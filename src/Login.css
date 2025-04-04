@@ -1,0 +1,119 @@
+/* General styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #dcd8e8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+/* Container for login */
+.login-container {
+    display: flex;
+    width: 800px;
+    height: 450px;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Left side (Fintechdb branding) */
+.login-left {
+    width: 50%;
+    background: linear-gradient(135deg, #ece9f3, #a2a1e0);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: #333;
+    text-align: center;
+}
+
+/* Right side (Login form) */
+.login-right {
+    width: 50%;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+h2 {
+    margin-bottom: 20px;
+}
+
+label {
+    font-size: 14px;
+    color: #666;
+    margin-top: 10px;
+    display: block;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+/* Password field with visibility toggle */
+.password-container {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* Checkbox styling */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.checkbox-container input {
+    margin-right: 8px;
+}
+
+/* Login button */
+.login-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #4bc1c5;
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.login-button:hover {
+    background-color: #3aa7a9;
+}
+
+/* Forgot password link */
+.forgot-password {
+    text-align: center;
+    color: #4bc1c5;
+    font-size: 14px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
