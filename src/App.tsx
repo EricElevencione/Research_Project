@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Login from "./Login";
+import "./assets/css/App.css";
 
 const App = () => {
   // Holds the selected role: "admin" or "technician". Initially, it's null.
