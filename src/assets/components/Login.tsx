@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./assets/css/Login.css"; // Importing CSS for styles
+import "../css/Login.css"; // Importing CSS for styles
 
 // Define the props interface so that Login expects a "role" prop of type string.
 interface LoginProps {
