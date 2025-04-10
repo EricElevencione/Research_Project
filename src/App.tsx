@@ -1,18 +1,32 @@
 // Corrected App.tsx
-import { Route, Routes } from "react-router-dom"; // Only import what's needed here
-import { Dashboard } from "./assets/components/Dashboard";
+import { Route, Routes } from "react-router-dom";
 import Login from "./assets/components/Login";
+import { useState } from "react";
 
 function App() {
+  const [role, setRole] = useState<string | null>(null);
+
+  if (role) {
+    return <Login role={role} />;
+  }
+
   return (
-    // No BrowserRouter here - it's already in main.tsx
     <div className="App">
-      <h1>App Component Loaded</h1> {/* Let's keep this for testing */}
-      <Routes> {/* Routes need to be direct children of the Router context (provided by main.tsx) */}
-        <Route path="/" element={<Dashboard />} />
+      <h1>App Component Loaded</h1>
+      <h1>Dashboard</h1>
+      <p>Welcome back!</p>
+      <div>
+        <button onClick={() => setRole("admin")}>Admin Login</button>
+      </div>
+      <div>
+        <button onClick={() => setRole("technician")}>Technician Login</button>
+      </div>
+
+      <Routes>
         <Route path="/Login" element={<Login role="default" />} />
       </Routes>
     </div>
   );
-};
+}
+
 export default App;
