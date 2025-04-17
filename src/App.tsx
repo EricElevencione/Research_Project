@@ -1,6 +1,6 @@
 // Corrected App.tsx
 import { Route, Routes } from "react-router-dom";
-import Login from "./assets/components/Login";
+import Login from "./Login";
 import { useState } from "react";
 
 function App() {
