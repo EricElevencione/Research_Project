@@ -1,5 +1,6 @@
 import { useState } from "react";
-import "../css/Login.css"; // Importing CSS for styles
+import "../assets/css/Login.css"; // Importing CSS for styles
+import { useNavigate } from 'react-router-dom';
 
 // Define the props interface so that Login expects a "role" prop of type string.
 interface LoginProps {
@@ -7,6 +8,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ role }) => {
+    const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -14,9 +16,7 @@ const Login: React.FC<LoginProps> = ({ role }) => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        alert(
-            `Role: ${role}\nEmail: ${email}\nPassword: ${password}\nRemember Me: ${rememberMe}`
-        );
+        navigate('/dashboard', { replace: true });
     };
 
     return (

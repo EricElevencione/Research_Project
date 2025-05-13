@@ -1,6 +1,5 @@
 // Corrected App.tsx
-import { Route, Routes } from "react-router-dom";
-import Login from "../connection/LoginConnection";
+import Login from "../connection/loginConnection";
 import { useState } from "react";
 
 function App() {
@@ -21,10 +20,6 @@ function App() {
       <div>
         <button onClick={() => setRole("technician")}>Technician Login</button>
       </div>
-
-      <Routes>
-        <Route path="/Login" element={<Login role="default" />} />
-      </Routes>
     </div>
   );
 }

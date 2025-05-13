@@ -1,14 +1,23 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './assets/css/index.css'
-import App from './screens/LoginScreen.tsx'
-import { BrowserRouter } from 'react-router-dom'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './assets/css/index.css';
+import Login from "./connection/loginConnection";
+import { Dashboard } from './screens/Dashboard';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('Failed to find the root element');
+}
+const root = createRoot(rootElement);
 
-createRoot(document.getElementById('root')!).render(
+root.render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <Routes>
+        <Route path="/" element={<Login role="default" />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
     </BrowserRouter>
   </StrictMode>
-)
+);
