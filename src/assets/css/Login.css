@@ -1,4 +1,10 @@
-/* General styling */
+/* 
+ * Login Page Styling
+ * This stylesheet handles all visual aspects of the login interface
+ * including layout, colors, animations, and responsive design
+ */
+
+/* Base page styling - ensures full viewport coverage and centered content */
 body {
     font-family: Arial, sans-serif;
     background-color: #dcd8e8;
@@ -9,7 +15,10 @@ body {
     margin: 0;
 }
 
-/* Container for login */
+/* Main container for login interface
+ * Uses flexbox for layout and includes shadow for depth
+ * Fixed dimensions ensure consistent appearance across devices
+ */
 .login-container {
     display: flex;
     width: 800px;
@@ -20,7 +29,11 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
-/* Left side (Fintechdb branding) */
+/* Left panel styling
+ * Contains branding and visual elements
+ * Uses gradient background for modern look
+ * Centered content with flexbox
+ */
 .login-left {
     width: 50%;
     background: linear-gradient(135deg, #ece9f3, #a2a1e0);
@@ -33,7 +46,11 @@ body {
     text-align: center;
 }
 
-/* Right side (Login form) */
+/* Right panel styling
+ * Contains the login form
+ * Uses padding for proper spacing
+ * Flexbox for vertical alignment
+ */
 .login-right {
     width: 50%;
     padding: 40px;
@@ -42,10 +59,14 @@ body {
     justify-content: center;
 }
 
+/* Typography styling */
 h2 {
     margin-bottom: 20px;
 }
 
+/* Form label styling
+ * Ensures consistent spacing and readability
+ */
 label {
     font-size: 14px;
     color: #666;
@@ -53,6 +74,10 @@ label {
     display: block;
 }
 
+/* Input field styling
+ * Consistent padding and border radius
+ * Subtle border for visual separation
+ */
 input {
     width: 100%;
     padding: 10px;
@@ -62,11 +87,17 @@ input {
     font-size: 14px;
 }
 
-/* Password field with visibility toggle */
+/* Password field container
+ * Relative positioning for toggle button placement
+ */
 .password-container {
     position: relative;
 }
 
+/* Password visibility toggle button
+ * Absolute positioning within password container
+ * Centered vertically
+ */
 .toggle-password {
     position: absolute;
     right: 10px;
@@ -77,7 +108,9 @@ input {
     cursor: pointer;
 }
 
-/* Checkbox styling */
+/* Checkbox container styling
+ * Flexbox for alignment of checkbox and label
+ */
 .checkbox-container {
     display: flex;
     align-items: center;
@@ -88,7 +121,10 @@ input {
     margin-right: 8px;
 }
 
-/* Login button */
+/* Login button styling
+ * Primary action button
+ * Includes hover state for interactivity
+ */
 .login-button {
     width: 100%;
     padding: 10px;
@@ -105,7 +141,9 @@ input {
     background-color: #3aa7a9;
 }
 
-/* Forgot password link */
+/* Forgot password link styling
+ * Secondary action with hover effect
+ */
 .forgot-password {
     text-align: center;
     color: #4bc1c5;

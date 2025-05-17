@@ -17,7 +17,7 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ role }) => {
     // Navigation hook for client-side routing
     const navigate = useNavigate();
-    
+
     // State Management
     // -----------------
     const [email, setEmail] = useState(""); // Stores email input
@@ -35,17 +35,17 @@ const Login: React.FC<LoginProps> = ({ role }) => {
 
     return (
         <div className="login-container">
-            // Left section containing branding and marketing text
+            {/* Left section containing branding and marketing text */}
             <div className="login-left">
                 <h1>Fintechdb</h1>
                 <p>Secure your financial future with us.</p>
             </div>
-            
+
             // Right section containing login form
             <div className="login-right">
                 {/* Dynamic heading showing user role */}
                 <h2>{role.toUpperCase()} LOGIN</h2>
-                
+
                 // Login Form
                 <form onSubmit={handleSubmit}>
                     // Email Field
@@ -91,7 +91,7 @@ const Login: React.FC<LoginProps> = ({ role }) => {
 
                     // Submit Button
                     <button type="submit" className="login-button">Log In</button>
-                    
+
                     // Forgotten Password Link
                     <p className="forgot-password">Forgot password?</p>
                 </form>
