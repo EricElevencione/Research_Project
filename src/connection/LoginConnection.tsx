@@ -41,14 +41,14 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                 <p>Secure your financial future with us.</p>
             </div>
 
-            // Right section containing login form
+            {/* Right section containing login form */}
             <div className="login-right">
                 {/* Dynamic heading showing user role */}
                 <h2>{role.toUpperCase()} LOGIN</h2>
 
-                // Login Form
+                {/* Login Form */}
                 <form onSubmit={handleSubmit}>
-                    // Email Field
+                    {/* Email Field */}
                     <label>Email</label>
                     <input
                         type="email"
@@ -58,7 +58,7 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                         required
                     />
 
-                    // Password Field with Toggle
+                    {/* Password Field with Toggle */}
                     <label>Password</label>
                     <div className="password-container">
                         <input
@@ -68,7 +68,7 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
-                        // Toggle visibility button
+                        {/* Toggle visibility button */}
                         <button
                             type="button"
                             className="toggle-password"
@@ -78,7 +78,7 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                         </button>
                     </div>
 
-                    // Remember Me Checkbox
+                    {/* Remember Me Checkbox */}
                     <div className="checkbox-container">
                         <input
                             type="checkbox"
@@ -89,10 +89,10 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                         <label htmlFor="remember">Keep me logged in</label>
                     </div>
 
-                    // Submit Button
+                    {/* Submit Button */}
                     <button type="submit" className="login-button">Log In</button>
 
-                    // Forgotten Password Link
+                    {/* Forgotten Password Link */}
                     <p className="forgot-password">Forgot password?</p>
                 </form>
             </div>

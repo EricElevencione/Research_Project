@@ -1,6 +1,8 @@
+import { useNavigate } from "react-router-dom";
 import "../assets/css/Dashboard.css";
 
 export const Dashboard = () => {
+    const navigate = useNavigate();
     return (
         <div>
             <h1>Dashboard</h1>
@@ -14,7 +16,7 @@ export const Dashboard = () => {
                     <button>Active Farmers</button>
                 </li>
                 <li className="btn">
-                    <button>Lands</button>
+                    <button onClick={() => navigate("/lands")}>Lands</button>
                 </li>
                 <li className="btn">
                     <button>Submit Files</button>

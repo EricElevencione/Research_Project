@@ -1,0 +1,57 @@
+.lands-container {
+    padding: 32px;
+    background: #f7f6fb;
+    min-height: 100vh;
+}
+
+.lands-container h2 {
+    margin-bottom: 24px;
+    color: #22223b;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.lands-table-wrapper {
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+    padding: 24px;
+}
+
+.lands-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+.lands-table th,
+.lands-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: left;
+    font-size: 1rem;
+}
+
+.lands-table th {
+    background: #f3f0fa;
+    color: #4f4f4f;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.lands-table tr:last-child td {
+    border-bottom: none;
+}
+
+@media (max-width: 900px) {
+    .lands-table-wrapper {
+        padding: 8px;
+    }
+
+    .lands-table th,
+    .lands-table td {
+        padding: 8px 6px;
+        font-size: 0.95rem;
+    }
+}
