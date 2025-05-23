@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './connection/loginConnection';
-import { Dashboard } from './screens/Dashboard';
+import Dashboard from './screens/Dashboard';  // Added default import for Dashboard
 import LandsPage from './screens/LandsPage';
 import './assets/css/index.css';
 
@@ -12,6 +12,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/lands" element={<LandsPage />} />
                 <Route path="*" element={<Navigate to="/" />} />
+                <Route path="/*" element={<Dashboard />} />
             </Routes>
         </BrowserRouter>
     );
