@@ -1,5 +1,5 @@
 // Corrected App.tsx
-import Login from "../connection/loginConnection";
+import Login from "../database/loginConnection";
 import { useState } from "react";
 
 function App() {
