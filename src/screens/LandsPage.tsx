@@ -7,7 +7,9 @@ interface LandRecord {
     "EXT NAME": string | null;
     "GENDER": string;
     "BIRTHDATE": string;
-    "FARMER ADDRESS": string;
+    "FARMER ADDRESS 1": string;
+    "FARMER ADDRESS 2": string;
+    "FARMER ADDRESS 3": string;
     "PARCEL NO.": string;
     "PARCEL ADDRESS": string;
     "PARCEL AREA": string;
@@ -58,7 +60,9 @@ const LandsPage = () => {
                             <th>EXT NAME</th>
                             <th>GENDER</th>
                             <th>BIRTHDATE</th>
-                            <th>FARMER ADDRESS</th>
+                            <th>FARMER ADDRESS 1</th>
+                            <th>FARMER ADDRESS 2</th>
+                            <th>FARMER ADDRESS 3</th>
                             <th>PARCEL NO.</th>
                             <th>PARCEL ADDRESS</th>
                             <th>PARCEL AREA</th>
@@ -72,7 +76,9 @@ const LandsPage = () => {
                                 <td>{record["EXT NAME"]}</td>
                                 <td>{record["GENDER"]}</td>
                                 <td>{record["BIRTHDATE"]}</td>
-                                <td>{record["FARMER ADDRESS"]}</td>
+                                <td>{record["FARMER ADDRESS 1"]}</td>
+                                <td>{record["FARMER ADDRESS 2"]}</td>
+                                <td>{record["FARMER ADDRESS 3"]}</td>
                                 <td>{record["PARCEL NO."]}</td>
                                 <td>{record["PARCEL ADDRESS"]}</td>
                                 <td>{record["PARCEL AREA"]}</td>

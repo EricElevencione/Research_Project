@@ -1,5 +1,5 @@
 import FarmlandMap from './components/FarmlandMap';
-import './App.css';
+import '../assets/css/App.css';
 
 function App() {
     return (
