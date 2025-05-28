@@ -8,11 +8,11 @@ const port = process.env.PORT || 5000;
 
 // Database connection configuration
 const pool = new Pool({
-    user: 'postgres', // Replace with your PostgreSQL username
-    host: 'localhost', // Replace with your PostgreSQL host (often localhost)
-    database: 'Masterlist', // Corrected database name to 'Masterlist' based on image
-    password: 'postgresadmin', // Replace with your PostgreSQL password
-    port: 5432, // Replace with your PostgreSQL port (default is 5432)
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'Masterlist',
+    password: process.env.DB_PASSWORD || 'postgresadmin',
+    port: process.env.DB_PORT || 5432,
 });
 
 // Test database connection
