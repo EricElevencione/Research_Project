@@ -24,7 +24,7 @@ const LandsPage = () => {
         const fetchLandRecords = async () => {
             try {
                 // Replace with your actual backend API endpoint
-                const response = await fetch('/api/lands');
+                const response = await fetch('https://farm-management-backend-466e.onrender.com/api/lands');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
