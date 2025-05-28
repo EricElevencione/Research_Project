@@ -1,5 +1,5 @@
 import "../assets/css/LandPage.css";
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface LandRecord {
     "FIRST NAME": string;
