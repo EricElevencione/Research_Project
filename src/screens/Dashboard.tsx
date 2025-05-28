@@ -1,7 +1,7 @@
 // c:\Users\dblaz\Research-Project\src\screens\Dashboard.tsx
 import { useNavigate } from "react-router-dom";
 import React from 'react';
-import FarmlandMap from '../components/FarmlandMap';
+import FarmlandMap from '../components/Map/FarmlandMap';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();

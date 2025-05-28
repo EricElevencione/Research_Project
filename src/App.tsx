@@ -1,4 +1,4 @@
-import FarmlandMap from './components/FarmlandMap';
+import FarmlandMap from './components/Map/FarmlandMap';
 import '../assets/css/App.css';
 
 function App() {

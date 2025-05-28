@@ -1,0 +1,223 @@
+{
+    "type": "FeatureCollection",
+    "name": "farmland_choropleth",
+    "crs": {
+        "type": "name",
+        "properties": {
+            "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+        }
+    },
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "id": "0D150D5EF2384C69BFFC",
+                "Name": "Farm 1",
+                "description": null,
+                "timestamp": null,
+                "begin": null,
+                "end": null,
+                "altitudeMode": null,
+                "tessellate": -1,
+                "extrude": 0,
+                "visibility": -1,
+                "drawOrder": null,
+                "icon": null
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            122.72521061571329,
+                            10.818134258691449,
+                            0.0
+                        ],
+                        [
+                            122.7257429376468,
+                            10.818655817457691,
+                            0.0
+                        ],
+                        [
+                            122.72521599257669,
+                            10.81919935819967,
+                            0.0
+                        ],
+                        [
+                            122.7246257815101,
+                            10.818649533533939,
+                            0.0
+                        ],
+                        [
+                            122.7249005609028,
+                            10.81839724821662,
+                            0.0
+                        ],
+                        [
+                            122.72521061571329,
+                            10.818134258691449,
+                            0.0
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "id": "0C93A4311F384C6A513C",
+                "Name": "Farm 2",
+                "description": null,
+                "timestamp": null,
+                "begin": null,
+                "end": null,
+                "altitudeMode": null,
+                "tessellate": -1,
+                "extrude": 0,
+                "visibility": -1,
+                "drawOrder": null,
+                "icon": null
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            122.723949584722504,
+                            10.819185822092329,
+                            0.0
+                        ],
+                        [
+                            122.724635095611305,
+                            10.81988664421875,
+                            0.0
+                        ],
+                        [
+                            122.723544514681194,
+                            10.820952935812221,
+                            0.0
+                        ],
+                        [
+                            122.722759936461699,
+                            10.820011102053231,
+                            0.0
+                        ],
+                        [
+                            122.723949584722504,
+                            10.819185822092329,
+                            0.0
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "id": "092C1A2CE4384C6CAE69",
+                "Name": "Farm 4",
+                "description": null,
+                "timestamp": null,
+                "begin": null,
+                "end": null,
+                "altitudeMode": null,
+                "tessellate": -1,
+                "extrude": 0,
+                "visibility": -1,
+                "drawOrder": null,
+                "icon": null
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            122.722399462998695,
+                            10.81960128036661,
+                            0.0
+                        ],
+                        [
+                            122.723534820097996,
+                            10.82094962609629,
+                            0.0
+                        ],
+                        [
+                            122.7226113737742,
+                            10.821611146165189,
+                            0.0
+                        ],
+                        [
+                            122.721586059353896,
+                            10.81997837515695,
+                            0.0
+                        ],
+                        [
+                            122.722399462998695,
+                            10.81960128036661,
+                            0.0
+                        ]
+                    ]
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "id": "0CA0E4D76E384C6CE5E7",
+                "Name": "Farm 5",
+                "description": null,
+                "timestamp": null,
+                "begin": null,
+                "end": null,
+                "altitudeMode": null,
+                "tessellate": -1,
+                "extrude": 0,
+                "visibility": -1,
+                "drawOrder": null,
+                "icon": null
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            122.722488163411398,
+                            10.819665864616139,
+                            0.0
+                        ],
+                        [
+                            122.722671805976205,
+                            10.819468875111861,
+                            0.0
+                        ],
+                        [
+                            122.722367954229099,
+                            10.81914045317027,
+                            0.0
+                        ],
+                        [
+                            122.722554260448902,
+                            10.81897244984075,
+                            0.0
+                        ],
+                        [
+                            122.723365729378401,
+                            10.81957191055961,
+                            0.0
+                        ],
+                        [
+                            122.722755257326597,
+                            10.820000821725809,
+                            0.0
+                        ],
+                        [
+                            122.722488163411398,
+                            10.819665864616139,
+                            0.0
+                        ]
+                    ]
+                ]
+            }
+        }
+    ]
+}
