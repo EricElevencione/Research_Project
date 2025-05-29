@@ -42,7 +42,22 @@ const Dashboard: React.FC = () => {
                             <p>3.75 ha</p>
                         </div>
                     </div>
-                </main>
+
+                    <ul className="dashboard-buttons">
+                        <li className="btn">
+                            <button onClick={() => navigate("/farmlands")}>Home</button>
+                        </li>
+                        <li className="btn">
+                            <button onClick={() => navigate("/active-farmers")}>Active Farmers</button>
+                        </li>
+                        <li className="btn">
+                            <button onClick={() => navigate("/lands")}>Lands</button>
+                        </li>
+                        <li className="btn">
+                            <button onClick={() => navigate("/upload")}>Upload Excel</button>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     );

@@ -23,10 +23,16 @@ const Login: React.FC<LoginProps> = ({ role }) => {
 
     // Form submission handler
     // Prevents default form behavior and navigates to dashboard
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Future Enhancement: Add actual authentication logic here
-        navigate('/dashboard', { replace: true });
+        try {
+            // Your existing login logic here
+            // After successful login:
+            localStorage.setItem('isAuthenticated', 'true');
+            navigate('/dashboard');
+        } catch (error) {
+            console.error('Login failed:', error);
+        }
     };
 
     return (
@@ -41,17 +47,17 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                     {/* Dynamic heading showing user role */}
                     <h2>{role.toUpperCase()} LOGIN</h2>
 
-                    {/* Login Form */}
-                    <form onSubmit={handleSubmit}>
-                        {/* Email Field */}
-                        <label>Email</label>
-                        <input
-                            type="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
+                {/* Login Form */}
+                <form onSubmit={handleLogin}>
+                    {/* Email Field */}
+                    <label>Email</label>
+                    <input
+                        type="email"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
 
                         {/* Password Field with Toggle */}
                         <label>Password</label>
