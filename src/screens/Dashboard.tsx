@@ -32,19 +32,16 @@ const Dashboard: React.FC = () => {
 
                     <ul className="dashboard-buttons">
                         <li className="btn">
-                            <button>Home</button>
+                            <button onClick={() => navigate("/farmlands")}>Home</button>
                         </li>
                         <li className="btn">
-                            <button>Active Farmers</button>
+                            <button onClick={() => navigate("/active-farmers")}>Active Farmers</button>
                         </li>
                         <li className="btn">
                             <button onClick={() => navigate("/lands")}>Lands</button>
                         </li>
                         <li className="btn">
                             <button>Submit Files</button>
-                        </li>
-                        <li className="btn">
-                            <button>Transmit Map</button>
                         </li>
                     </ul>
                 </div>
