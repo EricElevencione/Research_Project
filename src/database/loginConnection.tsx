@@ -1,9 +1,5 @@
-// React Login Component for Fintechdb
-// Handles user authentication with role-based access
-// -----------------------------------------------
-
-// Core module imports
 import { useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "../assets/css/Login.css"; // Login page styling
 import { useNavigate } from 'react-router-dom'; // Router for navigation
 
@@ -37,8 +33,6 @@ const Login: React.FC<LoginProps> = ({ role }) => {
         <div className="login-container">
             {/* Left section containing branding and marketing text */}
             <div className="login-left">
-                <h1>Fintechdb</h1>
-                <p>Secure your financial future with us.</p>
             </div>
 
             {/* Right section containing login form */}
@@ -73,8 +67,9 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                             type="button"
                             className="toggle-password"
                             onClick={() => setShowPassword(!showPassword)}
+                            aria-label="Toggle password visibility"
                         >
-                            {showPassword ? "🙈" : "👁️"}
+                            {showPassword ? <FaEyeSlash/> : <FaEye/>}
                         </button>
                     </div>
 
@@ -86,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                             checked={rememberMe}
                             onChange={() => setRememberMe(!rememberMe)}
                         />
-                        <label htmlFor="remember">Keep me logged in</label>
+                        <label htmlFor="remember" className="remember-label">Keep me logged in</label>
                     </div>
 
                     {/* Submit Button */}
