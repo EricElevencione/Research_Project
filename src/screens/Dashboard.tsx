@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
                             <button onClick={() => navigate("/lands")}>Lands</button>
                         </li>
                         <li className="btn">
-                            <button>Submit Files</button>
+                            <button onClick={() => navigate("/upload")}>Upload Excel</button>
                         </li>
                     </ul>
                 </div>

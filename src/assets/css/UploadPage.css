@@ -1,0 +1,150 @@
+.upload-container {
+    padding: 32px;
+    background: #f7f6fb;
+    min-height: 100vh;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.upload-container h2 {
+    margin-bottom: 24px;
+    color: #22223b;
+    font-size: 2rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.upload-box {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+    padding: 32px;
+    margin-bottom: 24px;
+}
+
+.upload-area {
+    border: 2px dashed #c4c4c4;
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    margin-bottom: 24px;
+    transition: border-color 0.3s ease;
+}
+
+.upload-area:hover {
+    border-color: #007bff;
+}
+
+.file-input {
+    display: none;
+}
+
+.file-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.file-label:hover {
+    color: #007bff;
+}
+
+.upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.upload-button {
+    width: 100%;
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.upload-button:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.upload-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.message {
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.upload-instructions {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+    padding: 24px;
+}
+
+.upload-instructions h3 {
+    color: #4a4a6a;
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+}
+
+.upload-instructions ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.upload-instructions li {
+    padding: 8px 0;
+    color: #666;
+    position: relative;
+    padding-left: 24px;
+}
+
+.upload-instructions li:before {
+    content: "•";
+    color: #007bff;
+    position: absolute;
+    left: 8px;
+}
+
+@media (max-width: 768px) {
+    .upload-container {
+        padding: 16px;
+    }
+
+    .upload-box {
+        padding: 16px;
+    }
+
+    .upload-area {
+        padding: 24px;
+    }
+
+    .upload-icon {
+        font-size: 36px;
+    }
+}
