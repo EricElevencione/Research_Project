@@ -1,23 +1,22 @@
-/* 
- * Main Application Styling
- * This stylesheet serves as the primary styling file for the application
- * handling global styles, resets, and common components
- */
-
-/* Reset and Base Styles
- * Normalizes browser defaults and sets up base styling
- * Ensures consistent rendering across different browsers
- */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* Root Variables
- * Defines global CSS variables for consistent theming
- * Makes it easy to maintain and update the design system
- */
+body, html {
+    overflow: hidden;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 :root {
   --primary-color: #4bc1c5;
   --secondary-color: #a2a1e0;
@@ -28,10 +27,6 @@
   --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Base Typography
- * Sets up default font styles and text rendering
- * Ensures consistent text appearance across the application
- */
 body {
   font-family: 'Arial', sans-serif;
   line-height: 1.6;
@@ -41,10 +36,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Container Layout
- * Main wrapper for content
- * Provides consistent padding and max-width
- */
 .container {
   width: 100%;
   max-width: 1200px;
@@ -52,10 +43,6 @@ body {
   padding: 0 20px;
 }
 
-/* Grid System
- * Simple flexbox-based grid system
- * Allows for responsive layouts
- */
 .grid {
   display: flex;
   flex-wrap: wrap;
@@ -67,14 +54,6 @@ body {
   flex: 1 1 300px;
 }
 
-/* Common Components
- * Styling for frequently used UI elements
- */
-
-/* Buttons
- * Consistent button styling with hover effects
- * Supports different variants (primary, secondary)
- */
 .btn {
   display: inline-block;
   padding: 10px 20px;
@@ -93,10 +72,6 @@ body {
   background-color: #3aa7a9;
 }
 
-/* Cards
- * Reusable card component
- * Includes shadow and hover effects
- */
 .card {
   background: white;
   border-radius: var(--border-radius);
@@ -109,10 +84,6 @@ body {
   transform: translateY(-5px);
 }
 
-/* Form Elements
- * Consistent styling for form inputs
- * Includes focus states and validation styles
- */
 input,
 textarea,
 select {
@@ -130,9 +101,6 @@ select:focus {
   border-color: var(--primary-color);
 }
 
-/* Utility Classes
- * Helper classes for common styling needs
- */
 .text-center {
   text-align: center;
 }
@@ -169,10 +137,6 @@ select:focus {
   margin-bottom: 30px;
 }
 
-/* Responsive Design
- * Media queries for different screen sizes
- * Ensures the layout works well on all devices
- */
 @media (max-width: 768px) {
   .container {
     padding: 0 15px;

@@ -193,7 +193,7 @@ const FarmlandMap: React.FC = () => {
     }
 
     return (
-        <div style={{ height: '500px', width: '100%', position: 'relative' }}>
+        <div style={{ height: '412px', width: '100%', position: 'relative' }}>
             <MapContainer
                 center={[0, 0]} // Initial center, will be adjusted by MapController
                 zoom={2} // Initial zoom, will be adjusted by MapController

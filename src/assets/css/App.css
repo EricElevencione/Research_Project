@@ -1,137 +1,117 @@
-/* ===== GLOBAL STYLES ===== */
-.App {
-    text-align: center;
-    padding: 20px;
-    min-height: 100vh;
-    background-color: #f5f5f5;
-}
+/* ===== DASHBOARD CSS ===== */
 
-.App-header {
-    margin-bottom: 20px;
-}
-
-main {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* ===== DASHBOARD LAYOUT ===== */
 .dashboard-container {
-    padding: 20px;
-    max-width: 1400px;
-    margin: 0 auto;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Segoe UI', sans-serif;
 }
 
-.dashboard-container h1 {
-    text-align: center;
-    margin-bottom: 30px;
-    color: #333;
+.top-menu {
+    display: flex;
+    justify-content: flex-end;
+    background-color: #4e944f;
+    padding: 20px 20px;
+    gap: 30px;
 }
 
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 20px;
-}
-
-/* ===== MAP SECTION ===== */
-.map-section {
+.top-menu button {
     background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
 }
 
-.map-section h2 {
-    margin-bottom: 15px;
+.dashboard-container > h1 {
+    background: white;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 12px 20px;
+    margin: 0;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: Arial, sans-serif;
+}
+
+.dashboard-container > h1::after {
+    content: "DASHBOARD   MANAGEMENT";
+    font-size: 12px;
     color: #333;
+    margin-left: auto;
+    padding-left: 30px;
+}
+
+/* Layout grid */
+.dashboard-grid {
+    display: flex;
+    flex-grow: 1;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-right: 1px solid #ccc;
+}
+
+.search-bar {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #bbb;
+}
+
+.location-label {
+    margin-top: 20px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* Main Map + Stats */
+.map-area {
+    height: 560px;
+    width: 1100px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: white;
 }
 
 .map-container {
-    height: 600px;
-    border-radius: 4px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
     overflow: hidden;
+    margin-bottom: 20px;
 }
 
-/* ===== DASHBOARD CONTENT ===== */
-.dashboard-content {
+.leaflet-container {
+    width: 100%;
+    height: 100%;
+    min-height: unset;
+}
+
+.dashboard-stats {
     display: flex;
-    flex-direction: column;
     gap: 20px;
 }
 
-/* ===== STATISTICS CARDS ===== */
-.dashboard-stats {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-}
-
 .stat-card {
-    background: white;
+    flex: 1;
+    background: #e6f4ea;
     padding: 15px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     text-align: center;
 }
 
-.stat-card h3 {
-    margin: 0;
-    font-size: 1rem;
-    color: #666;
-}
-
-.stat-card p {
-    margin: 10px 0 0;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #333;
-}
-
-/* ===== DASHBOARD BUTTONS ===== */
-.dashboard-buttons {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: 10px;
-}
-
-.btn button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 4px;
-    background: #007bff;
-    color: white;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btn button:hover {
-    background: #0056b3;
-}
-
-/* ===== LEAFLET MAP STYLES ===== */
+/* Ensure map fills container */
 .leaflet-container {
     width: 100%;
     height: 100%;
     z-index: 1;
-    min-height: 500px;
-}
-
-/* ===== RESPONSIVE DESIGN ===== */
-@media (max-width: 1024px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .map-container {
-        height: 400px;
-    }
+    min-height: 100%;
 }

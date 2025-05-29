@@ -1,16 +1,10 @@
-/*
- * Login Page Styling for Department of Agriculture Farmers
- * Uses nature-inspired colors: green, brown, and earthy tones
- */
-
-body {
+.login-page {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(to right, #e6f4ea, #d0e8c8);
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  margin: 0;
 }
 
 .login-container {

@@ -30,66 +30,68 @@ const Login: React.FC<LoginProps> = ({ role }) => {
     };
 
     return (
-        <div className="login-container">
-            {/* Left section containing branding and marketing text */}
-            <div className="login-left">
-            </div>
+        <div className="login-page">
+            <div className="login-container">
+                {/* Left section containing branding and marketing text */}
+                <div className="login-left">
+                </div>
 
-            {/* Right section containing login form */}
-            <div className="login-right">
-                {/* Dynamic heading showing user role */}
-                <h2>{role.toUpperCase()} LOGIN</h2>
+                {/* Right section containing login form */}
+                <div className="login-right">
+                    {/* Dynamic heading showing user role */}
+                    <h2>{role.toUpperCase()} LOGIN</h2>
 
-                {/* Login Form */}
-                <form onSubmit={handleSubmit}>
-                    {/* Email Field */}
-                    <label>Email</label>
-                    <input
-                        type="email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-
-                    {/* Password Field with Toggle */}
-                    <label>Password</label>
-                    <div className="password-container">
+                    {/* Login Form */}
+                    <form onSubmit={handleSubmit}>
+                        {/* Email Field */}
+                        <label>Email</label>
                         <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Enter your password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            type="email"
+                            placeholder="Enter your email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             required
                         />
-                        {/* Toggle visibility button */}
-                        <button
-                            type="button"
-                            className="toggle-password"
-                            onClick={() => setShowPassword(!showPassword)}
-                            aria-label="Toggle password visibility"
-                        >
-                            {showPassword ? <FaEyeSlash/> : <FaEye/>}
-                        </button>
-                    </div>
 
-                    {/* Remember Me Checkbox */}
-                    <div className="checkbox-container">
-                        <input
-                            type="checkbox"
-                            id="remember"
-                            checked={rememberMe}
-                            onChange={() => setRememberMe(!rememberMe)}
-                        />
-                        <label htmlFor="remember" className="remember-label">Keep me logged in</label>
-                    </div>
+                        {/* Password Field with Toggle */}
+                        <label>Password</label>
+                        <div className="password-container">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Enter your password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                            {/* Toggle visibility button */}
+                            <button
+                                type="button"
+                                className="toggle-password"
+                                onClick={() => setShowPassword(!showPassword)}
+                                aria-label="Toggle password visibility"
+                            >
+                                {showPassword ? <FaEyeSlash/> : <FaEye/>}
+                            </button>
+                        </div>
 
-                    {/* Submit Button */}
-                    <button type="submit" className="login-button">Log In</button>
+                        {/* Remember Me Checkbox */}
+                        <div className="checkbox-container">
+                            <input
+                                type="checkbox"
+                                id="remember"
+                                checked={rememberMe}
+                                onChange={() => setRememberMe(!rememberMe)}
+                            />
+                            <label htmlFor="remember" className="remember-label">Keep me logged in</label>
+                        </div>
 
-                    {/* Forgotten Password Link */}
-                    <p className="forgot-password">Forgot password?</p>
-                </form>
+                        {/* Submit Button */}
+                        <button type="submit" className="login-button">Log In</button>
+
+                        {/* Forgotten Password Link */}
+                        <p className="forgot-password">Forgot password?</p>
+                    </form>
+                </div>
             </div>
         </div>
     );
