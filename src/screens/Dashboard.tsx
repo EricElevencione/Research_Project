@@ -13,7 +13,7 @@ const Dashboard: React.FC = () => {
                 <button onClick={() => navigate("/")}>Home</button>
                 <button onClick={() => navigate("/active-farmers")}>Active Farmers</button>
                 <button onClick={() => navigate("/lands")}>Lands</button>
-                <button>Submit Files</button>
+                <button onClick={() => navigate("/upload")}>Submit Files</button>
             </nav>
 
             <div className="dashboard-grid">

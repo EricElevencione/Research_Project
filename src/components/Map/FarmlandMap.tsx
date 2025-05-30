@@ -81,26 +81,36 @@ const FarmlandMap: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Fetch the GeoJSON data from the public folder
         const fetchFarmlandData = async () => {
             try {
-                const response = await fetch('/Lacturan Map.geojson'); // Assuming the file is now in the public root folder
+                setLoading(true);
+                setError(null);
+
+                // Try to fetch from the public folder
+                const response = await fetch('/Lacturan Map.geojson');
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`Failed to fetch map data: ${response.status} ${response.statusText}`);
                 }
+
                 const data = await response.json();
+
+                // Validate the GeoJSON data
+                if (!data || !data.type || !data.features || !Array.isArray(data.features)) {
+                    throw new Error('Invalid GeoJSON data format');
+                }
+
+                console.log("Successfully loaded map data with", data.features.length, "features");
                 setMapData(data);
-                console.log("Fetched map data:", data);
             } catch (err: any) {
                 console.error("Error fetching farmland data:", err);
-                setError(err.message);
+                setError(err.message || 'Failed to load map data');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchFarmlandData();
-    }, []); // Empty dependency array means this effect runs once on mount
+    }, []);
 
     const getColor = (feature: any) => {
         // Use feature properties to determine color

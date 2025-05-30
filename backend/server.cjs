@@ -94,11 +94,7 @@ app.get('/api/lands', async (req, res) => {
 
 // API endpoint to handle file uploads
 app.post('/api/upload', upload.single('file'), async (req, res) => {
-    // 'file' is the name of the input field on the frontend
     const uploadedFile = req.file;
-
-    // You can access other form data like uploadId via req.body
-    // const uploadId = req.body.uploadId; 
 
     if (!uploadedFile) {
         return res.status(400).json({ message: 'No file uploaded' });
@@ -108,73 +104,80 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     let processedCount = 0;
     let errorMessage = null;
 
-    const client = await pool.connect(); // Get a database client
+    const client = await pool.connect();
     try {
-        // Start a database transaction (optional, but recommended for data consistency)
         await client.query('BEGIN');
 
-        // --- Optional: Update file_uploads table status to 'processing' ---
-        // If you are sending uploadId from the frontend and tracking in file_uploads table
-        // await client.query('UPDATE file_uploads SET status = $1, last_modified = CURRENT_TIMESTAMP WHERE id = $2', ['processing', uploadId]);
-
-        // --- Parse the Excel file ---
-        const workbook = XLSX.readFile(uploadedFile.path); // Read the file using xlsx
-        const sheetName = workbook.SheetNames[0]; // Assume data is in the first sheet
+        // Parse the Excel file
+        const workbook = XLSX.readFile(uploadedFile.path);
+        const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        // Convert sheet to JSON array (header row is used as keys)
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         console.log(`Parsed ${jsonData.length} rows from Excel.`);
 
-        // --- Implement your data processing and database interaction logic here ---
-        // Loop through the jsonData array:
+        // Process each row
         for (const row of jsonData) {
-            // Example: Access data using column headers from the Excel file
-            // const firstName = row['FIRST NAME'];
-            // const parcelNo = row['PARCEL NO.'];
+            try {
+                // Prepare the data for insertion
+                const insertQuery = `
+                    INSERT INTO masterlist (
+                        "FIRST NAME",
+                        "MIDDLE NAME",
+                        "EXT NAME",
+                        "GENDER",
+                        "BIRTHDATE",
+                        "FARMER ADDRESS 1",
+                        "FARMER ADDRESS 2",
+                        "FARMER ADDRESS 3",
+                        "PARCEL NO.",
+                        "PARCEL ADDRESS",
+                        "PARCEL AREA"
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                `;
 
-            // 1. Validate the data in the 'row' object
-            // 2. Prepare your SQL INSERT or UPDATE query for the 'masterlist' table
-            // 3. Execute the query using the 'client': await client.query('YOUR_SQL_QUERY', [values]);
-            // 4. Increment processedCount if the operation was successful
+                const values = [
+                    row['FIRST NAME'] || null,
+                    row['MIDDLE NAME'] || null,
+                    row['EXT NAME'] || null,
+                    row['GENDER'] || null,
+                    row['BIRTHDATE'] || null,
+                    row['FARMER ADDRESS 1'] || null,
+                    row['FARMER ADDRESS 2'] || null,
+                    row['FARMER ADDRESS 3'] || null,
+                    row['PARCEL NO.'] || null,
+                    row['PARCEL ADDRESS'] || null,
+                    row['PARCEL AREA'] || null
+                ];
 
-            // --- Placeholder for your logic ---
-            // Replace this with your actual database operations based on Excel data
-            // Example: if (row['SomeRequiredColumn']) { 
-            //              await client.query('INSERT INTO your_table ...', [...]); 
-            //              processedCount++; 
-            //          }
-            // For now, just counting rows:
-            processedCount++; // Remove this and use your actual logic
+                // Execute the insert query
+                await client.query(insertQuery, values);
+                processedCount++;
+            } catch (rowError) {
+                console.error('Error processing row:', rowError);
+                console.error('Problematic row:', row);
+                // Continue processing other rows even if one fails
+            }
         }
-        // --- End of data processing logic ---
 
-
-        // --- Update file_uploads table status to 'completed' ---
-        // If you are tracking in file_uploads table:
-        // await client.query('UPDATE file_uploads SET status = $1, processed_records = $2, last_modified = CURRENT_TIMESTAMP WHERE id = $3', ['completed', processedCount, uploadId]);
-
-        await client.query('COMMIT'); // Commit the transaction if everything was successful
-
-        // Send success response
-        res.json({ message: 'File processed successfully', processedRecords: processedCount });
+        await client.query('COMMIT');
+        res.json({
+            message: 'File processed successfully',
+            processedRecords: processedCount,
+            totalRows: jsonData.length
+        });
 
     } catch (error) {
-        await client.query('ROLLBACK'); // Rollback transaction on error
+        await client.query('ROLLBACK');
         console.error('Error processing file upload:', error);
         errorMessage = error.message;
-
-        // --- Update file_uploads table status to 'failed' ---
-        // If you are tracking in file_uploads table:
-        // await client.query('UPDATE file_uploads SET status = $1, error_message = $2, last_modified = CURRENT_TIMESTAMP WHERE id = $3', ['failed', errorMessage, uploadId]);
-
-        // Send error response
-        res.status(500).json({ message: 'Error processing file', error: errorMessage });
-
+        res.status(500).json({
+            message: 'Error processing file',
+            error: errorMessage
+        });
     } finally {
-        // Always release the database client
         client.release();
-        // Always clean up the temporary uploaded file
+        // Clean up the temporary file
         fs.unlink(uploadedFile.path, (err) => {
             if (err) console.error('Error deleting temporary file:', err);
         });

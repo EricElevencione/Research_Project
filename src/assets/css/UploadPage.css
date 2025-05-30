@@ -1,9 +1,6 @@
 .upload-container {
-    padding: 32px;
-    background: #f7f6fb;
-    min-height: 100vh;
-    max-width: 800px;
-    margin: 0 auto;
+    /* No layout styles here */
+    /* The padding and max-width from the old style were moved to .content-area padding */
 }
 
 .upload-container h2 {

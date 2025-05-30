@@ -1,0 +1,345 @@
+.farmers-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.farmers-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.back-button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #333;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-button:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.05);
+}
+
+.farmers-table td .delete-button {
+    padding: 5px 10px;
+    background-color: #e74c3c;
+    /* Red for delete */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s ease;
+}
+
+.farmers-table td .delete-button:hover {
+    background-color: #c0392b;
+}
+
+/* Table Styles */
+.farmers-table-container {
+    margin-top: 20px;
+    overflow-x: auto;
+    /* Added border and padding for card effect */
+    border: 1px solid #eee;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    padding: 0 15px;
+    /* Add some horizontal padding */
+}
+
+.farmers-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    /* Removed border-radius and box-shadow from table itself, now on container */
+    overflow: hidden;
+}
+
+.farmers-table thead th {
+    background-color: #ffffff;
+    color: #888;
+    font-weight: 500;
+    text-align: left;
+    /* Adjusted padding */
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.farmers-table tbody td {
+    /* Adjusted padding */
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.farmers-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.farmers-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* Style for the first column (Product Name in example) - add left border */
+/* Removed specific border-radius for first/last child as container handles it */
+/*
+.farmers-table thead th:first-child {
+    border-top-left-radius: 8px;
+}
+
+.farmers-table thead th:last-child {
+    border-top-right-radius: 8px;
+}
+
+.farmers-table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 8px;
+}
+
+.farmers-table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: 8px;
+}
+*/
+
+/* Adjust delete button styles for better alignment */
+.farmers-table td .delete-button {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border-radius: 3px;
+}
+
+.farmers-table td .edit-button {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border-radius: 3px;
+    margin-right: 8px;
+}
+
+/* Styles for the Status pills - refine appearance */
+.status-pill {
+    display: inline-block;
+    /* Adjusted padding and border-radius */
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    /* Slightly larger font */
+    font-weight: 600;
+    text-align: center;
+    /* Removed min-width */
+    /* min-width: 60px; */
+}
+
+.status-active {
+    background-color: #e9f7ef;
+    color: #2ecc71;
+}
+
+.status-tenant {
+    background-color: #fcf4e3;
+    color: #f39c12;
+}
+
+.status-landowner {
+    background-color: #e6f3ff;
+    color: #3498db;
+}
+
+/* Styles for the Add Farmer button */
+.add-farmer-button {
+    padding: 8px 15px;
+    background-color: #5e3aee;
+    /* Purple background */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+    margin-left: auto;
+    /* Push the button to the right */
+}
+
+.add-farmer-button:hover {
+    background-color: #4a2bc2;
+}
+
+/* Styles for the Edit button */
+.farmers-table td .edit-button:hover {
+    background-color: #4a2bc2;
+}
+
+/* Styles for the Actions and Status cells and dropdowns */
+
+/* Style for the clickable status text */
+.status-cell {
+    cursor: pointer;
+    position: relative;
+    /* Needed for absolute positioning of dropdown */
+}
+
+.status-cell:hover .status-pill {
+    text-decoration: underline;
+    /* Indicate clickability on hover */
+}
+
+/* Style for the '...' button */
+.action-more-button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 5px;
+    color: #555;
+    transition: color 0.2s ease;
+}
+
+.action-more-button:hover {
+    color: #333;
+    /* Darker on hover */
+}
+
+/* Style for the actions dropdown */
+.actions-dropdown {
+    position: absolute;
+    top: calc(100% + 5px);
+    /* Position below the button with a small gap */
+    right: 0;
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    min-width: 120px;
+}
+
+.actions-dropdown div {
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.actions-dropdown div:hover {
+    background-color: #f0f0f0;
+}
+
+/* Style for the status dropdown */
+.status-dropdown {
+    position: absolute;
+    top: 100%;
+    /* Position below the status pill */
+    left: 0;
+    /* Align to the left */
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* Stronger shadow */
+    z-index: 1000;
+    /* Increased z-index */
+    min-width: 150px;
+    /* Added padding and refined appearance */
+    padding: 8px;
+    border-radius: 10px;
+    /* More rounded corners */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* Stronger shadow */
+    /* Added max-height and overflow for potential scrolling */
+    max-height: 200px;
+    /* Or a suitable height */
+    overflow-y: auto;
+}
+
+/* Style for the dropdown header */
+.status-dropdown-header {
+    font-size: 0.8rem;
+    color: #888;
+    padding: 4px 8px 8px 8px;
+    /* Adjusted padding */
+    margin-bottom: 8px;
+    /* Space below the header */
+    border-bottom: 1px solid #eee;
+    /* Separator line */
+}
+
+/* Style for individual status options */
+.status-option {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    /* Padding inside each option */
+    cursor: pointer;
+    border-radius: 6px;
+    /* Rounded corners for options */
+    margin-bottom: 4px;
+    /* Space between options */
+    transition: background-color 0.2s ease;
+    font-size: 0.9rem;
+    /* Font size for option text */
+    color: #333;
+}
+
+.status-option:last-child {
+    margin-bottom: 0;
+}
+
+.status-option:hover {
+    background-color: #f0f0f0;
+    /* Hover effect */
+}
+
+/* Style for the 'Set a status' text */
+.status-option.status-set-status {
+    font-size: 0.8rem;
+    color: #888;
+    padding: 4px 8px 8px 8px;
+    /* Match header padding */
+    margin-bottom: 8px;
+    /* Match header margin */
+    border-bottom: 1px solid #eee;
+    /* Add separator line */
+    cursor: default;
+    /* Remove pointer cursor */
+    background-color: transparent;
+    /* Remove hover background */
+}
+
+/* Styles for the status dots */
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    /* Size of the dot */
+    height: 10px;
+    border-radius: 50%;
+    /* Make it round */
+    margin-right: 10px;
+    /* Space between dot and text */
+    /* Background color will be set by the status-active, status-tenant, etc. classes */
+}
+
+/* Remove or adjust existing rules that style direct children div of status-dropdown */
+/* Removed: .status-dropdown div */
+
+/* Removed: .status-dropdown div:hover */
+
+/* Ensure relative positioning on the parent td for dropdowns */
+.farmers-table tbody td.actions-cell,
+.farmers-table tbody td.status-cell {
+    position: relative;
+}

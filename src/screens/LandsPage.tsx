@@ -1,7 +1,9 @@
-import "../assets/css/LandPage.css";
+import "../assets/css/LandsPage.css";
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface LandRecord {
+    id: number;
     "FIRST NAME": string;
     "MIDDLE NAME": string | null;
     "EXT NAME": string | null;
@@ -15,30 +17,49 @@ interface LandRecord {
     "PARCEL AREA": string;
 }
 
-const LandsPage = () => {
+const LandsPage: React.FC = () => {
+    const navigate = useNavigate();
     const [landRecords, setLandRecords] = useState<LandRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchLandRecords = async () => {
-            try {
-                // Replace with your actual backend API endpoint
-                const response = await fetch('http://localhost:5000/api/lands');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data: LandRecord[] = await response.json();
-                setLandRecords(data);
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
+    const fetchLandRecords = async () => {
+        try {
+            const response = await fetch('/api/lands');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        };
+            const data = await response.json();
+            setLandRecords(data);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchLandRecords();
     }, []);
+
+    const handleDelete = async (id: number) => {
+        if (window.confirm('Are you sure you want to delete this record?')) {
+            try {
+                const response = await fetch(`/api/lands/${id}`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    // Remove the deleted record from the state
+                    setLandRecords(landRecords.filter(record => record.id !== id));
+                } else {
+                    throw new Error('Failed to delete record');
+                }
+            } catch (err: any) {
+                setError(err.message);
+            }
+        }
+    };
 
     if (loading) {
         return <div className="lands-container">Loading...</div>;
@@ -50,22 +71,29 @@ const LandsPage = () => {
 
     return (
         <div className="lands-container">
-            <h2>Land Records</h2>
-            <div className="lands-table-wrapper">
+            <div className="lands-header">
+                <button className="back-button" onClick={() => navigate('/dashboard')}>
+                    ←
+                </button>
+                <h1>Land Records</h1>
+            </div>
+
+            <div className="lands-table-container">
                 <table className="lands-table">
                     <thead>
                         <tr>
-                            <th>FIRST NAME</th>
-                            <th>MIDDLE NAME</th>
-                            <th>EXT NAME</th>
-                            <th>GENDER</th>
-                            <th>BIRTHDATE</th>
-                            <th>FARMER ADDRESS 1</th>
-                            <th>FARMER ADDRESS 2</th>
-                            <th>FARMER ADDRESS 3</th>
-                            <th>PARCEL NO.</th>
-                            <th>PARCEL ADDRESS</th>
-                            <th>PARCEL AREA</th>
+                            <th>First Name</th>
+                            <th>Middle Name</th>
+                            <th>Ext Name</th>
+                            <th>Gender</th>
+                            <th>Birthdate</th>
+                            <th>Address 1</th>
+                            <th>Address 2</th>
+                            <th>Address 3</th>
+                            <th>Parcel No.</th>
+                            <th>Parcel Address</th>
+                            <th>Parcel Area</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -82,6 +110,14 @@ const LandsPage = () => {
                                 <td>{record["PARCEL NO."]}</td>
                                 <td>{record["PARCEL ADDRESS"]}</td>
                                 <td>{record["PARCEL AREA"]}</td>
+                                <td>
+                                    <button
+                                        className="delete-button"
+                                        onClick={() => handleDelete(record.id)}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>

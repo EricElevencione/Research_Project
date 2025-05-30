@@ -8,5 +8,10 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5000',
     },
+    fs: {
+      // Allow serving files from one level up to the project root
+      allow: ['..']
+    }
   },
+  publicDir: 'public',
 })

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import '../assets/css/UploadPage.css';
 import { FaCloudUploadAlt } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const UploadPage: React.FC = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const navigate = useNavigate();
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -34,20 +36,34 @@ const UploadPage: React.FC = () => {
         formData.append('file', selectedFile);
 
         try {
-            const response = await fetch('http://localhost:5000/api/upload', {
+            console.log('Attempting to upload file:', selectedFile.name);
+            const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
             });
 
+            const data = await response.json();
+
             if (response.ok) {
-                setMessage({ type: 'success', text: 'File uploaded successfully!' });
+                console.log('Upload successful:', data);
+                setMessage({
+                    type: 'success',
+                    text: `File uploaded successfully! Processed ${data.processedRecords} records.`
+                });
                 setSelectedFile(null);
             } else {
-                const error = await response.json();
-                setMessage({ type: 'error', text: error.message || 'Upload failed' });
+                console.error('Upload failed:', data);
+                setMessage({
+                    type: 'error',
+                    text: data.message || 'Upload failed. Please try again.'
+                });
             }
         } catch (error) {
-            setMessage({ type: 'error', text: 'An error occurred while uploading the file' });
+            console.error('Upload error:', error);
+            setMessage({
+                type: 'error',
+                text: 'An error occurred while uploading the file. Please check your connection and try again.'
+            });
         } finally {
             setIsUploading(false);
         }
@@ -55,7 +71,12 @@ const UploadPage: React.FC = () => {
 
     return (
         <div className="upload-container">
-            <h2>Upload Excel File</h2>
+            <div className="upload-header">
+                <button className="back-button" onClick={() => navigate('/dashboard')}>
+                    ←
+                </button>
+                <h2>Upload Excel File</h2>
+            </div>
 
             <div className="upload-box">
                 <div className="upload-area">

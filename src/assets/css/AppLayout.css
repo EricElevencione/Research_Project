@@ -1,0 +1,320 @@
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f7f8fc;
+    /* Light background */
+}
+
+.sidebar {
+    width: 250px;
+    /* Fixed width for sidebar */
+    background-color: #ffffff;
+    /* White background */
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #5e3aee;
+    /* Purple color for brand */
+    margin-bottom: 30px;
+    padding: 10px;
+}
+
+.sidebar-nav ul,
+.sidebar-settings ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-nav li,
+.sidebar-settings li {
+    padding: 12px 10px;
+    /* Adjusted padding */
+    margin-bottom: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    color: #555;
+    /* Slightly darker text color */
+    display: flex;
+    /* Enable flexbox for icon and text */
+    align-items: center;
+    gap: 10px;
+    /* Space between icon and text */
+    font-size: 0.95rem;
+    /* Slightly larger font */
+}
+
+.sidebar-nav li:hover,
+.sidebar-settings li:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+/* Style for the active item (placeholder - will need logic) */
+.sidebar-nav li.active {
+    background-color: #5e3aee;
+    /* Purple background for active */
+    color: white;
+    font-weight: 600;
+}
+
+.sidebar-settings {
+    margin-top: auto;
+    /* Push settings to the bottom */
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.sidebar-settings h3 {
+    font-size: 0.9rem;
+    /* Smaller settings header */
+    color: #888;
+    margin-bottom: 10px;
+    /* Reduced margin */
+    padding: 0 10px;
+    font-weight: 500;
+}
+
+.main-content {
+    flex-grow: 1;
+    /* Take up remaining space */
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-header {
+    background-color: #ffffff;
+    padding: 10px 20px;
+    /* Adjusted padding */
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    /* Fixed height for header */
+}
+
+.search-bar-container {
+    flex-grow: 1;
+    /* Allow search bar to take space */
+    margin-right: 20px;
+    /* Space between search and user */
+    max-width: 400px;
+    /* Max width for search bar */
+}
+
+.search-bar-container input {
+    width: 100%;
+    /* Make input fill container */
+    padding: 10px 15px;
+    /* Adjusted padding */
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    /* More rounded corners */
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    /* Include padding in element's total width */
+    background-color: #f0f0f0;
+    /* Light background */
+    border: none;
+    /* Remove border */
+}
+
+.user-info {
+    font-weight: 600;
+    /* Bolder font */
+    color: #333;
+    /* Darker color */
+}
+
+.content-area {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    flex-grow: 1;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    /* Added padding */
+    border-bottom: 1px solid #eee;
+    /* Separator line */
+}
+
+.toolbar input {
+    padding: 8px 15px;
+    /* Adjusted padding */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    /* Less rounded than header search */
+    font-size: 0.9rem;
+    flex-grow: 1;
+    /* Take up available space */
+    max-width: 300px;
+    /* Max width for customer search */
+}
+
+.filters {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-left: auto;
+    /* Push filters to the right */
+}
+
+.filters span {
+    font-size: 0.9rem;
+    color: #555;
+    padding: 5px 10px;
+    /* Add padding for clickable area */
+    cursor: pointer;
+}
+
+.filters span:hover {
+    color: #333;
+    /* Darker color on hover */
+}
+
+.toolbar button {
+    padding: 8px 15px;
+    background-color: #5e3aee;
+    /* Purple button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+}
+
+.toolbar button:hover {
+    background-color: #4a2bc2;
+}
+
+/* Pagination styles */
+.pagination {
+    display: flex;
+    justify-content: flex-end;
+    /* Align pagination to the right */
+    align-items: center;
+    margin-top: 20px;
+    gap: 5px;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.pagination span {
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.pagination span:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.pagination span.active {
+    background-color: #5e3aee;
+    color: white;
+    font-weight: 600;
+}
+
+.pagination span:first-child,
+.pagination span:last-child {
+    font-weight: bold;
+    /* Style for the arrow icons */
+}
+
+/* Table Styles */
+.farmers-table-container {
+    margin-top: 20px;
+    overflow-x: auto;
+    /* Make table horizontally scrollable if needed */
+}
+
+.farmers-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.farmers-table thead th {
+    background-color: #f7f8fc;
+    /* Light background for header */
+    color: #555;
+    /* Darker text color */
+    font-weight: 600;
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.farmers-table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+}
+
+.farmers-table tbody tr:last-child td {
+    border-bottom: none;
+    /* No border on the last row */
+}
+
+.farmers-table tbody tr:hover {
+    background-color: #f9f9f9;
+    /* Slight hover effect */
+}
+
+.farmers-table td .delete-button {
+    padding: 5px 10px;
+    background-color: #e74c3c;
+    /* Red for delete */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s ease;
+}
+
+.farmers-table td .delete-button:hover {
+    background-color: #c0392b;
+}
+
+/* Adjustments for the header within the content area */
+.content-area .farmers-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 20px;
+    /* Reduced margin */
+}
+
+.content-area .farmers-header h1 {
+    font-size: 1.5rem;
+    /* Smaller title font size */
+    color: #333;
+    margin: 0;
+    /* Remove default margin */
+}
+
+.content-area .back-button {
+    /* Styles already defined in AppLayout.css for .back-button */
+    /* Ensure these styles are applied */
+}
