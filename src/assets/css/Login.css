@@ -24,7 +24,8 @@
 
 .login-left {
   width: 50%;
-  background: linear-gradient(135deg, #7fb77e, #4e944f);
+  background-image: url(../images/login_image.jpg);
+  background-size: cover;
   display: flex;
   flex-direction: column;
   justify-content: center;
