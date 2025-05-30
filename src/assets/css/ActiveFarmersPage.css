@@ -6,9 +6,60 @@
 
 .farmers-header {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.farmers-header-left {
+    display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 2rem;
+}
+
+.farmers-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.farmers-search-input {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 200px;
+    transition: border-color 0.2s ease;
+}
+
+.farmers-search-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.add-farmer-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.add-farmer-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.95rem;
+    transition: background-color 0.2s ease;
+}
+
+.add-farmer-button:hover {
+    background-color: #45a049;
 }
 
 .back-button {
@@ -96,25 +147,6 @@
     background-color: #f9f9f9;
 }
 
-/* Style for the first column (Product Name in example) - add left border */
-/* Removed specific border-radius for first/last child as container handles it */
-/*
-.farmers-table thead th:first-child {
-    border-top-left-radius: 8px;
-}
-
-.farmers-table thead th:last-child {
-    border-top-right-radius: 8px;
-}
-
-.farmers-table tbody tr:last-child td:first-child {
-    border-bottom-left-radius: 8px;
-}
-
-.farmers-table tbody tr:last-child td:last-child {
-    border-bottom-right-radius: 8px;
-}
-*/
 
 /* Adjust delete button styles for better alignment */
 .farmers-table td .delete-button {
@@ -161,21 +193,22 @@
 
 /* Styles for the Add Farmer button */
 .add-farmer-button {
-    padding: 8px 15px;
-    background-color: #5e3aee;
-    /* Purple background */
+    background-color: #4CAF50;
     color: white;
     border: none;
+    padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: background-color 0.2s ease;
-    margin-left: auto;
-    /* Push the button to the right */
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s ease;
 }
 
 .add-farmer-button:hover {
-    background-color: #4a2bc2;
+    background-color: #45a049;
 }
 
 /* Styles for the Edit button */

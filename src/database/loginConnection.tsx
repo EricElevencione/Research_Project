@@ -45,19 +45,19 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                 {/* Right section containing login form */}
                 <div className="login-right">
                     {/* Dynamic heading showing user role */}
-                    <h2>{role.toUpperCase()} LOGIN</h2>
+                    <h2>LOGIN</h2>
 
-                {/* Login Form */}
-                <form onSubmit={handleLogin}>
-                    {/* Email Field */}
-                    <label>Email</label>
-                    <input
-                        type="email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
+                    {/* Login Form */}
+                    <form onSubmit={handleLogin}>
+                        {/* Email Field */}
+                        <label>Email</label>
+                        <input
+                            type="email"
+                            placeholder="Enter your email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
 
                         {/* Password Field with Toggle */}
                         <label>Password</label>
@@ -76,7 +76,7 @@ const Login: React.FC<LoginProps> = ({ role }) => {
                                 onClick={() => setShowPassword(!showPassword)}
                                 aria-label="Toggle password visibility"
                             >
-                                {showPassword ? <FaEyeSlash/> : <FaEye/>}
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
                             </button>
                         </div>
 

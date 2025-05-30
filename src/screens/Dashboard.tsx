@@ -10,7 +10,7 @@ const Dashboard: React.FC = () => {
         <div className="dashboard-container">
             {/* Top Menu */}
             <nav className="top-menu">
-                <button onClick={() => navigate("/")}>Home</button>
+                <button onClick={() => navigate("/dashboard")}>Home</button>
                 <button onClick={() => navigate("/active-farmers")}>Active Farmers</button>
                 <button onClick={() => navigate("/lands")}>Lands</button>
                 <button onClick={() => navigate("/upload")}>Submit Files</button>

@@ -120,91 +120,108 @@ const ActiveFarmerPage: React.FC = () => {
     if (error) return <div>Error: {error}</div>;
 
     return (
-        <div className="farmers-container">
-            <div className="farmers-header">
-                <button className="back-button" onClick={() => navigate('/dashboard')}>
-                    ←
-                </button>
-                <h1>Active Farmers</h1>
-            </div>
+        <div className='active-farmer-page'>
+            <div className="farmers-container">
+                <div className="farmers-header">
+                    <div className="farmers-header-left">
+                        <button className="back-button" onClick={() => navigate('/dashboard')}>
+                            ←
+                        </button>
+                        <h1 className="farmers-title">Active Farmers</h1>
+                    </div>
+                    <div className="farmers-header-right">
+                        <input
+                            type="text"
+                            placeholder="Search farmers..."
+                            className="farmers-search-input"
+                        />
+                    </div>
+                </div>
 
-            <div className="farmers-table-container">
-                <table className="farmers-table">
-                    <thead>
-                        <tr>
-                            <th>First Name</th>
-                            <th>Middle Name</th>
-                            <th>Ext Name</th>
-                            <th>Gender</th>
-                            <th>Birthdate</th>
-                            <th>Address 1</th>
-                            <th>Address 2</th>
-                            <th>Address 3</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {farmerRecords.map((record) => (
-                            <tr key={record.id}>
-                                <td>{record["FIRST NAME"]}</td>
-                                <td>{record["MIDDLE NAME"]}</td>
-                                <td>{record["EXT NAME"]}</td>
-                                <td>{record["GENDER"]}</td>
-                                <td>{record["BIRTHDATE"]}</td>
-                                <td>{record["FARMER ADDRESS 1"]}</td>
-                                <td>{record["FARMER ADDRESS 2"]}</td>
-                                <td>{record["FARMER ADDRESS 3"]}</td>
-                                <td className="status-cell" onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenStatusRowId(openStatusRowId === record.id ? null : record.id);
-                                    setOpenActionsRowId(null);
-                                }}>
-                                    <span className={`status-pill status-${record.status?.toLowerCase().replace(/\s/g, '') || 'unknown'}`}>
-                                        {record.status || 'N/A'}
-                                    </span>
-                                    {openStatusRowId === record.id && (
-                                        <div ref={statusDropdownRef} className="status-dropdown">
-                                            <div className="status-option status-set-status">
-                                                Set a status
-                                            </div>
-                                            <div className="status-option status-option-active" onClick={() => handleUpdateStatus(record.id, 'Active Farmer')}>
-                                                <span className="status-dot status-active"></span>
-                                                Active Farmer
-                                            </div>
-                                            <div className="status-option status-option-tenant" onClick={() => handleUpdateStatus(record.id, 'Tenant')}>
-                                                <span className="status-dot status-tenant"></span>
-                                                Tenant
-                                            </div>
-                                            <div className="status-option status-option-landowner" onClick={() => handleUpdateStatus(record.id, 'Land Owner')}>
-                                                <span className="status-dot status-landowner"></span>
-                                                Land Owner
-                                            </div>
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="actions-cell">
-                                    <button
-                                        className="action-more-button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenActionsRowId(openActionsRowId === record.id ? null : record.id);
-                                            setOpenStatusRowId(null);
-                                        }}
-                                    >
-                                        ...
-                                    </button>
-                                    {openActionsRowId === record.id && (
-                                        <div ref={actionsDropdownRef} className="actions-dropdown">
-                                            <div onClick={() => handleEditFarmer(record.id)}>Edit</div>
-                                            <div onClick={() => handleDelete(record.id)}>Delete</div>
-                                        </div>
-                                    )}
-                                </td>
+                <div className="farmers-table-container">
+                    <table className="farmers-table">
+                        <thead>
+                            <tr>
+                                <th>First Name</th>
+                                <th>Middle Name</th>
+                                <th>Ext Name</th>
+                                <th>Gender</th>
+                                <th>Birthdate</th>
+                                <th>Address 1</th>
+                                <th>Address 2</th>
+                                <th>Address 3</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {farmerRecords.map((record) => (
+                                <tr key={record.id}>
+                                    <td>{record["FIRST NAME"]}</td>
+                                    <td>{record["MIDDLE NAME"]}</td>
+                                    <td>{record["EXT NAME"]}</td>
+                                    <td>{record["GENDER"]}</td>
+                                    <td>{record["BIRTHDATE"]}</td>
+                                    <td>{record["FARMER ADDRESS 1"]}</td>
+                                    <td>{record["FARMER ADDRESS 2"]}</td>
+                                    <td>{record["FARMER ADDRESS 3"]}</td>
+                                    <td className="status-cell" onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenStatusRowId(openStatusRowId === record.id ? null : record.id);
+                                        setOpenActionsRowId(null);
+                                    }}>
+                                        <span className={`status-pill status-${record.status?.toLowerCase().replace(/\s/g, '') || 'unknown'}`}>
+                                            {record.status || 'N/A'}
+                                        </span>
+                                        {openStatusRowId === record.id && (
+                                            <div ref={statusDropdownRef} className="status-dropdown">
+                                                <div className="status-option status-set-status">
+                                                    Set a status
+                                                </div>
+                                                <div className="status-option status-option-active" onClick={() => handleUpdateStatus(record.id, 'Active Farmer')}>
+                                                    <span className="status-dot status-active"></span>
+                                                    Active Farmer
+                                                </div>
+                                                <div className="status-option status-option-tenant" onClick={() => handleUpdateStatus(record.id, 'Tenant')}>
+                                                    <span className="status-dot status-tenant"></span>
+                                                    Tenant
+                                                </div>
+                                                <div className="status-option status-option-landowner" onClick={() => handleUpdateStatus(record.id, 'Land Owner')}>
+                                                    <span className="status-dot status-landowner"></span>
+                                                    Land Owner
+                                                </div>
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="actions-cell">
+                                        <button
+                                            className="action-more-button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenActionsRowId(openActionsRowId === record.id ? null : record.id);
+                                                setOpenStatusRowId(null);
+                                            }}
+                                        >
+                                            ...
+                                        </button>
+                                        {openActionsRowId === record.id && (
+                                            <div ref={actionsDropdownRef} className="actions-dropdown">
+                                                <div onClick={() => handleEditFarmer(record.id)}>Edit</div>
+                                                <div onClick={() => handleDelete(record.id)}>Delete</div>
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    <div className="add-farmer-container">
+                        <button className="add-farmer-button" onClick={() => navigate('/add-farmer')}>
+                            + Add Farmer
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
