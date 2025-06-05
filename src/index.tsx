@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import RoleSelection from './screens/RoleSelection';
 import Login from './database/loginConnection';
 import Dashboard from './screens/Dashboard';
 import LandsPage from './screens/LandsPage';
 import ActiveFarmerPage from './screens/ActiveFarmerPage';
 import FarmlandPage from './screens/FarmlandPage';
 import UploadPage from './screens/UploadPage';
+import RSBSAForm from './screens/RSBSAForm';
 import './assets/css/index.css';
 
 // Protected Route component
@@ -23,7 +25,8 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Login role="default" />} />
+                <Route path="/" element={<RoleSelection />} />
+                <Route path="/login/:role" element={<LoginWrapper />} />
                 <Route path="/dashboard" element={
                     <ProtectedRoute>
                         <Dashboard />
@@ -49,10 +52,20 @@ function App() {
                         <UploadPage />
                     </ProtectedRoute>
                 } />
+                <Route path="/RSBSAForm" element={
+                    <ProtectedRoute>
+                        <RSBSAForm />
+                    </ProtectedRoute>
+                } />
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </BrowserRouter>
     );
 }
+
+const LoginWrapper = () => {
+    const { role } = useParams();
+    return <Login role={role || 'default'} />;
+};
 
 export default App;
