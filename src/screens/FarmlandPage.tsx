@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import FarmlandMap from '../components/Map/FarmlandMap';
 import '../assets/css/FarmlandPage.css';
 
 interface FarmlandRecord {
@@ -53,7 +52,7 @@ const FarmlandPage = () => {
                 <div className="map-section">
                     <h3>Farmland Distribution</h3>
                     <div className="map-container">
-                        <FarmlandMap />
+                        <p>Map component for farmland distribution is not currently available.</p>
                     </div>
                 </div>
 

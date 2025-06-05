@@ -51,3 +51,5 @@ The backend server will serve the frontend application, and the frontend will fe
 *   If the browser shows a blank page or frontend errors, open the browser's developer console (F12) and look for JavaScript errors.
 
 ---
+
+https://www.google.com/maps/d/u/0/edit?hl=en&mid=15_ampwP-jkZ61_Coki20I0kG9dJrU10&ll=10.821462438695141%2C122.70912895551383&z=14
