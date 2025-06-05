@@ -5,7 +5,6 @@ import Dashboard from './screens/Dashboard';
 import LandsPage from './screens/LandsPage';
 import ActiveFarmerPage from './screens/ActiveFarmerPage';
 import FarmlandPage from './screens/FarmlandPage';
-import UploadPage from './screens/UploadPage';
 import RSBSAForm from './screens/RSBSAForm';
 import './assets/css/index.css';
 
@@ -45,11 +44,6 @@ function App() {
                 <Route path="/farmlands" element={
                     <ProtectedRoute>
                         <FarmlandPage />
-                    </ProtectedRoute>
-                } />
-                <Route path="/upload" element={
-                    <ProtectedRoute>
-                        <UploadPage />
                     </ProtectedRoute>
                 } />
                 <Route path="/RSBSAForm" element={
