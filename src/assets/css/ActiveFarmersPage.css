@@ -83,39 +83,20 @@
     transform: scale(1.05);
 }
 
-.farmers-table td .delete-button {
-    padding: 5px 10px;
-    background-color: #e74c3c;
-    /* Red for delete */
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: background-color 0.2s ease;
-}
-
-.farmers-table td .delete-button:hover {
-    background-color: #c0392b;
-}
-
 /* Table Styles */
 .farmers-table-container {
     margin-top: 20px;
     overflow-x: auto;
-    /* Added border and padding for card effect */
     border: 1px solid #eee;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     padding: 0 15px;
-    /* Add some horizontal padding */
 }
 
 .farmers-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    /* Removed border-radius and box-shadow from table itself, now on container */
     overflow: hidden;
 }
 
@@ -124,7 +105,6 @@
     color: #888;
     font-weight: 500;
     text-align: left;
-    /* Adjusted padding */
     padding: 12px 15px;
     border-bottom: 1px solid #eee;
     font-size: 0.85rem;
@@ -132,7 +112,6 @@
 }
 
 .farmers-table tbody td {
-    /* Adjusted padding */
     padding: 12px 15px;
     border-bottom: 1px solid #eee;
     color: #333;
@@ -147,232 +126,480 @@
     background-color: #f9f9f9;
 }
 
-
-/* Adjust delete button styles for better alignment */
-.farmers-table td .delete-button {
-    padding: 4px 8px;
-    font-size: 0.75rem;
-    border-radius: 3px;
-}
-
-.farmers-table td .edit-button {
-    padding: 4px 8px;
-    font-size: 0.75rem;
-    border-radius: 3px;
-    margin-right: 8px;
-}
-
-/* Styles for the Status pills - refine appearance */
+/* Status cell and container styles */
+/* Base status pill style */
 .status-pill {
     display: inline-block;
-    /* Adjusted padding and border-radius */
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 12px;
     font-size: 0.75rem;
-    /* Slightly larger font */
     font-weight: 600;
     text-align: center;
-    /* Removed min-width */
-    /* min-width: 60px; */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+    white-space: nowrap;
+    user-select: none;
 }
 
+.status-pill:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Active Farmer */
 .status-active {
     background-color: #e9f7ef;
-    color: #2ecc71;
+    color: #27ae60;
+    border: 1px solid #d5f4e6;
 }
 
+/* Tenant */
 .status-tenant {
-    background-color: #fcf4e3;
-    color: #f39c12;
+    background-color: #fef9e7;
+    color: #e67e22;
+    border: 1px solid #f8e6a0;
 }
 
+/* Land Owner */
 .status-landowner {
     background-color: #e6f3ff;
-    color: #3498db;
+    color: #2980b9;
+    border: 1px solid #b8daff;
 }
 
-/* Styles for the Add Farmer button */
-.add-farmer-button {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
+/* Optional: Unknown fallback */
+.status-unknown {
+    background-color: #eee;
+    color: #666;
+    border: 1px solid #ccc;
+}
+
+/* Status dropdown styles */
+.status-dropdown {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 8px);
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 160px;
+    overflow: hidden;
+    animation: dropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.status-option {
+    padding: 10px 14px;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 5px;
-    transition: background-color 0.3s ease;
+    gap: 10px;
+    transition: background-color 0.2s ease;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-.add-farmer-button:hover {
-    background-color: #45a049;
+.status-option:last-child {
+    border-bottom: none;
 }
 
-/* Styles for the Edit button */
-.farmers-table td .edit-button:hover {
-    background-color: #4a2bc2;
+.status-option:hover {
+    background-color: #f8f9fa;
 }
 
-/* Styles for the Actions and Status cells and dropdowns */
+.status-set-status {
+    color: #666;
+    font-weight: 500;
+    background-color: #f8f9fa !important;
+    cursor: default !important;
+}
 
-/* Style for the clickable status text */
-.status-cell {
-    cursor: pointer;
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.status-dot.status-active {
+    background-color: #27ae60;
+}
+
+.status-dot.status-tenant {
+    background-color: #e67e22;
+}
+
+.status-dot.status-landowner {
+    background-color: #2980b9;
+}
+
+/* Actions cell and container styles */
+.actions-cell {
     position: relative;
-    /* Needed for absolute positioning of dropdown */
+    text-align: center;
+    padding: 12px 15px !important;
 }
 
-.status-cell:hover .status-pill {
-    text-decoration: underline;
-    /* Indicate clickability on hover */
+.actions-container {
+    position: relative;
+    display: inline-block;
 }
 
-/* Style for the '...' button */
+/* Actions button styles */
 .action-more-button {
     background: none;
     border: none;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     cursor: pointer;
-    padding: 0 5px;
-    color: #555;
-    transition: color 0.2s ease;
+    padding: 4px 8px;
+    color: #666;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    font-weight: bold;
+    line-height: 1;
 }
 
 .action-more-button:hover {
     color: #333;
-    /* Darker on hover */
+    background-color: #f0f0f0;
+    transform: scale(1.1);
 }
 
-/* Style for the actions dropdown */
+/* Actions dropdown styles */
 .actions-dropdown {
     position: absolute;
-    top: calc(100% + 5px);
-    /* Position below the button with a small gap */
     right: 0;
-    background-color: #fff;
-    border: 1px solid #eee;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 10;
+    top: calc(100% + 8px);
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
     min-width: 120px;
+    overflow: hidden;
+    animation: dropdownFadeIn 0.2s ease-out;
 }
 
 .actions-dropdown div {
-    padding: 8px 15px;
+    padding: 10px 14px;
     cursor: pointer;
     transition: background-color 0.2s ease;
-    font-size: 0.9rem;
-    color: #333;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.actions-dropdown div:last-child {
+    border-bottom: none;
 }
 
 .actions-dropdown div:hover {
-    background-color: #f0f0f0;
+    background-color: #f8f9fa;
 }
 
-/* Style for the status dropdown */
-.status-dropdown {
-    position: absolute;
-    top: 100%;
-    /* Position below the status pill */
+.actions-dropdown div:first-child:hover {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.actions-dropdown div:last-child:hover {
+    background-color: #ffebee;
+    color: #d32f2f;
+}
+
+/* Remove old button styles that are no longer used */
+.farmers-table td .delete-button,
+.farmers-table td .edit-button {
+    display: none;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
     left: 0;
-    /* Align to the left */
-    background-color: #fff;
-    border: 1px solid #eee;
-    border-radius: 5px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    /* Stronger shadow */
-    z-index: 1000;
-    /* Increased z-index */
-    min-width: 150px;
-    /* Added padding and refined appearance */
-    padding: 8px;
-    border-radius: 10px;
-    /* More rounded corners */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    /* Stronger shadow */
-    /* Added max-height and overflow for potential scrolling */
-    max-height: 200px;
-    /* Or a suitable height */
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.status-modal {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
     overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out;
 }
 
-/* Style for the dropdown header */
-.status-dropdown-header {
-    font-size: 0.8rem;
-    color: #888;
-    padding: 4px 8px 8px 8px;
-    /* Adjusted padding */
-    margin-bottom: 8px;
-    /* Space below the header */
+@keyframes slideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
     border-bottom: 1px solid #eee;
-    /* Separator line */
+    background-color: #f8f9fa;
+    border-radius: 12px 12px 0 0;
 }
 
-/* Style for individual status options */
-.status-option {
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    padding: 8px;
-    /* Padding inside each option */
-    cursor: pointer;
-    border-radius: 6px;
-    /* Rounded corners for options */
-    margin-bottom: 4px;
-    /* Space between options */
-    transition: background-color 0.2s ease;
-    font-size: 0.9rem;
-    /* Font size for option text */
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-button:hover {
+    background-color: #e9ecef;
     color: #333;
 }
 
-.status-option:last-child {
-    margin-bottom: 0;
+.modal-content {
+    padding: 24px;
 }
 
-.status-option:hover {
-    background-color: #f0f0f0;
-    /* Hover effect */
+.farmer-info {
+    margin-bottom: 24px;
+    padding: 16px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #4CAF50;
 }
 
-/* Style for the 'Set a status' text */
-.status-option.status-set-status {
-    font-size: 0.8rem;
-    color: #888;
-    padding: 4px 8px 8px 8px;
-    /* Match header padding */
-    margin-bottom: 8px;
-    /* Match header margin */
-    border-bottom: 1px solid #eee;
-    /* Add separator line */
-    cursor: default;
-    /* Remove pointer cursor */
-    background-color: transparent;
-    /* Remove hover background */
+.farmer-info p {
+    margin: 8px 0;
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 
-/* Styles for the status dots */
-.status-dot {
+.farmer-info strong {
+    color: #333;
+    font-weight: 600;
+}
+
+.farmer-info .status-pill {
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.status-options h4 {
+    margin: 0 0 16px 0;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.status-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-option-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.status-option-btn:hover {
+    border-color: #4CAF50;
+    background-color: #f8fffe;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-option-btn.status-option-active:hover {
+    border-color: #27ae60;
+    background-color: #f0f9f4;
+}
+
+.status-option-btn.status-option-tenant:hover {
+    border-color: #e67e22;
+    background-color: #fef9f0;
+}
+
+.status-option-btn.status-option-landowner:hover {
+    border-color: #2980b9;
+    background-color: #f0f8ff;
+}
+
+/* Status pill styles - simplified since we removed dropdowns */
+.status-cell {
+    position: relative;
+    padding: 12px 15px !important;
+}
+
+.status-pill {
     display: inline-block;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.status-pill:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-active {
+    background-color: #e9f7ef;
+    color: #27ae60;
+    border: 1px solid #d5f4e6;
+}
+
+.status-tenant {
+    background-color: #fef9e7;
+    color: #e67e22;
+    border: 1px solid #f8e6a0;
+}
+
+.status-landowner {
+    background-color: #e6f3ff;
+    color: #2980b9;
+    border: 1px solid #b8daff;
+}
+
+.status-dot {
     width: 10px;
-    /* Size of the dot */
     height: 10px;
     border-radius: 50%;
-    /* Make it round */
-    margin-right: 10px;
-    /* Space between dot and text */
-    /* Background color will be set by the status-active, status-tenant, etc. classes */
+    display: inline-block;
+    flex-shrink: 0;
 }
 
-/* Remove or adjust existing rules that style direct children div of status-dropdown */
-/* Removed: .status-dropdown div */
+.status-dot.status-active {
+    background-color: #27ae60;
+}
 
-/* Removed: .status-dropdown div:hover */
+.status-dot.status-tenant {
+    background-color: #e67e22;
+}
 
-/* Ensure relative positioning on the parent td for dropdowns */
-.farmers-table tbody td.actions-cell,
-.farmers-table tbody td.status-cell {
-    position: relative;
+.status-dot.status-landowner {
+    background-color: #2980b9;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .farmers-container {
+        padding: 1rem;
+    }
+
+    .farmers-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .farmers-search-input {
+        min-width: auto;
+        width: 100%;
+    }
+
+    .actions-dropdown {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .status-modal {
+        width: 95%;
+        margin: 20px;
+        max-height: 90vh;
+    }
+
+    .modal-header {
+        padding: 16px 20px;
+    }
+
+    .modal-content {
+        padding: 20px;
+    }
+
+    .status-buttons {
+        gap: 10px;
+    }
+
+    .status-option-btn {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
 }

@@ -1,0 +1,111 @@
+.landplotting-container {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    padding: 20px;
+    background-color: #f0f2f5;
+    gap: 20px;
+}
+
+.landplotting-header {
+    color: #333;
+    font-size: 2em;
+}
+
+.landplotting-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    width: 100%;
+    gap: 20px;
+}
+
+.landplotting-map-section {
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.landplotting-control-panel {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.landplotting-control-panel h2,
+.landplotting-control-panel h3 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.landplotting-control-panel label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.landplotting-control-panel input[type="text"] {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.landplotting-control-panel button {
+    padding: 10px 15px;
+    margin-right: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s ease;
+}
+
+.landplotting-control-panel button:hover {
+    opacity: 0.9;
+}
+
+.landplotting-control-panel button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.landplotting-control-panel button:first-of-type {
+    background-color: #5cb85c;
+    color: white;
+}
+
+.landplotting-control-panel button:last-of-type {
+    background-color: #d9534f;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .landplotting-container {
+        grid-template-rows: auto 1fr;
+        height: auto;
+        gap: 10px;
+    }
+
+    .landplotting-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .landplotting-map-section,
+    .landplotting-control-panel {
+        width: 100%;
+    }
+
+    .landplotting-map-section {
+        height: 50vh;
+    }
+
+    .landplotting-control-panel {
+        height: auto;
+    }
+}

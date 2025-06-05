@@ -20,18 +20,41 @@ const Login: React.FC<LoginProps> = ({ role }) => {
     const [password, setPassword] = useState(""); // Stores password input
     const [showPassword, setShowPassword] = useState(false); // Toggles password visibility
     const [rememberMe, setRememberMe] = useState(false); // Stores remember me preference
+    const [error, setError] = useState("");
 
     // Form submission handler
     // Prevents default form behavior and navigates to dashboard
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError("");
+
+        // Basic validation
+        if (!email || !password) {
+            setError("Please fill in all fields");
+            return;
+        }
+
         try {
-            // Your existing login logic here
-            // After successful login:
-            localStorage.setItem('isAuthenticated', 'true');
-            navigate('/dashboard');
+            // For demo purposes, accept any non-empty email/password
+            // In a real application, you would validate against a backend
+            if (email && password) {
+                // Set authentication
+                localStorage.setItem('isAuthenticated', 'true');
+                localStorage.setItem('userEmail', email);
+
+                // If remember me is checked, set a longer expiration
+                if (rememberMe) {
+                    localStorage.setItem('rememberMe', 'true');
+                }
+
+                // Navigate to dashboard
+                navigate('/dashboard');
+            } else {
+                setError("Invalid credentials");
+            }
         } catch (error) {
             console.error('Login failed:', error);
+            setError("Login failed. Please try again.");
         }
     };
 
@@ -40,12 +63,16 @@ const Login: React.FC<LoginProps> = ({ role }) => {
             <div className="login-container">
                 {/* Left section containing branding and marketing text */}
                 <div className="login-left">
+                    <h1>Welcome Back</h1>
+                    <p>Access your farmland management system</p>
                 </div>
 
                 {/* Right section containing login form */}
                 <div className="login-right">
                     {/* Dynamic heading showing user role */}
                     <h2>LOGIN</h2>
+
+                    {error && <div className="error-message">{error}</div>}
 
                     {/* Login Form */}
                     <form onSubmit={handleLogin}>
