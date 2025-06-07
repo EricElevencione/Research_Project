@@ -11,7 +11,7 @@ const Dashboard: React.FC = () => {
             {/* Top Menu */}
             <nav className="top-menu">
                 <button onClick={() => navigate("/dashboard")}>Home</button>
-                <button onClick={() => navigate("/active-farmers")}>Active Farmers</button>
+                <button onClick={() => navigate("/active-farmers")}>Stakeholders</button>
                 <button onClick={() => navigate("/lands")}>Lands</button>
                 <button onClick={() => navigate("/land-plotting")}>Land Plotting</button>
             </nav>

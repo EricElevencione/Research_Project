@@ -79,6 +79,7 @@ interface LandPlottingMapProps {
     selectedShape: any;
     onShapeSelected?: (shape: any | null) => void;
     barangayName?: string;
+    onShapeFinalized?: (shape: any) => void;
 }
 
 export interface LandPlottingMapRef {
@@ -86,13 +87,31 @@ export interface LandPlottingMapRef {
 }
 
 const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
-    ({ onShapeCreated, onShapeEdited, onShapeDeleted, selectedShape, onShapeSelected, barangayName }, ref) => {
+    ({ onShapeCreated, onShapeEdited, onShapeDeleted, selectedShape, onShapeSelected, barangayName, onShapeFinalized }, ref) => {
         const [mapData, setMapData] = useState<any>(null);
         const [boundaryData, setBoundaryData] = useState<any>(null);
         const [loading, setLoading] = useState(true);
         const [error, setError] = useState<string | null>(null);
         const featureGroupRef = useRef<LeafletFeatureGroup>(null);
         const [drawnShapes, setDrawnShapes] = useState<any[]>([]);
+        const editControlRef = useRef<any>(null);
+
+        // Click handler for layers within the FeatureGroup
+        const onLayerClick = (e: L.LeafletEvent) => {
+            console.log('Layer clicked', e);
+            const clickedLayer = e.layer;
+            // Find the corresponding shape in drawnShapes by leaflet_id
+            // Need to ensure clickedLayer has _leaflet_id and it matches a drawn shape's layer _leaflet_id
+            const clickedShape = drawnShapes.find(shape => shape.layer && shape.layer._leaflet_id === clickedLayer._leaflet_id);
+
+            if (clickedShape && onShapeSelected) {
+                console.log('Shape found and selected', clickedShape);
+                onShapeSelected(clickedShape);
+            } else if (onShapeSelected && selectedShape) { // Deselect only if something is currently selected
+                console.log('Clicked outside drawn shapes, deselecting');
+                onShapeSelected(null);
+            }
+        };
 
         useImperativeHandle(ref, () => ({
             deleteShape: (shapeId: string) => {
@@ -110,9 +129,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                         console.log('drawnShapes updated, calling onShapeDeleted');
 
                         if (onShapeDeleted) {
-                            const layersToDelete = new L.FeatureGroup();
-                            layersToDelete.addLayer(layerToDelete);
-                            onShapeDeleted({ layers: layersToDelete });
+                            // Pass the deleted shape's info
+                            const deletedShape = drawnShapes.find(shape => shape.id === shapeId);
+                            if (deletedShape) onShapeDeleted({ layers: new L.FeatureGroup().addLayer(layerToDelete), shapes: [deletedShape] });
                         }
 
                         if (selectedShape && selectedShape.id === shapeId && onShapeSelected) {
@@ -128,33 +147,64 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             }
         }));
 
+        // Effect to manage layer highlighting and interactions (editing/dragging)
         useEffect(() => {
             console.log('selectedShape changed:', selectedShape);
             if (featureGroupRef.current) {
                 console.log('FeatureGroup ref available in highlighting effect', featureGroupRef.current);
                 featureGroupRef.current.eachLayer((layer: any) => {
                     console.log('Checking layer for setStyle:', layer, typeof layer.setStyle === 'function', layer.options);
-                    if (typeof layer.setStyle === 'function' && layer.options) {
-                        (layer as any).setStyle({ color: 'white', weight: 1, opacity: 1, fillOpacity: 0 });
-                        console.log('Resetting style for layer:', layer);
+                    // Only apply style and interaction changes to drawn shapes (which have an options.id)
+                    // We also check if the layer is an instance that supports editing/dragging/setStyle
+                    if (layer.options && layer.options.id && (layer instanceof L.Path || layer instanceof L.Marker)) {
+                        // Reset style for all drawn layers
+                        if (layer instanceof L.Path) {
+                            layer.setStyle({ color: 'white', weight: 1, opacity: 1, fillOpacity: 0 });
+                            console.log('Resetting style for drawn layer:', layer);
+                        }
+                        // Check if the layer has editing handlers before trying to disable
+                        if ((layer as any).editing) {
+                            try { (layer as any).editing.disable(); } catch (e) { console.error('Error disabling editing:', e); }
+                        }
+                        // Check if the layer has dragging handlers before trying to disable
+                        if ((layer as any).dragging) {
+                            try { (layer as any).dragging.disable(); } catch (e) { console.error('Error disabling dragging:', e); }
+                        }
+                        console.log('Disabling interactions for drawn layer:', layer);
                     }
                 });
 
                 if (selectedShape && selectedShape.layer) {
                     console.log('Attempting to highlight shape with ID:', selectedShape.id);
                     const layerToHighlight = featureGroupRef.current.getLayers().find((layer: any) => layer.options && layer.options.id === selectedShape.id);
-                    if (layerToHighlight) {
+                    if (layerToHighlight && (layerToHighlight instanceof L.Path || layerToHighlight instanceof L.Marker)) {
                         console.log('Highlighting layer:', layerToHighlight);
-                        (layerToHighlight as L.Path).setStyle({ color: 'blue', weight: 3, opacity: 1, fillOpacity: 0.5 });
+                        // Apply highlighting style
+                        if (layerToHighlight instanceof L.Path) {
+                            layerToHighlight.setStyle({ color: 'blue', weight: 3, opacity: 1, fillOpacity: 0.5 });
+                            console.log('Applied highlight style for layer:', layerToHighlight);
+                        }
+                        // Check if the layer has editing handlers before trying to enable
+                        if ((layerToHighlight as any).editing) {
+                            try { (layerToHighlight as any).editing.enable(); } catch (e) { console.error('Error enabling editing:', e); }
+                        }
+                        // Check if the layer has dragging handlers before trying to enable
+                        if ((layerToHighlight as any).dragging) {
+                            try { (layerToHighlight as any).dragging.enable(); } catch (e) { console.error('Error enabling dragging:', e); }
+                        }
+                        console.log('Enabled interactions for layer:', layerToHighlight);
                     } else {
-                        console.log('Layer to highlight not found with ID:', selectedShape.id);
+                        console.log('Layer to highlight not found or is not a Path/Marker instance with ID:', selectedShape.id);
                     }
+                } else {
+                    console.log('No shape selected or layer not found');
                 }
             } else {
                 console.log('featureGroupRef.current is null in highlighting effect');
             }
-        }, [selectedShape, drawnShapes, featureGroupRef]);
+        }, [selectedShape, featureGroupRef]);
 
+        // Effect to fetch boundary data
         useEffect(() => {
             const fetchMapData = async () => {
                 if (!barangayName) return;
@@ -198,141 +248,251 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             const isBoundary = feature.properties?.id === 'DUMANGAS_BOUNDARY';
             const isCalaoBoundary = feature.properties?.id === 'CALAO_BOUNDARY';
 
+            if (isBoundary || isCalaoBoundary) {
+                return {
+                    color: getColor(feature),
+                    weight: 2,
+                    opacity: 0.6,
+                    fillOpacity: 0,
+                };
+            }
             return {
-                fillColor: '#e74c3c',
-                weight: isBoundary ? 3 : isCalaoBoundary ? 2 : 1,
+                color: 'white', // Default color for drawn shapes
+                weight: 1,
                 opacity: 1,
-                color: isBoundary ? '#ff0000' : 'white',
-                dashArray: isBoundary ? undefined : (isCalaoBoundary ? '3' : undefined),
-                fillOpacity: 0
+                fillOpacity: 0,
             };
         };
 
         const onCreated = (e: any) => {
-            const layer = e.layer;
+            console.log('Shape created (onCreated event)', e);
+            const { layer } = e;
 
-            const drawnGeometry = layer.toGeoJSON();
+            const geoJson = layer.toGeoJSON();
+            const geometryType = geoJson.geometry.type;
 
-            if (boundaryData && boundaryData.features && boundaryData.features.length > 0) {
-                const boundary = boundaryData.features[0];
+            console.log(`Created shape geometry type: ${geometryType}`);
 
-                if (!booleanWithin(drawnGeometry, boundary)) {
-                    if (featureGroupRef.current) {
-                        featureGroupRef.current.removeLayer(layer);
+            let newShape;
+            let shapeId = `shape-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+            layer.options.id = shapeId; // Assign ID to the layer options
+
+            if (geometryType === 'Polygon') {
+                // --- Polygon Specific Logic ---
+                // Basic boundary check (simplified)
+                if (boundaryData && boundaryData.features && boundaryData.features.length > 0) {
+                    const boundary = boundaryData.features[0];
+                    const boundaryGeometryType = boundary.geometry.type;
+                    console.log(`Boundary geometry type: ${boundaryGeometryType}`);
+
+                    // Only perform boundary check if the boundary is a Polygon or MultiPolygon
+                    if (boundaryGeometryType === 'Polygon' || boundaryGeometryType === 'MultiPolygon') {
+                        try {
+                            console.log('Checking boundary for geoJson:', geoJson);
+                            if (!booleanWithin(geoJson, boundary)) {
+                                if (featureGroupRef.current) {
+                                    featureGroupRef.current.removeLayer(layer);
+                                }
+                                alert(`Drawn shape is outside the ${barangayName || 'selected barangay'} boundary. Please draw within the designated area.`);
+                                return; // Stop processing if outside boundary
+                            }
+                        } catch (boundaryError) {
+                            console.error("Error during boundary check (booleanWithin failed):", boundaryError);
+                            // Continue processing the shape even if boundary check fails due to unexpected geometry
+                        }
+                    } else {
+                        console.warn(`Skipping boundary check because boundary geometry is of unexpected type: ${boundaryGeometryType}`);
                     }
-                    alert(`Drawn shape is outside the ${barangayName || 'selected barangay'} boundary. Please draw within the designated area.`);
-                    return;
+
+                } else {
+                    console.warn('Boundary data is not available or empty, skipping boundary check.');
                 }
+
+                newShape = {
+                    id: shapeId,
+                    layer: layer,
+                    properties: { // Initialize properties for Polygon
+                        name: '',
+                        area: layer.getArea ? layer.getArea() : 0, // Calculate area for polygons
+                        coordinateAccuracy: 'approximate', // Default
+                        barangay: barangayName, // From state/props
+                        firstName: '',
+                        middleName: '',
+                        surname: '',
+                        gender: 'Male',
+                        municipality: '',
+                        city: '',
+                        status: 'Single',
+                        street: '',
+                        farmType: 'Irrigated',
+                    },
+                };
+
+            } else if (geometryType === 'Point') {
+                // --- Marker Specific Logic ---
+                // No boundary check needed for markers
+
+                newShape = {
+                    id: shapeId,
+                    layer: layer,
+                    properties: { // Initialize properties for Marker
+                        name: '',
+                        area: 0, // Markers have no area
+                        coordinateAccuracy: 'exact', // Markers usually represent exact points
+                        barangay: barangayName, // From state/props
+                        firstName: '',
+                        middleName: '',
+                        surname: '',
+                        gender: 'Male',
+                        municipality: '',
+                        city: '',
+                        status: 'Single',
+                        street: '',
+                        farmType: 'Other', // Default to 'Other' or a marker-specific type
+                    },
+                };
+
+            } else {
+                // --- Handle Other Geometry Types ---
+                console.warn(`Ignoring created shape of unexpected type: ${geometryType}`);
+                // Optionally remove the layer if it's not the expected type
+                if (featureGroupRef.current && featureGroupRef.current.hasLayer(layer)) {
+                    featureGroupRef.current.removeLayer(layer);
+                }
+                return; // Stop processing if not a supported type
             }
 
-            if (featureGroupRef.current) {
+            // --- Common Logic for Supported Shapes (Polygon or Point) ---
+            // Manually add layer to the FeatureGroup if it wasn't automatically added by EditControl
+            // Note: EditControl typically adds the layer automatically, this might be redundant but adding for robustness
+            if (featureGroupRef.current && !featureGroupRef.current.hasLayer(layer)) {
                 featureGroupRef.current.addLayer(layer);
             }
 
-            const shapeId = `shape_${Date.now()}`;
-            layer.options.id = shapeId;
-            console.log('Shape created with ID:', shapeId, 'and layer:', layer);
-
-            const newShape = {
-                id: shapeId,
-                layer: layer,
-                properties: {
-                    name: '',
-                    area: 0,
-                    coordinateAccuracy: 'approximate',
-                    owner: '',
-                    status: 'owned',
-                    barangay: barangayName
-                }
-            };
-
+            // Add the new shape to the state
             setDrawnShapes(prev => [...prev, newShape]);
-            console.log('drawnShapes after creation:', drawnShapes);
+            console.log('New shape added to drawnShapes:', newShape);
 
+            // Fire callbacks
             if (onShapeCreated) {
                 onShapeCreated(newShape);
+                console.log('onShapeCreated callback fired');
+            }
+
+            console.log('Drawing mode typically disabled here after creation.');
+
+            if (onShapeSelected) {
+                onShapeSelected(newShape);
+                console.log('onShapeSelected callback fired for new shape');
+            }
+
+            if (onShapeFinalized) {
+                onShapeFinalized(newShape);
+                console.log('onShapeFinalized callback fired');
             }
         };
 
         const onEdited = (e: any) => {
-            console.log('onEdited triggered', e);
-            const layers = e.layers;
-            let reverted = false;
+            console.log('Shape edited (onEdited event)', e);
+            const editedLayers = e.layers.getLayers();
 
-            layers.eachLayer((layer: any) => {
-                const shapeId = layer.options.id;
+            const updatedShapes = drawnShapes.map(shape => {
+                const editedLayer = editedLayers.find((layer: any) => layer.options.id === shape.id);
+                if (editedLayer) {
+                    console.log('Updating edited shape:', shape.id, 'Geometry type:', editedLayer.toGeoJSON().geometry.type);
 
-                const editedGeometry = layer.toGeoJSON();
-
-                if (boundaryData && boundaryData.features && boundaryData.features.length > 0) {
-                    const boundary = boundaryData.features[0];
-
-                    if (!booleanWithin(editedGeometry, boundary)) {
-                        alert('Edited shape moved outside the boundary. The edit will be reverted.');
-                        reverted = true;
-                        return;
-                    }
-                }
-
-                const shapeIndex = drawnShapes.findIndex(shape => shape.id === shapeId);
-
-                if (shapeIndex !== -1) {
-                    const updatedShapes = [...drawnShapes];
-                    updatedShapes[shapeIndex] = {
-                        ...updatedShapes[shapeIndex],
-                        layer: layer
+                    const updatedShape = {
+                        ...shape,
+                        layer: editedLayer,
+                        properties: {
+                            ...shape.properties,
+                            // Update geometry-related properties if needed
+                            // Only calculate area if the layer is a Polygon and supports getArea
+                            area: (editedLayer.toGeoJSON().geometry.type === 'Polygon' && editedLayer.getArea) ? editedLayer.getArea() : shape.properties.area
+                        }
                     };
-                    setDrawnShapes(updatedShapes);
-                    console.log('drawnShapes after edit:', updatedShapes);
+
+                    // Basic boundary check for edited shapes (simplified) - only for Polygons
+                    if (editedLayer.toGeoJSON().geometry.type === 'Polygon' && boundaryData && boundaryData.features && boundaryData.features.length > 0) {
+                        const boundary = boundaryData.features[0];
+                        const boundaryGeometryType = boundary.geometry.type;
+                        console.log(`Boundary geometry type during edit check: ${boundaryGeometryType}`);
+
+                        // Only perform boundary check if the boundary is a Polygon or MultiPolygon
+                        if (boundaryGeometryType === 'Polygon' || boundaryGeometryType === 'MultiPolygon') {
+                            try {
+                                const geoJson = editedLayer.toGeoJSON();
+                                if (!booleanWithin(geoJson, boundary)) {
+                                    alert('Edited shape moved outside the boundary. The edit may be reverted on save.');
+                                    // Note: Actual reversion might need more complex state management
+                                }
+                            } catch (error) {
+                                console.error('Error during edited shape boundary check:', error);
+                            }
+                        } else {
+                            console.warn(`Skipping boundary check during edit because boundary geometry is of unexpected type: ${boundaryGeometryType}`);
+                        }
+                    }
+
+                    return updatedShape;
                 }
+                return shape;
             });
 
-            if (onShapeEdited) {
-                onShapeEdited(e);
+            setDrawnShapes(updatedShapes);
+            console.log('drawnShapes updated after edit');
+
+            // Find the edited shape to pass to onShapeEdited
+            const editedShape = updatedShapes.find(shape => editedLayers.some((layer: any) => layer.options.id === shape.id));
+
+            if (onShapeEdited && editedShape) {
+                onShapeEdited(editedShape);
+                console.log('onShapeEdited callback fired');
+            }
+
+            // Keep the edited shape selected after editing
+            if (onShapeSelected && editedShape) {
+                onShapeSelected(editedShape);
+                console.log('onShapeSelected callback fired after edit');
             }
         };
 
         const onDeleted = (e: any) => {
-            console.log('onDeleted triggered by map tool', e);
-            const layers = e.layers;
-            layers.eachLayer((layer: any) => {
-                console.log('Deleting shape with ID:', layer.options.id);
-                setDrawnShapes(prev => prev.filter(shape => shape.id !== layer.options.id));
-            });
-            console.log('drawnShapes after map tool deletion:', drawnShapes);
+            console.log('Shape deleted (onDeleted event)', e);
+            const deletedLayers = e.layers.getLayers();
+            const deletedShapeIds = deletedLayers.map((layer: any) => layer.options.id);
+
+            setDrawnShapes(prev => prev.filter(shape => !deletedShapeIds.includes(shape.id)));
+            console.log('drawnShapes updated after delete');
 
             if (onShapeDeleted) {
-                onShapeDeleted(e);
+                // Pass the deleted shapes' information if needed in the parent
+                const deletedShapesInfo = drawnShapes.filter(shape => deletedShapeIds.includes(shape.id));
+                onShapeDeleted({ layers: deletedLayers, shapes: deletedShapesInfo });
+                console.log('onShapeDeleted callback fired');
+            }
+
+            // Deselect if the selected shape was deleted
+            if (selectedShape && deletedShapeIds.includes(selectedShape.id) && onShapeSelected) {
+                onShapeSelected(null);
+                console.log('onShapeSelected callback fired after delete (deselect)');
             }
         };
-        const onFeatureGroupReady = (featureGroupInstance: L.FeatureGroup) => {
-            if (featureGroupRef && typeof featureGroupRef === 'object') {
-                (featureGroupRef as MutableRefObject<L.FeatureGroup>).current = featureGroupInstance;
+
+        // Use this effect to attach the click listener after the featureGroupRef is set
+        useEffect(() => {
+            const featureGroupInstance = featureGroupRef.current;
+            if (featureGroupInstance) {
+                console.log('FeatureGroup ref is set, adding click listener');
+                featureGroupInstance.on('click', onLayerClick);
+
+                // Cleanup function to remove the listener when the component unmounts or ref changes
+                return () => {
+                    console.log('Removing click listener');
+                    featureGroupInstance.off('click', onLayerClick);
+                };
             }
-            console.log('FeatureGroup is ready and assigned to ref:', featureGroupRef.current);
-
-            featureGroupInstance.on('click', (event: L.LeafletEvent) => {
-                const clickedLayer = event.layer;
-                console.log('Map clicked. Clicked layer:', clickedLayer);
-                const clickedShape = drawnShapes.find(shape => shape.layer.options && (clickedLayer as any).options && shape.layer.options.id === (clickedLayer as any).options.id);
-
-                if (clickedShape) {
-                    console.log('Shape clicked for selection:', clickedShape);
-                    if (onShapeSelected) {
-                        onShapeSelected(clickedShape);
-                    }
-                } else {
-                    console.log('Clicked outside a drawn shape, deselecting.');
-                    if (selectedShape && onShapeSelected) {
-                        onShapeSelected(null);
-                    }
-                }
-            });
-
-            return () => {
-                featureGroupInstance.off('click');
-            };
-        };
+        }, [featureGroupRef.current, onLayerClick]); // Re-run if ref changes or onLayerClick identity changes (though it shouldn't)
 
         if (loading) {
             return <div>Loading map data...</div>;
@@ -374,18 +534,23 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                         />
                     )}
 
-                    <FeatureGroup ref={featureGroupRef} eventHandlers={{ add: (e) => onFeatureGroupReady(e.target) }}>
+                    <FeatureGroup ref={featureGroupRef}>
                         <EditControl
                             position="topright"
                             onCreated={onCreated}
                             onEdited={onEdited}
                             onDeleted={onDeleted}
                             draw={{
+                                polyline: false,
+                                polygon: { showArea: true },
                                 rectangle: false,
                                 circle: false,
+                                marker: true,
                                 circlemarker: false,
-                                marker: false,
-                                polyline: false
+                            }}
+                            edit={{
+                                featureGroup: featureGroupRef.current || undefined,
+                                remove: true,
                             }}
                         />
                     </FeatureGroup>

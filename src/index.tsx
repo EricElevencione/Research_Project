@@ -8,6 +8,7 @@ import FarmlandPage from './screens/FarmlandPage';
 import RSBSAForm from './screens/RSBSAForm';
 import BarangayDashboardPage from './screens/BarangayDashboardPage';
 import LandPlottingPage from './screens/LandPlottingPage';
+import AddFarmerPage from './screens/AddFarmerPage';
 import './assets/css/index.css';
 
 // Protected Route component
@@ -43,6 +44,8 @@ function App() {
                         <ActiveFarmerPage />
                     </ProtectedRoute>
                 } />
+                <Route path="/add-farmer" element={<AddFarmerPage />} />
+                <Route path="/add-farmer/:firstName/:middleName/:surname/:area" element={<AddFarmerPage />} />
                 <Route path="/farmlands" element={
                     <ProtectedRoute>
                         <FarmlandPage />

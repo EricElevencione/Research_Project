@@ -1,7 +1,12 @@
 .farmers-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: visible;
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
+    width: 100%;
 }
 
 .farmers-header {
@@ -87,17 +92,20 @@
 .farmers-table-container {
     margin-top: 20px;
     overflow-x: auto;
+    flex-grow: 1;
     border: 1px solid #eee;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    padding: 0 15px;
+    padding: 0 15px 200px 15px;
+    width: 100%;
+    flex-shrink: 0;
 }
 
 .farmers-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .farmers-table thead th {
@@ -116,6 +124,7 @@
     border-bottom: 1px solid #eee;
     color: #333;
     font-size: 0.9rem;
+    overflow: visible;
 }
 
 .farmers-table tbody tr:last-child td {
@@ -290,9 +299,9 @@
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
+    z-index: 9999;
     min-width: 120px;
-    overflow: hidden;
+    overflow: visible;
     animation: dropdownFadeIn 0.2s ease-out;
 }
 
@@ -468,6 +477,7 @@
     font-weight: 500;
     transition: all 0.2s ease;
     text-align: left;
+    color: #000;
 }
 
 .status-option-btn:hover {
@@ -602,4 +612,237 @@
         padding: 10px 14px;
         font-size: 0.85rem;
     }
+}
+
+/* Add Farmer Form Styles */
+.farmer-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+    margin: 0 auto;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h2 {
+    color: #333;
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #555;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.cancel-button {
+    padding: 0.75rem 1.5rem;
+    background-color: #f5f5f5;
+    color: #333;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.cancel-button:hover {
+    background-color: #e0e0e0;
+}
+
+.submit-button {
+    padding: 0.75rem 1.5rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.submit-button:hover {
+    background-color: #45a049;
+}
+
+/* Responsive adjustments for the form */
+@media (max-width: 768px) {
+    .farmer-form {
+        padding: 1rem;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .cancel-button,
+    .submit-button {
+        width: 100%;
+    }
+}
+
+/* Add scrolling styles */
+
+.active-farmer-page {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.scrollable-content {
+    flex: 1;
+    overflow-y: visible;
+    min-height: 0;
+}
+
+.farmers-container {
+    flex: 1;
+    padding: 0 2rem 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Customize scrollbar appearance */
+.farmers-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.farmers-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.farmers-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.farmers-container::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* Ensure the table container expands to fit content and doesn't handle its own vertical scrolling */
+.farmers-table-container {
+    margin-top: 20px;
+    overflow-x: auto;
+    flex-grow: 1;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    padding: 0 15px 200px 15px;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* Keep the header fixed while scrolling */
+.farmers-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    padding: 1rem 2rem;
+    margin: 0 auto;
+    max-width: 1200px;
+    width: 100%;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+/* Ensure the add farmer container stays below the table and doesn't shrink */
+.add-farmer-container {
+    flex-shrink: 0;
+    margin-top: 1rem;
+    padding: 0 15px;
+}
+
+/* New styles for the scrollable content wrapper */
+.scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Customize scrollbar appearance for the form */
+.farmer-form::-webkit-scrollbar {
+    width: 8px;
+}
+
+.farmer-form::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.farmer-form::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.farmer-form::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* Ensure table rows do not clip content from absolutely positioned children of their cells */
+.farmers-table tbody tr {
+    overflow: visible;
 }
