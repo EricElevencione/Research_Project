@@ -54,7 +54,7 @@ const LandPlottingPage: React.FC = () => {
 
     const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof LandAttributes, string>>>({});
 
-    const handleAttributeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleAttributeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setLandAttributes(prev => ({
             ...prev,
