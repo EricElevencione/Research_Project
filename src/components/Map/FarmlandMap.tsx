@@ -1,4 +1,3 @@
-// src/components/Map/FarmlandMap.tsx
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -19,12 +18,10 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 interface FarmlandMapProps {
-    barangayName?: string;
     onLandPlotSelect?: (properties: any) => void;
 }
 
-// Move MapController inside FarmlandMap component to ensure proper context
-const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelect }) => {
+const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
     const [farmlandRecords, setFarmlandRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -33,9 +30,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
     const [boundaryLoading, setBoundaryLoading] = useState(true);
     const [boundaryError, setBoundaryError] = useState<string | null>(null);
 
-    // MapController component moved inside FarmlandMap to ensure proper context
     const MapController: React.FC<{ data: any }> = ({ data }) => {
-        const map = useMap(); // Now useMap is called within MapContainer context
+        const map = useMap();
 
         useEffect(() => {
             if (data && data.features && data.features.length > 0) {
@@ -110,7 +106,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
                 setBoundaryLoading(true);
                 setBoundaryError(null);
 
-                // Fetch municipal boundary
                 const municipalResponse = await fetch('/Dumangas.geojson');
                 if (!municipalResponse.ok) {
                     throw new Error(`Failed to fetch municipal boundary data: ${municipalResponse.status} ${municipalResponse.statusText}`);
@@ -121,7 +116,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
                 }
                 setMunicipalBoundaryData(municipalData);
 
-                // Fetch all barangay boundaries
                 const barangays = ['Lacturan', 'Calao'];
                 const boundaries: { [key: string]: any } = {};
 
@@ -151,14 +145,14 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
         fetchBoundaryData();
     }, []);
 
-    const getMunicipalStyle = (feature: any) => ({
+    const getMunicipalStyle = () => ({
         color: '#e74c3c',
         weight: 3,
         opacity: 0.8,
         fillOpacity: 0,
     });
 
-    const getBarangayStyle = (feature: any) => ({
+    const getBarangayStyle = () => ({
         color: '#3498db',
         weight: 2,
         opacity: 0.6,
@@ -195,7 +189,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
                 opacity={1}
             />
 
-            {/* Render Municipal Boundary */}
             {municipalBoundaryData && (
                 <GeoJSON
                     key="municipal-boundary"
@@ -204,7 +197,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
                 />
             )}
 
-            {/* Render All Barangay Boundaries */}
             {Object.entries(barangayBoundaries).map(([name, data]) => (
                 <GeoJSON
                     key={`barangay-boundary-${name}`}
@@ -213,7 +205,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
                 />
             ))}
 
-            {/* Render Farmland Records */}
             {farmlandRecords && farmlandRecords.length > 0 && (
                 <GeoJSON
                     key="farmland-data"
@@ -268,14 +259,13 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
                                     <tr><td><b>Street:</b></td><td>${feature.properties.street || 'N/A'}</td></tr>
                                     <tr><td><b>Farm Type:</b></td><td>${feature.properties.farmType || 'N/A'}</td></tr>
                                     <tr><td><b>Area (ha):</b></td><td>${feature.properties.area || 'N/A'}</td></tr>
-                                    <tr><td><b>Coordinate Accuracy:</b></td><td>${feature.properties.coordinateAccuracy || 'N/A'}</td></tr>
+                                    <tr><td><b>Coordinate Accuracy:</b></td><td>${feature.properties.coordinateAccuracy || 'N/A'}</td></Ti>
                                     <tr><td><b>Created At:</b></td><td>${feature.properties.createdAt ? new Date(feature.properties.createdAt).toLocaleString() : 'N/A'}</td></tr>
                                     <tr><td><b>Updated At:</b></td><td>${feature.properties.updatedAt ? new Date(feature.properties.updatedAt).toLocaleString() : 'N/A'}</td></tr>
                                 </table>
                             </div>`;
                             layer.bindPopup(popupContent);
 
-                            // Add click event to the layer to select the land plot
                             layer.on({
                                 click: () => {
                                     if (onLandPlotSelect) {
@@ -308,4 +298,4 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName, onLandPlotSelec
     );
 };
 
-export default FarmlandMap; 
+export default FarmlandMap;
