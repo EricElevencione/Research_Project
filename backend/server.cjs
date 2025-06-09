@@ -111,67 +111,30 @@ app.post('/api/land-plots', async (req, res) => {
 
         const insertQuery = `
             INSERT INTO land_plots (
-                status,
-                barangay_name,
-                municipality_name,
-                province_name,
-                owner_name,
-                contact_number,
-                tenurial_status,
-                area,
-                crop,
-                crop_stages,
-                planting_date,
-                harvest_date,
-                farm_type,
-                irrigation_type,
-                gs_lat,
-                gs_lon,
-                notes,
-                geom
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, ST_SetSRID(ST_GeomFromGeoJSON($19), 4326))
-            ON CONFLICT (id) DO UPDATE 
-            SET
-                status = EXCLUDED.status,
-                barangay_name = EXCLUDED.barangay_name,
-                municipality_name = EXCLUDED.municipality_name,
-                province_name = EXCLUDED.province_name,
-                owner_name = EXCLUDED.owner_name,
-                contact_number = EXCLUDED.contact_number,
-                tenurial_status = EXCLUDED.tenurial_status,
-                area = EXCLUDED.area,
-                crop = EXCLUDED.crop,
-                crop_stages = EXCLUDED.crop_stages,
-                planting_date = EXCLUDED.planting_date,
-                harvest_date = EXCLUDED.harvest_date,
-                farm_type = EXCLUDED.farm_type,
-                irrigation_type = EXCLUDED.irrigation_type,
-                gs_lat = EXCLUDED.gs_lat,
-                gs_lon = EXCLUDED.gs_lon,
-                notes = EXCLUDED.notes,
-                geom = EXCLUDED.geom;
+                id, firstname, middlename, surname, gender, barangay_name, municipality_name, province_name, 
+                status, street, farm_type, area, coordinateaccuracy, geom, createdat, updatedat, name
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, ST_GeomFromGeoJSON($14), $15, $16, $17
+            )
         `;
-
         const values = [
             landPlotData.id,
-            landPlotData.status || null,
-            landPlotData.barangayName || null,
-            landPlotData.municipalityName || null,
-            landPlotData.provinceName || null,
-            landPlotData.ownerName || null,
-            landPlotData.contactNumber || null,
-            landPlotData.tenurialStatus || null,
-            landPlotData.area || null,
-            landPlotData.crop || null,
-            landPlotData.cropStages || null,
-            landPlotData.plantingDate || null,
-            landPlotData.harvestDate || null,
-            landPlotData.farmType || null,
-            landPlotData.irrigationType || null,
-            landPlotData.gs_lat || null,
-            landPlotData.gs_lon || null,
-            landPlotData.notes || null,
-            geometry // Pass the GeoJSON string here
+            landPlotData.firstName,
+            landPlotData.middleName,
+            landPlotData.surname,
+            landPlotData.gender,
+            landPlotData.barangay,
+            landPlotData.municipality,
+            landPlotData.province,
+            landPlotData.status,
+            landPlotData.street,
+            landPlotData.farmType,
+            landPlotData.area,
+            landPlotData.coordinateAccuracy,
+            geometry,
+            landPlotData.createdAt,
+            landPlotData.updatedAt,
+            landPlotData.name || null
         ];
 
         await pool.query(insertQuery, values);
@@ -184,41 +147,55 @@ app.post('/api/land-plots', async (req, res) => {
     }
 });
 
+// API endpoint to get land plots
 app.get('/api/land-plots', async (req, res) => {
-    console.log('Received GET request to /api/land-plots');
-
     try {
-        const result = await pool.query('SELECT id, status, barangay_name, municipality_name, province_name, owner_name, contact_number, tenurial_status, area, crop, crop_stages, planting_date, harvest_date, farm_type, irrigation_type, gs_lat, gs_lon, notes, ST_AsGeoJSON(geom) AS geometry FROM land_plots');
+        console.log('Fetching land plots...');
+        const result = await pool.query(`
+            SELECT 
+                id,
+                name,
+                firstname as "firstName",
+                middlename as "middleName",
+                surname,
+                gender,
+                barangay_name as "barangay",
+                municipality_name as "municipality",
+                province_name as "province",
+                status,
+                street,
+                farm_type as "farmType",
+                area,
+                coordinateaccuracy as "coordinateAccuracy",
+                createdat as "createdAt",
+                updatedat as "updatedAt",
+                ST_AsGeoJSON(geom) as geometry
+            FROM land_plots
+            ORDER BY createdat DESC
+        `);
 
-        // Map the results to match the frontend structure, converting geometry back to object
-        const savedLandPlots = result.rows.map(row => ({
-            id: row.id,
-            status: row.status,
-            barangayName: row.barangay_name,
-            municipalityName: row.municipality_name,
-            provinceName: row.province_name,
-            ownerName: row.owner_name,
-            contactNumber: row.contact_number,
-            tenurialStatus: row.tenurial_status,
-            area: row.area,
-            crop: row.crop,
-            cropStages: row.crop_stages,
-            plantingDate: row.planting_date,
-            harvestDate: row.harvest_date,
-            farmType: row.farm_type,
-            irrigationType: row.irrigation_type,
-            gs_lat: row.gs_lat,
-            gs_lon: row.gs_lon,
-            notes: row.notes,
-            geometry: JSON.parse(row.geometry) // Parse the GeoJSON string back to an object
+        const landPlots = result.rows.map(row => ({
+            ...row,
+            geometry: JSON.parse(row.geometry)
         }));
 
-        console.log('Sending saved land plots:', savedLandPlots.length, 'rows');
-        res.setHeader('Content-Type', 'application/json');
-        res.json(savedLandPlots);
+        console.log(`Retrieved ${landPlots.length} land plots`);
+        res.json(landPlots);
     } catch (error) {
-        console.error('Error fetching /api/land-plots GET:', error);
-        res.status(500).json({ message: 'Error fetching land plot data', error: error.message });
+        console.error('Error fetching land plots:', error);
+        res.status(500).json({ error: 'Failed to fetch land plots' });
+    }
+});
+
+// API endpoint to delete a land plot
+app.delete('/api/land-plots/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM land_plots WHERE id = $1', [id]);
+        res.json({ message: 'Land plot deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting land plot:', error);
+        res.status(500).json({ error: 'Failed to delete land plot' });
     }
 });
 

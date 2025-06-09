@@ -1,8 +1,8 @@
-// src/components/Map/FarmlandMap.tsx
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L, { LatLngBounds } from 'leaflet'; // Import LatLngBounds
+import { FeatureCollection, Feature } from 'geojson'; // Import FeatureCollection and Feature types
 
 // Fix for default marker icons in Leaflet with React
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -18,21 +18,20 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 interface FarmlandMapProps {
-    barangayName?: string;
+    onLandPlotSelect?: (properties: any) => void;
 }
 
-// Move MapController inside FarmlandMap component to ensure proper context
-const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName }) => {
+const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
     const [farmlandRecords, setFarmlandRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [boundaryData, setBoundaryData] = useState<any>(null);
+    const [municipalBoundaryData, setMunicipalBoundaryData] = useState<any>(null);
+    const [barangayBoundaries, setBarangayBoundaries] = useState<{ [key: string]: any }>({});
     const [boundaryLoading, setBoundaryLoading] = useState(true);
     const [boundaryError, setBoundaryError] = useState<string | null>(null);
 
-    // MapController component moved inside FarmlandMap to ensure proper context
     const MapController: React.FC<{ data: any }> = ({ data }) => {
-        const map = useMap(); // Now useMap is called within MapContainer context
+        const map = useMap();
 
         useEffect(() => {
             if (data && data.features && data.features.length > 0) {
@@ -103,48 +102,38 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName }) => {
 
     useEffect(() => {
         const fetchBoundaryData = async () => {
-            if (!barangayName) {
-                setBoundaryData(null);
-                setBoundaryLoading(false);
-                return;
-            }
-
             try {
                 setBoundaryLoading(true);
                 setBoundaryError(null);
 
-                const formattedName = barangayName.charAt(0).toUpperCase() + barangayName.slice(1).toLowerCase();
-                console.log(`Fetching border for: ${formattedName}`);
-                const filename = `/${formattedName} Border.geojson`;
-
-                console.log('Attempting to fetch boundary:', filename);
-                const boundaryResponse = await fetch(filename);
-                if (!boundaryResponse.ok) {
-                    if (boundaryResponse.status === 404) {
-                        console.warn(`Boundary file not found for ${formattedName}. Attempting to fetch Dumangas Border.`);
-                        const defaultFilename = '/Dumangas Border.geojson';
-                        const defaultBoundaryResponse = await fetch(defaultFilename);
-                        if (!defaultBoundaryResponse.ok) {
-                            throw new Error(`Failed to fetch default boundary data: ${defaultBoundaryResponse.status} ${defaultBoundaryResponse.statusText}`);
-                        }
-                        const defaultBoundaryData = await defaultBoundaryResponse.json();
-                        if (!defaultBoundaryData || !defaultBoundaryData.type || !defaultBoundaryData.features) {
-                            throw new Error(`Invalid default boundary GeoJSON data format`);
-                        }
-                        console.log('Fetched default boundary data.', defaultBoundaryData);
-                        setBoundaryData(defaultBoundaryData);
-                    } else {
-                        throw new Error(`Failed to fetch ${formattedName} Border boundary data: ${boundaryResponse.status} ${boundaryResponse.statusText}`);
-                    }
-                } else {
-                    const boundaryData = await boundaryResponse.json();
-                    console.log('Fetched specific boundary data.', boundaryData);
-                    if (!boundaryData || !boundaryData.type || !boundaryData.features) {
-                        throw new Error(`Invalid ${formattedName} Border GeoJSON data format`);
-                    }
-                    console.log('Fetched specific boundary data.', boundaryData);
-                    setBoundaryData(boundaryData);
+                const municipalResponse = await fetch('/Dumangas.geojson');
+                if (!municipalResponse.ok) {
+                    throw new Error(`Failed to fetch municipal boundary data: ${municipalResponse.status} ${municipalResponse.statusText}`);
                 }
+                const municipalData = await municipalResponse.json();
+                if (!municipalData || !municipalData.type || !municipalData.features) {
+                    throw new Error('Invalid municipal boundary GeoJSON data format');
+                }
+                setMunicipalBoundaryData(municipalData);
+
+                const barangays = ['Lacturan', 'Calao'];
+                const boundaries: { [key: string]: any } = {};
+
+                for (const barangay of barangays) {
+                    try {
+                        const response = await fetch(`/${barangay} Border.geojson`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data && data.type && data.features) {
+                                boundaries[barangay] = data;
+                            }
+                        }
+                    } catch (err) {
+                        console.warn(`Failed to fetch boundary for ${barangay}:`, err);
+                    }
+                }
+
+                setBarangayBoundaries(boundaries);
             } catch (err: any) {
                 console.error("Error fetching boundary data:", err);
                 setBoundaryError(err.message || 'Failed to load boundary data');
@@ -154,10 +143,17 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName }) => {
         };
 
         fetchBoundaryData();
-    }, [barangayName]);
+    }, []);
 
-    const style = (feature: any) => ({
-        color: 'red',
+    const getMunicipalStyle = () => ({
+        color: '#e74c3c',
+        weight: 3,
+        opacity: 0.8,
+        fillOpacity: 0,
+    });
+
+    const getBarangayStyle = () => ({
+        color: '#3498db',
         weight: 2,
         opacity: 0.6,
         fillOpacity: 0,
@@ -172,7 +168,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName }) => {
     }
 
     console.log('Rendering map with farmlandRecords:', farmlandRecords);
-    console.log('Rendering map with boundaryData:', boundaryData);
+    console.log('Rendering map with municipalBoundaryData:', municipalBoundaryData);
+    console.log('Rendering map with barangayBoundaries:', barangayBoundaries);
 
     return (
         <MapContainer
@@ -192,41 +189,113 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ barangayName }) => {
                 opacity={1}
             />
 
-            {/* Render Boundary GeoJSON if available */}
-            {/* {boundaryData && (
+            {municipalBoundaryData && (
                 <GeoJSON
-                    key={barangayName || 'default-boundary'}
-                    data={boundaryData}
-                    style={style}
+                    key="municipal-boundary"
+                    data={municipalBoundaryData}
+                    style={getMunicipalStyle}
                 />
-            )} */}
+            )}
 
-            {/* Render Farmland GeoJSON (fetched from backend) */}
-            {/* {farmlandRecords && farmlandRecords.map((record, index) => {
-                if (record.geometry && record.geometry.type) {
-                    return (
-                    <GeoJSON
-                            key={record.id || `farmland-${index}`}
-                            data={record}
-                            style={() => ({
-                                color: 'blue',
-                                weight: 2,
-                                opacity: 0.8,
-                                fillOpacity: 0.5
-                            })}
-                    />
-                    );
-                }
-                console.warn('Skipping rendering for record with missing or invalid geometry:', record);
-                return null;
-            })} */}
+            {Object.entries(barangayBoundaries).map(([name, data]) => (
+                <GeoJSON
+                    key={`barangay-boundary-${name}`}
+                    data={data}
+                    style={getBarangayStyle}
+                />
+            ))}
 
-            {/* <MapController data={{ 
-                type: 'FeatureCollection', 
-                features: [...(farmlandRecords || []), ...(boundaryData?.features || [])] 
-            }} /> */}
+            {farmlandRecords && farmlandRecords.length > 0 && (
+                <GeoJSON
+                    key="farmland-data"
+                    data={{
+                        type: 'FeatureCollection',
+                        features: farmlandRecords.map(record => {
+                            if (record.geometry && record.geometry.type) {
+                                return {
+                                    type: 'Feature',
+                                    geometry: record.geometry,
+                                    properties: {
+                                        id: record.id,
+                                        firstName: record.firstName,
+                                        middleName: record.middleName,
+                                        surname: record.surname,
+                                        gender: record.gender,
+                                        barangay: record.barangayName,
+                                        municipality: record.municipalityName,
+                                        province: record.provinceName,
+                                        status: record.status,
+                                        street: record.street,
+                                        farmType: record.farmType,
+                                        area: record.area,
+                                        coordinateAccuracy: record.coordinateAccuracy,
+                                        createdAt: record.createdAt,
+                                        updatedAt: record.updatedAt
+                                    }
+                                };
+                            }
+                            return null;
+                        }).filter(Boolean)
+                    } as FeatureCollection}
+                    style={() => ({
+                        color: 'blue',
+                        weight: 2,
+                        opacity: 0.8,
+                        fillOpacity: 0.5
+                    })}
+                    onEachFeature={(feature, layer) => {
+                        if (feature.properties) {
+                            let popupContent = `<div class="land-plot-popup">
+                                <table>
+                                    <tr><th>Attribute</th><th>Value</th></tr>
+                                    <tr><td><b>First Name:</b></td><td>${feature.properties.firstName || 'N/A'}</td></tr>
+                                    <tr><td><b>Middle Name:</b></td><td>${feature.properties.middleName || 'N/A'}</td></tr>
+                                    <tr><td><b>Surname:</b></td><td>${feature.properties.surname || 'N/A'}</td></tr>
+                                    <tr><td><b>Gender:</b></td><td>${feature.properties.gender || 'N/A'}</td></tr>
+                                    <tr><td><b>Barangay:</b></td><td>${feature.properties.barangay || 'N/A'}</td></tr>
+                                    <tr><td><b>Municipality:</b></td><td>${feature.properties.municipality || 'N/A'}</td></tr>
+                                    <tr><td><b>Province:</b></td><td>${feature.properties.province || 'N/A'}</td></tr>
+                                    <tr><td><b>Status:</b></td><td>${feature.properties.status || 'N/A'}</td></tr>
+                                    <tr><td><b>Street:</b></td><td>${feature.properties.street || 'N/A'}</td></tr>
+                                    <tr><td><b>Farm Type:</b></td><td>${feature.properties.farmType || 'N/A'}</td></tr>
+                                    <tr><td><b>Area (ha):</b></td><td>${feature.properties.area || 'N/A'}</td></tr>
+                                    <tr><td><b>Coordinate Accuracy:</b></td><td>${feature.properties.coordinateAccuracy || 'N/A'}</td></Ti>
+                                    <tr><td><b>Created At:</b></td><td>${feature.properties.createdAt ? new Date(feature.properties.createdAt).toLocaleString() : 'N/A'}</td></tr>
+                                    <tr><td><b>Updated At:</b></td><td>${feature.properties.updatedAt ? new Date(feature.properties.updatedAt).toLocaleString() : 'N/A'}</td></tr>
+                                </table>
+                            </div>`;
+                            layer.bindPopup(popupContent);
+
+                            layer.on({
+                                click: () => {
+                                    if (onLandPlotSelect) {
+                                        onLandPlotSelect(feature.properties);
+                                    }
+                                }
+                            });
+                        }
+                    }}
+                />
+            )}
+
+            <MapController data={(() => {
+                const features: Feature[] = [
+                    ...(municipalBoundaryData?.features || []),
+                    ...Object.values(barangayBoundaries).flatMap(data => data.features || []),
+                    ...(farmlandRecords || []).map(record => ({
+                        type: 'Feature',
+                        geometry: record.geometry,
+                        properties: record
+                    }))
+                ].filter((feature): feature is Feature => feature !== null);
+
+                return {
+                    type: 'FeatureCollection',
+                    features
+                } as FeatureCollection;
+            })()} />
         </MapContainer>
     );
 };
 
-export default FarmlandMap; 
+export default FarmlandMap;

@@ -3,18 +3,21 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface LandRecord {
-    id: number;
-    "FIRST NAME": string;
-    "MIDDLE NAME": string | null;
-    "EXT NAME": string | null;
-    "GENDER": string;
-    "BIRTHDATE": string;
-    "FARMER ADDRESS 1": string;
-    "FARMER ADDRESS 2": string;
-    "FARMER ADDRESS 3": string;
-    "PARCEL NO.": string;
-    "PARCEL ADDRESS": string;
-    "PARCEL AREA": string;
+    id: string;
+    firstName: string;
+    middleName: string | null;
+    surname: string;
+    gender: 'Male' | 'Female';
+    barangay: string;
+    municipality: string;
+    province: string;
+    status: 'Tenant' | 'Land Owner' | 'Farmer';
+    street: string;
+    farmType: 'Irrigated' | 'Rainfed Upland' | 'Rainfed Lowland';
+    area: number;
+    coordinateAccuracy: 'exact' | 'approximate';
+    createdAt: string;
+    updatedAt: string;
 }
 
 const LandsPage: React.FC = () => {
@@ -25,7 +28,7 @@ const LandsPage: React.FC = () => {
 
     const fetchLandRecords = async () => {
         try {
-            const response = await fetch('/api/lands');
+            const response = await fetch('http://localhost:5000/api/land-plots');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -42,15 +45,14 @@ const LandsPage: React.FC = () => {
         fetchLandRecords();
     }, []);
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this record?')) {
             try {
-                const response = await fetch(`/api/lands/${id}`, {
+                const response = await fetch(`http://localhost:5000/api/land-plots/${id}`, {
                     method: 'DELETE',
                 });
 
                 if (response.ok) {
-                    // Remove the deleted record from the state
                     setLandRecords(landRecords.filter(record => record.id !== id));
                 } else {
                     throw new Error('Failed to delete record');
@@ -84,32 +86,34 @@ const LandsPage: React.FC = () => {
                         <tr>
                             <th>First Name</th>
                             <th>Middle Name</th>
-                            <th>Ext Name</th>
+                            <th>Surname</th>
                             <th>Gender</th>
-                            <th>Birthdate</th>
-                            <th>Address 1</th>
-                            <th>Address 2</th>
-                            <th>Address 3</th>
-                            <th>Parcel No.</th>
-                            <th>Parcel Address</th>
-                            <th>Parcel Area</th>
+                            <th>Barangay</th>
+                            <th>Municipality</th>
+                            <th>Province</th>
+                            <th>Status</th>
+                            <th>Street</th>
+                            <th>Farm Type</th>
+                            <th>Area (ha)</th>
+                            <th>Coordinate Accuracy</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {landRecords.map((record, index) => (
-                            <tr key={index}>
-                                <td>{record["FIRST NAME"]}</td>
-                                <td>{record["MIDDLE NAME"]}</td>
-                                <td>{record["EXT NAME"]}</td>
-                                <td>{record["GENDER"]}</td>
-                                <td>{record["BIRTHDATE"]}</td>
-                                <td>{record["FARMER ADDRESS 1"]}</td>
-                                <td>{record["FARMER ADDRESS 2"]}</td>
-                                <td>{record["FARMER ADDRESS 3"]}</td>
-                                <td>{record["PARCEL NO."]}</td>
-                                <td>{record["PARCEL ADDRESS"]}</td>
-                                <td>{record["PARCEL AREA"]}</td>
+                        {landRecords.map((record) => (
+                            <tr key={record.id}>
+                                <td>{record.firstName}</td>
+                                <td>{record.middleName}</td>
+                                <td>{record.surname}</td>
+                                <td>{record.gender}</td>
+                                <td>{record.barangay}</td>
+                                <td>{record.municipality}</td>
+                                <td>{record.province}</td>
+                                <td>{record.status}</td>
+                                <td>{record.street}</td>
+                                <td>{record.farmType}</td>
+                                <td>{record.area}</td>
+                                <td>{record.coordinateAccuracy}</td>
                                 <td>
                                     <button
                                         className="delete-button"
