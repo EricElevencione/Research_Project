@@ -6,9 +6,9 @@ const RoleSelection = () => {
 
     const handleRoleSelect = (role: string) => {
         if (role === 'farmer') {
-            navigate ('/RSBSAForm/');
+            navigate('/RSBSAForm/');
         } else {
-        navigate(`/login/${role}`);
+            navigate(`/login/${role}`);
         }
     };
 
@@ -16,9 +16,13 @@ const RoleSelection = () => {
         <div className="role-selection-container">
             <h2>Select User Role</h2>
             <div className="role-buttons">
-                <button onClick={() => handleRoleSelect('admin')}>Admin</button>
-                <button onClick={() => handleRoleSelect('technician')}>Technician</button>
+                <button onClick={() => handleRoleSelect('admin')}>Admin Login</button>
+                <button onClick={() => handleRoleSelect('technician')}>Technician Login</button>
                 <button onClick={() => handleRoleSelect('farmer')}>Farmer Online Registration</button>
+            </div>
+            <div className="role-buttons" style={{ marginTop: '20px' }}>
+                <button onClick={() => navigate('/register/admin')}>Register as Admin</button>
+                <button onClick={() => navigate('/register/technician')}>Register as Technician</button>
             </div>
         </div>
     );

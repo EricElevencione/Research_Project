@@ -248,20 +248,18 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                             let popupContent = `<div class="land-plot-popup">
                                 <table>
                                     <tr><th>Attribute</th><th>Value</th></tr>
+                                    <tr><td><b>FFRS ID:</b></td><td>${feature.properties.ffrs_id || 'N/A'}</td></tr>
+                                    <tr><td><b>Last Name:</b></td><td>${feature.properties.surname || 'N/A'}</td></tr>
                                     <tr><td><b>First Name:</b></td><td>${feature.properties.firstName || 'N/A'}</td></tr>
                                     <tr><td><b>Middle Name:</b></td><td>${feature.properties.middleName || 'N/A'}</td></tr>
-                                    <tr><td><b>Surname:</b></td><td>${feature.properties.surname || 'N/A'}</td></tr>
+                                    <tr><td><b>Name Extension:</b></td><td>${feature.properties.ext_name || 'N/A'}</td></tr>
                                     <tr><td><b>Gender:</b></td><td>${feature.properties.gender || 'N/A'}</td></tr>
+                                    <tr><td><b>Birthdate:</b></td><td>${feature.properties.birthdate ? new Date(feature.properties.birthdate).toLocaleDateString() : 'N/A'}</td></tr>
                                     <tr><td><b>Barangay:</b></td><td>${feature.properties.barangay || 'N/A'}</td></tr>
                                     <tr><td><b>Municipality:</b></td><td>${feature.properties.municipality || 'N/A'}</td></tr>
                                     <tr><td><b>Province:</b></td><td>${feature.properties.province || 'N/A'}</td></tr>
-                                    <tr><td><b>Status:</b></td><td>${feature.properties.status || 'N/A'}</td></tr>
-                                    <tr><td><b>Street:</b></td><td>${feature.properties.street || 'N/A'}</td></tr>
-                                    <tr><td><b>Farm Type:</b></td><td>${feature.properties.farmType || 'N/A'}</td></tr>
-                                    <tr><td><b>Area (ha):</b></td><td>${feature.properties.area || 'N/A'}</td></tr>
-                                    <tr><td><b>Coordinate Accuracy:</b></td><td>${feature.properties.coordinateAccuracy || 'N/A'}</td></Ti>
-                                    <tr><td><b>Created At:</b></td><td>${feature.properties.createdAt ? new Date(feature.properties.createdAt).toLocaleString() : 'N/A'}</td></tr>
-                                    <tr><td><b>Updated At:</b></td><td>${feature.properties.updatedAt ? new Date(feature.properties.updatedAt).toLocaleString() : 'N/A'}</td></tr>
+                                    <tr><td><b>Parcel Address:</b></td><td>${feature.properties.parcel_address || 'N/A'}</td></tr>
+                                    <tr><td><b>Parcel Area:</b></td><td>${feature.properties.area || 'N/A'}</td></tr>
                                 </table>
                             </div>`;
                             layer.bindPopup(popupContent);
@@ -277,23 +275,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                     }}
                 />
             )}
-
-            <MapController data={(() => {
-                const features: Feature[] = [
-                    ...(municipalBoundaryData?.features || []),
-                    ...Object.values(barangayBoundaries).flatMap(data => data.features || []),
-                    ...(farmlandRecords || []).map(record => ({
-                        type: 'Feature',
-                        geometry: record.geometry,
-                        properties: record
-                    }))
-                ].filter((feature): feature is Feature => feature !== null);
-
-                return {
-                    type: 'FeatureCollection',
-                    features
-                } as FeatureCollection;
-            })()} />
         </MapContainer>
     );
 };

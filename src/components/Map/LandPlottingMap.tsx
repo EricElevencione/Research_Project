@@ -555,7 +555,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                         />
                     </FeatureGroup>
 
-                    {boundaryData && <MapController data={boundaryData} />}
+                    {/* {boundaryData && <MapController data={boundaryData} />} */}
                 </MapContainer>
             </div>
         );

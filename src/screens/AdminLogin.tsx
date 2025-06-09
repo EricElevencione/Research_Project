@@ -28,33 +28,40 @@ const Login: React.FC<LoginProps> = ({ role }) => {
         e.preventDefault();
         setError("");
 
-        // Basic validation
         if (!email || !password) {
             setError("Please fill in all fields");
             return;
         }
 
         try {
-            // For demo purposes, accept any non-empty email/password
-            // In a real application, you would validate against a backend
-            if (email && password) {
-                // Set authentication
-                localStorage.setItem('isAuthenticated', 'true');
-                localStorage.setItem('userEmail', email);
-
-                // If remember me is checked, set a longer expiration
-                if (rememberMe) {
-                    localStorage.setItem('rememberMe', 'true');
-                }
-
-                // Navigate to dashboard
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: email, password })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                setError(data.message || 'Login failed.');
+                return;
+            }
+            // Set authentication
+            localStorage.setItem('isAuthenticated', 'true');
+            localStorage.setItem('userEmail', data.user.email);
+            localStorage.setItem('userRole', data.user.role);
+            // If remember me is checked, set a longer expiration
+            if (rememberMe) {
+                localStorage.setItem('rememberMe', 'true');
+            }
+            // Navigate based on role
+            if (data.user.role === 'technician') {
+                navigate('/technician-dashboard');
+            } else if (data.user.role === 'admin') {
                 navigate('/dashboard');
             } else {
-                setError("Invalid credentials");
+                navigate('/dashboard'); // fallback
             }
         } catch (error) {
-            console.error('Login failed:', error);
-            setError("Login failed. Please try again.");
+            setError('Login failed. Please try again.');
         }
     };
 
@@ -76,11 +83,11 @@ const Login: React.FC<LoginProps> = ({ role }) => {
 
                     {/* Login Form */}
                     <form onSubmit={handleLogin}>
-                        {/* Email Field */}
-                        <label>Email</label>
+                        {/* Username Field */}
+                        <label>Username</label>
                         <input
-                            type="email"
-                            placeholder="Enter your email"
+                            type="text"
+                            placeholder="Enter your username"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required

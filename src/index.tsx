@@ -9,6 +9,8 @@ import RSBSAForm from './screens/RSBSAForm';
 import BarangayDashboardPage from './screens/BarangayDashboardPage';
 import LandPlottingPage from './screens/LandPlottingPage';
 import AddFarmerPage from './screens/AddFarmerPage';
+import TechnicianDashboard from './screens/TechnicianDashboard';
+import Register from './screens/Register';
 import './assets/css/index.css';
 
 // Protected Route component
@@ -66,6 +68,12 @@ function App() {
                         <LandPlottingPage />
                     </ProtectedRoute>
                 } />
+                <Route path="/technician-dashboard" element={
+                    <ProtectedRoute>
+                        <TechnicianDashboard />
+                    </ProtectedRoute>
+                } />
+                <Route path="/register/:role" element={<Register />} />
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </BrowserRouter>
