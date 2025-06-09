@@ -111,13 +111,15 @@ app.post('/api/land-plots', async (req, res) => {
         const geometry = JSON.stringify(landPlotData.geometry);
 
         const insertQuery = `
-            INSERT INTO land_plots (
-                id, firstname, middlename, surname, gender, barangay_name, municipality_name, province_name, 
-                status, street, farm_type, area, coordinateaccuracy, geom, createdat, updatedat, name
-            ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, ST_GeomFromGeoJSON($14), $15, $16, $17
-            )
-        `;
+    INSERT INTO land_plots (
+        id, firstname, middlename, surname, gender, barangay_name, municipality_name, province_name, 
+        status, street, farm_type, area, coordinateaccuracy, geom, createdat, updatedat, name,
+        ffrs_id, ext_name, birthdate, parcel_address
+    ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, ST_GeomFromGeoJSON($14), $15, $16, $17,
+        $18, $19, $20, $21
+    )
+`;
         const values = [
             landPlotData.id,
             landPlotData.firstName,
@@ -135,7 +137,11 @@ app.post('/api/land-plots', async (req, res) => {
             geometry,
             landPlotData.createdAt,
             landPlotData.updatedAt,
-            landPlotData.name || null
+            landPlotData.name || null,
+            landPlotData.ffrs_id || null,
+            landPlotData.ext_name || null,
+            landPlotData.birthdate || null,
+            landPlotData.parcel_address || null
         ];
 
         await pool.query(insertQuery, values);
@@ -170,6 +176,10 @@ app.get('/api/land-plots', async (req, res) => {
                 coordinateaccuracy as "coordinateAccuracy",
                 createdat as "createdAt",
                 updatedat as "updatedAt",
+                ffrs_id,
+                ext_name,
+                birthdate,
+                parcel_address,
                 ST_AsGeoJSON(geom) as geometry
             FROM land_plots
             ORDER BY createdat DESC
@@ -536,6 +546,45 @@ app.put('/api/farmers/:originalFirstName/:originalMiddleName/:originalSurname/:o
     } catch (error) {
         console.error('Error updating farmer:', error);
         res.status(500).json({ message: 'Error updating farmer', error: error.message });
+    }
+});
+
+// GET endpoint to fetch all farmers (for technician dashboard/stakeholders)
+app.get('/api/farmers', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                "FIRST NAME" as "firstName",
+                "MIDDLE NAME" as "middleName",
+                "LAST NAME" as "surname",
+                "GENDER" as "gender",
+                "FARMER ADDRESS 1" as "street",
+                "FARMER ADDRESS 2" as "barangay",
+                "FARMER ADDRESS 3" as "municipality_city",
+                "PARCEL AREA" as "area"
+            FROM masterlist
+        `);
+
+        // Optionally split municipality and city if needed
+        const farmers = result.rows.map(row => {
+            let municipality = '';
+            let city = '';
+            if (row.municipality_city) {
+                const parts = row.municipality_city.split(',');
+                municipality = parts[0]?.trim() || '';
+                city = parts[1]?.trim() || '';
+            }
+            return {
+                ...row,
+                municipality,
+                city
+            };
+        });
+
+        res.json(farmers);
+    } catch (err) {
+        console.error('Error fetching farmers:', err);
+        res.status(500).json({ error: 'Failed to fetch farmers' });
     }
 });
 

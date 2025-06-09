@@ -10,6 +10,8 @@ import BarangayDashboardPage from './screens/BarangayDashboardPage';
 import LandPlottingPage from './screens/LandPlottingPage';
 import AddFarmerPage from './screens/AddFarmerPage';
 import TechnicianDashboard from './screens/TechnicianDashboard';
+import TechnicianAddFarmerPage from './screens/TechnicianAddFarmerPage';
+import TechnicianStakeholdersPage from './screens/TechnicianStakeholdersPage';
 import Register from './screens/Register';
 import './assets/css/index.css';
 
@@ -71,6 +73,16 @@ function App() {
                 <Route path="/technician-dashboard" element={
                     <ProtectedRoute>
                         <TechnicianDashboard />
+                    </ProtectedRoute>
+                } />
+                <Route path="/technician-add-farmer" element={
+                    <ProtectedRoute>
+                        <TechnicianAddFarmerPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/technician-stakeholders" element={
+                    <ProtectedRoute>
+                        <TechnicianStakeholdersPage />
                     </ProtectedRoute>
                 } />
                 <Route path="/register/:role" element={<Register />} />

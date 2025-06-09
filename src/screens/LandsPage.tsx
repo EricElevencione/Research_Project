@@ -88,7 +88,7 @@ const LandsPage: React.FC = () => {
                 <table className="lands-table">
                     <thead>
                         <tr>
-                            <th>FFRS System genrated</th>
+                            <th>FFRS System Generated</th>
                             <th>Last Name</th>
                             <th>First Name</th>
                             <th>Middle Name</th>

@@ -217,6 +217,10 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                                     geometry: record.geometry,
                                     properties: {
                                         id: record.id,
+                                        ffrs_id: record.ffrs_id,
+                                        ext_name: record.ext_name,
+                                        birthdate: record.birthdate,
+                                        parcel_address: record.parcel_address,
                                         firstName: record.firstName,
                                         middleName: record.middleName,
                                         surname: record.surname,

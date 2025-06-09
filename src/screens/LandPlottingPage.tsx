@@ -102,6 +102,7 @@ const LandPlottingPage: React.FC = () => {
         try {
             const landPlotData = {
                 ...landAttributes,
+                area: Number(landAttributes.area),
                 geometry: shapeToSave.layer.toGeoJSON().geometry,
                 id: shapeToSave.id,
                 createdAt: new Date().toISOString(),
@@ -491,6 +492,36 @@ const LandPlottingPage: React.FC = () => {
                                                         disabled={!isEditingAttributes}
                                                         required
                                                     />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor="status">Status: *</label>
+                                                    <select
+                                                        id="status"
+                                                        name="status"
+                                                        value={landAttributes.status}
+                                                        onChange={handleAttributeChange}
+                                                        disabled={!isEditingAttributes}
+                                                        required
+                                                    >
+                                                        <option value="Tenant">Tenant</option>
+                                                        <option value="Land Owner">Land Owner</option>
+                                                        <option value="Farmer">Farmer</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label htmlFor="farmType">Farm Type: *</label>
+                                                    <select
+                                                        id="farmType"
+                                                        name="farmType"
+                                                        value={landAttributes.farmType}
+                                                        onChange={handleAttributeChange}
+                                                        disabled={!isEditingAttributes}
+                                                        required
+                                                    >
+                                                        <option value="Irrigated">Irrigated</option>
+                                                        <option value="Rainfed Upland">Rainfed Upland</option>
+                                                        <option value="Rainfed Lowland">Rainfed Lowland</option>
+                                                    </select>
                                                 </div>
                                             </div>
                                             <div className="form-actions">
