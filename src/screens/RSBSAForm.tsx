@@ -237,37 +237,43 @@ const RSBSAForm = () => {
 
                 <hr className="form-separator" />
 
-                <div className="form-row">
-                    <label>Type of Farming Activity:</label>
-                    <input type="checkbox" /> Rice
-                    <input type="checkbox" /> Corn
-                    <input type="checkbox" /> Other Crops
-                    <input type="checkbox" /> Livestock
-                    <input type="checkbox" /> Poultry
-                </div>
+                <div className="farm_profile-row">
+                    <div className="form-row type_activity-row">
+                        <label>For Farmers:</label>
+                        <label>Type of Farming Activity</label>
+                        <input type="checkbox" /> Rice
+                        <input type="checkbox" /> Corn
+                        <input type="checkbox" /> Other Crops
+                        <input type="checkbox" /> Livestock
+                        <input type="checkbox" /> Poultry
+                    </div>
 
-                <div className="form-row">
-                    <label>Kind of Work:</label>
-                    <input type="checkbox" /> Land Preparation
-                    <input type="checkbox" /> Planting/Transplanting
-                    <input type="checkbox" /> Cultivation
-                    <input type="checkbox" /> Harvesting
-                </div>
+                    <div className="form-row type_activity-row">
+                        <label>For Farmworkes:</label>
+                        <label>Kind of Work</label>
+                        <input type="checkbox" /> Land Preparation
+                        <input type="checkbox" /> Planting/Transplanting
+                        <input type="checkbox" /> Cultivation
+                        <input type="checkbox" /> Harvesting
+                    </div>
 
-                <div className="form-row">
-                    <label>Type of Fishing Activity:</label>
-                    <input type="checkbox" /> Fish Capture
-                    <input type="checkbox" /> Aquaculture
-                    <input type="checkbox" /> Gleaning
-                    <input type="checkbox" /> Fish Processing
-                    <input type="checkbox" /> Fish Vending
-                </div>
+                    <div className="form-row type_activity-row">
+                        <label>For Fisherfolk:</label>
+                        <label>Type of Fishing Activity</label>
+                        <input type="checkbox" /> Fish Capture
+                        <input type="checkbox" /> Aquaculture
+                        <input type="checkbox" /> Gleaning
+                        <input type="checkbox" /> Fish Processing
+                        <input type="checkbox" /> Fish Vending
+                    </div>
 
-                <div className="form-row">
-                    <label>Agri Youth Involvement:</label>
-                    <input type="checkbox" /> Part of a farming household
-                    <input type="checkbox" /> Attending agri-related course
-                    <input type="checkbox" /> Attending non-formal agri training
+                    <div className="form-row type_activity-row">
+                        <label>For Agri Youth:</label>
+                        <label>Type of Involvement</label>
+                        <input type="checkbox" /> Part of a farming household
+                        <input type="checkbox" /> Attending agri-related course
+                        <input type="checkbox" /> Attending non-formal agri training
+                    </div>
                 </div>
 
                 <hr className="form-separator" />

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import RoleSelection from './screens/RoleSelection';
-import Login from './database/loginConnection';
+import Login from './screens/AdminLogin';
 import Dashboard from './screens/Dashboard';
 import LandsPage from './screens/LandsPage';
 import ActiveFarmerPage from './screens/ActiveFarmerPage';

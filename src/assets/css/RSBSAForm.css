@@ -404,6 +404,25 @@ legend {
   font-weight: 600;
 }
 
+/* Farm Profile Section */
+.farm_profile-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.type_activity-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.type_activity-row label {
+  white-space: nowrap;
+}
+
+.type_activity-row label:first-child {
+  font-weight: 600;
+}
+
 /* Gross Annual Income Last Year row */
 .gross_annual_income-row {
   display: flex;
