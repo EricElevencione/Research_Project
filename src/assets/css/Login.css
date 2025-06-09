@@ -115,22 +115,13 @@ input[type="password"]:focus {
 
 .checkbox-container {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  font-size: 14px;
-  margin-top: 8px;
-  text-align: left;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 15px;
 }
 
 #remember {
-  justify-content: flex-start;
-  margin-left: -165px;
-  margin-right: -165px;
-}
-
-.remember-label {
-  padding-bottom: 9px;
+  margin-right: 5px;
 }
 
 .login-button {

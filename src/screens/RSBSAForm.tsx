@@ -285,7 +285,7 @@ const RSBSAForm = () => {
                 <p>[Additional fields for parcel location, area, ownership, etc.]</p>
                 </fieldset>
 
-                <button type="submit">Submit</button>
+                <button className="rsbsa_submit" type="submit">Submit</button>
             </form>
         </div>
     );
