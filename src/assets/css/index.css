@@ -87,11 +87,9 @@ body {
 input,
 textarea,
 select {
-  width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: var(--border-radius);
-  margin-bottom: 10px;
 }
 
 input:focus,
