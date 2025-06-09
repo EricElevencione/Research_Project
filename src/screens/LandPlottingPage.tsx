@@ -8,15 +8,19 @@ import '../assets/css/ActiveFarmersPage.css';
 // interfaces unchanged...
 interface LandAttributes {
     name: string;
+    ffrs_id: string;
     area: number;
     coordinateAccuracy: 'exact' | 'approximate';
     barangay: string;
     firstName: string;
     middleName: string;
     surname: string;
+    ext_name: string;
     gender: 'Male' | 'Female';
+    birthdate: string;
     municipality: string;
     province: string;
+    parcel_address: string;
     status: 'Tenant' | 'Land Owner' | 'Farmer';
     street: string;
     farmType: 'Irrigated' | 'Rainfed Upland' | 'Rainfed Lowland';
@@ -38,15 +42,19 @@ const LandPlottingPage: React.FC = () => {
 
     const [landAttributes, setLandAttributes] = useState<LandAttributes>({
         name: '',
+        ffrs_id: '',
         area: 0,
         coordinateAccuracy: 'approximate',
-        barangay: barangayName,
+        barangay: '',
         firstName: '',
         middleName: '',
         surname: '',
+        ext_name: '',
         gender: 'Male',
+        birthdate: '',
         municipality: 'Dumangas',
         province: 'Iloilo',
+        parcel_address: '',
         status: 'Tenant',
         street: '',
         farmType: 'Irrigated'
@@ -54,23 +62,27 @@ const LandPlottingPage: React.FC = () => {
 
     const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof LandAttributes, string>>>({});
 
+    const requiredFields: (keyof LandAttributes)[] = [
+        'ffrs_id', 'surname', 'firstName', 'gender', 'birthdate',
+        'barangay', 'municipality', 'province', 'parcel_address', 'area'
+    ];
+
     const handleAttributeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+        let newValue = value;
+        // Convert last name, first name, and middle name to uppercase
+        if (name === 'surname' || name === 'firstName' || name === 'middleName') {
+            newValue = value.toUpperCase();
+        }
         setLandAttributes(prev => ({
             ...prev,
-            [name]: value,
+            [name]: newValue,
             barangay: barangayName
         }));
     };
 
     const validateForm = (): boolean => {
         const errors: Partial<Record<keyof LandAttributes, string>> = {};
-        const requiredFields: (keyof LandAttributes)[] = [
-            'firstName', 'surname', 'gender',
-            'municipality', 'province', 'status',
-            'street', 'farmType'
-        ];
-
         requiredFields.forEach(field => {
             if (!landAttributes[field]) {
                 errors[field] = 'This field is required';
@@ -134,15 +146,19 @@ const LandPlottingPage: React.FC = () => {
                     setSelectedShape(null);
                     setLandAttributes({
                         name: '',
+                        ffrs_id: '',
                         area: 0,
-                        coordinateAccuracy: 'approximate' as const,
-                        barangay: barangayName,
+                        coordinateAccuracy: 'approximate',
+                        barangay: '',
                         firstName: '',
                         middleName: '',
                         surname: '',
+                        ext_name: '',
                         gender: 'Male',
+                        birthdate: '',
                         municipality: 'Dumangas',
                         province: 'Iloilo',
+                        parcel_address: '',
                         status: 'Tenant',
                         street: '',
                         farmType: 'Irrigated'
@@ -189,15 +205,19 @@ const LandPlottingPage: React.FC = () => {
     const handleShapeDeleted = () => {
         setLandAttributes({
             name: '',
+            ffrs_id: '',
             area: 0,
             coordinateAccuracy: 'approximate',
-            barangay: barangayName,
+            barangay: '',
             firstName: '',
             middleName: '',
             surname: '',
+            ext_name: '',
             gender: 'Male',
+            birthdate: '',
             municipality: 'Dumangas',
             province: 'Iloilo',
+            parcel_address: '',
             status: 'Tenant',
             street: '',
             farmType: 'Irrigated'
@@ -217,15 +237,19 @@ const LandPlottingPage: React.FC = () => {
         } else {
             setLandAttributes({
                 name: '',
+                ffrs_id: '',
                 area: 0,
                 coordinateAccuracy: 'approximate',
-                barangay: barangayName,
+                barangay: '',
                 firstName: '',
                 middleName: '',
                 surname: '',
+                ext_name: '',
                 gender: 'Male',
+                birthdate: '',
                 municipality: 'Dumangas',
                 province: 'Iloilo',
+                parcel_address: '',
                 status: 'Tenant',
                 street: '',
                 farmType: 'Irrigated'
@@ -250,15 +274,19 @@ const LandPlottingPage: React.FC = () => {
         } else {
             setLandAttributes({
                 name: '',
+                ffrs_id: '',
                 area: 0,
                 coordinateAccuracy: 'approximate',
-                barangay: barangayName,
+                barangay: '',
                 firstName: '',
                 middleName: '',
                 surname: '',
+                ext_name: '',
                 gender: 'Male',
+                birthdate: '',
                 municipality: 'Dumangas',
                 province: 'Iloilo',
+                parcel_address: '',
                 status: 'Tenant',
                 street: '',
                 farmType: 'Irrigated'
@@ -266,6 +294,19 @@ const LandPlottingPage: React.FC = () => {
             setIsEditingAttributes(false);
         }
     }, [selectedShape, barangayName]);
+
+    useEffect(() => {
+        const handleLandPlotDeleted = (event: any) => {
+            const deletedId = event.detail.id;
+            if (mapRef.current && typeof mapRef.current.deleteShape === 'function') {
+                mapRef.current.deleteShape(deletedId);
+            }
+        };
+        window.addEventListener('land-plot-deleted', handleLandPlotDeleted);
+        return () => {
+            window.removeEventListener('land-plot-deleted', handleLandPlotDeleted);
+        };
+    }, []);
 
     return (
         console.log('Rendering LandPlottingPage, municipality value:', landAttributes.municipality),
@@ -305,12 +346,37 @@ const LandPlottingPage: React.FC = () => {
                                             <h3>Land Attributes</h3>
                                             <div className="form-grid">
                                                 <div>
+                                                    <label htmlFor="ffrs_id">FFRS ID: *</label>
+                                                    <input
+                                                        type="text"
+                                                        id="ffrs_id"
+                                                        name="ffrs_id"
+                                                        value={landAttributes.ffrs_id || ''}
+                                                        onChange={handleAttributeChange}
+                                                        disabled={!isEditingAttributes}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor="surname">Last Name: *</label>
+                                                    <input
+                                                        type="text"
+                                                        id="surname"
+                                                        name="surname"
+                                                        value={landAttributes.surname || ''}
+                                                        onChange={handleAttributeChange}
+                                                        disabled={!isEditingAttributes}
+                                                        className={validationErrors.surname ? 'error' : ''}
+                                                    />
+                                                    {validationErrors.surname && <span className="error-message">{validationErrors.surname}</span>}
+                                                </div>
+                                                <div>
                                                     <label htmlFor="firstName">First Name: *</label>
                                                     <input
                                                         type="text"
                                                         id="firstName"
                                                         name="firstName"
-                                                        value={landAttributes.firstName}
+                                                        value={landAttributes.firstName || ''}
                                                         onChange={handleAttributeChange}
                                                         disabled={!isEditingAttributes}
                                                         className={validationErrors.firstName ? 'error' : ''}
@@ -323,38 +389,60 @@ const LandPlottingPage: React.FC = () => {
                                                         type="text"
                                                         id="middleName"
                                                         name="middleName"
-                                                        value={landAttributes.middleName}
+                                                        value={landAttributes.middleName || ''}
                                                         onChange={handleAttributeChange}
                                                         disabled={!isEditingAttributes}
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label htmlFor="surname">Surname: *</label>
+                                                    <label htmlFor="ext_name">Name Extension:</label>
                                                     <input
                                                         type="text"
-                                                        id="surname"
-                                                        name="surname"
-                                                        value={landAttributes.surname}
+                                                        id="ext_name"
+                                                        name="ext_name"
+                                                        value={landAttributes.ext_name || ''}
                                                         onChange={handleAttributeChange}
                                                         disabled={!isEditingAttributes}
-                                                        className={validationErrors.surname ? 'error' : ''}
+                                                        placeholder="e.g., Jr., Sr., III"
                                                     />
-                                                    {validationErrors.surname && <span className="error-message">{validationErrors.surname}</span>}
                                                 </div>
                                                 <div>
                                                     <label htmlFor="gender">Gender: *</label>
                                                     <select
                                                         id="gender"
                                                         name="gender"
-                                                        value={landAttributes.gender}
+                                                        value={landAttributes.gender || ''}
                                                         onChange={handleAttributeChange}
                                                         disabled={!isEditingAttributes}
-                                                        className={validationErrors.gender ? 'error' : ''}
+                                                        required
                                                     >
                                                         <option value="Male">Male</option>
                                                         <option value="Female">Female</option>
                                                     </select>
-                                                    {validationErrors.gender && <span className="error-message">{validationErrors.gender}</span>}
+                                                </div>
+                                                <div>
+                                                    <label htmlFor="birthdate">Birthdate: *</label>
+                                                    <input
+                                                        type="date"
+                                                        id="birthdate"
+                                                        name="birthdate"
+                                                        value={landAttributes.birthdate || ''}
+                                                        onChange={handleAttributeChange}
+                                                        disabled={!isEditingAttributes}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label htmlFor="barangay">Barangay: *</label>
+                                                    <input
+                                                        type="text"
+                                                        id="barangay"
+                                                        name="barangay"
+                                                        value={landAttributes.barangay || ''}
+                                                        onChange={handleAttributeChange}
+                                                        disabled={!isEditingAttributes}
+                                                        required
+                                                    />
                                                 </div>
                                                 <div>
                                                     <label htmlFor="municipality">Municipality: *</label>
@@ -362,13 +450,11 @@ const LandPlottingPage: React.FC = () => {
                                                         id="municipality"
                                                         name="municipality"
                                                         type="text"
-                                                        value={landAttributes.municipality}
+                                                        value={landAttributes.municipality || ''}
                                                         readOnly
                                                         disabled={!isEditingAttributes}
                                                         required
-                                                        className={validationErrors.municipality ? 'error' : ''}
                                                     />
-                                                    {validationErrors.municipality && <span className="error-message">{validationErrors.municipality}</span>}
                                                 </div>
                                                 <div>
                                                     <label htmlFor="province">Province: *</label>
@@ -376,96 +462,35 @@ const LandPlottingPage: React.FC = () => {
                                                         id="province"
                                                         name="province"
                                                         type="text"
-                                                        value={landAttributes.province}
+                                                        value={landAttributes.province || ''}
                                                         readOnly
                                                         disabled={!isEditingAttributes}
                                                         required
-                                                        className={validationErrors.province ? 'error' : ''}
                                                     />
-                                                    {validationErrors.province && <span className="error-message">{validationErrors.province}</span>}
-                                                </div>
-                                                <div className="form-group">
-                                                    <label htmlFor="status">Status:</label>
-                                                    <select
-                                                        id="status"
-                                                        name="status"
-                                                        value={landAttributes.status}
-                                                        onChange={handleAttributeChange}
-                                                        required
-                                                        disabled={!isEditingAttributes}
-                                                    >
-                                                        <option value="Tenant">Tenant</option>
-                                                        <option value="Land Owner">Land Owner</option>
-                                                        <option value="Farmer">Farmer</option>
-                                                    </select>
-                                                    {validationErrors.status && <span className="error-message">{validationErrors.status}</span>}
                                                 </div>
                                                 <div>
-                                                    <label htmlFor="street">Street/Sitio/Subdivision: *</label>
+                                                    <label htmlFor="parcel_address">Parcel Address: *</label>
                                                     <input
                                                         type="text"
-                                                        id="street"
-                                                        name="street"
-                                                        value={landAttributes.street}
+                                                        id="parcel_address"
+                                                        name="parcel_address"
+                                                        value={landAttributes.parcel_address || ''}
                                                         onChange={handleAttributeChange}
                                                         disabled={!isEditingAttributes}
-                                                        className={validationErrors.street ? 'error' : ''}
+                                                        required
                                                     />
-                                                    {validationErrors.street && <span className="error-message">{validationErrors.street}</span>}
                                                 </div>
                                                 <div>
-                                                    <label htmlFor="farmType">Farm Type: *</label>
-                                                    <select
-                                                        id="farmType"
-                                                        name="farmType"
-                                                        value={landAttributes.farmType}
-                                                        onChange={handleAttributeChange}
-                                                        disabled={!isEditingAttributes}
-                                                        className={validationErrors.farmType ? 'error' : ''}
-                                                    >
-                                                        <option value="Irrigated">Irrigated</option>
-                                                        <option value="Rainfed Upland">Rainfed Upland</option>
-                                                        <option value="Rainfed Lowland">Rainfed Lowland</option>
-                                                    </select>
-                                                    {validationErrors.farmType && <span className="error-message">{validationErrors.farmType}</span>}
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="area">Area:</label>
+                                                    <label htmlFor="area">Parcel Area: *</label>
                                                     <input
                                                         type="number"
                                                         id="area"
                                                         name="area"
-                                                        value={landAttributes.area || 0}
-                                                        onChange={handleAttributeChange}
-                                                        disabled={!isEditingAttributes}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="coordinateAccuracy">Coordinate Accuracy:</label>
-                                                    <select
-                                                        id="coordinateAccuracy"
-                                                        name="coordinateAccuracy"
-                                                        value={landAttributes.coordinateAccuracy || 'approximate'}
-                                                        onChange={handleAttributeChange}
-                                                        disabled={!isEditingAttributes}
-                                                    >
-                                                        <option value="approximate">Approximate</option>
-                                                        <option value="precise">Precise</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label htmlFor="barangay">Barangay: *</label>
-                                                    <input
-                                                        id="barangay"
-                                                        name="barangay"
-                                                        type="text"
-                                                        value={landAttributes.barangay}
+                                                        value={landAttributes.area === 0 ? '' : landAttributes.area}
                                                         onChange={handleAttributeChange}
                                                         disabled={!isEditingAttributes}
                                                         required
-                                                        className={validationErrors.barangay ? 'error' : ''}
                                                     />
-                                                    {validationErrors.barangay && <span className="error-message">{validationErrors.barangay}</span>}
                                                 </div>
                                             </div>
                                             <div className="form-actions">

@@ -5,6 +5,7 @@ const path = require('path');
 const multer = require('multer'); // Import multer
 const XLSX = require('xlsx');   // Import xlsx
 const fs = require('fs');       // Import file system module for cleanup
+const bcrypt = require('bcrypt'); // Add at the top if not present
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -535,6 +536,76 @@ app.put('/api/farmers/:originalFirstName/:originalMiddleName/:originalSurname/:o
     } catch (error) {
         console.error('Error updating farmer:', error);
         res.status(500).json({ message: 'Error updating farmer', error: error.message });
+    }
+});
+
+// Registration endpoint for admin and technician
+app.post('/api/register', async (req, res) => {
+    const { username, email, password, role } = req.body;
+    if (!username || !email || !password || !role) {
+        return res.status(400).json({ message: 'All fields are required.' });
+    }
+    // Username format validation
+    if (role === 'admin' && !username.endsWith('.dev')) {
+        return res.status(400).json({ message: 'Admin username must end with .dev' });
+    }
+    if (role === 'technician' && !username.endsWith('.tech')) {
+        return res.status(400).json({ message: 'Technician username must end with .tech' });
+    }
+    if (!['admin', 'technician'].includes(role)) {
+        return res.status(400).json({ message: 'Invalid role.' });
+    }
+    try {
+        // Check for duplicate username or email
+        const userCheck = await pool.query('SELECT 1 FROM users WHERE username = $1 OR email = $2', [username, email]);
+        if (userCheck.rowCount > 0) {
+            return res.status(409).json({ message: 'Username or email already exists.' });
+        }
+        // Hash password
+        const saltRounds = 10;
+        const password_hash = await bcrypt.hash(password, saltRounds);
+        // Insert user
+        await pool.query(
+            'INSERT INTO users (username, email, password_hash, role) VALUES ($1, $2, $3, $4)',
+            [username, email, password_hash, role]
+        );
+        res.status(201).json({ message: 'Registration successful.' });
+    } catch (err) {
+        console.error('Error in /api/register:', err);
+        res.status(500).json({ message: 'Server error.' });
+    }
+});
+
+// Login endpoint for admin and technician
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required.' });
+    }
+    try {
+        const userResult = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        if (userResult.rowCount === 0) {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
+        const user = userResult.rows[0];
+        const passwordMatch = await bcrypt.compare(password, user.password_hash);
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
+        // On success, return user info (excluding password)
+        res.json({
+            message: 'Login successful.',
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                created_at: user.created_at
+            }
+        });
+    } catch (err) {
+        console.error('Error in /api/login:', err);
+        res.status(500).json({ message: 'Server error.' });
     }
 });
 

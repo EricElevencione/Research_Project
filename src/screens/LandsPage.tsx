@@ -4,17 +4,21 @@ import { useNavigate } from 'react-router-dom';
 
 interface LandRecord {
     id: string;
+    ffrs_id: string;
     firstName: string;
     middleName: string | null;
     surname: string;
+    ext_name: string | null;
     gender: 'Male' | 'Female';
+    birthdate: string | null;
     barangay: string;
     municipality: string;
     province: string;
-    status: 'Tenant' | 'Land Owner' | 'Farmer';
+    parcel_address: string;
     street: string;
-    farmType: 'Irrigated' | 'Rainfed Upland' | 'Rainfed Lowland';
     area: number;
+    status: 'Tenant' | 'Land Owner' | 'Farmer';
+    farmType: 'Irrigated' | 'Rainfed Upland' | 'Rainfed Lowland';
     coordinateAccuracy: 'exact' | 'approximate';
     createdAt: string;
     updatedAt: string;
@@ -84,40 +88,44 @@ const LandsPage: React.FC = () => {
                 <table className="lands-table">
                     <thead>
                         <tr>
+                            <th>FFRS System genrated</th>
+                            <th>Last Name</th>
                             <th>First Name</th>
                             <th>Middle Name</th>
-                            <th>Surname</th>
+                            <th>Ext Name</th>
                             <th>Gender</th>
+                            <th>Birthdate</th>
                             <th>Barangay</th>
                             <th>Municipality</th>
                             <th>Province</th>
-                            <th>Status</th>
-                            <th>Street</th>
-                            <th>Farm Type</th>
-                            <th>Area (ha)</th>
-                            <th>Coordinate Accuracy</th>
+                            <th>Parcel Address</th>
+                            <th>Parcel Area</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {landRecords.map((record) => (
                             <tr key={record.id}>
-                                <td>{record.firstName}</td>
-                                <td>{record.middleName}</td>
+                                <td>{record.ffrs_id || 'N/A'}</td>
                                 <td>{record.surname}</td>
+                                <td>{record.firstName}</td>
+                                <td>{record.middleName || 'N/A'}</td>
+                                <td>{record.ext_name || 'N/A'}</td>
                                 <td>{record.gender}</td>
+                                <td>{record.birthdate ? new Date(record.birthdate).toLocaleDateString() : 'N/A'}</td>
                                 <td>{record.barangay}</td>
                                 <td>{record.municipality}</td>
                                 <td>{record.province}</td>
-                                <td>{record.status}</td>
-                                <td>{record.street}</td>
-                                <td>{record.farmType}</td>
+                                <td>{record.parcel_address || 'N/A'}</td>
                                 <td>{record.area}</td>
-                                <td>{record.coordinateAccuracy}</td>
                                 <td>
                                     <button
                                         className="delete-button"
-                                        onClick={() => handleDelete(record.id)}
+                                        onClick={() => {
+                                            handleDelete(record.id);
+                                            // Emit a custom event for dashboard map update
+                                            window.dispatchEvent(new CustomEvent('land-plot-deleted', { detail: { id: record.id } }));
+                                        }}
                                     >
                                         Delete
                                     </button>
