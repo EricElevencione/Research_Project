@@ -313,8 +313,3 @@
     margin: 0;
     /* Remove default margin */
 }
-
-.content-area .back-button {
-    /* Styles already defined in AppLayout.css for .back-button */
-    /* Ensure these styles are applied */
-}
