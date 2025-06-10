@@ -35,34 +35,55 @@ const ActiveFarmerPage: React.FC = () => {
 
     const fetchFarmerRecords = async () => {
         try {
-            const response = await fetch('/api/lands');
+            const response = await fetch('http://localhost:5000/api/farmers');
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
-            console.log('Fetched farmer records data from /api/lands:', data);
+            console.log('Raw API response data:', data);
 
-            const formattedData: FarmerRecord[] = data.map((record: any) => {
-                console.log("Mapping record:", record);
-                console.log("LAST NAME from record:", record["LAST NAME"]);
-                return ({
-                    id: `${record["FIRST NAME"]}-${record["SURNAME"]}-${record["PARCEL NO."] || Math.random()}`,
-                    name: `${record["FIRST NAME"]} ${record["MIDDLE NAME"] || ''} ${record["EXT NAME"] || ''}`,
-                    area: parseFloat(record["PARCEL AREA"]) || 0,
-                    coordinateAccuracy: 'approximate',
-                    barangay: record["FARMER ADDRESS 2"] || '',
-                    firstName: record["FIRST NAME"] || '',
-                    middleName: record["MIDDLE NAME"] || '',
-                    surname: record["LAST NAME"] || '',
-                    gender: record["GENDER"] || 'Male',
-                    municipality: record["FARMER ADDRESS 3"] ? record["FARMER ADDRESS 3"].split(',')[0].trim() : '',
-                    city: record["FARMER ADDRESS 3"] ? record["FARMER ADDRESS 3"].split(',')[1]?.trim() || '' : '',
-                    status: 'Farmer',
-                    street: record["FARMER ADDRESS 1"] || '',
-                    farmType: 'Irrigated',
-                    createdAt: '',
-                    updatedAt: '',
+            const formattedData: FarmerRecord[] = data
+                .map((record: any) => {
+                    console.log('Processing record:', record);
+                    // The API returns camelCase field names
+                    const firstName = record.firstName || '';
+                    const middleName = record.middleName || '';
+                    const surname = record.surname || '';
+                    const area = parseFloat(record.area) || 0;
+                    const barangay = record.barangay || '';
+                    const street = record.street || '';
+                    const municipality = record.municipality || '';
+                    const city = record.city || '';
+
+                    const formatted = {
+                        id: `${firstName}-${surname}-${Math.random()}`,
+                        name: `${firstName} ${middleName || ''} ${surname || ''}`,
+                        area: area,
+                        coordinateAccuracy: 'approximate',
+                        barangay: barangay,
+                        firstName: firstName,
+                        middleName: middleName,
+                        surname: surname,
+                        gender: record.gender || 'Male',
+                        municipality: municipality,
+                        city: city,
+                        status: record.status || 'Farmer',
+                        street: street,
+                        farmType: record.farmType || 'Irrigated',
+                        createdAt: record.createdAt || '',
+                        updatedAt: record.updatedAt || '',
+                    };
+                    console.log('Formatted record:', formatted);
+                    return formatted;
+                })
+                // Filter out records with missing required fields
+                .filter((record: FarmerRecord) => {
+                    const isValid = record.firstName && record.surname;
+                    if (!isValid) {
+                        console.log('Filtering out invalid record:', record);
+                    }
+                    return isValid;
                 });
-            });
 
+            console.log('Final formatted data:', formattedData);
             setFarmerRecords(formattedData);
             setLoading(false);
         } catch (err: any) {
@@ -100,11 +121,22 @@ const ActiveFarmerPage: React.FC = () => {
                     return;
                 }
 
+                console.log('Found farmer to delete:', farmerToDelete);
+
+                // Ensure we have valid values for all required fields
+                if (!farmerToDelete.firstName || !farmerToDelete.surname) {
+                    console.error("Invalid farmer data: missing required fields", {
+                        firstName: farmerToDelete.firstName,
+                        surname: farmerToDelete.surname,
+                        fullRecord: farmerToDelete
+                    });
+                    return;
+                }
+
                 // Encode URI components for URL parameters
-                const encodedFirstName = encodeURIComponent(farmerToDelete.firstName);
-                // Use 'NONE' for empty middle names and ensure it's properly encoded
-                const encodedMiddleName = encodeURIComponent(farmerToDelete.middleName?.trim() || 'NONE');
-                const encodedSurname = encodeURIComponent(farmerToDelete.surname?.trim() || 'NONE');
+                const encodedFirstName = encodeURIComponent(farmerToDelete.firstName.trim());
+                const encodedMiddleName = encodeURIComponent((farmerToDelete.middleName || '').trim());
+                const encodedSurname = encodeURIComponent(farmerToDelete.surname.trim());
                 const encodedArea = encodeURIComponent(farmerToDelete.area.toString());
 
                 // Log the URL and parameters for debugging
@@ -133,7 +165,7 @@ const ActiveFarmerPage: React.FC = () => {
                 console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
                 if (response.ok) {
-                    console.log(`Farmer ${farmerToDelete.name} deleted successfully from database.`);
+                    console.log(`Farmer ${farmerToDelete.firstName} ${farmerToDelete.surname} deleted successfully from database.`);
                     // Remove from frontend state only after successful backend deletion
                     setFarmerRecords(farmerRecords.filter(record => record.id !== id));
                     setOpenActionsRowId(null);
@@ -151,18 +183,8 @@ const ActiveFarmerPage: React.FC = () => {
     };
 
     const handleUpdateStatus = (newStatus: 'Tenant' | 'Land Owner' | 'Farmer') => {
-        if (selectedFarmerForStatus) {
-            console.warn("Frontend status update initiated, but backend update requires an endpoint.");
-            setFarmerRecords(prev =>
-                prev.map(record =>
-                    record.id === selectedFarmerForStatus.id
-                        ? { ...record, status: newStatus }
-                        : record
-                )
-            );
-            setIsStatusModalOpen(false);
-            setSelectedFarmerForStatus(null);
-        }
+        // Remove status update functionality for admin
+        console.log('Status updates are not allowed for admin users');
     };
 
     const handleEditFarmer = (id: string) => {
@@ -185,9 +207,8 @@ const ActiveFarmerPage: React.FC = () => {
     };
 
     const handleStatusClick = (farmer: FarmerRecord) => {
-        setSelectedFarmerForStatus(farmer);
-        setIsStatusModalOpen(true);
-        setOpenActionsRowId(null);
+        // Remove status click handler for admin
+        console.log('Status updates are not allowed for admin users');
     };
 
     const handleActionsButtonClick = (e: React.MouseEvent, recordId: string) => {
@@ -248,7 +269,6 @@ const ActiveFarmerPage: React.FC = () => {
                                                         ? 'status-tenant'
                                                         : 'status-landowner'
                                                     }`}
-                                                onClick={() => handleStatusClick(record)}
                                             >
                                                 {record.status}
                                             </span>

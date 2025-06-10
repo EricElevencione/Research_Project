@@ -347,6 +347,29 @@ app.post('/api/farmers', async (req, res) => {
     }
 });
 
+// New endpoint: Update farmer status by id
+app.put('/api/farmers/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!status) {
+        return res.status(400).json({ message: 'Status is required.' });
+    }
+    try {
+        const result = await pool.query(
+            'UPDATE masterlist SET status = $1 WHERE id = $2',
+            [status, id]
+        );
+        if (result.rowCount > 0) {
+            res.status(200).json({ message: 'Status updated successfully' });
+        } else {
+            res.status(404).json({ message: 'Farmer not found' });
+        }
+    } catch (error) {
+        console.error('Error updating status:', error);
+        res.status(500).json({ message: 'Error updating status', error: error.message });
+    }
+});
+
 // DELETE endpoint for farmers - uses multiple parameters for identification
 app.delete('/api/farmers/:firstName/:middleName/:surname/:area', async (req, res) => {
     const { firstName, middleName, surname, area } = req.params;
@@ -554,6 +577,8 @@ app.get('/api/farmers', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 
+                id,
+                status,
                 "FIRST NAME" as "firstName",
                 "MIDDLE NAME" as "middleName",
                 "LAST NAME" as "surname",
