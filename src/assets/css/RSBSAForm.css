@@ -21,7 +21,73 @@
 }
 
 .form-section {
-  margin-bottom: 20px;
+  display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.left-column {
+    flex: 2;
+    min-width: 60%;
+}
+
+.right-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 20px;
+}
+
+.photo-upload-box {
+    border: 2px solid black;
+    width: 227px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    background-color: #fff;
+    box-sizing: border-box;
+}
+
+.photo-label {
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.photo-instruction {
+    font-size: 12px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    line-height: 1.2;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.custom-file-upload {
+    display: inline-block;
+    padding: 5px 10px;
+    font-size: 12px;
+    background-color: #f0f0f0;
+    border: 1px solid #999;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+.preview-image img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border: 1px solid #ccc;
+    margin-top: 10px;
 }
 
 /* Enrollment type radio buttons */
