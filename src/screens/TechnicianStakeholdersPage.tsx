@@ -24,6 +24,8 @@ const TechnicianStakeholdersPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFarmer, setSelectedFarmer] = useState<FarmerRecord | null>(null);
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+    const [selectedFarmerForStatus, setSelectedFarmerForStatus] = useState<FarmerRecord | null>(null);
+    const [openActionsRowId, setOpenActionsRowId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchFarmerRecords();
@@ -44,7 +46,7 @@ const TechnicianStakeholdersPage: React.FC = () => {
             // Ensure all records have the required fields with default values
             const validatedData = data
                 .map((record: any) => ({
-                    id: record.id || `temp-${Math.random().toString(36).substr(2, 9)}`,
+                    id: record.id || '',
                     firstName: record["FIRST NAME"] || record.firstName || '',
                     middleName: record["MIDDLE NAME"] || record.middleName || '',
                     surname: record["LAST NAME"] || record.surname || '',
@@ -56,7 +58,7 @@ const TechnicianStakeholdersPage: React.FC = () => {
                     createdAt: record.createdAt || new Date().toISOString(),
                     updatedAt: record.updatedAt || new Date().toISOString()
                 }))
-                .filter((record: any) => record.firstName && record.surname); // Only show records with names
+                .filter((record: any) => record.firstName && record.surname && record.id); // Only show records with names and valid id
             setFarmerRecords(validatedData);
             setLoading(false);
         } catch (error) {
@@ -67,10 +69,14 @@ const TechnicianStakeholdersPage: React.FC = () => {
     };
 
     const handleUpdateStatus = async (newStatus: 'Tenant' | 'Land Owner' | 'Farmer') => {
-        if (selectedFarmer) {
+        if (selectedFarmerForStatus) {
+            if (!selectedFarmerForStatus.id) {
+                alert('Cannot update status: This record does not have a valid ID.');
+                return;
+            }
             try {
-                const response = await fetch(`http://localhost:5000/api/lands/${selectedFarmer.id}`, {
-                    method: 'PATCH',
+                const response = await fetch(`http://localhost:5000/api/farmers/${selectedFarmerForStatus.id}/status`, {
+                    method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -78,19 +84,19 @@ const TechnicianStakeholdersPage: React.FC = () => {
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to update status');
+                    throw new Error('Failed to update status');
                 }
 
+                // Update local state
                 setFarmerRecords(prev =>
                     prev.map(record =>
-                        record.id === selectedFarmer.id
-                            ? { ...record, status: newStatus, updatedAt: new Date().toISOString() }
+                        record.id === selectedFarmerForStatus.id
+                            ? { ...record, status: newStatus }
                             : record
                     )
                 );
                 setIsStatusModalOpen(false);
-                setSelectedFarmer(null);
+                setSelectedFarmerForStatus(null);
             } catch (error) {
                 console.error('Error updating status:', error);
                 alert('Failed to update status. Please try again.');
@@ -99,8 +105,9 @@ const TechnicianStakeholdersPage: React.FC = () => {
     };
 
     const handleStatusClick = (farmer: FarmerRecord) => {
-        setSelectedFarmer(farmer);
+        setSelectedFarmerForStatus(farmer);
         setIsStatusModalOpen(true);
+        setOpenActionsRowId(null);
     };
 
     const filteredFarmers = farmerRecords.filter(farmer => {
@@ -166,7 +173,7 @@ const TechnicianStakeholdersPage: React.FC = () => {
                                     </tr>
                                 ) : (
                                     filteredFarmers.map((record) => (
-                                        <tr key={record.id}>
+                                        <tr key={record.id || `${record.firstName}-${record.surname}-${record.area}`}>
                                             <td>{record.firstName || ''}</td>
                                             <td>{record.middleName || ''}</td>
                                             <td>{record.surname || ''}</td>
@@ -174,10 +181,15 @@ const TechnicianStakeholdersPage: React.FC = () => {
                                             <td>{record.area || 0}</td>
                                             <td className="status-cell">
                                                 <span
-                                                    className={`status-pill ${(record.status || 'Farmer').toLowerCase().replace(' ', '-')}`}
+                                                    className={`status-pill ${record.status === 'Farmer'
+                                                        ? 'status-active'
+                                                        : record.status === 'Tenant'
+                                                            ? 'status-tenant'
+                                                            : 'status-landowner'
+                                                        }`}
                                                     onClick={() => handleStatusClick(record)}
                                                 >
-                                                    {record.status || 'Farmer'}
+                                                    {record.status}
                                                 </span>
                                             </td>
                                             <td>{record.barangay || ''}</td>
@@ -192,25 +204,30 @@ const TechnicianStakeholdersPage: React.FC = () => {
                 </div>
             </div>
 
-            {isStatusModalOpen && selectedFarmer && (
+            {isStatusModalOpen && selectedFarmerForStatus && (
                 <div className="modal-overlay" onClick={() => setIsStatusModalOpen(false)}>
                     <div className="status-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Update Status for {selectedFarmer.firstName} {selectedFarmer.surname}</h3>
+                            <h3>Update Status for {selectedFarmerForStatus.firstName} {selectedFarmerForStatus.surname}</h3>
                             <button className="close-button" onClick={() => setIsStatusModalOpen(false)}>×</button>
                         </div>
                         <div className="modal-content">
                             <div className="farmer-info">
                                 <p><strong>Current Status:</strong>
-                                    <span className={`status-pill ${(selectedFarmer.status || 'Farmer').toLowerCase().replace(' ', '-')}`}>
-                                        {selectedFarmer.status || 'Farmer'}
+                                    <span className={`status-pill ${selectedFarmerForStatus.status === 'Farmer'
+                                        ? 'status-active'
+                                        : selectedFarmerForStatus.status === 'Tenant'
+                                            ? 'status-tenant'
+                                            : 'status-landowner'
+                                        }`}>
+                                        {selectedFarmerForStatus.status}
                                     </span>
                                 </p>
-                                <p><strong>Full Name:</strong> {selectedFarmer.firstName} {selectedFarmer.middleName} {selectedFarmer.surname}</p>
-                                <p><strong>Barangay:</strong> {selectedFarmer.barangay || ''}</p>
-                                <p><strong>Gender:</strong> {selectedFarmer.gender || ''}</p>
-                                <p><strong>Area:</strong> {selectedFarmer.area || 0} ha</p>
-                                <p><strong>Last Updated:</strong> {new Date(selectedFarmer.updatedAt).toLocaleString()}</p>
+                                <p><strong>Full Name:</strong> {selectedFarmerForStatus.firstName} {selectedFarmerForStatus.middleName} {selectedFarmerForStatus.surname}</p>
+                                <p><strong>Barangay:</strong> {selectedFarmerForStatus.barangay || ''}</p>
+                                <p><strong>Gender:</strong> {selectedFarmerForStatus.gender || ''}</p>
+                                <p><strong>Area:</strong> {selectedFarmerForStatus.area || 0} ha</p>
+                                <p><strong>Last Updated:</strong> {new Date(selectedFarmerForStatus.updatedAt).toLocaleString()}</p>
                             </div>
                             <div className="status-options">
                                 <h4>Select New Status:</h4>
