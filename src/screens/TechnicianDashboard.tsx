@@ -66,6 +66,7 @@ const TechnicianDashboard: React.FC = () => {
                 <button onClick={() => navigate("/technician-dashboard")}>Home</button>
                 <button onClick={() => navigate("/technician-add-farmer")}>Add Farmer</button>
                 <button onClick={() => navigate("/technician-stakeholders")}>Stakeholders</button>
+                <button onClick={() => navigate("/")}>Logout</button>
             </nav>
 
             <div className="dashboard-grid">

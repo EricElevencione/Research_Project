@@ -19,3 +19,4 @@ Ang ubrahon is:
 2. Kay adon ang add farmers kag paganahon
 3. 
 
+mockup - https://www.canva.com/design/DAGVToQ2vZM/nf2_0HUUNSt4B7X563gDGQ/edit
