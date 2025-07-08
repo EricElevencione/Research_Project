@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import "../assets/css/ActiveFarmersPage.css";
+import "../../assets/css/ActiveFarmersPage.css";
 
 interface FarmerRecord {
     id: string;
@@ -22,10 +22,8 @@ const TechnicianStakeholdersPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedFarmer, setSelectedFarmer] = useState<FarmerRecord | null>(null);
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
     const [selectedFarmerForStatus, setSelectedFarmerForStatus] = useState<FarmerRecord | null>(null);
-    const [openActionsRowId, setOpenActionsRowId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchFarmerRecords();
@@ -107,7 +105,6 @@ const TechnicianStakeholdersPage: React.FC = () => {
     const handleStatusClick = (farmer: FarmerRecord) => {
         setSelectedFarmerForStatus(farmer);
         setIsStatusModalOpen(true);
-        setOpenActionsRowId(null);
     };
 
     const filteredFarmers = farmerRecords.filter(farmer => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import "../assets/css/ActiveFarmersPage.css";
+import "../../assets/css/ActiveFarmersPage.css";
 
 interface FarmerRecord {
     id: string;
@@ -16,7 +16,7 @@ interface FarmerRecord {
     updatedAt: string;
 }
 
-const StakeholdersPage: React.FC = () => {
+const FarmersPage: React.FC = () => {
     const navigate = useNavigate();
     const [farmerRecords, setFarmerRecords] = useState<FarmerRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ const StakeholdersPage: React.FC = () => {
             <div className="farmers-header">
                 <div className="farmers-header-left">
                     <button className="back-button" onClick={() => navigate('/technician-dashboard')}>←</button>
-                    <h1 className="farmers-title">Stakeholders</h1>
+                    <h1 className="farmers-title">Farmers</h1>
                 </div>
                 <div className="farmers-header-right">
                     <input
@@ -218,4 +218,4 @@ const StakeholdersPage: React.FC = () => {
     );
 };
 
-export default StakeholdersPage; 
+export default FarmersPage; 

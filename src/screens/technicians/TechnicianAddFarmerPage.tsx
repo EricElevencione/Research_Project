@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import '../assets/css/ActiveFarmersPage.css';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import '../../assets/css/ActiveFarmersPage.css';
 
 interface FarmerFormData {
     firstName: string;
@@ -16,13 +16,8 @@ interface FarmerFormData {
     area: number;
 }
 
-const AddFarmerPage: React.FC = () => {
+const TechnicianAddFarmerPage: React.FC = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const params = useParams();
-    const isEditMode = !!params.firstName;
-    const isTechnicianFlow = location.pathname.includes('/technician');
-
     const [formData, setFormData] = useState<FarmerFormData>({
         firstName: '',
         middleName: '',
@@ -36,34 +31,6 @@ const AddFarmerPage: React.FC = () => {
         farmType: 'Irrigated',
         area: 0
     });
-    const [loadingFarmerData, setLoadingFarmerData] = useState(isEditMode);
-    const [errorFetchingFarmer, setErrorFetchingFarmer] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (isEditMode) {
-            const fetchFarmer = async () => {
-                try {
-                    const { firstName, middleName, surname, area } = params;
-                    const encodedMiddleName = middleName ? encodeURIComponent(middleName) : '';
-                    const response = await fetch(
-                        `http://localhost:5000/api/farmers/${encodeURIComponent(firstName || '')}/${encodedMiddleName}/${encodeURIComponent(surname || '')}/${encodeURIComponent(area || '0')}`
-                    );
-
-                    if (!response.ok) throw new Error(`Failed to fetch farmer data: ${response.statusText}`);
-
-                    const data = await response.json();
-                    setFormData(data);
-                    setLoadingFarmerData(false);
-                } catch (error) {
-                    console.error('Error fetching farmer data:', error);
-                    setErrorFetchingFarmer('Failed to load farmer data');
-                    setLoadingFarmerData(false);
-                }
-            };
-
-            fetchFarmer();
-        }
-    }, [isEditMode, params]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -75,57 +42,51 @@ const AddFarmerPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        const originalFirstName = params.firstName;
-        const originalMiddleName = params.middleName;
-        const originalSurname = params.surname;
-        const originalArea = params.area;
-
         try {
-            let response;
-            if (isEditMode) {
-                const encodedOriginalFirstName = encodeURIComponent(originalFirstName || '');
-                const encodedOriginalMiddleName = encodeURIComponent(originalMiddleName || '');
-                const encodedOriginalSurname = encodeURIComponent(originalSurname || '');
-                const encodedOriginalArea = encodeURIComponent(originalArea || '0');
+            // Format data to match /api/farmers expectations (camelCase keys)
+            const apiData = {
+                firstName: formData.firstName,
+                middleName: formData.middleName,
+                surname: formData.surname,
+                gender: formData.gender,
+                barangay: formData.barangay,
+                municipality: formData.municipality,
+                city: formData.city,
+                street: formData.street,
+                status: formData.status,
+                farmType: formData.farmType,
+                area: formData.area,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
 
-                response = await fetch(
-                    `http://localhost:5000/api/farmers/${encodedOriginalFirstName}/${encodedOriginalMiddleName}/${encodedOriginalSurname}/${encodedOriginalArea}`,
-                    {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData),
-                    }
-                );
-            } else {
-                response = await fetch('http://localhost:5000/api/farmers', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData),
-                });
-            }
+            const response = await fetch('http://localhost:5000/api/farmers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(apiData),
+            });
 
             if (response.ok) {
-                // Navigate based on the flow
-                if (isTechnicianFlow) {
-                    navigate('/technician-dashboard');
-                } else {
-                    navigate('/active-farmers');
-                }
+                navigate('/technician-dashboard');
             } else {
-                console.error('Failed to save farmer');
+                const errorData = await response.json();
+                console.error('Failed to save farmer:', errorData);
+                alert('Failed to save farmer. Please check the data and try again.');
             }
-        } catch (error) {
-            console.error('Error saving farmer:', error);
+        } catch (error: any) {
+            if (error.response) {
+                error.response.json().then((errData: any) => {
+                    console.error('Server error response:', errData);
+                    alert('Server error: ' + (errData.message || JSON.stringify(errData)));
+                });
+            } else {
+                console.error('Error saving farmer:', error);
+                alert('An error occurred while saving the farmer. Please try again.');
+            }
         }
     };
-
-    if (loadingFarmerData) return <div>Loading farmer data...</div>;
-    if (errorFetchingFarmer) return <div>Error: {errorFetchingFarmer}</div>;
 
     return (
         <div className="farmers-container">
@@ -133,11 +94,11 @@ const AddFarmerPage: React.FC = () => {
                 <div className="farmers-header-left">
                     <button
                         className="back-button"
-                        onClick={() => navigate(isTechnicianFlow ? '/technician-dashboard' : '/active-farmers')}
+                        onClick={() => navigate('/technician-dashboard')}
                     >
                         ←
                     </button>
-                    <h1 className="farmers-title">{isEditMode ? 'Edit Farmer' : 'Add New Farmer'}</h1>
+                    <h1 className="farmers-title">Add New Farmer</h1>
                 </div>
             </div>
 
@@ -303,12 +264,12 @@ const AddFarmerPage: React.FC = () => {
                     <button
                         type="button"
                         className="cancel-button"
-                        onClick={() => navigate(isTechnicianFlow ? '/technician-dashboard' : '/active-farmers')}
+                        onClick={() => navigate('/technician-dashboard')}
                     >
                         Cancel
                     </button>
                     <button type="submit" className="submit-button">
-                        {isEditMode ? 'Save Changes' : 'Add Farmer'}
+                        Add Farmer
                     </button>
                 </div>
             </form>
@@ -316,4 +277,4 @@ const AddFarmerPage: React.FC = () => {
     );
 };
 
-export default AddFarmerPage; 
+export default TechnicianAddFarmerPage; 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-const Register: React.FC = () => {
+const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
     const { role } = useParams();
     const [form, setForm] = useState({
@@ -108,4 +108,4 @@ const Register: React.FC = () => {
     );
 };
 
-export default Register; 
+export default RegisterPage; 

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../assets/css/BarangayDashboardPage.css'; // We will create this CSS file next
+import '../../assets/css/BarangayDashboardPage.css'; // We will create this CSS file next
 
 const BarangayDashboardPage: React.FC = () => {
     const navigate = useNavigate();

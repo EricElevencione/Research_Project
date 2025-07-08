@@ -1,16 +1,10 @@
 import { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import "../assets/css/Login.css"; // Login page styling
+import "../../assets/css/Login.css"; // Login page styling
 import { useNavigate } from 'react-router-dom'; // Router for navigation
 
-// Props interface definition
-// @role - Defines which user type this form is for (Admin/Corporate/Individual)
-interface LoginProps {
-    role: string;
-}
-
 // Main Login Component
-const Login: React.FC<LoginProps> = ({ role }) => {
+const Login: React.FC = () => {
     // Navigation hook for client-side routing
     const navigate = useNavigate();
 
@@ -24,7 +18,7 @@ const Login: React.FC<LoginProps> = ({ role }) => {
 
     // Form submission handler
     // Prevents default form behavior and navigates to dashboard
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
 
@@ -33,35 +27,29 @@ const Login: React.FC<LoginProps> = ({ role }) => {
             return;
         }
 
-        try {
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: email, password })
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                setError(data.message || 'Login failed.');
-                return;
-            }
-            // Set authentication
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('userEmail', data.user.email);
-            localStorage.setItem('userRole', data.user.role);
-            // If remember me is checked, set a longer expiration
-            if (rememberMe) {
-                localStorage.setItem('rememberMe', 'true');
-            }
-            // Navigate based on role
-            if (data.user.role === 'technician') {
-                navigate('/technician-dashboard');
-            } else if (data.user.role === 'admin') {
-                navigate('/dashboard');
-            } else {
-                navigate('/dashboard'); // fallback
-            }
-        } catch (error) {
-            setError('Login failed. Please try again.');
+        const normalizedEmail = (email || '').toLowerCase().trim();
+        let userRole = '';
+        if (normalizedEmail === 'admin@gmail.com') {
+            userRole = 'admin';
+        } else if (normalizedEmail === 'technician@gmail.com') {
+            userRole = 'technician';
+        } else {
+            setError("Invalid email for this role.");
+            return;
+        }
+
+        // Set authentication
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('userRole', userRole);
+        if (rememberMe) {
+            localStorage.setItem('rememberMe', 'true');
+        }
+        // Navigate based on role
+        if (userRole === 'technician') {
+            navigate('/technician-dashboard');
+        } else if (userRole === 'admin') {
+            navigate('/dashboard');
         }
     };
 
@@ -83,11 +71,11 @@ const Login: React.FC<LoginProps> = ({ role }) => {
 
                     {/* Login Form */}
                     <form onSubmit={handleLogin}>
-                        {/* Username Field */}
-                        <label>Username</label>
+                        {/* Email Field */}
+                        <label>Email</label>
                         <input
                             type="text"
-                            placeholder="Enter your username"
+                            placeholder="Enter your email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required

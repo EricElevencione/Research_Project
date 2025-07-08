@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
-import BarangayDashboardPage from './screens/BarangayDashboardPage';
-import LandPlottingPage from './screens/LandPlottingPage';
+import BarangayDashboardPage from './screens/admin/BarangayDashboardPage';
+import LandPlottingPage from './screens/admin/LandPlottingPage';
 import '../assets/css/App.css';
 
 function App() {

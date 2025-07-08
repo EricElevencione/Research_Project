@@ -1,18 +1,17 @@
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import RoleSelection from './screens/RoleSelection';
-import Login from './screens/AdminLogin';
-import Dashboard from './screens/Dashboard';
-import LandsPage from './screens/LandsPage';
-import ActiveFarmerPage from './screens/ActiveFarmerPage';
-import FarmlandPage from './screens/FarmlandPage';
-import RSBSAForm from './screens/RSBSAForm';
-import BarangayDashboardPage from './screens/BarangayDashboardPage';
-import LandPlottingPage from './screens/LandPlottingPage';
-import AddFarmerPage from './screens/AddFarmerPage';
-import TechnicianDashboard from './screens/TechnicianDashboard';
-import TechnicianAddFarmerPage from './screens/TechnicianAddFarmerPage';
-import TechnicianStakeholdersPage from './screens/TechnicianStakeholdersPage';
-import Register from './screens/Register';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './screens/admin/AdminLogin';
+import Dashboard from './screens/admin/Dashboard';
+import MasterlistPage from './screens/admin/MasterlistPage';
+import RSBSAPage from './screens/admin/RSBSAPage';
+import FarmlandPage from './screens/admin/FarmlandPage';
+import RSBSAForm from './screens/technicians/RSBSAFormPage';
+import BarangayDashboardPage from './screens/admin/BarangayDashboardPage';
+import LandPlottingPage from './screens/admin/LandPlottingPage';
+import AddFarmerPage from './screens/technicians/AddFarmerPage';
+import TechnicianDashboard from './screens/technicians/TechnicianDashboard';
+import TechnicianAddFarmerPage from './screens/technicians/TechnicianAddFarmerPage';
+import TechnicianStakeholdersPage from './screens/technicians/TechnicianStakeholdersPage';
+import Register from './screens/technicians/RegisterPage';
 import './assets/css/index.css';
 
 // Protected Route component
@@ -31,21 +30,21 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<RoleSelection />} />
-                <Route path="/login/:role" element={<LoginWrapper />} />
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/login" element={<Login />} />
                 <Route path="/dashboard" element={
                     <ProtectedRoute>
                         <Dashboard />
                     </ProtectedRoute>
                 } />
-                <Route path="/lands" element={
+                <Route path="/masterlist" element={
                     <ProtectedRoute>
-                        <LandsPage />
+                        <MasterlistPage />
                     </ProtectedRoute>
                 } />
-                <Route path="/active-farmers" element={
+                <Route path="/rsbsa" element={
                     <ProtectedRoute>
-                        <ActiveFarmerPage />
+                        <RSBSAPage />
                     </ProtectedRoute>
                 } />
                 <Route path="/add-farmer" element={<AddFarmerPage />} />
@@ -91,10 +90,5 @@ function App() {
         </BrowserRouter>
     );
 }
-
-const LoginWrapper = () => {
-    const { role } = useParams();
-    return <Login role={role || 'default'} />;
-};
 
 export default App;

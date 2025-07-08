@@ -1,0 +1,124 @@
+/* Masterlist Page Styles */
+.masterlist-container {
+    background: #f8f8f4;
+    min-height: 100vh;
+    border-radius: 16px;
+    padding: 32px 24px 24px 24px;
+    font-family: 'Inter', Arial, sans-serif;
+}
+
+.masterlist-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 32px;
+    position: relative;
+}
+
+.back-button {
+    background: none;
+    border: none;
+    font-size: 2.2rem;
+    margin-right: 16px;
+    cursor: pointer;
+    color: #222;
+}
+
+.masterlist-title {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #222;
+    margin: 0;
+}
+
+.masterlist-header-options {
+    margin-left: auto;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+}
+
+.masterlist-header-options span {
+    font-size: 1rem;
+    color: #222;
+    cursor: pointer;
+    font-weight: 400;
+}
+
+.masterlist-header-options .masterlist-add {
+    font-weight: 500;
+}
+
+.masterlist-table-container {
+    background: #fafaf7;
+    border-radius: 10px;
+    padding: 0;
+    box-shadow: none;
+    border: 1px solid #ecece6;
+}
+
+.masterlist-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: transparent;
+}
+
+.masterlist-table th,
+.masterlist-table td {
+    border: 1px solid #ecece6;
+    padding: 12px 8px;
+    text-align: left;
+    font-size: 0.98rem;
+    background: #fafaf7;
+}
+
+.masterlist-table th {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #222;
+    background: #f8f8f4;
+    letter-spacing: 0.02em;
+    text-align: left;
+}
+
+.masterlist-table tr {
+    height: 48px;
+}
+
+.masterlist-table td {
+    color: #222;
+    font-weight: 400;
+}
+
+.delete-button {
+    background: #fff;
+    color: #b00020;
+    border: 1px solid #ececec;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.delete-button:hover {
+    background: #ffeaea;
+}
+
+@media (max-width: 900px) {
+    .masterlist-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .masterlist-header-options {
+        margin-left: 0;
+        gap: 16px;
+    }
+
+    .masterlist-title {
+        font-size: 2rem;
+    }
+}

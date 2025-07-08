@@ -1,5 +1,13 @@
 /* ===== DASHBOARD CSS ===== */
 
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
 .dashboard-container {
     height: 100vh;
     display: flex;
@@ -74,6 +82,7 @@
 .dashboard-grid {
     display: flex;
     flex-grow: 1;
+    height: 100%;
 }
 
 /* Sidebar */
@@ -99,15 +108,19 @@
 
 /* Main Map + Stats */
 .map-area {
-    height: 560px;
-    width: 100%;
+    flex: 1;
     display: flex;
     flex-direction: column;
     padding: 20px;
     background: white;
+    height: 100%;
 }
 
 .map-container {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
     border: 1px solid #ccc;
     border-radius: 8px;
     overflow: hidden;
@@ -118,19 +131,6 @@
     width: 100%;
     height: 100%;
     min-height: unset;
-}
-
-.dashboard-stats {
-    display: flex;
-    gap: 20px;
-}
-
-.stat-card {
-    flex: 1;
-    background: #e6f4ea;
-    padding: 15px;
-    border-radius: 8px;
-    text-align: center;
 }
 
 /* Ensure map fills container */

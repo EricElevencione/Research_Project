@@ -1,10 +1,10 @@
-import React, { useEffect, useState, forwardRef, useRef, useImperativeHandle, MutableRefObject } from 'react';
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import { useEffect, useState, forwardRef, useRef, useImperativeHandle } from 'react';
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from 'react-leaflet-draw';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import L, { Layer, FeatureGroup as LeafletFeatureGroup } from 'leaflet';
+import L, { FeatureGroup as LeafletFeatureGroup } from 'leaflet';
 import { booleanWithin } from '@turf/turf';
 
 // Fix for default marker icons in Leaflet with React
@@ -21,56 +21,6 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // Component to handle map centering
-const MapController: React.FC<{ data: any }> = ({ data }) => {
-    const map = useMap();
-
-    useEffect(() => {
-        if (data) {
-            if (data.features && data.features.length > 0) {
-                const bounds = new L.LatLngBounds([]);
-
-                data.features.forEach((feature: any) => {
-                    if (feature.geometry && feature.geometry.coordinates) {
-                        const processCoordinates = (coords: any) => {
-                            if (Array.isArray(coords) && coords.length > 0) {
-                                if (Array.isArray(coords[0])) {
-                                    coords.forEach(processCoordinates);
-                                } else if (coords.length >= 2) {
-                                    const longitude = coords[0];
-                                    const latitude = coords[1];
-
-                                    if (typeof latitude === 'number' && typeof longitude === 'number') {
-                                        bounds.extend(new L.LatLng(latitude, longitude));
-                                    }
-                                }
-                            }
-                        };
-
-                        if (feature.geometry.type === 'Point') {
-                            processCoordinates(feature.geometry.coordinates);
-                        } else if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiPoint') {
-                            feature.geometry.coordinates.forEach(processCoordinates);
-                        } else if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiLineString') {
-                            feature.geometry.coordinates.forEach((ringCoords: any) => processCoordinates(ringCoords[0]));
-                        } else if (feature.geometry.type === 'MultiPolygon') {
-                            feature.geometry.coordinates.forEach((multiPolygonCoords: any) => {
-                                multiPolygonCoords.forEach((polygonCoords: any) => {
-                                    processCoordinates(polygonCoords[0]);
-                                });
-                            });
-                        }
-                    }
-                });
-
-                if (bounds.isValid() && bounds.getNorthEast() && bounds.getSouthWest()) {
-                    map.fitBounds(bounds);
-                }
-            }
-        }
-    }, [data, map]);
-
-    return null;
-};
 
 interface LandPlottingMapProps {
     onShapeCreated?: (shape: any) => void;
@@ -88,13 +38,11 @@ export interface LandPlottingMapRef {
 
 const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     ({ onShapeCreated, onShapeEdited, onShapeDeleted, selectedShape, onShapeSelected, barangayName, onShapeFinalized }, ref) => {
-        const [mapData, setMapData] = useState<any>(null);
         const [boundaryData, setBoundaryData] = useState<any>(null);
         const [loading, setLoading] = useState(true);
         const [error, setError] = useState<string | null>(null);
         const featureGroupRef = useRef<LeafletFeatureGroup>(null);
         const [drawnShapes, setDrawnShapes] = useState<any[]>([]);
-        const editControlRef = useRef<any>(null);
 
         // Click handler for layers within the FeatureGroup
         const onLayerClick = (e: L.LeafletEvent) => {
@@ -240,7 +188,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             fetchMapData();
         }, [barangayName]);
 
-        const getColor = (feature: any) => {
+        const getColor = (_feature: any) => {
             return '#e74c3c';
         };
 

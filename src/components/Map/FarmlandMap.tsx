@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import L, { LatLngBounds } from 'leaflet'; // Import LatLngBounds
-import { FeatureCollection, Feature } from 'geojson'; // Import FeatureCollection and Feature types
+import { FeatureCollection } from 'geojson'; // Import FeatureCollection and Feature types
 
 // Fix for default marker icons in Leaflet with React
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import L from 'leaflet';
 
 let DefaultIcon = L.icon({
     iconUrl: icon,
@@ -30,56 +30,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
     const [boundaryLoading, setBoundaryLoading] = useState(true);
     const [boundaryError, setBoundaryError] = useState<string | null>(null);
 
-    const MapController: React.FC<{ data: any }> = ({ data }) => {
-        const map = useMap();
-
-        useEffect(() => {
-            if (data && data.features && data.features.length > 0) {
-                const bounds = new LatLngBounds([]);
-                const processCoordinates = (coords: any) => {
-                    if (Array.isArray(coords) && coords.length > 0) {
-                        if (Array.isArray(coords[0])) {
-                            coords.forEach(processCoordinates);
-                        } else if (coords.length >= 2) {
-                            const longitude = coords[0];
-                            const latitude = coords[1];
-                            if (typeof latitude === 'number' && typeof longitude === 'number') {
-                                bounds.extend(new L.LatLng(latitude, longitude));
-                            }
-                        }
-                    }
-                };
-
-                data.features.forEach((feature: any) => {
-                    if (feature.geometry) {
-                        if (feature.geometry.type === 'Point') {
-                            processCoordinates(feature.geometry.coordinates);
-                        } else if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiPoint') {
-                            feature.geometry.coordinates.forEach(processCoordinates);
-                        } else if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiLineString') {
-                            feature.geometry.coordinates.forEach((ringCoords: any) => processCoordinates(ringCoords[0]));
-                        } else if (feature.geometry.type === 'MultiPolygon') {
-                            feature.geometry.coordinates.forEach((multiPolygonCoords: any) => {
-                                multiPolygonCoords.forEach((polygonCoords: any) => {
-                                    processCoordinates(polygonCoords[0]);
-                                });
-                            });
-                        }
-                    }
-                });
-
-                if (bounds.isValid() && bounds.getNorthEast() && bounds.getSouthWest()) {
-                    map.fitBounds(bounds);
-                } else {
-                    console.warn("Calculated bounds are not valid or empty. Bounds object:", bounds);
-                }
-            } else {
-                console.warn("MapController received empty or invalid data for bounds calculation:", data);
-            }
-        }, [data, map]);
-
-        return null;
-    };
 
     useEffect(() => {
         const fetchFarmlandRecords = async () => {
@@ -106,7 +56,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                 setBoundaryLoading(true);
                 setBoundaryError(null);
 
-                const municipalResponse = await fetch('/Dumangas.geojson');
+                const municipalResponse = await fetch('/Dumangas_map.json');
                 if (!municipalResponse.ok) {
                     throw new Error(`Failed to fetch municipal boundary data: ${municipalResponse.status} ${municipalResponse.statusText}`);
                 }
@@ -116,24 +66,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                 }
                 setMunicipalBoundaryData(municipalData);
 
-                const barangays = ['Lacturan', 'Calao'];
-                const boundaries: { [key: string]: any } = {};
-
-                for (const barangay of barangays) {
-                    try {
-                        const response = await fetch(`/${barangay} Border.geojson`);
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data && data.type && data.features) {
-                                boundaries[barangay] = data;
-                            }
-                        }
-                    } catch (err) {
-                        console.warn(`Failed to fetch boundary for ${barangay}:`, err);
-                    }
-                }
-
-                setBarangayBoundaries(boundaries);
+                // Remove fetching of individual barangay boundaries
+                setBarangayBoundaries({});
             } catch (err: any) {
                 console.error("Error fetching boundary data:", err);
                 setBoundaryError(err.message || 'Failed to load boundary data');
@@ -180,12 +114,10 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
         >
             <TileLayer
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
                 opacity={1}
             />
             <TileLayer
                 url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 opacity={1}
             />
 

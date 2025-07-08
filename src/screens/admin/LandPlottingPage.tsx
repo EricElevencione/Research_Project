@@ -1,9 +1,9 @@
 // unchanged imports
 import React, { useState, useEffect, useRef } from 'react';
-import LandPlottingMap, { LandPlottingMapRef } from '../components/Map/LandPlottingMap';
-import '../assets/css/LandPlottingPage.css';
+import LandPlottingMap, { LandPlottingMapRef } from '../../components/Map/LandPlottingMap';
+import '../../assets/css/LandPlottingPage.css';
 import { useNavigate, useParams } from 'react-router-dom';
-import '../assets/css/ActiveFarmersPage.css';
+import '../../assets/css/ActiveFarmersPage.css';
 
 // interfaces unchanged...
 interface LandAttributes {

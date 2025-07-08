@@ -1,4 +1,4 @@
-import '../assets/css/RSBSAForm.css';
+import '../../assets/css/RSBSAForm.css';
 import { useState } from 'react';
 import axios from 'axios';
 
@@ -156,7 +156,7 @@ type Errors = {
     [key: string]: string;
 };
 
-const RSBSAForm = () => {
+const RSBSAFormPage = () => {
     // Form state
     const [formData, setFormData] = useState<FormData>({
         // Enrollment Information
@@ -1938,4 +1938,4 @@ const RSBSAForm = () => {
     );
 };
 
-export default RSBSAForm;
+export default RSBSAFormPage;

@@ -1,4 +1,4 @@
-import "../assets/css/LandsPage.css";
+import "../../assets/css/MasterlistPage.css";
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,29 +6,25 @@ interface LandRecord {
     id: string;
     ffrs_id: string;
     firstName: string;
-    middleName: string | null;
     surname: string;
-    ext_name: string | null;
     gender: 'Male' | 'Female';
     birthdate: string | null;
     barangay: string;
     municipality: string;
     province: string;
     parcel_address: string;
-    street: string;
     area: number;
     status: 'Tenant' | 'Land Owner' | 'Farmer';
-    farmType: 'Irrigated' | 'Rainfed Upland' | 'Rainfed Lowland';
-    coordinateAccuracy: 'exact' | 'approximate';
     createdAt: string;
     updatedAt: string;
 }
 
-const LandsPage: React.FC = () => {
+const Masterlist: React.FC = () => {
     const navigate = useNavigate();
     const [landRecords, setLandRecords] = useState<LandRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const fetchLandRecords = async () => {
         try {
@@ -67,50 +63,61 @@ const LandsPage: React.FC = () => {
         }
     };
 
+    const filteredRecords = landRecords.filter(record =>
+        `${record.surname}, ${record.firstName}`.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     if (loading) {
-        return <div className="lands-container">Loading...</div>;
+        return <div className="masterlist-container">Loading...</div>;
     }
 
     if (error) {
-        return <div className="lands-container">Error: {error}</div>;
+        return <div className="masterlist-container">Error: {error}</div>;
     }
 
     return (
-        <div className="lands-container">
-            <div className="lands-header">
+        <div className="masterlist-container">
+            <div className="masterlist-header">
                 <button className="back-button" onClick={() => navigate('/dashboard')}>
-                    ←
+                    &#8592;
                 </button>
-                <h1>Land Records</h1>
+                <h1 className="masterlist-title">Masterlist</h1>
+                <div className="masterlist-header-options">
+                    <span className="masterlist-print">print</span>
+                    <div className="farmers-header-right">
+                        <input
+                            type="text"
+                            placeholder="Search farmers..."
+                            className="farmers-search-input"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
             </div>
 
-            <div className="lands-table-container">
-                <table className="lands-table">
+            <div className="masterlist-table-container">
+                <table className="masterlist-table">
                     <thead>
                         <tr>
-                            <th>FFRS System Generated</th>
-                            <th>Last Name</th>
-                            <th>First Name</th>
-                            <th>Middle Name</th>
-                            <th>Ext Name</th>
-                            <th>Gender</th>
-                            <th>Birthdate</th>
-                            <th>Barangay</th>
-                            <th>Municipality</th>
-                            <th>Province</th>
-                            <th>Parcel Address</th>
-                            <th>Parcel Area</th>
-                            <th>Actions</th>
+                            <th>NAME</th>
+                            <th>FFRS SYSTEM GENERATED</th>
+                            <th>GENDER</th>
+                            <th>BIRTHDATE</th>
+                            <th>BARANGAY</th>
+                            <th>MUNICIPALITY</th>
+                            <th>PROVINCE</th>
+                            <th>PARCEL ADDRESS</th>
+                            <th>PARCEL AREA</th>
+                            <th>STATUS</th>
+                            <th>OPTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {landRecords.map((record) => (
+                        {filteredRecords.map((record) => (
                             <tr key={record.id}>
+                                <td>{`${record.surname}, ${record.firstName}`}</td>
                                 <td>{record.ffrs_id || 'N/A'}</td>
-                                <td>{record.surname}</td>
-                                <td>{record.firstName}</td>
-                                <td>{record.middleName || 'N/A'}</td>
-                                <td>{record.ext_name || 'N/A'}</td>
                                 <td>{record.gender}</td>
                                 <td>{record.birthdate ? new Date(record.birthdate).toLocaleDateString() : 'N/A'}</td>
                                 <td>{record.barangay}</td>
@@ -118,12 +125,12 @@ const LandsPage: React.FC = () => {
                                 <td>{record.province}</td>
                                 <td>{record.parcel_address || 'N/A'}</td>
                                 <td>{record.area}</td>
+                                <td>{record.status}</td>
                                 <td>
                                     <button
                                         className="delete-button"
                                         onClick={() => {
                                             handleDelete(record.id);
-                                            // Emit a custom event for dashboard map update
                                             window.dispatchEvent(new CustomEvent('land-plot-deleted', { detail: { id: record.id } }));
                                         }}
                                     >
@@ -139,4 +146,4 @@ const LandsPage: React.FC = () => {
     );
 };
 
-export default LandsPage;
+export default Masterlist;

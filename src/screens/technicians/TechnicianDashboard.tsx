@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from 'react';
-import FarmlandMap from '../components/Map/FarmlandMap';
-import "../assets/css/App.css";
-import "../assets/css/ActiveFarmersPage.css";
+import FarmlandMap from '../../components/Map/FarmlandMap';
+import "../../assets/css/App.css";
+import "../../assets/css/ActiveFarmersPage.css";
 
 interface FarmerRecord {
     id: string;

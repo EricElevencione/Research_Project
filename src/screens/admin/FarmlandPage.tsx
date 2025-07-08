@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import '../assets/css/FarmlandPage.css';
+import '../../assets/css/FarmlandPage.css';
 
 interface FarmlandRecord {
     id: string;
