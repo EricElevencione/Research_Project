@@ -4,14 +4,19 @@
   box-sizing: border-box;
 }
 
-body, html {
-    overflow: hidden;
-    height: 100%;
-    margin: 0;
-    padding: 0;
+body,
+html {
+  /* overflow: hidden; */
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto !important;
+  /* Allow vertical scrolling */
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;

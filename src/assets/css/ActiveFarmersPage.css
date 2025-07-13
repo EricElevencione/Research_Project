@@ -157,6 +157,13 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Make status pills clickable */
+.status-pill[style*="cursor: pointer"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
 /* Active Farmer */
 .status-active {
     background-color: #e9f7ef;
@@ -382,6 +389,18 @@
     to {
         transform: translateY(0);
         opacity: 1;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
     }
 }
 
@@ -845,4 +864,107 @@
 /* Ensure table rows do not clip content from absolutely positioned children of their cells */
 .farmers-table tbody tr {
     overflow: visible;
+}
+
+/* Land Owner Input Styles */
+.land-owner-input {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.land-owner-input label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.land-owner-input input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.land-owner-input input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/* Modal Actions Styles */
+.modal-actions {
+    margin-top: 25px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.update-status-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+}
+
+.update-status-btn:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
+.update-status-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.cancel-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+}
+
+.cancel-btn:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+.cancel-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Selected Status Button Styles */
+.status-option-btn.status-option-active {
+    background-color: #e9f7ef;
+    border-color: #27ae60;
+    color: #27ae60;
+}
+
+.status-option-btn.status-option-tenant {
+    background-color: #fef9e7;
+    border-color: #e67e22;
+    color: #e67e22;
+}
+
+.status-option-btn.status-option-landowner {
+    background-color: #e6f3ff;
+    border-color: #2980b9;
+    color: #2980b9;
 }

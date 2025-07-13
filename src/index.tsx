@@ -5,13 +5,15 @@ import MasterlistPage from './screens/admin/MasterlistPage';
 import RSBSAPage from './screens/admin/RSBSAPage';
 import FarmlandPage from './screens/admin/FarmlandPage';
 import RSBSAForm from './screens/technicians/RSBSAFormPage';
-import BarangayDashboardPage from './screens/admin/BarangayDashboardPage';
-import LandPlottingPage from './screens/admin/LandPlottingPage';
+import LandPlottingPage from './screens/technicians/TechLandPlottingPage';
 import AddFarmerPage from './screens/technicians/AddFarmerPage';
 import TechnicianDashboard from './screens/technicians/TechnicianDashboard';
 import TechnicianAddFarmerPage from './screens/technicians/TechnicianAddFarmerPage';
-import TechnicianStakeholdersPage from './screens/technicians/TechnicianStakeholdersPage';
+import TechMasterlist from './screens/technicians/TechMasterlist';
 import Register from './screens/technicians/RegisterPage';
+import TechRSBSAPage from './screens/technicians/TechRSBSAPage';
+import TechLandPlotting from './screens/technicians/TechLandPlottingPage';
+import ParcelSelectionPage from './screens/technicians/ParcelSelectionPage';
 import './assets/css/index.css';
 
 // Protected Route component
@@ -59,11 +61,6 @@ function App() {
                         <RSBSAForm />
                     </ProtectedRoute>
                 } />
-                <Route path="/land-plotting" element={
-                    <ProtectedRoute>
-                        <BarangayDashboardPage />
-                    </ProtectedRoute>
-                } />
                 <Route path="/land-plotting/:barangayName" element={
                     <ProtectedRoute>
                         <LandPlottingPage />
@@ -79,9 +76,29 @@ function App() {
                         <TechnicianAddFarmerPage />
                     </ProtectedRoute>
                 } />
-                <Route path="/technician-stakeholders" element={
+                <Route path="/technician-masterlist" element={
                     <ProtectedRoute>
-                        <TechnicianStakeholdersPage />
+                        <TechMasterlist />
+                    </ProtectedRoute>
+                } />
+                <Route path="/technician-rsbsa" element={
+                    <ProtectedRoute>
+                        <TechRSBSAPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/technician-landplotting" element={
+                    <ProtectedRoute>
+                        <TechLandPlotting />
+                    </ProtectedRoute>
+                } />
+                <Route path="/tech-land-plotting/:farmerId" element={
+                    <ProtectedRoute>
+                        <TechLandPlotting />
+                    </ProtectedRoute>
+                } />
+                <Route path="/parcel-selection/:recordId" element={
+                    <ProtectedRoute>
+                        <ParcelSelectionPage />
                     </ProtectedRoute>
                 } />
                 <Route path="/register/:role" element={<Register />} />

@@ -5,7 +5,7 @@ import { EditControl } from 'react-leaflet-draw';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import L, { FeatureGroup as LeafletFeatureGroup } from 'leaflet';
-import { booleanWithin } from '@turf/turf';
+import { booleanWithin, centroid as turfCentroid } from '@turf/turf';
 
 // Fix for default marker icons in Leaflet with React
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -155,25 +155,20 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         // Effect to fetch boundary data
         useEffect(() => {
             const fetchMapData = async () => {
-                if (!barangayName) return;
-
                 try {
                     setLoading(true);
                     setError(null);
 
-                    // Convert barangay name to proper case (first letter uppercase, rest lowercase)
-                    const formattedName = barangayName.charAt(0).toUpperCase() + barangayName.slice(1).toLowerCase();
-                    console.log(`Fetching border for: ${formattedName}`);
-                    const filename = `/${formattedName} Border.geojson`;
-
-                    console.log('Attempting to fetch:', filename);
+                    // Quick fix: Always load Dumangas_map.json
+                    const filename = '/Dumangas_map.json';
+                    console.log('Quick fix: Attempting to fetch:', filename);
                     const boundaryResponse = await fetch(filename);
                     if (!boundaryResponse.ok) {
-                        throw new Error(`Failed to fetch ${formattedName} Border boundary data: ${boundaryResponse.status} ${boundaryResponse.statusText}`);
+                        throw new Error(`Failed to fetch Dumangas boundary data: ${boundaryResponse.status} ${boundaryResponse.statusText}`);
                     }
                     const boundaryData = await boundaryResponse.json();
                     if (!boundaryData || !boundaryData.type || !boundaryData.features || !Array.isArray(boundaryData.features)) {
-                        throw new Error(`Invalid ${formattedName} Border GeoJSON data format`);
+                        throw new Error(`Invalid Dumangas GeoJSON data format`);
                     }
                     setBoundaryData(boundaryData);
 
@@ -187,6 +182,32 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
             fetchMapData();
         }, [barangayName]);
+
+        // Mapping of barangay names to center coordinates and zoom
+        const barangayCenters: Record<string, { center: [number, number], zoom: number, id?: string }> = {
+            Lacturan: { center: [10.830, 122.720], zoom: 16, id: 'LACTURAN_BOUNDARY' },
+            Calao: { center: [10.825, 122.715], zoom: 16, id: 'CALAO_BOUNDARY' },
+            // Add more barangays as needed
+        };
+
+        // Helper to get map center/zoom
+        const getMapView = () => {
+            if (barangayName && boundaryData && boundaryData.features) {
+                // Find the feature for the selected barangay
+                const feature = boundaryData.features.find((f: any) => f.properties?.NAME_3?.toLowerCase() === barangayName.toLowerCase());
+                if (feature) {
+                    // Compute centroid using turf
+                    const center = turfCentroid(feature).geometry.coordinates;
+                    // GeoJSON is [lng, lat], Leaflet expects [lat, lng]
+                    return { center: [center[1], center[0]] as [number, number], zoom: 16 };
+                }
+            }
+            // Fallback to hardcoded mapping or default
+            if (barangayName && barangayCenters[barangayName]) {
+                return barangayCenters[barangayName];
+            }
+            return { center: [10.865263, 122.6983711], zoom: 13 };
+        };
 
         const getColor = (_feature: any) => {
             return '#e74c3c';
@@ -215,55 +236,45 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         const onCreated = (e: any) => {
             console.log('Shape created (onCreated event)', e);
             const { layer } = e;
-
             const geoJson = layer.toGeoJSON();
             const geometryType = geoJson.geometry.type;
-
             console.log(`Created shape geometry type: ${geometryType}`);
-
             let newShape;
             let shapeId = `shape-${Date.now()}-${Math.random().toString(16).slice(2)}`;
             layer.options.id = shapeId; // Assign ID to the layer options
 
+            // --- Polygon Specific Logic ---
             if (geometryType === 'Polygon') {
-                // --- Polygon Specific Logic ---
-                // Basic boundary check (simplified)
+                // Find the correct barangay boundary feature
+                let boundaryFeature = null;
                 if (boundaryData && boundaryData.features && boundaryData.features.length > 0) {
-                    const boundary = boundaryData.features[0];
-                    const boundaryGeometryType = boundary.geometry.type;
-                    console.log(`Boundary geometry type: ${boundaryGeometryType}`);
-
-                    // Only perform boundary check if the boundary is a Polygon or MultiPolygon
-                    if (boundaryGeometryType === 'Polygon' || boundaryGeometryType === 'MultiPolygon') {
-                        try {
-                            console.log('Checking boundary for geoJson:', geoJson);
-                            if (!booleanWithin(geoJson, boundary)) {
-                                if (featureGroupRef.current) {
-                                    featureGroupRef.current.removeLayer(layer);
-                                }
-                                alert(`Drawn shape is outside the ${barangayName || 'selected barangay'} boundary. Please draw within the designated area.`);
-                                return; // Stop processing if outside boundary
-                            }
-                        } catch (boundaryError) {
-                            console.error("Error during boundary check (booleanWithin failed):", boundaryError);
-                            // Continue processing the shape even if boundary check fails due to unexpected geometry
-                        }
-                    } else {
-                        console.warn(`Skipping boundary check because boundary geometry is of unexpected type: ${boundaryGeometryType}`);
+                    if (barangayName && barangayCenters[barangayName]?.id) {
+                        boundaryFeature = boundaryData.features.find((f: any) => f.properties?.id === barangayCenters[barangayName].id);
                     }
-
-                } else {
-                    console.warn('Boundary data is not available or empty, skipping boundary check.');
+                    // Fallback: use first feature
+                    if (!boundaryFeature) boundaryFeature = boundaryData.features[0];
                 }
-
+                if (boundaryFeature) {
+                    try {
+                        if (!booleanWithin(geoJson, boundaryFeature)) {
+                            if (featureGroupRef.current) {
+                                featureGroupRef.current.removeLayer(layer);
+                            }
+                            alert(`Drawn shape is outside the ${barangayName || 'selected barangay'} boundary. Please draw within the designated area.`);
+                            return; // Stop processing if outside boundary
+                        }
+                    } catch (boundaryError) {
+                        console.error("Error during boundary check (booleanWithin failed):", boundaryError);
+                    }
+                }
                 newShape = {
                     id: shapeId,
                     layer: layer,
-                    properties: { // Initialize properties for Polygon
+                    properties: {
                         name: '',
-                        area: layer.getArea ? layer.getArea() : 0, // Calculate area for polygons
-                        coordinateAccuracy: 'approximate', // Default
-                        barangay: barangayName, // From state/props
+                        area: layer.getArea ? layer.getArea() : 0,
+                        coordinateAccuracy: 'approximate',
+                        barangay: barangayName,
                         firstName: '',
                         middleName: '',
                         surname: '',
@@ -275,19 +286,15 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                         farmType: 'Irrigated',
                     },
                 };
-
             } else if (geometryType === 'Point') {
-                // --- Marker Specific Logic ---
-                // No boundary check needed for markers
-
                 newShape = {
                     id: shapeId,
                     layer: layer,
-                    properties: { // Initialize properties for Marker
+                    properties: {
                         name: '',
-                        area: 0, // Markers have no area
-                        coordinateAccuracy: 'exact', // Markers usually represent exact points
-                        barangay: barangayName, // From state/props
+                        area: 0,
+                        coordinateAccuracy: 'exact',
+                        barangay: barangayName,
                         firstName: '',
                         middleName: '',
                         surname: '',
@@ -296,48 +303,22 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                         city: '',
                         status: 'Single',
                         street: '',
-                        farmType: 'Other', // Default to 'Other' or a marker-specific type
+                        farmType: 'Other',
                     },
                 };
-
             } else {
-                // --- Handle Other Geometry Types ---
-                console.warn(`Ignoring created shape of unexpected type: ${geometryType}`);
-                // Optionally remove the layer if it's not the expected type
                 if (featureGroupRef.current && featureGroupRef.current.hasLayer(layer)) {
                     featureGroupRef.current.removeLayer(layer);
                 }
-                return; // Stop processing if not a supported type
+                return;
             }
-
-            // --- Common Logic for Supported Shapes (Polygon or Point) ---
-            // Manually add layer to the FeatureGroup if it wasn't automatically added by EditControl
-            // Note: EditControl typically adds the layer automatically, this might be redundant but adding for robustness
             if (featureGroupRef.current && !featureGroupRef.current.hasLayer(layer)) {
                 featureGroupRef.current.addLayer(layer);
             }
-
-            // Add the new shape to the state
             setDrawnShapes(prev => [...prev, newShape]);
-            console.log('New shape added to drawnShapes:', newShape);
-
-            // Fire callbacks
-            if (onShapeCreated) {
-                onShapeCreated(newShape);
-                console.log('onShapeCreated callback fired');
-            }
-
-            console.log('Drawing mode typically disabled here after creation.');
-
-            if (onShapeSelected) {
-                onShapeSelected(newShape);
-                console.log('onShapeSelected callback fired for new shape');
-            }
-
-            if (onShapeFinalized) {
-                onShapeFinalized(newShape);
-                console.log('onShapeFinalized callback fired');
-            }
+            if (onShapeCreated) onShapeCreated(newShape);
+            if (onShapeSelected) onShapeSelected(newShape);
+            if (onShapeFinalized) onShapeFinalized(newShape);
         };
 
         const onEdited = (e: any) => {
@@ -458,8 +439,8 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                 border: '2px solid red'
             }}>
                 <MapContainer
-                    center={[10.865263, 122.6983711]}
-                    zoom={13}
+                    center={getMapView().center as [number, number]}
+                    zoom={getMapView().zoom}
                     style={{ height: '100%' }}
                     scrollWheelZoom={true}
                 >

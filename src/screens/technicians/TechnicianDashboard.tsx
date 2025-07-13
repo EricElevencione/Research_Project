@@ -64,8 +64,9 @@ const TechnicianDashboard: React.FC = () => {
             {/* Top Menu - customize for technician */}
             <nav className="top-menu">
                 <button onClick={() => navigate("/technician-dashboard")}>Home</button>
-                <button onClick={() => navigate("/technician-add-farmer")}>Add Farmer</button>
-                <button onClick={() => navigate("/technician-stakeholders")}>Stakeholders</button>
+                <button onClick={() => navigate("/technician-masterlist")}>Masterlist</button>
+                <button onClick={() => navigate("/technician-rsbsa")}>RSBSA</button>
+                <button onClick={() => navigate("/technician-rsbsa")}>View Land Records</button>
                 <button onClick={() => navigate("/")}>Logout</button>
             </nav>
 
@@ -78,57 +79,12 @@ const TechnicianDashboard: React.FC = () => {
                         className="search-bar"
                     />
                     <div className="location-label">Lacturan</div>
-
-                    {/* Quick Stats */}
-                    <div className="quick-stats">
-                        <div className="stat-item">
-                            <h4>Total Farmers</h4>
-                            <p>{farmerRecords.length}</p>
-                        </div>
-                        <div className="stat-item">
-                            <h4>Active Farmers</h4>
-                            <p>{farmerRecords.filter(f => f?.status === 'Farmer').length}</p>
-                        </div>
-                        <div className="stat-item">
-                            <h4>Tenants</h4>
-                            <p>{farmerRecords.filter(f => f?.status === 'Tenant').length}</p>
-                        </div>
-                        <div className="stat-item">
-                            <h4>Land Owners</h4>
-                            <p>{farmerRecords.filter(f => f?.status === 'Land Owner').length}</p>
-                        </div>
-                    </div>
                 </aside>
 
                 {/* Map and Stats */}
                 <main className="map-area">
                     <div className="map-container">
                         <FarmlandMap />
-                    </div>
-                    <div className="dashboard-stats">
-                        <div className="stat-card">
-                            <h3>Recent Activities</h3>
-                            <div className="activity-list">
-                                {loading ? (
-                                    <p>Loading activities...</p>
-                                ) : error ? (
-                                    <p>Error loading activities</p>
-                                ) : farmerRecords.length === 0 ? (
-                                    <p>No recent activities</p>
-                                ) : (
-                                    <ul>
-                                        {farmerRecords.slice(0, 5).map((record) => (
-                                            <li key={record.id || `activity-${Math.random().toString(36).substr(2, 9)}`}>
-                                                <span className={`status-pill ${getStatusClass(record.status)}`}>
-                                                    {record.status || 'Farmer'}
-                                                </span>
-                                                {record.firstName} {record.surname} - {record.barangay}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 </main>
             </div>

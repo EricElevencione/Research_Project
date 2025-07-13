@@ -61,7 +61,7 @@ interface RSBSARecord {
     };
 }
 
-const RSBSAPage: React.FC = () => {
+const TechRSBSAPage: React.FC = () => {
     const navigate = useNavigate();
     const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -104,9 +104,6 @@ const RSBSAPage: React.FC = () => {
     // Add state for upload loading and error
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
-
-    // Add state for zoom
-    const [zoom, setZoom] = useState(1);
 
     // Helper function to determine ownership status
     const getOwnershipStatus = (record: RSBSARecord): string => {
@@ -513,19 +510,6 @@ const RSBSAPage: React.FC = () => {
         input.onchange = async (e: any) => {
             const file = e.target.files[0];
             if (!file) return;
-
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                setUploadError('Please select an image file (PNG, JPG, etc.)');
-                return;
-            }
-
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                setUploadError('File size must be less than 5MB');
-                return;
-            }
-
             setIsUploading(true);
             try {
                 const formData = new FormData();
@@ -534,28 +518,17 @@ const RSBSAPage: React.FC = () => {
                     method: 'POST',
                     body: formData,
                 });
-
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Upload failed with status: ${response.status}`);
+                    const err = await response.json();
+                    throw new Error(err.error || 'Upload failed');
                 }
-
-                const result = await response.json();
+                const data = await response.json();
                 setSuccessMessage('Photo uploaded successfully!');
                 setTimeout(() => setSuccessMessage(null), 2000);
-
-                // Re-fetch images after upload
-                const photosRes = await fetch(`http://localhost:5000/api/RSBSAform/${selectedRecordForDocs.id}/photos`);
-                if (photosRes.ok) {
-                    const docs = await photosRes.json();
-                    setDocsForRecord(docs);
-                    setSelectedDocIndex(docs.length - 1); // select the new image
-                } else {
-                    console.error('Failed to refresh photos after upload');
-                }
+                // Optionally update docsForRecord to show the new photo (mock for now)
+                // You may want to fetch the updated record from backend here
             } catch (err: any) {
-                console.error('Upload error:', err);
-                setUploadError(err.message || 'Failed to upload photo. Please try again.');
+                setUploadError(err.message);
             } finally {
                 setIsUploading(false);
             }
@@ -563,28 +536,8 @@ const RSBSAPage: React.FC = () => {
         input.click();
     };
 
-    const handleDeletePhoto = async (photoId: string) => {
-        if (!window.confirm('Are you sure you want to delete this photo?')) return;
-        if (!selectedRecordForDocs) return;
-        try {
-            const response = await fetch(`http://localhost:5000/api/RSBSAform/photo/${photoId}`, {
-                method: 'DELETE',
-            });
-            if (!response.ok) {
-                const err = await response.json();
-                alert(err.error || 'Failed to delete photo');
-                return;
-            }
-            // Refresh the photo list
-            const photosRes = await fetch(`http://localhost:5000/api/RSBSAform/${selectedRecordForDocs.id}/photos`);
-            if (photosRes.ok) {
-                const docs = await photosRes.json();
-                setDocsForRecord(docs);
-                setSelectedDocIndex(0);
-            }
-        } catch (err) {
-            alert('Failed to delete photo');
-        }
+    const handlePlotLand = (farmerId: string) => {
+        navigate(`/parcel-selection/${farmerId}`);
     };
 
     return (
@@ -608,7 +561,7 @@ const RSBSAPage: React.FC = () => {
             )}
             <div className="farmers-header">
                 <div className="farmers-header-left">
-                    <button className="back-button" onClick={() => navigate('/dashboard')}>←</button>
+                    <button className="back-button" onClick={() => navigate('/technician-dashboard')}>←</button>
                     <h1 className="farmers-title">RSBSA Records</h1>
                 </div>
                 <div className="farmers-header-right">
@@ -765,7 +718,7 @@ const RSBSAPage: React.FC = () => {
                                                             {openActionsRowId === record.id && (
                                                                 <div className="actions-dropdown">
                                                                     <div key="edit" onClick={() => handleEditClick(record.id)}>Edit</div>
-                                                                    <div key="view-docs" onClick={() => handleViewDocuments(record)}>View Documents</div>
+                                                                    <div key="plot-land" onClick={() => handlePlotLand(record.id)}>Plot Land</div>
                                                                 </div>
                                                             )}
                                                         </>
@@ -914,39 +867,22 @@ const RSBSAPage: React.FC = () => {
                                         ))
                                     )}
                                 </div>
-                                {/* Center: Document preview with scroll and zoom */}
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 320, maxHeight: 420, background: '#fff', padding: '24px 0' }}>
-                                    {/* Zoom Controls */}
-                                    <div style={{ marginBottom: 8 }}>
-                                        <button onClick={() => setZoom(z => Math.max(0.2, z - 0.2))} style={{ fontSize: 18, width: 32, height: 32 }}>-</button>
-                                        <span style={{ margin: '0 10px', fontWeight: 500 }}>{Math.round(zoom * 100)}%</span>
-                                        <button onClick={() => setZoom(z => Math.min(5, z + 0.2))} style={{ fontSize: 18, width: 32, height: 32 }}>+</button>
-                                    </div>
-                                    {/* Scrollable Image Container */}
-                                    <div style={{ width: 340, height: 340, overflow: 'auto', border: '1px solid #ccc', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {docsForRecord[selectedDocIndex] ? (() => {
+                                {/* Center: Document preview with scroll */}
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 320, maxHeight: 420, overflowY: 'auto', background: '#fff', padding: '24px 0' }}>
+                                    {docsForRecord[selectedDocIndex] ? (
+                                        (() => {
                                             const doc = docsForRecord[selectedDocIndex];
                                             const isImage = doc.file_name && doc.file_name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i);
                                             const imageUrl = doc.file_path ? `http://localhost:5000${doc.file_path}` : '';
                                             return isImage ? (
-                                                <img
-                                                    src={imageUrl}
-                                                    alt={doc.file_name}
-                                                    style={{
-                                                        transform: `scale(${zoom})`,
-                                                        transition: 'transform 0.2s',
-                                                        maxWidth: '100%',
-                                                        maxHeight: '100%',
-                                                        display: 'block'
-                                                    }}
-                                                />
+                                                <img src={imageUrl} alt={doc.file_name} style={{ maxWidth: 260, maxHeight: 340, borderRadius: 18, border: '2px solid #bbb', background: '#fff' }} />
                                             ) : (
                                                 <span style={{ fontSize: 110, color: '#222' }}>📄</span>
                                             );
-                                        })() : (
-                                            <span style={{ fontSize: 64, color: '#bbb' }}>No Image</span>
-                                        )}
-                                    </div>
+                                        })()
+                                    ) : (
+                                        <span style={{ fontSize: 64, color: '#bbb' }}>No Image</span>
+                                    )}
                                 </div>
                                 {/* Right: File details and actions */}
                                 <div style={{ minWidth: 240, display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center', background: '#fff', borderLeft: '1px solid #eee', padding: '24px 28px' }}>
@@ -957,9 +893,7 @@ const RSBSAPage: React.FC = () => {
                                             <div style={{ fontSize: 15, marginBottom: 4 }}><b>File size</b> : {docsForRecord[selectedDocIndex].file_size ? `${Math.round(docsForRecord[selectedDocIndex].file_size / 1024)} KB` : '—'}</div>
                                             <div style={{ fontSize: 15, marginBottom: 4 }}><b>Date upload</b> : {docsForRecord[selectedDocIndex].upload_time ? new Date(docsForRecord[selectedDocIndex].upload_time).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}</div>
                                             <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
-                                                {docsForRecord[selectedDocIndex] && docsForRecord[selectedDocIndex].id ? (
-                                                    <button className="cancel-btn" style={{ minWidth: 90, border: '1.5px solid #111', background: '#fff', color: '#111', borderRadius: 8, fontWeight: 500, fontSize: 15, padding: '7px 0', cursor: 'pointer' }} onClick={() => handleDeletePhoto(docsForRecord[selectedDocIndex].id)}>DELETE</button>
-                                                ) : null}
+                                                <button className="cancel-btn" style={{ minWidth: 90, border: '1.5px solid #111', background: '#fff', color: '#111', borderRadius: 8, fontWeight: 500, fontSize: 15, padding: '7px 0', cursor: 'pointer' }} onClick={() => alert('Delete not implemented')}>DELETE</button>
                                                 <button className="update-status-btn" style={{ minWidth: 90, background: '#111', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, fontSize: 15, padding: '7px 0', cursor: 'pointer' }} onClick={handlePhotoUpload} disabled={isUploading}>
                                                     {isUploading ? 'Uploading...' : 'UPLOAD'}
                                                 </button>
@@ -985,4 +919,4 @@ const RSBSAPage: React.FC = () => {
     );
 };
 
-export default RSBSAPage;
+export default TechRSBSAPage;

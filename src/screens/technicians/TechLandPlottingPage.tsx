@@ -40,6 +40,15 @@ const LandPlottingPage: React.FC = () => {
     const [selectedShape, setSelectedShape] = useState<Shape | null>(null);
     const [isEditingAttributes, setIsEditingAttributes] = useState(false);
 
+    // New state for parcel context
+    const [parcelContext, setParcelContext] = useState<{
+        recordId?: string;
+        parcelIndex?: number;
+        viewOnly?: boolean;
+    }>({});
+    const [rsbsaRecord, setRsbsaRecord] = useState<any>(null);
+    const [currentParcel, setCurrentParcel] = useState<any>(null);
+
     const [landAttributes, setLandAttributes] = useState<LandAttributes>({
         name: '',
         ffrs_id: '',
@@ -260,7 +269,12 @@ const LandPlottingPage: React.FC = () => {
     };
 
     const handleBackClick = () => {
-        navigate('/land-plotting');
+        // If we came from parcel selection, go back there
+        if (parcelContext.recordId) {
+            navigate(`/parcel-selection/${parcelContext.recordId}`);
+        } else {
+            navigate('/technician-rsbsa');
+        }
     };
 
     useEffect(() => {
@@ -296,6 +310,57 @@ const LandPlottingPage: React.FC = () => {
         }
     }, [selectedShape, barangayName]);
 
+    // Parse URL parameters for parcel context
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('recordId');
+        const parcelIndex = urlParams.get('parcelIndex');
+        const viewOnly = urlParams.get('viewOnly') === 'true';
+
+        if (recordId) {
+            setParcelContext({
+                recordId,
+                parcelIndex: parcelIndex ? parseInt(parcelIndex) : undefined,
+                viewOnly
+            });
+            fetchRSBSARecord(recordId);
+        }
+    }, []);
+
+    // Fetch RSBSA record data
+    const fetchRSBSARecord = async (recordId: string) => {
+        try {
+            const response = await fetch(`http://localhost:5000/api/RSBSAform/${recordId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            setRsbsaRecord(data);
+
+            // If parcelIndex is specified, set the current parcel
+            if (parcelContext.parcelIndex !== undefined && data.farmParcels) {
+                const parcel = data.farmParcels[parcelContext.parcelIndex];
+                if (parcel) {
+                    setCurrentParcel(parcel);
+                    // Pre-fill land attributes with parcel data
+                    setLandAttributes(prev => ({
+                        ...prev,
+                        firstName: data.firstName || '',
+                        middleName: data.middleName || '',
+                        surname: data.surname || '',
+                        barangay: parcel.farmLocation?.barangay || barangayName,
+                        municipality: parcel.farmLocation?.cityMunicipality || 'Dumangas',
+                        area: parseFloat(parcel.size || parcel.totalFarmArea || '0'),
+                        parcel_address: `${parcel.farmLocation?.barangay || ''}, ${parcel.farmLocation?.cityMunicipality || ''}`,
+                        farmType: parcel.farmType || 'Irrigated'
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching RSBSA record:', error);
+        }
+    };
+
     useEffect(() => {
         const handleLandPlotDeleted = (event: any) => {
             const deletedId = event.detail.id;
@@ -317,6 +382,18 @@ const LandPlottingPage: React.FC = () => {
                     <button className="back-button" onClick={handleBackClick}>←</button>
                     <h2>Land Plotting Dashboard{barangayName && `: ${barangayName}`}</h2>
                 </div>
+                {currentParcel && (
+                    <div className="parcel-context-info">
+                        <div className="parcel-badge">
+                            📍 Parcel #{currentParcel.parcelNumber}
+                        </div>
+                        {rsbsaRecord && (
+                            <div className="farmer-info">
+                                {rsbsaRecord.surname}, {rsbsaRecord.firstName} {rsbsaRecord.middleName}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="landplotting-grid">

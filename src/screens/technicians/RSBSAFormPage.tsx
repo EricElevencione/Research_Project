@@ -1,6 +1,7 @@
 import '../../assets/css/RSBSAForm.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 type ReferenceNumber = {
     region: string;
@@ -157,6 +158,25 @@ type Errors = {
 };
 
 const RSBSAFormPage = () => {
+    const navigate = useNavigate();
+    const [barangayNames, setBarangayNames] = useState<string[]>([]);
+
+    // Fetch barangay names from the map data
+    useEffect(() => {
+        const fetchBarangayNames = async () => {
+            try {
+                const response = await fetch('/Dumangas_map.json');
+                const data = await response.json();
+                const names = data.features.map((feature: any) => feature.properties.NAME_3).sort();
+                setBarangayNames(names);
+            } catch (error) {
+                console.error('Error fetching barangay data:', error);
+            }
+        };
+
+        fetchBarangayNames();
+    }, []);
+
     // Form state
     const [formData, setFormData] = useState<FormData>({
         // Enrollment Information
@@ -293,7 +313,8 @@ const RSBSAFormPage = () => {
 
     const [errors, setErrors] = useState<Errors>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [documentFile, setDocumentFile] = useState<File | null>(null);
+    const [documentPreview, setDocumentPreview] = useState<string>('');
 
     // Handle input changes
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -379,6 +400,51 @@ const RSBSAFormPage = () => {
         }));
     };
 
+    // Handle select changes
+    const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { name, value } = e.target;
+
+        // Handle deep nested fields like farmParcels[0].farmLocation.barangay
+        const arrayFieldMatch = name.match(/^(\w+)\[(\d+)\]\.(\w+)\.(\w+)$/);
+        if (arrayFieldMatch) {
+            const [, arrayName, index, objectName, property] = arrayFieldMatch;
+            setFormData(prev => {
+                const newArray = [...(prev as any)[arrayName]];
+                newArray[parseInt(index)] = {
+                    ...newArray[parseInt(index)],
+                    [objectName]: {
+                        ...newArray[parseInt(index)][objectName],
+                        [property]: value
+                    }
+                };
+                return {
+                    ...prev,
+                    [arrayName]: newArray
+                };
+            });
+            return;
+        }
+
+        // Existing logic for nested objects (e.g., address.barangay)
+        if (name.includes('.')) {
+            const [parent, child] = name.split('.');
+            setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                    ...(prev as any)[parent],
+                    [child]: value
+                }
+            }));
+            return;
+        }
+
+        // Regular fields
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
     const handleChangeProfile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, files } = e.target;
 
@@ -392,6 +458,15 @@ const RSBSAFormPage = () => {
                     profilePicture: file,
                     profilePicturePreview: preview
                 }));
+            }
+            return;
+        }
+        // Handle file input (document)
+        if (type === 'file' && name === 'documentFile') {
+            const file = files?.[0];
+            if (file) {
+                setDocumentFile(file);
+                setDocumentPreview(URL.createObjectURL(file));
             }
             return;
         }
@@ -453,26 +528,42 @@ const RSBSAFormPage = () => {
     const validateForm = () => {
         const newErrors: Errors = {};
 
-        // Required fields validation
-        if (!formData.enrollmentType) newErrors.enrollmentType = 'Required';
+        // Only require these fields for now
         if (!formData.dateAdministered) newErrors.dateAdministered = 'Required';
         if (!formData.surname) newErrors.surname = 'Required';
+        if (!formData.middleName) newErrors.middleName = 'Required';
         if (!formData.firstName) newErrors.firstName = 'Required';
-        if (!formData.sex) newErrors.sex = 'Required';
         if (!formData.address.barangay) newErrors['address.barangay'] = 'Required';
         if (!formData.address.municipality) newErrors['address.municipality'] = 'Required';
-        if (!formData.address.province) newErrors['address.province'] = 'Required';
+        if (!formData.mobileNumber) newErrors.mobileNumber = 'Required';
         if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Required';
-        if (!formData.mainLivelihood) newErrors.mainLivelihood = 'Required';
 
         // Validate at least one farm parcel has required fields
         let hasValidParcel = false;
+        let ownershipTypeValid = false;
         formData.farmParcels.forEach((parcel) => {
-            if (parcel.farmLocation.barangay && parcel.farmLocation.cityMunicipality && parcel.size) {
+            // Require farmLocation.barangay, farmLocation.cityMunicipality, totalFarmArea
+            const hasFields = parcel.farmLocation.barangay && parcel.farmLocation.cityMunicipality && parcel.totalFarmArea;
+            // Require at least one ownership type
+            const ownership = parcel.ownershipType;
+            const hasOwnership = ownership.registeredOwner || ownership.tenant || ownership.lessee || ownership.others;
+            if (hasFields) {
                 hasValidParcel = true;
+                if (!hasOwnership) {
+                    ownershipTypeValid = false;
+                    newErrors[`farmParcels.ownershipType.${parcel.parcelNumber}`] = 'Select at least one ownership type';
+                } else {
+                    ownershipTypeValid = true;
+                }
             }
         });
         if (!hasValidParcel) newErrors.farmParcels = 'At least one valid farm parcel required';
+        if (!ownershipTypeValid) newErrors.ownershipType = 'Select at least one ownership type for a valid parcel';
+
+        // Debug: Log validation errors
+        if (Object.keys(newErrors).length > 0) {
+            console.log('Validation errors:', newErrors);
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -481,31 +572,39 @@ const RSBSAFormPage = () => {
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('Submit clicked');
 
         if (!validateForm()) {
+            console.log('Validation failed');
             return;
         }
+        console.log('Validation passed');
 
         setIsSubmitting(true);
 
         try {
             // Transform data to match backend structure
             const submissionData = {
-                // Personal Information
-                "FIRST NAME": formData.firstName,
-                "MIDDLE NAME": formData.middleName,
-                "LAST NAME": formData.surname,
-                "EXT NAME": formData.extensionName,
-                "GENDER": formData.sex,
-                "BIRTHDATE": formData.dateOfBirth,
-                "FARMER ADDRESS 1": formData.address.houseNo,
-                "FARMER ADDRESS 2": formData.address.street,
-                "FARMER ADDRESS 3": `${formData.address.barangay}, ${formData.address.municipality}, ${formData.address.province}`,
+                // Personal Information - using the exact field names the backend expects
+                surname: formData.surname,
+                firstName: formData.firstName,
+                middleName: formData.middleName,
+                extensionName: formData.extensionName,
+                sex: formData.sex,
+                dateOfBirth: formData.dateOfBirth,
+                address: {
+                    houseNo: formData.address.houseNo,
+                    street: formData.address.street,
+                    barangay: formData.address.barangay,
+                    municipality: formData.address.municipality,
+                    province: formData.address.province,
+                    region: formData.address.region
+                },
 
                 // Farm Information (using first parcel as primary)
-                "PARCEL NO.": formData.farmParcels[0].parcelNumber,
-                "PARCEL ADDRESS": `${formData.farmParcels[0].farmLocation.barangay}, ${formData.farmParcels[0].farmLocation.cityMunicipality}`,
-                "PARCEL AREA": formData.farmParcels[0].size,
+                parcelNumber: formData.farmParcels[0].parcelNumber,
+                parcelAddress: `${formData.farmParcels[0].farmLocation.barangay}, ${formData.farmParcels[0].farmLocation.cityMunicipality}`,
+                parcelArea: formData.farmParcels[0].size,
 
                 // Additional fields for backend processing
                 enrollmentType: formData.enrollmentType,
@@ -538,35 +637,34 @@ const RSBSAFormPage = () => {
             };
 
             // Send data to backend
-            const response = await axios.post('/api/farmers', submissionData);
+            const response = await axios.post('http://localhost:5000/api/RSBSAform', submissionData);
 
             if (response.status === 201) {
-                setSubmitSuccess(true);
-                // Reset form after successful submission if needed
-                // setFormData(initialFormState);
+                window.alert('RSBSA form saved successfully!');
+                navigate('/technician-rsbsa');
+                return;
             }
         } catch (error) {
             console.error('Error submitting form:', error);
+            const err = error as any;
+            let errorMsg = 'Failed to submit form. Please try again.';
+            if (err.response && err.response.data && err.response.data.message) {
+                errorMsg = err.response.data.message;
+            } else if (err.message) {
+                errorMsg = err.message;
+            }
             setErrors({
-                submit: 'Failed to submit form. Please try again.'
+                submit: errorMsg
             });
+            window.alert(errorMsg);
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    if (submitSuccess) {
-        return (
-            <div className="submission-success">
-                <h2>Form Submitted Successfully!</h2>
-                <p>Thank you for registering with RSBSA.</p>
-                <button onClick={() => setSubmitSuccess(false)}>Submit Another Form</button>
-            </div>
-        );
-    }
-
     return (
         <div className="rsbsa-form-scrollable">
+            <button className="back-button" style={{ margin: '16px' }} onClick={() => navigate('/technician-rsbsa')}>← </button>
             <form className="rsbsa-form" onSubmit={handleSubmit}>
                 <h2>ANI AT KITA - RSBSA ENROLLMENT FORM</h2>
 
@@ -636,13 +734,18 @@ const RSBSAFormPage = () => {
                                     onChange={handleChange}
                                 />
                                 <span>-</span>
-                                <input
-                                    type="text"
-                                    placeholder="Barangay"
+                                <select
                                     name="referenceNumber.barangay"
                                     value={formData.referenceNumber.barangay}
-                                    onChange={handleChange}
-                                />
+                                    onChange={handleSelectChange}
+                                >
+                                    <option value="">Select Barangay</option>
+                                    {barangayNames.map((barangay, index) => (
+                                        <option key={index} value={barangay}>
+                                            {barangay}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -761,13 +864,18 @@ const RSBSAFormPage = () => {
                                 value={formData.address.street}
                                 onChange={handleChange}
                             />
-                            <input
-                                type="text"
-                                placeholder="Barangay"
+                            <select
                                 name="address.barangay"
                                 value={formData.address.barangay}
-                                onChange={handleChange}
-                            />
+                                onChange={handleSelectChange}
+                            >
+                                <option value="">Select Barangay</option>
+                                {barangayNames.map((barangay, index) => (
+                                    <option key={index} value={barangay}>
+                                        {barangay}
+                                    </option>
+                                ))}
+                            </select>
                             {errors['address.barangay'] && <span className="error">{errors['address.barangay']}</span>}
                             <input
                                 type="text"
@@ -1617,6 +1725,19 @@ const RSBSAFormPage = () => {
 
                     {formData.farmParcels.map((parcel, index) => (
                         <div key={index} className="farm-parcel-container">
+                            {/* Simple Parcel Header */}
+                            <div className="parcel-header">
+                                <h4>Farm Parcel #{parcel.parcelNumber}</h4>
+                                {formData.farmParcels.length > 1 && (
+                                    <button
+                                        type="button"
+                                        className="remove-parcel-btn"
+                                        onClick={() => removeFarmParcel(index)}
+                                    >
+                                        🗑️ Remove
+                                    </button>
+                                )}
+                            </div>
                             <table className="farm-table">
                                 <thead>
                                     <tr>
@@ -1636,12 +1757,18 @@ const RSBSAFormPage = () => {
                                         <td colSpan={2}>
                                             <div className="form-group">
                                                 <label>Farm Location (Barangay):</label>
-                                                <input
-                                                    type="text"
+                                                <select
                                                     name={`farmParcels[${index}].farmLocation.barangay`}
                                                     value={parcel.farmLocation.barangay}
-                                                    onChange={handleChange}
-                                                />
+                                                    onChange={handleSelectChange}
+                                                >
+                                                    <option value="">Select Barangay</option>
+                                                    {barangayNames.map((barangay, idx) => (
+                                                        <option key={idx} value={barangay}>
+                                                            {barangay}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                                 <label>City/Municipality:</label>
                                                 <input
                                                     type="text"
@@ -1922,7 +2049,31 @@ const RSBSAFormPage = () => {
                     </div>
                 </fieldset>
 
+                {/* Move document upload to the end of the form */}
                 <div className="form-footer">
+                    {/* Document Upload Section at the end */}
+                    <div className="document-upload-box" style={{ marginBottom: '16px' }}>
+                        <label htmlFor="documentFile" className="custom-file-upload">
+                            Add Document
+                        </label>
+                        <input
+                            type="file"
+                            id="documentFile"
+                            name="documentFile"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={handleChangeProfile}
+                        />
+                        {documentPreview && (
+                            <div className="preview-image" style={{ marginTop: '8px' }}>
+                                <img
+                                    src={documentPreview}
+                                    alt="Document Preview"
+                                    style={{ maxWidth: '120px', maxHeight: '120px', border: '1px solid #ccc' }}
+                                />
+                            </div>
+                        )}
+                    </div>
                     {errors.submit && <div className="error-message">{errors.submit}</div>}
                     {errors.farmParcels && <div className="error-message">{errors.farmParcels}</div>}
                     <button

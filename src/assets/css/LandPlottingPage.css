@@ -134,6 +134,35 @@
     color: white;
 }
 
+/* Parcel Context Information */
+.parcel-context-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.parcel-badge {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.farmer-info {
+    background: rgba(255, 255, 255, 0.9);
+    color: #2c3e50;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    font-weight: 500;
+    border: 1px solid #e9ecef;
+}
+
 @media (max-width: 768px) {
     .landplotting-container {
         grid-template-rows: auto 1fr;

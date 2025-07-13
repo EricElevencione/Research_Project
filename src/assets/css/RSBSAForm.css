@@ -22,72 +22,72 @@
 
 .form-section {
   display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
 }
 
 .left-column {
-    flex: 2;
-    min-width: 60%;
+  flex: 2;
+  min-width: 60%;
 }
 
 .right-column {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: 20px;
 }
 
 .photo-upload-box {
-    border: 2px solid black;
-    width: 227px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px;
-    text-align: center;
-    font-family: Arial, sans-serif;
-    background-color: #fff;
-    box-sizing: border-box;
+  border: 2px solid black;
+  width: 227px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  background-color: #fff;
+  box-sizing: border-box;
 }
 
 .photo-label {
-    font-weight: bold;
-    font-size: 16px;
-    line-height: 1.2;
+  font-weight: bold;
+  font-size: 16px;
+  line-height: 1.2;
 }
 
 .photo-instruction {
-    font-size: 12px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-    line-height: 1.2;
+  font-size: 12px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  line-height: 1.2;
 }
 
 input[type="file"] {
-    display: none;
+  display: none;
 }
 
 .custom-file-upload {
-    display: inline-block;
-    padding: 5px 10px;
-    font-size: 12px;
-    background-color: #f0f0f0;
-    border: 1px solid #999;
-    cursor: pointer;
-    border-radius: 4px;
-    margin-bottom: 5px;
+  display: inline-block;
+  padding: 5px 10px;
+  font-size: 12px;
+  background-color: #f0f0f0;
+  border: 1px solid #999;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 5px;
 }
 
 .preview-image img {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border: 1px solid #ccc;
-    margin-top: 10px;
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border: 1px solid #ccc;
+  margin-top: 10px;
 }
 
 /* Enrollment type radio buttons */
@@ -209,7 +209,7 @@ legend {
 }
 
 .name-row span {
- font-weight: 600;
+  font-weight: 600;
 }
 
 /* Sex radio group styling */
@@ -249,7 +249,7 @@ legend {
 }
 
 .number-row span {
- font-weight: 600;
+  font-weight: 600;
 }
 
 /* Date of Birth section */
@@ -267,7 +267,7 @@ legend {
 }
 
 .birth-row span {
- font-weight: 600;
+  font-weight: 600;
 }
 
 /* Religion section */
@@ -315,19 +315,19 @@ legend {
 }
 
 .name_of_spouse-row {
- align-items: center;
+  align-items: center;
 }
 
 .name_of_spouse-row span {
- font-weight: 600;
+  font-weight: 600;
 }
 
 .mother_maiden_name-row {
- align-items: center;
+  align-items: center;
 }
 
 .mother_maiden_name-row {
- font-weight: 600;
+  font-weight: 600;
 }
 
 /* Household section */
@@ -351,19 +351,19 @@ legend {
 }
 
 .household_head_relationship-row {
- align-items: center;
+  align-items: center;
 }
 
 .household_head_relationship-row {
- font-weight: 600;
+  font-weight: 600;
 }
 
 .number_of_male_female_household_member-row {
- align-items: center;
+  align-items: center;
 }
 
 .number_of_male_female_household_member-row {
- font-weight: 600;
+  font-weight: 600;
 }
 
 /* Highest Formal Education section */
@@ -420,7 +420,7 @@ legend {
 }
 
 .indigenous_group-row input {
- width: 30%;
+  width: 30%;
 }
 
 /* Government ID Section */
@@ -510,7 +510,7 @@ legend {
 }
 
 .farm_parcel-row span {
- font-weight: 600;
+  font-weight: 600;
 }
 
 /* Farm Parcel fieldset */
@@ -526,6 +526,122 @@ legend {
   font-weight: 700;
   font-size: 1.2em;
   padding: 0 10px;
+}
+
+/* Enhanced Farm Parcel Container */
+.farm-parcel-container {
+  margin-bottom: 30px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Parcel Header */
+.parcel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 2px solid #ddd;
+}
+
+.parcel-info h4 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.parcel-status {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.not_plotted {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-badge.plotted {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-badge.pending {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.plot-date {
+  font-size: 0.8em;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.parcel-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.plot-parcel-btn,
+.view-plot-btn,
+.remove-parcel-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.plot-parcel-btn {
+  background-color: #007bff;
+  color: white;
+}
+
+.plot-parcel-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.view-plot-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.view-plot-btn:hover {
+  background-color: #1e7e34;
+  transform: translateY(-1px);
+}
+
+.remove-parcel-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.remove-parcel-btn:hover {
+  background-color: #c82333;
+  transform: translateY(-1px);
 }
 
 /* Farm table */

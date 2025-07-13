@@ -21,7 +21,7 @@ interface LandRecord {
     updatedAt: string;
 }
 
-const Masterlist: React.FC = () => {
+const TechMasterlist: React.FC = () => {
     const navigate = useNavigate();
     const [landRecords, setLandRecords] = useState<LandRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -245,7 +245,7 @@ const Masterlist: React.FC = () => {
     return (
         <div className="masterlist-container">
             <div className="masterlist-header">
-                <button className="back-button" onClick={() => navigate('/dashboard')}>
+                <button className="back-button" onClick={() => navigate('/technician-dashboard')}>
                     &#8592;
                 </button>
                 <h1 className="masterlist-title">Masterlist</h1>
@@ -319,4 +319,4 @@ const Masterlist: React.FC = () => {
     );
 };
 
-export default Masterlist;
+export default TechMasterlist;
