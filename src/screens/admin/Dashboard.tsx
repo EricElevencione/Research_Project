@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import React from 'react';
-import FarmlandMap from '../../components/Map/FarmlandMap';
 import "../../assets/css/App.css";
 
 const Dashboard: React.FC = () => {
@@ -31,7 +30,7 @@ const Dashboard: React.FC = () => {
                 {/* Map and Stats */}
                 <main className="map-area">
                     <div className="map-container">
-                        <FarmlandMap />
+                        {/* FarmlandMap component was removed */}
                     </div>
                 </main>
             </div>

@@ -59,7 +59,6 @@ const Login: React.FC = () => {
                 {/* Left section containing branding and marketing text */}
                 <div className="login-left">
                     <h1>Welcome Back</h1>
-                    <p>Access your farmland management system</p>
                 </div>
 
                 {/* Right section containing login form */}

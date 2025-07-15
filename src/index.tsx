@@ -3,7 +3,6 @@ import Login from './screens/admin/AdminLogin';
 import Dashboard from './screens/admin/Dashboard';
 import MasterlistPage from './screens/admin/MasterlistPage';
 import RSBSAPage from './screens/admin/RSBSAPage';
-import FarmlandPage from './screens/admin/FarmlandPage';
 import RSBSAForm from './screens/technicians/RSBSAFormPage';
 import LandPlottingPage from './screens/technicians/TechLandPlottingPage';
 import AddFarmerPage from './screens/technicians/AddFarmerPage';
@@ -51,11 +50,6 @@ function App() {
                 } />
                 <Route path="/add-farmer" element={<AddFarmerPage />} />
                 <Route path="/add-farmer/:firstName/:middleName/:surname/:area" element={<AddFarmerPage />} />
-                <Route path="/farmlands" element={
-                    <ProtectedRoute>
-                        <FarmlandPage />
-                    </ProtectedRoute>
-                } />
                 <Route path="/RSBSAForm" element={
                     <ProtectedRoute>
                         <RSBSAForm />

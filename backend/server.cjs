@@ -121,15 +121,20 @@ app.post('/api/land-plots', async (req, res) => {
     try {
         // Convert GeoJSON geometry to PostGIS geometry type
         const geometry = JSON.stringify(landPlotData.geometry);
+        // Determine plot_type based on geometry type
+        let plotType = 'polygon';
+        if (landPlotData.geometry.type && landPlotData.geometry.type.toUpperCase() === 'POINT') {
+            plotType = 'point';
+        }
 
         const insertQuery = `
     INSERT INTO land_plots (
         id, firstname, middlename, surname, gender, barangay_name, municipality_name, province_name, 
         status, street, farm_type, area, coordinateaccuracy, geom, createdat, updatedat, name,
-        ffrs_id, ext_name, birthdate, parcel_address
+        ffrs_id, ext_name, birthdate, parcel_address, plotSource, plot_type
     ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, ST_GeomFromGeoJSON($14), $15, $16, $17,
-        $18, $19, $20, $21
+        $18, $19, $20, $21, $22, $23
     )
 `;
         const values = [
@@ -153,7 +158,9 @@ app.post('/api/land-plots', async (req, res) => {
             landPlotData.ffrs_id || null,
             landPlotData.ext_name || null,
             landPlotData.birthdate || null,
-            landPlotData.parcel_address || null
+            landPlotData.parcel_address || null,
+            landPlotData.plotSource || null,
+            plotType
         ];
 
         await pool.query(insertQuery, values);
@@ -192,6 +199,8 @@ app.get('/api/land-plots', async (req, res) => {
                 ext_name,
                 birthdate,
                 parcel_address,
+                plotSource,
+                plot_type,
                 ST_AsGeoJSON(geom) as geometry
             FROM land_plots
             ORDER BY createdat DESC

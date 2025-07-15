@@ -24,7 +24,6 @@ interface RSBSARecord {
     numberOfFarmParcels: string;
     createdAt: string;
     // Farm land description fields from database
-    farmLandDescription?: string;
     farmLocationBarangay?: string;
     farmLocationCityMunicipality?: string;
     totalFarmArea?: string;
@@ -182,7 +181,6 @@ const TechRSBSAPage: React.FC = () => {
                         numberOfFarmParcels: record.numberOfFarmParcels || '',
                         createdAt: record.createdAt || '',
                         // Farm land description fields from database
-                        farmLandDescription: record.farmLandDescription || '',
                         farmLocationBarangay: record.farmLocationBarangay || '',
                         farmLocationCityMunicipality: record.farmLocationCityMunicipality || '',
                         totalFarmArea: record.totalFarmArea || '',

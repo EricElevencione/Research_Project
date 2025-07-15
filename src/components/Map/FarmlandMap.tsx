@@ -48,6 +48,15 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
         };
 
         fetchFarmlandRecords();
+
+        // Listen for land-plot-saved event to refresh
+        const handleRefresh = () => {
+            fetchFarmlandRecords();
+        };
+        window.addEventListener('land-plot-saved', handleRefresh);
+        return () => {
+            window.removeEventListener('land-plot-saved', handleRefresh);
+        };
     }, []);
 
     useEffect(() => {
@@ -157,8 +166,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                                         middleName: record.middleName,
                                         surname: record.surname,
                                         gender: record.gender,
-                                        barangay: record.barangayName,
-                                        municipality: record.municipalityName,
+                                        barangay: record.barangay || record.barangayName,
+                                        municipality: record.municipality || record.municipalityName,
                                         province: record.provinceName,
                                         status: record.status,
                                         street: record.street,
@@ -183,19 +192,11 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                         if (feature.properties) {
                             let popupContent = `<div class="land-plot-popup">
                                 <table>
-                                    <tr><th>Attribute</th><th>Value</th></tr>
-                                    <tr><td><b>FFRS ID:</b></td><td>${feature.properties.ffrs_id || 'N/A'}</td></tr>
-                                    <tr><td><b>Last Name:</b></td><td>${feature.properties.surname || 'N/A'}</td></tr>
-                                    <tr><td><b>First Name:</b></td><td>${feature.properties.firstName || 'N/A'}</td></tr>
-                                    <tr><td><b>Middle Name:</b></td><td>${feature.properties.middleName || 'N/A'}</td></tr>
-                                    <tr><td><b>Name Extension:</b></td><td>${feature.properties.ext_name || 'N/A'}</td></tr>
-                                    <tr><td><b>Gender:</b></td><td>${feature.properties.gender || 'N/A'}</td></tr>
-                                    <tr><td><b>Birthdate:</b></td><td>${feature.properties.birthdate ? new Date(feature.properties.birthdate).toLocaleDateString() : 'N/A'}</td></tr>
-                                    <tr><td><b>Barangay:</b></td><td>${feature.properties.barangay || 'N/A'}</td></tr>
+                                    <tr><th>Field</th><th>Value</th></tr>
+                                    <tr><td><b>Name:</b></td><td>${[feature.properties.surname, feature.properties.firstName, feature.properties.middleName].filter(Boolean).join(' ') || 'N/A'}</td></tr>
                                     <tr><td><b>Municipality:</b></td><td>${feature.properties.municipality || 'N/A'}</td></tr>
-                                    <tr><td><b>Province:</b></td><td>${feature.properties.province || 'N/A'}</td></tr>
-                                    <tr><td><b>Parcel Address:</b></td><td>${feature.properties.parcel_address || 'N/A'}</td></tr>
-                                    <tr><td><b>Parcel Area:</b></td><td>${feature.properties.area || 'N/A'}</td></tr>
+                                    <tr><td><b>Barangay:</b></td><td>${feature.properties.barangay || 'N/A'}</td></tr>
+                                    <tr><td><b>History:</b></td><td></td></tr>
                                 </table>
                             </div>`;
                             layer.bindPopup(popupContent);

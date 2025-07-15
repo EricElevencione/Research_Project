@@ -5,7 +5,7 @@ import { EditControl } from 'react-leaflet-draw';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import L, { FeatureGroup as LeafletFeatureGroup } from 'leaflet';
-import { booleanWithin, centroid as turfCentroid } from '@turf/turf';
+import { booleanWithin, centroid as turfCentroid, booleanOverlap } from '@turf/turf';
 
 // Fix for default marker icons in Leaflet with React
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -30,6 +30,9 @@ interface LandPlottingMapProps {
     onShapeSelected?: (shape: any | null) => void;
     barangayName?: string;
     onShapeFinalized?: (shape: any) => void;
+    drawingDisabled?: boolean;
+    geometryPreview?: any;
+    shapes?: any[]; // <-- add this line
 }
 
 export interface LandPlottingMapRef {
@@ -37,12 +40,17 @@ export interface LandPlottingMapRef {
 }
 
 const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
-    ({ onShapeCreated, onShapeEdited, onShapeDeleted, selectedShape, onShapeSelected, barangayName, onShapeFinalized }, ref) => {
+    ({ onShapeCreated, onShapeEdited, onShapeDeleted, selectedShape, onShapeSelected, barangayName, onShapeFinalized, drawingDisabled, geometryPreview, shapes }, ref) => {
         const [boundaryData, setBoundaryData] = useState<any>(null);
         const [loading, setLoading] = useState(true);
         const [error, setError] = useState<string | null>(null);
         const featureGroupRef = useRef<LeafletFeatureGroup>(null);
         const [drawnShapes, setDrawnShapes] = useState<any[]>([]);
+
+        // Helper to normalize barangay names for matching
+        function normalizeName(name: string) {
+            return name.replace(/[^a-z0-9]/gi, '').toLowerCase();
+        }
 
         // Click handler for layers within the FeatureGroup
         const onLayerClick = (e: L.LeafletEvent) => {
@@ -183,6 +191,31 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             fetchMapData();
         }, [barangayName]);
 
+        // Add shapes from props to the map when shapes prop changes
+        useEffect(() => {
+            if (featureGroupRef.current && Array.isArray(shapes)) {
+                // Remove all existing layers first (except boundary)
+                featureGroupRef.current?.eachLayer((layer: any) => {
+                    // Only remove layers that are not boundary overlays
+                    if (!layer.options || !layer.options.isBoundary) {
+                        featureGroupRef.current?.removeLayer(layer);
+                    }
+                });
+                // Add all shapes from props
+                shapes.forEach((shape: any) => {
+                    if (shape.layer && !featureGroupRef.current?.hasLayer(shape.layer)) {
+                        featureGroupRef.current?.addLayer(shape.layer);
+                        // Optionally bind popup
+                        if (shape.properties) {
+                            shape.layer.bindPopup(getPopupContent(shape.properties));
+                        }
+                    }
+                });
+                // Update drawnShapes state to match
+                setDrawnShapes(shapes);
+            }
+        }, [shapes]);
+
         // Mapping of barangay names to center coordinates and zoom
         const barangayCenters: Record<string, { center: [number, number], zoom: number, id?: string }> = {
             Lacturan: { center: [10.830, 122.720], zoom: 16, id: 'LACTURAN_BOUNDARY' },
@@ -233,6 +266,16 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             };
         };
 
+        // Helper to generate popup content for a shape
+        const getPopupContent = (properties: any) => {
+            return `<div style='min-width:180px'>
+                <b>Parcel</b><br/>
+                <b>Name:</b> ${properties.surname || ''} ${properties.firstName || ''} ${properties.middleName || ''}<br/>
+                <b>Barangay:</b> ${properties.barangay || ''}<br/>
+                <b>Municipality:</b> ${properties.municipality || ''}<br/>
+            </div>`;
+        };
+
         const onCreated = (e: any) => {
             console.log('Shape created (onCreated event)', e);
             const { layer } = e;
@@ -247,16 +290,34 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             if (geometryType === 'Polygon') {
                 // Find the correct barangay boundary feature
                 let boundaryFeature = null;
-                if (boundaryData && boundaryData.features && boundaryData.features.length > 0) {
-                    if (barangayName && barangayCenters[barangayName]?.id) {
-                        boundaryFeature = boundaryData.features.find((f: any) => f.properties?.id === barangayCenters[barangayName].id);
+                if (!barangayName) {
+                    console.error('barangayName is not set! Cannot check boundary.');
+                    alert('Barangay is not selected. Please select a barangay before plotting.');
+                    if (featureGroupRef.current && featureGroupRef.current.hasLayer(layer)) {
+                        featureGroupRef.current.removeLayer(layer);
                     }
+                    return;
+                }
+                if (boundaryData && boundaryData.features && boundaryData.features.length > 0) {
+                    boundaryFeature = boundaryData.features.find(
+                        (f: any) => normalizeName(f.properties?.NAME_3 || '') === normalizeName(barangayName || '')
+                    );
                     // Fallback: use first feature
+                    if (!boundaryFeature) {
+                        console.error('No matching boundary found for:', barangayName, 'Normalized:', normalizeName(barangayName || ''));
+                    }
                     if (!boundaryFeature) boundaryFeature = boundaryData.features[0];
                 }
                 if (boundaryFeature) {
                     try {
-                        if (!booleanWithin(geoJson, boundaryFeature)) {
+                        // Debug: Log the drawn shape and boundary feature
+                        console.log('Drawn shape GeoJSON:', JSON.stringify(geoJson, null, 2));
+                        console.log('Boundary feature GeoJSON:', JSON.stringify(boundaryFeature, null, 2));
+                        const within = booleanWithin(geoJson, boundaryFeature);
+                        const overlap = booleanOverlap(geoJson, boundaryFeature);
+                        console.log('booleanWithin result:', within);
+                        console.log('booleanOverlap result:', overlap);
+                        if (!within && !overlap) {
                             if (featureGroupRef.current) {
                                 featureGroupRef.current.removeLayer(layer);
                             }
@@ -264,7 +325,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                             return; // Stop processing if outside boundary
                         }
                     } catch (boundaryError) {
-                        console.error("Error during boundary check (booleanWithin failed):", boundaryError);
+                        console.error("Error during boundary check (booleanWithin/booleanOverlap failed):", boundaryError);
                     }
                 }
                 newShape = {
@@ -314,6 +375,11 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             }
             if (featureGroupRef.current && !featureGroupRef.current.hasLayer(layer)) {
                 featureGroupRef.current.addLayer(layer);
+            }
+            // Bind popup with parcel details
+            if (layer && newShape && newShape.properties) {
+                layer.bindPopup(getPopupContent(newShape.properties));
+                layer.on('click', () => { layer.openPopup(); });
             }
             setDrawnShapes(prev => [...prev, newShape]);
             if (onShapeCreated) onShapeCreated(newShape);
@@ -423,6 +489,14 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             }
         }, [featureGroupRef.current, onLayerClick]); // Re-run if ref changes or onLayerClick identity changes (though it shouldn't)
 
+        // Attach popup to shape on selection
+        useEffect(() => {
+            if (selectedShape && selectedShape.layer && selectedShape.properties) {
+                selectedShape.layer.bindPopup(getPopupContent(selectedShape.properties));
+                selectedShape.layer.openPopup();
+            }
+        }, [selectedShape]);
+
         if (loading) {
             return <div>Loading map data...</div>;
         }
@@ -464,24 +538,33 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                     )}
 
                     <FeatureGroup ref={featureGroupRef}>
-                        <EditControl
-                            position="topright"
-                            onCreated={onCreated}
-                            onEdited={onEdited}
-                            onDeleted={onDeleted}
-                            draw={{
-                                polyline: false,
-                                polygon: { showArea: true },
-                                rectangle: false,
-                                circle: false,
-                                marker: true,
-                                circlemarker: false,
-                            }}
-                            edit={{
-                                featureGroup: featureGroupRef.current || undefined,
-                                remove: true,
-                            }}
-                        />
+                        {!drawingDisabled && (
+                            <EditControl
+                                position="topright"
+                                onCreated={onCreated}
+                                onEdited={onEdited}
+                                onDeleted={onDeleted}
+                                draw={{
+                                    polyline: false,
+                                    polygon: { showArea: true },
+                                    rectangle: false,
+                                    circle: false,
+                                    marker: true,
+                                    circlemarker: false,
+                                }}
+                                edit={{
+                                    featureGroup: featureGroupRef.current || undefined,
+                                    remove: true,
+                                }}
+                            />
+                        )}
+                        {/* Geometry preview overlay */}
+                        {geometryPreview && (
+                            <GeoJSON
+                                data={geometryPreview}
+                                style={{ color: 'blue', weight: 3, opacity: 0.8, fillOpacity: 0.2 }}
+                            />
+                        )}
                     </FeatureGroup>
 
                     {/* {boundaryData && <MapController data={boundaryData} />} */}
