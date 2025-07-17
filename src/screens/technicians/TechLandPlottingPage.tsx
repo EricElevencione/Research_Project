@@ -271,9 +271,9 @@ const LandPlottingPage: React.FC = () => {
         setSelectedShape(shape);
         setIsEditingAttributes(true);
         // Add the new shape to the shapes array if not already present
-        setShapes(prevShapes => {
+        setShapesAndVersion((prevShapes: Shape[]) => {
             // Prevent duplicates by checking id
-            if (prevShapes.some(s => s.id === shape.id)) return prevShapes;
+            if (prevShapes.some((s: Shape) => s.id === shape.id)) return prevShapes;
             return [...prevShapes, shape];
         });
     };
@@ -329,7 +329,7 @@ const LandPlottingPage: React.FC = () => {
         setDeletedShapeIds(prev => [...prev, ...deletedIds]);
 
         const remainingShapes = shapes.filter(s => !deletedIds.includes(s.id));
-        setShapes(remainingShapes);
+        setShapesAndVersion(remainingShapes);
 
         // Persist deletions to the backend
         for (const deletedShape of e.shapes) {
@@ -441,20 +441,13 @@ const LandPlottingPage: React.FC = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const recordId = urlParams.get('recordId');
         const parcelIndex = urlParams.get('parcelIndex');
-        setParcelContext({
-            recordId: recordId ?? undefined,
-            parcelIndex: parcelIndex ? parseInt(parcelIndex, 10) : undefined,
-        });
-        console.log('parcelContext set:', { recordId, parcelIndex });
-    }, []);
+        const parsedIndex = parcelIndex ? parseInt(parcelIndex, 10) : undefined;
 
-    // Fetch RSBSA record data when parcelContext is ready
-    useEffect(() => {
-        console.log('parcelContext:', parcelContext);
-        if (parcelContext.recordId) {
-            fetchRSBSARecord(parcelContext.recordId, parcelContext.parcelIndex);
+        if (recordId) {
+            setParcelContext({ recordId, parcelIndex: parsedIndex });
+            fetchRSBSARecord(recordId, parsedIndex);
         }
-    }, [parcelContext]);
+    }, []);
 
     // Fetch RSBSA record data
     const fetchRSBSARecord = async (recordId: string, parcelIndex?: number) => {
@@ -489,7 +482,6 @@ const LandPlottingPage: React.FC = () => {
                 console.log('Selected parcel:', parcel);
                 if (parcel) {
                     setCurrentParcel(parcel);
-                    // Pre-fill land attributes with parcel data
                     setLandAttributes(prev => ({
                         ...prev,
                         firstName: data.firstName || '',
@@ -500,13 +492,12 @@ const LandPlottingPage: React.FC = () => {
                         area: parseFloat(parcel.size || parcel.totalFarmArea || '0'),
                         parcel_address: `${parcel.farmLocation?.barangay || ''}, ${parcel.farmLocation?.cityMunicipality || ''}`,
                         farmType: parcel.farmType || 'Irrigated',
-                        plotSource: parcel.plotSource || 'manual', // Set plotSource from parcel data
-                        parcelNumber: parcel.parcelNumber, // Ensure parcelNumber is set
+                        plotSource: parcel.plotSource || 'manual',
+                        parcelNumber: parcel.parcelNumber,
                     }));
 
                     // --- NEW: Load all geometry for this parcel and farmer ---
                     let shapes: Shape[] = [];
-                    // 1. Add geometry from parcel if present
                     let L: any = (window as any).L;
                     if (!L) {
                         L = (await import('leaflet'));
@@ -525,7 +516,6 @@ const LandPlottingPage: React.FC = () => {
                             },
                         });
                     }
-                    // 2. Add all matching land plots
                     const landPlotsRes = await fetch('/api/land-plots');
                     if (landPlotsRes.ok) {
                         const allPlots = await landPlotsRes.json();
@@ -536,15 +526,17 @@ const LandPlottingPage: React.FC = () => {
                         const parcelAddr = normalize(`${parcel.farmLocation?.barangay || ''}, ${parcel.farmLocation?.cityMunicipality || ''}`);
                         const surname = normalize(data.surname);
                         const firstName = normalize(data.firstName);
-                        const middleName = normalize(data.middleName);
-                        // Find all plots for this parcel and farmer
+                        // Log filter values and all plots for debugging
+                        console.log('Filtering for:', { parcelAddr, surname, firstName });
+                        allPlots.forEach((plot: any) => {
+                            console.log('plot:', plot.parcel_address, plot.surname, plot.firstName, plot.middleName);
+                        });
+                        // Relaxed filter: only require parcel_address, surname, and firstName to match
                         const matches = allPlots.filter((plot: any) => {
                             return (
                                 normalize(plot.parcel_address) === parcelAddr &&
                                 normalize(plot.surname) === surname &&
-                                normalize(plot.firstName) === firstName &&
-                                // Allow middle name to be missing or match
-                                (!plot.middleName || !data.middleName || normalize(plot.middleName) === middleName)
+                                normalize(plot.firstName) === firstName
                             );
                         });
                         // Diagnostic logging
@@ -559,9 +551,7 @@ const LandPlottingPage: React.FC = () => {
                             });
                         });
                     }
-                    // 3. Set shapes and select the one for the current parcel
-                    setShapes(shapes);
-                    // Prefer shape with matching parcelNumber, else first
+                    setShapesAndVersion(shapes);
                     const selected = shapes.find(s => s.properties.parcelNumber === parcel.parcelNumber) || shapes[0];
                     setSelectedShape(selected || null);
                     setIsEditingAttributes(!!selected);
@@ -687,7 +677,30 @@ const LandPlottingPage: React.FC = () => {
     };
 
     const [shapes, setShapes] = useState<Shape[]>([]);
+    const [shapesVersion, setShapesVersion] = useState(0);
     const [deletedShapeIds, setDeletedShapeIds] = useState<string[]>([]);
+
+    // When setting shapes, increment shapesVersion
+    const setShapesAndVersion = (newShapes: Shape[] | ((prevShapes: Shape[]) => Shape[])) => {
+        setShapes(prev => {
+            const updated = typeof newShapes === 'function' ? (newShapes as (prevShapes: Shape[]) => Shape[])(prev) : newShapes;
+            setShapesVersion(v => v + 1);
+            return updated;
+        });
+    };
+
+    // Helper: Check if a polygon exists for the current parcel
+    const polygonExistsForCurrentParcel = shapes.some(
+        (shape) => {
+            const geo = shape.layer && shape.layer.toGeoJSON && shape.layer.toGeoJSON();
+            // Only check for Polygon type
+            return (
+                geo && geo.geometry && geo.geometry.type === 'Polygon' &&
+                ((currentParcel && shape.properties && shape.properties.parcelNumber === currentParcel.parcelNumber) ||
+                    (!currentParcel && shape.properties && shape.properties.parcelNumber === undefined))
+            );
+        }
+    );
 
     return (
         <div className="landplotting-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '90vh', border: '1px solid #222', borderRadius: '10px', margin: '2rem', background: '#fff' }}>
@@ -715,13 +728,15 @@ const LandPlottingPage: React.FC = () => {
                                 onShapeDeleted={handleMapShapeDeleted}
                                 barangayName={landAttributes.barangay}
                                 onShapeFinalized={handleShapeFinalized}
-                                // Hide drawing tools if geometry mode
+                                // Only disable drawing if geometry mode
                                 drawingDisabled={plottingMethod === 'geometry'}
                                 geometryPreview={plottingMethod === 'geometry' ? geometryPreview : null}
                                 shapes={shapes}
+                                polygonExistsForCurrentParcel={polygonExistsForCurrentParcel}
                             />
                         </div>
                     </div>
+                    {/* Optionally, remove the red warning message since modal will handle feedback */}
                 </div>
                 {/* Right: Details Panel */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #ccc', padding: '2rem 2rem 2rem 2rem', justifyContent: 'flex-start', overflowY: 'auto', maxHeight: '100%' }}>

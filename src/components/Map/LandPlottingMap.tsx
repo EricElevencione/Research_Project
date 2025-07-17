@@ -33,6 +33,7 @@ interface LandPlottingMapProps {
     drawingDisabled?: boolean;
     geometryPreview?: any;
     shapes?: any[]; // <-- add this line
+    polygonExistsForCurrentParcel?: boolean; // <-- add this line
 }
 
 export interface LandPlottingMapRef {
@@ -40,12 +41,14 @@ export interface LandPlottingMapRef {
 }
 
 const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
-    ({ onShapeCreated, onShapeEdited, onShapeDeleted, selectedShape, onShapeSelected, barangayName, onShapeFinalized, drawingDisabled, geometryPreview, shapes }, ref) => {
+    ({ onShapeCreated, onShapeEdited, onShapeDeleted, selectedShape, onShapeSelected, barangayName, onShapeFinalized, drawingDisabled, geometryPreview, shapes, polygonExistsForCurrentParcel }, ref) => {
         const [boundaryData, setBoundaryData] = useState<any>(null);
         const [loading, setLoading] = useState(true);
         const [error, setError] = useState<string | null>(null);
         const featureGroupRef = useRef<LeafletFeatureGroup>(null);
         const [drawnShapes, setDrawnShapes] = useState<any[]>([]);
+        const [showPolygonLimitModal, setShowPolygonLimitModal] = useState(false);
+        const [pendingLayerToRemove, setPendingLayerToRemove] = useState<any>(null);
 
         // Helper to normalize barangay names for matching
         function normalizeName(name: string) {
@@ -194,27 +197,23 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         // Add shapes from props to the map when shapes prop changes
         useEffect(() => {
             if (featureGroupRef.current && Array.isArray(shapes)) {
-                // Remove all existing layers first (except boundary)
-                featureGroupRef.current?.eachLayer((layer: any) => {
-                    // Only remove layers that are not boundary overlays
-                    if (!layer.options || !layer.options.isBoundary) {
+                featureGroupRef.current.eachLayer((layer: any) => {
+                    if (!layer.options?.isBoundary) {
                         featureGroupRef.current?.removeLayer(layer);
                     }
                 });
-                // Add all shapes from props
                 shapes.forEach((shape: any) => {
                     if (shape.layer && !featureGroupRef.current?.hasLayer(shape.layer)) {
                         featureGroupRef.current?.addLayer(shape.layer);
-                        // Optionally bind popup
                         if (shape.properties) {
                             shape.layer.bindPopup(getPopupContent(shape.properties));
                         }
                     }
                 });
-                // Update drawnShapes state to match
                 setDrawnShapes(shapes);
             }
-        }, [shapes]);
+        }, [shapes ?? [], (shapes ?? []).length]);
+
 
         // Mapping of barangay names to center coordinates and zoom
         const barangayCenters: Record<string, { center: [number, number], zoom: number, id?: string }> = {
@@ -276,6 +275,18 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             </div>`;
         };
 
+        // Helper: Check if a polygon exists for the current parcel (local check)
+        function polygonExistsForParcel(newLayer: any) {
+            // Only check for Polygon type
+            const newParcelNumber = newLayer.options && newLayer.options.properties && newLayer.options.properties.parcelNumber;
+            return drawnShapes.some(shape => {
+                const geo = shape.layer && shape.layer.toGeoJSON && shape.layer.toGeoJSON();
+                return geo && geo.geometry && geo.geometry.type === 'Polygon' &&
+                    ((newParcelNumber !== undefined && shape.properties && shape.properties.parcelNumber === newParcelNumber) ||
+                        (newParcelNumber === undefined && shape.properties && shape.properties.parcelNumber === undefined));
+            });
+        }
+
         const onCreated = (e: any) => {
             console.log('Shape created (onCreated event)', e);
             const { layer } = e;
@@ -288,6 +299,14 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
             // --- Polygon Specific Logic ---
             if (geometryType === 'Polygon') {
+                // Use local check for existing polygon for this parcel
+                if (polygonExistsForParcel(layer)) {
+                    // Show modal and store the layer to remove after confirmation
+                    setShowPolygonLimitModal(true);
+                    setPendingLayerToRemove(layer);
+                    // Do NOT remove the layer yet; wait for user to click OK
+                    return;
+                }
                 // Find the correct barangay boundary feature
                 let boundaryFeature = null;
                 if (!barangayName) {
@@ -497,6 +516,33 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             }
         }, [selectedShape]);
 
+        // Modal for polygon limit
+        const PolygonLimitModal = () => showPolygonLimitModal ? (
+            <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                background: 'rgba(0,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 9999
+            }}>
+                <div style={{ background: '#fff', padding: '2rem', borderRadius: '10px', boxShadow: '0 2px 16px rgba(0,0,0,0.2)', minWidth: 300, textAlign: 'center' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '1rem' }}>Only one polygon is allowed.</div>
+                    <button onClick={() => {
+                        setShowPolygonLimitModal(false);
+                        if (pendingLayerToRemove && featureGroupRef.current && featureGroupRef.current.hasLayer(pendingLayerToRemove)) {
+                            featureGroupRef.current.removeLayer(pendingLayerToRemove);
+                        }
+                        setPendingLayerToRemove(null);
+                    }} style={{ padding: '0.5rem 2rem', borderRadius: '8px', border: '1px solid #222', background: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>OK</button>
+                </div>
+            </div>
+        ) : null;
+
         if (loading) {
             return <div>Loading map data...</div>;
         }
@@ -512,7 +558,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                 position: 'relative',
                 border: '2px solid red'
             }}>
+                <PolygonLimitModal />
                 <MapContainer
+                    key={barangayName} // <- Add this line
                     center={getMapView().center as [number, number]}
                     zoom={getMapView().zoom}
                     style={{ height: '100%' }}

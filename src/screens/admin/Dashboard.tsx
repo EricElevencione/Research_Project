@@ -13,7 +13,9 @@ const Dashboard: React.FC = () => {
                 <button onClick={() => navigate("/rsbsa")}>RSBSA</button>
                 <button onClick={() => navigate("/masterlist")}>Masterlist</button>
                 <button onClick={() => navigate("/land-plotting")}>Land Plotting</button>
+                <button onClick={() => navigate("/")}>Incetives</button>
                 <button onClick={() => navigate("/")}>Logout</button>
+
             </nav>
 
             <div className="dashboard-grid">

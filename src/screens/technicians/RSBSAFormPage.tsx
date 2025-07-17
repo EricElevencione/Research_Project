@@ -201,9 +201,9 @@ const RSBSAFormPage = () => {
             houseNo: '',
             street: '',
             barangay: '',
-            municipality: '',
-            province: '',
-            region: ''
+            municipality: 'Dumangas', // Fixed value
+            province: 'Iloilo',       // Fixed value
+            region: 'VI'              // Fixed value
         },
         mobileNumber: '',
         landlineNumber: '',
@@ -882,7 +882,8 @@ const RSBSAFormPage = () => {
                                 placeholder="Municipality/City"
                                 name="address.municipality"
                                 value={formData.address.municipality}
-                                onChange={handleChange}
+                                readOnly
+                            // onChange={handleChange} // Remove onChange for fixed field
                             />
                             {errors['address.municipality'] && <span className="error">{errors['address.municipality']}</span>}
                             <input
@@ -890,7 +891,8 @@ const RSBSAFormPage = () => {
                                 placeholder="Province"
                                 name="address.province"
                                 value={formData.address.province}
-                                onChange={handleChange}
+                                readOnly
+                            // onChange={handleChange} // Remove onChange for fixed field
                             />
                             {errors['address.province'] && <span className="error">{errors['address.province']}</span>}
                             <input
@@ -898,7 +900,8 @@ const RSBSAFormPage = () => {
                                 placeholder="Region"
                                 name="address.region"
                                 value={formData.address.region}
-                                onChange={handleChange}
+                                readOnly
+                            // onChange={handleChange} // Remove onChange for fixed field
                             />
                         </div>
                     </div>
