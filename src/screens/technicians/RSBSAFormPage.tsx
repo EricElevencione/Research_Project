@@ -106,11 +106,8 @@ type FarmParcel = {
 };
 
 type FormData = {
-    enrollmentType: string;
     dateAdministered: string;
     referenceNumber: ReferenceNumber;
-    profilePicture: File | null;
-    profilePicturePreview: string;
     surname: string;
     firstName: string;
     middleName: string;
@@ -180,7 +177,6 @@ const RSBSAFormPage = () => {
     // Form state
     const [formData, setFormData] = useState<FormData>({
         // Enrollment Information
-        enrollmentType: '',
         dateAdministered: '',
         referenceNumber: {
             region: '',
@@ -188,8 +184,6 @@ const RSBSAFormPage = () => {
             cityMuni: '',
             barangay: ''
         },
-        profilePicture: null,
-        profilePicturePreview: '',
 
         // Personal Information
         surname: '',
@@ -313,8 +307,6 @@ const RSBSAFormPage = () => {
 
     const [errors, setErrors] = useState<Errors>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [documentFile, setDocumentFile] = useState<File | null>(null);
-    const [documentPreview, setDocumentPreview] = useState<string>('');
 
     // Handle input changes
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -439,39 +431,6 @@ const RSBSAFormPage = () => {
         }
 
         // Regular fields
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
-    const handleChangeProfile = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, files } = e.target;
-
-        // Handle file input (profile picture)
-        if (type === 'file' && name === 'profilePicture') {
-            const file = files?.[0];
-            if (file) {
-                const preview = URL.createObjectURL(file);
-                setFormData(prev => ({
-                    ...prev,
-                    profilePicture: file,
-                    profilePicturePreview: preview
-                }));
-            }
-            return;
-        }
-        // Handle file input (document)
-        if (type === 'file' && name === 'documentFile') {
-            const file = files?.[0];
-            if (file) {
-                setDocumentFile(file);
-                setDocumentPreview(URL.createObjectURL(file));
-            }
-            return;
-        }
-
-        // Handle other input types
         setFormData(prev => ({
             ...prev,
             [name]: value
@@ -607,7 +566,6 @@ const RSBSAFormPage = () => {
                 parcelArea: formData.farmParcels[0].size,
 
                 // Additional fields for backend processing
-                enrollmentType: formData.enrollmentType,
                 dateAdministered: formData.dateAdministered,
                 referenceNumber: formData.referenceNumber,
                 mobileNumber: formData.mobileNumber,
@@ -672,29 +630,6 @@ const RSBSAFormPage = () => {
                 <section className="form-section">
                     <div className="left-column">
                         <div className="enrollment-date-row">
-                            <div className="enrollment-type">
-                                <label>Enrollment Type:</label>
-                                <label>
-                                    <input
-                                        type="radio"
-                                        name="enrollmentType"
-                                        value="new"
-                                        checked={formData.enrollmentType === 'new'}
-                                        onChange={handleRadioChange}
-                                    /> New
-                                </label>
-                                <label>
-                                    <input
-                                        type="radio"
-                                        name="enrollmentType"
-                                        value="updating"
-                                        checked={formData.enrollmentType === 'updating'}
-                                        onChange={handleRadioChange}
-                                    /> Updating
-                                </label>
-                                {errors.enrollmentType && <span className="error">{errors.enrollmentType}</span>}
-                            </div>
-
                             <div className="date-administered">
                                 <label>Date Administered:</label>
                                 <input
@@ -750,31 +685,6 @@ const RSBSAFormPage = () => {
                         </div>
                     </div>
 
-                    <div className="right-column">
-                        <div className="photo-upload-box">
-                            <div className="photo-label">2x2<br />PICTURE</div>
-                            <div className="photo-instruction">PHOTO TAKEN<br />WITHIN 6 MONTHS</div>
-
-                            <label htmlFor="profilePicture" className="custom-file-upload">
-                                Choose File
-                            </label>
-                            <input
-                                type="file"
-                                id="profilePicture"
-                                name="profilePicture"
-                                accept="image/*"
-                                onChange={handleChangeProfile}
-                            />
-                            {formData.profilePicturePreview && (
-                                <div className="preview-image">
-                                    <img
-                                        src={formData.profilePicturePreview}
-                                        alt="Preview"
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </div>
                 </section>
 
                 {/* PART I: PERSONAL INFORMATION */}
@@ -953,10 +863,10 @@ const RSBSAFormPage = () => {
                             <input
                                 type="radio"
                                 name="religion"
-                                value="Christianity"
-                                checked={formData.religion === 'Christianity'}
+                                value="Roman Catholic"
+                                checked={formData.religion === 'Roman Catholic'}
                                 onChange={handleRadioChange}
-                            /> Christianity
+                            /> Roman Catholic
                         </label>
                         <label>
                             <input
@@ -1025,15 +935,17 @@ const RSBSAFormPage = () => {
                         </label>
                     </div>
 
-                    <div className="form-row name_of_spouse-row">
-                        <span className="inline-label">Name of Spouse if Married:</span>
-                        <input
-                            type="text"
-                            name="nameOfSpouse"
-                            value={formData.nameOfSpouse}
-                            onChange={handleChange}
-                        />
-                    </div>
+                    {formData.civilStatus === 'Married' && (
+                        <div className="form-row name_of_spouse-row">
+                            <span className="inline-label">Name of Spouse if Married:</span>
+                            <input
+                                type="text"
+                                name="nameOfSpouse"
+                                value={formData.nameOfSpouse}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    )}
 
                     <hr className="form-separator" />
 
@@ -1071,22 +983,24 @@ const RSBSAFormPage = () => {
                         </label>
                     </div>
 
-                    <div className="form-row household_head_relationship-row">
-                        <span className="inline-label">If no, name of household head:</span>
-                        <input
-                            type="text"
-                            name="householdHeadName"
-                            value={formData.householdHeadName}
-                            onChange={handleChange}
-                        />
-                        <span className="inline-label">Relationship:</span>
-                        <input
-                            type="text"
-                            name="householdHeadRelationship"
-                            value={formData.householdHeadRelationship}
-                            onChange={handleChange}
-                        />
-                    </div>
+                    {formData.householdHead === 'No' && (
+                        <div className="form-row household_head_relationship-row">
+                            <span className="inline-label">If no, name of household head:</span>
+                            <input
+                                type="text"
+                                name="householdHeadName"
+                                value={formData.householdHeadName}
+                                onChange={handleChange}
+                            />
+                            <span className="inline-label">Relationship:</span>
+                            <input
+                                type="text"
+                                name="householdHeadRelationship"
+                                value={formData.householdHeadRelationship}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    )}
 
                     <div className="form-row number_of_male_female_household_member-row">
                         <span className="inline-label">Number of male household members:</span>
@@ -1272,14 +1186,18 @@ const RSBSAFormPage = () => {
                                 onChange={handleRadioChange}
                             /> No
                         </label>
-                        <span className="inline-label">If yes, specify </span>
-                        <input
-                            type="text"
-                            name="indigenousGroupSpecify"
-                            value={formData.indigenousGroupSpecify}
-                            onChange={handleChange}
-                        />
                     </div>
+                    {formData.indigenousGroup === 'Yes' && (
+                        <div className="form-row specify-row">
+                            <span className="inline-label">If yes, specify: </span>
+                            <input
+                                type="text"
+                                name="indigenousGroupSpecify"
+                                value={formData.indigenousGroupSpecify}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    )}
 
                     <hr className="form-separator" />
 
@@ -1305,22 +1223,24 @@ const RSBSAFormPage = () => {
                         </label>
                     </div>
 
-                    <div className="form-row id_type-row">
-                        <span className="inline-label">If yes, specify ID Type: </span>
-                        <input
-                            type="text"
-                            name="idType"
-                            value={formData.idType}
-                            onChange={handleChange}
-                        />
-                        <span className="inline-label">ID Number: </span>
-                        <input
-                            type="text"
-                            name="idNumber"
-                            value={formData.idNumber}
-                            onChange={handleChange}
-                        />
-                    </div>
+                    {formData.governmentId === 'Yes' && (
+                        <div className="form-row id_type-row">
+                            <span className="inline-label">If yes, specify ID Type: </span>
+                            <input
+                                type="text"
+                                name="idType"
+                                value={formData.idType}
+                                onChange={handleChange}
+                            />
+                            <span className="inline-label">ID Number: </span>
+                            <input
+                                type="text"
+                                name="idNumber"
+                                value={formData.idNumber}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    )}
 
                     <hr className="form-separator" />
 
@@ -1346,15 +1266,17 @@ const RSBSAFormPage = () => {
                         </label>
                     </div>
 
-                    <div className="form-row specify-row">
-                        <span className="inline-label">If yes, specify: </span>
-                        <input
-                            type="text"
-                            name="farmerAssociationSpecify"
-                            value={formData.farmerAssociationSpecify}
-                            onChange={handleChange}
-                        />
-                    </div>
+                    {formData.farmerAssociation === 'Yes' && (
+                        <div className="form-row specify-row">
+                            <span className="inline-label">If yes, specify: </span>
+                            <input
+                                type="text"
+                                name="farmerAssociationSpecify"
+                                value={formData.farmerAssociationSpecify}
+                                onChange={handleChange}
+                            />
+                        </div>
+                    )}
 
                     <hr className="form-separator" />
 
@@ -2054,29 +1976,6 @@ const RSBSAFormPage = () => {
 
                 {/* Move document upload to the end of the form */}
                 <div className="form-footer">
-                    {/* Document Upload Section at the end */}
-                    <div className="document-upload-box" style={{ marginBottom: '16px' }}>
-                        <label htmlFor="documentFile" className="custom-file-upload">
-                            Add Document
-                        </label>
-                        <input
-                            type="file"
-                            id="documentFile"
-                            name="documentFile"
-                            accept="image/*"
-                            style={{ display: 'none' }}
-                            onChange={handleChangeProfile}
-                        />
-                        {documentPreview && (
-                            <div className="preview-image" style={{ marginTop: '8px' }}>
-                                <img
-                                    src={documentPreview}
-                                    alt="Document Preview"
-                                    style={{ maxWidth: '120px', maxHeight: '120px', border: '1px solid #ccc' }}
-                                />
-                            </div>
-                        )}
-                    </div>
                     {errors.submit && <div className="error-message">{errors.submit}</div>}
                     {errors.farmParcels && <div className="error-message">{errors.farmParcels}</div>}
                     <button
