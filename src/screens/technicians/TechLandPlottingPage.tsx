@@ -5,6 +5,7 @@ import '../../assets/css/LandPlottingPage.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../../assets/css/ActiveFarmersPage.css';
 import { v4 as uuidv4 } from 'uuid'; // Add at the top for unique id generation
+import type { Polygon as GeoJSONPolygon } from 'geojson';
 
 // interfaces unchanged...
 interface LandAttributes {
@@ -27,6 +28,7 @@ interface LandAttributes {
     farmType: 'Irrigated' | 'Rainfed Upland' | 'Rainfed Lowland';
     plotSource?: 'manual' | 'lot_plan'; // NEW FIELD
     parcelNumber?: number; // Added to fix linter error
+    _isGenerated?: boolean; // Allow generated shape flag
 }
 
 interface Shape {
@@ -649,10 +651,11 @@ const LandPlottingPage: React.FC = () => {
 
     // Generate geometry from geometry input
     const handleGenerateGeometry = () => {
-        const startLat = parseFloat(geometryStart.lat);
-        const startLng = parseFloat(geometryStart.lng);
+        // Use 0,0 if user leaves blank
+        const startLat = geometryStart.lat.trim() === '' ? 0 : parseFloat(geometryStart.lat);
+        const startLng = geometryStart.lng.trim() === '' ? 0 : parseFloat(geometryStart.lng);
         if (isNaN(startLat) || isNaN(startLng)) {
-            alert('Please enter a valid starting latitude and longitude.');
+            alert('Please enter a valid starting latitude and longitude or leave both blank for relative plotting.');
             return;
         }
         let coords = [[startLng, startLat]];
@@ -669,11 +672,31 @@ const LandPlottingPage: React.FC = () => {
         }
         // Close the polygon
         coords.push([startLng, startLat]);
-        const geojson = {
+        const geojson: GeoJSONPolygon = {
             type: 'Polygon',
             coordinates: [coords]
         };
         setGeometryPreview(geojson);
+
+        // --- Add as a real shape ---
+        import('leaflet').then(L => {
+            const layer = L.geoJSON(geojson).getLayers()[0];
+            const newShape = {
+                id: `shape-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                layer,
+                properties: { ...landAttributes, area: 0 },
+            };
+            // Only allow one generated shape at a time (remove previous preview shape if any)
+            setShapesAndVersion(prevShapes => {
+                // Remove any shape with a special flag (e.g., area 0 and coordinates at 0,0)
+                const filtered = prevShapes.filter(s => !(s.properties && s.properties._isGenerated));
+                newShape.properties._isGenerated = true; // Mark as generated for easy removal
+                return [...filtered, newShape];
+            });
+            setSelectedShape(newShape);
+            setIsEditingAttributes(true);
+            setGeometryPreview(null); // Clear preview after adding
+        });
     };
 
     const [shapes, setShapes] = useState<Shape[]>([]);
@@ -796,6 +819,10 @@ const LandPlottingPage: React.FC = () => {
                     {/* Geometry Input Form (only show if geometry mode) */}
                     {plottingMethod === 'geometry' && (
                         <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9', maxHeight: 350, overflowY: 'auto' }}>
+                            {/* UI note for relative plotting */}
+                            <div style={{ color: '#b36b00', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                Note: If you leave the starting latitude and longitude blank, the lot will be plotted as a relative shape (not georeferenced to a real-world location).
+                            </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ fontWeight: 'bold', marginRight: '1rem' }}>Starting Point (Lat, Lng):</label>
                                 <input
