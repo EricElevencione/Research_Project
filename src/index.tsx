@@ -13,6 +13,7 @@ import Register from './screens/technicians/RegisterPage';
 import TechRSBSAPage from './screens/technicians/TechRSBSAPage';
 import TechLandPlotting from './screens/technicians/TechLandPlottingPage';
 import ParcelSelectionPage from './screens/technicians/ParcelSelectionPage';
+import Incentives from './screens/admin/Incentives';
 import './assets/css/index.css';
 
 // Protected Route component
@@ -93,6 +94,11 @@ function App() {
                 <Route path="/parcel-selection/:recordId" element={
                     <ProtectedRoute>
                         <ParcelSelectionPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/incentives" element={
+                    <ProtectedRoute>
+                        <Incentives />
                     </ProtectedRoute>
                 } />
                 <Route path="/register/:role" element={<Register />} />

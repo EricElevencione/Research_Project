@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import React from 'react';
 import "../../assets/css/App.css";
+import FarmlandMap from "../../components/Map/FarmlandMap";
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -12,8 +13,7 @@ const Dashboard: React.FC = () => {
                 <button onClick={() => navigate("/dashboard")}>Home</button>
                 <button onClick={() => navigate("/rsbsa")}>RSBSA</button>
                 <button onClick={() => navigate("/masterlist")}>Masterlist</button>
-                <button onClick={() => navigate("/land-plotting")}>Land Plotting</button>
-                <button onClick={() => navigate("/")}>Incetives</button>
+                <button onClick={() => navigate("/incentives")}>Incetives</button>
                 <button onClick={() => navigate("/")}>Logout</button>
 
             </nav>
@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
                 {/* Map and Stats */}
                 <main className="map-area">
                     <div className="map-container">
-                        {/* FarmlandMap component was removed */}
+                        <FarmlandMap />
                     </div>
                 </main>
             </div>
