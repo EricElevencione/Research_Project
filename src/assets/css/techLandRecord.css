@@ -1,0 +1,56 @@
+.land-records-container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 24px;
+    background: #181818;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #222;
+}
+
+.land-records-title {
+    text-align: center;
+    margin-bottom: 16px;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.land-records-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #222;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.land-records-table th,
+.land-records-table td {
+    border: 1px solid #333;
+    padding: 10px 14px;
+    text-align: left;
+}
+
+.land-records-table th {
+    background: #222;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.land-records-table tr:nth-child(even) {
+    background: #232323;
+}
+
+.land-records-table tr:nth-child(odd) {
+    background: #181818;
+}
+
+.land-records-role-badge {
+    display: inline-block;
+    border-radius: 8px;
+    padding: 2px 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fff;
+    margin-right: 2px;
+}

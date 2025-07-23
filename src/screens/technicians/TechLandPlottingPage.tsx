@@ -39,7 +39,7 @@ interface Shape {
 }
 
 const LandPlottingPage: React.FC = () => {
-    const { barangayName = '' } = useParams<{ barangayName: string }>();
+    const { barangayName = '', recordId } = useParams(); // Restore barangayName and add recordId
     const navigate = useNavigate();
     const mapRef = useRef<LandPlottingMapRef>(null);
     const [selectedShape, setSelectedShape] = useState<Shape | null>(null);
@@ -725,6 +725,19 @@ const LandPlottingPage: React.FC = () => {
         }
     );
 
+    const [history, setHistory] = useState<any[]>([]);
+
+    // Fetch land rights history for the current parcel
+    useEffect(() => {
+        const parcelId = Number(recordId || currentParcel?.id || currentParcel?.parcelNumber);
+        console.log('parcelId for history fetch:', parcelId, currentParcel);
+        if (!parcelId) return;
+        fetch(`http://localhost:5000/api/land-rights-history?parcel_id=${parcelId}`)
+            .then(res => res.json())
+            .then(data => setHistory(data))
+            .catch(() => setHistory([]));
+    }, [recordId, currentParcel]);
+
     return (
         <div className="landplotting-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '90vh', border: '1px solid #222', borderRadius: '10px', margin: '2rem', background: '#fff' }}>
             {/* Back Button at top left */}
@@ -938,6 +951,29 @@ const LandPlottingPage: React.FC = () => {
                         <button onClick={handleSaveAttributes} disabled={!isEditingAttributes || isSaving} style={{ padding: '0.5rem 2rem', borderRadius: '8px', border: '1px solid #222', background: '#fff', fontWeight: 'bold', cursor: isEditingAttributes && !isSaving ? 'pointer' : 'not-allowed' }}>
                             {isSaving ? 'Saving...' : 'SAVE'}
                         </button>
+                    </div>
+                    <div style={{ marginTop: '2rem' }}>
+                        <span style={{ fontWeight: 'bold' }}>History:</span>
+                        <table style={{ width: '100%', marginTop: '0.5rem', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ borderBottom: '1px solid #ccc' }}>Date</th>
+                                    <th style={{ borderBottom: '1px solid #ccc' }}>Status Chosen</th>
+                                    <th style={{ borderBottom: '1px solid #ccc' }}>Farmer Name</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {history.length === 0 ? (
+                                    <tr><td colSpan={3} style={{ textAlign: 'center' }}>No history found.</td></tr>
+                                ) : history.map(entry => (
+                                    <tr key={entry.id}>
+                                        <td>{new Date(entry.changed_at).toLocaleDateString()}</td>
+                                        <td>{entry.role}</td>
+                                        <td>{entry.farmer_name}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

@@ -66,7 +66,7 @@ const TechnicianDashboard: React.FC = () => {
                 <button onClick={() => navigate("/technician-dashboard")}>Home</button>
                 <button onClick={() => navigate("/technician-masterlist")}>Masterlist</button>
                 <button onClick={() => navigate("/technician-rsbsa")}>RSBSA</button>
-                <button onClick={() => navigate("/technician-rsbsa")}>View Land Records</button>
+                <button onClick={() => navigate("/technician-land-record")}>View Land Records</button>
                 <button onClick={() => navigate("/")}>Logout</button>
             </nav>
 

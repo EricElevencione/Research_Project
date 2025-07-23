@@ -84,7 +84,7 @@ const TechRSBSAPage: React.FC = () => {
     // Add state for selected document index in the modal
     const [selectedDocIndex, setSelectedDocIndex] = useState(0);
 
-    // Add state for success message
+    // Add state for success messageparcel_id
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const [selectedParcel, setSelectedParcel] = useState<FarmParcel | null>(null);
@@ -276,7 +276,23 @@ const TechRSBSAPage: React.FC = () => {
         if ((selectedOwnershipType === 'TENANT' || selectedOwnershipType === 'LESSEE') && !selectedOwnerId) return;
         setIsUpdatingStatus(true);
         try {
-            // Call the backend API to update ownership type
+            // --- Land Rights History Integration ---
+            // Use the correct parcel number for parcel_id, as a number
+            const parcelId = Number(selectedRecordForStatus.parcelNumber);
+            await fetch('http://localhost:5000/api/land-rights-history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    parcel_id: parcelId,
+                    person_id: selectedRecordForStatus.id, // or use the correct person ID
+                    role: selectedOwnershipType,
+                    reason: `Assigned as ${selectedOwnershipType}`,
+                    changed_by: 'technician' // Replace with actual user if available
+                })
+            });
+            // --- End Land Rights History Integration ---
+
+            // Call the backend API to update ownership type (existing logic)
             const response = await fetch(`http://localhost:5000/api/RSBSAform/${selectedRecordForStatus.id}/ownership`, {
                 method: 'PUT',
                 headers: {

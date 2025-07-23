@@ -14,6 +14,7 @@ import TechRSBSAPage from './screens/technicians/TechRSBSAPage';
 import TechLandPlotting from './screens/technicians/TechLandPlottingPage';
 import ParcelSelectionPage from './screens/technicians/ParcelSelectionPage';
 import Incentives from './screens/admin/Incentives';
+import TechLandRecord from './screens/technicians/TechLandRecord';
 import './assets/css/index.css';
 
 // Protected Route component
@@ -84,6 +85,11 @@ function App() {
                 <Route path="/technician-landplotting" element={
                     <ProtectedRoute>
                         <TechLandPlotting />
+                    </ProtectedRoute>
+                } />
+                <Route path="/technician-land-record" element={
+                    <ProtectedRoute>
+                        <TechLandRecord />
                     </ProtectedRoute>
                 } />
                 <Route path="/tech-land-plotting/:farmerId" element={

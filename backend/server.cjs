@@ -1332,6 +1332,94 @@ app.delete('/api/RSBSAform/photo/:photoId', async (req, res) => {
     }
 });
 
+// --- Land Rights History API ---
+
+// Get all history for a parcel
+app.get('/api/land/:parcelId/history', async (req, res) => {
+    const { parcelId } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT * FROM land_rights_history WHERE parcel_id = $1 ORDER BY start_date ASC`,
+            [parcelId]
+        );
+        res.json(result.rows); // Always return JSON
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch land rights history', details: err.message });
+    }
+});
+
+// Add a new history entry
+app.post('/api/land/:parcelId/history', async (req, res) => {
+    const { parcelId } = req.params;
+    const { person_id, role, start_date, end_date, reason, changed_by } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO land_rights_history (parcel_id, person_id, role, start_date, end_date, reason, changed_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [parcelId, person_id, role, start_date, end_date || null, reason || null, changed_by || null]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('Error adding land rights history:', err);
+        res.status(500).json({ error: 'Failed to add land rights history', details: err.message });
+    }
+});
+
+// Update/end an existing history entry
+app.put('/api/land/:parcelId/history/:historyId', async (req, res) => {
+    const { parcelId, historyId } = req.params;
+    const { end_date, reason, changed_by } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE land_rights_history SET end_date = $1, reason = COALESCE($2, reason), changed_by = COALESCE($3, changed_by), changed_at = CURRENT_TIMESTAMP WHERE id = $4 AND parcel_id = $5 RETURNING *`,
+            [end_date, reason, changed_by, historyId, parcelId]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'History entry not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error updating land rights history:', err);
+        res.status(500).json({ error: 'Failed to update land rights history', details: err.message });
+    }
+});
+
+// Add a new land rights history record
+app.post('/api/land-rights-history', async (req, res) => {
+    const { parcel_id, person_id, role, reason, changed_by } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO land_rights_history
+        (parcel_id, person_id, role, start_date, reason, changed_by, changed_at)
+       VALUES ($1, $2, $3, NOW(), $4, $5, NOW())
+       RETURNING *`,
+            [parcel_id, person_id, role, reason, changed_by]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to insert history record' });
+    }
+});
+
+// Fetch history for a given parcel_id (and join to get farmer name)
+app.get('/api/land-rights-history', async (req, res) => {
+    const { parcel_id } = req.query;
+    try {
+        const result = await pool.query(
+            `SELECT h.*, r.first_name || ' ' || r.surname AS farmer_name
+         FROM land_rights_history h
+         LEFT JOIN rsbsaform r ON h.person_id = r.id
+        WHERE h.parcel_id = $1
+        ORDER BY h.changed_at DESC`,
+            [parcel_id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch history' });
+    }
+});
+
 // For any requests not matching API routes, serve the frontend's index.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(frontendBuildPath, 'index.html'));

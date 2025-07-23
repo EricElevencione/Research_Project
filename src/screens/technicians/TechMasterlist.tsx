@@ -16,7 +16,7 @@ interface LandRecord {
     province: string;
     parcel_address: string;
     area: number;
-    status: 'Tenant' | 'Land Owner' | 'Farmer';
+    status: 'Active Farmer' | 'Inactive Farmer';
     createdAt: string;
     updatedAt: string;
 }
@@ -48,14 +48,7 @@ const TechMasterlist: React.FC = () => {
                         ? `${farmLocationBarangay}, ${farmLocationCityMunicipality}`
                         : farmLocationBarangay || farmLocationCityMunicipality || 'N/A';
 
-                    // Determine status based on ownership type
-                    let status: 'Tenant' | 'Land Owner' | 'Farmer' = 'Farmer';
-                    if (record.ownershipTypeRegisteredOwner) {
-                        status = 'Land Owner';
-                    } else if (record.ownershipTypeTenant || record.ownershipTypeLessee) {
-                        status = 'Tenant';
-                    }
-
+                    // Removed old status logic
                     return {
                         id: record.id || `${record.firstName}-${record.surname}-${Math.random()}`,
                         ffrs_id: record.ffrs_id || 'N/A',
@@ -70,7 +63,7 @@ const TechMasterlist: React.FC = () => {
                         province: record.addressProvince || '',
                         parcel_address: parcelAddress,
                         area: parseFloat(record.farmSize || record.totalFarmArea || record.numberOfFarmParcels || '0') || 0,
-                        status: status,
+                        status: 'Active Farmer', // Default to Active Farmer
                         createdAt: record.createdAt || new Date().toISOString(),
                         updatedAt: record.updatedAt || new Date().toISOString()
                     };
@@ -101,9 +94,20 @@ const TechMasterlist: React.FC = () => {
         }
     };
 
+    // Add a function to toggle status
+    const handleToggleStatus = (id: string) => {
+        setLandRecords(prevRecords =>
+            prevRecords.map(record =>
+                record.id === id
+                    ? { ...record, status: record.status === 'Active Farmer' ? 'Inactive Farmer' : 'Active Farmer' }
+                    : record
+            )
+        );
+    };
+
     const handlePrint = () => {
-        // Filter to show only land owners
-        const landOwnersOnly = filteredRecords.filter(record => record.status === 'Land Owner');
+        // Filter to show only active farmers
+        const activeFarmersOnly = filteredRecords.filter(record => record.status === 'Active Farmer');
 
         // Create a new window for printing
         const printWindow = window.open('', '_blank');
@@ -117,7 +121,7 @@ const TechMasterlist: React.FC = () => {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Land Owners Masterlist</title>
+                <title>Active Farmers Masterlist</title>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
@@ -171,9 +175,9 @@ const TechMasterlist: React.FC = () => {
             </head>
             <body>
                 <div class="header">
-                    <h1>LAND OWNERS MASTERLIST</h1>
+                    <h1>ACTIVE FARMERS MASTERLIST</h1>
                     <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-                    <p>Total Land Owners: ${landOwnersOnly.length}</p>
+                    <p>Total Active Farmers: ${activeFarmersOnly.length}</p>
                 </div>
                 
                 <table>
@@ -194,7 +198,7 @@ const TechMasterlist: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        ${landOwnersOnly.map((record, index) => `
+                        ${activeFarmersOnly.map((record, index) => `
                             <tr>
                                 <td>${record.ffrs_id}</td>
                                 <td>${record.surname}</td>
@@ -214,7 +218,7 @@ const TechMasterlist: React.FC = () => {
                 </table>
                 
                 <div class="footer">
-                    <p>This document contains ${landOwnersOnly.length} land owner records</p>
+                    <p>This document contains ${activeFarmersOnly.length} active farmer records</p>
                 </div>
             </body>
             </html>
@@ -298,7 +302,22 @@ const TechMasterlist: React.FC = () => {
                                 <td>{record.province}</td>
                                 <td>{record.parcel_address || 'N/A'}</td>
                                 <td>{record.area}</td>
-                                <td>{record.status}</td>
+                                <td>
+                                    <button
+                                        className={record.status === 'Active Farmer' ? 'status-active' : 'status-inactive'}
+                                        onClick={() => handleToggleStatus(record.id)}
+                                        style={{
+                                            backgroundColor: record.status === 'Active Farmer' ? '#4CAF50' : '#f44336',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            padding: '4px 8px',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {record.status}
+                                    </button>
+                                </td>
                                 <td>
                                     <button
                                         className="delete-button"
