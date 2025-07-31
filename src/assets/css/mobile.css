@@ -1,0 +1,458 @@
+/* ===== MOBILE-SPECIFIC OPTIMIZATIONS ===== */
+
+/* Prevent text selection on buttons and interactive elements */
+.btn,
+.status-pill,
+.top-menu button,
+.landplotting-action-btn,
+.landplotting-control-panel button,
+.back-button,
+.actions-dropdown div {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+    /* Ensure minimum touch target size */
+    .btn,
+    .status-pill,
+    .top-menu button,
+    .landplotting-action-btn,
+    .landplotting-control-panel button,
+    .back-button,
+    .actions-dropdown div,
+    .action-more-button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 16px;
+    }
+
+    /* Improve table scrolling on mobile */
+    .farmers-table-container,
+    .masterlist-table-container,
+    .history-container {
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: #888 #f1f1f1;
+    }
+
+    /* Custom scrollbar for webkit browsers */
+    .farmers-table-container::-webkit-scrollbar,
+    .masterlist-table-container::-webkit-scrollbar,
+    .history-container::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .farmers-table-container::-webkit-scrollbar-track,
+    .masterlist-table-container::-webkit-scrollbar-track,
+    .history-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .farmers-table-container::-webkit-scrollbar-thumb,
+    .masterlist-table-container::-webkit-scrollbar-thumb,
+    .history-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+
+    .farmers-table-container::-webkit-scrollbar-thumb:hover,
+    .masterlist-table-container::-webkit-scrollbar-thumb:hover,
+    .history-container::-webkit-scrollbar-thumb:hover {
+        background: #666;
+    }
+
+    /* Improve map interaction on mobile */
+    .leaflet-container {
+        touch-action: manipulation;
+    }
+
+    /* Better focus states for accessibility */
+    .btn:focus,
+    .status-pill:focus,
+    .top-menu button:focus,
+    .landplotting-action-btn:focus,
+    .landplotting-control-panel button:focus,
+    .back-button:focus,
+    .action-more-button:focus {
+        outline: 2px solid #007bff;
+        outline-offset: 2px;
+    }
+
+    /* Improve modal interaction on mobile */
+    .modal-overlay {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .status-modal {
+        max-height: 90vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Better form inputs on mobile */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    textarea,
+    select {
+        font-size: 16px; /* Prevents zoom on iOS */
+        -webkit-appearance: none;
+        border-radius: 8px;
+        padding: 12px 16px;
+        border: 1px solid #ddd;
+        background-color: #fff;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    /* Improve dropdown menus on mobile */
+    .actions-dropdown {
+        max-height: 60vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Better status pills on mobile */
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Improve map popups on mobile */
+    .leaflet-popup-content-wrapper {
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .leaflet-popup-content {
+        margin: 12px;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .leaflet-popup-close-button {
+        width: 32px;
+        height: 32px;
+        font-size: 20px;
+        line-height: 32px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.1);
+        color: #333;
+    }
+
+    /* Improve loading states on mobile */
+    .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 200px;
+        font-size: 16px;
+        color: #666;
+    }
+
+    /* Better error messages on mobile */
+    .error {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 16px;
+        border: 1px solid #f5c6cb;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    /* Improve empty states on mobile */
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+    }
+
+    .empty-state p {
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+
+    /* Better navigation on mobile */
+    .top-menu {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+
+    /* Improve sidebar on mobile */
+    .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+    }
+
+    /* Better table headers on mobile */
+    .farmers-table th,
+    .masterlist-table th,
+    .history-table th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #6c757d;
+        color: white;
+    }
+
+    /* Improve action buttons on mobile */
+    .action-more-button {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #6c757d;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .action-more-button:hover {
+        background: #e9ecef;
+        color: #495057;
+    }
+
+    /* Better status modal on mobile */
+    .status-modal {
+        border-radius: 16px;
+        margin: 20px;
+        max-width: calc(100vw - 40px);
+    }
+
+    .modal-header {
+        padding: 20px 20px 0 20px;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 20px;
+    }
+
+    .modal-content {
+        padding: 0 20px 20px 20px;
+    }
+
+    .status-buttons {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .status-option-btn {
+        padding: 16px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 500;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Improve history table on mobile */
+    .history-table {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .history-table th {
+        font-size: 12px;
+        padding: 12px 8px;
+    }
+
+    .history-table td {
+        font-size: 13px;
+        padding: 10px 8px;
+    }
+
+    /* Better parcel cards on mobile */
+    .parcel-card {
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .parcel-header {
+        margin-bottom: 12px;
+    }
+
+    .parcel-header h3 {
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .parcel-details {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .parcel-actions {
+        margin-top: 16px;
+        display: flex;
+        gap: 12px;
+    }
+
+    .parcel-actions button {
+        flex: 1;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+    /* Even smaller touch targets for very small screens */
+    .btn,
+    .status-pill,
+    .top-menu button,
+    .landplotting-action-btn,
+    .landplotting-control-panel button,
+    .back-button {
+        min-height: 40px;
+        min-width: 40px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+
+    /* Smaller table text */
+    .farmers-table,
+    .masterlist-table,
+    .history-table {
+        font-size: 12px;
+    }
+
+    .farmers-table th,
+    .farmers-table td,
+    .masterlist-table th,
+    .masterlist-table td,
+    .history-table th,
+    .history-table td {
+        padding: 8px 6px;
+    }
+
+    /* Smaller modal */
+    .status-modal {
+        margin: 10px;
+        max-width: calc(100vw - 20px);
+    }
+
+    .modal-header {
+        padding: 16px 16px 0 16px;
+    }
+
+    .modal-content {
+        padding: 0 16px 16px 16px;
+    }
+
+    .status-option-btn {
+        padding: 14px;
+        font-size: 14px;
+    }
+
+    /* Smaller map popups */
+    .leaflet-popup-content {
+        margin: 8px;
+        font-size: 12px;
+    }
+
+    .leaflet-popup-close-button {
+        width: 28px;
+        height: 28px;
+        font-size: 18px;
+        line-height: 28px;
+    }
+}
+
+/* Landscape orientation optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+    .top-menu {
+        height: 50px;
+    }
+
+    .top-menu button {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .map-container {
+        height: 70vh;
+    }
+
+    .landplotting-map-section {
+        height: 70vh;
+    }
+
+    .landplotting-control-panel {
+        max-height: 70vh;
+    }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .btn,
+    .status-pill,
+    .top-menu button,
+    .landplotting-action-btn,
+    .landplotting-control-panel button,
+    .back-button {
+        border-width: 0.5px;
+    }
+
+    .farmers-table,
+    .masterlist-table,
+    .history-table {
+        border-width: 0.5px;
+    }
+}
+
+/* Dark mode support (if needed in the future) */
+@media (prefers-color-scheme: dark) {
+    /* This can be expanded when dark mode is implemented */
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .btn,
+    .status-pill,
+    .top-menu button,
+    .landplotting-action-btn,
+    .landplotting-control-panel button,
+    .back-button,
+    .action-more-button {
+        transition: none;
+    }
+
+    .modal-overlay,
+    .status-modal {
+        animation: none;
+    }
+} 

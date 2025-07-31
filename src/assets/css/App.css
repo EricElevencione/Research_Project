@@ -50,6 +50,7 @@ body,
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.3s, transform 0.2s;
+    white-space: nowrap;
 }
 
 .top-menu button:hover {
@@ -91,6 +92,8 @@ body,
     padding: 20px;
     background: #f9f9f9;
     border-right: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
 }
 
 .search-bar {
@@ -98,12 +101,14 @@ body,
     padding: 10px;
     border-radius: 5px;
     border: 1px solid #bbb;
+    font-size: 14px;
 }
 
 .location-label {
     margin-top: 20px;
     font-weight: bold;
     font-size: 16px;
+    color: #333;
 }
 
 /* Main Map + Stats */
@@ -139,4 +144,187 @@ body,
     height: 100%;
     z-index: 1;
     min-height: 100%;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Mobile devices */
+@media (max-width: 768px) {
+    .dashboard-container {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .dashboard-grid {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        order: 2;
+        padding: 15px;
+        border-right: none;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .map-area {
+        order: 1;
+        padding: 15px;
+        height: auto;
+    }
+
+    .map-container {
+        height: 60vh;
+        min-height: 300px;
+        margin-bottom: 15px;
+    }
+
+    .top-menu {
+        height: auto;
+        min-height: 60px;
+        padding: 10px 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .top-menu button {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        flex: 1;
+        min-width: 80px;
+        max-width: 120px;
+    }
+
+    .dashboard-container > h1 {
+        font-size: 12px;
+        padding: 10px 15px;
+    }
+
+    .dashboard-container > h1::after {
+        font-size: 10px;
+        padding-left: 15px;
+    }
+
+    .search-bar {
+        padding: 12px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .location-label {
+        margin-top: 15px;
+        font-size: 14px;
+        text-align: center;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+    .top-menu {
+        padding: 8px 10px;
+    }
+
+    .top-menu button {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+        min-width: 60px;
+        max-width: 100px;
+    }
+
+    .map-container {
+        height: 50vh;
+        min-height: 250px;
+    }
+
+    .sidebar {
+        padding: 10px;
+    }
+
+    .map-area {
+        padding: 10px;
+    }
+
+    .search-bar {
+        padding: 10px;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .dashboard-grid {
+        flex-direction: row;
+    }
+
+    .sidebar {
+        width: 200px;
+        order: 1;
+    }
+
+    .map-area {
+        order: 2;
+    }
+
+    .map-container {
+        height: 70vh;
+    }
+
+    .top-menu {
+        height: 50px;
+    }
+
+    .top-menu button {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Tablet devices */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .sidebar {
+        width: 220px;
+        padding: 15px;
+    }
+
+    .map-area {
+        padding: 15px;
+    }
+
+    .map-container {
+        height: 70vh;
+    }
+
+    .top-menu {
+        padding: 0 20px;
+    }
+
+    .top-menu button {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+    .top-menu button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .search-bar {
+        min-height: 44px;
+    }
+
+    .top-menu button:focus,
+    .search-bar:focus {
+        outline: 2px solid #007bff;
+        outline-offset: 2px;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .top-menu button,
+    .search-bar {
+        border-width: 0.5px;
+    }
 }

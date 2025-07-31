@@ -6,7 +6,6 @@ import type { FarmParcel } from '../../types/geojson';
 
 interface RSBSARecord {
     id: string;
-    enrollmentType: string;
     dateAdministered: string;
     surname: string;
     firstName: string;
@@ -107,14 +106,14 @@ const TechRSBSAPage: React.FC = () => {
     // Helper function to determine ownership status
     const getOwnershipStatus = (record: RSBSARecord): string => {
         // First try to use the new database fields
-        if (record.ownershipTypeRegisteredOwner) return 'REGISTERED OWNER';
+        if (record.ownershipTypeRegisteredOwner) return 'LANDOWNER';
         if (record.ownershipTypeTenant) return 'TENANT';
         if (record.ownershipTypeLessee) return 'LESSEE';
         if (record.ownershipTypeOthers) return 'OTHERS';
 
         // Fallback to legacy ownershipType object if available
         if (record.ownershipType) {
-            if (record.ownershipType.registeredOwner) return 'REGISTERED OWNER';
+            if (record.ownershipType.registeredOwner) return 'LANDOWNER';
             if (record.ownershipType.tenant) return 'TENANT';
             if (record.ownershipType.lessee) return 'LESSEE';
             if (record.ownershipType.others) return 'OTHERS';
@@ -125,7 +124,7 @@ const TechRSBSAPage: React.FC = () => {
     // Helper function to get status pill class
     const getStatusPillClass = (status: string): string => {
         switch (status) {
-            case 'REGISTERED OWNER':
+            case 'LANDOWNER':
                 return 'status-active';
             case 'TENANT':
                 return 'status-tenant';
@@ -163,7 +162,6 @@ const TechRSBSAPage: React.FC = () => {
 
                     const formatted = {
                         id: record.id || `${record.firstName}-${record.surname}-${Math.random()}`,
-                        enrollmentType: record.enrollmentType || '',
                         dateAdministered: record.dateAdministered || '',
                         surname: record.surname || '',
                         firstName: record.firstName || '',
@@ -279,7 +277,9 @@ const TechRSBSAPage: React.FC = () => {
             // --- Land Rights History Integration ---
             // Use the correct parcel number for parcel_id, as a number
             const parcelId = Number(selectedRecordForStatus.parcelNumber);
-            await fetch('http://localhost:5000/api/land-rights-history', {
+            // Get the current user's ID from localStorage
+            const userId = Number(localStorage.getItem('userId'));
+            await fetch('http://localhost:5000/api/land_rights_history', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -287,7 +287,7 @@ const TechRSBSAPage: React.FC = () => {
                     person_id: selectedRecordForStatus.id, // or use the correct person ID
                     role: selectedOwnershipType,
                     reason: `Assigned as ${selectedOwnershipType}`,
-                    changed_by: 'technician' // Replace with actual user if available
+                    changed_by: userId // Send the user ID as integer
                 })
             });
             // --- End Land Rights History Integration ---
@@ -319,7 +319,7 @@ const TechRSBSAPage: React.FC = () => {
 
             // Set the appropriate flag based on new status
             switch (selectedOwnershipType) {
-                case 'REGISTERED OWNER':
+                case 'LANDOWNER':
                     updatedRecord.ownershipTypeRegisteredOwner = true;
                     break;
                 case 'TENANT':
@@ -363,8 +363,8 @@ const TechRSBSAPage: React.FC = () => {
 
             console.log(`Updated ownership type for ${updatedRecord.firstName} ${updatedRecord.surname} to ${selectedOwnershipType}`);
 
-            // Re-fetch registered owners if the status was changed to Registered Owner
-            if (selectedOwnershipType === 'REGISTERED OWNER') {
+            // Re-fetch registered owners if the status was changed to Landowner
+            if (selectedOwnershipType === 'LANDOWNER') {
                 fetchRegisteredOwners();
             }
 
@@ -416,10 +416,18 @@ const TechRSBSAPage: React.FC = () => {
         }
 
         try {
-            // Update the area in all possible fields for consistency
-            const updatedRecord = {
-                ...recordToUpdate,
+            // Format names before saving
+            const formattedEditData = { 
                 ...editFormData,
+                firstName: editFormData.firstName ? formatFullName(editFormData.firstName) : recordToUpdate.firstName,
+                middleName: editFormData.middleName ? formatFullName(editFormData.middleName) : recordToUpdate.middleName,
+                surname: editFormData.surname ? formatFullName(editFormData.surname) : recordToUpdate.surname,
+            };
+
+            // Update the area in all possible fields for consistency
+            const updatedRecord: RSBSARecord = {
+                ...recordToUpdate,
+                ...formattedEditData,
                 farmSize: editFormDataArea,
                 totalFarmArea: editFormDataArea,
                 parcelArea: editFormDataArea,
@@ -554,6 +562,11 @@ const TechRSBSAPage: React.FC = () => {
         navigate(`/parcel-selection/${farmerId}`);
     };
 
+    const formatFullName = (name: string) => {
+        if (!name) return "";   
+        return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    };
+
     return (
         <div className='active-farmer-page'>
             {/* Success Message */}
@@ -648,7 +661,11 @@ const TechRSBSAPage: React.FC = () => {
                                                         </label>
                                                     </div>
                                                 ) : (
-                                                    [record.surname, record.firstName, record.middleName].filter(Boolean).join(', ')
+                                                    [
+                                                        formatFullName(record.surname), 
+                                                        formatFullName(record.firstName), 
+                                                        formatFullName(record.middleName)
+                                                    ].filter(Boolean).join(', ')
                                                 )}
                                             </td>
                                             {/* GENDER */}
@@ -761,8 +778,15 @@ const TechRSBSAPage: React.FC = () => {
                                             {getOwnershipStatus(selectedRecordForStatus)}
                                         </span>
                                     </p>
-                                    <p><strong>Full Name:</strong> {selectedRecordForStatus.firstName} {selectedRecordForStatus.middleName} {selectedRecordForStatus.surname}</p>
-                                    <p><strong>Address:</strong> {selectedRecordForStatus.addressBarangay}, {selectedRecordForStatus.addressMunicipality}, {selectedRecordForStatus.addressProvince}</p>
+                                    <p>
+                                        <strong>Full Name:</strong>{" "}
+                                        {formatFullName(selectedRecordForStatus.firstName)}{" "}
+                                        {formatFullName(selectedRecordForStatus.middleName)}{" "}
+                                        {formatFullName(selectedRecordForStatus.surname)}
+                                    </p>
+                                    <p>
+                                        <strong>Address:</strong> {selectedRecordForStatus.addressBarangay}, {selectedRecordForStatus.addressMunicipality}, {selectedRecordForStatus.addressProvince}
+                                    </p>
                                     <p><strong>Gender:</strong> {selectedRecordForStatus.sex}</p>
                                     <p><strong>Farm Area:</strong> {selectedRecordForStatus.parcelArea || selectedRecordForStatus.numberOfFarmParcels}</p>
                                 </div>
@@ -771,11 +795,11 @@ const TechRSBSAPage: React.FC = () => {
                                     <div className="status-buttons">
                                         <button
                                             key="registered-owner"
-                                            className={`status-option-btn ${selectedOwnershipType === 'REGISTERED OWNER' ? 'status-option-active' : ''}`}
-                                            onClick={() => setSelectedOwnershipType('REGISTERED OWNER')}
+                                            className={`status-option-btn ${selectedOwnershipType === 'LANDOWNER' ? 'status-option-active' : ''}`}
+                                            onClick={() => setSelectedOwnershipType('LANDOWNER')}
                                         >
                                             <span className="status-dot status-active"></span>
-                                            Registered Owner
+                                            Landowner
                                         </button>
                                         <button
                                             key="tenant"
@@ -799,7 +823,7 @@ const TechRSBSAPage: React.FC = () => {
                                     {(selectedOwnershipType === 'TENANT' || selectedOwnershipType === 'LESSEE') && (
                                         <div className="land-owner-input">
                                             <label htmlFor="landOwnerId">
-                                                {selectedOwnershipType === 'TENANT' ? 'Select Registered Owner (for Tenant):' : 'Select Registered Owner (for Lessee):'}
+                                                {selectedOwnershipType === 'TENANT' ? 'Select Landowner (for Tenant):' : 'Select Landowner (for Lessee):'}
                                             </label>
                                             <select
                                                 id="landOwnerId"
@@ -807,7 +831,7 @@ const TechRSBSAPage: React.FC = () => {
                                                 onChange={e => setSelectedOwnerId(e.target.value)}
                                                 required
                                             >
-                                                <option value="">-- Select Registered Owner --</option>
+                                                <option value="">-- Select Landowner --</option>
                                                 {registeredOwners.map(owner => (
                                                     <option key={owner.id} value={owner.id}>
                                                         {owner.surname}, {owner.first_name} {owner.middle_name ? owner.middle_name : ''} ({owner.address_barangay}, {owner.address_municipality}, {owner.address_province})

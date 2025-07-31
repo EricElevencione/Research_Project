@@ -3,11 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import '../../assets/css/ParcelSelectionPage.css';
 
 interface FarmParcel {
+    id?: string;
     parcelNumber: number;
     farmLocation: {
         barangay: string;
         cityMunicipality: string;
     };
+    // Database field names for actual farm location
+    farm_location_barangay?: string;
+    farm_location_city_municipality?: string;
     totalFarmArea: string;
     cropCommodity: string;
     size: string;
@@ -47,6 +51,8 @@ const ParcelSelectionPage: React.FC = () => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
+            console.log('Server response data:', data);
+            console.log('Farm parcels from server:', data.farmParcels);
 
             // Transform the data to match our interface
             const transformedRecord: RSBSARecord = {
@@ -57,38 +63,68 @@ const ParcelSelectionPage: React.FC = () => {
                 addressBarangay: data.addressBarangay,
                 addressMunicipality: data.addressMunicipality,
                 addressProvince: data.addressProvince,
-                farmParcels: data.farmParcels || [{
-                    parcelNumber: 1,
-                    farmLocation: {
-                        barangay: data.farmLocationBarangay || data.addressBarangay,
-                        cityMunicipality: data.farmLocationCityMunicipality || data.addressMunicipality
-                    },
-                    totalFarmArea: data.totalFarmArea || data.parcelArea || '',
-                    cropCommodity: data.cropCommodity || '',
-                    size: data.farmSize || data.parcelArea || '',
-                    farmType: data.farmType || '',
-                    organicPractitioner: data.organicPractitioner || '',
-                    plotStatus: 'not_plotted'
-                }]
+                farmParcels: (data.farmParcels || []).map((parcel: any, index: number) => {
+                    // Use actual farm location from database, fallback to farmer's address
+                    const actualBarangay = parcel.farm_location_barangay || parcel.farmLocationBarangay || parcel.addressBarangay || data.addressBarangay;
+                    const actualMunicipality = parcel.farm_location_city_municipality || parcel.farmLocationCityMunicipality || parcel.addressMunicipality || data.addressMunicipality;
+                    
+                    console.log(`📍 Parcel ${index + 1} Location Priority:`, {
+                        parcelId: parcel.id,
+                        farm_location_barangay: parcel.farm_location_barangay,
+                        farmLocationBarangay: parcel.farmLocationBarangay,
+                        addressBarangay: parcel.addressBarangay,
+                        farmerBarangay: data.addressBarangay,
+                        finalBarangay: actualBarangay,
+                        finalMunicipality: actualMunicipality
+                    });
+                    
+                    return {
+                        id: parcel.id, // ✅ Include DB ID
+                        parcelNumber: parcel.parcel_number || parcel.parcelNumber || index + 1,
+                        farmLocation: {
+                            barangay: actualBarangay,
+                            cityMunicipality: actualMunicipality
+                        },
+                        // Store database field names for reference
+                        farm_location_barangay: parcel.farm_location_barangay,
+                        farm_location_city_municipality: parcel.farm_location_city_municipality,
+                        totalFarmArea: parcel.total_farm_area || parcel.totalFarmArea || parcel.parcelArea || '',
+                        cropCommodity: parcel.crop_commodity || parcel.cropCommodity || '',
+                        size: parcel.farm_size || parcel.farmSize || parcel.parcelArea || '',
+                        farmType: parcel.farm_type || parcel.farmType || '',
+                        organicPractitioner: parcel.organic_practitioner || parcel.organicPractitioner || '',
+                        plotStatus: parcel.plot_status || parcel.plotStatus || 'not_plotted',
+                        lastPlottedAt: parcel.last_plotted_at || parcel.lastPlottedAt,
+                        geometry: parcel.geometry
+                    };
+                })
             };
 
             setRsbsaRecord(transformedRecord);
             setLoading(false);
         } catch (err: any) {
             console.error('Error fetching RSBSA record:', err);
+            console.log('rsbsaRecord:', rsbsaRecord);
+            if (rsbsaRecord?.farmParcels) {
+                console.log('farmParcels:', rsbsaRecord.farmParcels);
+            }
             setError(err.message);
             setLoading(false);
         }
     };
 
     const handlePlotParcel = (parcel: FarmParcel, parcelIndex: number) => {
-        // Navigate to land plotting with parcel context
-        navigate(`/tech-land-plotting/${parcel.farmLocation.barangay}?recordId=${recordId}&parcelIndex=${parcelIndex}`);
+        // Use actual farm location for navigation, fallback to farmer's address
+        const locationBarangay = parcel.farm_location_barangay || parcel.farmLocation.barangay;
+        console.log('📍 Navigating to plot with location:', locationBarangay);
+        navigate(`/tech-land-plotting/${locationBarangay}?recordId=${recordId}&parcelIndex=${parcelIndex}`);
     };
 
     const handleViewPlot = (parcel: FarmParcel, parcelIndex: number) => {
-        // Navigate to view existing plot
-        navigate(`/tech-land-plotting/${parcel.farmLocation.barangay}?recordId=${recordId}&parcelIndex=${parcelIndex}&viewOnly=true`);
+        // Use actual farm location for navigation, fallback to farmer's address
+        const locationBarangay = parcel.farm_location_barangay || parcel.farmLocation.barangay;
+        console.log('📍 Navigating to view plot with location:', locationBarangay);
+        navigate(`/tech-land-plotting/${locationBarangay}?recordId=${recordId}&parcelIndex=${parcelIndex}&viewOnly=true`);
     };
 
     const handleBackToRSBSA = () => {

@@ -1,6 +1,6 @@
 /* Masterlist Page Styles */
 .masterlist-container {
-    background: #f8f8f4;
+    background: #f8f9fa;
     min-height: 100vh;
     border-radius: 16px;
     padding: 32px 24px 24px 24px;
@@ -50,72 +50,127 @@
 }
 
 .masterlist-table-container {
-    background: #fafaf7;
-    border-radius: 10px;
-    padding: 0;
-    box-shadow: none;
-    border: 1px solid #ecece6;
+    background: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    border: none;
 }
 
 .masterlist-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    background: transparent;
-}
-
-.masterlist-table th,
-.masterlist-table td {
-    border: 1px solid #ecece6;
-    padding: 12px 8px;
-    text-align: left;
-    font-size: 0.98rem;
-    background: #fafaf7;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    font-size: 0.9rem;
 }
 
 .masterlist-table th {
-    font-size: 0.85rem;
+    background: #6c757d;
+    color: white;
     font-weight: 600;
-    color: #222;
-    background: #f8f8f4;
-    letter-spacing: 0.02em;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
     text-align: left;
-}
-
-.masterlist-table tr {
-    height: 48px;
+    border: none;
 }
 
 .masterlist-table td {
-    color: #222;
+    padding: 12px 16px;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+    color: #333;
     font-weight: 400;
 }
 
+.masterlist-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.masterlist-table tbody tr:nth-child(odd) {
+    background: white;
+}
+
+.masterlist-table tbody tr:hover {
+    background: #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+.masterlist-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
 .delete-button {
-    background: #fff;
-    color: #b00020;
-    border: 1px solid #ececec;
+    background: #dc3545;
+    color: white;
+    border: none;
     border-radius: 6px;
-    padding: 4px 12px;
-    font-size: 0.95rem;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.2s ease;
 }
 
 .delete-button:hover {
-    background: #ffeaea;
+    background: #c82333;
+}
+
+/* Status button styles */
+.status-active {
+    background: #28a745 !important;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 80px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.status-active:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.status-inactive {
+    background: #dc3545 !important;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 80px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.status-inactive:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 @media (max-width: 900px) {
     .masterlist-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 12px;
+        gap: 16px;
     }
 
     .masterlist-header-options {
         margin-left: 0;
-        gap: 16px;
+        width: 100%;
+        justify-content: space-between;
     }
 
     .masterlist-title {

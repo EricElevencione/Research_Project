@@ -1,97 +1,175 @@
 .landplotting-container {
     display: grid;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: 1fr auto;
     height: 100vh;
-    padding: 20px;
-    background-color: #f0f2f5;
+    min-height: 800px; /* Ensure minimum height */
     gap: 20px;
-    overflow: hidden;
-}
-
-.landplotting-header {
-    color: #333;
-    font-size: 2em;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: #f0f2f5;
-    padding: 10px 0;
+    padding: 20px;
+    background: #f5f5f5;
 }
 
 .landplotting-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    width: 100%;
     gap: 20px;
-    height: calc(100vh - 100px);
+    height: 100%;
 }
 
 .landplotting-map-section {
-    background-color: #fff;
+    background: white;
     border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.landplotting-control-panel {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    height: 100%;
-    overflow-y: auto;
     position: relative;
 }
 
-.landplotting-control-panel h2 {
-    position: sticky;
-    top: 0;
-    background-color: #fff;
-    padding: 10px 0;
-    margin: 0;
-    z-index: 5;
+.landplotting-map-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
 }
 
-.landplotting-control-panel h3 {
-    background-color: #fff;
-    padding: 10px 0;
-    margin: 0;
-    z-index: 5;
+.landplotting-control-panel {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 100%;
+    min-height: 600px; /* Ensure minimum height for content */
 }
 
-.landplotting-control-panel label {
-    display: block;
+.landplotting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.landplotting-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.landplotting-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.landplotting-info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.landplotting-info-label {
+    font-weight: 500;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.landplotting-info-value {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.landplotting-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.landplotting-action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.landplotting-action-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
     margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
 }
 
-.landplotting-control-panel label::after {
-    content: " *";
-    color: #ff4d4f;
-    display: none;
+.landplotting-action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
-.landplotting-control-panel label[for="firstName"]::after,
-.landplotting-control-panel label[for="surname"]::after,
-.landplotting-control-panel label[for="address"]::after,
-.landplotting-control-panel label[for="street"]::after,
-.landplotting-control-panel label[for="farmType"]::after {
-    display: inline;
+.landplotting-action-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    flex: 1;
+    min-width: 80px;
 }
 
-.landplotting-control-panel input[type="text"] {
-    width: calc(100% - 22px);
+.landplotting-action-btn:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+}
+
+.landplotting-action-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.landplotting-status {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.landplotting-status-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.landplotting-status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.85rem;
+}
+
+.landplotting-status-label {
+    color: #666;
+}
+
+.landplotting-status-value {
+    font-weight: 500;
+    color: #333;
+}
+
+.landplotting-error {
+    background: #f8d7da;
+    color: #721c24;
     padding: 10px;
+    border-radius: 6px;
     margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.landplotting-control-panel input.error,
-.landplotting-control-panel select.error {
-    border: 1px solid #ff4d4f;
-    background-color: #fff2f0;
+    font-size: 0.85rem;
 }
 
 .error-message {
@@ -163,16 +241,188 @@
     border: 1px solid #e9ecef;
 }
 
+/* History Section Styles */
+.history-section {
+    margin-top: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.history-section h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.history-container {
+    max-height: 200px; /* Reduced from 300px to give more space to geometry input */
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+}
+
+/* Geometry Input Section Styles */
+.geometry-input-section {
+    max-height: 60vh !important; /* Use viewport height for better control */
+    min-height: 400px !important; /* Set minimum height */
+    overflow-y: auto;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #f9f9f9;
+    display: block !important; /* Ensure it's displayed as block */
+    position: relative !important; /* Ensure proper positioning */
+}
+
+/* Make geometry input table more compact */
+.geometry-input-section table {
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.geometry-input-section th,
+.geometry-input-section td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #ccc;
+}
+
+.geometry-input-section input,
+.geometry-input-section select {
+    padding: 2px 4px;
+    font-size: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.geometry-input-section button {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    margin: 2px;
+}
+
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.history-table th {
+    background: #6c757d;
+    color: white;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px;
+    text-align: left;
+    border: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.history-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+    color: #333;
+    font-weight: 400;
+}
+
+.history-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.history-table tbody tr:nth-child(odd) {
+    background: white;
+}
+
+.history-table tbody tr:hover {
+    background: #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+.history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.status-badge {
+    display: inline-block;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: white;
+    text-align: center;
+    min-width: 60px;
+}
+
+.status-active {
+    background: #28a745;
+}
+
+.status-tenant {
+    background: #17a2b8;
+}
+
+.status-landowner {
+    background: #6f42c1;
+}
+
+.status-lessee {
+    background: #fd7e14;
+}
+
+.history-date {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.history-reason {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Back Button */
+.back-button {
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-bottom: 15px;
+}
+
+.back-button:hover {
+    background: #5a6268;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
 @media (max-width: 768px) {
     .landplotting-container {
-        grid-template-rows: auto 1fr;
+        grid-template-rows: 1fr auto;
         height: auto;
         gap: 10px;
+        padding: 10px;
     }
 
     .landplotting-grid {
         grid-template-columns: 1fr;
         gap: 10px;
+        height: auto;
     }
 
     .landplotting-map-section,
@@ -182,9 +432,143 @@
 
     .landplotting-map-section {
         height: 50vh;
+        min-height: 300px;
     }
 
     .landplotting-control-panel {
         height: auto;
+        max-height: none;
+        position: relative;
+    }
+
+    .landplotting-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .landplotting-title {
+        font-size: 1.3rem;
+    }
+
+    .landplotting-action-buttons {
+        flex-direction: column;
+    }
+
+    .landplotting-action-btn {
+        width: 100%;
+        min-width: auto;
+    }
+
+    .landplotting-control-panel button {
+        position: static;
+        width: 100%;
+        margin: 5px 0;
+        padding: 12px;
+        font-size: 1rem;
+    }
+
+    .history-container {
+        max-height: 200px;
+    }
+
+    .history-table {
+        font-size: 0.8rem;
+    }
+
+    .history-table th,
+    .history-table td {
+        padding: 6px 8px;
+    }
+
+    .parcel-context-info {
+        align-items: flex-start;
+        margin-left: 0;
+        margin-top: 10px;
+    }
+
+    .parcel-badge,
+    .farmer-info {
+        font-size: 0.8em;
+        padding: 6px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .landplotting-container {
+        padding: 5px;
+    }
+
+    .landplotting-map-section {
+        height: 40vh;
+        min-height: 250px;
+    }
+
+    .landplotting-control-panel {
+        padding: 15px;
+    }
+
+    .landplotting-title {
+        font-size: 1.2rem;
+    }
+
+    .landplotting-info-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .history-table {
+        font-size: 0.75rem;
+    }
+
+    .history-table th,
+    .history-table td {
+        padding: 4px 6px;
+    }
+
+    /* Hide less important columns on very small screens */
+    .history-table th:nth-child(3),
+    .history-table td:nth-child(3),
+    .history-table th:nth-child(4),
+    .history-table td:nth-child(4) {
+        display: none;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .landplotting-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .landplotting-map-section {
+        height: 70vh;
+    }
+
+    .landplotting-control-panel {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+    .landplotting-action-btn,
+    .landplotting-control-panel button,
+    .back-button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .landplotting-control-panel {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .landplotting-action-btn:focus,
+    .landplotting-control-panel button:focus,
+    .back-button:focus {
+        outline: 2px solid #007bff;
+        outline-offset: 2px;
     }
 }

@@ -312,6 +312,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                 if (!barangayName) {
                     console.error('barangayName is not set! Cannot check boundary.');
                     alert('Barangay is not selected. Please select a barangay before plotting.');
+                    console.warn("❗ No barangayName passed to LandPlottingMap");
                     if (featureGroupRef.current && featureGroupRef.current.hasLayer(layer)) {
                         featureGroupRef.current.removeLayer(layer);
                     }

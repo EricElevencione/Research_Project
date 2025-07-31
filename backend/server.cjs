@@ -18,17 +18,17 @@ const upload = multer({ dest: 'uploads/' }); // Files will be temporarily stored
 
 // Database connection configuration
 const pool = new Pool({
-    user: process.env.DB_USER || 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME || 'Masterlist',
-    password: process.env.DB_PASSWORD || 'postgresadmin',
-    port: process.env.DB_PORT || 5432,
+    user: process.env.DB_USER || 'postgres', // Replace with your database username
+    host: process.env.DB_HOST || 'localhost', // Replace with your database host
+    database: process.env.DB_NAME || 'Masterlist', // Replace with your database name
+    password: process.env.DB_PASSWORD || 'postgresadmin', // Replace with your database password
+    port: process.env.DB_PORT || 5432, // Replace with your database port
 });
 
 // Test database connection
-pool.connect((err, client, release) => {
+pool.connect((err, client, release) => { // Connect to the database
     if (err) {
-        console.error('Error connecting to the database:', err);
+        console.error('Error connecting to the database:', err); // Log the error
         return;
     }
     console.log('Successfully connected to database');
@@ -42,11 +42,11 @@ app.use(cors()); // Allows cross-origin requests (can be configured more restric
 app.use(express.json()); // Parses incoming JSON requests
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req, res) => { // Health check
     res.json({
-        status: 'OK',
-        message: 'Server is running',
-        timestamp: new Date().toISOString()
+        status: 'OK', // Status
+        message: 'Server is running', // Custom message
+        timestamp: new Date().toISOString() // Current timestamp
     });
 });
 
@@ -57,9 +57,9 @@ app.use(express.static(frontendBuildPath));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API endpoint to get land records for the table
-app.get('/api/lands', async (req, res) => {
+app.get('/api/lands', async (req, res) => { // Get land records in the table
     try {
-        console.log('Attempting to fetch land records...');
+        console.log('Attempting to fetch land records...'); // Log a message
 
         // First, let's check what columns actually exist in the table
         const columnCheck = await pool.query(`
@@ -69,8 +69,6 @@ app.get('/api/lands', async (req, res) => {
             AND table_name = 'masterlist'
             ORDER BY ordinal_position;
         `);
-
-        console.log('Available columns:', columnCheck.rows.map(r => r.column_name));
 
         // Then try to fetch the data with the updated column names
         const result = await pool.query(`
@@ -90,14 +88,12 @@ app.get('/api/lands', async (req, res) => {
             FROM public."masterlist"
         `);
 
-        console.log('Query successful, rows returned:', result.rows.length);
-
         // Set proper content type
-        res.setHeader('Content-Type', 'application/json');
-        res.json(result.rows);
+        res.setHeader('Content-Type', 'application/json'); // Set the content type
+        res.json(result.rows); // Send the rows as the response
     } catch (err) {
-        console.error('Detailed error in /api/lands:', err);
-        console.error('Error stack:', err.stack);
+        console.error('Detailed error in /api/lands:', err); // Log the error
+        console.error('Error stack:', err.stack); // Log the stack
         res.status(500).json({
             error: 'Server Error',
             details: err.message,
@@ -107,14 +103,14 @@ app.get('/api/lands', async (req, res) => {
 });
 
 // API endpoint to handle land plot data from the Land Plotting Dashboard
-app.post('/api/land-plots', async (req, res) => {
-    console.log('Received POST request to /api/land-plots');
-    const landPlotData = req.body;
+app.post('/api/land-plots', async (req, res) => { // Handle land plot data
+    console.log('Received POST request to /api/land-plots'); // Log a message
+    const landPlotData = req.body; // Get the land plot data
     console.log('Land plot data received:', landPlotData);
 
     // Validate incoming data structure
-    if (!landPlotData || !landPlotData.id || !landPlotData.geometry || landPlotData.geometry.type === undefined) {
-        console.error('Invalid land plot data structure:', landPlotData);
+    if (!landPlotData || !landPlotData.id || !landPlotData.geometry || landPlotData.geometry.type === undefined) { // Check for required fields
+        console.error('Invalid land plot data structure:', landPlotData); // Log the error
         return res.status(400).json({ message: 'Invalid land plot data structure' });
     }
 
@@ -216,6 +212,53 @@ app.get('/api/land-plots', async (req, res) => {
     } catch (error) {
         console.error('Error fetching land plots:', error);
         res.status(500).json({ error: 'Failed to fetch land plots' });
+    }
+});
+
+// GET land plots for a specific barangay
+app.get('/api/land-plots/barangay/:barangay', async (req, res) => {
+    const { barangay } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT 
+                id,
+                name,
+                firstname as "firstName",
+                middlename as "middleName",
+                surname,
+                gender,
+                barangay_name as "barangay",
+                municipality_name as "municipality",
+                province_name as "province",
+                status,
+                street,
+                farm_type as "farmType",
+                area,
+                coordinateaccuracy as "coordinateAccuracy",
+                createdat as "createdAt",
+                updatedat as "updatedAt",
+                ffrs_id,
+                ext_name,
+                birthdate,
+                parcel_address,
+                plotSource,
+                plot_type,
+                ST_AsGeoJSON(geom) as geometry
+            FROM land_plots
+            WHERE LOWER(barangay_name) = LOWER($1)
+            ORDER BY createdat DESC`,
+            [barangay]
+        );
+
+        const landPlots = result.rows.map(row => ({
+            ...row,
+            geometry: JSON.parse(row.geometry)
+        }));
+
+        res.json(landPlots);
+    } catch (error) {
+        console.error('Error fetching land plots by barangay:', error);
+        res.status(500).json({ error: 'Failed to fetch land plots for barangay' });
     }
 });
 
@@ -744,7 +787,6 @@ app.get('/api/RSBSAform', async (req, res) => {
         // Define the mapping of database columns to frontend fields
         const columnMapping = {
             'id': 'id',
-            'enrollment_type': 'enrollmentType',
             'date_administered': 'dateAdministered',
             'reference_region': 'referenceRegion',
             'reference_province': 'referenceProvince',
@@ -868,7 +910,7 @@ app.get('/api/RSBSAform/:id', async (req, res) => {
     try {
         console.log(`Fetching RSBSA record with ID: ${id}`);
 
-        // Check if the table exists
+        // Check if table exists
         const tableCheck = await pool.query(`
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
@@ -878,14 +920,13 @@ app.get('/api/RSBSAform/:id', async (req, res) => {
         `);
 
         if (!tableCheck.rows[0].exists) {
-            console.log('RSBSAform table does not exist');
             return res.status(404).json({
                 error: 'RSBSAform table not found',
                 message: 'The RSBSAform table does not exist in the database.'
             });
         }
 
-        // Check what columns exist in the table
+        // Check columns
         const columnCheck = await pool.query(`
             SELECT column_name 
             FROM information_schema.columns 
@@ -896,10 +937,9 @@ app.get('/api/RSBSAform/:id', async (req, res) => {
 
         const availableColumns = columnCheck.rows.map(r => r.column_name);
 
-        // Define the mapping of database columns to frontend fields
+        // Map columns
         const columnMapping = {
             'id': 'id',
-            'enrollment_type': 'enrollmentType',
             'date_administered': 'dateAdministered',
             'reference_region': 'referenceRegion',
             'reference_province': 'referenceProvince',
@@ -977,7 +1017,6 @@ app.get('/api/RSBSAform/:id', async (req, res) => {
             'farm_remarks': 'farmRemarks'
         };
 
-        // Build the SELECT clause with only available columns
         const selectColumns = [];
         for (const [dbColumn, frontendField] of Object.entries(columnMapping)) {
             if (availableColumns.includes(dbColumn)) {
@@ -992,27 +1031,72 @@ app.get('/api/RSBSAform/:id', async (req, res) => {
             });
         }
 
-        const selectClause = selectColumns.join(', ');
-
         const query = `
-            SELECT ${selectClause}
+            SELECT ${selectColumns.join(', ')}
             FROM rsbsaform
             WHERE id = $1
         `;
 
-        console.log('Executing query:', query);
-
         const result = await pool.query(query, [id]);
 
         if (result.rows.length === 0) {
+            console.log(`No RSBSA record found with ID: ${id}`);
             return res.status(404).json({
                 error: 'RSBSA record not found',
                 message: `No RSBSA record found with ID: ${id}`
             });
         }
 
-        console.log(`Retrieved RSBSA record with ID: ${id}`);
-        res.json(result.rows[0]);
+        const rsbsaRecord = result.rows[0];
+
+        // ✅ Fetch related parcels
+        // ADD this in your /api/RSBSAform/:id route
+        try {
+            const parcelsResult = await pool.query(`
+  SELECT 
+    id,                 -- ✅ this is the true database ID
+    parcel_number,
+    farm_location_barangay,
+    farm_location_city_municipality,
+    total_farm_area,
+    crop_commodity,
+    farm_type,
+    organic_practitioner,
+    plot_status,
+    last_plotted_at,
+    geometry,
+    -- Add new columns if they exist (will be NULL if they don't exist yet)
+    within_ancestral_domain,
+    agrarian_reform_beneficiary,
+    ownership_document_no,
+    ownership_type_registered_owner,
+    ownership_type_tenant,
+    ownership_type_tenant_land_owner,
+    ownership_type_lessee,
+    ownership_type_lessee_land_owner,
+    ownership_type_others,
+    ownership_type_others_specify,
+    number_of_head,
+    farm_remarks,
+    farm_size
+  FROM farm_parcels
+  WHERE owner_id = $1
+`, [id]);
+
+            rsbsaRecord.farmParcels = parcelsResult.rows;
+            console.log(`Successfully fetched ${parcelsResult.rows.length} parcels for RSBSA ID: ${id}`);
+        } catch (parcelError) {
+            console.error('Error fetching farm parcels:', parcelError);
+            // If there's an error fetching parcels, just set an empty array
+            rsbsaRecord.farmParcels = [];
+            console.log('Setting farmParcels to empty array due to error');
+        }
+
+        console.log(`Retrieved RSBSA record with ID: ${id} including ${rsbsaRecord.farmParcels.length} parcels`);
+        console.log('Parcels found:', rsbsaRecord.farmParcels);
+
+        res.json(rsbsaRecord);
+
     } catch (error) {
         console.error('Error fetching RSBSA record:', error);
         res.status(500).json({
@@ -1023,6 +1107,7 @@ app.get('/api/RSBSAform/:id', async (req, res) => {
     }
 });
 
+
 // POST endpoint to save RSBSA form data
 app.post('/api/RSBSAform', async (req, res) => {
     const data = req.body;
@@ -1031,7 +1116,7 @@ app.post('/api/RSBSAform', async (req, res) => {
         const firstParcel = data.farmParcels && data.farmParcels.length > 0 ? data.farmParcels[0] : {};
 
         const insertQuery = `
-            INSERT INTO RSBSAform (
+            INSERT INTO rsbsaform (
                 enrollment_type, date_administered, reference_region, reference_province, reference_city_muni, reference_barangay,
                 profile_picture_url, surname, first_name, middle_name, extension_name, sex, address_house_no, address_street,
                 address_barangay, address_municipality, address_province, address_region, mobile_number, landline_number,
@@ -1054,7 +1139,7 @@ app.post('/api/RSBSAform', async (req, res) => {
                 $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
                 $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $60,
                 $61, $62, $63, $64, $65, $66, $67, $68, $69, $70, $71, $72
-            )
+            ) RETURNING id
         `;
 
         // Create farm land description text
@@ -1077,8 +1162,10 @@ app.post('/api/RSBSAform', async (req, res) => {
             return isNaN(num) ? null : num;
         };
 
+        console.log('RSBSA Form Data:', JSON.stringify(data, null, 2));
+        
         const values = [
-            data.enrollmentType || null,        // 1
+            'New',                              // 1 - Default enrollment type
             data.dateAdministered || null,      // 2
             data.referenceNumber?.region || null, // 3
             data.referenceNumber?.province || null, // 4
@@ -1155,12 +1242,261 @@ app.post('/api/RSBSAform', async (req, res) => {
             firstParcel.remarks || null                 // 72
         ];
 
-        console.log('Insert values:', values);
-        await pool.query(insertQuery, values);
+        console.log('Values array:', JSON.stringify(values, null, 2));
+        console.log('Values array length:', values.length);
+        console.log('First few values:', values.slice(0, 5));
+
+        // Insert the main RSBSA record
+        const rsbsaResult = await pool.query(insertQuery, values);
+        const rsbsaId = rsbsaResult.rows[0].id;
+        
+        console.log(`RSBSA record created with ID: ${rsbsaId}`);
+        
+        // Save all farm parcels to the farm_parcels table
+        if (data.farmParcels && Array.isArray(data.farmParcels) && data.farmParcels.length > 0) {
+            console.log(`Saving ${data.farmParcels.length} farm parcels for RSBSA ID: ${rsbsaId}`);
+            
+            for (let i = 0; i < data.farmParcels.length; i++) {
+                const parcel = data.farmParcels[i];
+                
+                // Use a simpler INSERT query with only the essential columns that definitely exist
+                const parcelInsertQuery = `
+                    INSERT INTO farm_parcels (
+                        owner_id, parcel_number, farm_location_barangay, farm_location_city_municipality,
+                        total_farm_area, crop_commodity, farm_type, organic_practitioner, plot_status
+                    ) VALUES (
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9
+                    )
+                `;
+                
+                const parcelValues = [
+                    rsbsaId,                                    // 1 - owner_id
+                    parcel.parcelNumber || (i + 1),            // 2 - parcel_number
+                    parcel.farmLocation?.barangay || null,     // 3 - farm_location_barangay
+                    parcel.farmLocation?.cityMunicipality || null, // 4 - farm_location_city_municipality
+                    parcel.totalFarmArea || null,              // 5 - total_farm_area
+                    parcel.cropCommodity || null,              // 6 - crop_commodity
+                    parcel.farmType || 'Unspecified',          // 7 - farm_type (default to 'Unspecified' if empty)
+                    parcel.organicPractitioner || 'N',         // 8 - organic_practitioner (default to 'N' if empty)
+                    'not_plotted'                              // 9 - plot_status (default)
+                ];
+                
+                console.log(`Inserting parcel ${i + 1}:`, parcelValues);
+                console.log(`Parcel ${i + 1} details:`, {
+                    parcelNumber: parcel.parcelNumber,
+                    farmLocation: parcel.farmLocation,
+                    totalFarmArea: parcel.totalFarmArea,
+                    cropCommodity: parcel.cropCommodity,
+                    farmType: parcel.farmType,
+                    organicPractitioner: parcel.organicPractitioner,
+                    size: parcel.size
+                });
+                await pool.query(parcelInsertQuery, parcelValues);
+            }
+            
+            console.log(`Successfully saved ${data.farmParcels.length} farm parcels`);
+        } else {
+            console.log('No farm parcels to save');
+        }
+        
         res.status(201).json({ message: 'RSBSA form saved successfully!' });
     } catch (error) {
         console.error('Error saving RSBSA form:', error);
-        res.status(500).json({ message: 'Error saving RSBSA form', error: error.message });
+        res.status(500).json({ 
+            message: 'Error saving RSBSA form', 
+            error: error.message
+        });
+    }
+});
+
+// GET endpoint to fetch a specific farm parcel by recordId and parcelIndex
+app.get('/api/farm-parcels', async (req, res) => {
+    const { recordId, parcelIndex } = req.query;
+    
+    if (!recordId || parcelIndex === undefined) {
+        return res.status(400).json({ 
+            message: 'recordId and parcelIndex are required' 
+        });
+    }
+    
+    try {
+        const result = await pool.query(`
+            SELECT 
+                id,
+                parcel_number,
+                farm_location_barangay,
+                farm_location_city_municipality,
+                total_farm_area,
+                crop_commodity,
+                farm_size,
+                farm_type,
+                organic_practitioner,
+                plot_status,
+                last_plotted_at,
+                geometry,
+                within_ancestral_domain,
+                agrarian_reform_beneficiary,
+                ownership_document_no,
+                ownership_type_registered_owner,
+                ownership_type_tenant,
+                ownership_type_tenant_land_owner,
+                ownership_type_lessee,
+                ownership_type_lessee_land_owner,
+                ownership_type_others,
+                ownership_type_others_specify,
+                number_of_head,
+                farm_remarks,
+                created_at,
+                updated_at
+            FROM farm_parcels
+            WHERE owner_id = $1 AND parcel_number = $2
+            ORDER BY parcel_number
+        `, [recordId, parseInt(parcelIndex) + 1]); // parcelIndex is 0-based, parcel_number is 1-based
+        
+        if (result.rows.length > 0) {
+            res.json(result.rows[0]);
+        } else {
+            res.status(404).json({ 
+                message: 'Farm parcel not found' 
+            });
+        }
+    } catch (error) {
+        console.error('Error fetching farm parcel:', error);
+        res.status(500).json({ 
+            message: 'Error fetching farm parcel', 
+            error: error.message
+        });
+    }
+});
+
+// GET endpoint to fetch all farm parcels for a specific farmer
+app.get('/api/farm-parcels/:ownerId', async (req, res) => {
+    const { ownerId } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT 
+                id,
+                parcel_number,
+                farm_location_barangay,
+                farm_location_city_municipality,
+                total_farm_area,
+                crop_commodity,
+                farm_size,
+                farm_type,
+                organic_practitioner,
+                plot_status,
+                last_plotted_at,
+                geometry,
+                -- New columns (will be NULL if they don't exist yet)
+                within_ancestral_domain,
+                agrarian_reform_beneficiary,
+                ownership_document_no,
+                ownership_type_registered_owner,
+                ownership_type_tenant,
+                ownership_type_tenant_land_owner,
+                ownership_type_lessee,
+                ownership_type_lessee_land_owner,
+                ownership_type_others,
+                ownership_type_others_specify,
+                number_of_head,
+                farm_remarks,
+                created_at,
+                updated_at
+            FROM farm_parcels
+            WHERE owner_id = $1
+            ORDER BY parcel_number
+        `, [ownerId]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching farm parcels:', error);
+        res.status(500).json({ 
+            message: 'Error fetching farm parcels', 
+            error: error.message
+        });
+    }
+});
+
+// PUT endpoint to update a specific farm parcel
+app.put('/api/farm-parcels/:parcelId', async (req, res) => {
+    const { parcelId } = req.params;
+    const updateData = req.body;
+    
+    try {
+        const updateQuery = `
+            UPDATE farm_parcels SET
+                parcel_number = COALESCE($1, parcel_number),
+                farm_location_barangay = COALESCE($2, farm_location_barangay),
+                farm_location_city_municipality = COALESCE($3, farm_location_city_municipality),
+                total_farm_area = COALESCE($4, total_farm_area),
+                crop_commodity = COALESCE($5, crop_commodity),
+                farm_size = COALESCE($6, farm_size),
+                farm_type = COALESCE($7, farm_type),
+                organic_practitioner = COALESCE($8, organic_practitioner),
+                within_ancestral_domain = COALESCE($9, within_ancestral_domain),
+                agrarian_reform_beneficiary = COALESCE($10, agrarian_reform_beneficiary),
+                ownership_document_no = COALESCE($11, ownership_document_no),
+                ownership_type_registered_owner = COALESCE($12, ownership_type_registered_owner),
+                ownership_type_tenant = COALESCE($13, ownership_type_tenant),
+                ownership_type_tenant_land_owner = COALESCE($14, ownership_type_tenant_land_owner),
+                ownership_type_lessee = COALESCE($15, ownership_type_lessee),
+                ownership_type_lessee_land_owner = COALESCE($16, ownership_type_lessee_land_owner),
+                ownership_type_others = COALESCE($17, ownership_type_others),
+                ownership_type_others_specify = COALESCE($18, ownership_type_others_specify),
+                number_of_head = COALESCE($19, number_of_head),
+                farm_remarks = COALESCE($20, farm_remarks),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $21
+        `;
+        
+        const values = [
+            updateData.parcelNumber,
+            updateData.farmLocationBarangay,
+            updateData.farmLocationCityMunicipality,
+            updateData.totalFarmArea,
+            updateData.cropCommodity,
+            updateData.farmSize,
+            updateData.farmType,
+            updateData.organicPractitioner,
+            updateData.withinAncestralDomain,
+            updateData.agrarianReformBeneficiary,
+            updateData.ownershipDocumentNo,
+            updateData.ownershipTypeRegisteredOwner,
+            updateData.ownershipTypeTenant,
+            updateData.ownershipTypeTenantLandOwner,
+            updateData.ownershipTypeLessee,
+            updateData.ownershipTypeLesseeLandOwner,
+            updateData.ownershipTypeOthers,
+            updateData.ownershipTypeOthersSpecify,
+            updateData.numberOfHead,
+            updateData.farmRemarks,
+            parcelId
+        ];
+        
+        await pool.query(updateQuery, values);
+        res.json({ message: 'Farm parcel updated successfully' });
+    } catch (error) {
+        console.error('Error updating farm parcel:', error);
+        res.status(500).json({ 
+            message: 'Error updating farm parcel', 
+            error: error.message
+        });
+    }
+});
+
+// DELETE endpoint to delete a farm parcel
+app.delete('/api/farm-parcels/:parcelId', async (req, res) => {
+    const { parcelId } = req.params;
+    
+    try {
+        await pool.query('DELETE FROM farm_parcels WHERE id = $1', [parcelId]);
+        res.json({ message: 'Farm parcel deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting farm parcel:', error);
+        res.status(500).json({ 
+            message: 'Error deleting farm parcel', 
+            error: error.message
+        });
     }
 });
 
@@ -1191,7 +1527,7 @@ app.put('/api/RSBSAform/:id/ownership', async (req, res) => {
         let values = [id];
 
         switch (ownershipType) {
-            case 'REGISTERED OWNER':
+            case 'LANDOWNER':
                 specificUpdateQuery = `
                     UPDATE rsbsaform 
                     SET ownership_type_registered_owner = true 
@@ -1384,7 +1720,7 @@ app.put('/api/land/:parcelId/history/:historyId', async (req, res) => {
 });
 
 // Add a new land rights history record
-app.post('/api/land-rights-history', async (req, res) => {
+app.post('/api/land_rights_history', async (req, res) => {
     const { parcel_id, person_id, role, reason, changed_by } = req.body;
     try {
         const result = await pool.query(
@@ -1402,17 +1738,49 @@ app.post('/api/land-rights-history', async (req, res) => {
 });
 
 // Fetch history for a given parcel_id (and join to get farmer name)
-app.get('/api/land-rights-history', async (req, res) => {
-    const { parcel_id } = req.query;
+app.get('/api/land_rights_history', async (req, res) => {
+    const { parcel_id, farmer_name, barangay, surname, firstName } = req.query;
+    console.log('DEBUG /api/land_rights_history: received parcel_id =', parcel_id, 'farmer_name =', farmer_name, 'surname =', surname, 'firstName =', firstName, 'barangay =', barangay, 'type:', typeof parcel_id);
     try {
-        const result = await pool.query(
-            `SELECT h.*, r.first_name || ' ' || r.surname AS farmer_name
+        let query;
+        let params;
+        if (parcel_id) {
+            // Original query by parcel_id
+            query = `
+                SELECT h.*, r.first_name || ' ' || r.surname AS farmer_name
          FROM land_rights_history h
          LEFT JOIN rsbsaform r ON h.person_id = r.id
         WHERE h.parcel_id = $1
-        ORDER BY h.changed_at DESC`,
-            [parcel_id]
-        );
+                ORDER BY h.changed_at DESC
+            `;
+            params = [parcel_id];
+        } else if (surname && firstName) {
+            // New query by surname and firstName
+            query = `
+                SELECT h.*, r.first_name || ' ' || r.surname AS farmer_name
+                FROM land_rights_history h
+                LEFT JOIN rsbsaform r ON h.person_id = r.id
+                WHERE LOWER(r.surname) LIKE LOWER($1)
+                AND LOWER(r.first_name) LIKE LOWER($2)
+                ORDER BY h.changed_at DESC
+            `;
+            params = [`%${surname}%`, `%${firstName}%`];
+        } else if (farmer_name && barangay) {
+            // Fallback: query by farmer name and barangay
+            query = `
+                SELECT h.*, r.first_name || ' ' || r.surname AS farmer_name
+                FROM land_rights_history h
+                LEFT JOIN rsbsaform r ON h.person_id = r.id
+                WHERE LOWER(r.first_name || ' ' || r.surname) LIKE LOWER($1)
+                AND LOWER(r.farm_location_barangay) LIKE LOWER($2)
+                ORDER BY h.changed_at DESC
+            `;
+            params = [`%${farmer_name}%`, `%${barangay}%`];
+        } else {
+            return res.status(400).json({ error: 'Either parcel_id or (surname, firstName) or (farmer_name, barangay) must be provided' });
+        }
+        const result = await pool.query(query, params);
+        console.log('DEBUG /api/land_rights_history: returned rows =', result.rows.length);
         res.json(result.rows);
     } catch (err) {
         console.error(err);

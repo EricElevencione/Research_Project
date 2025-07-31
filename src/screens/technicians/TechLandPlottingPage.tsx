@@ -39,7 +39,12 @@ interface Shape {
 }
 
 const LandPlottingPage: React.FC = () => {
-    const { barangayName = '', recordId } = useParams(); // Restore barangayName and add recordId
+    const { barangayName: barangayNameParam, recordId } = useParams();
+    const urlParams = new URLSearchParams(window.location.search);
+    const barangayNameQuery = urlParams.get('barangayName');
+    // Use URL barangay as fallback only - parcel location will be primary
+    const fallbackBarangayName = barangayNameParam || barangayNameQuery || '';
+    console.log('DEBUG: Fallback barangayName from URL:', fallbackBarangayName);
     const navigate = useNavigate();
     const mapRef = useRef<LandPlottingMapRef>(null);
     const [selectedShape, setSelectedShape] = useState<Shape | null>(null);
@@ -54,6 +59,8 @@ const LandPlottingPage: React.FC = () => {
     }>({});
     const [rsbsaRecord, setRsbsaRecord] = useState<any>(null);
     const [currentParcel, setCurrentParcel] = useState<any>(null);
+    // State to track the actual parcel barangay (from RSBSA form)
+    const [parcelBarangay, setParcelBarangay] = useState<string>('');
 
     const [landAttributes, setLandAttributes] = useState<LandAttributes>({
         name: '',
@@ -95,7 +102,7 @@ const LandPlottingPage: React.FC = () => {
         setLandAttributes(prev => ({
             ...prev,
             [name]: newValue,
-            barangay: barangayName
+            barangay: parcelBarangay || fallbackBarangayName
         }));
     };
 
@@ -224,7 +231,7 @@ const LandPlottingPage: React.FC = () => {
                     ffrs_id: '',
                     area: 0,
                     coordinateAccuracy: 'approximate',
-                    barangay: '',
+                    barangay: parcelBarangay || fallbackBarangayName,
                     firstName: '',
                     middleName: '',
                     surname: '',
@@ -261,8 +268,8 @@ const LandPlottingPage: React.FC = () => {
             shape.properties.birthdate = landAttributes.birthdate;
         }
         // Assign parcelNumber from currentParcel if available
-        if (currentParcel && currentParcel.parcelNumber !== undefined) {
-            (shape.properties as any).parcelNumber = currentParcel.parcelNumber;
+        if (currentParcel && currentParcel.parcel_number !== undefined) {
+            (shape.properties as any).parcelNumber = currentParcel.parcel_number;
         }
         // If the shape is a polygon, auto-calculate area
         const geo = shape.layer.toGeoJSON();
@@ -285,7 +292,7 @@ const LandPlottingPage: React.FC = () => {
         setLandAttributes(prevAttributes => ({
             ...prevAttributes,
             ...shape.properties,
-            barangay: shape.properties.barangay || barangayName || prevAttributes.barangay,
+            barangay: shape.properties.barangay || parcelBarangay || fallbackBarangayName || prevAttributes.barangay,
             municipality: shape.properties.municipality || 'Dumangas',
             province: shape.properties.province || 'Iloilo',
         }));
@@ -300,7 +307,7 @@ const LandPlottingPage: React.FC = () => {
         setLandAttributes(prevAttributes => ({
             ...prevAttributes,
             ...shape.properties,
-            barangay: shape.properties.barangay || barangayName || prevAttributes.barangay,
+            barangay: shape.properties.barangay || parcelBarangay || fallbackBarangayName || prevAttributes.barangay,
             municipality: shape.properties.municipality || 'Dumangas',
             province: shape.properties.province || 'Iloilo',
         }));
@@ -376,7 +383,7 @@ const LandPlottingPage: React.FC = () => {
                 ffrs_id: '',
                 area: 0,
                 coordinateAccuracy: 'approximate',
-                barangay: '',
+                barangay: parcelBarangay || fallbackBarangayName,
                 firstName: '',
                 middleName: '',
                 surname: '',
@@ -408,7 +415,7 @@ const LandPlottingPage: React.FC = () => {
         if (selectedShape) {
             setLandAttributes({
                 ...selectedShape.properties,
-                barangay: selectedShape.properties.barangay || barangayName,
+                barangay: selectedShape.properties.barangay || parcelBarangay || fallbackBarangayName,
                 municipality: selectedShape.properties.municipality || 'Dumangas',
                 province: selectedShape.properties.province || 'Iloilo'
             });
@@ -419,7 +426,7 @@ const LandPlottingPage: React.FC = () => {
                 ffrs_id: '',
                 area: 0,
                 coordinateAccuracy: 'approximate',
-                barangay: '',
+                barangay: parcelBarangay || fallbackBarangayName,
                 firstName: '',
                 middleName: '',
                 surname: '',
@@ -436,7 +443,7 @@ const LandPlottingPage: React.FC = () => {
             });
             setIsEditingAttributes(false);
         }
-    }, [selectedShape, barangayName]);
+    }, [selectedShape, parcelBarangay, fallbackBarangayName]);
 
     // Parse URL parameters for parcel context
     useEffect(() => {
@@ -451,6 +458,21 @@ const LandPlottingPage: React.FC = () => {
         }
     }, []);
 
+    // Helper function to fetch farm parcel data from the database
+    const fetchFarmParcelData = async (recordId: string, parcelIndex: number) => {
+        try {
+            // Fetch the specific farm parcel data
+            const response = await fetch(`http://localhost:5000/api/farm-parcels?recordId=${recordId}&parcelIndex=${parcelIndex}`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const parcelData = await response.json();
+            console.log('📍 Fetched farm parcel data:', parcelData);
+            return parcelData;
+        } catch (error) {
+            console.error('Error fetching farm parcel data:', error);
+            return null;
+        }
+    };
+
     // Fetch RSBSA record data
     const fetchRSBSARecord = async (recordId: string, parcelIndex?: number) => {
         try {
@@ -461,22 +483,29 @@ const LandPlottingPage: React.FC = () => {
             console.log('Fetched data:', data);
             console.log('parcelIndex:', parcelIndex);
 
-            // Fallback: If no farmParcels, create one from root fields
+            // Fetch farm parcel data from the database
             let farmParcels = data.farmParcels;
             if (!farmParcels || !Array.isArray(farmParcels) || farmParcels.length === 0) {
-                farmParcels = [{
-                    parcelNumber: data.parcelNumber || 1,
-                    farmLocation: {
-                        barangay: data.farmLocationBarangay || data.addressBarangay || '',
-                        cityMunicipality: data.farmLocationCityMunicipality || data.addressMunicipality || ''
-                    },
-                    totalFarmArea: data.totalFarmArea || data.parcelArea || '',
-                    cropCommodity: data.cropCommodity || '',
-                    size: data.farmSize || data.parcelArea || '',
-                    farmType: data.farmType || '',
-                    organicPractitioner: data.organicPractitioner || '',
-                    plotStatus: 'not_plotted'
-                }];
+                // If no farmParcels in the RSBSA data, fetch from farm_parcels table
+                const parcelData = await fetchFarmParcelData(recordId, parcelIndex || 0);
+                if (parcelData) {
+                    farmParcels = [parcelData];
+                } else {
+                    // Fallback: create basic parcel structure
+                    farmParcels = [{
+                        parcelNumber: data.parcelNumber || 1,
+                        farmLocation: {
+                            barangay: data.farmLocationBarangay || data.addressBarangay || '',
+                            cityMunicipality: data.farmLocationCityMunicipality || data.addressMunicipality || ''
+                        },
+                        totalFarmArea: data.totalFarmArea || data.parcelArea || '',
+                        cropCommodity: data.cropCommodity || '',
+                        size: data.farmSize || data.parcelArea || '',
+                        farmType: data.farmType || '',
+                        organicPractitioner: data.organicPractitioner || '',
+                        plotStatus: 'not_plotted'
+                    }];
+                }
             }
 
             if (parcelIndex !== undefined && farmParcels) {
@@ -484,18 +513,33 @@ const LandPlottingPage: React.FC = () => {
                 console.log('Selected parcel:', parcel);
                 if (parcel) {
                     setCurrentParcel(parcel);
+                    
+                    // Use the farm parcel data from the database
+                    const parcelBarangayLocation = parcel.farm_location_barangay || parcel.farmLocation?.barangay || fallbackBarangayName;
+                    const parcelMunicipalityLocation = parcel.farm_location_city_municipality || parcel.farmLocation?.cityMunicipality || 'Dumangas';
+                    
+                    setParcelBarangay(parcelBarangayLocation);
+                    console.log('📍 Land Plotting Location Priority:', {
+                        parcelBarangay: parcel.farm_location_barangay,
+                        farmLocationBarangay: parcel.farmLocation?.barangay,
+                        fallbackBarangay: fallbackBarangayName,
+                        finalLocation: parcelBarangayLocation,
+                        farmerBarangay: data.addressBarangay,
+                        parcelLocation: `${parcelBarangayLocation}, ${parcelMunicipalityLocation}`
+                    });
+                    
                     setLandAttributes(prev => ({
                         ...prev,
                         firstName: data.firstName || '',
                         middleName: data.middleName || '',
                         surname: data.surname || '',
-                        barangay: parcel.farmLocation?.barangay || barangayName,
-                        municipality: parcel.farmLocation?.cityMunicipality || 'Dumangas',
-                        area: parseFloat(parcel.size || parcel.totalFarmArea || '0'),
-                        parcel_address: `${parcel.farmLocation?.barangay || ''}, ${parcel.farmLocation?.cityMunicipality || ''}`,
-                        farmType: parcel.farmType || 'Irrigated',
-                        plotSource: parcel.plotSource || 'manual',
-                        parcelNumber: parcel.parcelNumber,
+                        barangay: parcelBarangayLocation,
+                        municipality: parcelMunicipalityLocation,
+                        area: parseFloat(parcel.farm_size || parcel.total_farm_area || '0'),
+                        parcel_address: `${parcelBarangayLocation}, ${parcelMunicipalityLocation}`,
+                        farmType: parcel.farm_type || 'Irrigated',
+                        plotSource: parcel.plot_source || 'manual',
+                        parcelNumber: parcel.parcel_number,
                     }));
 
                     // --- NEW: Load all geometry for this parcel and farmer ---
@@ -525,7 +569,7 @@ const LandPlottingPage: React.FC = () => {
                         console.log('All plots from backend:', allPlots);
                         // Robust matching: ignore case, trim, allow missing middle names
                         const normalize = (str: string) => (str || '').trim().toLowerCase();
-                        const parcelAddr = normalize(`${parcel.farmLocation?.barangay || ''}, ${parcel.farmLocation?.cityMunicipality || ''}`);
+                        const parcelAddr = normalize(`${parcelBarangayLocation}, ${parcelMunicipalityLocation}`);
                         const surname = normalize(data.surname);
                         const firstName = normalize(data.firstName);
                         // Log filter values and all plots for debugging
@@ -549,12 +593,15 @@ const LandPlottingPage: React.FC = () => {
                             shapes.push({
                                 id: match.id,
                                 layer,
-                                properties: match,
+                                properties: {
+                                    ...match,
+                                    parcelNumber: parcel.parcel_number,
+                                },
                             });
                         });
                     }
                     setShapesAndVersion(shapes);
-                    const selected = shapes.find(s => s.properties.parcelNumber === parcel.parcelNumber) || shapes[0];
+                    const selected = shapes.find(s => s.properties.parcelNumber === parcel.parcel_number) || shapes[0];
                     setSelectedShape(selected || null);
                     setIsEditingAttributes(!!selected);
                     if (selected) setLandAttributes((prev) => ({ ...prev, ...selected.properties }));
@@ -725,18 +772,53 @@ const LandPlottingPage: React.FC = () => {
         }
     );
 
-    const [history, setHistory] = useState<any[]>([]);
+    // Add at the top with other useState imports
+    const [parcelHistory, setParcelHistory] = useState<any[]>([]);
 
-    // Fetch land rights history for the current parcel
+    // Replace the old parcelHistory logic and useEffect for currentParcel
     useEffect(() => {
-        const parcelId = Number(recordId || currentParcel?.id || currentParcel?.parcelNumber);
-        console.log('parcelId for history fetch:', parcelId, currentParcel);
-        if (!parcelId) return;
-        fetch(`http://localhost:5000/api/land-rights-history?parcel_id=${parcelId}`)
-            .then(res => res.json())
-            .then(data => setHistory(data))
-            .catch(() => setHistory([]));
-    }, [recordId, currentParcel]);
+        console.log('Effect: currentParcel =', currentParcel);
+        if (currentParcel && currentParcel.id) {
+            console.log('Fetching parcel history for parcel_id:', Number(currentParcel.parcel_number));
+            fetch(`/api/land_rights_history?parcel_id=${Number(currentParcel.parcel_number)}`)
+                .then(res => res.json())
+                .then(data => {
+                    console.log('Fetched parcel history:', data);
+                    setParcelHistory(data);
+                });
+        } else {
+            console.log('No currentParcel or no id, not fetching history');
+            setParcelHistory([]);
+        }
+    }, [currentParcel]);
+
+    // Define the designated farmer's ID. Replace with the correct variable if needed.
+    const designatedFarmerId = currentParcel?.person_id || null;
+    // Filter parcelHistory for the designated farmer
+    const farmerHistory = designatedFarmerId ? parcelHistory.filter((entry: any) => entry.person_id === designatedFarmerId) : [];
+
+    // Filter history to show only records for the current farmer
+    const currentFarmerHistory = parcelHistory.filter((entry: any) => {
+        // Get current farmer's full name
+        const currentFarmerName = `${landAttributes.surname} ${landAttributes.firstName} ${landAttributes.middleName}`.trim();
+        const currentFarmerId = rsbsaRecord?.id;
+        
+        // Match by farmer name (case-insensitive, handle variations)
+        const entryFarmerName = entry.farmer_name || '';
+        const nameMatches = currentFarmerName && entryFarmerName && 
+            entryFarmerName.toLowerCase().includes(currentFarmerName.toLowerCase()) ||
+            currentFarmerName.toLowerCase().includes(entryFarmerName.toLowerCase());
+        
+        // Match by person ID
+        const idMatches = currentFarmerId && entry.person_id && entry.person_id === currentFarmerId;
+        
+        return nameMatches || idMatches;
+    });
+
+    console.log("📍 Barangay going to map:", landAttributes.barangay);
+    console.log("📦 Current Parcel:", currentParcel);
+    console.log("👤 Current Farmer:", `${landAttributes.surname} ${landAttributes.firstName} ${landAttributes.middleName}`);
+    console.log("📋 Filtered History Count:", currentFarmerHistory.length, "of", parcelHistory.length, "total records");
 
     return (
         <div className="landplotting-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '90vh', border: '1px solid #222', borderRadius: '10px', margin: '2rem', background: '#fff' }}>
@@ -762,7 +844,7 @@ const LandPlottingPage: React.FC = () => {
                                 onShapeCreated={handleShapeCreated}
                                 onShapeEdited={handleShapeEdited}
                                 onShapeDeleted={handleMapShapeDeleted}
-                                barangayName={landAttributes.barangay}
+                                barangayName={parcelBarangay || fallbackBarangayName}
                                 onShapeFinalized={handleShapeFinalized}
                                 // Only disable drawing if geometry mode
                                 drawingDisabled={plottingMethod === 'geometry'}
@@ -801,8 +883,8 @@ const LandPlottingPage: React.FC = () => {
                         </label>
                     </div>
                     <div style={{ borderBottom: '2px solid #222', marginBottom: '1.5rem', paddingBottom: '0.5rem', fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '1px' }}>
-                        {currentParcel && (currentParcel.parcelNumber !== undefined && currentParcel.parcelNumber !== null && currentParcel.parcelNumber !== '')
-                            ? `Farm Parcel #${currentParcel.parcelNumber}`
+                        {currentParcel && (currentParcel.parcel_number !== undefined && currentParcel.parcel_number !== null && currentParcel.parcel_number !== '')
+                            ? `Farm Parcel #${currentParcel.parcel_number}`
                             : (selectedShape && (selectedShape.properties as any).parcelNumber !== undefined)
                                 ? `Farm Parcel #${(selectedShape.properties as any).parcelNumber}`
                                 : 'Farm Parcel #1'}
@@ -819,11 +901,7 @@ const LandPlottingPage: React.FC = () => {
                         </div>
                         <div>
                             <span style={{ fontWeight: 'bold' }}>Barangay:</span>
-                            {` ${landAttributes.barangay}`}
-                        </div>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>History:</span>
-                            {/* History will be added here in the future */}
+                            {` ${parcelBarangay || fallbackBarangayName || landAttributes.barangay}`}
                         </div>
                     </div>
                     {/* Editable plot-specific fields */}
@@ -831,7 +909,7 @@ const LandPlottingPage: React.FC = () => {
 
                     {/* Geometry Input Form (only show if geometry mode) */}
                     {plottingMethod === 'geometry' && (
-                        <div style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #ccc', borderRadius: '8px', background: '#f9f9f9', maxHeight: 350, overflowY: 'auto' }}>
+                        <div className="geometry-input-section">
                             {/* UI note for relative plotting */}
                             <div style={{ color: '#b36b00', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                                 Note: If you leave the starting latitude and longitude blank, the lot will be plotted as a relative shape (not georeferenced to a real-world location).
@@ -952,24 +1030,39 @@ const LandPlottingPage: React.FC = () => {
                             {isSaving ? 'Saving...' : 'SAVE'}
                         </button>
                     </div>
-                    <div style={{ marginTop: '2rem' }}>
-                        <span style={{ fontWeight: 'bold' }}>History:</span>
-                        <table style={{ width: '100%', marginTop: '0.5rem', borderCollapse: 'collapse' }}>
+                    {/* History Section */}
+                    <div className="history-section">
+                        <h3>History</h3>
+                        <table className="history-table">
                             <thead>
                                 <tr>
-                                    <th style={{ borderBottom: '1px solid #ccc' }}>Date</th>
-                                    <th style={{ borderBottom: '1px solid #ccc' }}>Status Chosen</th>
-                                    <th style={{ borderBottom: '1px solid #ccc' }}>Farmer Name</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Farmer</th>
+                                    <th>Reason</th>
+                                    <th>Changed At</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {history.length === 0 ? (
-                                    <tr><td colSpan={3} style={{ textAlign: 'center' }}>No history found.</td></tr>
-                                ) : history.map(entry => (
-                                    <tr key={entry.id}>
-                                        <td>{new Date(entry.changed_at).toLocaleDateString()}</td>
-                                        <td>{entry.role}</td>
-                                        <td>{entry.farmer_name}</td>
+                                {currentFarmerHistory.length === 0 ? (
+                                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>No history found for this farmer.</td></tr>
+                                ) : currentFarmerHistory.map((entry: any, idx: number) => (
+                                    <tr key={entry.id || idx}>
+                                        <td className="history-date">
+                                            {entry.changed_at ? new Date(entry.changed_at).toLocaleDateString() : ''}
+                                        </td>
+                                        <td>
+                                            <span className={`status-badge status-${entry.role?.toLowerCase().replace(/\s+/g, '-')}`}>
+                                                {entry.role || ''}
+                                            </span>
+                                        </td>
+                                        <td>{entry.farmer_name || entry.person_id || ''}</td>
+                                        <td className="history-reason" title={entry.reason || ''}>
+                                            {entry.reason || ''}
+                                        </td>
+                                        <td className="history-date">
+                                            {entry.changed_at ? new Date(entry.changed_at).toLocaleString() : ''}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

@@ -140,6 +140,9 @@ select:focus {
   margin-bottom: 30px;
 }
 
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Mobile First Approach */
 @media (max-width: 768px) {
   .container {
     padding: 0 15px;
@@ -148,11 +151,341 @@ select:focus {
   .grid-item {
     flex: 1 1 100%;
   }
-}
 
-@media (max-width: 480px) {
+  /* Dashboard Layout */
+  .dashboard-container {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .dashboard-grid {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    order: 2;
+    padding: 15px;
+    border-right: none;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .map-area {
+    order: 1;
+    padding: 15px;
+  }
+
+  .map-container {
+    height: 60vh;
+    min-height: 300px;
+  }
+
+  /* Top Menu */
+  .top-menu {
+    height: auto;
+    min-height: 60px;
+    padding: 10px 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .top-menu button {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  /* Tables */
+  .farmers-table-container,
+  .masterlist-table-container {
+    padding: 10px;
+    overflow-x: auto;
+  }
+
+  .farmers-table,
+  .masterlist-table {
+    font-size: 0.8rem;
+    min-width: 600px;
+  }
+
+  .farmers-table th,
+  .farmers-table td,
+  .masterlist-table th,
+  .masterlist-table td {
+    padding: 8px 6px;
+  }
+
+  /* Forms */
+  .farmer-form,
+  .rsbsa-form {
+    padding: 15px;
+    margin: 10px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .form-group {
+    width: 100%;
+  }
+
+  /* Modals */
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .status-modal {
+    width: 95%;
+    max-width: none;
+    margin: 10px;
+  }
+
+  /* Buttons */
   .btn {
     width: 100%;
     margin-bottom: 10px;
+    padding: 12px 16px;
+    font-size: 1rem;
+  }
+
+  /* Search inputs */
+  .farmers-search-input,
+  .search-bar {
+    width: 100%;
+    min-width: auto;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Headers */
+  .farmers-header,
+  .masterlist-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .farmers-header h1,
+  .masterlist-title {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  /* Status pills */
+  .status-pill {
+    min-width: 60px;
+    max-width: 80px;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+
+  /* Actions dropdown */
+  .actions-dropdown {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 300px;
+  }
+
+  /* Map popups */
+  .leaflet-popup-content {
+    max-width: 250px;
+    font-size: 0.9rem;
+  }
+
+  .leaflet-popup-content table {
+    font-size: 0.8rem;
+  }
+
+  /* Parcel cards */
+  .parcel-card {
+    min-width: auto;
+    max-width: none;
+    flex: 1 1 100%;
+  }
+
+  /* Land plotting controls */
+  .landplotting-control-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 15px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+  }
+
+  .landplotting-control-panel button {
+    width: 100%;
+    margin: 5px 0;
+    padding: 12px;
+    font-size: 1rem;
+  }
+}
+
+/* Small Mobile Devices */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 10px;
+  }
+
+  .top-menu {
+    padding: 8px 10px;
+  }
+
+  .top-menu button {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    min-width: 60px;
+  }
+
+  .farmers-table,
+  .masterlist-table {
+    font-size: 0.75rem;
+    min-width: 500px;
+  }
+
+  .farmers-table th,
+  .farmers-table td,
+  .masterlist-table th,
+  .masterlist-table td {
+    padding: 6px 4px;
+  }
+
+  .status-pill {
+    min-width: 50px;
+    max-width: 70px;
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+
+  .map-container {
+    height: 50vh;
+    min-height: 250px;
+  }
+
+  .leaflet-popup-content {
+    max-width: 200px;
+    font-size: 0.8rem;
+  }
+
+  /* Hide less important columns on very small screens */
+  .farmers-table th:nth-child(4),
+  .farmers-table td:nth-child(4),
+  .farmers-table th:nth-child(5),
+  .farmers-table td:nth-child(5) {
+    display: none;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .dashboard-grid {
+    flex-direction: row;
+  }
+
+  .sidebar {
+    width: 200px;
+    order: 1;
+  }
+
+  .map-area {
+    order: 2;
+  }
+
+  .map-container {
+    height: 70vh;
+  }
+
+  .top-menu {
+    height: 50px;
+  }
+
+  .top-menu button {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Tablet devices */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding: 0 20px;
+  }
+
+  .sidebar {
+    width: 220px;
+  }
+
+  .map-container {
+    height: 70vh;
+  }
+
+  .farmers-table,
+  .masterlist-table {
+    font-size: 0.85rem;
+  }
+
+  .status-pill {
+    min-width: 70px;
+    max-width: 100px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets */
+  .btn,
+  .status-pill,
+  .top-menu button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve scrolling */
+  .farmers-table-container,
+  .masterlist-table-container {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better focus states for touch */
+  .btn:focus,
+  .status-pill:focus,
+  .top-menu button:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .card,
+  .btn,
+  .status-pill {
+    border-width: 0.5px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .top-menu,
+  .sidebar,
+  .landplotting-control-panel {
+    display: none;
+  }
+
+  .dashboard-container {
+    height: auto;
+  }
+
+  .map-container {
+    height: 400px;
   }
 }

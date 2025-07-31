@@ -29,7 +29,37 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
     const [barangayBoundaries, setBarangayBoundaries] = useState<{ [key: string]: any }>({});
     const [boundaryLoading, setBoundaryLoading] = useState(true);
     const [boundaryError, setBoundaryError] = useState<string | null>(null);
+    const [historyMap, setHistoryMap] = useState<{ [parcelId: string]: any[] }>({});
 
+    // Helper to fetch history for a parcel
+    const fetchParcelHistory = async (parcelId: string) => {
+        if (historyMap[parcelId]) return; // Already fetched
+        try {
+            const res = await fetch(`/api/land_rights_history?parcel_id=${parcelId}`);
+            const data = await res.json();
+            setHistoryMap(prev => ({ ...prev, [parcelId]: data }));
+        } catch (err) {
+            setHistoryMap(prev => ({ ...prev, [parcelId]: [] }));
+        }
+    };
+
+    // Helper to fetch history by farmer name and location (fallback method)
+    const fetchHistoryByFarmer = async (farmerName: string, barangay: string, surname?: string, firstName?: string) => {
+        try {
+            let url;
+            if (surname && firstName && barangay) {
+                url = `/api/land_rights_history?surname=${encodeURIComponent(surname)}&firstName=${encodeURIComponent(firstName)}&barangay=${encodeURIComponent(barangay)}`;
+            } else {
+                url = `/api/land_rights_history?farmer_name=${encodeURIComponent(farmerName)}&barangay=${encodeURIComponent(barangay)}`;
+            }
+            const res = await fetch(url);
+            const data = await res.json();
+            return data;
+        } catch (err) {
+            console.error('Error fetching history by farmer:', err);
+            return [];
+        }
+    };
 
     useEffect(() => {
         const fetchFarmlandRecords = async () => {
@@ -157,25 +187,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                                     type: 'Feature',
                                     geometry: record.geometry,
                                     properties: {
-                                        id: record.id,
-                                        ffrs_id: record.ffrs_id,
-                                        ext_name: record.ext_name,
-                                        birthdate: record.birthdate,
-                                        parcel_address: record.parcel_address,
-                                        firstName: record.firstName,
-                                        middleName: record.middleName,
-                                        surname: record.surname,
-                                        gender: record.gender,
-                                        barangay: record.barangay || record.barangayName,
-                                        municipality: record.municipality || record.municipalityName,
-                                        province: record.provinceName,
-                                        status: record.status,
-                                        street: record.street,
-                                        farmType: record.farmType,
-                                        area: record.area,
-                                        coordinateAccuracy: record.coordinateAccuracy,
-                                        createdAt: record.createdAt,
-                                        updatedAt: record.updatedAt
+                                        ...record
                                     }
                                 };
                             }
@@ -190,22 +202,59 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                     })}
                     onEachFeature={(feature, layer) => {
                         if (feature.properties) {
+                            // Debug: Log all available properties
+                            console.log('Feature properties:', JSON.stringify(feature.properties, null, 2));
+                            console.log('Available property keys:', Object.keys(feature.properties));
+                            
+                            // Create a unique key for this feature based on farmer name and location
+                            const farmerName = [feature.properties.surname, feature.properties.firstName, feature.properties.middleName].filter(Boolean).join(' ');
+                            const location = feature.properties.barangay || '';
+                            const featureKey = `${farmerName}-${location}`;
+                            
+                            console.log('Map click - featureKey:', featureKey, 'farmerName:', farmerName);
+                            
+                            // Initial popup content
                             let popupContent = `<div class="land-plot-popup">
                                 <table>
                                     <tr><th>Field</th><th>Value</th></tr>
-                                    <tr><td><b>Name:</b></td><td>${[feature.properties.surname, feature.properties.firstName, feature.properties.middleName].filter(Boolean).join(' ') || 'N/A'}</td></tr>
+                                    <tr><td><b>Name:</b></td><td>${farmerName || 'N/A'}</td></tr>
                                     <tr><td><b>Municipality:</b></td><td>${feature.properties.municipality || 'N/A'}</td></tr>
-                                    <tr><td><b>Barangay:</b></td><td>${feature.properties.barangay || 'N/A'}</td></tr>
-                                    <tr><td><b>History:</b></td><td></td></tr>
+                                    <tr><td><b>Barangay:</b></td><td>${location || 'N/A'}</td></tr>
+                                    <tr><td><b>History:</b></td><td id="history-cell-${featureKey}">Loading...</td></tr>
                                 </table>
                             </div>`;
                             layer.bindPopup(popupContent);
 
                             layer.on({
-                                click: () => {
+                                click: async () => {
                                     if (onLandPlotSelect) {
                                         onLandPlotSelect(feature.properties);
                                     }
+                                    
+                                    const surname = feature.properties.surname || '';
+                                    const firstName = feature.properties.firstName || '';
+                                    // Try to fetch history by surname, firstName, and barangay
+                                    console.log('Fetching history for:', { surname, firstName, barangay: location });
+                                    const history = await fetchHistoryByFarmer(farmerName, location, surname, firstName);
+                                    setHistoryMap(prev => ({ ...prev, [featureKey]: history }));
+                                    
+                                    setTimeout(() => {
+                                        const cell = document.getElementById(`history-cell-${featureKey}`);
+                                        if (cell) {
+                                            if (history.length === 0) {
+                                                cell.innerHTML = '<span style="color:#888">No history found for this farmer.</span>';
+                                            } else {
+                                                let html = `<div style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; background: white;">`;
+                                                html += `<table class='history-table' style='width:100%;font-size:0.8em;'>`;
+                                                html += `<tr><th style="position: sticky; top: 0; background: #6c757d; color: white; padding: 4px 6px; font-size: 0.75em;">Date of Change</th></tr>`;
+                                                history.forEach((entry: any) => {
+                                                    html += `<tr><td style="padding: 4px 6px; border-bottom: 1px solid #dee2e6;">${entry.changed_at ? new Date(entry.changed_at).toLocaleDateString() : ''}</td></tr>`;
+                                                });
+                                                html += `</table></div>`;
+                                                cell.innerHTML = html;
+                                            }
+                                        }
+                                    }, 100);
                                 }
                             });
                         }

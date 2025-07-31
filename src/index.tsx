@@ -16,6 +16,7 @@ import ParcelSelectionPage from './screens/technicians/ParcelSelectionPage';
 import Incentives from './screens/admin/Incentives';
 import TechLandRecord from './screens/technicians/TechLandRecord';
 import './assets/css/index.css';
+import './assets/css/mobile.css';
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -92,7 +93,7 @@ function App() {
                         <TechLandRecord />
                     </ProtectedRoute>
                 } />
-                <Route path="/tech-land-plotting/:farmerId" element={
+                <Route path="/tech-land-plotting/:barangayName" element={
                     <ProtectedRoute>
                         <TechLandPlotting />
                     </ProtectedRoute>

@@ -6,7 +6,6 @@ import type { FarmParcel } from '../../types/geojson';
 
 interface RSBSARecord {
     id: string;
-    enrollmentType: string;
     dateAdministered: string;
     surname: string;
     firstName: string;
@@ -87,6 +86,10 @@ const RSBSAPage: React.FC = () => {
     // Add state for success message
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+    // Add state for delete confirmation modal
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [photoToDelete, setPhotoToDelete] = useState<any>(null);
+
     const [selectedParcel, setSelectedParcel] = useState<FarmParcel | null>(null);
     const [isParcelModalOpen, setIsParcelModalOpen] = useState(false);
 
@@ -110,14 +113,14 @@ const RSBSAPage: React.FC = () => {
     // Helper function to determine ownership status
     const getOwnershipStatus = (record: RSBSARecord): string => {
         // First try to use the new database fields
-        if (record.ownershipTypeRegisteredOwner) return 'REGISTERED OWNER';
+        if (record.ownershipTypeRegisteredOwner) return 'LANDOWNER';
         if (record.ownershipTypeTenant) return 'TENANT';
         if (record.ownershipTypeLessee) return 'LESSEE';
         if (record.ownershipTypeOthers) return 'OTHERS';
 
         // Fallback to legacy ownershipType object if available
         if (record.ownershipType) {
-            if (record.ownershipType.registeredOwner) return 'REGISTERED OWNER';
+            if (record.ownershipType.registeredOwner) return 'LANDOWNER';
             if (record.ownershipType.tenant) return 'TENANT';
             if (record.ownershipType.lessee) return 'LESSEE';
             if (record.ownershipType.others) return 'OTHERS';
@@ -128,7 +131,7 @@ const RSBSAPage: React.FC = () => {
     // Helper function to get status pill class
     const getStatusPillClass = (status: string): string => {
         switch (status) {
-            case 'REGISTERED OWNER':
+            case 'LANDOWNER':
                 return 'status-active';
             case 'TENANT':
                 return 'status-tenant';
@@ -166,7 +169,6 @@ const RSBSAPage: React.FC = () => {
 
                     const formatted = {
                         id: record.id || `${record.firstName}-${record.surname}-${Math.random()}`,
-                        enrollmentType: record.enrollmentType || '',
                         dateAdministered: record.dateAdministered || '',
                         surname: record.surname || '',
                         firstName: record.firstName || '',
@@ -306,7 +308,7 @@ const RSBSAPage: React.FC = () => {
 
             // Set the appropriate flag based on new status
             switch (selectedOwnershipType) {
-                case 'REGISTERED OWNER':
+                case 'LANDOWNER':
                     updatedRecord.ownershipTypeRegisteredOwner = true;
                     break;
                 case 'TENANT':
@@ -350,8 +352,8 @@ const RSBSAPage: React.FC = () => {
 
             console.log(`Updated ownership type for ${updatedRecord.firstName} ${updatedRecord.surname} to ${selectedOwnershipType}`);
 
-            // Re-fetch registered owners if the status was changed to Registered Owner
-            if (selectedOwnershipType === 'REGISTERED OWNER') {
+            // Re-fetch registered owners if the status was changed to Landowner
+            if (selectedOwnershipType === 'LANDOWNER') {
                 fetchRegisteredOwners();
             }
 
@@ -562,17 +564,31 @@ const RSBSAPage: React.FC = () => {
     };
 
     const handleDeletePhoto = async (photoId: string) => {
-        if (!window.confirm('Are you sure you want to delete this photo?')) return;
         if (!selectedRecordForDocs) return;
+        
+        // Find the photo to delete
+        const photo = docsForRecord.find(doc => doc.id === photoId);
+        if (!photo) return;
+        
+        // Set photo to delete and open confirmation modal
+        setPhotoToDelete(photo);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDeletePhoto = async () => {
+        if (!photoToDelete || !selectedRecordForDocs) return;
+        
         try {
-            const response = await fetch(`http://localhost:5000/api/RSBSAform/photo/${photoId}`, {
+            const response = await fetch(`http://localhost:5000/api/RSBSAform/photo/${photoToDelete.id}`, {
                 method: 'DELETE',
             });
             if (!response.ok) {
                 const err = await response.json();
-                alert(err.error || 'Failed to delete photo');
+                setSuccessMessage(err.error || 'Failed to delete photo');
+                setTimeout(() => setSuccessMessage(null), 3000);
                 return;
             }
+            
             // Refresh the photo list
             const photosRes = await fetch(`http://localhost:5000/api/RSBSAform/${selectedRecordForDocs.id}/photos`);
             if (photosRes.ok) {
@@ -580,9 +596,21 @@ const RSBSAPage: React.FC = () => {
                 setDocsForRecord(docs);
                 setSelectedDocIndex(0);
             }
+            
+            setSuccessMessage('Photo deleted successfully!');
+            setTimeout(() => setSuccessMessage(null), 3000);
         } catch (err) {
-            alert('Failed to delete photo');
+            setSuccessMessage('Failed to delete photo');
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } finally {
+            setIsDeleteModalOpen(false);
+            setPhotoToDelete(null);
         }
+    };
+
+    const cancelDeletePhoto = () => {
+        setIsDeleteModalOpen(false);
+        setPhotoToDelete(null);
     };
 
     return (
@@ -801,12 +829,12 @@ const RSBSAPage: React.FC = () => {
                                     <h4>Select New Ownership Status:</h4>
                                     <div className="status-buttons">
                                         <button
-                                            key="registered-owner"
-                                            className={`status-option-btn ${selectedOwnershipType === 'REGISTERED OWNER' ? 'status-option-active' : ''}`}
-                                            onClick={() => setSelectedOwnershipType('REGISTERED OWNER')}
+                                            key="landowner"
+                                            className={`status-option-btn ${selectedOwnershipType === 'LANDOWNER' ? 'status-option-active' : ''}`}
+                                            onClick={() => setSelectedOwnershipType('LANDOWNER')}
                                         >
                                             <span className="status-dot status-active"></span>
-                                            Registered Owner
+                                            Landowner
                                         </button>
                                         <button
                                             key="tenant"
@@ -973,6 +1001,178 @@ const RSBSAPage: React.FC = () => {
                                             {uploadError && <div style={{ color: 'red', fontSize: 13, marginTop: 4 }}>{uploadError}</div>}
                                         </>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Custom Delete Confirmation Modal */}
+                {isDeleteModalOpen && photoToDelete && (
+                    <div className="modal-overlay" onClick={cancelDeletePhoto}>
+                        <div 
+                            className="status-modal" 
+                            style={{
+                                maxWidth: 400,
+                                minWidth: 350,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                border: '2px solid #dc3545',
+                                borderRadius: 12,
+                                boxShadow: '0 8px 32px rgba(220, 53, 69, 0.2)',
+                                background: '#fff',
+                                padding: 0,
+                                overflow: 'hidden',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="modal-header" style={{ 
+                                borderBottom: '1px solid #f8d7da', 
+                                padding: '20px 24px 16px 24px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                background: '#f8d7da'
+                            }}>
+                                <h3 style={{ 
+                                    fontWeight: 600, 
+                                    fontSize: 18, 
+                                    margin: 0, 
+                                    color: '#721c24',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <span style={{ fontSize: '20px' }}>⚠️</span>
+                                    Delete Photo
+                                </h3>
+                                <button 
+                                    className="close-button" 
+                                    style={{ 
+                                        fontSize: 24, 
+                                        background: 'none', 
+                                        border: 'none', 
+                                        cursor: 'pointer', 
+                                        color: '#721c24',
+                                        fontWeight: 'bold'
+                                    }} 
+                                    onClick={cancelDeletePhoto}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div className="modal-content" style={{ 
+                                padding: '24px', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: '16px',
+                                background: '#fff'
+                            }}>
+                                <div style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '12px',
+                                    padding: '16px',
+                                    background: '#f8f9fa',
+                                    borderRadius: '8px',
+                                    border: '1px solid #e9ecef'
+                                }}>
+                                    <div style={{
+                                        width: 48, 
+                                        height: 48, 
+                                        border: '2px solid #dc3545', 
+                                        borderRadius: 8, 
+                                        background: '#fff', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center'
+                                    }}>
+                                        <span style={{ fontSize: 24, color: '#dc3545' }}>📄</span>
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ 
+                                            fontWeight: 600, 
+                                            fontSize: 14, 
+                                            color: '#495057',
+                                            marginBottom: '4px'
+                                        }}>
+                                            {photoToDelete.file_name}
+                                        </div>
+                                        <div style={{ 
+                                            fontSize: 12, 
+                                            color: '#6c757d'
+                                        }}>
+                                            {photoToDelete.file_size ? `${Math.round(photoToDelete.file_size / 1024)} KB` : 'Unknown size'}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div style={{ 
+                                    fontSize: 15, 
+                                    color: '#495057',
+                                    lineHeight: '1.5',
+                                    textAlign: 'center',
+                                    padding: '8px 0'
+                                }}>
+                                    Are you sure you want to delete this photo? This action cannot be undone.
+                                </div>
+                                
+                                <div style={{ 
+                                    display: 'flex', 
+                                    gap: '12px', 
+                                    justifyContent: 'center',
+                                    marginTop: '8px'
+                                }}>
+                                    <button 
+                                        onClick={cancelDeletePhoto}
+                                        style={{
+                                            padding: '10px 20px',
+                                            border: '2px solid #6c757d',
+                                            background: '#fff',
+                                            color: '#6c757d',
+                                            borderRadius: '8px',
+                                            fontWeight: 600,
+                                            fontSize: 14,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            minWidth: '100px'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            e.currentTarget.style.background = '#6c757d';
+                                            e.currentTarget.style.color = '#fff';
+                                        }}
+                                        onMouseOut={(e) => {
+                                            e.currentTarget.style.background = '#fff';
+                                            e.currentTarget.style.color = '#6c757d';
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={confirmDeletePhoto}
+                                        style={{
+                                            padding: '10px 20px',
+                                            border: '2px solid #dc3545',
+                                            background: '#dc3545',
+                                            color: '#fff',
+                                            borderRadius: '8px',
+                                            fontWeight: 600,
+                                            fontSize: 14,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            minWidth: '100px'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            e.currentTarget.style.background = '#c82333';
+                                            e.currentTarget.style.borderColor = '#c82333';
+                                        }}
+                                        onMouseOut={(e) => {
+                                            e.currentTarget.style.background = '#dc3545';
+                                            e.currentTarget.style.borderColor = '#dc3545';
+                                        }}
+                                    >
+                                        Delete
+                                    </button>
                                 </div>
                             </div>
                         </div>

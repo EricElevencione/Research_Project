@@ -1,5 +1,5 @@
 .farmers-container {
-    flex: 1;
+    flex: 0;
     display: flex;
     flex-direction: column;
     overflow-y: visible;
@@ -93,68 +93,83 @@
     margin-top: 20px;
     overflow-x: auto;
     flex-grow: 1;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    padding: 0 15px 200px 15px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
     width: 100%;
-    flex-shrink: 0;
+    overflow-y: visible;
 }
 
 .farmers-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
     overflow: visible;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    font-size: 0.9rem;
+    position: relative;
 }
 
 .farmers-table thead th {
-    background-color: #ffffff;
-    color: #888;
-    font-weight: 500;
-    text-align: left;
-    padding: 12px 15px;
-    border-bottom: 1px solid #eee;
+    background: #6c757d;
+    color: white;
+    font-weight: 600;
     font-size: 0.85rem;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    text-align: left;
+    border: none;
 }
 
 .farmers-table tbody td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #eee;
-    color: #333;
-    font-size: 0.9rem;
+    padding: 12px 16px;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+    position: relative;
     overflow: visible;
+}
+
+.farmers-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.farmers-table tbody tr:nth-child(odd) {
+    background: white;
+}
+
+.farmers-table tbody tr:hover {
+    background: #e9ecef;
+    transition: background-color 0.2s ease;
+    z-index: 1;
 }
 
 .farmers-table tbody tr:last-child td {
     border-bottom: none;
 }
 
-.farmers-table tbody tr:hover {
-    background-color: #f9f9f9;
-}
-
 /* Status cell and container styles */
 /* Base status pill style */
 .status-pill {
     display: inline-block;
-    padding: 6px 12px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-weight: 500;
+    font-size: 0.8rem;
+    color: white;
     text-align: center;
+    min-width: 80px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     cursor: pointer;
     transition: all 0.2s ease;
-    min-width: 80px;
-    white-space: nowrap;
-    user-select: none;
 }
 
 .status-pill:hover {
-    opacity: 0.8;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Make status pills clickable */
@@ -166,30 +181,22 @@
 
 /* Active Farmer */
 .status-active {
-    background-color: #e9f7ef;
-    color: #27ae60;
-    border: 1px solid #d5f4e6;
+    background: #28a745 !important;
 }
 
 /* Tenant */
 .status-tenant {
-    background-color: #fef9e7;
-    color: #e67e22;
-    border: 1px solid #f8e6a0;
+    background: #17a2b8 !important;
 }
 
 /* Land Owner */
 .status-landowner {
-    background-color: #e6f3ff;
-    color: #2980b9;
-    border: 1px solid #b8daff;
+    background: #6f42c1 !important;
 }
 
 /* Optional: Unknown fallback */
 .status-unknown {
-    background-color: #eee;
-    color: #666;
-    border: 1px solid #ccc;
+    background: #6c757d !important;
 }
 
 /* Status dropdown styles */
@@ -246,8 +253,8 @@
 }
 
 .status-dot {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     display: inline-block;
     flex-shrink: 0;
@@ -275,6 +282,7 @@
 .actions-container {
     position: relative;
     display: inline-block;
+    z-index: 1000;
 }
 
 /* Actions button styles */
@@ -289,6 +297,8 @@
     border-radius: 4px;
     font-weight: bold;
     line-height: 1;
+    position: relative;
+    z-index: 1001;
 }
 
 .action-more-button:hover {
@@ -318,6 +328,7 @@
     transition: background-color 0.2s ease;
     font-size: 0.85rem;
     border-bottom: 1px solid #f0f0f0;
+    white-space: nowrap;
 }
 
 .actions-dropdown div:last-child {
@@ -497,6 +508,7 @@
     transition: all 0.2s ease;
     text-align: left;
     color: #000;
+    min-height: 48px;
 }
 
 .status-option-btn:hover {
@@ -529,45 +541,44 @@
 
 .status-pill {
     display: inline-block;
-    padding: 6px 12px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-weight: 500;
+    font-size: 0.8rem;
+    color: white;
     text-align: center;
+    min-width: 120px;
+    max-width: 140px;
+    height: 28px;
+    line-height: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     cursor: pointer;
     transition: all 0.2s ease;
-    min-width: 80px;
     white-space: nowrap;
-    user-select: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .status-pill:hover {
-    opacity: 0.8;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .status-active {
-    background-color: #e9f7ef;
-    color: #27ae60;
-    border: 1px solid #d5f4e6;
+    background: #28a745 !important;
 }
 
 .status-tenant {
-    background-color: #fef9e7;
-    color: #e67e22;
-    border: 1px solid #f8e6a0;
+    background: #17a2b8 !important;
 }
 
 .status-landowner {
-    background-color: #e6f3ff;
-    color: #2980b9;
-    border: 1px solid #b8daff;
+    background: #6f42c1 !important;
 }
 
 .status-dot {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     display: inline-block;
     flex-shrink: 0;
@@ -864,6 +875,26 @@
 /* Ensure table rows do not clip content from absolutely positioned children of their cells */
 .farmers-table tbody tr {
     overflow: visible;
+    position: relative;
+}
+
+.farmers-table tbody td {
+    padding: 12px 16px;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+    position: relative;
+    overflow: visible;
+}
+
+.farmers-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.farmers-table tbody tr:hover {
+    background: #e9ecef;
+    transition: background-color 0.2s ease;
+    z-index: 1;
 }
 
 /* Land Owner Input Styles */
@@ -950,21 +981,94 @@
     opacity: 0.6;
 }
 
-/* Selected Status Button Styles */
+/* Selected Status Button Styles - only affect button background, not dots */
 .status-option-btn.status-option-active {
-    background-color: #e9f7ef;
+    background-color: #f0f9f4;
     border-color: #27ae60;
     color: #27ae60;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status-option-btn.status-option-active .status-dot {
+    background-color: #27ae60;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
 .status-option-btn.status-option-tenant {
     background-color: #fef9e7;
     border-color: #e67e22;
     color: #e67e22;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status-option-btn.status-option-tenant .status-dot {
+    background-color: #e67e22;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
 .status-option-btn.status-option-landowner {
-    background-color: #e6f3ff;
+    background-color: #f0f8ff;
     border-color: #2980b9;
     color: #2980b9;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status-option-btn.status-option-landowner .status-dot {
+    background-color: #2980b9;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Force consistent dot styling regardless of button state */
+.status-option-btn .status-dot {
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    min-width: 12px !important;
+    min-height: 12px !important;
+    max-width: 12px !important;
+    max-height: 12px !important;
+}
+
+.status-option-btn.status-option-active .status-dot {
+    background-color: #27ae60 !important;
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+}
+
+.status-option-btn.status-option-tenant .status-dot {
+    background-color: #e67e22 !important;
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+}
+
+.status-option-btn.status-option-landowner .status-dot {
+    background-color: #2980b9 !important;
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
 }

@@ -174,6 +174,12 @@ const RSBSAFormPage = () => {
         fetchBarangayNames();
     }, []);
 
+    // Helper function to format names (first letter uppercase, rest lowercase)
+    const formatFullName = (name: string) => {
+        if (!name) return "";   
+        return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    };
+
     // Form state
     const [formData, setFormData] = useState<FormData>({
         // Enrollment Information
@@ -494,7 +500,11 @@ const RSBSAFormPage = () => {
         if (!formData.firstName) newErrors.firstName = 'Required';
         if (!formData.address.barangay) newErrors['address.barangay'] = 'Required';
         if (!formData.address.municipality) newErrors['address.municipality'] = 'Required';
-        if (!formData.mobileNumber) newErrors.mobileNumber = 'Required';
+        if (!formData.mobileNumber) {
+            newErrors.mobileNumber = 'Required';
+          } else if (!/^09\d{9}$/.test(formData.mobileNumber)) {
+            newErrors.mobileNumber = 'Must be 11 digits and start with 09';
+          }
         if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Required';
 
         // Validate at least one farm parcel has required fields
@@ -545,10 +555,10 @@ const RSBSAFormPage = () => {
             // Transform data to match backend structure
             const submissionData = {
                 // Personal Information - using the exact field names the backend expects
-                surname: formData.surname,
-                firstName: formData.firstName,
-                middleName: formData.middleName,
-                extensionName: formData.extensionName,
+                surname: formatFullName(formData.surname),
+                firstName: formatFullName(formData.firstName),
+                middleName: formatFullName(formData.middleName),
+                extensionName: formatFullName(formData.extensionName),
                 sex: formData.sex,
                 dateOfBirth: formData.dateOfBirth,
                 address: {
@@ -573,16 +583,21 @@ const RSBSAFormPage = () => {
                 placeOfBirth: formData.placeOfBirth,
                 religion: formData.religion,
                 civilStatus: formData.civilStatus,
-                nameOfSpouse: formData.nameOfSpouse,
-                motherMaidenName: formData.motherMaidenName,
+                nameOfSpouse: formatFullName(formData.nameOfSpouse),
+                motherMaidenName: formatFullName(formData.motherMaidenName),
                 householdHead: formData.householdHead,
+                householdHeadName: formatFullName(formData.householdHeadName),
+                householdHeadRelationship: formData.householdHeadRelationship,
                 highestFormalEducation: formData.highestFormalEducation,
                 pwd: formData.pwd,
                 psBeneficiary: formData.psBeneficiary,
                 indigenousGroup: formData.indigenousGroup,
                 governmentId: formData.governmentId,
-                farmerAssociation: formData.farmerAssociation,
-                emergencyContact: formData.emergencyContact,
+                farmerAssociation: formatFullName(formData.farmerAssociation),
+                emergencyContact: {
+                    name: formatFullName(formData.emergencyContact.name),
+                    contactNumber: formData.emergencyContact.contactNumber
+                },
                 mainLivelihood: formData.mainLivelihood,
                 farmingActivities: formData.farmingActivities,
                 farmworkerActivities: formData.farmworkerActivities,
@@ -590,7 +605,11 @@ const RSBSAFormPage = () => {
                 agriYouthActivities: formData.agriYouthActivities,
                 grossAnnualIncome: formData.grossAnnualIncome,
                 numberOfFarmParcels: formData.numberOfFarmParcels,
-                farmersInRotation: formData.farmersInRotation,
+                farmersInRotation: {
+                    p1: formatFullName(formData.farmersInRotation.p1),
+                    p2: formatFullName(formData.farmersInRotation.p2),
+                    p3: formatFullName(formData.farmersInRotation.p3)
+                },
                 farmParcels: formData.farmParcels
             };
 
@@ -626,7 +645,7 @@ const RSBSAFormPage = () => {
             <form className="rsbsa-form" onSubmit={handleSubmit}>
                 <h2>ANI AT KITA - RSBSA ENROLLMENT FORM</h2>
 
-                {/* ENROLLMENT TYPE & DATE */}
+                {/* ENROLLMENT DATE */}
                 <section className="form-section">
                     <div className="left-column">
                         <div className="enrollment-date-row">
