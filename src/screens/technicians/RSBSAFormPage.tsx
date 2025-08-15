@@ -1,7 +1,7 @@
 import '../../assets/css/RSBSAForm.css';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 type ReferenceNumber = {
     region: string;
@@ -156,7 +156,10 @@ type Errors = {
 
 const RSBSAFormPage = () => {
     const navigate = useNavigate();
+    const { recordId } = useParams<{ recordId?: string }>(); // Get record ID from URL
     const [barangayNames, setBarangayNames] = useState<string[]>([]);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Fetch barangay names from the map data
     useEffect(() => {
@@ -173,6 +176,212 @@ const RSBSAFormPage = () => {
 
         fetchBarangayNames();
     }, []);
+
+    // Fetch existing RSBSA record for editing
+    useEffect(() => {
+        const fetchExistingRecord = async () => {
+            if (!recordId) return;
+            
+            setIsLoading(true);
+            try {
+                const response = await fetch(`http://localhost:5000/api/RSBSAform/${recordId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch RSBSA record');
+                }
+                
+                const record = await response.json();
+                console.log('Fetched existing RSBSA record:', record);
+                
+                // Helper function to format date for HTML input
+                const formatDateForInput = (dateString: string) => {
+                    if (!dateString) return '';
+                    try {
+                        const date = new Date(dateString);
+                        return date.toISOString().split('T')[0]; // Convert to yyyy-MM-dd
+                    } catch (error) {
+                        console.warn('Invalid date format:', dateString);
+                        return '';
+                    }
+                };
+                
+                // Populate form with existing data
+                setFormData({
+                    // Enrollment Information
+                    dateAdministered: formatDateForInput(record.dateAdministered),
+                    referenceNumber: {
+                        region: record.referenceRegion || '',
+                        province: record.referenceProvince || '',
+                        cityMuni: record.referenceCityMuni || '',
+                        barangay: record.referenceBarangay || ''
+                    },
+
+                    // Personal Information
+                    surname: record.surname || '',
+                    firstName: record.firstName || '',
+                    middleName: record.middleName || '',
+                    extensionName: record.extensionName || '',
+                    sex: record.sex || '',
+                    address: {
+                        houseNo: record.addressHouseNo || '',
+                        street: record.addressStreet || '',
+                        barangay: record.addressBarangay || '',
+                        municipality: record.addressMunicipality || 'Dumangas',
+                        province: record.addressProvince || 'Iloilo',
+                        region: record.addressRegion || 'VI'
+                    },
+                    mobileNumber: record.mobileNumber || '',
+                    landlineNumber: record.landlineNumber || '',
+                    dateOfBirth: formatDateForInput(record.dateOfBirth),
+                    placeOfBirth: record.placeOfBirth || '',
+                    religion: record.religion || '',
+                    otherReligion: record.otherReligion || '',
+                    civilStatus: record.civilStatus || '',
+                    nameOfSpouse: record.nameOfSpouse || '',
+                    motherMaidenName: record.motherMaidenName || '',
+                    householdHead: record.householdHead || '',
+                    householdHeadName: record.householdHeadName || '',
+                    householdHeadRelationship: record.householdHeadRelationship || '',
+                    maleHouseholdMembers: record.maleHouseholdMembers || 0,
+                    femaleHouseholdMembers: record.femaleHouseholdMembers || 0,
+                    highestFormalEducation: record.highestFormalEducation || '',
+                    pwd: record.pwd || '',
+                    psBeneficiary: record.psBeneficiary || '',
+                    indigenousGroup: record.indigenousGroup || '',
+                    indigenousGroupSpecify: record.indigenousGroupSpecify || '',
+                    governmentId: record.governmentId || '',
+                    idType: record.idType || '',
+                    idNumber: record.idNumber || '',
+                    farmerAssociation: record.farmerAssociation || '',
+                    farmerAssociationSpecify: record.farmerAssociationSpecify || '',
+                    emergencyContact: {
+                        name: record.emergencyContactName || '',
+                        contactNumber: record.emergencyContactNumber || ''
+                    },
+
+                    // Farm Profile
+                    mainLivelihood: record.mainLivelihood || '',
+                    farmingActivities: {
+                        rice: record.farmingActivities?.rice || false,
+                        corn: record.farmingActivities?.corn || false,
+                        otherCrops: record.farmingActivities?.otherCrops || false,
+                        otherCropsSpecify: record.farmingActivities?.otherCropsSpecify || '',
+                        livestock: record.farmingActivities?.livestock || false,
+                        livestockSpecify: record.farmingActivities?.livestockSpecify || '',
+                        poultry: record.farmingActivities?.poultry || false,
+                        poultrySpecify: record.farmingActivities?.poultrySpecify || ''
+                    },
+                    farmworkerActivities: {
+                        landPreparation: record.farmworkerActivities?.landPreparation || false,
+                        planting: record.farmworkerActivities?.planting || false,
+                        cultivation: record.farmworkerActivities?.cultivation || false,
+                        harvesting: record.farmworkerActivities?.harvesting || false,
+                        others: record.farmworkerActivities?.others || false,
+                        othersSpecify: record.farmworkerActivities?.othersSpecify || ''
+                    },
+                    fisherfolkActivities: {
+                        fishCapture: record.fisherfolkActivities?.fishCapture || false,
+                        aquaculture: record.fisherfolkActivities?.aquaculture || false,
+                        gleaning: record.fisherfolkActivities?.gleaning || false,
+                        fishProcessing: record.fisherfolkActivities?.fishProcessing || false,
+                        fishVending: record.fisherfolkActivities?.fishVending || false,
+                        others: record.fisherfolkActivities?.others || false,
+                        othersSpecify: record.fisherfolkActivities?.othersSpecify || ''
+                    },
+                    agriYouthActivities: {
+                        farmingHousehold: record.agriYouthActivities?.farmingHousehold || false,
+                        formalCourse: record.agriYouthActivities?.formalCourse || false,
+                        nonFormalCourse: record.agriYouthActivities?.nonFormalCourse || false,
+                        participated: record.agriYouthActivities?.participated || false,
+                        others: record.agriYouthActivities?.others || false,
+                        othersSpecify: record.agriYouthActivities?.othersSpecify || ''
+                    },
+                    grossAnnualIncome: {
+                        farming: record.grossAnnualIncomeFarming || '',
+                        nonFarming: record.grossAnnualIncomeNonfarming || ''
+                    },
+
+                    // Farm Parcel Details
+                    numberOfFarmParcels: record.numberOfFarmParcels || '',
+                    farmersInRotation: {
+                        p1: record.farmersInRotationP1 || '',
+                        p2: record.farmersInRotationP2 || '',
+                        p3: record.farmersInRotationP3 || ''
+                    },
+                    farmParcels: (() => {
+                        // Check if we have farm_parcels data from the backend
+                        if (record.farmParcels && record.farmParcels.length > 0) {
+                            console.log('Using farm_parcels data:', record.farmParcels);
+                            return record.farmParcels.map((parcel: any, index: number) => ({
+                                parcelNumber: parcel.parcel_number || index + 1,
+                                farmLocation: {
+                                    barangay: parcel.farm_location_barangay || '',
+                                    cityMunicipality: parcel.farm_location_city_municipality || ''
+                                },
+                                totalFarmArea: parcel.total_farm_area || '',
+                                withinAncestralDomain: parcel.within_ancestral_domain || '',
+                                agrarianReformBeneficiary: parcel.agrarian_reform_beneficiary || '',
+                                ownershipDocumentNo: parcel.ownership_document_no || '',
+                                ownershipType: {
+                                    registeredOwner: parcel.ownership_type_registered_owner || false,
+                                    tenant: parcel.ownership_type_tenant || false,
+                                    tenantLandOwner: parcel.ownership_type_tenant_land_owner || '',
+                                    lessee: parcel.ownership_type_lessee || false,
+                                    lesseeLandOwner: parcel.ownership_type_lessee_land_owner || '',
+                                    others: parcel.ownership_type_others || false,
+                                    othersSpecify: parcel.ownership_type_others_specify || ''
+                                },
+                                cropCommodity: parcel.crop_commodity || '',
+                                size: parcel.farm_size || '',
+                                numberOfHead: parcel.number_of_head || '',
+                                farmType: parcel.farm_type || '',
+                                organicPractitioner: parcel.organic_practitioner || '',
+                                remarks: parcel.farm_remarks || ''
+                            }));
+                        } else {
+                            // Fallback to main record fields (legacy structure)
+                            console.log('Using legacy main record fields for farm parcel data');
+                            return [{
+                                parcelNumber: 1,
+                                farmLocation: {
+                                    barangay: record.farmLocationBarangay || '',
+                                    cityMunicipality: record.farmLocationCityMunicipality || ''
+                                },
+                                totalFarmArea: record.totalFarmArea || '',
+                                withinAncestralDomain: record.withinAncestralDomain || '',
+                                agrarianReformBeneficiary: record.agrarianReformBeneficiary || '',
+                                ownershipDocumentNo: record.ownershipDocumentNo || '',
+                                ownershipType: {
+                                    registeredOwner: record.ownershipTypeRegisteredOwner || false,
+                                    tenant: record.ownershipTypeTenant || false,
+                                    tenantLandOwner: record.ownershipTypeTenantLandOwner || '',
+                                    lessee: record.ownershipTypeLessee || false,
+                                    lesseeLandOwner: record.ownershipTypeLesseeLandOwner || '',
+                                    others: record.ownershipTypeOthers || false,
+                                    othersSpecify: record.ownershipTypeOthersSpecify || ''
+                                },
+                                cropCommodity: record.cropCommodity || '',
+                                size: record.farmSize || '',
+                                numberOfHead: record.numberOfHead || '',
+                                farmType: record.farmType || '',
+                                organicPractitioner: record.organicPractitioner || '',
+                                remarks: record.farmRemarks || ''
+                            }];
+                        }
+                    })()
+                });
+                
+                setIsEditing(true);
+            } catch (error) {
+                console.error('Error fetching existing RSBSA record:', error);
+                window.alert('Failed to load existing RSBSA record. Please try again.');
+                navigate('/technician-rsbsa');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchExistingRecord();
+    }, [recordId, navigate]);
 
     // Helper function to format names (first letter uppercase, rest lowercase)
     const formatFullName = (name: string) => {
@@ -506,16 +715,45 @@ const RSBSAFormPage = () => {
             newErrors.mobileNumber = 'Must be 11 digits and start with 09';
           }
         if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Required';
+        if (!formData.sex) newErrors.sex = 'Required';
 
         // Validate at least one farm parcel has required fields
         let hasValidParcel = false;
         let ownershipTypeValid = false;
-        formData.farmParcels.forEach((parcel) => {
-            // Require farmLocation.barangay, farmLocation.cityMunicipality, totalFarmArea
-            const hasFields = parcel.farmLocation.barangay && parcel.farmLocation.cityMunicipality && parcel.totalFarmArea;
+        
+        console.log('Validating farm parcels:', formData.farmParcels);
+        
+        formData.farmParcels.forEach((parcel, index) => {
+            console.log(`Validating parcel ${index}:`, parcel);
+            
+            // Check if parcel has the required fields
+            const hasBarangay = parcel.farmLocation.barangay && parcel.farmLocation.barangay.trim() !== '';
+            const hasCityMunicipality = parcel.farmLocation.cityMunicipality && parcel.farmLocation.cityMunicipality.trim() !== '';
+            const hasTotalFarmArea = parcel.totalFarmArea && parcel.totalFarmArea.trim() !== '';
+            
+            console.log(`Parcel ${index} validation:`, {
+                hasBarangay,
+                hasCityMunicipality, 
+                hasTotalFarmArea,
+                barangay: parcel.farmLocation.barangay,
+                cityMunicipality: parcel.farmLocation.cityMunicipality,
+                totalFarmArea: parcel.totalFarmArea
+            });
+            
+            const hasFields = hasBarangay && hasCityMunicipality && hasTotalFarmArea;
+            
             // Require at least one ownership type
             const ownership = parcel.ownershipType;
             const hasOwnership = ownership.registeredOwner || ownership.tenant || ownership.lessee || ownership.others;
+            
+            console.log(`Parcel ${index} ownership:`, {
+                registeredOwner: ownership.registeredOwner,
+                tenant: ownership.tenant,
+                lessee: ownership.lessee,
+                others: ownership.others,
+                hasOwnership
+            });
+            
             if (hasFields) {
                 hasValidParcel = true;
                 if (!hasOwnership) {
@@ -526,12 +764,18 @@ const RSBSAFormPage = () => {
                 }
             }
         });
-        if (!hasValidParcel) newErrors.farmParcels = 'At least one valid farm parcel required';
+        
+        if (!hasValidParcel) {
+            newErrors.farmParcels = 'At least one valid farm parcel required';
+            console.log('No valid farm parcel found. Required fields: barangay, cityMunicipality, totalFarmArea');
+        }
         if (!ownershipTypeValid) newErrors.ownershipType = 'Select at least one ownership type for a valid parcel';
 
         // Debug: Log validation errors
         if (Object.keys(newErrors).length > 0) {
             console.log('Validation errors:', newErrors);
+        } else {
+            console.log('Form validation passed successfully');
         }
 
         setErrors(newErrors);
@@ -613,18 +857,54 @@ const RSBSAFormPage = () => {
                 farmParcels: formData.farmParcels
             };
 
-            // Send data to backend
-            const response = await axios.post('http://localhost:5000/api/RSBSAform', submissionData);
-
-            if (response.status === 201) {
-                window.alert('RSBSA form saved successfully!');
-                navigate('/technician-rsbsa');
-                return;
+            let response;
+            if (isEditing && recordId) {
+                // Update existing record
+                response = await axios.put(`http://localhost:5000/api/RSBSAform/${recordId}`, submissionData);
+                if (response.status === 200) {
+                    window.alert('RSBSA form updated successfully!');
+                    
+                    // Auto-sync to masterlist after update
+                    try {
+                        await fetch('http://localhost:5000/api/sync-rsbsa-to-masterlist', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        console.log('Auto-sync to masterlist completed after RSBSA update');
+                    } catch (syncError) {
+                        console.warn('Auto-sync failed after RSBSA update:', syncError);
+                    }
+                }
+            } else {
+                // Create new record
+                response = await axios.post('http://localhost:5000/api/RSBSAform', submissionData);
+                if (response.status === 201) {
+                    window.alert('RSBSA form saved successfully!');
+                    
+                    // Auto-sync to masterlist after creation
+                    try {
+                        await fetch('http://localhost:5000/api/sync-rsbsa-to-masterlist', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        console.log('Auto-sync to masterlist completed after RSBSA creation');
+                    } catch (syncError) {
+                        console.warn('Auto-sync failed after RSBSA creation:', syncError);
+                    }
+                }
             }
+
+            const userRole = localStorage.getItem('userRole');
+            if (userRole === 'admin') {
+                navigate('/rsbsa');
+            } else {
+                navigate('/technician-rsbsa');
+            }
+            return;
         } catch (error) {
             console.error('Error submitting form:', error);
             const err = error as any;
-            let errorMsg = 'Failed to submit form. Please try again.';
+            let errorMsg = isEditing ? 'Failed to update form. Please try again.' : 'Failed to submit form. Please try again.';
             if (err.response && err.response.data && err.response.data.message) {
                 errorMsg = err.response.data.message;
             } else if (err.message) {
@@ -641,9 +921,50 @@ const RSBSAFormPage = () => {
 
     return (
         <div className="rsbsa-form-scrollable">
-            <button className="back-button" style={{ margin: '16px' }} onClick={() => navigate('/technician-rsbsa')}>← </button>
+            <button 
+                className="back-button" 
+                style={{ margin: '16px' }} 
+                onClick={() => {
+                    const userRole = localStorage.getItem('userRole');
+                    if (userRole === 'admin') {
+                        navigate('/rsbsa');
+                    } else {
+                        navigate('/technician-rsbsa');
+                    }
+                }}
+            >
+                ← 
+            </button>
             <form className="rsbsa-form" onSubmit={handleSubmit}>
-                <h2>ANI AT KITA - RSBSA ENROLLMENT FORM</h2>
+                <h2>ANI AT KITA - RSBSA ENROLLMENT FORM {isEditing ? '(EDITING)' : ''}</h2>
+
+                {/* Show loading indicator if fetching existing record */}
+                {isLoading && (
+                    <div style={{ 
+                        textAlign: 'center', 
+                        padding: '20px', 
+                        backgroundColor: '#f0f8ff', 
+                        margin: '10px 0',
+                        borderRadius: '5px'
+                    }}>
+                        Loading existing RSBSA record...
+                    </div>
+                )}
+
+                {/* Show editing mode indicator */}
+                {isEditing && !isLoading && (
+                    <div style={{ 
+                        textAlign: 'center', 
+                        padding: '15px', 
+                        backgroundColor: '#fff3cd', 
+                        border: '1px solid #ffeaa7',
+                        margin: '10px 0',
+                        borderRadius: '5px',
+                        color: '#856404'
+                    }}>
+                        📝 <strong>Editing Mode:</strong> You are editing an existing RSBSA record. All changes will update the current record.
+                    </div>
+                )}
 
                 {/* ENROLLMENT DATE */}
                 <section className="form-section">
@@ -1634,38 +1955,6 @@ const RSBSAFormPage = () => {
                 <fieldset>
                     <legend>Farm Parcel Details & Ownership</legend>
 
-                    <div className="form-row farm_parcel-row">
-                        <span className="inline-label">No. of Farm Parcels: </span>
-                        <input
-                            type="text"
-                            name="numberOfFarmParcels"
-                            value={formData.numberOfFarmParcels}
-                            onChange={handleChange}
-                        />
-                        <span className="inline-label">Name of Farmer/s in Rotation(P1): </span>
-                        <input
-                            type="text"
-                            name="farmersInRotation.p1"
-                            value={formData.farmersInRotation.p1}
-                            onChange={handleChange}
-                        />
-                        <span className="inline-label">(P2): </span>
-                        <input
-                            type="text"
-                            name="farmersInRotation.p2"
-                            value={formData.farmersInRotation.p2}
-                            onChange={handleChange}
-                        />
-                        <span className="inline-label">(P3): </span>
-                        <input
-                            type="text"
-                            name="farmersInRotation.p3"
-                            value={formData.farmersInRotation.p3}
-                            onChange={handleChange}
-                        />
-                    </div>
-
-                    <hr className="form-separator" />
 
                     {formData.farmParcels.map((parcel, index) => (
                         <div key={index} className="farm-parcel-container">
@@ -2000,9 +2289,9 @@ const RSBSAFormPage = () => {
                     <button
                         className="rsbsa_submit"
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isLoading}
                     >
-                        {isSubmitting ? 'Submitting...' : 'Submit'}
+                        {isSubmitting ? (isEditing ? 'Updating...' : 'Submitting...') : (isEditing ? 'Update RSBSA Form' : 'Submit')}
                     </button>
                 </div>
             </form>

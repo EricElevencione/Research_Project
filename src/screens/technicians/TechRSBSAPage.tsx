@@ -567,6 +567,8 @@ const TechRSBSAPage: React.FC = () => {
         return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
     };
 
+
+
     return (
         <div className='active-farmer-page'>
             {/* Success Message */}
@@ -586,6 +588,7 @@ const TechRSBSAPage: React.FC = () => {
                     {successMessage}
                 </div>
             )}
+            
             <div className="farmers-header">
                 <div className="farmers-header-left">
                     <button className="back-button" onClick={() => navigate('/technician-dashboard')}>←</button>
@@ -749,6 +752,7 @@ const TechRSBSAPage: React.FC = () => {
                                                             {openActionsRowId === record.id && (
                                                                 <div className="actions-dropdown">
                                                                     <div key="edit" onClick={() => handleEditClick(record.id)}>Edit</div>
+                                                                    <div key="edit-form" onClick={() => navigate(`/RSBSAForm/${record.id}`)}>Edit Form</div>
                                                                     <div key="plot-land" onClick={() => handlePlotLand(record.id)}>Plot Land</div>
                                                                 </div>
                                                             )}

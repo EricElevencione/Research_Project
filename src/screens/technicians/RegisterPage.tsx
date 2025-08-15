@@ -16,6 +16,7 @@ const RegisterPage: React.FC = () => {
     const validateUsername = (username: string) => {
         if (role === 'admin') return username.endsWith('.dev');
         if (role === 'technician') return username.endsWith('.tech');
+        if (role === 'jo') return username.endsWith('.jo');
         return false;
     };
 
@@ -28,7 +29,11 @@ const RegisterPage: React.FC = () => {
         setError('');
         setSuccess('');
         if (!validateUsername(form.username)) {
-            setError(`Username must end with ${role === 'admin' ? '.dev' : '.tech'}`);
+            let suffix = '';
+            if (role === 'admin') suffix = '.dev';
+            else if (role === 'technician') suffix = '.tech';
+            else if (role === 'jo') suffix = '.jo';
+            setError(`Username must end with ${suffix}`);
             return;
         }
         if (!form.email || !form.password || !form.confirmPassword) {
@@ -64,7 +69,7 @@ const RegisterPage: React.FC = () => {
 
     return (
         <div className="register-container">
-            <h2>Register as {role === 'admin' ? 'Admin' : 'Technician'}</h2>
+            <h2>Register as {role === 'admin' ? 'Admin' : role === 'technician' ? 'Technician' : 'JO'}</h2>
             <form onSubmit={handleSubmit} className="register-form">
                 <label>Username</label>
                 <input
@@ -72,7 +77,7 @@ const RegisterPage: React.FC = () => {
                     name="username"
                     value={form.username}
                     onChange={handleChange}
-                    placeholder={role === 'admin' ? 'yourname.dev' : 'yourname.tech'}
+                    placeholder={role === 'admin' ? 'yourname.dev' : role === 'technician' ? 'yourname.tech' : 'yourname.jo'}
                     required
                 />
                 <label>Email</label>

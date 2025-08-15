@@ -22,6 +22,7 @@ interface RSBSARecord {
     mainLivelihood: string;
     numberOfFarmParcels: string;
     createdAt: string;
+    ffrs_id?: string;
     // Farm land description fields from database
     farmLocationBarangay?: string;
     farmLocationCityMunicipality?: string;
@@ -185,6 +186,7 @@ const RSBSAPage: React.FC = () => {
                         mainLivelihood: record.mainLivelihood || '',
                         numberOfFarmParcels: record.numberOfFarmParcels || '',
                         createdAt: record.createdAt || '',
+                        ffrs_id: record.ffrs_id || null,
                         // Farm land description fields from database
                         farmLocationBarangay: record.farmLocationBarangay || '',
                         farmLocationCityMunicipality: record.farmLocationCityMunicipality || '',
@@ -651,6 +653,7 @@ const RSBSAPage: React.FC = () => {
                         <table className="farmers-table">
                             <thead>
                                 <tr>
+                                    <th>FFRS ID</th>
                                     <th>FULL NAME</th>
                                     <th>GENDER</th>
                                     <th>BARANGAY</th>
@@ -668,6 +671,10 @@ const RSBSAPage: React.FC = () => {
                                     const isEditing = editingRecordId === record.id;
                                     return (
                                         <tr key={record.id}>
+                                            {/* FFRS ID */}
+                                            <td style={{ fontFamily: 'monospace', fontSize: '0.9em', fontWeight: 'bold' }}>
+                                                {record.ffrs_id || 'N/A'}
+                                            </td>
                                             {/* FULL NAME: Surname, First Name, Middle Name */}
                                             <td>
                                                 {isEditing ? (

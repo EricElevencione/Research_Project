@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './screens/admin/AdminLogin';
+import Login from './login/PageLogin';
 import Dashboard from './screens/admin/Dashboard';
 import MasterlistPage from './screens/admin/MasterlistPage';
 import RSBSAPage from './screens/admin/RSBSAPage';
@@ -15,8 +15,12 @@ import TechLandPlotting from './screens/technicians/TechLandPlottingPage';
 import ParcelSelectionPage from './screens/technicians/ParcelSelectionPage';
 import Incentives from './screens/admin/Incentives';
 import TechLandRecord from './screens/technicians/TechLandRecord';
+import JODashboard from './screens/JO/JODashboard';
+import JOReports from './screens/JO/joReports';
+import BrgyChairDash from './screens/Barangay Chairman/BrgyChairDash';
 import './assets/css/index.css';
 import './assets/css/mobile.css';
+
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -54,6 +58,11 @@ function App() {
                 <Route path="/add-farmer" element={<AddFarmerPage />} />
                 <Route path="/add-farmer/:firstName/:middleName/:surname/:area" element={<AddFarmerPage />} />
                 <Route path="/RSBSAForm" element={
+                    <ProtectedRoute>
+                        <RSBSAForm />
+                    </ProtectedRoute>
+                } />
+                <Route path="/RSBSAForm/:recordId" element={
                     <ProtectedRoute>
                         <RSBSAForm />
                     </ProtectedRoute>
@@ -109,6 +118,36 @@ function App() {
                     </ProtectedRoute>
                 } />
                 <Route path="/register/:role" element={<Register />} />
+                <Route path="/jo-dashboard" element={
+                    <ProtectedRoute>
+                        <JODashboard />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-masterlist" element={
+                    <ProtectedRoute>
+                        <TechMasterlist />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-rsbsa" element={
+                    <ProtectedRoute>
+                        <TechRSBSAPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-land-record" element={
+                    <ProtectedRoute>
+                        <TechLandRecord />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-reports" element={
+                    <ProtectedRoute>
+                        <JOReports />
+                    </ProtectedRoute>
+                } />
+                <Route path="/brgy-chair-dashboard" element={
+                    <ProtectedRoute>
+                        <BrgyChairDash />
+                    </ProtectedRoute>
+                } />
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </BrowserRouter>

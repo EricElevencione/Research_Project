@@ -691,7 +691,10 @@ app.post('/api/register', async (req, res) => {
     if (role === 'technician' && !username.endsWith('.tech')) {
         return res.status(400).json({ message: 'Technician username must end with .tech' });
     }
-    if (!['admin', 'technician'].includes(role)) {
+    if (role === 'jo' && !username.endsWith('.jo')) {
+        return res.status(400).json({ message: 'JO username must end with .jo' });
+    }
+    if (!['admin', 'technician', 'jo'].includes(role)) {
         return res.status(400).json({ message: 'Invalid role.' });
     }
     try {
@@ -865,22 +868,22 @@ app.get('/api/RSBSAform', async (req, res) => {
         };
 
         // Build the SELECT clause with only available columns
-        const selectColumns = [];
-        for (const [dbColumn, frontendField] of Object.entries(columnMapping)) {
-            if (availableColumns.includes(dbColumn)) {
-                selectColumns.push(`${dbColumn} as "${frontendField}"`);
+        const selectColumns = []; // Array to hold the selected columns
+        for (const [dbColumn, frontendField] of Object.entries(columnMapping)) { // If the column is available then push
+            if (availableColumns.includes(dbColumn)) { // to the selectColumns array
+                selectColumns.push(`${dbColumn} as "${frontendField}"`); // to the selectColumns array
             }
         }
 
-        if (selectColumns.length === 0) {
-            return res.status(500).json({
+        if (selectColumns.length === 0) { // If the selectColumns array is empty
+            return res.status(500).json({ // return an error response
                 error: 'No valid columns found in rsbsaform table',
                 availableColumns: availableColumns
             });
         }
 
-        const selectClause = selectColumns.join(', ');
-        const orderClause = availableColumns.includes('created_at') ? 'ORDER BY created_at DESC' : '';
+        const selectClause = selectColumns.join(', '); // Join the selected columns into a comma-separated string
+        const orderClause = availableColumns.includes('created_at') ? 'ORDER BY created_at DESC' : ''; // Add the ORDER BY clause if 'created_at' is available
 
         const query = `
             SELECT ${selectClause}
@@ -892,8 +895,8 @@ app.get('/api/RSBSAform', async (req, res) => {
 
         const result = await pool.query(query);
 
-        console.log(`Retrieved ${result.rows.length} RSBSA form records`);
-        res.json(result.rows);
+        console.log(`Retrieved ${result.rows.length} RSBSA form records`); // Log the number of records retrieved
+        res.json(result.rows); // Send the response with the retrieved records
     } catch (error) {
         console.error('Error fetching RSBSA form data:', error);
         res.status(500).json({
@@ -1163,7 +1166,7 @@ app.post('/api/RSBSAform', async (req, res) => {
         };
 
         console.log('RSBSA Form Data:', JSON.stringify(data, null, 2));
-        
+
         const values = [
             'New',                              // 1 - Default enrollment type
             data.dateAdministered || null,      // 2
@@ -1249,16 +1252,16 @@ app.post('/api/RSBSAform', async (req, res) => {
         // Insert the main RSBSA record
         const rsbsaResult = await pool.query(insertQuery, values);
         const rsbsaId = rsbsaResult.rows[0].id;
-        
+
         console.log(`RSBSA record created with ID: ${rsbsaId}`);
-        
+
         // Save all farm parcels to the farm_parcels table
         if (data.farmParcels && Array.isArray(data.farmParcels) && data.farmParcels.length > 0) {
             console.log(`Saving ${data.farmParcels.length} farm parcels for RSBSA ID: ${rsbsaId}`);
-            
+
             for (let i = 0; i < data.farmParcels.length; i++) {
                 const parcel = data.farmParcels[i];
-                
+
                 // Use a simpler INSERT query with only the essential columns that definitely exist
                 const parcelInsertQuery = `
                     INSERT INTO farm_parcels (
@@ -1268,7 +1271,7 @@ app.post('/api/RSBSAform', async (req, res) => {
                         $1, $2, $3, $4, $5, $6, $7, $8, $9
                     )
                 `;
-                
+
                 const parcelValues = [
                     rsbsaId,                                    // 1 - owner_id
                     parcel.parcelNumber || (i + 1),            // 2 - parcel_number
@@ -1280,7 +1283,7 @@ app.post('/api/RSBSAform', async (req, res) => {
                     parcel.organicPractitioner || 'N',         // 8 - organic_practitioner (default to 'N' if empty)
                     'not_plotted'                              // 9 - plot_status (default)
                 ];
-                
+
                 console.log(`Inserting parcel ${i + 1}:`, parcelValues);
                 console.log(`Parcel ${i + 1} details:`, {
                     parcelNumber: parcel.parcelNumber,
@@ -1293,77 +1296,17 @@ app.post('/api/RSBSAform', async (req, res) => {
                 });
                 await pool.query(parcelInsertQuery, parcelValues);
             }
-            
+
             console.log(`Successfully saved ${data.farmParcels.length} farm parcels`);
         } else {
             console.log('No farm parcels to save');
         }
-        
+
         res.status(201).json({ message: 'RSBSA form saved successfully!' });
     } catch (error) {
         console.error('Error saving RSBSA form:', error);
-        res.status(500).json({ 
-            message: 'Error saving RSBSA form', 
-            error: error.message
-        });
-    }
-});
-
-// GET endpoint to fetch a specific farm parcel by recordId and parcelIndex
-app.get('/api/farm-parcels', async (req, res) => {
-    const { recordId, parcelIndex } = req.query;
-    
-    if (!recordId || parcelIndex === undefined) {
-        return res.status(400).json({ 
-            message: 'recordId and parcelIndex are required' 
-        });
-    }
-    
-    try {
-        const result = await pool.query(`
-            SELECT 
-                id,
-                parcel_number,
-                farm_location_barangay,
-                farm_location_city_municipality,
-                total_farm_area,
-                crop_commodity,
-                farm_size,
-                farm_type,
-                organic_practitioner,
-                plot_status,
-                last_plotted_at,
-                geometry,
-                within_ancestral_domain,
-                agrarian_reform_beneficiary,
-                ownership_document_no,
-                ownership_type_registered_owner,
-                ownership_type_tenant,
-                ownership_type_tenant_land_owner,
-                ownership_type_lessee,
-                ownership_type_lessee_land_owner,
-                ownership_type_others,
-                ownership_type_others_specify,
-                number_of_head,
-                farm_remarks,
-                created_at,
-                updated_at
-            FROM farm_parcels
-            WHERE owner_id = $1 AND parcel_number = $2
-            ORDER BY parcel_number
-        `, [recordId, parseInt(parcelIndex) + 1]); // parcelIndex is 0-based, parcel_number is 1-based
-        
-        if (result.rows.length > 0) {
-            res.json(result.rows[0]);
-        } else {
-            res.status(404).json({ 
-                message: 'Farm parcel not found' 
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching farm parcel:', error);
-        res.status(500).json({ 
-            message: 'Error fetching farm parcel', 
+        res.status(500).json({
+            message: 'Error saving RSBSA form',
             error: error.message
         });
     }
@@ -1406,12 +1349,12 @@ app.get('/api/farm-parcels/:ownerId', async (req, res) => {
             WHERE owner_id = $1
             ORDER BY parcel_number
         `, [ownerId]);
-        
+
         res.json(result.rows);
     } catch (error) {
         console.error('Error fetching farm parcels:', error);
-        res.status(500).json({ 
-            message: 'Error fetching farm parcels', 
+        res.status(500).json({
+            message: 'Error fetching farm parcels',
             error: error.message
         });
     }
@@ -1421,7 +1364,7 @@ app.get('/api/farm-parcels/:ownerId', async (req, res) => {
 app.put('/api/farm-parcels/:parcelId', async (req, res) => {
     const { parcelId } = req.params;
     const updateData = req.body;
-    
+
     try {
         const updateQuery = `
             UPDATE farm_parcels SET
@@ -1448,7 +1391,7 @@ app.put('/api/farm-parcels/:parcelId', async (req, res) => {
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $21
         `;
-        
+
         const values = [
             updateData.parcelNumber,
             updateData.farmLocationBarangay,
@@ -1472,13 +1415,13 @@ app.put('/api/farm-parcels/:parcelId', async (req, res) => {
             updateData.farmRemarks,
             parcelId
         ];
-        
+
         await pool.query(updateQuery, values);
         res.json({ message: 'Farm parcel updated successfully' });
     } catch (error) {
         console.error('Error updating farm parcel:', error);
-        res.status(500).json({ 
-            message: 'Error updating farm parcel', 
+        res.status(500).json({
+            message: 'Error updating farm parcel',
             error: error.message
         });
     }
@@ -1487,14 +1430,14 @@ app.put('/api/farm-parcels/:parcelId', async (req, res) => {
 // DELETE endpoint to delete a farm parcel
 app.delete('/api/farm-parcels/:parcelId', async (req, res) => {
     const { parcelId } = req.params;
-    
+
     try {
         await pool.query('DELETE FROM farm_parcels WHERE id = $1', [parcelId]);
         res.json({ message: 'Farm parcel deleted successfully' });
     } catch (error) {
         console.error('Error deleting farm parcel:', error);
-        res.status(500).json({ 
-            message: 'Error deleting farm parcel', 
+        res.status(500).json({
+            message: 'Error deleting farm parcel',
             error: error.message
         });
     }

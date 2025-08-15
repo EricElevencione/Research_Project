@@ -30,47 +30,43 @@ const TechMasterlist: React.FC = () => {
 
     const fetchLandRecords = async () => {
         try {
-            // Fetch data from RSBSA database instead of land-plots
-            const response = await fetch('http://localhost:5000/api/RSBSAform');
+            // Fetch data from masterlist API
+            const response = await fetch('http://localhost:5000/api/masterlist');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
 
-            // Transform RSBSA data to match LandRecord interface
-            const transformedData: LandRecord[] = data
-                .filter((record: any) => record.firstName && record.surname) // Filter out invalid records
-                .map((record: any) => {
-                    // Create parcel address from farm location fields
-                    const farmLocationBarangay = record.farmLocationBarangay || '';
-                    const farmLocationCityMunicipality = record.farmLocationCityMunicipality || '';
-                    const parcelAddress = farmLocationBarangay && farmLocationCityMunicipality
-                        ? `${farmLocationBarangay}, ${farmLocationCityMunicipality}`
-                        : farmLocationBarangay || farmLocationCityMunicipality || 'N/A';
+            console.log('Raw data from /api/masterlist:', data);
 
-                    // Removed old status logic
+            // Transform masterlist data to match LandRecord interface
+            const transformedData: LandRecord[] = data
+                .filter((record: any) => record['FIRST NAME'] && record['LAST NAME']) // Filter out invalid records
+                .map((record: any) => {
                     return {
-                        id: record.id || `${record.firstName}-${record.surname}-${Math.random()}`,
-                        ffrs_id: record.ffrs_id || 'N/A',
-                        firstName: record.firstName || '',
-                        middleName: record.middleName || '',
-                        surname: record.surname || '',
-                        extensionName: record.extensionName || '',
-                        gender: record.sex === 'Male' ? 'Male' : 'Female',
-                        birthdate: record.dateOfBirth || null,
-                        barangay: record.addressBarangay || '',
-                        municipality: record.addressMunicipality || '',
-                        province: record.addressProvince || '',
-                        parcel_address: parcelAddress,
-                        area: parseFloat(record.farmSize || record.totalFarmArea || record.numberOfFarmParcels || '0') || 0,
-                        status: 'Active Farmer', // Default to Active Farmer
-                        createdAt: record.createdAt || new Date().toISOString(),
-                        updatedAt: record.updatedAt || new Date().toISOString()
+                        id: record.id?.toString() || `${record['FIRST NAME']}-${record['LAST NAME']}-${record['PARCEL AREA']}`,
+                        ffrs_id: record['FFRS SYSTEM GENERATED'] || 'N/A',
+                        firstName: record['FIRST NAME'] || '',
+                        middleName: record['MIDDLE NAME'] || '',
+                        surname: record['LAST NAME'] || '',
+                        extensionName: record['EXT NAME'] || '',
+                        gender: record['GENDER'] || 'Male',
+                        birthdate: record['BIRTHDATE'] || null,
+                        barangay: record['FARMER ADDRESS 1'] || '', // Assuming this is barangay
+                        municipality: record['FARMER ADDRESS 2'] || '', // Assuming this is municipality
+                        province: record['FARMER ADDRESS 3'] || '', // Assuming this is province
+                        parcel_address: record['PARCEL ADDRESS'] || 'N/A',
+                        area: parseFloat(record['PARCEL AREA'] || '0') || 0,
+                        status: record.status || 'Active Farmer', // Use status from database
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
                     };
                 });
 
+            console.log('Transformed data:', transformedData);
             setLandRecords(transformedData);
         } catch (err: any) {
+            console.error('Error fetching land records:', err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -95,15 +91,54 @@ const TechMasterlist: React.FC = () => {
     };
 
     // Add a function to toggle status
-    const handleToggleStatus = (id: string) => {
-        setLandRecords(prevRecords =>
-            prevRecords.map(record =>
-                record.id === id
-                    ? { ...record, status: record.status === 'Active Farmer' ? 'Inactive Farmer' : 'Active Farmer' }
-                    : record
-            )
-        );
+    const handleToggleStatus = async (id: string) => {
+        try {
+            const currentRecord = landRecords.find(record => record.id === id);
+            if (!currentRecord) {
+                console.error('Record not found for status update:', id);
+                return;
+            }
+            
+            const newStatus = currentRecord.status === 'Active Farmer' ? 'Inactive Farmer' : 'Active Farmer';
+            
+            console.log('Updating status for record:', {
+                id,
+                currentStatus: currentRecord.status,
+                newStatus,
+                record: currentRecord
+            });
+            
+            // Update in database using the correct endpoint
+            const response = await fetch(`http://localhost:5000/api/masterlist/${id}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message || 'Unknown error'}`);
+            }
+            
+            // Update local state
+            setLandRecords(prevRecords =>
+                prevRecords.map(record =>
+                    record.id === id
+                        ? { ...record, status: newStatus }
+                        : record
+                )
+            );
+            
+            console.log(`Status updated for record ${id} to ${newStatus}`);
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert(`Failed to update status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     };
+
+
 
     const handlePrint = () => {
         // Filter to show only active farmers

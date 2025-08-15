@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import "../../assets/css/Login.css"; // Login page styling
+import "../assets/css/Login.css"; // Login page styling
 import { useNavigate } from 'react-router-dom'; // Router for navigation
 
 // Main Login Component
@@ -33,6 +33,10 @@ const Login: React.FC = () => {
             userRole = 'admin';
         } else if (normalizedEmail === 'technician@gmail.com') {
             userRole = 'technician';
+        } else if (normalizedEmail === 'jo@gmail.com') {
+            userRole = 'jo';
+        } else if (normalizedEmail === 'brgychair@gmail.com') {
+            userRole = 'brgychair';
         } else {
             setError("Invalid email for this role.");
             return;
@@ -50,6 +54,10 @@ const Login: React.FC = () => {
             navigate('/technician-dashboard');
         } else if (userRole === 'admin') {
             navigate('/dashboard');
+        } else if (userRole === 'jo') {
+            navigate('/jo-dashboard');
+        } else if (userRole === 'brgychair') {
+            navigate('/brgy-chair-dashboard');
         }
     };
 
