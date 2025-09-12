@@ -24,7 +24,7 @@
 
 .login-left {
   width: 50%;
-  background-image: url(../images/login_image.jpg);
+  background-image: url(../../images/login_image.jpg);
   background-size: cover;
   display: flex;
   flex-direction: column;
@@ -100,7 +100,7 @@ input[type="password"]:focus {
   position: absolute;
   right: 12px;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-34%);
   background: none;
   border: none;
   font-size: 16px;

@@ -1,0 +1,159 @@
+/* Green theme variables */
+:root {
+    --green-600: #16a34a;
+    /* primary */
+    --green-500: #22c55e;
+    --green-700: #15803d;
+    --green-100: #dcfce7;
+    --green-50: #f0fdf4;
+    --gray-900: #111827;
+    --gray-700: #374151;
+    --gray-600: #4b5563;
+    --gray-500: #6b7280;
+    --gray-400: #9ca3af;
+    --gray-300: #d1d5db;
+    --gray-200: #e5e7eb;
+    --gray-100: #f3f4f6;
+    --surface: #ffffff;
+    --font-sans: "Inter", sans-serif;;
+}
+
+/* Sidebar Navigation Styles */
+.sidebar {
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    width: 200px;
+    max-width: 250px;
+    height: 100%;
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: var(--font-sans);
+}
+
+* {
+    font-family: var(--font-sans);
+}
+
+/* Ensure buttons use the same system font */
+.sidebar button,
+.sidebar .sidebar-nav-item {
+    font-family: var(--font-sans) !important;
+    font-size: 14px;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    width: 80%;
+    padding: 12px 10px 16px 10px;
+}
+
+/* Logo Icon */
+.sidebar-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 10px 10px 16px 30px;
+    padding: 12px;
+    border-bottom: 1px solid var(--gray-900);
+}
+
+.sidebar-logo img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    object-position: center;
+}
+
+/* Nav Item */
+.sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    padding: 20px 30px;
+    margin: 5px 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    text-align: left;
+    justify-content: flex-start;
+    border-radius: 10px;
+}
+
+/* Nav Item Hover */
+.sidebar-nav-item:hover {
+    background-color: var(--green-500);
+}
+
+/* Nav Icon */
+.nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.nav-icon img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    object-position: center;
+}
+
+.nav-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+/* Active (selected) item resembles a pill */
+.sidebar-nav-item.active {
+    background-color: var(--green-100);
+    box-shadow: inset 0 0 0 1px var(--green-200, #bbf7d0);
+}
+.sidebar-nav-item.active .nav-text {
+    color: var(--green-700);
+}
+.sidebar-nav-item.active .nav-icon img {
+    filter: hue-rotate(60deg) saturate(1.3);
+}
+
+/* Utility elements to mimic sections and footer (optional hooks) */
+.sidebar-section-title {
+    font-size: 12px;
+    color: var(--gray-500);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 10px 12px 6px 12px;
+}
+
+.sidebar-separator {
+    height: 1px;
+    background: var(--gray-200);
+    margin: 8px 10px;
+    border-radius: 1px;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: 10px;
+    border-top: 1px solid var(--gray-200);
+}
+
+/* Badges for counts (if added in markup) */
+.nav-badge {
+    margin-left: auto;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 18px;
+}

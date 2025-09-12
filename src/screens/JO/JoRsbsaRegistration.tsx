@@ -382,7 +382,7 @@ const JoRsbsa: React.FC = () => {
 
             <button
               className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/jo-dashboard')}
             >
               <span className="nav-icon">
                 <img src={HomeIcon} alt="Home" />
@@ -392,7 +392,7 @@ const JoRsbsa: React.FC = () => {
 
             <button
               className={`sidebar-nav-item ${activeTab === 'rsbsa' ? 'active' : ''}`}
-              onClick={() => navigate('/rsbsa')}
+              onClick={() => navigate('/jo-rsbsa')}
             >
               <span className="nav-icon">
                 <img src={RSBSAIcon} alt="RSBSA" />
@@ -402,7 +402,7 @@ const JoRsbsa: React.FC = () => {
 
             <button
               className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
-              onClick={() => navigate('/incentives')}
+              onClick={() => navigate('/jo-incentives')}
             >
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
@@ -412,12 +412,22 @@ const JoRsbsa: React.FC = () => {
 
             <button
               className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
-              onClick={() => navigate('/masterlist')}
+              onClick={() => navigate('/jo-masterlist')}
             >
               <span className="nav-icon">
                 <img src={ApproveIcon} alt="Incentives" />
               </span>
               <span className="nav-text">Masterlist</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${activeTab === 'landrecords' ? 'active' : ''}`}
+              onClick={() => navigate('/jo-landrecords')}
+            >
+              <span className="nav-icon">
+                <img src={LandRecsIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Land Records</span>
             </button>
 
             <button

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FeatureCollection } from 'geojson'; // Import FeatureCollection and Feature types
 
@@ -24,24 +24,14 @@ interface FarmlandMapProps {
 const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
     const [farmlandRecords, setFarmlandRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // Removed unused error state
     const [municipalBoundaryData, setMunicipalBoundaryData] = useState<any>(null);
     const [barangayBoundaries, setBarangayBoundaries] = useState<{ [key: string]: any }>({});
     const [boundaryLoading, setBoundaryLoading] = useState(true);
     const [boundaryError, setBoundaryError] = useState<string | null>(null);
     const [historyMap, setHistoryMap] = useState<{ [parcelId: string]: any[] }>({});
 
-    // Helper to fetch history for a parcel
-    const fetchParcelHistory = async (parcelId: string) => {
-        if (historyMap[parcelId]) return; // Already fetched
-        try {
-            const res = await fetch(`/api/land_rights_history?parcel_id=${parcelId}`);
-            const data = await res.json();
-            setHistoryMap(prev => ({ ...prev, [parcelId]: data }));
-        } catch (err) {
-            setHistoryMap(prev => ({ ...prev, [parcelId]: [] }));
-        }
-    };
+    // Removed unused fetchParcelHistory helper
 
     // Helper to fetch history by farmer name and location (fallback method)
     const fetchHistoryByFarmer = async (farmerName: string, barangay: string, surname?: string, firstName?: string) => {
@@ -67,12 +57,18 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                 setLoading(true);
                 const response = await fetch('/api/land-plots');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
-                setFarmlandRecords(data);
-                setLoading(false);
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const data = await response.json();
+                    setFarmlandRecords(Array.isArray(data) ? data : []);
+                } else {
+                    console.warn('Non-JSON response for /api/land-plots; proceeding with empty records');
+                    setFarmlandRecords([]);
+                }
             } catch (err: any) {
-                console.error("Error fetching farmland records:", err);
-                setError(err.message);
+                console.warn("Error fetching farmland records (non-blocking):", err);
+                setFarmlandRecords([]);
+            } finally {
                 setLoading(false);
             }
         };
@@ -136,29 +132,172 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
         return <div>Loading map data...</div>;
     }
 
-    if (error || boundaryError) {
-        return <div>Error loading map data: {error || boundaryError}</div>;
+    if (boundaryError) {
+        return <div>Error loading boundary data: {boundaryError}</div>;
     }
 
     console.log('Rendering map with farmlandRecords:', farmlandRecords);
     console.log('Rendering map with municipalBoundaryData:', municipalBoundaryData);
     console.log('Rendering map with barangayBoundaries:', barangayBoundaries);
 
+    const MapSizeInvalidator: React.FC = () => {
+        const map = useMap();
+        useEffect(() => {
+            const invalidate = () => map.invalidateSize();
+            setTimeout(invalidate, 0);
+            window.addEventListener('resize', invalidate);
+            return () => {
+                window.removeEventListener('resize', invalidate);
+            };
+        }, [map]);
+        return null;
+    };
+
     return (
         <MapContainer
             center={[10.865263, 122.6983711]}
             zoom={13}
-            style={{ height: '100%' }}
+            style={{ height: '60vh', minHeight: 300 }}
             scrollWheelZoom={true}
         >
-            <TileLayer
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                opacity={1}
-            />
-            <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png"
-                opacity={1}
-            />
+            <MapSizeInvalidator />
+            <LayersControl position="topright">
+                <LayersControl.BaseLayer name="Hybrid (Imagery + Roads/Labels)">
+                    <LayerGroup>
+                        <TileLayer
+                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                            attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+                            opacity={1}
+                        />
+                        <TileLayer
+                            url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+                            attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+                            opacity={0.9}
+                        />
+                        <TileLayer
+                            url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+                            attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+                            opacity={0.9}
+                        />
+                    </LayerGroup>
+                </LayersControl.BaseLayer>
+
+                <LayersControl.BaseLayer checked name="Carto Voyager (Roads/Buildings/Landuse)">
+                    <TileLayer
+                        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://carto.com/attributions">CARTO</a> &copy; OpenStreetMap contributors'
+                        opacity={1}
+                    />
+                </LayersControl.BaseLayer>
+
+                <LayersControl.Overlay checked name="Municipal Boundary">
+                    {municipalBoundaryData && (
+                        <GeoJSON
+                            key="municipal-boundary"
+                            data={municipalBoundaryData}
+                            style={getMunicipalStyle}
+                        />
+                    )}
+                </LayersControl.Overlay>
+
+                {Object.entries(barangayBoundaries).map(([name, data]) => (
+                    <LayersControl.Overlay key={`overlay-${name}`} checked name={`Barangay: ${name}`}>
+                        <GeoJSON
+                            key={`barangay-boundary-${name}`}
+                            data={data}
+                            style={getBarangayStyle}
+                        />
+                    </LayersControl.Overlay>
+                ))}
+
+                {farmlandRecords && farmlandRecords.length > 0 && (
+                    <LayersControl.Overlay checked name="Farmland Parcels">
+                        <GeoJSON
+                            key="farmland-data"
+                            data={{
+                                type: 'FeatureCollection',
+                                features: farmlandRecords.map(record => {
+                                    if (record.geometry && record.geometry.type) {
+                                        return {
+                                            type: 'Feature',
+                                            geometry: record.geometry,
+                                            properties: {
+                                                ...record
+                                            }
+                                        };
+                                    }
+                                    return null;
+                                }).filter(Boolean)
+                            } as FeatureCollection}
+                            style={() => ({
+                                color: 'blue',
+                                weight: 2,
+                                opacity: 0.8,
+                                fillOpacity: 0.5
+                            })}
+                            onEachFeature={(feature, layer) => {
+                                if (feature.properties) {
+                                    // Debug: Log all available properties
+                                    console.log('Feature properties:', JSON.stringify(feature.properties, null, 2));
+                                    console.log('Available property keys:', Object.keys(feature.properties));
+                                    
+                                    // Create a unique key for this feature based on farmer name and location
+                                    const farmerName = [feature.properties.surname, feature.properties.firstName, feature.properties.middleName].filter(Boolean).join(' ');
+                                    const location = feature.properties.barangay || '';
+                                    const featureKey = `${farmerName}-${location}`;
+                                    
+                                    console.log('Map click - featureKey:', featureKey, 'farmerName:', farmerName);
+                                    
+                                    // Initial popup content
+                                    let popupContent = `<div class="land-plot-popup">
+                                        <table>
+                                            <tr><th>Field</th><th>Value</th></tr>
+                                            <tr><td><b>Name:</b></td><td>${farmerName || 'N/A'}</td></tr>
+                                            <tr><td><b>Municipality:</b></td><td>${feature.properties.municipality || 'N/A'}</td></tr>
+                                            <tr><td><b>Barangay:</b></td><td>${location || 'N/A'}</td></tr>
+                                            <tr><td><b>History:</b></td><td id="history-cell-${featureKey}">Loading...</td></tr>
+                                        </table>
+                                    </div>`;
+                                    layer.bindPopup(popupContent);
+
+                                    layer.on({
+                                        click: async () => {
+                                            if (onLandPlotSelect) {
+                                                onLandPlotSelect(feature.properties);
+                                            }
+                                            
+                                            const surname = feature.properties.surname || '';
+                                            const firstName = feature.properties.firstName || '';
+                                            // Try to fetch history by surname, firstName, and barangay
+                                            console.log('Fetching history for:', { surname, firstName, barangay: location });
+                                            const history = await fetchHistoryByFarmer(farmerName, location, surname, firstName);
+                                            setHistoryMap(prev => ({ ...prev, [featureKey]: history }));
+                                            
+                                            setTimeout(() => {
+                                                const cell = document.getElementById(`history-cell-${featureKey}`);
+                                                if (cell) {
+                                                    if (history.length === 0) {
+                                                        cell.innerHTML = '<span style="color:#888">No history found for this farmer.</span>';
+                                                    } else {
+                                                        let html = `<div style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; background: white;">`;
+                                                        html += `<table class='history-table' style='width:100%;font-size:0.8em;'>`;
+                                                        html += `<tr><th style="position: sticky; top: 0; background: #6c757d; color: white; padding: 4px 6px; font-size: 0.75em;">Date of Change</th></tr>`;
+                                                        history.forEach((entry: any) => {
+                                                            html += `<tr><td style="padding: 4px 6px; border-bottom: 1px solid #dee2e6;">${entry.changed_at ? new Date(entry.changed_at).toLocaleDateString() : ''}</td></tr>`;
+                                                        });
+                                                        html += `</table></div>`;
+                                                        cell.innerHTML = html;
+                                                    }
+                                                }
+                                            }, 100);
+                                        }
+                                    });
+                                }
+                            }}
+                        />
+                    </LayersControl.Overlay>
+                )}
+            </LayersControl>
 
             {municipalBoundaryData && (
                 <GeoJSON

@@ -28,7 +28,7 @@ interface RSBSARecord {
   };
 }
 
-const TechMasterlist: React.FC = () => {
+const JoMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -340,4 +340,4 @@ const TechMasterlist: React.FC = () => {
   );
 };
 
-export default TechMasterlist;
+export default JoMasterlist;

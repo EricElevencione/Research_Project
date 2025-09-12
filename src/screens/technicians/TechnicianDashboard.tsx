@@ -1,95 +1,118 @@
-import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from "react-router-dom";
+import '../../assets/css/navigation/nav.css';
+import '../../assets/css/jo css/JoDashStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
-import "../../assets/css/App.css";
-import "../../assets/css/ActiveFarmersPage.css";
+import LogoImage from '../../assets/images/Logo.png';
+import HomeIcon from '../../assets/images/home.png';
+import RSBSAIcon from '../../assets/images/rsbsa.png';
+import PendingIcon from '../../assets/images/pending.png';
+import ApproveIcon from '../../assets/images/approve.png';
+import LogoutIcon from '../../assets/images/logout.png';
+import IncentivesIcon from '../../assets/images/incentives.png';
 
-interface FarmerRecord {
-    id: string;
-    firstName: string;
-    middleName: string;
-    surname: string;
-    gender: 'Male' | 'Female';
-    area: number;
-    status: 'Tenant' | 'Land Owner' | 'Farmer';
-    barangay: string;
-    farmType: 'Irrigated' | 'Rainfed Upland' | 'Rainfed Lowland';
-}
-
-const TechnicianDashboard: React.FC = () => {
+const JoDashboard: React.FC = () => {
     const navigate = useNavigate();
-    const [farmerRecords, setFarmerRecords] = useState<FarmerRecord[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const location = useLocation();
 
-    useEffect(() => {
-        fetchFarmerRecords();
-    }, []);
-
-    const fetchFarmerRecords = async () => {
-        try {
-            const response = await fetch('http://localhost:5000/api/farmers');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const data = await response.json();
-            // Ensure all records have the required fields with default values
-            const validatedData = data
-                .map((record: any) => ({
-                    id: record.id || `temp-${Math.random().toString(36).substr(2, 9)}`,
-                    firstName: record["FIRST NAME"] || record.firstName || '',
-                    middleName: record["MIDDLE NAME"] || record.middleName || '',
-                    surname: record["LAST NAME"] || record.surname || '',
-                    gender: record["GENDER"] || record.gender || 'Male',
-                    area: parseFloat(record["PARCEL AREA"] || record.area) || 0,
-                    status: record.status || 'Farmer',
-                    barangay: record["FARMER ADDRESS 2"] || record.barangay || '',
-                    farmType: record["FARM TYPE"] || record.farmType || 'Irrigated'
-                }))
-                .filter((record: any) => record.firstName && record.surname); // Only show records with names
-            setFarmerRecords(validatedData);
-            setLoading(false);
-        } catch (error) {
-            console.error('Error fetching farmer records:', error);
-            setError('Failed to load farmer records');
-            setLoading(false);
-        }
-    };
-
-    const getStatusClass = (status: string | undefined) => {
-        if (!status) return 'status-farmer';
-        return `status-${status.toLowerCase().replace(' ', '-')}`;
-    };
+    const [activeTab, setActiveTab] = useState('overview');
+    const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="dashboard-container">
-            {/* Top Menu - customize for technician */}
-            <nav className="top-menu">
-                <button onClick={() => navigate("/technician-dashboard")}>Home</button>
-                <button onClick={() => navigate("/technician-masterlist")}>Masterlist</button>
-                <button onClick={() => navigate("/technician-rsbsa")}>RSBSA</button>
-                <button onClick={() => navigate("/technician-land-record")}>View Land Records</button>
-                <button onClick={() => navigate("/")}>Logout</button>
-            </nav>
+        <div className="page-container">
 
-            <div className="dashboard-grid">
-                {/* Left Sidebar */}
-                <aside className="sidebar">
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        className="search-bar"
-                    />
-                    <div className="location-label">Lacturan</div>
-                </aside>
+            <div className="page">
 
-                {/* Map and Stats */}
-                <main className="map-area">
-                    <div className="map-container">
-                        <FarmlandMap />
+                {/* Sidebar starts here */}
+                <div className="sidebar">
+                    <nav className="sidebar-nav">
+                        <div className='sidebar-logo'>
+                            <img src={LogoImage} alt="Logo" />
+                        </div>
+
+                        <button
+                            className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-dashboard')}
+                        >
+                            <span className="nav-icon">
+                                <img src={HomeIcon} alt="Home" />
+                            </span>
+                            <span className="nav-text">Home</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${activeTab === 'rsbsa' ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-rsbsa')}
+                        >
+                            <span className="nav-icon">
+                                <img src={RSBSAIcon} alt="RSBSA" />
+                            </span>
+                            <span className="nav-text">RSBSA</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-incentives')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Incentives" />
+                            </span>
+                            <span className="nav-text">Incentives</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-masterlist')}
+                        >
+                            <span className="nav-icon">
+                                <img src={ApproveIcon} alt="Masterlist" />
+                            </span>
+                            <span className="nav-text">Masterlist</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${activeTab === 'logout' ? 'active' : ''}`}
+                            onClick={() => navigate('/')}
+                        >
+                            <span className="nav-icon">
+                                <img src={LogoutIcon} alt="Logout" />
+                            </span>
+                            <span className="nav-text">Logout</span>
+                        </button>
+                    </nav>
+                </div>
+                {/* Sidebar ends here */}
+
+                {/* Main content starts here */}
+                <div className="main-content">
+                    <div className="dashboard-header">
+                        <h2 className="page-header">Dashboard</h2>
                     </div>
-                </main>
+                    <div className="content-card">
+                        <div className="dashboard-stats">
+                            <div className="stat-card">
+                                <h3>Total Farmers</h3>
+                                <p className="stat-number">1,247</p>
+                            </div>
+                            <div className="stat-card">
+                                <h3>Pending Applications</h3>
+                                <p className="stat-number">23</p>
+                            </div>
+                            <div className="stat-card">
+                                <h3>Approved Today</h3>
+                                <p className="stat-number">8</p>
+                            </div>
+                        </div>
+
+                        <div className="map-container">
+                            <FarmlandMap />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+
     );
 };
 
-export default TechnicianDashboard; 
+export default JoDashboard;

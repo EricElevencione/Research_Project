@@ -1,9 +1,7 @@
 // unchanged imports
 import React, { useState, useEffect, useRef } from 'react';
 import LandPlottingMap, { LandPlottingMapRef } from '../../components/Map/LandPlottingMap';
-import '../../assets/css/LandPlottingPage.css';
 import { useNavigate, useParams } from 'react-router-dom';
-import '../../assets/css/ActiveFarmersPage.css';
 import { v4 as uuidv4 } from 'uuid'; // Add at the top for unique id generation
 
 // interfaces unchanged...
@@ -512,11 +510,11 @@ const LandPlottingPage: React.FC = () => {
                 console.log('Selected parcel:', parcel);
                 if (parcel) {
                     setCurrentParcel(parcel);
-                    
+
                     // Use the farm parcel data from the database
                     const parcelBarangayLocation = parcel.farm_location_barangay || parcel.farmLocation?.barangay || fallbackBarangayName;
                     const parcelMunicipalityLocation = parcel.farm_location_city_municipality || parcel.farmLocation?.cityMunicipality || 'Dumangas';
-                    
+
                     setParcelBarangay(parcelBarangayLocation);
                     console.log('📍 Land Plotting Location Priority:', {
                         parcelBarangay: parcel.farm_location_barangay,
@@ -526,7 +524,7 @@ const LandPlottingPage: React.FC = () => {
                         farmerBarangay: data.addressBarangay,
                         parcelLocation: `${parcelBarangayLocation}, ${parcelMunicipalityLocation}`
                     });
-                    
+
                     setLandAttributes(prev => ({
                         ...prev,
                         firstName: data.firstName || '',
@@ -632,19 +630,19 @@ const LandPlottingPage: React.FC = () => {
         // Handle formats like: "10°51'15.9"N", "122°42'47.9"E"
         const match = dmsString.match(/(\d+)°(\d+)'([\d.]+)"([NSEW])/);
         if (!match) return null;
-        
+
         const degrees = parseInt(match[1]);
         const minutes = parseInt(match[2]);
         const seconds = parseFloat(match[3]);
         const direction = match[4];
-        
+
         let decimal = degrees + (minutes / 60) + (seconds / 3600);
-        
+
         // Apply direction
         if (direction === 'S' || direction === 'W') {
             decimal = -decimal;
         }
-        
+
         return decimal;
     }
 
@@ -654,11 +652,11 @@ const LandPlottingPage: React.FC = () => {
         const degrees = Math.floor(abs);
         const minutes = Math.floor((abs - degrees) * 60);
         const seconds = ((abs - degrees - minutes / 60) * 3600).toFixed(1);
-        
-        const direction = isLatitude 
+
+        const direction = isLatitude
             ? (decimal >= 0 ? 'N' : 'S')
             : (decimal >= 0 ? 'E' : 'W');
-            
+
         return `${degrees}°${minutes}'${seconds}"${direction}`;
     }
 
@@ -742,7 +740,7 @@ const LandPlottingPage: React.FC = () => {
     // Enhanced handleGenerateGeometry with DMS support
     const handleGenerateGeometry = () => {
         let startLat: number, startLng: number;
-        
+
         // Convert coordinates based on input mode
         if (geometryStart.inputMode === 'dms') {
             // Handle DMS format
@@ -753,12 +751,12 @@ const LandPlottingPage: React.FC = () => {
             startLat = geometryStart.lat.trim() === '' ? 0 : parseFloat(geometryStart.lat);
             startLng = geometryStart.lng.trim() === '' ? 0 : parseFloat(geometryStart.lng);
         }
-        
+
         if (isNaN(startLat) || isNaN(startLng)) {
             alert('Please enter valid starting coordinates or leave both blank for relative plotting.');
             return;
         }
-        
+
         let coords = [[startLng, startLat]];
         let curr = { lat: startLat, lng: startLng };
         for (const pt of geometryPoints) {
@@ -856,16 +854,16 @@ const LandPlottingPage: React.FC = () => {
         // Get current farmer's full name
         const currentFarmerName = `${landAttributes.surname} ${landAttributes.firstName} ${landAttributes.middleName}`.trim();
         const currentFarmerId = rsbsaRecord?.id;
-        
+
         // Match by farmer name (case-insensitive, handle variations)
         const entryFarmerName = entry.farmer_name || '';
-        const nameMatches = currentFarmerName && entryFarmerName && 
+        const nameMatches = currentFarmerName && entryFarmerName &&
             entryFarmerName.toLowerCase().includes(currentFarmerName.toLowerCase()) ||
             currentFarmerName.toLowerCase().includes(entryFarmerName.toLowerCase());
-        
+
         // Match by person ID
         const idMatches = currentFarmerId && entry.person_id && entry.person_id === currentFarmerId;
-        
+
         return nameMatches || idMatches;
     });
 
@@ -968,30 +966,30 @@ const LandPlottingPage: React.FC = () => {
                             <div style={{ color: '#b36b00', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                                 Note: If you leave the starting latitude and longitude blank, the lot will be plotted as a relative shape (not georeferenced to a real-world location).
                             </div>
-                            
+
                             {/* Starting Point Input Mode Toggle */}
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ fontWeight: 'bold', marginRight: '1rem' }}>Starting Point Format:</label>
                                 <label style={{ marginRight: '1rem' }}>
-                                    <input 
-                                        type="radio" 
-                                        name="startPointMode" 
-                                        value="decimal" 
-                                        checked={geometryStart.inputMode === 'decimal'} 
-                                        onChange={() => setGeometryStart(s => ({ ...s, inputMode: 'decimal' }))} 
+                                    <input
+                                        type="radio"
+                                        name="startPointMode"
+                                        value="decimal"
+                                        checked={geometryStart.inputMode === 'decimal'}
+                                        onChange={() => setGeometryStart(s => ({ ...s, inputMode: 'decimal' }))}
                                     /> Decimal (e.g., 10.8544, 122.7133)
                                 </label>
                                 <label>
-                                    <input 
-                                        type="radio" 
-                                        name="startPointMode" 
-                                        value="dms" 
-                                        checked={geometryStart.inputMode === 'dms'} 
-                                        onChange={() => setGeometryStart(s => ({ ...s, inputMode: 'dms' }))} 
+                                    <input
+                                        type="radio"
+                                        name="startPointMode"
+                                        value="dms"
+                                        checked={geometryStart.inputMode === 'dms'}
+                                        onChange={() => setGeometryStart(s => ({ ...s, inputMode: 'dms' }))}
                                     /> DMS (e.g., 10°51'15.9"N, 122°42'47.9"E)
                                 </label>
                             </div>
-                            
+
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ fontWeight: 'bold', marginRight: '1rem' }}>Starting Point:</label>
                                 {geometryStart.inputMode === 'dms' ? (

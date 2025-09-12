@@ -1,322 +1,333 @@
-import "../../assets/css/MasterlistPage.css";
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import '../../assets/css/jo css/JoMasterlistStyle.css';
+import '../../assets/css/navigation/nav.css';
+import FarmlandMap from '../../components/Map/FarmlandMap';
+import LogoImage from '../../assets/images/Logo.png';
+import HomeIcon from '../../assets/images/home.png';
+import RSBSAIcon from '../../assets/images/rsbsa.png';
+import ApproveIcon from '../../assets/images/approve.png';
+import LogoutIcon from '../../assets/images/logout.png';
+import IncentivesIcon from '../../assets/images/incentives.png';
+import LandRecsIcon from '../../assets/images/landrecord.png';
 
-interface LandRecord {
+interface RSBSARecord {
     id: string;
-    ffrs_id: string;
-    firstName: string;
-    middleName: string;
-    surname: string;
-    extensionName: string;
-    gender: 'Male' | 'Female';
-    birthdate: string | null;
-    barangay: string;
-    municipality: string;
-    province: string;
-    parcel_address: string;
-    area: number;
-    status: 'Tenant' | 'Land Owner' | 'Farmer';
-    createdAt: string;
-    updatedAt: string;
-}
+    referenceNumber: string;
+    farmerName: string;
+    farmerAddress: string;
+    farmLocation: string;
+    parcelArea: string;
+    dateSubmitted: string;
+    status: string;
+    landParcel: string;
+    ownershipType?: {
+      registeredOwner: boolean;
+      tenant: boolean;
+      lessee: boolean;
+    };
+  }
 
 const Masterlist: React.FC = () => {
     const navigate = useNavigate();
-    const [landRecords, setLandRecords] = useState<LandRecord[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+  const location = useLocation();
 
-    const fetchLandRecords = async () => {
-        try {
-            // Fetch data from RSBSA database instead of land-plots
-            const response = await fetch('http://localhost:5000/api/RSBSAform');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-            // Transform RSBSA data to match LandRecord interface
-            const transformedData: LandRecord[] = data
-                .filter((record: any) => record.firstName && record.surname) // Filter out invalid records
-                .map((record: any) => {
-                    // Create parcel address from farm location fields
-                    const farmLocationBarangay = record.farmLocationBarangay || '';
-                    const farmLocationCityMunicipality = record.farmLocationCityMunicipality || '';
-                    const parcelAddress = farmLocationBarangay && farmLocationCityMunicipality
-                        ? `${farmLocationBarangay}, ${farmLocationCityMunicipality}`
-                        : farmLocationBarangay || farmLocationCityMunicipality || 'N/A';
+  const isActive = (path: string) => location.pathname === path;
 
-                    // Determine status based on ownership type
-                    let status: 'Tenant' | 'Land Owner' | 'Farmer' = 'Farmer';
-                    if (record.ownershipTypeRegisteredOwner) {
-                        status = 'Land Owner';
-                    } else if (record.ownershipTypeTenant || record.ownershipTypeLessee) {
-                        status = 'Tenant';
-                    }
+  useEffect(() => {
+    fetchRSBSARecords();
+  }, []);
 
-                    return {
-                        id: record.id || `${record.firstName}-${record.surname}-${Math.random()}`,
-                        ffrs_id: record.ffrs_id || 'N/A',
-                        firstName: record.firstName || '',
-                        middleName: record.middleName || '',
-                        surname: record.surname || '',
-                        extensionName: record.extensionName || '',
-                        gender: record.sex === 'Male' ? 'Male' : 'Female',
-                        birthdate: record.dateOfBirth || null,
-                        barangay: record.addressBarangay || '',
-                        municipality: record.addressMunicipality || '',
-                        province: record.addressProvince || '',
-                        parcel_address: parcelAddress,
-                        area: parseFloat(record.farmSize || record.totalFarmArea || record.numberOfFarmParcels || '0') || 0,
-                        status: status,
-                        createdAt: record.createdAt || new Date().toISOString(),
-                        updatedAt: record.updatedAt || new Date().toISOString()
-                    };
-                });
+  const fetchRSBSARecords = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/rsbsa_submission');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
 
-            setLandRecords(transformedData);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+      const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any, idx: number) => {
+        // Prefer backend-transformed fields; fallback to raw
+        const referenceNumber = String(item.referenceNumber ?? item.id ?? `RSBSA-${idx + 1}`);
+        const composedName = [item.surname, item.firstName, item.middleName].filter(Boolean).join(', ');
+        const preferredName = (item.farmerName ?? composedName);
+        const farmerName = String(preferredName || '—');
+        const farmerAddress = String(item.farmerAddress ?? item.addressBarangay ?? '—');
+        const farmLocation = String(item.farmLocation ?? '—');
+        const landParcel = String(item.landParcel ?? '—');
+        const parcelArea = (() => {
+          const direct = item.parcelArea ?? item["PARCEL AREA"];
+          if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+            return String(direct);
+          }
+          // Fallback: parse from landParcel string e.g., "... (1.25 ha)"
+          const match = /\(([^)]+)\)/.exec(landParcel);
+          return match ? match[1] : '—';
+        })();
+        const dateSubmitted = item.dateSubmitted
+          ? new Date(item.dateSubmitted).toISOString()
+          : (item.createdAt ? new Date(item.createdAt).toISOString() : '');
 
-    useEffect(() => {
-        fetchLandRecords();
-    }, []);
+        // Reflect database status semantics: Submitted / Not Submitted
+        const status = String(item.status ?? 'Not Submitted');
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm('Are you sure you want to delete this record?')) {
-            try {
-                // Since we're now using RSBSA data, we'll just remove from frontend state
-                // as there's no delete endpoint for RSBSA records yet
-                setLandRecords(landRecords.filter(record => record.id !== id));
-                console.log(`Record ${id} deleted from frontend state`);
-            } catch (err: any) {
-                setError(err.message);
-            }
-        }
-    };
-
-    const handlePrint = () => {
-        // Filter to show only land owners
-        const landOwnersOnly = filteredRecords.filter(record => record.status === 'Land Owner');
-
-        // Create a new window for printing
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            alert('Please allow pop-ups to print the masterlist');
-            return;
-        }
-
-        // Create the print content
-        const printContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Land Owners Masterlist</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        margin: 20px;
-                        font-size: 12px;
-                    }
-                    .header {
-                        text-align: center;
-                        margin-bottom: 20px;
-                        border-bottom: 2px solid #333;
-                        padding-bottom: 10px;
-                    }
-                    .header h1 {
-                        margin: 0;
-                        font-size: 18px;
-                        font-weight: bold;
-                    }
-                    .header p {
-                        margin: 5px 0;
-                        font-size: 12px;
-                    }
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-top: 20px;
-                    }
-                    th, td {
-                        border: 1px solid #ddd;
-                        padding: 8px;
-                        text-align: left;
-                        font-size: 11px;
-                    }
-                    th {
-                        background-color: #f2f2f2;
-                        font-weight: bold;
-                    }
-                    tr:nth-child(even) {
-                        background-color: #f9f9f9;
-                    }
-                    .footer {
-                        margin-top: 20px;
-                        text-align: center;
-                        font-size: 10px;
-                        color: #666;
-                    }
-                    @media print {
-                        body { margin: 0; }
-                        .no-print { display: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>LAND OWNERS MASTERLIST</h1>
-                    <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-                    <p>Total Land Owners: ${landOwnersOnly.length}</p>
-                </div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>FFRS SYSTEM GENERATED</th>
-                            <th>LAST NAME</th>
-                            <th>FIRST NAME</th>
-                            <th>MIDDLE NAME</th>
-                            <th>EXT NAME</th>
-                            <th>GENDER</th>
-                            <th>BIRTHDATE</th>
-                            <th>BARANGAY</th>
-                            <th>MUNICIPALITY</th>
-                            <th>PROVINCE</th>
-                            <th>PARCEL ADDRESS</th>
-                            <th>PARCEL AREA</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${landOwnersOnly.map((record, index) => `
-                            <tr>
-                                <td>${record.ffrs_id}</td>
-                                <td>${record.surname}</td>
-                                <td>${record.firstName}</td>
-                                <td>${record.middleName || 'N/A'}</td>
-                                <td>${record.extensionName || 'N/A'}</td>
-                                <td>${record.gender}</td>
-                                <td>${record.birthdate ? new Date(record.birthdate).toLocaleDateString() : 'N/A'}</td>
-                                <td>${record.barangay}</td>
-                                <td>${record.municipality}</td>
-                                <td>${record.province}</td>
-                                <td>${record.parcel_address}</td>
-                                <td>${record.area}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                
-                <div class="footer">
-                    <p>This document contains ${landOwnersOnly.length} land owner records</p>
-                </div>
-            </body>
-            </html>
-        `;
-
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-
-        // Wait for content to load then print
-        printWindow.onload = () => {
-            printWindow.print();
-            printWindow.close();
+        return {
+          id: String(item.id ?? `${idx}-${Math.random().toString(36).slice(2)}`),
+          referenceNumber,
+          farmerName,
+          farmerAddress,
+          farmLocation,
+          parcelArea,
+          dateSubmitted,
+          status,
+          landParcel,
+          ownershipType: item.ownershipType
         };
-    };
+      });
 
-    const filteredRecords = landRecords.filter(record =>
-        `${record.surname}, ${record.firstName}`.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (loading) {
-        return <div className="masterlist-container">Loading...</div>;
+      setRsbsaRecords(formattedRecords);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to load RSBSA records');
+      setLoading(false);
     }
+  };
 
-    if (error) {
-        return <div className="masterlist-container">Error: {error}</div>;
+  const handleStatusChange = async (recordId: string, newStatus: 'Approved' | 'Not Approved') => {
+    try {
+      // Update the record status
+      const updatedRecords = rsbsaRecords.map(record =>
+        record.id === recordId ? { ...record, status: newStatus } : record
+      );
+      setRsbsaRecords(updatedRecords);
+
+      // Here you would typically make an API call to update the backend
+      // await fetch(`http://localhost:5000/api/RSBSAform/${recordId}/status`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ status: newStatus })
+      // });
+
+      console.log(`Status updated for record ${recordId} to ${newStatus}`);
+    } catch (err: any) {
+      console.error('Error updating status:', err);
+      // Revert the change if the API call fails
+      fetchRSBSARecords();
     }
+  };
 
-    return (
-        <div className="masterlist-container">
-            <div className="masterlist-header">
-                <button className="back-button" onClick={() => navigate('/dashboard')}>
-                    &#8592;
-                </button>
-                <h1 className="masterlist-title">Masterlist</h1>
-                <div className="masterlist-header-options">
-                    <span className="masterlist-print" onClick={handlePrint} style={{ cursor: 'pointer' }}>print</span>
-                    <div className="farmers-header-right">
-                        <input
-                            type="text"
-                            placeholder="Search farmers..."
-                            className="farmers-search-input"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                </div>
+  const handleSaveDraft = async (recordId: string) => {
+    try {
+      const updatedRecords = rsbsaRecords.map(record =>
+        record.id === recordId ? { ...record, isDraft: true, status: 'Draft' as const } : record
+      );
+      setRsbsaRecords(updatedRecords);
+
+      // Here you would typically make an API call to save as draft
+      // await fetch(`http://localhost:5000/api/RSBSAform/${recordId}/draft`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ isDraft: true, status: 'Draft' })
+      // });
+
+      console.log(`Record ${recordId} saved as draft`);
+    } catch (err: any) {
+      console.error('Error saving draft:', err);
+      fetchRSBSARecords();
+    }
+  };
+
+  const filteredRecords = rsbsaRecords.filter(record => {
+    const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = record.farmerName.toLowerCase().includes(q) ||
+      record.referenceNumber.toLowerCase().includes(q) ||
+      record.farmerAddress.toLowerCase().includes(q) ||
+      record.farmLocation.toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
+
+  const formatDate = (iso: string) => {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString();
+    } catch {
+      return '—';
+    }
+  };
+
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case 'Submitted': return 'status-approved';
+      case 'Not Submitted': return 'status-not-approved';
+      default: return 'status-pending';
+    }
+  };
+
+  return (
+    <div className="page-container">
+      <div className="page">
+        {/* Sidebar starts here */}
+        <div className="sidebar">
+          <nav className="sidebar-nav">
+            <div className='sidebar-logo'>
+              <img src={LogoImage} alt="Logo" />
             </div>
 
-            <div className="masterlist-table-container">
-                <table className="masterlist-table">
-                    <thead>
-                        <tr>
-                            <th>FFRS SYSTEM GENERATED</th>
-                            <th>LAST NAME</th>
-                            <th>FIRST NAME</th>
-                            <th>MIDDLE NAME</th>
-                            <th>EXT NAME</th>
-                            <th>GENDER</th>
-                            <th>BIRTHDATE</th>
-                            <th>BARANGAY</th>
-                            <th>MUNICIPALITY</th>
-                            <th>PROVINCE</th>
-                            <th>PARCEL ADDRESS</th>
-                            <th>PARCEL AREA</th>
-                            <th>STATUS</th>
-                            <th>OPTIONS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredRecords.map((record) => (
-                            <tr key={record.id}>
-                                <td>{record.ffrs_id || 'N/A'}</td>
-                                <td>{record.surname}</td>
-                                <td>{record.firstName}</td>
-                                <td>{record.middleName || 'N/A'}</td>
-                                <td>{record.extensionName || 'N/A'}</td>
-                                <td>{record.gender}</td>
-                                <td>{record.birthdate ? new Date(record.birthdate).toLocaleDateString() : 'N/A'}</td>
-                                <td>{record.barangay}</td>
-                                <td>{record.municipality}</td>
-                                <td>{record.province}</td>
-                                <td>{record.parcel_address || 'N/A'}</td>
-                                <td>{record.area}</td>
-                                <td>{record.status}</td>
-                                <td>
-                                    <button
-                                        className="delete-button"
-                                        onClick={() => {
-                                            handleDelete(record.id);
-                                            window.dispatchEvent(new CustomEvent('land-plot-deleted', { detail: { id: record.id } }));
-                                        }}
-                                    >
-                                        Delete
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            <button
+              className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => navigate('/dashboard')}
+            >
+              <span className="nav-icon">
+                <img src={HomeIcon} alt="Home" />
+              </span>
+              <span className="nav-text">Home</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${activeTab === 'rsbsa-page' ? 'active' : ''}`}
+              onClick={() => navigate('/rsbsa')}
+            >
+              <span className="nav-icon">
+                <img src={RSBSAIcon} alt="RSBSA" />
+              </span>
+              <span className="nav-text">RSBSA</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
+              onClick={() => navigate('/incentives')}
+            >
+              <span className="nav-icon">
+                <img src={IncentivesIcon} alt="Incentives" />
+              </span>
+              <span className="nav-text">Incentives</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
+              onClick={() => navigate('/masterlist')}
+            >
+              <span className="nav-icon">
+                <img src={ApproveIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Masterlist</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${activeTab === 'logout' ? 'active' : ''}`}
+              onClick={() => navigate('/')}
+            >
+              <span className="nav-icon">
+                <img src={LogoutIcon} alt="Logout" />
+              </span>
+              <span className="nav-text">Logout</span>
+            </button>
+          </nav>
         </div>
-    );
+        {/* Sidebar ends here */}
+
+        {/* Main content starts here */}
+        <div className="main-content">
+          <div className="dashboard-header">
+            <h2 className="page-header">Masterlist</h2>
+          </div>
+
+          <div className="content-card">
+            {/* Filters and Search */}
+            <div className="filters-section">
+              <div className="search-filter">
+                <input
+                  type="text"
+                  placeholder="Search by farmer name, reference number, or barangay..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+
+              <div className="status-filter">
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="status-select"
+                >
+                  <option value="all">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Not Approved">Not Approved</option>
+                  <option value="Draft">Draft</option>
+                </select>
+              </div>
+            </div>
+
+            {/* RSBSA Records Table */}
+            <div className="table-container">
+              <table className="farmers-table">
+                <thead>
+                  <tr>
+                    {[
+                      'FFRS System Generated',
+                      'Farmer Name',
+                      'Farmer Address',
+                      'Parcel Address',
+                      'Parcel Area',
+                      'Date Submitted',
+                      'Status'
+                    ].map((header) => (
+                      <th key={header}>{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && (
+                    <tr><td colSpan={7} className="loading-cell">Loading...</td></tr>
+                  )}
+
+                  {error && !loading && (
+                    <tr><td colSpan={7} className="error-cell">Error: {error}</td></tr>
+                  )}
+
+                  {!loading && !error && filteredRecords.length > 0 && (
+                    filteredRecords.map((record) => {
+                      return (
+                        <tr key={record.id}>
+                          <td>{record.referenceNumber}</td>
+                          <td>{record.farmerName}</td>
+                          <td>{record.farmerAddress}</td>
+                          <td>{record.farmLocation}</td>
+                          <td>{record.parcelArea}</td>
+                          <td>{formatDate(record.dateSubmitted)}</td>
+                          <td>
+                            <span className={`status-pill ${getStatusClass(record.status)}`}>
+                              {record.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+
+                  {!loading && !error && filteredRecords.length === 0 && (
+                    Array.from({ length: 16 }).map((_, i) => (
+                      <tr key={`empty-${i}`}>
+                        <td colSpan={7}>&nbsp;</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default Masterlist;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
+import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../assets/css/navigation/nav.css';
-import '../../assets/css/jo css/JoDashStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -12,7 +12,7 @@ import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
 
-const JoDashboard: React.FC = () => {
+const JoIncentives: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -95,60 +95,13 @@ const JoDashboard: React.FC = () => {
                 {/* Sidebar ends here */}
 
                 {/* Main content starts here */}
-                <div className="main-content jo-map-layout">
+                <div className="main-content">
                     <div className="dashboard-header">
-                        <h2 className="page-header">Dashboard</h2>
+                        <h2 className="page-header">Incentives</h2>
                     </div>
+                    <div className="content-card">
 
-                    <div className="map-area">
-                        <FarmlandMap />
                     </div>
-
-                    <aside className="floating-panel">
-                        <div className="panel-section">
-                            <div className="panel-header">
-                                <h3 className="panel-title">Mineral Owners <span className="muted">4</span></h3>
-                            </div>
-                            <div className="panel-body">
-                                <div className="progress-row">
-                                    <div className="progress-circle">54%</div>
-                                    <div className="progress-text">
-                                        <div className="muted">probability to buy the right to mine minerals</div>
-                                        <div className="row-caps">
-                                            <span>3 Persons</span>
-                                            <span>1 Person</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button className="link-btn">VIEW ALL PROFILES</button>
-                            </div>
-                        </div>
-
-                        <div className="panel-section">
-                            <div className="panel-header with-bar">
-                                <h3 className="panel-title">Activity Log <span className="muted">170</span></h3>
-                            </div>
-                            <div className="panel-body grid-2">
-                                <div className="metric"><div className="metric-label">Phone Call</div><div className="metric-value">72</div></div>
-                                <div className="metric"><div className="metric-label">Voice Mail</div><div className="metric-value">35</div></div>
-                                <div className="metric"><div className="metric-label">Text Message</div><div className="metric-value">58</div></div>
-                                <div className="metric"><div className="metric-label">Offer Letter</div><div className="metric-value">15</div></div>
-                                <button className="link-btn">VIEW ACTIVITY</button>
-                            </div>
-                        </div>
-
-                        <div className="panel-section">
-                            <div className="panel-header">
-                                <h3 className="panel-title">Activity Success</h3>
-                            </div>
-                            <div className="panel-body grid-2">
-                                <div className="metric"><div className="metric-label">Great results</div><div className="metric-value">58%</div></div>
-                                <div className="metric"><div className="metric-label">Terrible results</div><div className="metric-value">10%</div></div>
-                                <div className="metric"><div className="metric-label">Not great, not terrible</div><div className="metric-value">32%</div></div>
-                                <button className="link-btn">VIEW ACTIVITY</button>
-                            </div>
-                        </div>
-                    </aside>
                 </div>
             </div>
         </div>
@@ -156,4 +109,4 @@ const JoDashboard: React.FC = () => {
     );
 };
 
-export default JoDashboard;
+export default JoIncentives;

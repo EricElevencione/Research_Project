@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import "../assets/css/Login.css"; // Login page styling
+import "../assets/css/admin css/Login.css"; // Login page styling
 import { useNavigate } from 'react-router-dom'; // Router for navigation
 
 // Main Login Component
