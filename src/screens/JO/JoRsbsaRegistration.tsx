@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../../assets/css/jo css/joRsbsaStyle.css';
 import '../../assets/css/navigation/nav.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -12,8 +12,10 @@ import LandRecsIcon from '../../assets/images/landrecord.png';
 
 const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [activeTab] = useState('overview');
+  const isActive = (path: string) => location.pathname === path;
   const [draftId, setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({ // Initialize with default values
@@ -381,7 +383,7 @@ const JoRsbsa: React.FC = () => {
             </div>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-dashboard') ? 'active' : ''}`}
               onClick={() => navigate('/jo-dashboard')}
             >
               <span className="nav-icon">
@@ -391,7 +393,7 @@ const JoRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'rsbsa' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-rsbsa') ? 'active' : ''}`}
               onClick={() => navigate('/jo-rsbsa')}
             >
               <span className="nav-icon">
@@ -401,7 +403,7 @@ const JoRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
               onClick={() => navigate('/jo-incentives')}
             >
               <span className="nav-icon">
@@ -411,7 +413,7 @@ const JoRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
               onClick={() => navigate('/jo-masterlist')}
             >
               <span className="nav-icon">
@@ -421,7 +423,7 @@ const JoRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'landrecords' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
               onClick={() => navigate('/jo-landrecords')}
             >
               <span className="nav-icon">
@@ -431,7 +433,7 @@ const JoRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'logout' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
               <span className="nav-icon">
@@ -446,9 +448,7 @@ const JoRsbsa: React.FC = () => {
 
         {/* Main content starts here */}
         <div className="main-content">
-          <div className="dashboard-header">
-            <h2 className="page-header">RSBSA Enrollment Form</h2>
-          </div>
+          <h2>RSBSA Enrollment Form</h2>
 
           <div className="rsbsa-form-container">
             <div className="form-steps">

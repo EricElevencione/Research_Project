@@ -24,7 +24,7 @@
 
 .login-left {
   width: 50%;
-  background-image: url(../../images/login_image.jpg);
+  background-image: url(../../images/Login.jpg);
   background-size: cover;
   display: flex;
   flex-direction: column;
@@ -38,6 +38,7 @@
 .login-left h1 {
   font-size: 36px;
   margin-bottom: 10px;
+  color: #FFFDF6;
 }
 
 .login-left p {

@@ -27,6 +27,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
     // Removed unused error state
     const [municipalBoundaryData, setMunicipalBoundaryData] = useState<any>(null);
     const [barangayBoundaries, setBarangayBoundaries] = useState<{ [key: string]: any }>({});
+    const [parcelCountsByBarangay, setParcelCountsByBarangay] = useState<Record<string, number>>({});
     const [boundaryLoading, setBoundaryLoading] = useState(true);
     const [boundaryError, setBoundaryError] = useState<string | null>(null);
     const [historyMap, setHistoryMap] = useState<{ [parcelId: string]: any[] }>({});
@@ -114,16 +115,50 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
         fetchBoundaryData();
     }, []);
 
+    // Choropleth helpers
+    useEffect(() => {
+        const counts: Record<string, number> = {};
+        farmlandRecords.forEach((rec: any) => {
+            const name: string = (rec.barangay || rec.farmLocationBarangay || '').toString();
+            if (!name) return;
+            counts[name] = (counts[name] || 0) + 1;
+        });
+        setParcelCountsByBarangay(counts);
+    }, [farmlandRecords]);
+
+    const getChoroplethColor = (value: number) => {
+        return value > 20 ? '#14532d'
+             : value > 10 ? '#166534'
+             : value > 5  ? '#16a34a'
+             : value > 2  ? '#22c55e'
+             : value > 0  ? '#86efac'
+                          : '#d1fae5';
+    };
+
+    const choroplethStyle = (feature: any) => {
+        const props = feature?.properties || {};
+        const barangayName: string = (props.NAME_3 || props.barangay || '').toString();
+        const value = parcelCountsByBarangay[barangayName] || 0;
+        return {
+            color: '#134e4a',
+            weight: 1,
+            opacity: 1,
+            fillColor: getChoroplethColor(value),
+            fillOpacity: 0.9,
+        } as L.PathOptions;
+    };
+
+    // Fallback styles for non-choropleth layers (in case they are still rendered)
     const getMunicipalStyle = () => ({
-        color: '#e74c3c',
-        weight: 3,
-        opacity: 0.8,
+        color: '#134e4a',
+        weight: 1,
+        opacity: 1,
         fillOpacity: 0,
     });
 
     const getBarangayStyle = () => ({
         color: '#3498db',
-        weight: 2,
+        weight: 1,
         opacity: 0.6,
         fillOpacity: 0,
     });
@@ -136,9 +171,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
         return <div>Error loading boundary data: {boundaryError}</div>;
     }
 
-    console.log('Rendering map with farmlandRecords:', farmlandRecords);
-    console.log('Rendering map with municipalBoundaryData:', municipalBoundaryData);
-    console.log('Rendering map with barangayBoundaries:', barangayBoundaries);
+    console.log('Rendering map choropleth; parcel counts:', parcelCountsByBarangay);
 
     const MapSizeInvalidator: React.FC = () => {
         const map = useMap();
@@ -159,6 +192,13 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
             zoom={13}
             style={{ height: '60vh', minHeight: 300 }}
             scrollWheelZoom={true}
+            doubleClickZoom={true}
+            dragging={true}
+            touchZoom={true}
+            boxZoom={true}
+            keyboard={true}
+            zoomControl={true}
+            attributionControl={true}
         >
             <MapSizeInvalidator />
             <LayersControl position="topright">
@@ -217,7 +257,10 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                             data={{
                                 type: 'FeatureCollection',
                                 features: farmlandRecords.map(record => {
-                                    if (record.geometry && record.geometry.type) {
+                                    if (
+                                        record.geometry &&
+                                        (record.geometry.type === 'Polygon' || record.geometry.type === 'MultiPolygon')
+                                    ) {
                                         return {
                                             type: 'Feature',
                                             geometry: record.geometry,
@@ -235,6 +278,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                                 opacity: 0.8,
                                 fillOpacity: 0.5
                             })}
+                            filter={(feature) => !!feature.geometry &&
+                                (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')}
                             onEachFeature={(feature, layer) => {
                                 if (feature.properties) {
                                     // Debug: Log all available properties

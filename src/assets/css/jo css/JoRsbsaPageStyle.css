@@ -92,10 +92,6 @@ label {
   transition: transform .15s ease, box-shadow .2s ease;
 }
 
-.add-photo-fab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(22, 163, 74, 0.45);
-}
 
 .add-photo-label {
   margin-top: 6px;
@@ -381,12 +377,12 @@ label {
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
   transition: background-color .2s ease, box-shadow .2s ease, transform .05s ease;
+  border: 1px solid black;
 }
 
 .register-button:hover {
-  background: var(--green-500);
+  background: #A0C878;
   box-shadow: 0 8px 18px rgba(29, 78, 216, 0.3);
 }
 
@@ -734,6 +730,7 @@ label {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-right: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: #A0C878;
 }
 
 .owners-table th:last-child {

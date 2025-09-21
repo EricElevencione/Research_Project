@@ -109,12 +109,12 @@
 }
 
 .farmers-table thead th {
-    background: #f8f9fa;
+    background: #A0C878;
     color: #333;
     font-weight: 600;
     text-align: left;
     padding: 16px 12px;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
     white-space: nowrap;
 }
 

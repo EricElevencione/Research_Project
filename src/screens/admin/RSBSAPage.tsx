@@ -436,9 +436,7 @@ const JoRsbsa: React.FC = () => {
 
         {/* Main content starts here */}
         <div className="main-content">
-          <div className="dashboard-header">
-            <h2 className="page-header">RSBSA Enrollment Form</h2>
-          </div>
+          <h2>RSBSA Enrollment Form</h2>
 
           <div className="rsbsa-form-container">
             <div className="form-steps">

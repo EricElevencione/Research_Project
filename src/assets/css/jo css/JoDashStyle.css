@@ -9,10 +9,15 @@
 
 .jo-map-layout .map-area {
     position: relative;
-    height: calc(100vh - 140px);
-    background: #f8fafc;
+    height: calc(104vh - 140px);
+    background: #FAF6E9;
     border-radius: 12px;
     overflow: hidden;
+}
+
+/* Hide Leaflet layers toggle button on JO Dashboard only */
+.jo-map-layout .map-area .leaflet-control-layers-toggle {
+    display: none !important;
 }
 
 .jo-map-layout .map-area > div {
@@ -26,9 +31,7 @@
     width: 360px;
     max-height: calc(100% - 120px);
     overflow-y: auto;
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    background: transparent;
     padding: 12px;
     z-index: 2000; /* ensure above Leaflet map panes */
     pointer-events: auto;

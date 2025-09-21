@@ -32,7 +32,7 @@ const TechMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab] = useState('overview');
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -180,73 +180,51 @@ const TechMasterlist: React.FC = () => {
             </div>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => navigate('/jo-dashboard')}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
+                            className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-dashboard')}
+                        >
+                            <span className="nav-icon">
+                                <img src={HomeIcon} alt="Home" />
+                            </span>
+                            <span className="nav-text">Home</span>
+                        </button>
 
-            <button
-              className={`sidebar-nav-item ${activeTab === 'rsbsa-page' ? 'active' : ''}`}
-              onClick={() => navigate('/jo-rsbsapage')}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
+                        <button
+                            className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-rsbsa')}
+                        >
+                            <span className="nav-icon">
+                                <img src={RSBSAIcon} alt="RSBSA" />
+                            </span>
+                            <span className="nav-text">RSBSA</span>
+                        </button>
 
-            <button
-              className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
-              onClick={() => navigate('/jo-incentives')}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Incentives</span>
-            </button>
+                        <button
+                            className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-masterlist')}
+                        >
+                            <span className="nav-icon">
+                                <img src={ApproveIcon} alt="Masterlist" />
+                            </span>
+                            <span className="nav-text">Masterlist</span>
+                        </button>
 
-            <button
-              className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
-              onClick={() => navigate('/jo-masterlist')}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${activeTab === 'landrecords' ? 'active' : ''}`}
-              onClick={() => navigate('/jo-landrecords')}
-            >
-              <span className="nav-icon">
-                <img src={LandRecsIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Land Records</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${activeTab === 'logout' ? 'active' : ''}`}
-              onClick={() => navigate('/')}
-            >
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-        </div>
-        {/* Sidebar ends here */}
+                        <button
+                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+                            onClick={() => navigate('/')}
+                        >
+                            <span className="nav-icon">
+                                <img src={LogoutIcon} alt="Logout" />
+                            </span>
+                            <span className="nav-text">Logout</span>
+                        </button>
+                    </nav>
+                </div>
+                {/* Sidebar ends here */}
 
         {/* Main content starts here */}
         <div className="main-content">
-          <div className="dashboard-header">
-            <h2 className="page-header">Masterlist</h2>
-          </div>
+          <h2>Masterlist</h2>
 
           <div className="content-card">
             {/* Filters and Search */}

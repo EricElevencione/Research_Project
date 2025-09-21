@@ -3,10 +3,11 @@ import Login from './login/PageLogin';
 import Dashboard from './screens/admin/Dashboard';
 import MasterlistPage from './screens/admin/MasterlistPage';
 import RSBSAPage from './screens/admin/RSBSAPage';
-import LandPlottingPage from './screens/technicians/TechLandPlottingPage';
+import TechLandPlotting from './screens/technicians/TechLandPlottingPage';
 import TechnicianDashboard from './screens/technicians/TechnicianDashboard';
 import TechMasterlist from './screens/technicians/TechMasterlist';
-import TechLandPlotting from './screens/technicians/TechLandPlottingPage';
+import TechRsbsa from './screens/technicians/TechRsbsa';
+import TechPickLandParcel from './screens/technicians/TechPickLandParcel';
 import Incentives from './screens/admin/Incentives';
 import JoDashboard from './screens/JO/JoDashboard';
 import JoRsbsa from './screens/JO/JoRsbsaRegistration';
@@ -56,11 +57,6 @@ function App() {
                         <Incentives />
                     </ProtectedRoute>
                 } />
-                <Route path="/land-plotting/:barangayName" element={
-                    <ProtectedRoute>
-                        <LandPlottingPage />
-                    </ProtectedRoute>
-                } />
                 <Route path="/technician-dashboard" element={
                     <ProtectedRoute>
                         <TechnicianDashboard />
@@ -76,9 +72,14 @@ function App() {
                         <TechLandPlotting />
                     </ProtectedRoute>
                 } />
-                <Route path="/tech-land-plotting/:barangayName" element={
+                <Route path="/technician-rsbsa" element={
                     <ProtectedRoute>
-                        <TechLandPlotting />
+                        <TechRsbsa />
+                    </ProtectedRoute>
+                } />
+                <Route path="/technician-pick-land-parcel/:ownerId" element={
+                    <ProtectedRoute>
+                        <TechPickLandParcel />
                     </ProtectedRoute>
                 } />
                 <Route path="/jo-dashboard" element={

@@ -33,7 +33,7 @@ const JoLandrecords: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab] = useState('overview');
     const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -136,7 +136,7 @@ const JoLandrecords: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-dashboard') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-dashboard')}
                         >
                             <span className="nav-icon">
@@ -146,7 +146,7 @@ const JoLandrecords: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'rsbsa-page' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-rsbsapage')}
                         >
                             <span className="nav-icon">
@@ -156,7 +156,7 @@ const JoLandrecords: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-incentives')}
                         >
                             <span className="nav-icon">
@@ -166,7 +166,7 @@ const JoLandrecords: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-masterlist')}
                         >
                             <span className="nav-icon">
@@ -176,7 +176,7 @@ const JoLandrecords: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'landrecords' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-landrecords')}
                         >
                             <span className="nav-icon">
@@ -186,7 +186,7 @@ const JoLandrecords: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'logout' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
                         >
                             <span className="nav-icon">
@@ -200,9 +200,7 @@ const JoLandrecords: React.FC = () => {
 
                 {/* Main content starts here */}
                 <div className="main-content">
-                    <div className="dashboard-header">
-                        <h2 className="page-header">Land Records</h2>
-                    </div>
+                    <h2>Land Records</h2>
                     <div className="content-card">
                     <div className="filters-section">
                         <div className="search-filter">

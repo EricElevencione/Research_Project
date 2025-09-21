@@ -22,6 +22,9 @@ interface RSBSARecord {
   dateSubmitted: string;
   status: string;
   landParcel: string;
+  parcelArea: number | string | null;
+  totalFarmArea: number;
+  parcelCount: number;
   ownershipType: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -33,7 +36,7 @@ const JoRsbsaPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab] = useState('overview');
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,10 +54,24 @@ const JoRsbsaPage: React.FC = () => {
       }
 
       const data = await response.json();
-      setRsbsaRecords(data);
+      console.log('Received data from API:', data);
+      
+      // Add total farm area and parcel count to each record
+      const dataWithTotalArea = data.map((record: RSBSARecord) => {
+        const calculatedTotal = calculateTotalFarmArea(data, record.farmerName);
+        const parcelCount = countFarmParcels(data, record.farmerName);
+        console.log(`Farmer: ${record.farmerName}, API totalFarmArea: ${record.totalFarmArea}, Calculated: ${calculatedTotal}, Parcels: ${parcelCount}`);
+        return {
+          ...record,
+          totalFarmArea: calculatedTotal,
+          parcelCount: parcelCount
+        };
+      });
+      
+      setRsbsaRecords(dataWithTotalArea);
       
       // Automatically filter for registered owners only
-      const registeredOwnersData = filterRegisteredOwners(data);
+      const registeredOwnersData = filterRegisteredOwners(dataWithTotalArea);
       setRegisteredOwners(registeredOwnersData);
       setError(null);
     } catch (err: any) {
@@ -63,6 +80,28 @@ const JoRsbsaPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Function to calculate total farm area for a farmer
+  const calculateTotalFarmArea = (records: RSBSARecord[], farmerName: string) => {
+    // Find all records for the same farmer (by name)
+    const farmerRecords = records.filter(record => record.farmerName === farmerName);
+    
+    // Sum up all parcel areas for this farmer
+    const totalArea = farmerRecords.reduce((sum, record) => {
+      const area = parseFloat(String(record.parcelArea || 0)) || 0;
+      return sum + area;
+    }, 0);
+    
+    return totalArea;
+  };
+
+  // Function to count the number of parcels for a farmer based on existing data
+  const countFarmParcels = (records: RSBSARecord[], farmerName: string) => {
+    // Count how many records exist for this farmer
+    // Each record in rsbsa_submission represents one parcel
+    const farmerRecords = records.filter(record => record.farmerName === farmerName);
+    return farmerRecords.length;
   };
 
   // Function to filter registered owners only
@@ -117,7 +156,7 @@ const JoRsbsaPage: React.FC = () => {
             </div>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-dashboard') ? 'active' : ''}`}
               onClick={() => navigate('/jo-dashboard')}
             >
               <span className="nav-icon">
@@ -127,7 +166,7 @@ const JoRsbsaPage: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'rsbsa-page' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
               onClick={() => navigate('/jo-rsbsapage')}
             >
               <span className="nav-icon">
@@ -137,7 +176,7 @@ const JoRsbsaPage: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
               onClick={() => navigate('/jo-incentives')}
             >
               <span className="nav-icon">
@@ -147,7 +186,7 @@ const JoRsbsaPage: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
               onClick={() => navigate('/jo-masterlist')}
             >
               <span className="nav-icon">
@@ -157,7 +196,7 @@ const JoRsbsaPage: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'landrecords' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
               onClick={() => navigate('/jo-landrecords')}
             >
               <span className="nav-icon">
@@ -167,7 +206,7 @@ const JoRsbsaPage: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'logout' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
               <span className="nav-icon">
@@ -181,9 +220,7 @@ const JoRsbsaPage: React.FC = () => {
 
         {/* Main content starts here */}
         <div className="main-content">
-          <div className="dashboard-header">
-            <h2 className="page-header">Registered Land Owners</h2>
-          </div>
+          <h2>Registered Land Owners</h2>
 
           <div className="content-card">
             <div className="actions-bar">
@@ -215,13 +252,14 @@ const JoRsbsaPage: React.FC = () => {
                       <th>Birthdate</th>
                       <th>Farmer Address</th>
                       <th>Farm Location</th>
-                      <th>Parcel Area</th>
+                      <th>Number of Parcels</th>
+                      <th>Total Farm Area</th>
                     </tr>
                   </thead>
                   <tbody>
                     {registeredOwners.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="no-data">
+                        <td colSpan={10} className="no-data">
                           No registered owners found
                         </td>
                       </tr>
@@ -234,11 +272,7 @@ const JoRsbsaPage: React.FC = () => {
                         const middleName = nameParts[2] || '';
                         const extName = nameParts[3] || '';
 
-                        // Extract parcel information from landParcel
-                        const parcelInfo = record.landParcel || 'N/A';
-                        const parcelArea = parcelInfo.includes('(')
-                          ? parcelInfo.split('(')[1]?.replace(')', '') || 'N/A'
-                          : 'N/A';
+                        // Parcel count is now calculated and stored in record.parcelCount
 
                         return (
                           <tr key={record.id}>
@@ -250,7 +284,11 @@ const JoRsbsaPage: React.FC = () => {
                             <td>{record.birthdate ? formatDate(record.birthdate) : 'N/A'}</td>
                             <td>{record.farmerAddress || 'N/A'}</td>
                             <td>{record.farmLocation || 'N/A'}</td>
-                            <td>{parcelArea}</td>
+                            <td>{record.parcelCount || 0}</td>
+                            <td>{(() => {
+                              const area = typeof record.totalFarmArea === 'number' ? record.totalFarmArea : parseFloat(String(record.totalFarmArea || 0));
+                              return !isNaN(area) && area > 0 ? `${area.toFixed(2)} ha` : 'N/A';
+                            })()}</td>
                           </tr>
                         );
                       })

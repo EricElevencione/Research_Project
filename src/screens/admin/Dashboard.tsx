@@ -84,9 +84,7 @@ const Dashboard: React.FC = () => {
 
                 {/* Main content starts here */}
                 <div className="main-content">
-                    <div className="dashboard-header">
-                        <h2 className="page-header">Dashboard</h2>
-                    </div>
+                    <h2>Dashboard</h2>
                     <div className="content-card">
                         <div className="dashboard-stats">
                             <div className="stat-card">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/navigation/nav.css';
 import '../../assets/css/jo css/JoDashStyle.css';
@@ -6,7 +6,6 @@ import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
-import PendingIcon from '../../assets/images/pending.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
@@ -16,7 +15,6 @@ const JoDashboard: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [activeTab, setActiveTab] = useState('overview');
     const isActive = (path: string) => location.pathname === path;
 
     return (
@@ -32,7 +30,7 @@ const JoDashboard: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-dashboard') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-dashboard')}
                         >
                             <span className="nav-icon">
@@ -42,7 +40,7 @@ const JoDashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'rsbsa-page' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-rsbsapage')}
                         >
                             <span className="nav-icon">
@@ -52,7 +50,7 @@ const JoDashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-incentives')}
                         >
                             <span className="nav-icon">
@@ -62,7 +60,7 @@ const JoDashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-masterlist')}
                         >
                             <span className="nav-icon">
@@ -72,7 +70,7 @@ const JoDashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'landrecords' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-landrecords')}
                         >
                             <span className="nav-icon">
@@ -82,7 +80,7 @@ const JoDashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${activeTab === 'logout' ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
                         >
                             <span className="nav-icon">
@@ -96,9 +94,7 @@ const JoDashboard: React.FC = () => {
 
                 {/* Main content starts here */}
                 <div className="main-content jo-map-layout">
-                    <div className="dashboard-header">
-                        <h2 className="page-header">Dashboard</h2>
-                    </div>
+				<h2>Dashboard</h2>
 
                     <div className="map-area">
                         <FarmlandMap />
@@ -107,45 +103,41 @@ const JoDashboard: React.FC = () => {
                     <aside className="floating-panel">
                         <div className="panel-section">
                             <div className="panel-header">
-                                <h3 className="panel-title">Mineral Owners <span className="muted">4</span></h3>
+                                <h3 className="panel-title">Total Farmers <span className="muted">4</span></h3>
                             </div>
                             <div className="panel-body">
                                 <div className="progress-row">
                                     <div className="progress-circle">54%</div>
                                     <div className="progress-text">
-                                        <div className="muted">probability to buy the right to mine minerals</div>
                                         <div className="row-caps">
                                             <span>3 Persons</span>
                                             <span>1 Person</span>
                                         </div>
                                     </div>
                                 </div>
-                                <button className="link-btn">VIEW ALL PROFILES</button>
                             </div>
                         </div>
 
                         <div className="panel-section">
                             <div className="panel-header with-bar">
-                                <h3 className="panel-title">Activity Log <span className="muted">170</span></h3>
+                                <h3 className="panel-title">Land Owners<span className="muted">170</span></h3>
                             </div>
                             <div className="panel-body grid-2">
                                 <div className="metric"><div className="metric-label">Phone Call</div><div className="metric-value">72</div></div>
                                 <div className="metric"><div className="metric-label">Voice Mail</div><div className="metric-value">35</div></div>
                                 <div className="metric"><div className="metric-label">Text Message</div><div className="metric-value">58</div></div>
                                 <div className="metric"><div className="metric-label">Offer Letter</div><div className="metric-value">15</div></div>
-                                <button className="link-btn">VIEW ACTIVITY</button>
                             </div>
                         </div>
 
                         <div className="panel-section">
                             <div className="panel-header">
-                                <h3 className="panel-title">Activity Success</h3>
+                                <h3 className="panel-title">Total Registered Land Maps</h3>
                             </div>
                             <div className="panel-body grid-2">
                                 <div className="metric"><div className="metric-label">Great results</div><div className="metric-value">58%</div></div>
                                 <div className="metric"><div className="metric-label">Terrible results</div><div className="metric-value">10%</div></div>
                                 <div className="metric"><div className="metric-label">Not great, not terrible</div><div className="metric-value">32%</div></div>
-                                <button className="link-btn">VIEW ACTIVITY</button>
                             </div>
                         </div>
                     </aside>
