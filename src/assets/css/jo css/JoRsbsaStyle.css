@@ -46,66 +46,10 @@
   border: 1px solid var(--gray-200);
 }
 
-/* Header with photo */
-.form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.form-title h2 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--gray-900);
-  margin: 0;
-}
-
-.form-title p {
-  margin: 2px 0;
-  color: var(--gray-600);
-  font-size: 14px;
-}
-
-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gray-700);
-
-}
-
-.version {
-  color: var(--gray-400);
-  font-size: 12px;
-}
-
-.add-photo-fab {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
-  background: var(--green-600);
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
-  cursor: pointer;
-  transition: transform .15s ease, box-shadow .2s ease;
-}
-
-.add-photo-fab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(22, 163, 74, 0.45);
-}
-
-.add-photo-label {
-  margin-top: 6px;
-  grid-template-columns: repeat(3, 1fr);
-  color: var(--gray-600);
-}
-
 /* Stepper */
 .form-steps {
   display: grid;
-  grid-template-columns: repeat(4, 1fr) !important;
+  grid-template-columns: repeat(4, 2fr) !important;
   gap: 12px;
   margin: 12px 0 20px;
 }
@@ -115,23 +59,24 @@ label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  left: -50% !important;
-  right: 52% !important;
 }
 
 .step::before {
   content: "" !important;
   position: absolute !important;
   top: 12px !important;
-  left: -37% !important;
-  right: 37% !important;
+  /* Keeps vertical alignment with dot center */
+  left: calc(-50% - 6px) !important;
+  /* Half the step width left, minus half the gap for centering */
+  width: calc(100% + 12px) !important;
+  /* Full step width + gap to reach next dot */
   height: 2px !important;
   background: var(--gray-200) !important;
   z-index: 1 !important;
+  /* Ensures line is behind dots if needed */
 }
 
-/* Hide the connector line for the last step */
-.step:last-child::before {
+.step:first-child::before {
   display: none !important;
 }
 

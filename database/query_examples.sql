@@ -83,3 +83,6 @@ FROM rsbsa_farm_parcels fp
 JOIN rsbsa_submission rs ON fp.submission_id = rs.id
 WHERE fp.farm_location_barangay = 'Specific Barangay'
   AND fp.farm_location_municipality = 'Specific Municipality';
+
+
+

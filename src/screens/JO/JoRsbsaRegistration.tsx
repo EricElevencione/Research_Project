@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import '../../assets/css/jo css/joRsbsaStyle.css';
+import '../../assets/css/jo css/JoRsbsaPageStyle.css';
 import '../../assets/css/navigation/nav.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -464,7 +464,7 @@ const JoRsbsa: React.FC = () => {
                 <span className="dot">{isStepCompleted(3) ? '✓' : '3'}</span>
                 <span className="label">Farmland</span>
               </div>
-              <div className={`step ${isStepActive(4) ? 'active' : ''}`}>
+              <div className={`step ${isStepActive(4) ? 'active' : ''}${isStepCompleted(4) ? 'completed' : ''}`}>
                 <span className="dot">4</span>
                 <span className="label">Verification</span>
               </div>

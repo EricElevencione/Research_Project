@@ -47,64 +47,16 @@
   border: 1px solid var(--gray-200);
 }
 
-/* Header with photo */
-.form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.form-title h2 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--gray-900);
-  margin: 0;
-}
-
-.form-title p {
-  margin: 2px 0;
-  color: var(--gray-600);
-  font-size: 14px;
-}
-
-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gray-700);
-
-}
-
-.version {
-  color: var(--gray-400);
-  font-size: 12px;
-}
-
-.add-photo-fab {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
-  background: var(--green-600);
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
-  cursor: pointer;
-  transition: transform .15s ease, box-shadow .2s ease;
-}
-
-
-.add-photo-label {
-  margin-top: 6px;
-  grid-template-columns: repeat(3, 1fr);
-  color: var(--gray-600);
-}
-
 /* Stepper */
 .form-steps {
   display: grid;
   grid-template-columns: repeat(4, 1fr) !important;
   gap: 12px;
   margin: 12px 0 20px;
+  position: relative;
+  /* Ensure container can contain absolute children if needed */
+  overflow: hidden;
+  /* Optional: Prevents lines from overflowing the container */
 }
 
 .step {
@@ -112,25 +64,31 @@ label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  left: -50% !important;
+  left: -5% !important;
   right: 52% !important;
+  z-index: 1;
 }
 
 .step::before {
   content: "" !important;
   position: absolute !important;
   top: 12px !important;
-  left: -37% !important;
-  right: 37% !important;
+  /* Align with dot center */
+  left: -50% !important;
+  /* Extend halfway left to the previous dot’s center */
+  width: calc(100% + 223px) !important;
+  /* Span the step width plus the gap */
   height: 2px !important;
   background: var(--gray-200) !important;
-  z-index: 1 !important;
+  z-index: -1 !important;
 }
 
-/* Hide the connector line for the last step */
-.step:last-child::before {
-  display: none !important;
+.step.completed::before,
+.step.active::before {
+  background: var(--green-600) !important;
 }
+
+
 
 .dot {
   width: 24px;
@@ -441,55 +399,7 @@ label {
   }
 }
 
-/* Farmland Photo Upload Section */
 
-
-/* Responsive adjustments for photo upload */
-@media (max-width: 768px) {
-  .photo-upload-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .photo-upload-area {
-    min-height: 100px;
-    padding: 16px;
-  }
-
-  .upload-icon {
-    font-size: 24px;
-  }
-
-  .upload-text {
-    font-size: 13px;
-  }
-
-  .upload-hint {
-    font-size: 11px;
-  }
-}
-
-
-/* Responsive adjustments for verification section */
-@media (max-width: 768px) {
-  .signature-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-
-  .verification-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .declaration-text {
-    font-size: 13px;
-  }
-
-  .verification-roles {
-    font-size: 10px;
-  }
-}
 
 /* === Farmland Parcels (PART III) === */
 .parcel-card {
@@ -810,7 +720,7 @@ label {
   .table-container {
     overflow-x: auto;
   }
-  
+
   .owners-table {
     min-width: 800px;
   }

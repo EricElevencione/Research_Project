@@ -31,3 +31,6 @@ LIMIT 5;
 SELECT id, submission_id, parcel_number, farm_location_barangay, total_farm_area_ha 
 FROM rsbsa_farm_parcels 
 LIMIT 5;
+
+
+
