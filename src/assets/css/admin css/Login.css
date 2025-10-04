@@ -55,13 +55,6 @@
   justify-content: center;
 }
 
-h2 {
-  margin-bottom: 25px;
-  font-size: 24px;
-  color: #2e3d27;
-  text-align: center;
-}
-
 .login-form {
   display: flex;
   flex-direction: column;

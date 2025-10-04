@@ -93,19 +93,10 @@
   color: var(--gray-600);
 }
 
-.step.active .dot {
-  background: var(--green-600);
-  color: #fff;
-}
 
 .step .label {
   font-size: 12px;
   color: var(--gray-600);
-}
-
-.step.active .label {
-  color: var(--green-700);
-  font-weight: 600;
 }
 
 /* Enrollment metadata card */

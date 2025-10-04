@@ -55,7 +55,7 @@ const JoRsbsaPage: React.FC = () => {
 
       const data = await response.json();
       console.log('Received data from API:', data);
-      
+
       // Add total farm area and parcel count to each record
       const dataWithTotalArea = data.map((record: RSBSARecord) => {
         const calculatedTotal = calculateTotalFarmArea(data, record.farmerName);
@@ -67,9 +67,9 @@ const JoRsbsaPage: React.FC = () => {
           parcelCount: parcelCount
         };
       });
-      
+
       setRsbsaRecords(dataWithTotalArea);
-      
+
       // Automatically filter for registered owners only
       const registeredOwnersData = filterRegisteredOwners(dataWithTotalArea);
       setRegisteredOwners(registeredOwnersData);
@@ -86,13 +86,13 @@ const JoRsbsaPage: React.FC = () => {
   const calculateTotalFarmArea = (records: RSBSARecord[], farmerName: string) => {
     // Find all records for the same farmer (by name)
     const farmerRecords = records.filter(record => record.farmerName === farmerName);
-    
+
     // Sum up all parcel areas for this farmer
     const totalArea = farmerRecords.reduce((sum, record) => {
       const area = parseFloat(String(record.parcelArea || 0)) || 0;
       return sum + area;
     }, 0);
-    
+
     return totalArea;
   };
 
@@ -111,16 +111,16 @@ const JoRsbsaPage: React.FC = () => {
       // A registered owner is someone where OWNERSHIP_TYPE_REGISTERED_OWNER is true
       // and they are NOT a tenant or lessee
       if (record.ownershipType) {
-        return record.ownershipType.registeredOwner === true && 
-               record.ownershipType.tenant === false && 
-               record.ownershipType.lessee === false;
+        return record.ownershipType.registeredOwner === true &&
+          record.ownershipType.tenant === false &&
+          record.ownershipType.lessee === false;
       }
-      
+
       // Fallback: if ownershipType is not available, check for land parcel data
       // This is a safety net for records that might not have ownership type data
       const hasLandParcel = record.landParcel && record.landParcel !== 'N/A' && record.landParcel.trim() !== '';
       const hasFarmLocation = record.farmLocation && record.farmLocation !== 'N/A' && record.farmLocation.trim() !== '';
-      
+
       return hasLandParcel && hasFarmLocation;
     });
   };
@@ -251,7 +251,6 @@ const JoRsbsaPage: React.FC = () => {
                       <th>Gender</th>
                       <th>Birthdate</th>
                       <th>Farmer Address</th>
-                      <th>Farm Location</th>
                       <th>Number of Parcels</th>
                       <th>Total Farm Area</th>
                     </tr>
@@ -283,7 +282,6 @@ const JoRsbsaPage: React.FC = () => {
                             <td>{record.gender || 'N/A'}</td>
                             <td>{record.birthdate ? formatDate(record.birthdate) : 'N/A'}</td>
                             <td>{record.farmerAddress || 'N/A'}</td>
-                            <td>{record.farmLocation || 'N/A'}</td>
                             <td>{record.parcelCount || 0}</td>
                             <td>{(() => {
                               const area = typeof record.totalFarmArea === 'number' ? record.totalFarmArea : parseFloat(String(record.totalFarmArea || 0));

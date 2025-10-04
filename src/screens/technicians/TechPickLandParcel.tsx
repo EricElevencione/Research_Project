@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import '../../assets/css/navigation/nav.css';
 import '../../assets/css/technician css/PickLandStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
@@ -10,40 +10,42 @@ import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 
 interface LandOwner {
-  id: string;
-  farmerName: string;
-  farmerAddress: string;
-  farmLocation: string;
-  parcelArea?: string;
+    id: string;
+    farmerName: string;
+    farmerAddress: string;
+    farmLocation: string;
+    parcelArea?: string;
+    submissionId?: string; // Add submissionId to LandOwner interface
 }
 
-interface LandParcel {
-  id: string;
-  parcelNumber: string;
-  farmLocationBarangay: string;
-  farmLocationCityMunicipality: string;
-  totalFarmArea: number;
-  cropCommodity: string;
-  farmSize: string;
-  farmType: string;
-  organicPractitioner: boolean;
-  plotStatus: string;
-  geometry?: any;
-  ownershipTypeRegisteredOwner: boolean;
-  ownershipTypeTenant: boolean;
-  ownershipTypeLessee: boolean;
-  createdAt: string;
-  updatedAt: string;
+interface FarmParcel {
+    id: string;
+    submissionId: string;
+    parcelNumber: string;
+    farmLocationBarangay: string;
+    farmLocationCityMunicipality: string;
+    totalFarmArea: number;
+    cropCommodity: string;
+    farmSize: string;
+    farmType: string;
+    organicPractitioner: boolean;
+    plotStatus: string;
+    geometry?: any;
+    ownershipTypeRegisteredOwner: boolean;
+    ownershipTypeTenant: boolean;
+    ownershipTypeLessee: boolean;
+    createdAt: string;
+    updatedAt: string;
 }
 
-const TechPicklandParcel: React.FC = () => {
+const TechPickLandParcel: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { ownerId } = useParams<{ ownerId: string }>();
 
     const [landOwner, setLandOwner] = useState<LandOwner | null>(null);
-    const [landParcels, setLandParcels] = useState<LandParcel[]>([]);
-    const [selectedParcel, setSelectedParcel] = useState<LandParcel | null>(null);
+    const [landParcels, setLandParcels] = useState<FarmParcel[]>([]);
+    const [selectedParcel, setSelectedParcel] = useState<FarmParcel | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -54,38 +56,73 @@ const TechPicklandParcel: React.FC = () => {
         try {
             const response = await fetch('http://localhost:5000/api/rsbsa_submission');
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+
             const data = await response.json();
+            console.log('RSBSA submission API response:', data); // Log the full response
             const owner = data.find((record: any) => record.id === ownerId);
-            
+
             if (owner) {
-                setLandOwner({
+                const ownerData = {
                     id: owner.id,
                     farmerName: owner.farmerName,
                     farmerAddress: owner.farmerAddress,
                     farmLocation: owner.farmLocation,
-                    parcelArea: owner.parcelArea
-                });
+                    parcelArea: owner.parcelArea,
+                    submissionId: owner.id, // Confirm this is the correct field
+                };
+                console.log('Land owner data:', ownerData); // Log owner data
+                setLandOwner(ownerData);
+                return ownerData;
             } else {
                 setError('Land owner not found');
+                return null;
             }
         } catch (err: any) {
             console.error('Error fetching land owner:', err);
             setError('Failed to load land owner information');
+            return null;
         }
     };
-
-    // Fetch land parcels for the specific owner
-    const fetchLandParcels = async () => {
+    // Fetch land parcels for the specific submission
+    const fetchLandParcels = async (submissionId: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/farm-parcels/${ownerId}`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+            console.log('Fetching parcels for submissionId:', submissionId);
+            const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${submissionId}/parcels`);
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers));
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
-            setLandParcels(data);
+            console.log('Raw parcels data:', data);
+
+            const mappedParcels: FarmParcel[] = data.map((parcel: any) => ({
+                id: parcel.id,
+                submissionId: parcel.submission_id,
+                parcelNumber: parcel.parcel_number || 'N/A',
+                farmLocationBarangay: parcel.farm_location_barangay || 'N/A',
+                farmLocationCityMunicipality: parcel.farm_location_municipality || 'N/A',
+                totalFarmArea: parseFloat(parcel.total_farm_area_ha) || 0,
+                cropCommodity: parcel.crop_commodity || 'N/A',
+                farmSize: parcel.total_farm_area_ha ? `${parcel.total_farm_area_ha} ha` : 'N/A',
+                farmType: parcel.farm_type || 'N/A',
+                organicPractitioner: parcel.organic_practitioner || false,
+                plotStatus: parcel.plot_status || 'N/A',
+                geometry: parcel.geometry || null,
+                ownershipTypeRegisteredOwner: parcel.ownership_type_registered_owner || false,
+                ownershipTypeTenant: parcel.ownership_type_tenant || false,
+                ownershipTypeLessee: parcel.ownership_type_lessee || false,
+                createdAt: parcel.created_at || new Date().toISOString(),
+                updatedAt: parcel.updated_at || new Date().toISOString(),
+            }));
+
+            console.log('Mapped parcels:', mappedParcels);
+            setLandParcels(mappedParcels);
         } catch (err: any) {
             console.error('Error fetching land parcels:', err);
-            setError('Failed to load land parcels');
+            setError(`Failed to load land parcels: ${err.message}`);
         }
     };
 
@@ -93,17 +130,28 @@ const TechPicklandParcel: React.FC = () => {
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
-            await Promise.all([fetchLandOwner(), fetchLandParcels()]);
-            setLoading(false);
+            try {
+                const owner = await fetchLandOwner();
+                console.log('Fetched owner:', owner); // Debug log
+                if (owner?.submissionId) {
+                    await fetchLandParcels(owner.submissionId);
+                } else {
+                    setError('No submission ID found for this land owner');
+                }
+            } catch (err: any) {
+                setError('Failed to load data');
+            } finally {
+                setLoading(false);
+            }
         };
-        
+
         if (ownerId) {
             loadData();
         }
     }, [ownerId]);
 
     // Handle parcel selection
-    const handleParcelSelect = (parcel: LandParcel) => {
+    const handleParcelSelect = (parcel: FarmParcel) => {
         setSelectedParcel(parcel);
     };
 
@@ -113,7 +161,7 @@ const TechPicklandParcel: React.FC = () => {
             return new Date(dateString).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
-                day: 'numeric'
+                day: 'numeric',
             });
         } catch {
             return dateString;
@@ -122,16 +170,13 @@ const TechPicklandParcel: React.FC = () => {
 
     return (
         <div className="page-container">
-
             <div className="page">
-
                 {/* Sidebar starts here */}
                 <div className="sidebar">
                     <nav className="sidebar-nav">
-                        <div className='sidebar-logo'>
+                        <div className="sidebar-logo">
                             <img src={LogoImage} alt="Logo" />
                         </div>
-
                         <button
                             className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-dashboard')}
@@ -141,7 +186,6 @@ const TechPicklandParcel: React.FC = () => {
                             </span>
                             <span className="nav-text">Home</span>
                         </button>
-
                         <button
                             className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-rsbsa')}
@@ -151,7 +195,6 @@ const TechPicklandParcel: React.FC = () => {
                             </span>
                             <span className="nav-text">RSBSA</span>
                         </button>
-
                         <button
                             className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-masterlist')}
@@ -161,7 +204,6 @@ const TechPicklandParcel: React.FC = () => {
                             </span>
                             <span className="nav-text">Masterlist</span>
                         </button>
-
                         <button
                             className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
@@ -182,8 +224,12 @@ const TechPicklandParcel: React.FC = () => {
                         {landOwner && (
                             <div className="land-owner-info">
                                 <h3>Land Owner: {landOwner.farmerName}</h3>
-                                <p><strong>Address:</strong> {landOwner.farmerAddress}</p>
-                                <p><strong>Farm Location:</strong> {landOwner.farmLocation}</p>
+                                <p>
+                                    <strong>Address:</strong> {landOwner.farmerAddress}
+                                </p>
+                                <p>
+                                    <strong>Farm Location:</strong> {landOwner.farmLocation}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -212,24 +258,42 @@ const TechPicklandParcel: React.FC = () => {
                                     ) : (
                                         <div className="parcel-grid">
                                             {landParcels.map((parcel) => (
-                                                <div 
+                                                <div
                                                     key={parcel.id}
                                                     className={`parcel-card ${selectedParcel?.id === parcel.id ? 'selected' : ''}`}
                                                     onClick={() => handleParcelSelect(parcel)}
                                                 >
                                                     <div className="parcel-header">
                                                         <h4>Parcel {parcel.parcelNumber}</h4>
-                                                        <span className={`status-badge ${parcel.plotStatus.toLowerCase().replace(' ', '-')}`}>
+                                                        <span
+                                                            className={`status-badge ${parcel.plotStatus
+                                                                .toLowerCase()
+                                                                .replace(' ', '-')}`}
+                                                        >
                                                             {parcel.plotStatus}
                                                         </span>
                                                     </div>
                                                     <div className="parcel-details">
-                                                        <p><strong>Location:</strong> {parcel.farmLocationBarangay}, {parcel.farmLocationCityMunicipality}</p>
-                                                        <p><strong>Area:</strong> {parcel.totalFarmArea} hectares</p>
-                                                        <p><strong>Crop:</strong> {parcel.cropCommodity || 'N/A'}</p>
-                                                        <p><strong>Farm Type:</strong> {parcel.farmType || 'N/A'}</p>
-                                                        <p><strong>Organic:</strong> {parcel.organicPractitioner ? 'Yes' : 'No'}</p>
-                                                        <p><strong>Created:</strong> {formatDate(parcel.createdAt)}</p>
+                                                        <p>
+                                                            <strong>Location:</strong> {parcel.farmLocationBarangay},{' '}
+                                                            {parcel.farmLocationCityMunicipality}
+                                                        </p>
+                                                        <p>
+                                                            <strong>Area:</strong> {parcel.totalFarmArea} hectares
+                                                        </p>
+                                                        <p>
+                                                            <strong>Crop:</strong> {parcel.cropCommodity || 'N/A'}
+                                                        </p>
+                                                        <p>
+                                                            <strong>Farm Type:</strong> {parcel.farmType || 'N/A'}
+                                                        </p>
+                                                        <p>
+                                                            <strong>Organic:</strong>{' '}
+                                                            {parcel.organicPractitioner ? 'Yes' : 'No'}
+                                                        </p>
+                                                        <p>
+                                                            <strong>Created:</strong> {formatDate(parcel.createdAt)}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -242,15 +306,19 @@ const TechPicklandParcel: React.FC = () => {
                                     <h3>Parcel Visualization</h3>
                                     {selectedParcel ? (
                                         <div className="map-container">
-                                            <FarmlandMap 
+                                            <FarmlandMap
                                                 onLandPlotSelect={(properties) => {
                                                     console.log('Selected land plot:', properties);
                                                 }}
                                             />
                                             <div className="selected-parcel-info">
                                                 <h4>Selected: Parcel {selectedParcel.parcelNumber}</h4>
-                                                <p><strong>Area:</strong> {selectedParcel.totalFarmArea} hectares</p>
-                                                <p><strong>Location:</strong> {selectedParcel.farmLocationBarangay}</p>
+                                                <p>
+                                                    <strong>Area:</strong> {selectedParcel.totalFarmArea} hectares
+                                                </p>
+                                                <p>
+                                                    <strong>Location:</strong> {selectedParcel.farmLocationBarangay}
+                                                </p>
                                             </div>
                                         </div>
                                     ) : (
@@ -265,8 +333,7 @@ const TechPicklandParcel: React.FC = () => {
                 </div>
             </div>
         </div>
-
     );
 };
 
-export default TechPicklandParcel;
+export default TechPickLandParcel;

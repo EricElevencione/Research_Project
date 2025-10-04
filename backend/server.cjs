@@ -104,76 +104,6 @@ app.get('/api/lands', async (req, res) => { // Get land records in the table
 
 
 // API endpoint to get land plots with geometry and owner info for the map
-app.get('/api/land-plots', async (req, res) => {
-    try {
-		// Prefer PostGIS if available to ensure proper GeoJSON output
-		const queryWithPostGIS = `
-            SELECT 
-				fp.id,
-				fp.parcel_number AS "parcelNumber",
-				fp.farm_location_barangay AS "barangay",
-				fp.farm_location_city_municipality AS "municipality",
-				fp.total_farm_area AS "totalFarmArea",
-				fp.crop_commodity AS "cropCommodity",
-				r.surname AS "surname",
-				r.first_name AS "firstName",
-				r.middle_name AS "middleName",
-				ST_AsGeoJSON(fp.geometry)::json AS geometry
-			FROM rsbsa_farm_parcels fp
-			LEFT JOIN rsbsaform r ON r.id = fp.owner_id
-			WHERE fp.geometry IS NOT NULL
-		`;
-
-		let result;
-		try {
-			result = await pool.query(queryWithPostGIS);
-		} catch (err) {
-			// If PostGIS is not installed (undefined function), fall back to raw geometry
-			if (err && (err.code === '42883' || (err.message || '').includes('ST_AsGeoJSON'))) {
-				const fallbackQuery = `
-					SELECT 
-						fp.id,
-						fp.parcel_number AS "parcelNumber",
-						fp.farm_location_barangay AS "barangay",
-						fp.farm_location_city_municipality AS "municipality",
-						fp.total_farm_area AS "totalFarmArea",
-						fp.crop_commodity AS "cropCommodity",
-						r.surname AS "surname",
-						r.first_name AS "firstName",
-						r.middle_name AS "middleName",
-						fp.geometry AS geometry
-					FROM rsbsa_farm_parcels fp
-					LEFT JOIN rsbsaform r ON r.id = fp.owner_id
-					WHERE fp.geometry IS NOT NULL
-				`;
-				result = await pool.query(fallbackQuery);
-				// Best-effort: try to parse geometry if it looks like JSON
-				result.rows = result.rows.map(row => {
-					if (row && row.geometry && typeof row.geometry === 'string') {
-						try {
-							row.geometry = JSON.parse(row.geometry);
-						} catch (_) {
-							// leave as-is if not JSON (e.g., WKB/WKT)
-						}
-					}
-					return row;
-				});
-        } else {
-				throw err;
-			}
-		}
-
-		res.json(result.rows || []);
-    } catch (error) {
-		console.error('Error fetching land plots:', error);
-		// If table or column is missing, avoid blocking UI and return empty list
-		if (error && (error.code === '42P01' || error.code === '42703')) {
-			return res.json([]);
-		}
-		// Fallback: non-blocking empty response
-		return res.json([]);
-	}
-});
 
 
 // Registration endpoint for admin and technician
@@ -251,137 +181,7 @@ app.post('/api/login', async (req, res) => {
 
 // GET endpoint to fetch RSBSA form data
 
-
-// GET endpoint to fetch all farm parcels for a specific farmer
-app.get('/api/farm-parcels/:ownerId', async (req, res) => {
-    const { ownerId } = req.params;
-    try {
-        const result = await pool.query(`
-            SELECT 
-                id,
-                parcel_number,
-                farm_location_barangay,
-                farm_location_city_municipality,
-                total_farm_area,
-                crop_commodity,
-                farm_size,
-                farm_type,
-                organic_practitioner,
-                plot_status,
-                last_plotted_at,
-                geometry,
-                -- New columns (will be NULL if they don't exist yet)
-                within_ancestral_domain,
-                agrarian_reform_beneficiary,
-                ownership_document_no,
-                ownership_type_registered_owner,
-                ownership_type_tenant,
-                ownership_type_tenant_land_owner,
-                ownership_type_lessee,
-                ownership_type_lessee_land_owner,
-                ownership_type_others,
-                ownership_type_others_specify,
-                number_of_head,
-                farm_remarks,
-                created_at,
-                updated_at
-            FROM rsbsa_farm_parcels
-            WHERE owner_id = $1
-            ORDER BY parcel_number
-        `, [ownerId]);
-
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error fetching farm parcels:', error);
-        res.status(500).json({
-            message: 'Error fetching farm parcels',
-            error: error.message
-        });
-    }
-});
-
-// PUT endpoint to update a specific farm parcel
-app.put('/api/farm-parcels/:parcelId', async (req, res) => {
-    const { parcelId } = req.params;
-    const updateData = req.body;
-
-    try {
-        const updateQuery = `
-            UPDATE rsbsa_farm_parcels SET
-                parcel_number = COALESCE($1, parcel_number),
-                farm_location_barangay = COALESCE($2, farm_location_barangay),
-                farm_location_city_municipality = COALESCE($3, farm_location_city_municipality),
-                total_farm_area = COALESCE($4, total_farm_area),
-                crop_commodity = COALESCE($5, crop_commodity),
-                farm_size = COALESCE($6, farm_size),
-                farm_type = COALESCE($7, farm_type),
-                organic_practitioner = COALESCE($8, organic_practitioner),
-                within_ancestral_domain = COALESCE($9, within_ancestral_domain),
-                agrarian_reform_beneficiary = COALESCE($10, agrarian_reform_beneficiary),
-                ownership_document_no = COALESCE($11, ownership_document_no),
-                ownership_type_registered_owner = COALESCE($12, ownership_type_registered_owner),
-                ownership_type_tenant = COALESCE($13, ownership_type_tenant),
-                ownership_type_tenant_land_owner = COALESCE($14, ownership_type_tenant_land_owner),
-                ownership_type_lessee = COALESCE($15, ownership_type_lessee),
-                ownership_type_lessee_land_owner = COALESCE($16, ownership_type_lessee_land_owner),
-                ownership_type_others = COALESCE($17, ownership_type_others),
-                ownership_type_others_specify = COALESCE($18, ownership_type_others_specify),
-                number_of_head = COALESCE($19, number_of_head),
-                farm_remarks = COALESCE($20, farm_remarks),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $21
-        `;
-
-        const values = [
-            updateData.parcelNumber,
-            updateData.farmLocationBarangay,
-            updateData.farmLocationCityMunicipality,
-            updateData.totalFarmArea,
-            updateData.cropCommodity,
-            updateData.farmSize,
-            updateData.farmType,
-            updateData.organicPractitioner,
-            updateData.withinAncestralDomain,
-            updateData.agrarianReformBeneficiary,
-            updateData.ownershipDocumentNo,
-            updateData.ownershipTypeRegisteredOwner,
-            updateData.ownershipTypeTenant,
-            updateData.ownershipTypeTenantLandOwner,
-            updateData.ownershipTypeLessee,
-            updateData.ownershipTypeLesseeLandOwner,
-            updateData.ownershipTypeOthers,
-            updateData.ownershipTypeOthersSpecify,
-            updateData.numberOfHead,
-            updateData.farmRemarks,
-            parcelId
-        ];
-
-        await pool.query(updateQuery, values);
-        res.json({ message: 'Farm parcel updated successfully' });
-    } catch (error) {
-        console.error('Error updating farm parcel:', error);
-        res.status(500).json({
-            message: 'Error updating farm parcel',
-            error: error.message
-        });
-    }
-});
-
 // DELETE endpoint to delete a farm parcel
-app.delete('/api/farm-parcels/:parcelId', async (req, res) => {
-    const { parcelId } = req.params;
-
-    try {
-        await pool.query('DELETE FROM rsbsa_farm_parcels WHERE id = $1', [parcelId]);
-        res.json({ message: 'Farm parcel deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting farm parcel:', error);
-        res.status(500).json({
-            message: 'Error deleting farm parcel',
-            error: error.message
-        });
-    }
-});
 
 
 // GET endpoint to fetch all Registered Owners from RSBSAform
@@ -400,184 +200,154 @@ app.get('/api/registered-owners', async (req, res) => {
     }
 });
 
-// POST endpoint to save RSBSA draft
-app.post('/api/rsbsa-draft', async (req, res) => {
-    const { data } = req.body; // Get the data from the request body
-    try {
-        const insertQuery = ` 
-            INSERT INTO rsbsa_draft (data) VALUES ($1) RETURNING id
-        `;
-        const values = [data];
-        const result = await pool.query(insertQuery, values);
-        res.status(201).json({
-            message: 'RSBSA draft saved successfully!',
-            id: result.rows[0].id
-        });
-    } catch (error) {
-        console.error('Error saving RSBSA draft:', error);
-        res.status(500).json({ message: 'Error saving RSBSA draft', error: error.message });
-    }
-});
 
 
 
 // POST endpoint to submit final RSBSA form
 app.post('/api/rsbsa_submission', async (req, res) => {
     const { draftId, data } = req.body;
+    const client = await pool.connect();
     try {
-        console.log('Received RSBSA submission:', { draftId, data });
+        await client.query('BEGIN');
 
-        // Calculate total farm area from all parcels
-        const totalFarmArea = data.farmlandParcels ? 
-            data.farmlandParcels.reduce((total, parcel) => {
+        console.log('Received RSBSA submission:', {
+            draftId,
+            data: {
+                ...data,
+                farmlandParcels: JSON.stringify(data.farmlandParcels, null, 2)
+            }
+        });
+
+        const totalFarmArea = data.farmlandParcels
+            ? data.farmlandParcels.reduce((total, parcel) => {
                 const area = parseFloat(parcel.totalFarmAreaHa) || 0;
                 return total + area;
-            }, 0) : 0;
+            }, 0)
+            : 0;
 
-        // Create one record for each parcel
-        const parcelResults = [];
-        
+        // Derive FARM LOCATION from the first parcel, if available
+        let farmLocation = '';
         if (data.farmlandParcels && data.farmlandParcels.length > 0) {
-            for (let i = 0; i < data.farmlandParcels.length; i++) {
-                const parcel = data.farmlandParcels[i];
-                
-                const insertQuery = `
-                    INSERT INTO rsbsa_submission (
-                        "LAST NAME",
-                        "FIRST NAME", 
-                        "MIDDLE NAME",
-                        "EXT NAME",
-                        "GENDER",
-                        "BIRTHDATE",
-                        "BARANGAY",
-                        "MUNICIPALITY",
-                        "FARM LOCATION",
-                        "PARCEL AREA",
-                        "TOTAL FARM AREA",
-                        "MAIN LIVELIHOOD",
-                        "OWNERSHIP_TYPE_REGISTERED_OWNER",
-                        "OWNERSHIP_TYPE_TENANT",
-                        "OWNERSHIP_TYPE_LESSEE",
-                        status
-                    ) VALUES (
-                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
-                    ) 
-                    RETURNING id, submitted_at
-                `;
+            const firstParcel = data.farmlandParcels[0];
+            farmLocation = `${firstParcel.farmLocationBarangay || ''}, ${firstParcel.farmLocationMunicipality || ''}`.trim();
+            if (farmLocation === ',') farmLocation = ''; // Avoid just a comma
+        }
 
-                const values = [
-                    data.surname || '',
-                    data.firstName || '',
-                    data.middleName || '',
-                    data.extensionName || '',
-                    data.gender || '',
-                    data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-                    data.barangay || '',
-                    data.municipality || '',
-                    parcel.farmLocationBarangay || '',
-                    parcel.totalFarmAreaHa ? parseFloat(parcel.totalFarmAreaHa) : null,
-                    totalFarmArea,
-                    data.mainLivelihood || '',
-                    parcel.ownershipTypeRegisteredOwner || false,
-                    parcel.ownershipTypeTenant || false,
-                    parcel.ownershipTypeLessee || false,
-                    'Submitted'
-                ];
+        const insertSubmissionQuery = `
+            INSERT INTO rsbsa_submission (
+                "LAST NAME", "FIRST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE",
+                "BARANGAY", "MUNICIPALITY", "FARM LOCATION", "PARCEL AREA", "TOTAL FARM AREA",
+                "MAIN LIVELIHOOD", "OWNERSHIP_TYPE_REGISTERED_OWNER", "OWNERSHIP_TYPE_TENANT",
+                "OWNERSHIP_TYPE_LESSEE", status
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+            )
+            RETURNING id, submitted_at
+        `;
 
-                const result = await pool.query(insertQuery, values);
-                parcelResults.push(result.rows[0]);
-            }
-        } else {
-            // If no parcels, create one record with empty parcel data
-            const insertQuery = `
-                INSERT INTO rsbsa_submission (
-                    "LAST NAME",
-                    "FIRST NAME", 
-                    "MIDDLE NAME",
-                    "EXT NAME",
-                    "GENDER",
-                    "BIRTHDATE",
-                    "BARANGAY",
-                    "MUNICIPALITY",
-                    "FARM LOCATION",
-                    "PARCEL AREA",
-                    "TOTAL FARM AREA",
-                    "MAIN LIVELIHOOD",
-                    "OWNERSHIP_TYPE_REGISTERED_OWNER",
-                    "OWNERSHIP_TYPE_TENANT",
-                    "OWNERSHIP_TYPE_LESSEE",
-                    status
+        const submissionValues = [
+            data.surname || '',
+            data.firstName || '',
+            data.middleName || '',
+            data.extensionName || '',
+            data.gender || '',
+            data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+            data.barangay || '',
+            data.municipality || '',
+            farmLocation, // Updated to use derived location
+            null, // PARCEL AREA
+            totalFarmArea,
+            data.mainLivelihood || '',
+            false, // ownershipType.registeredOwner
+            false, // ownershipType.tenant
+            false, // ownershipType.lessee
+            'Submitted',
+        ];
+
+        const submissionResult = await client.query(insertSubmissionQuery, submissionValues);
+        const submissionId = submissionResult.rows[0].id;
+        const submittedAt = submissionResult.rows[0].submitted_at;
+
+        if (data.farmlandParcels && data.farmlandParcels.length > 0) {
+            const parcelInsertQuery = `
+                INSERT INTO farm_parcels (
+                    submission_id, parcel_number, farm_location_barangay, farm_location_city_municipality,
+                    total_farm_area_ha, within_ancestral_domain, ownership_document_no,
+                    agrarian_reform_beneficiary, ownership_type_registered_owner, ownership_type_tenant,
+                    ownership_type_lessee, tenant_land_owner_name, lessee_land_owner_name, ownership_others_specify
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
-                ) 
-                RETURNING id, submitted_at
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+                )
             `;
-
-            const values = [
-                data.surname || '',
-                data.firstName || '',
-                data.middleName || '',
-                data.extensionName || '',
-                data.gender || '',
-                data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-                data.barangay || '',
-                data.municipality || '',
-                '',
-                null,
-                totalFarmArea,
-                data.mainLivelihood || '',
-                false,
-                false,
-                false,
-                'Submitted'
-            ];
-
-            const result = await pool.query(insertQuery, values);
-            parcelResults.push(result.rows[0]);
+            for (let parcel of data.farmlandParcels) {
+                try {
+                    if (!parcel.farmLocationBarangay || !parcel.totalFarmAreaHa) {
+                        console.warn('Skipping parcel due to missing required fields:', parcel);
+                        continue;
+                    }
+                    const area = parseFloat(parcel.totalFarmAreaHa);
+                    if (isNaN(area)) throw new Error('Invalid totalFarmAreaHa');
+                    await client.query(parcelInsertQuery, [
+                        submissionId,
+                        parcel.parcelNo || `Parcel-${submissionId}-${data.farmlandParcels.indexOf(parcel) + 1}`,
+                        parcel.farmLocationBarangay || '',
+                        parcel.farmLocationMunicipality || '',
+                        area,
+                        parcel.withinAncestralDomain === 'Yes' || false,
+                        parcel.ownershipDocumentNo || '',
+                        parcel.agrarianReformBeneficiary === 'Yes' || false,
+                        parcel.ownershipTypeRegisteredOwner || false,
+                        parcel.ownershipTypeTenant || false,
+                        parcel.ownershipTypeLessee || false,
+                        parcel.tenantLandOwnerName || '',
+                        parcel.lesseeLandOwnerName || '',
+                        parcel.ownershipOthersSpecify || '',
+                    ]);
+                } catch (err) {
+                    console.error('Error inserting parcel:', err, 'Parcel data:', parcel);
+                    throw err;
+                }
+            }
         }
 
-        // Use the first result for the response
-        const firstResult = parcelResults[0];
-
-        const submissionId = firstResult.id;
-        const submittedAt = firstResult.submitted_at;
-
-        console.log(`RSBSA form submitted successfully with ${parcelResults.length} parcels for farmer: ${data.firstName} ${data.surname}`);
-
-        // If there's a draftId, we can optionally delete the draft after successful submission
-        if (draftId) {
-            console.log(`Processing submission for draft ID: ${draftId}`);
-            // Optional: Delete the draft after successful submission
-            // await pool.query('DELETE FROM rsbsa_draft WHERE id = $1', [draftId]);
-        }
-
+        await client.query('COMMIT');
+        console.log(`RSBSA form submitted successfully with ${data.farmlandParcels.length} parcels for farmer: ${data.firstName} ${data.surname}`);
         res.status(201).json({
             message: 'RSBSA form submitted successfully!',
             submissionId: submissionId,
-            submittedAt: submittedAt
+            submittedAt: submittedAt,
         });
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error submitting RSBSA form:', error);
-        console.error('Error details:', {
-            message: error.message,
-            code: error.code,
-            detail: error.detail,
-            hint: error.hint,
-            position: error.position
-        });
         res.status(500).json({
             message: 'Error submitting RSBSA form',
             error: error.message,
-            details: error.detail || error.code
         });
+    } finally {
+        client.release();
     }
 });
 
-// API endpoint to get farm parcels for a specific submission
 app.get('/api/rsbsa_submission/:id/parcels', async (req, res) => {
     try {
         const submissionId = req.params.id;
         console.log(`Fetching farm parcels for submission ID: ${submissionId}`);
+
+        const tableCheck = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'farm_parcels'
+            );
+        `);
+
+        if (!tableCheck.rows[0].exists) {
+            console.log('farm_parcels table does not exist');
+            return res.status(500).json({
+                message: 'Database error: farm_parcels table not found',
+            });
+        }
 
         const query = `
             SELECT 
@@ -585,7 +355,7 @@ app.get('/api/rsbsa_submission/:id/parcels', async (req, res) => {
                 submission_id,
                 parcel_number,
                 farm_location_barangay,
-                farm_location_municipality,
+                farm_location_city_municipality,
                 total_farm_area_ha,
                 within_ancestral_domain,
                 ownership_document_no,
@@ -593,13 +363,12 @@ app.get('/api/rsbsa_submission/:id/parcels', async (req, res) => {
                 ownership_type_registered_owner,
                 ownership_type_tenant,
                 ownership_type_lessee,
-                ownership_type_others,
                 tenant_land_owner_name,
                 lessee_land_owner_name,
                 ownership_others_specify,
                 created_at,
                 updated_at
-            FROM rsbsa_rsbsa_farm_parcels 
+            FROM farm_parcels 
             WHERE submission_id = $1
             ORDER BY parcel_number
         `;
@@ -642,7 +411,7 @@ app.get('/api/rsbsa_farm_parcels', async (req, res) => {
                 rs."LAST NAME",
                 rs."FIRST NAME",
                 rs."MIDDLE NAME"
-            FROM rsbsa_rsbsa_farm_parcels fp
+            FROM rsbsa_farm_parcels fp
             JOIN rsbsa_submission rs ON fp.submission_id = rs.id
             ORDER BY fp.submission_id, fp.parcel_number
         `;
@@ -661,10 +430,10 @@ app.get('/api/rsbsa_farm_parcels', async (req, res) => {
 app.get('/api/rsbsa_farm_parcels/by-farmer', async (req, res) => {
     try {
         const { lastName, firstName } = req.query;
-        
+
         if (!lastName || !firstName) {
-            return res.status(400).json({ 
-                message: 'Both lastName and firstName query parameters are required' 
+            return res.status(400).json({
+                message: 'Both lastName and firstName query parameters are required'
             });
         }
 
@@ -695,7 +464,7 @@ app.get('/api/rsbsa_farm_parcels/by-farmer', async (req, res) => {
                 rs."MIDDLE NAME",
                 rs."BARANGAY",
                 rs."MUNICIPALITY"
-            FROM rsbsa_rsbsa_farm_parcels fp
+            FROM rsbsa_farm_parcels fp
             JOIN rsbsa_submission rs ON fp.submission_id = rs.id
             WHERE rs."LAST NAME" = $1 AND rs."FIRST NAME" = $2
             ORDER BY fp.parcel_number
@@ -728,7 +497,7 @@ app.get('/api/farmers/summary', async (req, res) => {
                 COALESCE(SUM(fp.total_farm_area_ha), 0) as total_farm_area,
                 rs.submitted_at
             FROM rsbsa_submission rs
-            LEFT JOIN rsbsa_rsbsa_farm_parcels fp ON rs.id = fp.submission_id
+            LEFT JOIN rsbsa_farm_parcels fp ON rs.id = fp.submission_id
             GROUP BY rs.id, rs."LAST NAME", rs."FIRST NAME", rs."MIDDLE NAME", 
                      rs."BARANGAY", rs."MUNICIPALITY", rs.submitted_at
             ORDER BY total_parcels DESC, rs."LAST NAME"
@@ -926,4 +695,3 @@ app.get('*', (req, res) => {
 app.listen(port, () => {
     console.log(`Backend server listening on port ${port}`);
 });
-

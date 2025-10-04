@@ -10,6 +10,74 @@ import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
 
+interface Parcel {
+  parcelNo: string;
+  farmLocationBarangay: string;
+  farmLocationMunicipality: string;
+  totalFarmAreaHa: string;
+  withinAncestralDomain: string; // 'Yes' | 'No'
+  ownershipDocumentNo: string;
+  agrarianReformBeneficiary: string; // 'Yes' | 'No'
+  ownershipTypeRegisteredOwner: boolean;
+  ownershipTypeTenant: boolean;
+  ownershipTypeLessee: boolean;
+  ownershipTypeOthers: boolean;
+  tenantLandOwnerName: string;
+  lesseeLandOwnerName: string;
+  ownershipOthersSpecify: string;
+}
+
+interface FormData {
+  // Basic Details
+  surname: string;
+  firstName: string;
+  middleName: string;
+  extensionName: string;
+  houseNumber: string;
+  gender: string;
+  street: string;
+  barangay: string;
+  municipality: string;
+  province: string;
+  dateOfBirth: string;
+  // Farm Profile
+  mainLivelihood: string;
+  farmingActivity: string;
+  otherCrops: string;
+  livestock: string;
+  poultry: string;
+  // Farmland Parcels
+  farmlandParcels: Parcel[];
+  // Dynamic Fields
+  farmerRice?: boolean;
+  farmerCorn?: boolean;
+  farmerOtherCrops?: boolean;
+  farmerOtherCropsText?: string;
+  farmerLivestock?: boolean;
+  farmerLivestockText?: string;
+  farmerPoultry?: boolean;
+  farmerPoultryText?: string;
+  fwLandPrep?: boolean;
+  fwPlanting?: boolean;
+  fwCultivation?: boolean;
+  fwHarvesting?: boolean;
+  fwOthers?: boolean;
+  fwOthersText?: string;
+  ffFishCapture?: boolean;
+  ffAquaculture?: boolean;
+  ffGleaning?: boolean;
+  ffFishProcessing?: boolean;
+  ffFishVending?: boolean;
+  ffOthers?: boolean;
+  ffOthersText?: string;
+  ayPartHousehold?: boolean;
+  ayFormalCourse?: boolean;
+  ayNonFormalCourse?: boolean;
+  ayParticipatedProgram?: boolean;
+  ayOthers?: boolean;
+  ayOthersText?: string;
+}
+
 const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,8 +86,7 @@ const JoRsbsa: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   const [draftId, setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({ // Initialize with default values
-    // Basic Details
+  const [formData, setFormData] = useState<FormData>({
     surname: '',
     firstName: '',
     middleName: '',
@@ -31,93 +98,59 @@ const JoRsbsa: React.FC = () => {
     municipality: '',
     province: '',
     dateOfBirth: '',
-    // Farm Profile
     mainLivelihood: '',
     farmingActivity: '',
     otherCrops: '',
     livestock: '',
     poultry: '',
-    // Farmland parcels
     farmlandParcels: [
       {
         parcelNo: '1',
         farmLocationBarangay: '',
         farmLocationMunicipality: '',
         totalFarmAreaHa: '',
-        withinAncestralDomain: '', // 'Yes' | 'No'
+        withinAncestralDomain: '',
         ownershipDocumentNo: '',
-        agrarianReformBeneficiary: '', // 'Yes' | 'No'
+        agrarianReformBeneficiary: '',
         ownershipTypeRegisteredOwner: false,
         ownershipTypeTenant: false,
         ownershipTypeLessee: false,
         ownershipTypeOthers: false,
         tenantLandOwnerName: '',
         lesseeLandOwnerName: '',
-        ownershipOthersSpecify: ''
-      }
-    ] as any[]
+        ownershipOthersSpecify: '',
+      },
+    ],
   });
 
-  // Extend form data with livelihood-specific fields
-  // Farmers
-  (formData as any).farmerRice = (formData as any).farmerRice ?? false;
-  (formData as any).farmerCorn = (formData as any).farmerCorn ?? false;
-  (formData as any).farmerOtherCrops = (formData as any).farmerOtherCrops ?? false;
-  (formData as any).farmerOtherCropsText = (formData as any).farmerOtherCropsText ?? '';
-  (formData as any).farmerLivestock = (formData as any).farmerLivestock ?? false;
-  (formData as any).farmerLivestockText = (formData as any).farmerLivestockText ?? '';
-  (formData as any).farmerPoultry = (formData as any).farmerPoultry ?? false;
-  (formData as any).farmerPoultryText = (formData as any).farmerPoultryText ?? '';
-  // Farmworkers
-  (formData as any).fwLandPrep = (formData as any).fwLandPrep ?? false;
-  (formData as any).fwPlanting = (formData as any).fwPlanting ?? false;
-  (formData as any).fwCultivation = (formData as any).fwCultivation ?? false;
-  (formData as any).fwHarvesting = (formData as any).fwHarvesting ?? false;
-  (formData as any).fwOthers = (formData as any).fwOthers ?? false;
-  (formData as any).fwOthersText = (formData as any).fwOthersText ?? '';
-  // Fisherfolk
-  (formData as any).ffFishCapture = (formData as any).ffFishCapture ?? false;
-  (formData as any).ffAquaculture = (formData as any).ffAquaculture ?? false;
-  (formData as any).ffGleaning = (formData as any).ffGleaning ?? false;
-  (formData as any).ffFishProcessing = (formData as any).ffFishProcessing ?? false;
-  (formData as any).ffFishVending = (formData as any).ffFishVending ?? false;
-  (formData as any).ffOthers = (formData as any).ffOthers ?? false;
-  (formData as any).ffOthersText = (formData as any).ffOthersText ?? '';
-  // Agri youth
-  (formData as any).ayPartHousehold = (formData as any).ayPartHousehold ?? false;
-  (formData as any).ayFormalCourse = (formData as any).ayFormalCourse ?? false;
-  (formData as any).ayNonFormalCourse = (formData as any).ayNonFormalCourse ?? false;
-  (formData as any).ayParticipatedProgram = (formData as any).ayParticipatedProgram ?? false;
-  (formData as any).ayOthers = (formData as any).ayOthers ?? false;
-  (formData as any).ayOthersText = (formData as any).ayOthersText ?? '';
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleParcelChange = (idx: number, field: string, value: any) => {
+  const handleParcelChange = (idx: number, field: keyof Parcel, value: any) => {
     setFormData(prev => {
-      const parcels = [...(prev.farmlandParcels as any[])];
+      const parcels = [...prev.farmlandParcels];
       parcels[idx] = { ...parcels[idx], [field]: value };
-      return { ...prev, farmlandParcels: parcels } as any;
+      return { ...prev, farmlandParcels: parcels };
     });
   };
 
-  const toggleParcelBool = (idx: number, field: string) => {
+  const toggleParcelBool = (idx: number, field: keyof Parcel) => {
     setFormData(prev => {
-      const parcels = [...(prev.farmlandParcels as any[])];
+      const parcels = [...prev.farmlandParcels];
       parcels[idx] = { ...parcels[idx], [field]: !parcels[idx][field] };
-      return { ...prev, farmlandParcels: parcels } as any;
+      return { ...prev, farmlandParcels: parcels };
     });
+  };
+
+  const toggleBool = (field: keyof FormData) => {
+    setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
   const addParcel = () => {
     setFormData(prev => {
-      const nextNo = String(((prev.farmlandParcels as any[]).length || 0) + 1);
-      const parcels = [...(prev.farmlandParcels as any[])];
+      const nextNo = String(prev.farmlandParcels.length + 1);
+      const parcels = [...prev.farmlandParcels];
       parcels.push({
         parcelNo: nextNo,
         farmLocationBarangay: '',
@@ -132,155 +165,46 @@ const JoRsbsa: React.FC = () => {
         ownershipTypeOthers: false,
         tenantLandOwnerName: '',
         lesseeLandOwnerName: '',
-        ownershipOthersSpecify: ''
+        ownershipOthersSpecify: '',
       });
-      return { ...prev, farmlandParcels: parcels } as any;
+      return { ...prev, farmlandParcels: parcels };
     });
   };
 
   const removeParcel = (idx: number) => {
     setFormData(prev => {
-      const parcels = [...(prev.farmlandParcels as any[])];
+      const parcels = [...prev.farmlandParcels];
       parcels.splice(idx, 1);
-      return { ...prev, farmlandParcels: parcels } as any;
+      return { ...prev, farmlandParcels: parcels };
     });
   };
 
-  // --> Draft and Update section
-
-  /**
-   * Handles the final submission of the RSBSA form.
-   * Calls the submitFinalToServer function and handles its response.
-   * If the response is OK, it shows a success alert and navigates to the JO dashboard.
-   * If the response is not OK, it shows an error alert and logs the error.
-   */
-  const handleFinalSubmit = async () => {
-    try {
-      const submitted = await submitFinalToServer(); // Call the submitFinalToServer function
-      if (!submitted) return; //  
-
-      alert('RSBSA form submitted successfully!');
-      navigate('/jo-dashboard');
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      alert('Error submitting form. Please try again.');
-    }
+  const handleLivelihoodToggle = (value: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      mainLivelihood: checked ? value : prev.mainLivelihood === value ? '' : prev.mainLivelihood,
+    }));
   };
 
-  /**
-   * Updates an existing RSBSA draft in the backend.
-   * Sends a PUT request to the /api/rsbsa-draft/:id endpoint.
-   * The request body contains the formData to be updated.
-   * If the response is OK, the function returns the parsed server response.
-   * If the response is not OK, the function throws an error.
-   * returns The parsed server response if the request is successful, or null if the request fails.
-   */
-
-  const updateExistingDraft = async () => {
-    if (!draftId) return null;
-    try {
-      // 1) Send the whole formData as the request body
-      const response = await fetch(`http://localhost:5000/api/rsbsa-draft/${draftId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: formData }),
-      })
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP ${response.status}`);
-      }
-
-      // 3) Parse the server response
-      const result = await response.json();
-
-      return result;
-    } catch (error) {
-      console.error('Error updating draft:', error);
-      alert('Error updating draft. Please try again.');
-      return null
-    }
+  const handleNextStep = () => {
+    if (currentStep < 4) setCurrentStep(currentStep + 1);
   };
 
-  /**
-   * Handles saving a draft of the RSBSA form.
-   * It first saves the draft to localStorage.
-   * If the draft is new, it calls saveNewDraft to save it to the backend.
-   * If the draft already exists, it calls updateExistingDraft to update it in the backend.
-   * If the request is successful, it shows a success alert.
-   */
-  const handleSaveDraft = async () => {
-    localStorage.setItem('rsbsaDraft', JSON.stringify(formData));
-    if (!draftId) {
-      const created = await saveNewDraft();
-      if (created?.id) setDraftId(String(created.id));
-      alert('Draft saved successfully!');
-    } else {
-      const updated = await updateExistingDraft();
-      if (updated) alert('Draft updated successfully!');
-    }
+  const handlePrevStep = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  /**
-   * Saves a new RSBSA draft to the backend.
-   * Sends a POST request to the /api/rsbsa-draft endpoint.
-   * The request body contains the formData to be saved.
-   * If the response is OK, the function returns the parsed server response.
-   * If the response is not OK, the function throws an error.
-   * returns The parsed server response if the request is successful, or null if the request fails.
-   */
-  const saveNewDraft = async () => {
-    try {
-      // 1) Send the whole formData as the request body
-      const response = await fetch('http://localhost:5000/api/rsbsa-draft', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: formData }),
-      })
+  const isStepActive = (step: number) => currentStep === step;
+  const isStepCompleted = (step: number) => currentStep > step;
 
-      // 2) If HTTP status is not 2xx, throw to trigger catch block
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP ${response.status}`);
-      }
-
-      // 3) Parse the server response
-      const result = await response.json();
-
-      // 4) The server should retrun the new draft id; store it for the future updates
-      if (result.id) setDraftId(String(result.id));
-
-      return result;
-    } catch (error) {
-      console.error('Error saving draft:', error);
-      alert('Error saving draft. Please try again.');
-      return null
-    }
-  };
-
-  // End Draft and Update section
-
-  // --> Handles Draft section
-
-  /**
-   * Handles the form submission.
-   * Performs basic validation by checking if required fields are filled.
-   * If there are missing fields, it alerts the user and returns.
-   * If all required fields are filled, it proceeds to the next step.
-   * If on the last step, it calls handleFinalSubmit to submit the form to the server.
-   */
   const handleSubmitForm = () => {
-    // Check if at least one farmland parcel has required fields
-    const hasValidFarmland = (formData.farmlandParcels as any[]).some(parcel =>
-      parcel.farmLocationBarangay
-    );
+    // Define required fields with proper typing
+    const requiredFields: (keyof FormData)[] = ['surname', 'firstName', 'barangay'];
+    const missingFields = requiredFields.filter(field => !formData[field]);
 
-    const requiredFields = ['surname', 'firstName', 'barangay'];
-    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+    const hasValidFarmland = formData.farmlandParcels.some(
+      parcel => parcel.farmLocationBarangay && parcel.totalFarmAreaHa
+    );
 
     if (missingFields.length > 0) {
       alert(`Please fill in required fields: ${missingFields.join(', ')}`);
@@ -288,11 +212,10 @@ const JoRsbsa: React.FC = () => {
     }
 
     if (!hasValidFarmland) {
-      alert('Please fill in at least one farmland location (barangay)');
+      alert('Please fill in at least one farmland location (barangay) and area');
       return;
     }
 
-    // Rest of the function...
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -300,75 +223,52 @@ const JoRsbsa: React.FC = () => {
     }
   };
 
-  /**
-   * This function is called when the form is submitted on the last step.
-   * It sends the whole formData as the request body to the server.
-   * If the response is not OK, it throws an error with the response message.
-   * If the response is OK, it returns the response JSON.
-   * If there's an error sending the request, it logs the error and alerts the user.
-   * returns {Promise<Object | null>} The response JSON or null if there's an error.
-   */
-  const submitFinalToServer = async () => { // This function is called when 
+  const submitFinalToServer = async () => {
     try {
-      // 1) Send the whole formData as the request body
+      const transformedData = {
+        ...formData,
+        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth) : null,
+        farmlandParcels: formData.farmlandParcels.map(parcel => ({
+          ...parcel,
+          totalFarmAreaHa: parcel.totalFarmAreaHa ? parseFloat(parcel.totalFarmAreaHa) : 0,
+          withinAncestralDomain: parcel.withinAncestralDomain === 'Yes',
+          agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === 'Yes',
+        })),
+      };
+
       const response = await fetch('http://localhost:5000/api/rsbsa_submission', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ draftId, data: formData }),
-      })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draftId, data: transformedData }),
+      });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.message || `HTTP ${response.status}`);
       }
-      const result = await response.json().catch(() => ({}));
-      return result;
+
+      const result = await response.json();
+      console.log('Submission response:', result);
+      return result; // Should include { message, submissionId, submittedAt }
     } catch (error: any) {
       console.error('Error submitting form:', error);
+      alert(`Error submitting form: ${error.message}. Please try again.`);
+      return null;
+    }
+  };
+
+  const handleFinalSubmit = async () => {
+    try {
+      const submitted = await submitFinalToServer();
+      if (submitted && submitted.submissionId) {
+        alert('RSBSA form submitted successfully!');
+        navigate(`/tech-pick-land-parcel/${submitted.submissionId}`);
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
       alert('Error submitting form. Please try again.');
-      return null
     }
   };
-
-  // End of Handle Draft section
-
-
-  /**
-   * Advances the form to the next step if it's not already on the last step.
-   * Does nothing if the form is already on the last step.
-   * returns {void}
-   */
-
-  const handleNextStep = () => {
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handlePrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const isStepActive = (step: number) => currentStep === step;
-  const isStepCompleted = (step: number) => currentStep > step;
-
-  function handleLivelihoodToggle(value: string, checked: boolean): void {
-    setFormData(prev => ({
-      ...prev,
-      mainLivelihood: checked ? value : (prev.mainLivelihood === value ? '' : prev.mainLivelihood)
-    }));
-  }
-
-  function toggleBool(field: string): void {
-    setFormData(prev => ({
-      ...prev,
-      [field]: !(prev as any)[field]
-    }));
-  }
 
 
   return (
