@@ -350,6 +350,10 @@ const JoRsbsa: React.FC = () => {
         <div className="main-content">
           <h2>RSBSA Enrollment Form</h2>
 
+          <div className="back-button">
+            <button className="btn-back" onClick={() => navigate('/jo-rsbsapage')}>Back</button>
+          </div>
+
           <div className="rsbsa-form-container">
             <div className="form-steps">
               <div className={`step ${isStepActive(1) ? 'active' : ''} ${isStepCompleted(1) ? 'completed' : ''}`}>

@@ -51,33 +51,20 @@ const TechMasterlist: React.FC = () => {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any, idx: number) => {
-        // Prefer backend-transformed fields; fallback to raw
-        const referenceNumber = String(item.referenceNumber ?? item.id ?? `RSBSA-${idx + 1}`);
-        const composedName = [item.surname, item.firstName, item.middleName].filter(Boolean).join(', ');
-        const preferredName = (item.farmerName ?? composedName);
-        const farmerName = String(preferredName || '—');
-        const farmerAddress = String(item.farmerAddress ?? item.addressBarangay ?? '—');
+      const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any) => {
+        const referenceNumber = String(item.referenceNumber ?? item.id);
+        const farmerName = String(item.farmerName || '—');
+        const farmerAddress = String(item.farmerAddress ?? '—');
         const farmLocation = String(item.farmLocation ?? '—');
-        const landParcel = String(item.landParcel ?? '—');
-        const parcelArea = (() => {
-          const direct = item.parcelArea ?? item["PARCEL AREA"];
-          if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
-            return String(direct);
-          }
-          // Fallback: parse from landParcel string e.g., "... (1.25 ha)"
-          const match = /\(([^)]+)\)/.exec(landParcel);
-          return match ? match[1] : '—';
-        })();
+        const landParcel = String(item.landParcel ?? item.farmLocation ?? '—');
+        const parcelArea = String(item.parcelArea ?? '—');
         const dateSubmitted = item.dateSubmitted
           ? new Date(item.dateSubmitted).toISOString()
-          : (item.createdAt ? new Date(item.createdAt).toISOString() : '');
-
-        // Reflect database status semantics: Submitted / Not Submitted
-        const status = String(item.status ?? 'Not Submitted');
+          : '';
+        const status = String(item.status ?? 'Not Active');
 
         return {
-          id: String(item.id ?? `${idx}-${Math.random().toString(36).slice(2)}`),
+          id: String(item.id),
           referenceNumber,
           farmerName,
           farmerAddress,
@@ -86,7 +73,11 @@ const TechMasterlist: React.FC = () => {
           dateSubmitted,
           status,
           landParcel,
-          ownershipType: item.ownershipType
+          ownershipType: item.ownershipType || {
+            registeredOwner: false,
+            tenant: false,
+            lessee: false
+          }
         };
       });
 
@@ -95,50 +86,6 @@ const TechMasterlist: React.FC = () => {
     } catch (err: any) {
       setError(err.message ?? 'Failed to load RSBSA records');
       setLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (recordId: string, newStatus: 'Approved' | 'Not Approved') => {
-    try {
-      // Update the record status
-      const updatedRecords = rsbsaRecords.map(record =>
-        record.id === recordId ? { ...record, status: newStatus } : record
-      );
-      setRsbsaRecords(updatedRecords);
-
-      // Here you would typically make an API call to update the backend
-      // await fetch(`http://localhost:5000/api/RSBSAform/${recordId}/status`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ status: newStatus })
-      // });
-
-      console.log(`Status updated for record ${recordId} to ${newStatus}`);
-    } catch (err: any) {
-      console.error('Error updating status:', err);
-      // Revert the change if the API call fails
-      fetchRSBSARecords();
-    }
-  };
-
-  const handleSaveDraft = async (recordId: string) => {
-    try {
-      const updatedRecords = rsbsaRecords.map(record =>
-        record.id === recordId ? { ...record, isDraft: true, status: 'Draft' as const } : record
-      );
-      setRsbsaRecords(updatedRecords);
-
-      // Here you would typically make an API call to save as draft
-      // await fetch(`http://localhost:5000/api/RSBSAform/${recordId}/draft`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ isDraft: true, status: 'Draft' })
-      // });
-
-      console.log(`Record ${recordId} saved as draft`);
-    } catch (err: any) {
-      console.error('Error saving draft:', err);
-      fetchRSBSARecords();
     }
   };
 
@@ -163,71 +110,245 @@ const TechMasterlist: React.FC = () => {
 
   const getStatusClass = (status: string) => {
     switch (status) {
-      case 'Submitted': return 'status-approved';
-      case 'Not Submitted': return 'status-not-approved';
+      case 'Active Farmer': return 'status-approved';
+      case 'Not Active': return 'status-not-approved';
       default: return 'status-pending';
     }
+  };
+
+  const toggleStatus = async (id: string) => {
+    console.log('Toggle status clicked for ID:', id);
+    
+    try {
+      const record = rsbsaRecords.find((r) => r.id === id);
+      if (!record) {
+        console.error('Record not found for ID:', id);
+        setError('Record not found');
+        return;
+      }
+
+      console.log('Found record:', record);
+      const newStatus = record.status === 'Active Farmer' ? 'Not Active' : 'Active Farmer';
+      console.log('Updating status from', record.status, 'to', newStatus);
+
+      const requestBody = {
+        status: newStatus
+      };
+      console.log('Request body:', requestBody);
+
+      const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
+        console.error('Error details:', errorData.details);
+        throw new Error(`Failed to update status: ${errorData.message || response.status}. Details: ${errorData.details || 'No additional details'}`);
+      }
+
+      const responseData = await response.json();
+      console.log('Success response:', responseData);
+
+      console.log('Status updated successfully, refetching records...');
+      // Refetch records to ensure UI is in sync with backend
+      await fetchRSBSARecords();
+    } catch (error: any) {
+      console.error('Error updating farmer status:', error);
+      setError(`Failed to update farmer status: ${error.message}`);
+    }
+  };
+
+  const printActiveFarmers = () => {
+    const activeFarmers = rsbsaRecords.filter(record => record.status === 'Active Farmer');
+
+    if (activeFarmers.length === 0) {
+      alert('No active farmers found to print.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to print the active farmers list.');
+      return;
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Active Farmers List</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+              color: #333;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #333;
+              padding-bottom: 10px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+            }
+            .header p {
+              margin: 5px 0;
+              font-size: 14px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            th, td {
+              border: 1px solid #333;
+              padding: 8px;
+              text-align: left;
+              font-size: 12px;
+            }
+            th {
+              background-color: #f5f5f5;
+              font-weight: bold;
+            }
+            .summary {
+              margin-top: 20px;
+              font-weight: bold;
+              font-size: 14px;
+            }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>ACTIVE FARMERS LIST</h1>
+            <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            <p>Total Active Farmers: ${activeFarmers.length}</p>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Reference Number</th>
+                <th>Farmer Name</th>
+                <th>Farmer Address</th>
+                <th>Parcel Address</th>
+                <th>Parcel Area</th>
+                <th>Date Submitted</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${activeFarmers.map((farmer, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${farmer.referenceNumber}</td>
+                  <td>${farmer.farmerName}</td>
+                  <td>${farmer.farmerAddress}</td>
+                  <td>${farmer.farmLocation}</td>
+                  <td>${farmer.parcelArea}</td>
+                  <td>${formatDate(farmer.dateSubmitted)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="summary">
+            <p>Total Active Farmers: ${activeFarmers.length}</p>
+            <p>Report generated by FFRS System</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
   };
 
   return (
     <div className="page-container">
       <div className="page">
-        {/* Sidebar starts here */}
         <div className="sidebar">
           <nav className="sidebar-nav">
             <div className='sidebar-logo'>
               <img src={LogoImage} alt="Logo" />
             </div>
-
             <button
-                            className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-dashboard')}
-                        >
-                            <span className="nav-icon">
-                                <img src={HomeIcon} alt="Home" />
-                            </span>
-                            <span className="nav-text">Home</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-rsbsa')}
-                        >
-                            <span className="nav-icon">
-                                <img src={RSBSAIcon} alt="RSBSA" />
-                            </span>
-                            <span className="nav-text">RSBSA</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={ApproveIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
-                            onClick={() => navigate('/')}
-                        >
-                            <span className="nav-icon">
-                                <img src={LogoutIcon} alt="Logout" />
-                            </span>
-                            <span className="nav-text">Logout</span>
-                        </button>
-                    </nav>
-                </div>
-                {/* Sidebar ends here */}
-
-        {/* Main content starts here */}
+              className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
+              onClick={() => navigate('/technician-dashboard')}
+            >
+              <span className="nav-icon">
+                <img src={HomeIcon} alt="Home" />
+              </span>
+              <span className="nav-text">Home</span>
+            </button>
+            <button
+              className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
+              onClick={() => navigate('/technician-rsbsa')}
+            >
+              <span className="nav-icon">
+                <img src={RSBSAIcon} alt="RSBSA" />
+              </span>
+              <span className="nav-text">RSBSA</span>
+            </button>
+            <button
+              className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
+              onClick={() => navigate('/technician-masterlist')}
+            >
+              <span className="nav-icon">
+                <img src={ApproveIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Masterlist</span>
+            </button>
+            <button
+              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+              onClick={() => navigate('/')}
+            >
+              <span className="nav-icon">
+                <img src={LogoutIcon} alt="Logout" />
+              </span>
+              <span className="nav-text">Logout</span>
+            </button>
+          </nav>
+        </div>
         <div className="main-content">
           <h2>Masterlist</h2>
-
           <div className="content-card">
-            {/* Filters and Search */}
+            <div className="print-section" style={{ marginBottom: '20px', textAlign: 'right' }}>
+              <button
+                onClick={printActiveFarmers}
+                className="print-button"
+                style={{
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Print Active Farmers List
+              </button>
+            </div>
             <div className="filters-section">
               <div className="search-filter">
                 <input
@@ -238,7 +359,6 @@ const TechMasterlist: React.FC = () => {
                   className="search-input"
                 />
               </div>
-
               <div className="status-filter">
                 <select
                   value={selectedStatus}
@@ -246,15 +366,11 @@ const TechMasterlist: React.FC = () => {
                   className="status-select"
                 >
                   <option value="all">All Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Not Approved">Not Approved</option>
-                  <option value="Draft">Draft</option>
+                  <option value="Active Farmer">Active Farmer</option>
+                  <option value="Not Active">Not Active</option>
                 </select>
               </div>
             </div>
-
-            {/* RSBSA Records Table */}
             <div className="table-container">
               <table className="farmers-table">
                 <thead>
@@ -276,31 +392,29 @@ const TechMasterlist: React.FC = () => {
                   {loading && (
                     <tr><td colSpan={7} className="loading-cell">Loading...</td></tr>
                   )}
-
                   {error && !loading && (
                     <tr><td colSpan={7} className="error-cell">Error: {error}</td></tr>
                   )}
-
                   {!loading && !error && filteredRecords.length > 0 && (
-                    filteredRecords.map((record) => {
-                      return (
-                        <tr key={record.id}>
-                          <td>{record.referenceNumber}</td>
-                          <td>{record.farmerName}</td>
-                          <td>{record.farmerAddress}</td>
-                          <td>{record.farmLocation}</td>
-                          <td>{record.parcelArea}</td>
-                          <td>{formatDate(record.dateSubmitted)}</td>
-                          <td>
-                            <span className={`status-pill ${getStatusClass(record.status)}`}>
-                              {record.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
+                    filteredRecords.map((record) => (
+                      <tr key={record.id}>
+                        <td>{record.referenceNumber}</td>
+                        <td>{record.farmerName}</td>
+                        <td>{record.farmerAddress}</td>
+                        <td>{record.farmLocation}</td>
+                        <td>{record.parcelArea}</td>
+                        <td>{formatDate(record.dateSubmitted)}</td>
+                        <td>
+                          <button
+                            className={`status-button ${getStatusClass(record.status)}`}
+                            onClick={() => toggleStatus(record.id)}
+                          >
+                            {record.status}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
                   )}
-
                   {!loading && !error && filteredRecords.length === 0 && (
                     Array.from({ length: 16 }).map((_, i) => (
                       <tr key={`empty-${i}`}>

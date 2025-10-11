@@ -7,6 +7,17 @@
   flex-direction: column;
 }
 
+.btn-back {
+  background: #A0C878;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
 h2 {
   display: flex;
   margin-bottom: 10px;
@@ -665,7 +676,7 @@ h2 {
 }
 
 .owners-table th {
-  padding: 16px 12px;
+  padding: 12px 12px;
   text-align: left;
   font-weight: 600;
   font-size: 13px;
@@ -693,7 +704,7 @@ h2 {
 }
 
 .owners-table td {
-  padding: 14px 12px;
+  padding: 16px 12px;
   color: #374151;
   border-right: 1px solid #f3f4f6;
 }
@@ -704,6 +715,7 @@ h2 {
 
 .owners-table tbody tr:nth-child(even) {
   background-color: #fafafa;
+  gap: 10px;
 }
 
 /* Loading, Error, and No Data States */
