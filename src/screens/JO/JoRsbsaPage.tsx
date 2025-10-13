@@ -53,10 +53,10 @@ const JoRsbsaPage: React.FC = () => {
       }
       const data = await response.json();
       console.log('Received data from API:', JSON.stringify(data, null, 2));
-      
+
       // Debug ownership types
       console.log('Sample record ownership type:', data[0]?.ownershipType);
-      console.log('Records with ownership types:', data.filter(r => r.ownershipType).length);
+      console.log('Records with ownership types:', data.filter((r: { ownershipType: any; }) => r.ownershipType).length);
 
       const dataWithTotalArea = data.map((record: RSBSARecord) => {
         const calculatedTotal = calculateTotalFarmArea(data, record.farmerName);
