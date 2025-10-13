@@ -138,7 +138,13 @@ const JoRsbsa: React.FC = () => {
   const toggleParcelBool = (idx: number, field: keyof Parcel) => {
     setFormData(prev => {
       const parcels = [...prev.farmlandParcels];
-      parcels[idx] = { ...parcels[idx], [field]: !parcels[idx][field] };
+      parcels[idx] = {
+        ...parcels[idx],
+        ownershipTypeRegisteredOwner: field === 'ownershipTypeRegisteredOwner' ? !parcels[idx].ownershipTypeRegisteredOwner : false,
+        ownershipTypeTenant: field === 'ownershipTypeTenant' ? !parcels[idx].ownershipTypeTenant : false,
+        ownershipTypeLessee: field === 'ownershipTypeLessee' ? !parcels[idx].ownershipTypeLessee : false,
+        ownershipTypeOthers: field === 'ownershipTypeOthers' ? !parcels[idx].ownershipTypeOthers : false,
+      };
       return { ...prev, farmlandParcels: parcels };
     });
   };
@@ -198,14 +204,24 @@ const JoRsbsa: React.FC = () => {
   const isStepCompleted = (step: number) => currentStep > step;
 
   const handleSubmitForm = () => {
-    // Define required fields with proper typing
+    // Define required fields
     const requiredFields: (keyof FormData)[] = ['surname', 'firstName', 'barangay'];
     const missingFields = requiredFields.filter(field => !formData[field]);
 
+    // Check if at least one farmland parcel has valid data
     const hasValidFarmland = formData.farmlandParcels.some(
       parcel => parcel.farmLocationBarangay && parcel.totalFarmAreaHa
     );
 
+    // Validate ownership type for at least one parcel
+    const hasValidOwnershipType = formData.farmlandParcels.some(
+      parcel =>
+        parcel.ownershipTypeRegisteredOwner ||
+        parcel.ownershipTypeTenant ||
+        parcel.ownershipTypeLessee
+    );
+
+    // Combine validation checks
     if (missingFields.length > 0) {
       alert(`Please fill in required fields: ${missingFields.join(', ')}`);
       return;
@@ -213,6 +229,11 @@ const JoRsbsa: React.FC = () => {
 
     if (!hasValidFarmland) {
       alert('Please fill in at least one farmland location (barangay) and area');
+      return;
+    }
+
+    if (!hasValidOwnershipType) {
+      alert('Please select at least one ownership type (Registered Owner, Tenant, or Lessee) for at least one parcel');
       return;
     }
 
@@ -231,31 +252,47 @@ const JoRsbsa: React.FC = () => {
         farmlandParcels: formData.farmlandParcels.map(parcel => ({
           ...parcel,
           totalFarmAreaHa: parcel.totalFarmAreaHa ? parseFloat(parcel.totalFarmAreaHa) : 0,
-          withinAncestralDomain: parcel.withinAncestralDomain === 'Yes',
-          agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === 'Yes',
+          withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
+          agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
+          ownershipType: {
+            registeredOwner: parcel.ownershipTypeRegisteredOwner || false,
+            tenant: parcel.ownershipTypeTenant || false,
+            lessee: parcel.ownershipTypeLessee || false,
+          },
+          // Optional: Remove the old flat fields so only ownershipType remains
+          // You can comment out or filter these as needed
+          // ownershipTypeRegisteredOwner: undefined,
+          // ownershipTypeTenant: undefined,
+          // ownershipTypeLessee: undefined,
         })),
       };
 
-      const response = await fetch('http://localhost:5000/api/rsbsa_submission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("http://localhost:5000/api/rsbsa_submission", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draftId, data: transformedData }),
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || `HTTP ${response.status}`);
+        const err = await response.json().catch(() => null);
+        throw new Error(err?.message || `HTTP ${response.status}`);
       }
-
       const result = await response.json();
-      console.log('Submission response:', result);
-      return result; // Should include { message, submissionId, submittedAt }
-    } catch (error: any) {
-      console.error('Error submitting form:', error);
-      alert(`Error submitting form: ${error.message}. Please try again.`);
+      console.log("Submission response:", result);
+      return result; // Should include message, submissionId, submittedAt
+    } catch (error) {
+      let message = "Unknown error";
+      if (error instanceof Error) {
+        message = error.message;
+      } else if (typeof error === "string") {
+        message = error;
+      }
+      console.error("Error submitting form:", error);
+      alert("Error submitting form: " + message + ". Please try again.");
       return null;
     }
   };
+
 
   const handleFinalSubmit = async () => {
     try {

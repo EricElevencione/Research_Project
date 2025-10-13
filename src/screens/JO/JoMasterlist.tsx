@@ -98,50 +98,6 @@ const JoMasterlist: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (recordId: string, newStatus: 'Approved' | 'Not Approved') => {
-    try {
-      // Update the record status
-      const updatedRecords = rsbsaRecords.map(record =>
-        record.id === recordId ? { ...record, status: newStatus } : record
-      );
-      setRsbsaRecords(updatedRecords);
-
-      // Here you would typically make an API call to update the backend
-      // await fetch(`http://localhost:5000/api/RSBSAform/${recordId}/status`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ status: newStatus })
-      // });
-
-      console.log(`Status updated for record ${recordId} to ${newStatus}`);
-    } catch (err: any) {
-      console.error('Error updating status:', err);
-      // Revert the change if the API call fails
-      fetchRSBSARecords();
-    }
-  };
-
-  const handleSaveDraft = async (recordId: string) => {
-    try {
-      const updatedRecords = rsbsaRecords.map(record =>
-        record.id === recordId ? { ...record, isDraft: true, status: 'Draft' as const } : record
-      );
-      setRsbsaRecords(updatedRecords);
-
-      // Here you would typically make an API call to save as draft
-      // await fetch(`http://localhost:5000/api/RSBSAform/${recordId}/draft`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ isDraft: true, status: 'Draft' })
-      // });
-
-      console.log(`Record ${recordId} saved as draft`);
-    } catch (err: any) {
-      console.error('Error saving draft:', err);
-      fetchRSBSARecords();
-    }
-  };
-
   const filteredRecords = rsbsaRecords.filter(record => {
     const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
     const q = searchQuery.toLowerCase();

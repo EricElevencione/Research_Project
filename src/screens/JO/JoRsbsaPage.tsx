@@ -48,15 +48,16 @@ const JoRsbsaPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
-      console.log('Received data from API:', data);
+      console.log('Received data from API:', JSON.stringify(data, null, 2));
+      
+      // Debug ownership types
+      console.log('Sample record ownership type:', data[0]?.ownershipType);
+      console.log('Records with ownership types:', data.filter(r => r.ownershipType).length);
 
-      // Add total farm area and parcel count to each record
       const dataWithTotalArea = data.map((record: RSBSARecord) => {
         const calculatedTotal = calculateTotalFarmArea(data, record.farmerName);
         const parcelCount = countFarmParcels(data, record.farmerName);
@@ -69,9 +70,8 @@ const JoRsbsaPage: React.FC = () => {
       });
 
       setRsbsaRecords(dataWithTotalArea);
-
-      // Automatically filter for registered owners only
       const registeredOwnersData = filterRegisteredOwners(dataWithTotalArea);
+      console.log('Filtered registered owners:', JSON.stringify(registeredOwnersData, null, 2));
       setRegisteredOwners(registeredOwnersData);
       setError(null);
     } catch (err: any) {
@@ -106,23 +106,19 @@ const JoRsbsaPage: React.FC = () => {
 
   // Function to filter registered owners only
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
-    return records.filter(record => {
-      // Check if the record represents a registered owner
-      // A registered owner is someone where OWNERSHIP_TYPE_REGISTERED_OWNER is true
-      // and they are NOT a tenant or lessee
-      if (record.ownershipType) {
-        return record.ownershipType.registeredOwner === true &&
-          record.ownershipType.tenant === false &&
-          record.ownershipType.lessee === false;
+    console.log('Total records to filter:', records.length);
+    const filtered = records.filter(record => {
+      if (!record.ownershipType) {
+        console.warn(`Missing ownershipType for ${record.farmerName}`, record);
+        return false;
       }
-
-      // Fallback: if ownershipType is not available, check for land parcel data
-      // This is a safety net for records that might not have ownership type data
-      const hasLandParcel = record.landParcel && record.landParcel !== 'N/A' && record.landParcel.trim() !== '';
-      const hasFarmLocation = record.farmLocation && record.farmLocation !== 'N/A' && record.farmLocation.trim() !== '';
-
-      return hasLandParcel && hasFarmLocation;
+      const isRegisteredOwner = record.ownershipType.registeredOwner === true;
+      console.log(`${record.farmerName}: registeredOwner=${record.ownershipType.registeredOwner}, tenant=${record.ownershipType.tenant}, lessee=${record.ownershipType.lessee}, isRegisteredOwner=${isRegisteredOwner}`);
+      return isRegisteredOwner;
     });
+    console.log('Filtered registered owners count:', filtered.length);
+    console.log('Filtered registered owners:', JSON.stringify(filtered, null, 2));
+    return filtered;
   };
 
   // Load data on component mount

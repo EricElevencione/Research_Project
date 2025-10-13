@@ -17,6 +17,9 @@ ADD COLUMN IF NOT EXISTS "PARCEL ADDRESS" VARCHAR(500),
 ADD COLUMN IF NOT EXISTS "PARCEL AREA" DECIMAL(10,2),
 ADD COLUMN IF NOT EXISTS "MOBILE NUMBER" VARCHAR(20),
 ADD COLUMN IF NOT EXISTS "MAIN LIVELIHOOD" VARCHAR(100),
+ADD COLUMN IF NOT EXISTS "OWNERSHIP_TYPE_REGISTERED_OWNER" BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS "OWNERSHIP_TYPE_TENANT" BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS "OWNERSHIP_TYPE_LESSEE" BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Submitted';
 
 -- Create indexes for better performance
@@ -72,6 +75,21 @@ SET
     END,
     "MOBILE NUMBER" = data->>'mobileNumber',
     "MAIN LIVELIHOOD" = data->>'mainLivelihood',
+    "OWNERSHIP_TYPE_REGISTERED_OWNER" = CASE 
+        WHEN jsonb_array_length(data->'farmlandParcels') > 0 
+        THEN (data->'farmlandParcels'->0->>'ownershipTypeRegisteredOwner')::boolean
+        ELSE FALSE 
+    END,
+    "OWNERSHIP_TYPE_TENANT" = CASE 
+        WHEN jsonb_array_length(data->'farmlandParcels') > 0 
+        THEN (data->'farmlandParcels'->0->>'ownershipTypeTenant')::boolean
+        ELSE FALSE 
+    END,
+    "OWNERSHIP_TYPE_LESSEE" = CASE 
+        WHEN jsonb_array_length(data->'farmlandParcels') > 0 
+        THEN (data->'farmlandParcels'->0->>'ownershipTypeLessee')::boolean
+        ELSE FALSE 
+    END,
     status = 'Submitted'
 WHERE data IS NOT NULL;
 

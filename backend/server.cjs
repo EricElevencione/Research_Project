@@ -250,8 +250,29 @@ app.post('/api/rsbsa_submission', async (req, res) => {
         if (data.farmlandParcels && data.farmlandParcels.length > 0) {
             const firstParcel = data.farmlandParcels[0];
             farmLocation = `${firstParcel.farmLocationBarangay || ''}, ${firstParcel.farmLocationMunicipality || ''}`.trim();
-            if (farmLocation === ',') farmLocation = ''; // Avoid just a comma
+            if (farmLocation === ',') farmLocation = '';
         }
+
+        // Validate ownership type
+        if (data.farmlandParcels && data.farmlandParcels.length > 0) {
+            const hasValidOwnershipType = data.farmlandParcels.some(
+                parcel =>
+                    parcel.ownershipTypeRegisteredOwner ||
+                    parcel.ownershipTypeTenant ||
+                    parcel.ownershipTypeLessee
+            );
+            if (!hasValidOwnershipType) {
+                throw new Error('At least one parcel must have a valid ownership type (Registered Owner, Tenant, or Lessee)');
+            }
+        } else {
+            throw new Error('At least one farmland parcel is required');
+        }
+
+        // Derive ownership types from the first parcel (or adjust logic as needed)
+        const firstParcel = data.farmlandParcels && data.farmlandParcels.length > 0 ? data.farmlandParcels[0] : {};
+        const ownershipTypeRegisteredOwner = firstParcel.ownershipTypeRegisteredOwner || false;
+        const ownershipTypeTenant = firstParcel.ownershipTypeTenant || false;
+        const ownershipTypeLessee = firstParcel.ownershipTypeLessee || false;
 
         const insertSubmissionQuery = `
             INSERT INTO rsbsa_submission (
@@ -274,13 +295,13 @@ app.post('/api/rsbsa_submission', async (req, res) => {
             data.dateOfBirth ? new Date(data.dateOfBirth) : null,
             data.barangay || '',
             data.municipality || '',
-            farmLocation, // Updated to use derived location
+            farmLocation,
             null, // PARCEL AREA
             totalFarmArea,
             data.mainLivelihood || '',
-            false, // ownershipType.registeredOwner
-            false, // ownershipType.tenant
-            false, // ownershipType.lessee
+            ownershipTypeRegisteredOwner,
+            ownershipTypeTenant,
+            ownershipTypeLessee,
             'Submitted',
         ];
 
@@ -340,7 +361,7 @@ app.post('/api/rsbsa_submission', async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error submitting RSBSA form:', error);
-        res.status(500).json({
+        res.status(400).json({
             message: 'Error submitting RSBSA form',
             error: error.message,
         });
@@ -349,6 +370,7 @@ app.post('/api/rsbsa_submission', async (req, res) => {
     }
 });
 
+// D ko sure man
 app.get('/api/rsbsa_submission/:id/parcels', async (req, res) => {
     try {
         const submissionId = req.params.id;
@@ -533,7 +555,13 @@ app.get('/api/farmers/summary', async (req, res) => {
     }
 });
 
-// GET endpoint to fetch RSBSA submissions for masterlist
+// GET endpoint to fetch RSBSA submissions for masterlist for the 
+
+/*
+Purpose:For the masterlist 
+Where: In the file 
+Description: 
+*/
 app.get('/api/rsbsa_submission', async (req, res) => {
     try {
         console.log('Fetching RSBSA submissions...');
@@ -549,7 +577,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
 
         if (!tableCheck.rows[0].exists) {
             console.log('rsbsa_submission table does not exist');
-            return res.status(404).json({
+            return res.status(404).json({ // Table not found
                 error: 'rsbsa_submission table not found',
                 message: 'The rsbsa_submission table does not exist in the database.'
             });
@@ -566,8 +594,15 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         console.log('Available columns:', columnResult.rows.map(row => row.column_name));
 
         // Check if this is the JSONB version or structured version
-        const hasJsonbColumn = columnResult.rows.some(row => row.column_name === 'data');
-        const hasStructuredColumns = columnResult.rows.some(row => row.column_name === 'LAST NAME');
+        const hasJsonbColumn = columnResult.rows.some(row => row.column_name === 'data'); // This is the JSONB column
+        const hasStructuredColumns = columnResult.rows.some(row => row.column_name === 'LAST NAME'); // These are the structured columns
+        const hasOwnershipColumns = columnResult.rows.some(row => row.column_name === 'OWNERSHIP_TYPE_REGISTERED_OWNER');
+        
+        console.log('Table structure check:', {
+            hasJsonbColumn,
+            hasStructuredColumns,
+            hasOwnershipColumns
+        });
 
         let query;
         if (hasJsonbColumn && !hasStructuredColumns) {
@@ -586,24 +621,36 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         } else {
             // This is the structured table
             console.log('Using structured table');
+            // Build query dynamically based on available columns
+            let selectFields = `
+                id,
+                "LAST NAME",
+                "FIRST NAME", 
+                "MIDDLE NAME",
+                "EXT NAME",
+                "GENDER",
+                "BIRTHDATE",
+                "BARANGAY",
+                "MUNICIPALITY", 
+                "FARM LOCATION",
+                "PARCEL AREA",
+                "TOTAL FARM AREA",
+                "MAIN LIVELIHOOD",
+                status,
+                submitted_at,
+                created_at,
+                updated_at
+            `;
+            
+            if (hasOwnershipColumns) {
+                selectFields += `,
+                "OWNERSHIP_TYPE_REGISTERED_OWNER",
+                "OWNERSHIP_TYPE_TENANT",
+                "OWNERSHIP_TYPE_LESSEE"`;
+            }
+            
             query = `
-                SELECT 
-                    id,
-                    "LAST NAME",
-                    "FIRST NAME", 
-                    "MIDDLE NAME",
-                    "EXT NAME",
-                    "GENDER",
-                    "BIRTHDATE",
-                    "BARANGAY",
-                    "MUNICIPALITY", 
-                    "FARM LOCATION",
-                    "PARCEL AREA",
-                    "MAIN LIVELIHOOD",
-                    status,
-                    submitted_at,
-                    created_at,
-                    updated_at
+                SELECT ${selectFields}
                 FROM rsbsa_submission 
                 WHERE "LAST NAME" IS NOT NULL 
                 ORDER BY submitted_at DESC
@@ -611,6 +658,16 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         }
         const result = await pool.query(query);
         console.log(`Found ${result.rows.length} submissions in database`);
+        
+        // Debug: Check ownership type data in raw results
+        if (result.rows.length > 0) {
+            console.log('Sample raw record:', JSON.stringify(result.rows[0], null, 2));
+            console.log('Ownership type fields in raw data:', {
+                registeredOwner: result.rows[0]["OWNERSHIP_TYPE_REGISTERED_OWNER"],
+                tenant: result.rows[0]["OWNERSHIP_TYPE_TENANT"],
+                lessee: result.rows[0]["OWNERSHIP_TYPE_LESSEE"]
+            });
+        }
 
         // Transform the data to match the frontend's expected format
         const submissions = result.rows.map(row => {
@@ -620,11 +677,11 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                 const fullName = [data.surname, data.firstName, data.middleName]
                     .filter(Boolean)
                     .join(', ');
-                
+
                 const farmLocation = data.farmlandParcels && data.farmlandParcels.length > 0
                     ? `${data.farmlandParcels[0].farmLocationBarangay || ''}, ${data.farmlandParcels[0].farmLocationMunicipality || ''}`.replace(/^,\s*|,\s*$/g, '')
                     : 'N/A';
-                
+
                 const parcelArea = data.farmlandParcels && data.farmlandParcels.length > 0
                     ? data.farmlandParcels[0].totalFarmAreaHa
                     : 'N/A';
@@ -658,6 +715,14 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                     ? `${row["FARM LOCATION"]}${row["PARCEL AREA"] ? ` (${row["PARCEL AREA"]} ha)` : ''}`
                     : 'N/A';
 
+                const ownershipType = {
+                    registeredOwner: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_REGISTERED_OWNER"] : false,
+                    tenant: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_TENANT"] : false,
+                    lessee: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_LESSEE"] : false
+                };
+                
+                console.log(`Processing ${fullName}: ownershipType=`, ownershipType, `(hasOwnershipColumns=${hasOwnershipColumns})`);
+
                 return {
                     id: row.id,
                     referenceNumber: `RSBSA-${row.id}`,
@@ -669,13 +734,9 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                     dateSubmitted: row.submitted_at || row.created_at,
                     status: row.status || 'Not Active',
                     parcelArea: row["PARCEL AREA"] ? String(row["PARCEL AREA"]) : '—',
-                    totalFarmArea: 0,
+                    totalFarmArea: parseFloat(row["TOTAL FARM AREA"]) || 0,
                     landParcel: parcelInfo,
-                    ownershipType: {
-                        registeredOwner: false,
-                        tenant: false,
-                        lessee: false
-                    }
+                    ownershipType: ownershipType
                 };
             }
         });
@@ -721,14 +782,14 @@ app.put('/api/rsbsa_submission/:id', async (req, res) => {
         // Check if the record exists
         const checkQuery = `SELECT id, status FROM rsbsa_submission WHERE id = $1`;
         const checkResult = await pool.query(checkQuery, [id]);
-        
+
         if (checkResult.rowCount === 0) {
             return res.status(404).json({
                 message: 'RSBSA submission not found',
                 error: 'No record found with the provided ID'
             });
         }
-        
+
         console.log('Found record:', checkResult.rows[0]);
 
         // Parse farmer name if provided
@@ -814,3 +875,4 @@ app.get('*', (req, res) => {
 app.listen(port, () => {
     console.log(`Backend server listening on port ${port}`);
 });
+
