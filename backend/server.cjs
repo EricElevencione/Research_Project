@@ -21,7 +21,7 @@ const pool = new Pool({
     user: process.env.DB_USER || 'postgres', // Replace with your database username
     host: process.env.DB_HOST || 'localhost', // Replace with your database host
     database: process.env.DB_NAME || 'Masterlist', // Replace with your database name
-    password: process.env.DB_PASSWORD || 'postgresadmin', // Replace with your database password
+    password: process.env.DB_PASSWORD || 'admin123', // Replace with your database password
     port: process.env.DB_PORT || 5432, // Replace with your database port
 });
 
@@ -53,7 +53,7 @@ app.get('/api/health', (req, res) => { // Health check
 // Database test endpoint
 app.get('/api/test-db', async (req, res) => {
     try {
-        const result = await pool.query('SELECT COUNT(*) as count FROM rsbsa_submission');
+        const result = await pool.query('SELECT COUNT(*) as count FROM rsbsaform');
         res.json({
             status: 'OK',
             message: 'Database connection successful',
