@@ -21,7 +21,8 @@ const pool = new Pool({
     user: process.env.DB_USER || 'postgres', // Replace with your database username
     host: process.env.DB_HOST || 'localhost', // Replace with your database host
     database: process.env.DB_NAME || 'Masterlist', // Replace with your database name
-    password: process.env.DB_PASSWORD || 'admin123', // Replace with your database password
+    password: process.env.DB_PASSWORD || 'postgresadmin', // Replace with your database password 
+    // password: process.env.DB_PASSWORD || 'postgresadmin', 
     port: process.env.DB_PORT || 5432, // Replace with your database port
 });
 
@@ -597,7 +598,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         const hasJsonbColumn = columnResult.rows.some(row => row.column_name === 'data'); // This is the JSONB column
         const hasStructuredColumns = columnResult.rows.some(row => row.column_name === 'LAST NAME'); // These are the structured columns
         const hasOwnershipColumns = columnResult.rows.some(row => row.column_name === 'OWNERSHIP_TYPE_REGISTERED_OWNER');
-        
+
         console.log('Table structure check:', {
             hasJsonbColumn,
             hasStructuredColumns,
@@ -641,14 +642,14 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                 created_at,
                 updated_at
             `;
-            
+
             if (hasOwnershipColumns) {
                 selectFields += `,
                 "OWNERSHIP_TYPE_REGISTERED_OWNER",
                 "OWNERSHIP_TYPE_TENANT",
                 "OWNERSHIP_TYPE_LESSEE"`;
             }
-            
+
             query = `
                 SELECT ${selectFields}
                 FROM rsbsa_submission 
@@ -658,7 +659,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         }
         const result = await pool.query(query);
         console.log(`Found ${result.rows.length} submissions in database`);
-        
+
         // Debug: Check ownership type data in raw results
         if (result.rows.length > 0) {
             console.log('Sample raw record:', JSON.stringify(result.rows[0], null, 2));
@@ -720,7 +721,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                     tenant: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_TENANT"] : false,
                     lessee: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_LESSEE"] : false
                 };
-                
+
                 console.log(`Processing ${fullName}: ownershipType=`, ownershipType, `(hasOwnershipColumns=${hasOwnershipColumns})`);
 
                 return {
