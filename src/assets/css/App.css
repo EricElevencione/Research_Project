@@ -1,3 +1,143 @@
+/* Map-first layout with floating panel (keeps Dashboard title) */
+.jo-map-layout {
+    position: relative;
+}
+
+.jo-map-layout .dashboard-header {
+    margin-bottom: 22px;
+}
+
+.jo-map-layout .map-area {
+    position: relative;
+    height: calc(104vh - 140px);
+    background: #FAF6E9;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Hide Leaflet layers toggle button on JO Dashboard only */
+.jo-map-layout .map-area .leaflet-control-layers-toggle {
+    display: none !important;
+}
+
+.jo-map-layout .map-area>div {
+    height: 100% !important;
+}
+
+.floating-panel {
+    position: absolute;
+    right: 18px;
+    top: 188px;
+    /* below the header */
+    width: 360px;
+    max-height: calc(100% - 120px);
+    overflow-y: auto;
+    background: transparent;
+    padding: 12px;
+    z-index: 2000;
+    /* ensure above Leaflet map panes */
+    pointer-events: auto;
+}
+
+.panel-section {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+    margin: 10px;
+}
+
+.panel-header {
+    padding: 14px 16px 8px 16px;
+}
+
+.panel-header.with-bar {
+    border-bottom: 4px solid #7c3aed;
+}
+
+.panel-title {
+    margin: 0;
+    font-size: 16px;
+}
+
+.panel-title .muted {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.panel-body {
+    padding: 8px 16px 14px 16px;
+    z-index: 10;
+
+}
+
+.progress-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.progress-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #eef2ff;
+    color: #4f46e5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.row-caps {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: #111827;
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+}
+
+.metric-label {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.metric-value {
+    font-weight: 700;
+}
+
+.link-btn {
+    margin-top: 8px;
+    background: transparent;
+    color: #10b981;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+    .floating-panel {
+        width: 320px;
+    }
+}
+
+@media (max-width: 900px) {
+    .floating-panel {
+        position: static;
+        width: auto;
+        max-height: none;
+        margin: 12px 0;
+    }
+
+    .jo-map-layout .map-area {
+        height: 60vh;
+    }
+}
+
 /* Page Layout */
 .page-container {
     display: flex;
@@ -10,16 +150,6 @@
     width: 100%;
 }
 
-.sidebar {
-    width: 250px;
-    background-color: #f8f9fa;
-    border-right: 1px solid #e9ecef;
-    height: 100vh;
-    position: sticky;
-    top: 0;
-    overflow-y: auto;
-    z-index: 100;
-}
 
 /* Main content start */
 .main-content {
@@ -44,21 +174,22 @@
     font-weight: 600;
     font-size: 28px;
     color: #111827;
-    margin: 0 0 10px 0;
+    margin: 0 0 0 0;
 }
 
 .content-card {
     background-color: white;
     border-radius: 8px;
-    padding: 20px;
+    padding: 12px;
     margin-top: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     min-height: 400px;
+    z-index: 10;
 }
 
 /* Dashboard Stats */
 .dashboard-stats {
-    display: grid;
+    display: flex;
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     margin-bottom: 30px;
@@ -96,6 +227,10 @@
 .recent-activity h3 {
     margin: 0 0 15px 0;
     color: #333;
+}
+
+.map-container {
+    position: relative
 }
 
 /* Responsive */

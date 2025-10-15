@@ -11,25 +11,26 @@ import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
 
+
 interface RSBSARecord {
-    id: string;
-    referenceNumber: string;
-    farmerName: string;
-    farmerAddress: string;
-    farmLocation: string;
-    parcelArea: string;
-    dateSubmitted: string;
-    status: string;
-    landParcel: string;
-    ownershipType?: {
-      registeredOwner: boolean;
-      tenant: boolean;
-      lessee: boolean;
-    };
-  }
+  id: string;
+  referenceNumber: string;
+  farmerName: string;
+  farmerAddress: string;
+  farmLocation: string;
+  parcelArea: string;
+  dateSubmitted: string;
+  status: string;
+  landParcel: string;
+  ownershipType?: {
+    registeredOwner: boolean;
+    tenant: boolean;
+    lessee: boolean;
+  };
+}
 
 const Masterlist: React.FC = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const location = useLocation();
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -217,6 +218,16 @@ const Masterlist: React.FC = () => {
                 <img src={ApproveIcon} alt="Masterlist" />
               </span>
               <span className="nav-text">Masterlist</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-landrecords')}
+            >
+              <span className="nav-icon">
+                <img src={LandRecsIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Land Records</span>
             </button>
 
             <button

@@ -72,7 +72,6 @@ app.get('/api/test-db', async (req, res) => {
 });
 
 // Serve static files from the frontend build directory
-// IMPORTANT: Replace '../dist' with the actual path to your frontend's build output directory
 const frontendBuildPath = path.join(__dirname, '../dist'); // Assuming 'dist' is in the project root
 app.use(express.static(frontendBuildPath));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -167,7 +166,11 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// Login endpoint for admin and technician
+/*
+Purpose: Login endpoint
+Where: 
+Description: This endpoint handles user login.
+*/
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -205,7 +208,11 @@ app.post('/api/login', async (req, res) => {
 // DELETE endpoint to delete a farm parcel
 
 
-// GET endpoint to fetch all Registered Owners from RSBSAform
+/*
+Purpose: Fetches all Registered Owners from RSBSAform
+Where: Used in backend API route '/api/registered-owners' in server.cjs
+Description: This endpoint fetches all Registered Owners from the RSBSAform table.
+*/
 app.get('/api/registered-owners', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -224,7 +231,13 @@ app.get('/api/registered-owners', async (req, res) => {
 
 
 
-// POST endpoint to submit final RSBSA form
+/*
+Purpose: Handles the submission of the final RSBSA form along with multiple farmland parcels. 
+Validates data, calculates totals, and stores everything in the database.
+Where: Used in backend API route '/api/rsbsa_submission' in server.cjs.
+Description: This endpoint handles the submission of the final RSBSA form along with multiple farmland parcels. 
+Validates data, calculates totals, and stores everything in the database.
+*/
 app.post('/api/rsbsa_submission', async (req, res) => {
     const { draftId, data } = req.body;
     const client = await pool.connect();
@@ -353,7 +366,7 @@ app.post('/api/rsbsa_submission', async (req, res) => {
         }
 
         await client.query('COMMIT');
-        console.log(`RSBSA form submitted successfully with ${data.farmlandParcels.length} parcels for farmer: ${data.firstName} ${data.surname}`);
+        // console.log(`RSBSA form submitted successfully with ${data.farmlandParcels.length} parcels for farmer: ${data.firstName} ${data.surname}`);
         res.status(201).json({
             message: 'RSBSA form submitted successfully!',
             submissionId: submissionId,
@@ -371,11 +384,17 @@ app.post('/api/rsbsa_submission', async (req, res) => {
     }
 });
 
-// D ko sure man
+/*
+Purpose: Fetches a summary of farmers along with their parcel counts and total farm area. Useful for overview dashboards or reports.
+Where: Used in backend API route '/api/farmers/summary' in server.cjs. Consumed by frontend farmer page/component.
+Description: This endpoint fetches a summary of farmers along with their parcel counts and total farm area. 
+Handles both legacy JSONB and structured table formats. 
+Returns a list of farmers with their details, parcel counts, total farm area, and submission timestamps.
+*/
 app.get('/api/rsbsa_submission/:id/parcels', async (req, res) => {
     try {
         const submissionId = req.params.id;
-        console.log(`Fetching farm parcels for submission ID: ${submissionId}`);
+        // console.log(`Fetching farm parcels for submission ID: ${submissionId}`);
 
         const tableCheck = await pool.query(`
             SELECT EXISTS (
@@ -426,7 +445,12 @@ app.get('/api/rsbsa_submission/:id/parcels', async (req, res) => {
     }
 });
 
-// API endpoint to get all farm parcels
+/*
+Purpose: Fetches all farm parcels along with associated farmer details. Useful for overview dashboards or reports.
+Where: Used in backend API route '/api/rsbsa_farm_parcels' in server.cjs. Consumed by frontend farmer page/component.
+Description: This endpoint fetches all farm parcels along with associated farmer details by joining the parcels with submission data. 
+Returns a list of parcels with detailed information including farmer names and parcel specifics.
+*/
 app.get('/api/rsbsa_farm_parcels', async (req, res) => {
     try {
         console.log('Fetching all farm parcels...');
@@ -469,7 +493,13 @@ app.get('/api/rsbsa_farm_parcels', async (req, res) => {
     }
 });
 
-// API endpoint to get parcels for a specific farmer by name
+/*
+Purpose: Fetches farm parcels associated with a specific farmer identified by their last and first names. Useful for detailed farmer views.
+Where: Used in backend API route '/api/rsbsa_farm_parcels/by-farmer' in server.cjs. Consumed by frontend farmer detail page/component.
+Description: This endpoint fetches farm parcels associated with a specific farmer identified by their last and first names. 
+It joins the parcels with submission data to retrieve farmer details. 
+Requires both lastName and firstName as query parameters. Returns a list of parcels with detailed information.
+*/
 app.get('/api/rsbsa_farm_parcels/by-farmer', async (req, res) => {
     try {
         const { lastName, firstName } = req.query;
@@ -480,7 +510,7 @@ app.get('/api/rsbsa_farm_parcels/by-farmer', async (req, res) => {
             });
         }
 
-        console.log(`Fetching parcels for farmer: ${firstName} ${lastName}`);
+        // console.log(`Fetching parcels for farmer: ${firstName} ${lastName}`);
 
         const query = `
             SELECT 
@@ -514,7 +544,7 @@ app.get('/api/rsbsa_farm_parcels/by-farmer', async (req, res) => {
         `;
 
         const result = await pool.query(query, [lastName, firstName]);
-        console.log(`Found ${result.rows.length} parcels for farmer: ${firstName} ${lastName}`);
+        // console.log(`Found ${result.rows.length} parcels for farmer: ${firstName} ${lastName}`);
 
         res.json(result.rows);
     } catch (error) {
@@ -523,10 +553,15 @@ app.get('/api/rsbsa_farm_parcels/by-farmer', async (req, res) => {
     }
 });
 
-// API endpoint to get farmer summary with parcel counts
+/*
+Purpose: Fetches a summary of farmers along with their parcel counts and total farm area. Useful for overview dashboards or reports.
+Where: Used in backend API route '/api/farmers/summary' in server.cjs. Consumed by frontend farmer page/component.
+Description: This endpoint fetches a summary of farmers along with their parcel counts and total farm area. Handles both legacy JSONB and structured table formats. 
+Returns a list of farmers with their details, parcel counts, total farm area, and submission timestamps.
+*/
 app.get('/api/farmers/summary', async (req, res) => {
     try {
-        console.log('Fetching farmer summary with parcel counts...');
+        // console.log('Fetching farmer summary with parcel counts...');
 
         const query = `
             SELECT 
@@ -559,13 +594,14 @@ app.get('/api/farmers/summary', async (req, res) => {
 // GET endpoint to fetch RSBSA submissions for masterlist for the 
 
 /*
-Purpose:For the masterlist 
-Where: In the file 
-Description: 
+Purpose: Fetches RSBSA submissions for the masterlist. Dynamically adapts to table structure (JSONB or structured columns) and transforms results for frontend use.
+Where: Used in backend API route '/api/rsbsa_submission' in server.cjs. Consumed by frontend masterlist page/component.
+Description: This endpoint checks the database table structure, builds the appropriate query, fetches all RSBSA submissions, and transforms the data to match frontend expectations. 
+Handles both legacy JSONB and structured table formats, including ownership type fields if present. Returns a list of submissions with farmer details, parcel info, and status.
 */
 app.get('/api/rsbsa_submission', async (req, res) => {
     try {
-        console.log('Fetching RSBSA submissions...');
+        // console.log('Fetching RSBSA submissions...');
 
         // Check if table exists
         const tableCheck = await pool.query(`
@@ -583,7 +619,11 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                 message: 'The rsbsa_submission table does not exist in the database.'
             });
         }
-
+        /*
+        Purpose: Fetches RSBSA submissions for the masterlist. Dynamically adapts to table structure (JSONB or structured columns) and transforms results for frontend use.
+        Where: Used in backend API route '/api/rsbsa_submission' in server.cjs. Consumed by frontend masterlist page/component.
+        Description: This endpoint checks the database table structure, builds the appropriate query, fetches all RSBSA submissions, and transforms the data to match frontend expectations. Handles both legacy JSONB and structured table formats, including ownership type fields if present. Returns a list of submissions with farmer details, parcel info, and status.
+        */
         // First, let's check what columns actually exist
         const columnCheckQuery = `
             SELECT column_name 
@@ -592,23 +632,23 @@ app.get('/api/rsbsa_submission', async (req, res) => {
             ORDER BY ordinal_position
         `;
         const columnResult = await pool.query(columnCheckQuery);
-        console.log('Available columns:', columnResult.rows.map(row => row.column_name));
+        // console.log('Available columns:', columnResult.rows.map(row => row.column_name));
 
         // Check if this is the JSONB version or structured version
         const hasJsonbColumn = columnResult.rows.some(row => row.column_name === 'data'); // This is the JSONB column
         const hasStructuredColumns = columnResult.rows.some(row => row.column_name === 'LAST NAME'); // These are the structured columns
         const hasOwnershipColumns = columnResult.rows.some(row => row.column_name === 'OWNERSHIP_TYPE_REGISTERED_OWNER');
 
-        console.log('Table structure check:', {
-            hasJsonbColumn,
-            hasStructuredColumns,
-            hasOwnershipColumns
-        });
+        // console.log('Table structure check:', {
+        //     hasJsonbColumn,
+        //     hasStructuredColumns,
+        //     hasOwnershipColumns
+        // });
 
         let query;
         if (hasJsonbColumn && !hasStructuredColumns) {
             // This is the original JSONB table
-            console.log('Using JSONB table structure');
+            // console.log('Using JSONB table structure');
             query = `
                 SELECT 
                     id,
@@ -621,7 +661,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
             `;
         } else {
             // This is the structured table
-            console.log('Using structured table');
+            // console.log('Using structured table');
             // Build query dynamically based on available columns
             let selectFields = `
                 id,
@@ -658,17 +698,17 @@ app.get('/api/rsbsa_submission', async (req, res) => {
             `;
         }
         const result = await pool.query(query);
-        console.log(`Found ${result.rows.length} submissions in database`);
+        // console.log(`Found ${result.rows.length} submissions in database`);
 
-        // Debug: Check ownership type data in raw results
-        if (result.rows.length > 0) {
-            console.log('Sample raw record:', JSON.stringify(result.rows[0], null, 2));
-            console.log('Ownership type fields in raw data:', {
-                registeredOwner: result.rows[0]["OWNERSHIP_TYPE_REGISTERED_OWNER"],
-                tenant: result.rows[0]["OWNERSHIP_TYPE_TENANT"],
-                lessee: result.rows[0]["OWNERSHIP_TYPE_LESSEE"]
-            });
-        }
+        // // Debug: Check ownership type data in raw results
+        // if (result.rows.length > 0) {
+        //     console.log('Sample raw record:', JSON.stringify(result.rows[0], null, 2));
+        //     console.log('Ownership type fields in raw data:', {
+        //         registeredOwner: result.rows[0]["OWNERSHIP_TYPE_REGISTERED_OWNER"],
+        //         tenant: result.rows[0]["OWNERSHIP_TYPE_TENANT"],
+        //         lessee: result.rows[0]["OWNERSHIP_TYPE_LESSEE"]
+        //     });
+        // }
 
         // Transform the data to match the frontend's expected format
         const submissions = result.rows.map(row => {
@@ -722,7 +762,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                     lessee: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_LESSEE"] : false
                 };
 
-                console.log(`Processing ${fullName}: ownershipType=`, ownershipType, `(hasOwnershipColumns=${hasOwnershipColumns})`);
+                // console.log(`Processing ${fullName}: ownershipType=`, ownershipType, `(hasOwnershipColumns=${hasOwnershipColumns})`);
 
                 return {
                     id: row.id,
@@ -758,7 +798,7 @@ app.put('/api/rsbsa_submission/:id', async (req, res) => {
     const updateData = req.body;
 
     try {
-        console.log(`Updating RSBSA submission ${id} with status:`, updateData.status);
+        // console.log(`Updating RSBSA submission ${id} with status:`, updateData.status);
 
         // Check table structure first
         const tableCheckQuery = `
@@ -767,11 +807,11 @@ app.put('/api/rsbsa_submission/:id', async (req, res) => {
             WHERE table_name = 'rsbsa_submission' 
             ORDER BY ordinal_position
         `;
-        const tableStructure = await pool.query(tableCheckQuery);
-        console.log('Table structure:', tableStructure.rows);
+        // const tableStructure = await pool.query(tableCheckQuery);
+        // console.log('Table structure:', tableStructure.rows);
 
-        const hasJsonbColumn = tableStructure.rows.some(row => row.column_name === 'data');
-        const hasStatusColumn = tableStructure.rows.some(row => row.column_name === 'status');
+        // const hasJsonbColumn = tableStructure.rows.some(row => row.column_name === 'data');
+        // const hasStatusColumn = tableStructure.rows.some(row => row.column_name === 'status');
 
         if (!hasStatusColumn) {
             return res.status(400).json({
@@ -791,7 +831,7 @@ app.put('/api/rsbsa_submission/:id', async (req, res) => {
             });
         }
 
-        console.log('Found record:', checkResult.rows[0]);
+        // console.log('Found record:', checkResult.rows[0]);
 
         // Parse farmer name if provided
         let lastName = '';
@@ -816,7 +856,7 @@ app.put('/api/rsbsa_submission/:id', async (req, res) => {
         // Validate status
         const validStatuses = ['Active Farmer', 'Not Active'];
         const status = validStatuses.includes(updateData.status) ? updateData.status : null;
-        console.log('Validated status:', status);
+        // console.log('Validated status:', status);
 
         // For status-only updates, use a simpler query
         const updateQuery = `
@@ -831,20 +871,20 @@ app.put('/api/rsbsa_submission/:id', async (req, res) => {
             id
         ];
 
-        console.log('Executing query with values:', values);
+        // console.log('Executing query with values:', values);
         const result = await pool.query(updateQuery, values);
-        console.log('Query result:', result.rows);
+        // console.log('Query result:', result.rows);
 
         if (result.rowCount === 0) {
-            console.log('No rows updated - record not found');
+            // console.log('No rows updated - record not found');
             return res.status(404).json({
                 message: 'RSBSA submission not found',
                 error: 'No record found with the provided ID'
             });
         }
 
-        console.log(`RSBSA submission ${id} updated successfully`);
-        console.log('Updated record:', result.rows[0]);
+        // console.log(`RSBSA submission ${id} updated successfully`);
+        // console.log('Updated record:', result.rows[0]);
         res.json({
             message: 'RSBSA submission updated successfully',
             data: result.rows[0] // Return the updated record
