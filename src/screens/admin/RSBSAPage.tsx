@@ -43,7 +43,7 @@ const JoRsbsa: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
 
-  // Fetch RSBSA records from API
+  // Fetch RSBSA records from API and shii
   const fetchRSBSARecords = async () => {
     try {
       setLoading(true);
