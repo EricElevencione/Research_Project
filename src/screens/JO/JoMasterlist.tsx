@@ -38,8 +38,34 @@ const JoMasterlist: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete record: ${response.statusText}`);
+      }
+
+      // Remove the deleted record from the local state
+      setRsbsaRecords(prev => prev.filter(record => record.id !== id));
+    } catch (err: any) {
+      console.error('Error deleting record:', err);
+      alert(`Failed to delete record: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     fetchRSBSARecords();
@@ -53,7 +79,8 @@ const JoMasterlist: React.FC = () => {
 
       const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any, idx: number) => {
         // Prefer backend-transformed fields; fallback to raw
-        const referenceNumber = String(item.referenceNumber ?? item.id ?? `RSBSA-${idx + 1}`);
+        const id = String(item.id);
+        const referenceNumber = String(item.referenceNumber ?? `RSBSA-${idx + 1}`);
         const composedName = [item.surname, item.firstName, item.middleName].filter(Boolean).join(', ');
         const preferredName = (item.farmerName ?? composedName);
         const farmerName = String(preferredName || '—');
@@ -77,7 +104,7 @@ const JoMasterlist: React.FC = () => {
         const status = String(item.status ?? 'Not Submitted');
 
         return {
-          id: String(item.id ?? `${idx}-${Math.random().toString(36).slice(2)}`),
+          id: String(item.id), // Use the actual database ID
           referenceNumber,
           farmerName,
           farmerAddress,
@@ -242,7 +269,8 @@ const JoMasterlist: React.FC = () => {
                       'Parcel Address',
                       'Parcel Area',
                       'Date Submitted',
-                      'Status'
+                      'Status',
+                      'Actions'
                     ].map((header) => (
                       <th key={header}>{header}</th>
                     ))}
@@ -250,11 +278,11 @@ const JoMasterlist: React.FC = () => {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={7} className="loading-cell">Loading...</td></tr>
+                    <tr><td colSpan={8} className="loading-cell">Loading...</td></tr>
                   )}
 
                   {error && !loading && (
-                    <tr><td colSpan={7} className="error-cell">Error: {error}</td></tr>
+                    <tr><td colSpan={8} className="error-cell">Error: {error}</td></tr>
                   )}
 
                   {!loading && !error && filteredRecords.length > 0 && (
@@ -272,6 +300,24 @@ const JoMasterlist: React.FC = () => {
                               {record.status}
                             </span>
                           </td>
+                          <td>
+                            <button
+                              onClick={() => handleDelete(record.id)}
+                              disabled={isDeleting}
+                              className="delete-button"
+                              style={{
+                                backgroundColor: '#ff4444',
+                                color: 'white',
+                                border: 'none',
+                                padding: '5px 10px',
+                                borderRadius: '4px',
+                                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                                opacity: isDeleting ? 0.7 : 1
+                              }}
+                            >
+                              {isDeleting ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </td>
                         </tr>
                       );
                     })
@@ -280,7 +326,7 @@ const JoMasterlist: React.FC = () => {
                   {!loading && !error && filteredRecords.length === 0 && (
                     Array.from({ length: 16 }).map((_, i) => (
                       <tr key={`empty-${i}`}>
-                        <td colSpan={7}>&nbsp;</td>
+                        <td colSpan={8}>&nbsp;</td>
                       </tr>
                     ))
                   )}

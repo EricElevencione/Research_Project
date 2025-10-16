@@ -42,6 +42,45 @@ pool.connect((err, client, release) => { // Connect to the database
 app.use(cors()); // Allows cross-origin requests (can be configured more restrictively)
 app.use(express.json()); // Parses incoming JSON requests
 
+// Delete RSBSA record endpoint
+app.delete('/api/rsbsa_submission/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Convert string ID to integer for PostgreSQL
+        const numericId = parseInt(id, 10);
+        if (isNaN(numericId)) {
+            return res.status(400).json({
+                error: 'Invalid ID format',
+                message: 'The provided ID must be a number'
+            });
+        }
+
+        const result = await pool.query(
+            'DELETE FROM rsbsa_submission WHERE id = $1 RETURNING *',
+            [numericId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                error: 'Record not found',
+                message: 'The specified RSBSA record was not found.'
+            });
+        }
+
+        res.json({
+            message: 'Record deleted successfully',
+            deletedRecord: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error deleting record:', error);
+        res.status(500).json({
+            error: 'Database error',
+            message: 'Failed to delete the record'
+        });
+    }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => { // Health check
     res.json({
@@ -646,6 +685,8 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         // });
 
         let query;
+        const hasFFRSCode = columnResult.rows.some(row => row.column_name === 'FFRS_CODE');
+
         if (hasJsonbColumn && !hasStructuredColumns) {
             // This is the original JSONB table
             // console.log('Using JSONB table structure');
@@ -665,6 +706,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
             // Build query dynamically based on available columns
             let selectFields = `
                 id,
+                "FFRS_CODE" as "referenceNumber",
                 "LAST NAME",
                 "FIRST NAME", 
                 "MIDDLE NAME",
@@ -792,120 +834,191 @@ app.get('/api/rsbsa_submission', async (req, res) => {
     }
 });
 
-// PUT endpoint to update a specific RSBSA submission
+// PUT endpoint to update a specific RSBSA submission in technician masterlist 
 app.put('/api/rsbsa_submission/:id', async (req, res) => {
-    const { id } = req.params;
-    const updateData = req.body;
-
     try {
-        // console.log(`Updating RSBSA submission ${id} with status:`, updateData.status);
+        const { id } = req.params;
+        const updateData = req.body;
 
-        // Check table structure first
-        const tableCheckQuery = `
-            SELECT column_name, data_type 
-            FROM information_schema.columns 
-            WHERE table_name = 'rsbsa_submission' 
-            ORDER BY ordinal_position
-        `;
-        // const tableStructure = await pool.query(tableCheckQuery);
-        // console.log('Table structure:', tableStructure.rows);
+        console.log('Updating RSBSA submission:', { id, updateData });
 
-        // const hasJsonbColumn = tableStructure.rows.some(row => row.column_name === 'data');
-        // const hasStatusColumn = tableStructure.rows.some(row => row.column_name === 'status');
+        // Initialize queryValues and updateFields
+        let queryValues = [];
+        const updateFields = [];
+        let paramCounter = 1;
 
-        if (!hasStatusColumn) {
-            return res.status(400).json({
-                message: 'Status column does not exist in database',
-                error: 'The rsbsa_submission table does not have a status column. Please run the database migration first.'
+        // Check if only status is provided (e.g., from Masterlist toggle)
+        if (Object.keys(updateData).length === 1 && updateData.status) {
+            // Validate status
+            if (!['Active Farmer', 'Not Active'].includes(updateData.status)) {
+                return res.status(400).json({
+                    message: 'Invalid status value',
+                    error: 'Status must be either "Active Farmer" or "Not Active"'
+                });
+            }
+
+            // Use simple status update query
+            const updateQuery = `
+                UPDATE rsbsa_submission 
+                SET status = $1, 
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $2
+                RETURNING *;
+            `;
+            queryValues = [updateData.status, id];
+
+            console.log('Executing status update query:', { query: updateQuery, params: queryValues });
+
+            const result = await pool.query(updateQuery, queryValues);
+
+            if (result.rowCount === 0) {
+                return res.status(404).json({
+                    message: 'Record not found',
+                    error: 'No record found with the provided ID'
+                });
+            }
+
+            console.log('Status update successful:', result.rows[0]);
+
+            return res.json({
+                message: 'Status updated successfully',
+                updatedRecord: result.rows[0]
             });
         }
 
-        // Check if the record exists
-        const checkQuery = `SELECT id, status FROM rsbsa_submission WHERE id = $1`;
-        const checkResult = await pool.query(checkQuery, [id]);
-
-        if (checkResult.rowCount === 0) {
-            return res.status(404).json({
-                message: 'RSBSA submission not found',
-                error: 'No record found with the provided ID'
-            });
+        // For other updates (e.g., RSBSA form updates with multiple fields)
+        // Handle status if provided
+        if (updateData.status) {
+            if (!['Active Farmer', 'Not Active'].includes(updateData.status)) {
+                return res.status(400).json({
+                    message: 'Invalid status value',
+                    error: 'Status must be either "Active Farmer" or "Not Active"'
+                });
+            }
+            updateFields.push(`status = $${paramCounter}`);
+            queryValues.push(updateData.status);
+            paramCounter++;
         }
 
-        // console.log('Found record:', checkResult.rows[0]);
-
-        // Parse farmer name if provided
-        let lastName = '';
-        let firstName = '';
-        let middleName = '';
-        let extName = '';
-
+        // Handle farmer name components if provided
         if (updateData.farmerName) {
             const nameParts = updateData.farmerName.split(', ');
-            lastName = nameParts[0] || '';
-            firstName = nameParts[1] || '';
-            middleName = nameParts[2] || '';
-            extName = nameParts[3] || '';
+            const [lName, fName, mName, eName] = nameParts;
+
+            updateFields.push('"LAST NAME" = $' + paramCounter);
+            queryValues.push(lName || '');
+            paramCounter++;
+
+            updateFields.push('"FIRST NAME" = $' + paramCounter);
+            queryValues.push(fName || '');
+            paramCounter++;
+
+            updateFields.push('"MIDDLE NAME" = $' + paramCounter);
+            queryValues.push(mName || '');
+            paramCounter++;
+
+            updateFields.push('"EXT NAME" = $' + paramCounter);
+            queryValues.push(eName || '');
+            paramCounter++;
         }
 
-        // Extract parcel area number if it contains "hectares"
-        let parcelArea = updateData.parcelArea;
-        if (parcelArea && parcelArea.includes('hectares')) {
-            parcelArea = parcelArea.replace(/\s*hectares\s*$/i, '').trim();
+        // Handle other fields if provided
+        if (updateData.gender) {
+            updateFields.push('"GENDER" = $' + paramCounter);
+            queryValues.push(updateData.gender);
+            paramCounter++;
         }
 
-        // Validate status
-        const validStatuses = ['Active Farmer', 'Not Active'];
-        const status = validStatuses.includes(updateData.status) ? updateData.status : null;
-        // console.log('Validated status:', status);
+        if (updateData.birthdate) {
+            updateFields.push('"BIRTHDATE" = $' + paramCounter);
+            queryValues.push(updateData.birthdate);
+            paramCounter++;
+        }
 
-        // For status-only updates, use a simpler query
-        const updateQuery = `
-            UPDATE rsbsa_submission SET
-                status = $1
-            WHERE id = $2
+        if (updateData.farmLocation) {
+            updateFields.push('"FARM LOCATION" = $' + paramCounter);
+            queryValues.push(updateData.farmLocation);
+            paramCounter++;
+        }
+
+        if (updateData.parcelArea) {
+            const areaValue = updateData.parcelArea.replace(/\s*hectares\s*$/i, '').trim();
+            if (!isNaN(parseFloat(areaValue))) {
+                updateFields.push('"PARCEL AREA" = $' + paramCounter);
+                queryValues.push(parseFloat(areaValue));
+                paramCounter++;
+            }
+        }
+
+        // If no fields to update, return early
+        if (updateFields.length === 0) {
+            return res.status(400).json({
+                message: 'No valid fields to update',
+                error: 'Please provide at least one field to update'
+            });
+        }
+
+        // Add updated_at timestamp
+        updateFields.push('updated_at = CURRENT_TIMESTAMP');
+
+        // Construct the dynamic query
+        const finalQuery = `
+            UPDATE rsbsa_submission 
+            SET ${updateFields.join(', ')}
+            WHERE id = $${paramCounter}
             RETURNING *;
         `;
 
-        const values = [
-            status,
-            id
-        ];
+        // Add the ID as the last parameter
+        queryValues.push(id);
 
-        // console.log('Executing query with values:', values);
-        const result = await pool.query(updateQuery, values);
-        // console.log('Query result:', result.rows);
+        console.log('Executing dynamic update query:', { query: finalQuery, params: queryValues });
+
+        // Execute the dynamically constructed query
+        const result = await pool.query(finalQuery, queryValues);
 
         if (result.rowCount === 0) {
-            // console.log('No rows updated - record not found');
             return res.status(404).json({
-                message: 'RSBSA submission not found',
+                message: 'Record not found',
                 error: 'No record found with the provided ID'
             });
         }
 
-        // console.log(`RSBSA submission ${id} updated successfully`);
-        // console.log('Updated record:', result.rows[0]);
+        console.log('Update successful:', result.rows[0]);
+
+        // Return success response
         res.json({
-            message: 'RSBSA submission updated successfully',
-            data: result.rows[0] // Return the updated record
+            message: 'Record updated successfully',
+            updatedRecord: result.rows[0]
         });
 
     } catch (error) {
         console.error('Error updating RSBSA submission:', error);
-        console.error('Error details:', {
+
+        // Detailed error logging
+        const errorDetails = {
             message: error.message,
             code: error.code,
             detail: error.detail,
             hint: error.hint,
-            position: error.position
-        });
+            position: error.position,
+            where: error.where,
+            schema: error.schema,
+            table: error.table,
+            constraint: error.constraint
+        };
+        console.error('Error details:', errorDetails);
+
+        // Send a more informative error response
         res.status(500).json({
             message: 'Error updating RSBSA submission',
-            error: error.message,
-            details: error.detail || error.code
+            error: error.message || 'Unknown error occurred',
+            details: error.detail || 'No additional details available'
         });
     }
 });
+
+
 
 // For any requests not matching API routes, serve the frontend's index.html
 app.get('*', (req, res) => {

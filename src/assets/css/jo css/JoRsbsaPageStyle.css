@@ -314,6 +314,23 @@ h2 {
   transition: box-shadow .2s ease, border-color .2s ease;
 }
 
+/* Error styling */
+.input-error {
+  border-color: #dc2626 !important; /* red-600 */
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15) !important;
+  background: #fff !important;
+}
+
+.error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: -4px;
+}
+
+.form-errors .error {
+  margin: 6px 0;
+}
+
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
@@ -513,6 +530,12 @@ h2 {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--gray-200);
+}
+
+.ownership-error {
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  padding: 8px;
 }
 
 .ownership-group>label {
