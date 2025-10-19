@@ -42,6 +42,104 @@ pool.connect((err, client, release) => { // Connect to the database
 app.use(cors()); // Allows cross-origin requests (can be configured more restrictively)
 app.use(express.json()); // Parses incoming JSON requests
 
+// Get landowners endpoint (from structured rsbsa_submission)
+app.get('/api/landowners', async (req, res) => {
+    try {
+        // Check existence of tables and columns for robust querying
+        const tableExists = async (tableName) => {
+            const q = `
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = $1
+                ) AS exists;
+            `;
+            const r = await pool.query(q, [tableName]);
+            return !!r.rows?.[0]?.exists;
+        };
+
+        const rsbsaExists = await tableExists('rsbsa_submission');
+        if (!rsbsaExists) {
+            return res.json([]);
+        }
+
+        const columnsResult = await pool.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'rsbsa_submission'
+        `);
+        const columnNames = columnsResult.rows.map(r => r.column_name);
+        const hasLast = columnNames.includes('LAST NAME');
+        const hasFirst = columnNames.includes('FIRST NAME');
+        const hasMiddle = columnNames.includes('MIDDLE NAME');
+        const hasExt = columnNames.includes('EXT NAME');
+        const hasOwnerFlag = columnNames.includes('OWNERSHIP_TYPE_REGISTERED_OWNER');
+
+        const farmParcelsExists = await tableExists('farm_parcels');
+
+        const subSelects = [];
+
+        // Build SELECT for parcels path if table exists
+        if (farmParcelsExists && hasLast && hasFirst) {
+            subSelects.push(`
+                SELECT DISTINCT
+                    rs.id,
+                    TRIM(BOTH ', ' FROM (
+                        COALESCE(rs."LAST NAME", '') || ', ' || COALESCE(rs."FIRST NAME", '') ||
+                        ${hasMiddle ? `CASE WHEN COALESCE(rs."MIDDLE NAME", '') <> '' THEN ' ' || rs."MIDDLE NAME" ELSE '' END ||` : `'' ||`}
+                        ${hasExt ? `CASE WHEN COALESCE(rs."EXT NAME", '') <> '' THEN ' ' || rs."EXT NAME" ELSE '' END` : `''`}
+                    )) AS name
+                FROM rsbsa_submission rs
+                WHERE EXISTS (
+                    SELECT 1 FROM farm_parcels fp
+                    WHERE fp.submission_id = rs.id
+                      AND COALESCE(fp.ownership_type_registered_owner, false) = true
+                )
+                  AND LENGTH(TRIM(BOTH ' ' FROM (
+                        COALESCE(rs."LAST NAME", '') || COALESCE(rs."FIRST NAME", '')
+                  ))) > 0
+            `);
+        }
+
+        // Build SELECT for submission-level flag if column exists
+        if (hasOwnerFlag && hasLast && hasFirst) {
+            subSelects.push(`
+                SELECT DISTINCT
+                    id,
+                    TRIM(BOTH ', ' FROM (
+                        COALESCE("LAST NAME", '') || ', ' || COALESCE("FIRST NAME", '') ||
+                        ${hasMiddle ? `CASE WHEN COALESCE("MIDDLE NAME", '') <> '' THEN ' ' || "MIDDLE NAME" ELSE '' END ||` : `'' ||`}
+                        ${hasExt ? `CASE WHEN COALESCE("EXT NAME", '') <> '' THEN ' ' || "EXT NAME" ELSE '' END` : `''`}
+                    )) AS name
+                FROM rsbsa_submission
+                WHERE COALESCE("OWNERSHIP_TYPE_REGISTERED_OWNER", false) = true
+                  AND LENGTH(TRIM(BOTH ' ' FROM (
+                        COALESCE("LAST NAME", '') || COALESCE("FIRST NAME", '')
+                  ))) > 0
+            `);
+        }
+
+        if (!subSelects.length) {
+            // Not enough structure to build names
+            return res.json([]);
+        }
+
+        const finalQuery = `
+            SELECT DISTINCT id, name
+            FROM (
+                ${subSelects.join('\n                UNION ALL\n')}
+            ) owners
+            WHERE name IS NOT NULL AND name <> ''
+            ORDER BY name;
+        `;
+
+        const result = await pool.query(finalQuery);
+        res.json(result.rows || []);
+    } catch (error) {
+        console.error('Error fetching landowners:', error);
+        res.status(500).json({ error: 'Failed to fetch landowners' });
+    }
+});
+
 // Delete RSBSA record endpoint
 app.delete('/api/rsbsa_submission/:id', async (req, res) => {
     try {
@@ -162,9 +260,6 @@ app.get('/api/lands', async (req, res) => { // Get land records in the table
 });
 
 
-// API endpoint to get land plots with geometry and owner info for the map
-
-
 // Registration endpoint for admin and technician
 app.post('/api/register', async (req, res) => {
     const { username, email, password, role } = req.body;
@@ -266,9 +361,6 @@ app.get('/api/registered-owners', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch registered owners' });
     }
 });
-
-
-
 
 /*
 Purpose: Handles the submission of the final RSBSA form along with multiple farmland parcels. 
@@ -808,7 +900,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
 
                 return {
                     id: row.id,
-                    referenceNumber: `RSBSA-${row.id}`,
+                    referenceNumber: row.referenceNumber || `RSBSA-${row.id}`,
                     farmerName: fullName || '—',
                     farmerAddress: `${row["BARANGAY"] || ''}, ${row["MUNICIPALITY"] || ''}`.replace(/^,\s*|,\s*$/g, '') || '—',
                     farmLocation: row["FARM LOCATION"] || '—',

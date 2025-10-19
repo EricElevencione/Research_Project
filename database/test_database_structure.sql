@@ -32,5 +32,15 @@ SELECT id, submission_id, parcel_number, farm_location_barangay, total_farm_area
 FROM rsbsa_farm_parcels 
 LIMIT 5;
 
-
+-- Create land_history table with appropriate data types
+CREATE TABLE land_history (
+    id SERIAL PRIMARY KEY,
+    "Land_Owner_Name" VARCHAR(100),
+    "Tenant_Name" VARCHAR(100),
+    "Lessee_Name" VARCHAR(100),
+    "Is_LandOwner" BOOLEAN,
+    "Is_Tenant" BOOLEAN,
+    "Is_Lessee" BOOLEAN,
+    "Date_Created" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 

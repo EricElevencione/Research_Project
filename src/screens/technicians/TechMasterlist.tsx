@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
-import '../../assets/css/jo css/JoMasterlistStyle.css';
+import '../../assets/css/technician css/MasterlistPage.css';
 import '../../assets/css/navigation/nav.css';
-import { generateFFRSCode } from '../../utils/ffrsCodeGenerator';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -54,8 +53,8 @@ const TechMasterlist: React.FC = () => {
 
       const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any) => {
         const farmLocation = String(item.farmLocation ?? '—');
-        // Generate FFRS code if it doesn't exist, otherwise use the existing one
-        const referenceNumber = item.referenceNumber || generateFFRSCode(farmLocation);
+        // Use the FFRS code from database, fallback to RSBSA-{id} if not present
+        const referenceNumber = item.referenceNumber || `RSBSA-${item.id}`;
         const farmerName = String(item.farmerName || '—');
         const farmerAddress = String(item.farmerAddress ?? '—');
         const landParcel = String(item.landParcel ?? item.farmLocation ?? '—');

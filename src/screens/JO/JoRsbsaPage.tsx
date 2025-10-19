@@ -282,7 +282,8 @@ const JoRsbsaPage: React.FC = () => {
                             <td>{(() => {
                               const area = typeof record.totalFarmArea === 'number' ? record.totalFarmArea : parseFloat(String(record.totalFarmArea || 0));
                               return !isNaN(area) && area > 0 ? `${area.toFixed(2)} ha` : 'N/A';
-                            })()}</td>
+                            })()}
+                            </td>
                           </tr>
                         );
                       })
@@ -293,6 +294,8 @@ const JoRsbsaPage: React.FC = () => {
             )}
           </div>
         </div>
+
+
       </div>
     </div>
 

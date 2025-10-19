@@ -505,6 +505,17 @@
   max-width: 520px;
 }
 
+.owners-table th {
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: #A0C878;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .parcel-card .form-row {

@@ -27,6 +27,11 @@ interface Parcel {
   ownershipOthersSpecify: string;
 }
 
+interface LandOwner {
+  id: string;
+  name: string;
+}
+
 interface FormData {
   // Basic Details
   surname: string;
@@ -78,6 +83,8 @@ interface FormData {
   ayOthersText?: string;
 }
 
+import { useEffect } from 'react';
+
 const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,6 +93,25 @@ const JoRsbsa: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   const [draftId, setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [landowners, setLandowners] = useState<LandOwner[]>([]);
+
+  // Fetch landowners from the database
+  useEffect(() => {
+    const fetchLandowners = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/landowners');
+        if (!response.ok) {
+          throw new Error('Failed to fetch landowners');
+        }
+        const data = await response.json();
+        setLandowners(data);
+      } catch (error) {
+        console.error('Error fetching landowners:', error);
+      }
+    };
+
+    fetchLandowners();
+  }, []);
   const [formData, setFormData] = useState<FormData>({
     surname: '',
     firstName: '',
@@ -248,6 +274,20 @@ const JoRsbsa: React.FC = () => {
       );
       if (!hasValidOwnershipType) newErrors.ownership = 'Select ownership type for at least one parcel';
 
+      // If Tenant/Lessee chosen, require landowner selection
+      const missingTenantOwner = formData.farmlandParcels.some(
+        parcel => parcel.ownershipTypeTenant && !parcel.tenantLandOwnerName?.toString().trim()
+      );
+      const missingLesseeOwner = formData.farmlandParcels.some(
+        parcel => parcel.ownershipTypeLessee && !parcel.lesseeLandOwnerName?.toString().trim()
+      );
+      if (missingTenantOwner || missingLesseeOwner) {
+        const msgParts: string[] = [];
+        if (missingTenantOwner) msgParts.push('select land owner for tenant parcels');
+        if (missingLesseeOwner) msgParts.push('select land owner for lessee parcels');
+        newErrors.ownership = (newErrors.ownership ? newErrors.ownership + ' ' : '') + msgParts.join(' and ');
+      }
+
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) return;
 
@@ -271,6 +311,20 @@ const JoRsbsa: React.FC = () => {
       parcel => parcel.ownershipTypeRegisteredOwner || parcel.ownershipTypeTenant || parcel.ownershipTypeLessee
     );
     if (!hasValidOwnershipTypeFinal) newErrors.ownership = 'Select ownership type for at least one parcel';
+
+    // Final check for tenant/lessee owner selection
+    const missingTenantOwnerFinal = formData.farmlandParcels.some(
+      parcel => parcel.ownershipTypeTenant && !parcel.tenantLandOwnerName?.toString().trim()
+    );
+    const missingLesseeOwnerFinal = formData.farmlandParcels.some(
+      parcel => parcel.ownershipTypeLessee && !parcel.lesseeLandOwnerName?.toString().trim()
+    );
+    if (missingTenantOwnerFinal || missingLesseeOwnerFinal) {
+      const msgParts: string[] = [];
+      if (missingTenantOwnerFinal) msgParts.push('select land owner for tenant parcels');
+      if (missingLesseeOwnerFinal) msgParts.push('select land owner for lessee parcels');
+      newErrors.ownership = (newErrors.ownership ? newErrors.ownership + ' ' : '') + msgParts.join(' and ');
+    }
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
@@ -333,7 +387,8 @@ const JoRsbsa: React.FC = () => {
       const submitted = await submitFinalToServer();
       if (submitted && submitted.submissionId) {
         alert('RSBSA form submitted successfully!');
-        navigate(`/tech-pick-land-parcel/${submitted.submissionId}`);
+        // Navigate back to JO flow instead of technician route to avoid auth redirects
+        navigate('/jo-rsbsapage');
       }
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -710,14 +765,32 @@ const JoRsbsa: React.FC = () => {
 
                       {p.ownershipTypeTenant && (
                         <div className="form-group">
-                          <label>Tenant - Name of Land Owner</label>
-                          <input type="text" value={p.tenantLandOwnerName} onChange={(e) => handleParcelChange(idx, 'tenantLandOwnerName', e.target.value)} />
+                          <label>Tenant - Select Land Owner</label>
+                          <select
+                            value={p.tenantLandOwnerName}
+                            onChange={(e) => handleParcelChange(idx, 'tenantLandOwnerName', e.target.value)}
+                            className={errors.ownership ? 'input-error' : ''}
+                          >
+                            <option value="">Select Land Owner</option>
+                            {landowners.map(owner => (
+                              <option key={owner.id} value={owner.name}>{owner.name}</option>
+                            ))}
+                          </select>
                         </div>
                       )}
                       {p.ownershipTypeLessee && (
                         <div className="form-group">
-                          <label>Lessee - Name of Land Owner</label>
-                          <input type="text" value={p.lesseeLandOwnerName} onChange={(e) => handleParcelChange(idx, 'lesseeLandOwnerName', e.target.value)} />
+                          <label>Lessee - Select Land Owner</label>
+                          <select
+                            value={p.lesseeLandOwnerName}
+                            onChange={(e) => handleParcelChange(idx, 'lesseeLandOwnerName', e.target.value)}
+                            className={errors.ownership ? 'input-error' : ''}
+                          >
+                            <option value="">Select Land Owner</option>
+                            {landowners.map(owner => (
+                              <option key={owner.id} value={owner.name}>{owner.name}</option>
+                            ))}
+                          </select>
                         </div>
                       )}
                       {p.ownershipTypeOthers && (
