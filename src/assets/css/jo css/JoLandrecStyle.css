@@ -114,3 +114,332 @@
         width: 100%;
     }
 }
+
+/* Land Owners Container */
+.land-owners-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* Land Owner Card */
+.land-owner-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.land-owner-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Owner Header */
+.owner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #2c5f2d 0%, #3a7d3c 100%);
+    color: white;
+}
+
+.owner-name-section {
+    flex: 1;
+}
+
+.owner-name-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.tenant-count {
+    font-size: 14px;
+    opacity: 0.9;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+.full-history-btn {
+    background: white;
+    color: #2c5f2d;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.full-history-btn:hover {
+    background: #f0f0f0;
+    transform: scale(1.05);
+}
+
+/* Tenants List */
+.tenants-list {
+    padding: 0;
+}
+
+.tenant-item {
+    display: grid;
+    grid-template-columns: 100px 1fr 150px;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+.tenant-item:hover {
+    background-color: #f8f9fa;
+}
+
+.tenant-item.preview-item {
+    background-color: #f8f9fa;
+    border-left: 4px solid #A0C878;
+}
+
+.tenant-type-badge {
+    background: #dee2e6;
+    color: #495057;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.tenant-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 16px;
+}
+
+.tenant-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: #212529;
+}
+
+.tenant-location {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.tenant-date {
+    text-align: right;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.no-tenants {
+    padding: 20px;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.more-tenants-notice {
+    padding: 12px 20px;
+    text-align: center;
+    background: #fff3cd;
+    color: #856404;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 2px solid #e9ecef;
+    background: linear-gradient(135deg, #2c5f2d 0%, #3a7d3c 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+    padding: 0;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.history-item {
+    display: grid;
+    grid-template-columns: 40px 100px 1fr;
+    gap: 16px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #A0C878;
+    transition: all 0.2s ease;
+}
+
+.history-item:hover {
+    background: #e9ecef;
+    transform: translateX(4px);
+}
+
+.history-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: #2c5f2d;
+    color: white;
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.history-type-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #dee2e6;
+    color: #495057;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    height: fit-content;
+}
+
+.history-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.history-name {
+    font-weight: 600;
+    font-size: 18px;
+    color: #212529;
+}
+
+.history-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.history-meta span {
+    display: flex;
+    align-items: center;
+}
+
+.no-history {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.loading-container,
+.error-container {
+    padding: 40px;
+    text-align: center;
+    color: #6c757d;
+}
+
+.no-data {
+    padding: 40px;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}

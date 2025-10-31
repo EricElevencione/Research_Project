@@ -2,126 +2,98 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/jo css/JoLandrecStyle.css';
 import '../../assets/css/navigation/nav.css';
-import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
-import PendingIcon from '../../assets/images/pending.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
 
-interface RSBSARecord {
+interface TenantLessee {
     id: string;
-    referenceNumber: string;
-    farmerName: string;
-    farmerAddress: string;
-    farmLocation: string;
-    parcelArea: string;
-    dateSubmitted: string;
-    status: string;
-    landParcel: string;
-    ownershipType?: {
-        registeredOwner: boolean;
-        tenant: boolean;
-        lessee: boolean;
-    };
+    name: string;
+    type: 'Tenant' | 'Lessee';
+    location: string;
+    area: number;
+    createdAt: string;
+}
+
+interface LandOwner {
+    owner_id: string;
+    owner_name: string;
+    first_name: string;
+    last_name: string;
+    middle_name: string;
+    tenants_lessees: TenantLessee[];
 }
 
 const JoLandrecords: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [activeTab] = useState('overview');
-    const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
+    const [landOwners, setLandOwners] = useState<LandOwner[]>([]);
+    const [expandedOwners, setExpandedOwners] = useState<Set<string>>(new Set());
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [selectedOwnerHistory, setSelectedOwnerHistory] = useState<LandOwner | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedStatus, setSelectedStatus] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const isActive = (path: string) => location.pathname === path;
 
     useEffect(() => {
-        fetchRSBSARecords();
+        fetchLandOwnersData();
     }, []);
 
-    const fetchRSBSARecords = async () => {
+    const fetchLandOwnersData = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/rsbsa_submission');
+            setLoading(true);
+            const response = await fetch('http://localhost:5000/api/land-owners-with-tenants');
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
-
-            const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any, idx: number) => {
-                const referenceNumber = String(item.referenceNumber ?? item.id ?? `RSBSA-${idx + 1}`);
-                const composedName = [item.surname, item.firstName, item.middleName].filter(Boolean).join(', ');
-                const preferredName = (item.farmerName ?? composedName);
-                const farmerName = String(preferredName || '—');
-                const farmerAddress = String(item.farmerAddress ?? item.addressBarangay ?? '—');
-                const farmLocation = String(item.farmLocation ?? '—');
-                const landParcel = String(item.landParcel ?? '—');
-                const parcelArea = (() => {
-                    const direct = item.parcelArea ?? item["PARCEL AREA"];
-                    if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
-                        return String(direct);
-                    }
-                    const match = /\(([^)]+)\)/.exec(landParcel);
-                    return match ? match[1] : '—';
-                })();
-                const dateSubmitted = item.dateSubmitted
-                    ? new Date(item.dateSubmitted).toISOString()
-                    : (item.createdAt ? new Date(item.createdAt).toISOString() : '');
-
-                // Reflect database status semantics: Submitted / Not Submitted
-                const status = String(item.status ?? 'Not Submitted');
-
-                return {
-                    id: String(item.id ?? `${idx}-${Math.random().toString(36).slice(2)}`),
-                    referenceNumber,
-                    farmerName,
-                    farmerAddress,
-                    farmLocation,
-                    parcelArea,
-                    dateSubmitted,
-                    status,
-                    landParcel,
-                    ownershipType: item.ownershipType
-                };
-            });
-
-            setRsbsaRecords(formattedRecords);
+            setLandOwners(data);
             setLoading(false);
         } catch (err: any) {
-            setError(err.message ?? 'Failed to load RSBSA records');
+            setError(err.message ?? 'Failed to load land owners data');
             setLoading(false);
         }
     };
 
-    const filteredRecords = rsbsaRecords.filter(record => {
-        const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
-        const q = searchQuery.toLowerCase();
-        const matchesSearch = record.farmerName.toLowerCase().includes(q) ||
-            record.referenceNumber.toLowerCase().includes(q) ||
-            record.farmerAddress.toLowerCase().includes(q) ||
-            record.farmLocation.toLowerCase().includes(q);
-        return matchesStatus && matchesSearch;
+    const toggleOwnerExpansion = (ownerId: string) => {
+        setExpandedOwners(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(ownerId)) {
+                newSet.delete(ownerId);
+            } else {
+                newSet.add(ownerId);
+            }
+            return newSet;
+        });
+    };
+
+    const openHistoryModal = (owner: LandOwner) => {
+        setSelectedOwnerHistory(owner);
+        setShowHistoryModal(true);
+    };
+
+    const closeHistoryModal = () => {
+        setShowHistoryModal(false);
+        setSelectedOwnerHistory(null);
+    };
+
+    const filteredLandOwners = landOwners.filter(owner => {
+        if (!searchQuery.trim()) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+            owner.owner_name.toLowerCase().includes(query) ||
+            owner.first_name?.toLowerCase().includes(query) ||
+            owner.last_name?.toLowerCase().includes(query) ||
+            owner.tenants_lessees.some(tl =>
+                tl.name.toLowerCase().includes(query) ||
+                tl.location?.toLowerCase().includes(query)
+            )
+        );
     });
-
-    const formatDate = (iso: string) => {
-        if (!iso) return '—';
-        try {
-            return new Date(iso).toLocaleDateString();
-        } catch {
-            return '—';
-        }
-    };
-
-    const getStatusClass = (status: string) => {
-        switch (status) {
-            case 'Submitted': return 'status-approved';
-            case 'Not Submitted': return 'status-not-approved';
-            default: return 'status-pending';
-        }
-    };
 
     return (
         <div className="page-container">
@@ -202,91 +174,137 @@ const JoLandrecords: React.FC = () => {
                 <div className="main-content">
                     <h2>Land Records</h2>
                     <div className="content-card">
-                    <div className="filters-section">
-                        <div className="search-filter">
-                            <input
-                                type="text"
-                                placeholder="Search by farmer name, reference number, or barangay..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="search-input"
-                            />
+                        <div className="filters-section">
+                            <div className="search-filter">
+                                <input
+                                    type="text"
+                                    placeholder="Search by land owner or tenant name..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="search-input"
+                                />
+                            </div>
                         </div>
-                        <div className="status-filter">
-                            <select
-                                value={selectedStatus}
-                                onChange={(e) => setSelectedStatus(e.target.value)}
-                                className="status-select"
-                            >
-                                <option value="all">All Status</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Approved">Approved</option>
-                                <option value="Not Approved">Not Approved</option>
-                                <option value="Draft">Draft</option>
-                            </select>
-                        </div>
+
+                        {loading ? (
+                            <div className="loading-container">
+                                <p>Loading land records...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="error-container">
+                                <p>Error: {error}</p>
+                            </div>
+                        ) : (
+                            <div className="land-owners-container">
+                                {filteredLandOwners.length === 0 ? (
+                                    <div className="no-data">
+                                        {searchQuery ? 'No results found for your search' : 'No land owners found'}
+                                    </div>
+                                ) : (
+                                    filteredLandOwners.map((owner) => {
+                                        const isExpanded = expandedOwners.has(owner.owner_id);
+                                        const tenantsToShow = isExpanded
+                                            ? owner.tenants_lessees.slice(0, 4)
+                                            : owner.tenants_lessees.slice(0, 1);
+
+                                        return (
+                                            <div key={owner.owner_id} className="land-owner-card">
+                                                {/* Land Owner Header */}
+                                                <div className="owner-header">
+                                                    <div
+                                                        className="owner-name-section"
+                                                        onClick={() => toggleOwnerExpansion(owner.owner_id)}
+                                                        style={{ cursor: 'pointer' }}
+                                                    >
+                                                        <h3>{owner.owner_name}</h3>
+                                                        <span className="tenant-count">
+                                                            {owner.tenants_lessees.length} Tenant{owner.tenants_lessees.length !== 1 ? 's' : ''}/Lessee{owner.tenants_lessees.length !== 1 ? 's' : ''}
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        className="full-history-btn"
+                                                        onClick={() => openHistoryModal(owner)}
+                                                    >
+                                                        Full History
+                                                    </button>
+                                                </div>
+
+                                                {/* Tenants/Lessees List */}
+                                                {tenantsToShow.length > 0 && (
+                                                    <div className="tenants-list">
+                                                        {tenantsToShow.map((tenant, index) => (
+                                                            <div
+                                                                key={tenant.id}
+                                                                className={`tenant-item ${index === 0 && !isExpanded ? 'preview-item' : ''}`}
+                                                            >
+                                                                <div className="tenant-type-badge">
+                                                                    {tenant.type}
+                                                                </div>
+                                                                <div className="tenant-info">
+                                                                    <span className="tenant-name">{tenant.name}</span>
+                                                                    <span className="tenant-location">{tenant.location}</span>
+                                                                </div>
+                                                                <div className="tenant-date">
+                                                                    {new Date(tenant.createdAt).toLocaleDateString()}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {owner.tenants_lessees.length > 4 && isExpanded && (
+                                                            <div className="more-tenants-notice">
+                                                                +{owner.tenants_lessees.length - 4} more... Click "Full History" to see all
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {owner.tenants_lessees.length === 0 && (
+                                                    <div className="no-tenants">
+                                                        No tenants or lessees currently
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        )}
                     </div>
-                    <div className="table-container">
-              <table className="farmers-table">
-                <thead>
-                  <tr>
-                    {[
-                      'Reference Number',
-                      'Farmer Name',
-                      'Farmer Address',
-                      'Parcel Address',
-                      'Parcel Area',
-                      'Date Submitted',
-                      'Status'
-                    ].map((header) => (
-                      <th key={header}>{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && (
-                    <tr><td colSpan={7} className="loading-cell">Loading...</td></tr>
-                  )}
 
-                  {error && !loading && (
-                    <tr><td colSpan={7} className="error-cell">Error: {error}</td></tr>
-                  )}
-
-                  {!loading && !error && filteredRecords.length > 0 && (
-                    filteredRecords.map((record) => {
-                      return (
-                        <tr key={record.id}>
-                          <td>{record.referenceNumber}</td>
-                          <td>{record.farmerName}</td>
-                          <td>{record.farmerAddress}</td>
-                          <td>{record.farmLocation}</td>
-                          <td>{record.parcelArea}</td>
-                          <td>{formatDate(record.dateSubmitted)}</td>
-                          <td>
-                            <span className={`status-pill ${getStatusClass(record.status)}`}>
-                              {record.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-
-                  {!loading && !error && filteredRecords.length === 0 && (
-                    Array.from({ length: 16 }).map((_, i) => (
-                      <tr key={`empty-${i}`}>
-                        <td colSpan={7}>&nbsp;</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>        
-          </div>          
-        </div>            
-      </div>              
-    </div>                
+                    {/* Full History Modal */}
+                    {showHistoryModal && selectedOwnerHistory && (
+                        <div className="modal-overlay" onClick={closeHistoryModal}>
+                            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                                <div className="modal-header">
+                                    <h2>Full History - {selectedOwnerHistory.owner_name}</h2>
+                                    <button className="modal-close" onClick={closeHistoryModal}>×</button>
+                                </div>
+                                <div className="modal-body">
+                                    {selectedOwnerHistory.tenants_lessees.length === 0 ? (
+                                        <p className="no-history">No tenant or lessee history available</p>
+                                    ) : (
+                                        <div className="history-list">
+                                            {selectedOwnerHistory.tenants_lessees.map((tenant, index) => (
+                                                <div key={tenant.id} className="history-item">
+                                                    <div className="history-number">{index + 1}</div>
+                                                    <div className="history-type-badge">{tenant.type}</div>
+                                                    <div className="history-details">
+                                                        <div className="history-name">{tenant.name}</div>
+                                                        <div className="history-meta">
+                                                            <span>Location: {tenant.location}</span>
+                                                            <span>Area: {tenant.area} ha</span>
+                                                            <span>Date: {new Date(tenant.createdAt).toLocaleDateString()}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
     );
-};
-
-export default JoLandrecords;
+}; export default JoLandrecords;

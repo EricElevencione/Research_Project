@@ -548,6 +548,25 @@
     }
 
     .form-steps {
-        grid-template-columns: 1fr 1fr 1fr;
+        flex-direction: column;
     }
+}
+
+/* Parcel validation error styles */
+.parcel-error-input {
+    border: 2px solid #d32f2f !important;
+    background-color: #ffebee !important;
+    outline: none !important;
+}
+
+.parcel-error-message {
+    color: #d32f2f;
+    font-size: 0.85em;
+    display: block;
+    margin-top: 5px;
+    font-weight: 500;
+}
+
+.parcel-error-border {
+    border: 2px solid #d32f2f !important;
 }

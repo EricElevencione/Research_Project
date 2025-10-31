@@ -27,6 +27,23 @@ interface RSBSARecord {
   };
 }
 
+interface Parcel {
+  id: string;
+  parcel_number: string;
+  farm_location_barangay: string;
+  farm_location_municipality: string;
+  total_farm_area_ha: number;
+  within_ancestral_domain: string;
+  ownership_document_no: string;
+  agrarian_reform_beneficiary: string;
+  ownership_type_registered_owner: boolean;
+  ownership_type_tenant: boolean;
+  ownership_type_lessee: boolean;
+  tenant_land_owner_name: string;
+  lessee_land_owner_name: string;
+  ownership_others_specify: string;
+}
+
 const JoMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,6 +59,9 @@ const JoMasterlist: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<RSBSARecord | null>(null);
   type EditForm = Partial<RSBSARecord> & { firstName?: string; middleName?: string; lastName?: string; barangay?: string; municipality?: string };
   const [editFormData, setEditFormData] = useState<EditForm>({});
+  const [editingParcels, setEditingParcels] = useState<Parcel[]>([]);
+  const [loadingParcels, setLoadingParcels] = useState(false);
+  const [parcelErrors, setParcelErrors] = useState<Record<string, string>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
@@ -174,6 +194,8 @@ const JoMasterlist: React.FC = () => {
   const handleCancel = () => {
     setEditingRecord(null);
     setEditFormData({});
+    setEditingParcels([]);
+    setParcelErrors({});
   };
 
   const parseName = (fullName: string): { lastName: string; firstName: string; middleName: string } => {
@@ -198,7 +220,7 @@ const JoMasterlist: React.FC = () => {
     return { barangay: parts[0] || '', municipality: parts[1] || '' };
   };
 
-  const handleEdit = (recordId: string) => {
+  const handleEdit = async (recordId: string) => {
     const recordToEdit = rsbsaRecords.find(record => record.id === recordId);
     if (recordToEdit) {
       const { lastName, firstName, middleName } = parseName(recordToEdit.farmerName || '');
@@ -217,6 +239,25 @@ const JoMasterlist: React.FC = () => {
         dateSubmitted: recordToEdit.dateSubmitted,
         parcelArea: extractParcelAreaNumber(recordToEdit.parcelArea || '')
       });
+
+      // Fetch individual parcels for this submission
+      setLoadingParcels(true);
+      setParcelErrors({}); // Clear any previous errors
+      try {
+        const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${recordId}/parcels`);
+        if (response.ok) {
+          const parcels = await response.json();
+          setEditingParcels(parcels);
+        } else {
+          console.error('Failed to fetch parcels');
+          setEditingParcels([]);
+        }
+      } catch (error) {
+        console.error('Error fetching parcels:', error);
+        setEditingParcels([]);
+      } finally {
+        setLoadingParcels(false);
+      }
     }
     closeMenu();
   };
@@ -258,28 +299,99 @@ const JoMasterlist: React.FC = () => {
     }));
   };
 
-  const handleParcelAreaChange = (value: string) => {
-    setEditFormData(prev => ({
-      ...prev,
-      parcelArea: value
-    }));
-  };
+  const handleIndividualParcelChange = (parcelId: string, field: keyof Parcel, value: any) => {
+    // Validate if the field is total_farm_area_ha
+    if (field === 'total_farm_area_ha') {
+      const valueStr = String(value).trim();
 
-  const formatParcelArea = (value: string): string => {
-    if (!value || value.trim() === '') return '';
+      // Check if empty
+      if (valueStr === '') {
+        setParcelErrors(prev => ({
+          ...prev,
+          [parcelId]: 'Parcel area is required'
+        }));
+        setEditingParcels(prev =>
+          prev.map(parcel =>
+            parcel.id === parcelId
+              ? { ...parcel, [field]: 0 }
+              : parcel
+          )
+        );
+        return;
+      }
 
-    // If it's just a number, add "hectares"
-    if (/^\d+(\.\d+)?$/.test(value.trim())) {
-      return `${value.trim()} hectares`;
+      // Check if it's a valid number
+      const numValue = parseFloat(valueStr);
+      if (isNaN(numValue)) {
+        setParcelErrors(prev => ({
+          ...prev,
+          [parcelId]: 'Parcel area must be a valid number'
+        }));
+        return;
+      }
+
+      // Check if it's positive
+      if (numValue <= 0) {
+        setParcelErrors(prev => ({
+          ...prev,
+          [parcelId]: 'Parcel area must be greater than 0'
+        }));
+        setEditingParcels(prev =>
+          prev.map(parcel =>
+            parcel.id === parcelId
+              ? { ...parcel, [field]: numValue }
+              : parcel
+          )
+        );
+        return;
+      }
+
+      // Valid input - clear error
+      setParcelErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[parcelId];
+        return newErrors;
+      });
+
+      setEditingParcels(prev =>
+        prev.map(parcel =>
+          parcel.id === parcelId
+            ? { ...parcel, [field]: numValue }
+            : parcel
+        )
+      );
+    } else {
+      // For other fields, just update without validation
+      setEditingParcels(prev =>
+        prev.map(parcel =>
+          parcel.id === parcelId
+            ? { ...parcel, [field]: value }
+            : parcel
+        )
+      );
     }
-
-    // If it already contains "hectares" or other text, return as is
-    return value;
-  };
-
-  const handleSave = async () => {
+  }; const handleSave = async () => {
     if (editingRecord && editFormData) {
       try {
+        // Validate all parcels before saving
+        if (editingParcels.length > 0) {
+          let hasErrors = false;
+          const newErrors: Record<string, string> = {};
+
+          editingParcels.forEach(parcel => {
+            if (!parcel.total_farm_area_ha || parcel.total_farm_area_ha <= 0) {
+              hasErrors = true;
+              newErrors[parcel.id] = 'Parcel area must be a valid positive number';
+            }
+          });
+
+          if (hasErrors) {
+            setParcelErrors(newErrors);
+            setError('Please fix all parcel area errors before saving');
+            return;
+          }
+        }
+
         // Start with the existing record data
         const existingData = {
           farmerName: editingRecord.farmerName,
@@ -310,14 +422,19 @@ const JoMasterlist: React.FC = () => {
           return editFormData.farmerAddress ?? editingRecord.farmerAddress;
         })();
 
+        // Calculate new parcel area string from individual parcels
+        const newParcelAreaString = editingParcels.length > 0
+          ? editingParcels.map(p => p.total_farm_area_ha).join(', ')
+          : editFormData.parcelArea;
+
         // Format the data for submission
         const formattedData = {
           ...existingData,
           ...editFormData,
           farmerName: composedFarmerName,
           farmerAddress: composedAddress,
-          // Format parcel area to include "hectares" if it's just a number
-          parcelArea: editFormData.parcelArea ? formatParcelArea(editFormData.parcelArea) : undefined,
+          // Use the calculated parcel area string from individual parcels
+          parcelArea: newParcelAreaString,
         };
 
         // Remove any undefined or empty values
@@ -355,6 +472,40 @@ const JoMasterlist: React.FC = () => {
 
         const updatedRecord = await response.json();
 
+        // Update individual parcels if they were edited
+        if (editingParcels.length > 0) {
+          for (const parcel of editingParcels) {
+            try {
+              const parcelResponse = await fetch(`http://localhost:5000/api/rsbsa_farm_parcels/${parcel.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  total_farm_area_ha: parcel.total_farm_area_ha,
+                  farm_location_barangay: parcel.farm_location_barangay,
+                  farm_location_municipality: parcel.farm_location_municipality,
+                  within_ancestral_domain: parcel.within_ancestral_domain,
+                  ownership_document_no: parcel.ownership_document_no,
+                  agrarian_reform_beneficiary: parcel.agrarian_reform_beneficiary,
+                  ownership_type_registered_owner: parcel.ownership_type_registered_owner,
+                  ownership_type_tenant: parcel.ownership_type_tenant,
+                  ownership_type_lessee: parcel.ownership_type_lessee,
+                  tenant_land_owner_name: parcel.tenant_land_owner_name,
+                  lessee_land_owner_name: parcel.lessee_land_owner_name,
+                  ownership_others_specify: parcel.ownership_others_specify,
+                }),
+              });
+
+              if (!parcelResponse.ok) {
+                console.error(`Failed to update parcel ${parcel.id}`);
+              }
+            } catch (error) {
+              console.error(`Error updating parcel ${parcel.id}:`, error);
+            }
+          }
+        }
+
         // Update the local state with the response from the server
         const updatedRecordData = {
           ...editingRecord,
@@ -375,6 +526,9 @@ const JoMasterlist: React.FC = () => {
         // Close edit mode
         setEditingRecord(null);
         setEditFormData({});
+        setEditingParcels([]);
+        setParcelErrors({});
+        setError(null); // Clear any error messages
 
         // Show success message (optional)
         console.log('Record updated successfully');
@@ -487,7 +641,7 @@ const JoMasterlist: React.FC = () => {
                 </select>
               </div>
 
-              <div className="refresh-filter">
+              {/* <div className="refresh-filter">
                 <button
                   onClick={() => {
                     setLoading(true);
@@ -499,7 +653,7 @@ const JoMasterlist: React.FC = () => {
                 >
                   Refresh
                 </button>
-              </div>
+              </div> */}
             </div>
 
             {/* RSBSA Records Table */}
@@ -683,14 +837,54 @@ const JoMasterlist: React.FC = () => {
                     placeholder="Municipality"
                   />
                 </div>
-                <div className="form-group">
-                  <label>Parcel Area:</label>
-                  <input
-                    type="text"
-                    value={editFormData.parcelArea || ''}
-                    onChange={(e) => handleParcelAreaChange(e.target.value)}
-                    placeholder="e.g., 2.5 (will show as '2.5 hectares')"
-                  />
+
+                {/* Individual Parcel Areas */}
+                <div style={{ marginTop: '20px', borderTop: '2px solid #e0e0e0', paddingTop: '15px' }}>
+                  <h4 style={{ marginBottom: '15px', color: '#2c5f2d' }}>Parcel Areas</h4>
+                  {loadingParcels ? (
+                    <p>Loading parcels...</p>
+                  ) : editingParcels.length > 0 ? (
+                    editingParcels.map((parcel, index) => (
+                      <div
+                        key={parcel.id}
+                        style={{
+                          marginBottom: '15px',
+                          padding: '15px',
+                          backgroundColor: '#f9f9f9',
+                          borderRadius: '8px',
+                          border: parcelErrors[parcel.id] ? '2px solid #d32f2f' : '1px solid #e0e0e0'
+                        }}
+                      >
+                        <div className="form-group">
+                          <label style={{ fontWeight: 'bold', color: '#2c5f2d' }}>
+                            Parcel Area {index + 1} (Parcel No. {parcel.parcel_number}):
+                          </label>
+                          <input
+                            type="text"
+                            value={parcel.total_farm_area_ha || ''}
+                            onChange={(e) => handleIndividualParcelChange(parcel.id, 'total_farm_area_ha', e.target.value)}
+                            placeholder="e.g., 2.5"
+                            style={{
+                              width: '100%',
+                              border: parcelErrors[parcel.id] ? '2px solid #d32f2f' : '1px solid #ccc',
+                              backgroundColor: parcelErrors[parcel.id] ? '#ffebee' : 'white',
+                              outline: parcelErrors[parcel.id] ? 'none' : undefined
+                            }}
+                          />
+                          {parcelErrors[parcel.id] && (
+                            <small style={{ color: '#d32f2f', fontSize: '0.85em', display: 'block', marginTop: '5px' }}>
+                              {parcelErrors[parcel.id]}
+                            </small>
+                          )}
+                          <small style={{ color: '#666', fontSize: '0.85em', display: 'block', marginTop: '5px' }}>
+                            Location: {parcel.farm_location_barangay || 'N/A'}
+                          </small>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p style={{ color: '#666', fontStyle: 'italic' }}>No parcels found for this farmer.</p>
+                  )}
                 </div>
               </div>
               <div className="edit-modal-footer">

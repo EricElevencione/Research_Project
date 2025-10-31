@@ -1,6 +1,5 @@
-let x;
+const arr = ["apple", "banana", "cherry"];
 
-if (true) {
-    x = 5;
-}
-console.log(x)
+arr["apple"] = "orange";
+
+console.log(arr);

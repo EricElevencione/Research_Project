@@ -186,6 +186,8 @@ const JoRsbsa: React.FC = () => {
 
   const toggleBool = (field: keyof FormData) => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
+    // Clear farmingActivity error when any activity checkbox is toggled
+    setErrors(prev => ({ ...prev, farmingActivity: '' }));
   };
 
   const addParcel = () => {
@@ -225,6 +227,8 @@ const JoRsbsa: React.FC = () => {
       ...prev,
       mainLivelihood: checked ? value : prev.mainLivelihood === value ? '' : prev.mainLivelihood,
     }));
+    // Clear errors when livelihood is selected
+    setErrors(prev => ({ ...prev, mainLivelihood: '', farmingActivity: '' }));
   };
 
   // Next step validation is handled by handleSubmitForm now
@@ -256,7 +260,54 @@ const JoRsbsa: React.FC = () => {
     }
 
     if (currentStep === 2) {
-      // No strict required fields for farm profile in this implementation; advance
+      // Validate farm profile: require main livelihood selection
+      if (!formData.mainLivelihood) {
+        newErrors.mainLivelihood = 'Please select a main livelihood';
+      } else {
+        // Validate specific activities based on selected livelihood
+        if (formData.mainLivelihood === 'farmer') {
+          const hasFarmingActivity = (formData as any).farmerRice ||
+            (formData as any).farmerCorn ||
+            (formData as any).farmerOtherCrops ||
+            (formData as any).farmerLivestock ||
+            (formData as any).farmerPoultry;
+          if (!hasFarmingActivity) {
+            newErrors.farmingActivity = 'Please select at least one farming activity';
+          }
+        } else if (formData.mainLivelihood === 'farmworker') {
+          const hasWorkType = (formData as any).fwLandPrep ||
+            (formData as any).fwPlanting ||
+            (formData as any).fwCultivation ||
+            (formData as any).fwHarvesting ||
+            (formData as any).fwOthers;
+          if (!hasWorkType) {
+            newErrors.farmingActivity = 'Please select at least one kind of work';
+          }
+        } else if (formData.mainLivelihood === 'fisherfolk') {
+          const hasFishingActivity = (formData as any).ffFishCapture ||
+            (formData as any).ffAquaculture ||
+            (formData as any).ffGleaning ||
+            (formData as any).ffFishProcessing ||
+            (formData as any).ffFishVending ||
+            (formData as any).ffOthers;
+          if (!hasFishingActivity) {
+            newErrors.farmingActivity = 'Please select at least one fishing activity';
+          }
+        } else if (formData.mainLivelihood === 'agri-youth') {
+          const hasInvolvement = (formData as any).ayPartHousehold ||
+            (formData as any).ayFormalCourse ||
+            (formData as any).ayNonFormalCourse ||
+            (formData as any).ayParticipatedProgram ||
+            (formData as any).ayOthers;
+          if (!hasInvolvement) {
+            newErrors.farmingActivity = 'Please select at least one type of involvement';
+          }
+        }
+      }
+
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) return;
+
       setErrors({});
       setCurrentStep(3);
       return;
@@ -569,6 +620,7 @@ const JoRsbsa: React.FC = () => {
                       <label><input type="checkbox" checked={formData.mainLivelihood === 'fisherfolk'} onChange={(e) => handleLivelihoodToggle('fisherfolk', e.target.checked)} /> FISHERFOLK</label>
                       <label><input type="checkbox" checked={formData.mainLivelihood === 'agri-youth'} onChange={(e) => handleLivelihoodToggle('agri-youth', e.target.checked)} /> AGRI YOUTH</label>
                     </div>
+                    {errors.mainLivelihood && <div className="error">{errors.mainLivelihood}</div>}
                   </div>
 
                   {formData.mainLivelihood === 'farmer' && (
@@ -594,6 +646,7 @@ const JoRsbsa: React.FC = () => {
                       {(formData as any).farmerPoultry && (
                         <input type="text" placeholder="Specify poultry" value={(formData as any).farmerPoultryText} onChange={(e) => handleInputChange('farmerPoultryText', e.target.value)} />
                       )}
+                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>
                   )}
 
@@ -610,6 +663,7 @@ const JoRsbsa: React.FC = () => {
                       {(formData as any).fwOthers && (
                         <input type="text" placeholder="Specify other work" value={(formData as any).fwOthersText} onChange={(e) => handleInputChange('fwOthersText', e.target.value)} />
                       )}
+                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>
                   )}
 
@@ -627,6 +681,7 @@ const JoRsbsa: React.FC = () => {
                       {(formData as any).ffOthers && (
                         <input type="text" placeholder="Specify other fishing activity" value={(formData as any).ffOthersText} onChange={(e) => handleInputChange('ffOthersText', e.target.value)} />
                       )}
+                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>
                   )}
 
@@ -643,6 +698,7 @@ const JoRsbsa: React.FC = () => {
                       {(formData as any).ayOthers && (
                         <input type="text" placeholder="Specify other involvement" value={(formData as any).ayOthersText} onChange={(e) => handleInputChange('ayOthersText', e.target.value)} />
                       )}
+                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>
                   )}
 
