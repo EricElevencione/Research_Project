@@ -39,7 +39,9 @@ pool.connect((err, client, release) => { // Connect to the database
 // In production, frontend is served statically, so CORS is only needed for API calls from other origins if applicable
 // For this setup where backend serves frontend, cors() might not be strictly needed for the served files
 app.use(cors()); // Allows cross-origin requests (can be configured more restrictively)
-app.use(express.json()); // Parses incoming JSON requests
+// Increase body size limits to accept GeoJSON payloads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => { // Health check
@@ -75,6 +77,31 @@ app.get('/api/test-db', async (req, res) => {
 const frontendBuildPath = path.join(__dirname, '../dist'); // Assuming 'dist' is in the project root
 app.use(express.static(frontendBuildPath));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Simple file-backed storage for land plots if DB table is not available
+const LAND_PLOTS_STORE = path.join(__dirname, 'uploads', 'land_plots.json');
+function readLandPlots() {
+    try {
+        if (!fs.existsSync(LAND_PLOTS_STORE)) {
+            fs.mkdirSync(path.dirname(LAND_PLOTS_STORE), { recursive: true });
+            fs.writeFileSync(LAND_PLOTS_STORE, JSON.stringify([]));
+        }
+        const raw = fs.readFileSync(LAND_PLOTS_STORE, 'utf8');
+        return JSON.parse(raw || '[]');
+    } catch (e) {
+        console.error('Failed to read land plots store:', e);
+        return [];
+    }
+}
+function writeLandPlots(items) {
+    try {
+        fs.writeFileSync(LAND_PLOTS_STORE, JSON.stringify(items, null, 2));
+        return true;
+    } catch (e) {
+        console.error('Failed to write land plots store:', e);
+        return false;
+    }
+}
 
 // API endpoint to get land records for the table
 app.get('/api/lands', async (req, res) => { // Get land records in the table
@@ -123,8 +150,76 @@ app.get('/api/lands', async (req, res) => { // Get land records in the table
 });
 
 
-// API endpoint to get land plots with geometry and owner info for the map
+// API endpoint to get/create/update/delete land plots (file-backed fallback)
+app.get('/api/land-plots', async (req, res) => {
+    try {
+        const items = readLandPlots();
+        res.json(items);
+    } catch (e) {
+        console.error('Error in GET /api/land-plots:', e);
+        res.status(500).json({ message: 'Failed to load land plots' });
+    }
+});
 
+app.post('/api/land-plots', async (req, res) => {
+    try {
+        const body = req.body || {};
+        if (!body.id) {
+            // generate simple id
+            body.id = `plot-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+        if (!body.geometry) {
+            return res.status(400).json({ message: 'Missing geometry' });
+        }
+        const items = readLandPlots();
+        const exists = items.find(p => p.id === body.id);
+        if (exists) {
+            return res.status(409).json({ message: 'Plot with id already exists' });
+        }
+        const now = new Date().toISOString();
+        const toSave = {
+            ...body,
+            createdAt: body.createdAt || now,
+            updatedAt: body.updatedAt || now,
+        };
+        items.push(toSave);
+        writeLandPlots(items);
+        res.status(201).json(toSave);
+    } catch (e) {
+        console.error('Error in POST /api/land-plots:', e);
+        res.status(500).json({ message: 'Failed to save land plot' });
+    }
+});
+
+app.put('/api/land-plots/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const body = req.body || {};
+        const items = readLandPlots();
+        const idx = items.findIndex(p => p.id === id);
+        if (idx === -1) return res.status(404).json({ message: 'Plot not found' });
+        const now = new Date().toISOString();
+        items[idx] = { ...items[idx], ...body, id, updatedAt: now };
+        writeLandPlots(items);
+        res.json(items[idx]);
+    } catch (e) {
+        console.error('Error in PUT /api/land-plots/:id:', e);
+        res.status(500).json({ message: 'Failed to update land plot' });
+    }
+});
+
+app.delete('/api/land-plots/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const items = readLandPlots();
+        const next = items.filter(p => p.id !== id);
+        writeLandPlots(next);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Error in DELETE /api/land-plots/:id:', e);
+        res.status(500).json({ message: 'Failed to delete land plot' });
+    }
+});
 
 // Registration endpoint for admin and technician
 app.post('/api/register', async (req, res) => {
@@ -621,39 +716,43 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         } else {
             // This is the structured table
             console.log('Using structured table');
-            // Build query dynamically based on available columns
-            let selectFields = `
-                id,
-                "LAST NAME",
-                "FIRST NAME", 
-                "MIDDLE NAME",
-                "EXT NAME",
-                "GENDER",
-                "BIRTHDATE",
-                "BARANGAY",
-                "MUNICIPALITY", 
-                "FARM LOCATION",
-                "PARCEL AREA",
-                "TOTAL FARM AREA",
-                "MAIN LIVELIHOOD",
-                status,
-                submitted_at,
-                created_at,
-                updated_at
-            `;
-            
-            if (hasOwnershipColumns) {
-                selectFields += `,
-                "OWNERSHIP_TYPE_REGISTERED_OWNER",
-                "OWNERSHIP_TYPE_TENANT",
-                "OWNERSHIP_TYPE_LESSEE"`;
-            }
-            
+
+            // Build SELECT that coalesces PARCEL AREA from submission column or sum from farm_parcels
+            const ownershipFields = hasOwnershipColumns
+                ? `,
+                rs."OWNERSHIP_TYPE_REGISTERED_OWNER",
+                rs."OWNERSHIP_TYPE_TENANT",
+                rs."OWNERSHIP_TYPE_LESSEE"`
+                : '';
+
             query = `
-                SELECT ${selectFields}
-                FROM rsbsa_submission 
-                WHERE "LAST NAME" IS NOT NULL 
-                ORDER BY submitted_at DESC
+                SELECT 
+                    rs.id,
+                    rs."LAST NAME",
+                    rs."FIRST NAME",
+                    rs."MIDDLE NAME",
+                    rs."EXT NAME",
+                    rs."GENDER",
+                    rs."BIRTHDATE",
+                    rs."BARANGAY",
+                    rs."MUNICIPALITY",
+                    rs."FARM LOCATION",
+                    COALESCE(rs."PARCEL AREA", fp_sum.total_area) AS "PARCEL AREA",
+                    rs."TOTAL FARM AREA",
+                    rs."MAIN LIVELIHOOD",
+                    rs.status,
+                    rs.submitted_at,
+                    rs.created_at,
+                    rs.updated_at
+                    ${ownershipFields}
+                FROM rsbsa_submission rs
+                LEFT JOIN (
+                    SELECT submission_id, SUM(total_farm_area_ha) AS total_area
+                    FROM farm_parcels
+                    GROUP BY submission_id
+                ) fp_sum ON fp_sum.submission_id = rs.id
+                WHERE rs."LAST NAME" IS NOT NULL
+                ORDER BY rs.submitted_at DESC
             `;
         }
         const result = await pool.query(query);
@@ -751,119 +850,271 @@ app.get('/api/rsbsa_submission', async (req, res) => {
     }
 });
 
-// PUT endpoint to update a specific RSBSA submission
-app.put('/api/rsbsa_submission/:id', async (req, res) => {
+// GET endpoint to fetch a specific RSBSA submission by ID
+app.get('/api/rsbsa_submission/:id', async (req, res) => {
     const { id } = req.params;
-    const updateData = req.body;
-
+    
     try {
-        console.log(`Updating RSBSA submission ${id} with status:`, updateData.status);
+        console.log(`Fetching RSBSA submission ${id}...`);
 
-        // Check table structure first
-        const tableCheckQuery = `
-            SELECT column_name, data_type 
+        // Check if table exists
+        const tableCheck = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'rsbsa_submission'
+            );
+        `);
+
+        if (!tableCheck.rows[0].exists) {
+            return res.status(404).json({
+                error: 'rsbsa_submission table not found',
+                message: 'The rsbsa_submission table does not exist in the database.'
+            });
+        }
+
+        // Check table structure
+        const columnCheckQuery = `
+            SELECT column_name 
             FROM information_schema.columns 
             WHERE table_name = 'rsbsa_submission' 
             ORDER BY ordinal_position
         `;
-        const tableStructure = await pool.query(tableCheckQuery);
-        console.log('Table structure:', tableStructure.rows);
+        const columnResult = await pool.query(columnCheckQuery);
+        const hasJsonbColumn = columnResult.rows.some(row => row.column_name === 'data');
+        const hasStructuredColumns = columnResult.rows.some(row => row.column_name === 'LAST NAME');
 
-        const hasJsonbColumn = tableStructure.rows.some(row => row.column_name === 'data');
-        const hasStatusColumn = tableStructure.rows.some(row => row.column_name === 'status');
-
-        if (!hasStatusColumn) {
-            return res.status(400).json({
-                message: 'Status column does not exist in database',
-                error: 'The rsbsa_submission table does not have a status column. Please run the database migration first.'
-            });
+        let query;
+        if (hasJsonbColumn && !hasStructuredColumns) {
+            // JSONB version
+            query = `
+                SELECT id, data, created_at, updated_at, submitted_at, status
+                FROM rsbsa_submission 
+                WHERE id = $1
+            `;
+        } else {
+            // Structured version
+            query = `
+                SELECT *
+                FROM rsbsa_submission 
+                WHERE id = $1
+            `;
         }
 
-        // Check if the record exists
-        const checkQuery = `SELECT id, status FROM rsbsa_submission WHERE id = $1`;
-        const checkResult = await pool.query(checkQuery, [id]);
-
-        if (checkResult.rowCount === 0) {
+        const result = await pool.query(query, [id]);
+        
+        if (result.rows.length === 0) {
             return res.status(404).json({
-                message: 'RSBSA submission not found',
-                error: 'No record found with the provided ID'
+                error: 'RSBSA submission not found',
+                message: `No RSBSA submission found with ID ${id}`
             });
         }
 
-        console.log('Found record:', checkResult.rows[0]);
+        const row = result.rows[0];
+        let submissionData;
 
-        // Parse farmer name if provided
-        let lastName = '';
-        let firstName = '';
-        let middleName = '';
-        let extName = '';
-
-        if (updateData.farmerName) {
-            const nameParts = updateData.farmerName.split(', ');
-            lastName = nameParts[0] || '';
-            firstName = nameParts[1] || '';
-            middleName = nameParts[2] || '';
-            extName = nameParts[3] || '';
+        if (hasJsonbColumn && !hasStructuredColumns) {
+            // Handle JSONB data
+            submissionData = {
+                id: row.id,
+                ...row.data,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                submitted_at: row.submitted_at,
+                status: row.status
+            };
+        } else {
+            // Handle structured data
+            submissionData = {
+                id: row.id,
+                firstName: row["FIRST NAME"] || '',
+                middleName: row["MIDDLE NAME"] || '',
+                surname: row["LAST NAME"] || '',
+                extName: row["EXT NAME"] || '',
+                gender: row["GENDER"] || '',
+                birthdate: row["BIRTHDATE"] || '',
+                municipality: row["MUNICIPALITY"] || '',
+                barangay: row["BARANGAY"] || '',
+                province: row["PROVINCE"] || '',
+                farmLocation: row["FARM LOCATION"] || '',
+                parcelArea: row["PARCEL AREA"] || '',
+                totalFarmArea: row["TOTAL FARM AREA"] || '',
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                submitted_at: row.submitted_at,
+                status: row.status
+            };
         }
 
-        // Extract parcel area number if it contains "hectares"
-        let parcelArea = updateData.parcelArea;
-        if (parcelArea && parcelArea.includes('hectares')) {
-            parcelArea = parcelArea.replace(/\s*hectares\s*$/i, '').trim();
-        }
-
-        // Validate status
-        const validStatuses = ['Active Farmer', 'Not Active'];
-        const status = validStatuses.includes(updateData.status) ? updateData.status : null;
-        console.log('Validated status:', status);
-
-        // For status-only updates, use a simpler query
-        const updateQuery = `
-            UPDATE rsbsa_submission SET
-                status = $1
-            WHERE id = $2
-            RETURNING *;
+        // Also fetch farm parcels for this submission
+        const parcelsQuery = `
+            SELECT *
+            FROM rsbsa_farm_parcels 
+            WHERE submission_id = $1
+            ORDER BY parcel_number
         `;
+        const parcelsResult = await pool.query(parcelsQuery, [id]);
+        
+        submissionData.farmParcels = parcelsResult.rows;
 
-        const values = [
-            status,
-            id
-        ];
-
-        console.log('Executing query with values:', values);
-        const result = await pool.query(updateQuery, values);
-        console.log('Query result:', result.rows);
-
-        if (result.rowCount === 0) {
-            console.log('No rows updated - record not found');
-            return res.status(404).json({
-                message: 'RSBSA submission not found',
-                error: 'No record found with the provided ID'
-            });
-        }
-
-        console.log(`RSBSA submission ${id} updated successfully`);
-        console.log('Updated record:', result.rows[0]);
-        res.json({
-            message: 'RSBSA submission updated successfully',
-            data: result.rows[0] // Return the updated record
-        });
-
+        res.json(submissionData);
     } catch (error) {
-        console.error('Error updating RSBSA submission:', error);
-        console.error('Error details:', {
-            message: error.message,
-            code: error.code,
-            detail: error.detail,
-            hint: error.hint,
-            position: error.position
-        });
+        console.error('Error fetching RSBSA submission:', error);
         res.status(500).json({
-            message: 'Error updating RSBSA submission',
-            error: error.message,
-            details: error.detail || error.code
+            message: 'Error fetching RSBSA submission',
+            error: error.message
         });
     }
+});
+
+// PUT endpoint to update a specific RSBSA submission
+app.put('/api/rsbsa_submission/:id', async (req, res) => {
+	const { id } = req.params;
+	const updateData = req.body;
+
+	try {
+		console.log(`Updating RSBSA submission ${id} with payload:`, updateData);
+
+		// Check table structure first
+		const tableCheckQuery = `
+			SELECT column_name, data_type 
+			FROM information_schema.columns 
+			WHERE table_name = 'rsbsa_submission' 
+			ORDER BY ordinal_position
+		`;
+		const tableStructure = await pool.query(tableCheckQuery);
+		console.log('Table structure:', tableStructure.rows.map(r => r.column_name));
+
+		const hasStatusColumn = tableStructure.rows.some(row => row.column_name === 'status');
+		if (!hasStatusColumn) {
+			return res.status(400).json({
+				message: 'Status column does not exist in database',
+				error: 'The rsbsa_submission table does not have a status column. Please run the database migration first.'
+			});
+		}
+
+		// Ensure record exists
+		const checkQuery = `SELECT id FROM rsbsa_submission WHERE id = $1`;
+		const checkResult = await pool.query(checkQuery, [id]);
+		if (checkResult.rowCount === 0) {
+			return res.status(404).json({
+				message: 'RSBSA submission not found',
+				error: 'No record found with the provided ID'
+			});
+		}
+
+		// Prepare dynamic update based on provided fields
+		const setClauses = [];
+		const values = [];
+		let paramIndex = 1;
+
+		// Parse farmer name if provided: "LAST NAME", "FIRST NAME", "MIDDLE NAME", "EXT NAME"
+		if (typeof updateData.farmerName === 'string' && updateData.farmerName.trim() !== '') {
+			const nameParts = updateData.farmerName.split(', ');
+			const lastName = nameParts[0] || '';
+			const firstName = nameParts[1] || '';
+			const middleName = nameParts[2] || '';
+			const extName = nameParts[3] || '';
+			setClauses.push(`"LAST NAME" = $${paramIndex++}`);
+			values.push(lastName);
+			setClauses.push(`"FIRST NAME" = $${paramIndex++}`);
+			values.push(firstName);
+			setClauses.push(`"MIDDLE NAME" = $${paramIndex++}`);
+			values.push(middleName);
+			setClauses.push(`"EXT NAME" = $${paramIndex++}`);
+			values.push(extName);
+		}
+
+		// Gender
+		if (typeof updateData.gender === 'string') {
+			setClauses.push(`"GENDER" = $${paramIndex++}`);
+			values.push(updateData.gender);
+		}
+
+		// Birthdate
+		if (typeof updateData.birthdate === 'string' && updateData.birthdate.trim() !== '') {
+			setClauses.push(`"BIRTHDATE" = $${paramIndex++}`);
+			values.push(new Date(updateData.birthdate));
+		}
+
+		// Farm Location
+		if (typeof updateData.farmLocation === 'string') {
+			setClauses.push(`"FARM LOCATION" = $${paramIndex++}`);
+			values.push(updateData.farmLocation);
+		}
+
+		// Farmer Address -> split into BARANGAY, MUNICIPALITY if possible
+		if (typeof updateData.farmerAddress === 'string') {
+			const parts = updateData.farmerAddress.split(',').map(p => p.trim()).filter(Boolean);
+			const barangay = parts[0] || updateData.farmerAddress.trim();
+			const municipality = parts.length > 1 ? parts[1] : null;
+			setClauses.push(`"BARANGAY" = $${paramIndex++}`);
+			values.push(barangay);
+			setClauses.push(`"MUNICIPALITY" = $${paramIndex++}`);
+			values.push(municipality);
+		}
+
+		// Parcel Area (strip "hectares" and store numeric if possible)
+		if (typeof updateData.parcelArea === 'string') {
+			let parcelAreaStr = updateData.parcelArea;
+			if (parcelAreaStr.includes('hectares')) {
+				parcelAreaStr = parcelAreaStr.replace(/\s*hectares\s*$/i, '').trim();
+			}
+			const parcelAreaNum = parcelAreaStr === '' ? null : parseFloat(parcelAreaStr);
+			setClauses.push(`"PARCEL AREA" = $${paramIndex++}`);
+			values.push(Number.isFinite(parcelAreaNum) ? parcelAreaNum : null);
+		}
+
+		// Status
+		if (typeof updateData.status === 'string') {
+			const validStatuses = ['Active Farmer', 'Not Active'];
+			const statusValue = validStatuses.includes(updateData.status) ? updateData.status : null;
+			setClauses.push(`status = $${paramIndex++}`);
+			values.push(statusValue);
+		}
+
+		if (setClauses.length === 0) {
+			return res.status(400).json({
+				message: 'No valid fields provided to update.'
+			});
+		}
+
+		const updateQuery = `
+			UPDATE rsbsa_submission
+			SET ${setClauses.join(', ')}
+			WHERE id = $${paramIndex}
+			RETURNING *;
+		`;
+		values.push(id);
+
+		console.log('Executing dynamic UPDATE:', updateQuery, 'VALUES:', values);
+		const result = await pool.query(updateQuery, values);
+		if (result.rowCount === 0) {
+			return res.status(404).json({
+				message: 'RSBSA submission not found after update'
+			});
+		}
+
+		res.json({
+			message: 'RSBSA submission updated successfully',
+			data: result.rows[0]
+		});
+
+	} catch (error) {
+		console.error('Error updating RSBSA submission:', error);
+		console.error('Error details:', {
+			message: error.message,
+			code: error.code,
+			detail: error.detail,
+			hint: error.hint,
+			position: error.position
+		});
+		res.status(500).json({
+			message: 'Error updating RSBSA submission',
+			error: error.message,
+			details: error.detail || error.code
+		});
+	}
 });
 
 // For any requests not matching API routes, serve the frontend's index.html

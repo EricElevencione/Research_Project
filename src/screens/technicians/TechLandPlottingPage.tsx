@@ -110,6 +110,12 @@ const LandPlottingPage: React.FC = () => {
                 if (landAttributes.area === undefined || landAttributes.area === null || isNaN(Number(landAttributes.area))) {
                     errors.area = 'This field is required';
                 }
+            } else if (field === 'barangay') {
+                // Use robust derived barangay when landAttributes.barangay is missing
+                const derivedBarangay = getDisplayBarangay();
+                if (!derivedBarangay || derivedBarangay === 'N/A') {
+                    errors.barangay = 'This field is required';
+                }
             } else if (!landAttributes[field]) {
                 errors[field] = 'This field is required';
             }
@@ -137,6 +143,10 @@ const LandPlottingPage: React.FC = () => {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 plotSource: landAttributes.plotSource || 'manual', // Ensure plotSource is sent
+                // Ensure barangay is populated using derived value if missing
+                barangay: landAttributes.barangay && landAttributes.barangay.trim() !== ''
+                    ? landAttributes.barangay
+                    : (getDisplayBarangay() === 'N/A' ? '' : getDisplayBarangay()),
             };
 
             // Determine if this is a new or existing plot
@@ -402,7 +412,7 @@ const LandPlottingPage: React.FC = () => {
     const handleBackClick = () => {
         // If we came from parcel selection, go back there
         if (parcelContext.recordId) {
-            navigate(`/parcel-selection/${parcelContext.recordId}`);
+            navigate(`/technician-pick-land-parcel/${parcelContext.recordId}`);
         } else {
             navigate('/technician-rsbsa');
         }
@@ -473,11 +483,11 @@ const LandPlottingPage: React.FC = () => {
     // Fetch RSBSA record data
     const fetchRSBSARecord = async (recordId: string, parcelIndex?: number) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/RSBSAform/${recordId}`);
+            const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${recordId}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             setRsbsaRecord(data);
-            console.log('Fetched data:', data);
+            console.log('Fetched RSBSA data:', data);
             console.log('parcelIndex:', parcelIndex);
 
             // Fetch farm parcel data from the database
@@ -512,28 +522,26 @@ const LandPlottingPage: React.FC = () => {
                     setCurrentParcel(parcel);
 
                     // Use the farm parcel data from the database
-                    const parcelBarangayLocation = parcel.farm_location_barangay || parcel.farmLocation?.barangay || fallbackBarangayName;
-                    const parcelMunicipalityLocation = parcel.farm_location_city_municipality || parcel.farmLocation?.cityMunicipality || 'Dumangas';
+                    console.log('📍 Raw parcel data:', parcel);
+                    const parcelBarangayLocation = parcel.farm_location_barangay || parcel.farmLocation?.barangay || parcel.farmLocationBarangay || data.addressBarangay || fallbackBarangayName;
+                    const parcelMunicipalityLocation = parcel.farm_location_city_municipality || parcel.farmLocation?.cityMunicipality || parcel.farmLocationCityMunicipality || data.addressMunicipality || 'Dumangas';
 
-                    setParcelBarangay(parcelBarangayLocation);
-                    console.log('📍 Land Plotting Location Priority:', {
-                        parcelBarangay: parcel.farm_location_barangay,
-                        farmLocationBarangay: parcel.farmLocation?.barangay,
-                        fallbackBarangay: fallbackBarangayName,
-                        finalLocation: parcelBarangayLocation,
-                        farmerBarangay: data.addressBarangay,
-                        parcelLocation: `${parcelBarangayLocation}, ${parcelMunicipalityLocation}`
-                    });
+                    // Ensure we have a valid barangay
+                    const finalBarangay = parcelBarangayLocation || fallbackBarangayName || '';
+                    setParcelBarangay(finalBarangay);
+                    console.log('📍 Setting parcelBarangay to:', finalBarangay);
 
                     setLandAttributes(prev => ({
                         ...prev,
                         firstName: data.firstName || '',
                         middleName: data.middleName || '',
                         surname: data.surname || '',
-                        barangay: parcelBarangayLocation,
+                        gender: data.gender || 'Male',
+                        birthdate: data.birthdate || '',
+                        barangay: finalBarangay,
                         municipality: parcelMunicipalityLocation,
-                        area: parseFloat(parcel.farm_size || parcel.total_farm_area || '0'),
-                        parcel_address: `${parcelBarangayLocation}, ${parcelMunicipalityLocation}`,
+                        area: parseFloat(parcel.total_farm_area_ha || parcel.farm_size || parcel.total_farm_area || '0'),
+                        parcel_address: `${finalBarangay}, ${parcelMunicipalityLocation}`,
                         farmType: parcel.farm_type || 'Irrigated',
                         plotSource: parcel.plot_source || 'manual',
                         parcelNumber: parcel.parcel_number,
@@ -872,6 +880,58 @@ const LandPlottingPage: React.FC = () => {
     console.log("👤 Current Farmer:", `${landAttributes.surname} ${landAttributes.firstName} ${landAttributes.middleName}`);
     console.log("📋 Filtered History Count:", currentFarmerHistory.length, "of", parcelHistory.length, "total records");
 
+    // Helpers to robustly derive display values from various possible field names
+    function getDisplayBarangay() {
+        const candidates = [
+            currentParcel?.farm_location_barangay,
+            currentParcel?.farmLocation?.barangay,
+            (currentParcel as any)?.farmLocationBarangay,
+            (currentParcel as any)?.barangay,
+            landAttributes.barangay,
+            (rsbsaRecord as any)?.farmLocationBarangay,
+            rsbsaRecord?.addressBarangay,
+            (rsbsaRecord as any)?.barangay,
+        ];
+        const value = candidates.find(v => typeof v === 'string' && v.trim().length > 0);
+        return value || 'N/A';
+    }
+
+    function getDisplayMunicipality() {
+        const candidates = [
+            (currentParcel as any)?.farm_location_city_municipality,
+            currentParcel?.farmLocation?.cityMunicipality,
+            (currentParcel as any)?.farmLocationCityMunicipality,
+            landAttributes.municipality,
+            rsbsaRecord?.addressMunicipality,
+            'Dumangas'
+        ];
+        const value = candidates.find(v => typeof v === 'string' && v.trim().length > 0);
+        return value || 'Dumangas';
+    }
+
+    function toNumberOrNull(val: any): number | null {
+        if (val === 0) return 0;
+        if (val === null || val === undefined) return null;
+        const num = typeof val === 'string' ? parseFloat(val) : (typeof val === 'number' ? val : NaN);
+        return Number.isFinite(num) ? num : null;
+    }
+
+    function getDisplayAreaHectares() {
+        const candidateNums = [
+            toNumberOrNull((currentParcel as any)?.total_farm_area_ha),
+            toNumberOrNull((currentParcel as any)?.total_farm_area),
+            toNumberOrNull((currentParcel as any)?.farm_size),
+            toNumberOrNull((currentParcel as any)?.size),
+            toNumberOrNull(landAttributes.area),
+            toNumberOrNull((rsbsaRecord as any)?.totalFarmArea),
+        ];
+        const value = candidateNums.find(v => v !== null);
+        if (value === null || value === undefined) return 'N/A';
+        // Keep 0 if actual value is 0; otherwise format to max 4 decimals
+        const formatted = value === 0 ? '0' : String(Math.round((value as number) * 10000) / 10000);
+        return `${formatted} hectares`;
+    }
+
     return (
         <div className="landplotting-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '90vh', border: '1px solid #222', borderRadius: '10px', margin: '2rem', background: '#fff' }}>
             {/* Back Button at top left */}
@@ -896,7 +956,7 @@ const LandPlottingPage: React.FC = () => {
                                 onShapeCreated={handleShapeCreated}
                                 onShapeEdited={handleShapeEdited}
                                 onShapeDeleted={handleMapShapeDeleted}
-                                barangayName={parcelBarangay || fallbackBarangayName}
+                                barangayName={getDisplayBarangay()}
                                 onShapeFinalized={handleShapeFinalized}
                                 // Only disable drawing if geometry mode
                                 drawingDisabled={plottingMethod === 'geometry'}
@@ -941,21 +1001,33 @@ const LandPlottingPage: React.FC = () => {
                                 ? `Farm Parcel #${(selectedShape.properties as any).parcelNumber}`
                                 : 'Farm Parcel #1'}
                     </div>
-                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Details:</div>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>Name:</span>
-                            {` ${landAttributes.surname} ${landAttributes.firstName} ${landAttributes.middleName}`}
-                        </div>
+                     <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Details:</div>
+                     <div style={{ marginBottom: '1rem' }}>
+                         <div>
+                             <span style={{ fontWeight: 'bold' }}>Name:</span>
+                            {` ${rsbsaRecord?.firstName || landAttributes.firstName || ''} ${rsbsaRecord?.middleName || landAttributes.middleName || ''} ${rsbsaRecord?.surname || landAttributes.surname || ''}`.trim() || 'N/A'}
+                         </div>
                         <div>
                             <span style={{ fontWeight: 'bold' }}>Municipality:</span>
-                            {` ${landAttributes.municipality}`}
+                            {` ${getDisplayMunicipality()}`}
                         </div>
                         <div>
                             <span style={{ fontWeight: 'bold' }}>Barangay:</span>
-                            {` ${parcelBarangay || fallbackBarangayName || landAttributes.barangay}`}
+                            {` ${getDisplayBarangay()}`}
                         </div>
-                    </div>
+                         <div>
+                             <span style={{ fontWeight: 'bold' }}>Gender:</span>
+                            {` ${rsbsaRecord?.gender || landAttributes.gender || 'N/A'}`}
+                         </div>
+                         <div>
+                             <span style={{ fontWeight: 'bold' }}>Birthdate:</span>
+                            {` ${(rsbsaRecord?.birthdate || landAttributes.birthdate) ? new Date(rsbsaRecord?.birthdate || landAttributes.birthdate).toLocaleDateString() : 'N/A'}`}
+                         </div>
+                        <div>
+                            <span style={{ fontWeight: 'bold' }}>Parcel Area:</span>
+                            {` ${getDisplayAreaHectares()}`}
+                        </div>
+                     </div>
                     {/* Editable plot-specific fields */}
                     {/* Removed Area (sqm) and Plot Source fields as requested */}
 

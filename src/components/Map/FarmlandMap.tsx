@@ -19,9 +19,11 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 interface FarmlandMapProps {
     onLandPlotSelect?: (properties: any) => void;
+    highlightGeometry?: any | null; // optional geometry to highlight
+    highlightMatcher?: ((properties: any) => boolean) | null; // optional predicate to highlight existing parcels
 }
 
-const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
+const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGeometry, highlightMatcher }) => {
     const [farmlandRecords, setFarmlandRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     // Removed unused error state
@@ -92,11 +94,29 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                 setBoundaryLoading(true);
                 setBoundaryError(null);
 
-                const municipalResponse = await fetch('/Dumangas_map.json');
-                if (!municipalResponse.ok) {
-                    throw new Error(`Failed to fetch municipal boundary data: ${municipalResponse.status} ${municipalResponse.statusText}`);
+                const base = ((import.meta as any)?.env?.BASE_URL || '/').replace(/\/$/, '');
+                const candidates = [
+                    `${base}/Dumangas_map.json`,
+                    '/Dumangas_map.json',
+                    'Dumangas_map.json'
+                ];
+                let municipalData: any | null = null;
+                let lastErr: any = null;
+                for (const url of candidates) {
+                    try {
+                        console.log('Fetching municipal boundary:', url);
+                        const resp = await fetch(url);
+                        if (resp.ok) {
+                            municipalData = await resp.json();
+                            break;
+                        } else {
+                            lastErr = new Error(`Failed to fetch municipal boundary data: ${resp.status} ${resp.statusText}`);
+                        }
+                    } catch (e) {
+                        lastErr = e;
+                    }
                 }
-                const municipalData = await municipalResponse.json();
+                if (!municipalData) throw lastErr || new Error('Failed to fetch municipal boundary');
                 if (!municipalData || !municipalData.type || !municipalData.features) {
                     throw new Error('Invalid municipal boundary GeoJSON data format');
                 }
@@ -272,12 +292,13 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                                     return null;
                                 }).filter(Boolean)
                             } as FeatureCollection}
-                            style={() => ({
-                                color: 'blue',
-                                weight: 2,
-                                opacity: 0.8,
-                                fillOpacity: 0.5
-                            })}
+                            style={(feature: any) => {
+                                const props = feature?.properties || {};
+                                const isHighlighted = typeof highlightMatcher === 'function' ? !!highlightMatcher(props) : false;
+                                return isHighlighted
+                                    ? { color: '#e74c3c', weight: 3, opacity: 1, fillOpacity: 0.2 }
+                                    : { color: 'blue', weight: 2, opacity: 0.8, fillOpacity: 0.5 };
+                            }}
                             filter={(feature) => !!feature.geometry &&
                                 (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')}
                             onEachFeature={(feature, layer) => {
@@ -339,6 +360,18 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect }) => {
                                     });
                                 }
                             }}
+                        />
+                    </LayersControl.Overlay>
+                )}
+
+                {highlightGeometry && (
+                    <LayersControl.Overlay checked name="Hovered Parcel">
+                        <GeoJSON
+                            key="highlight-geometry"
+                            data={{ type: 'FeatureCollection', features: [
+                                { type: 'Feature', geometry: highlightGeometry, properties: {} }
+                            ] } as any}
+                            style={() => ({ color: '#e74c3c', weight: 3, opacity: 1, fillOpacity: 0.2 })}
                         />
                     </LayersControl.Overlay>
                 )}

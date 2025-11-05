@@ -46,6 +46,27 @@ const TechPickLandParcel: React.FC = () => {
     const [landOwner, setLandOwner] = useState<LandOwner | null>(null);
     const [landParcels, setLandParcels] = useState<FarmParcel[]>([]);
     const [selectedParcel, setSelectedParcel] = useState<FarmParcel | null>(null);
+    const [hoveredParcel, setHoveredParcel] = useState<FarmParcel | null>(null);
+
+    // Helper used for matching against land plots in the map
+    const normalize = (str: string) => (str || '').trim().toLowerCase();
+    const hoveredMatcher = hoveredParcel ? ((props: any) => {
+        // 1) Prefer matching by parcel number (most reliable)
+        const propsParcelNo = normalize(String(props.parcelNumber ?? props.parcel_number ?? ''));
+        const hoveredParcelNo = normalize(String(hoveredParcel.parcelNumber ?? (hoveredParcel as any).parcel_number ?? ''));
+        if (propsParcelNo && hoveredParcelNo && propsParcelNo === hoveredParcelNo) return true;
+
+        // 2) Fallback to address equality
+        const hoveredAddr = normalize(`${hoveredParcel.farmLocationBarangay}, ${hoveredParcel.farmLocationCityMunicipality}`);
+        const propsAddr = normalize(props.parcel_address || `${props.barangay || ''}, ${props.municipality || ''}`);
+        if (hoveredAddr && propsAddr && hoveredAddr === propsAddr) return true;
+
+        // 3) Last resort: barangay-only match
+        if (normalize(hoveredParcel.farmLocationBarangay) && normalize(props.barangay) && normalize(hoveredParcel.farmLocationBarangay) === normalize(props.barangay)) {
+            return true;
+        }
+        return false;
+    }) : null;
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -150,9 +171,12 @@ const TechPickLandParcel: React.FC = () => {
         }
     }, [ownerId]);
 
-    // Handle parcel selection
-    const handleParcelSelect = (parcel: FarmParcel) => {
+    // Handle parcel selection -> navigate to mapping page
+    const handleParcelSelect = (parcel: FarmParcel, parcelIndex: number) => {
         setSelectedParcel(parcel);
+        if (ownerId) {
+            navigate(`/technician-landplotting?recordId=${ownerId}&parcelIndex=${parcelIndex}`);
+        }
     };
 
     // Format date for display
@@ -219,6 +243,7 @@ const TechPickLandParcel: React.FC = () => {
 
                 {/* Main content starts here */}
                 <div className="main-content jo-map-layout">
+                    <button onClick={() => navigate('/technician-rsbsa')} className="back-button" aria-label="Back to RSBSA list">←</button>
                     <div className="content-header">
                         <h2>Land Parcel Selection</h2>
                         {landOwner && (
@@ -257,11 +282,13 @@ const TechPickLandParcel: React.FC = () => {
                                         </div>
                                     ) : (
                                         <div className="parcel-grid">
-                                            {landParcels.map((parcel) => (
+                                            {landParcels.map((parcel, idx) => (
                                                 <div
                                                     key={parcel.id}
                                                     className={`parcel-card ${selectedParcel?.id === parcel.id ? 'selected' : ''}`}
-                                                    onClick={() => handleParcelSelect(parcel)}
+                                                    onClick={() => handleParcelSelect(parcel, idx)}
+                                                    onMouseEnter={() => setHoveredParcel(parcel)}
+                                                    onMouseLeave={() => setHoveredParcel(prev => (prev?.id === parcel.id ? null : prev))}
                                                 >
                                                     <div className="parcel-header">
                                                         <h4>Parcel {parcel.parcelNumber}</h4>
@@ -310,6 +337,8 @@ const TechPickLandParcel: React.FC = () => {
                                                 onLandPlotSelect={(properties) => {
                                                     console.log('Selected land plot:', properties);
                                                 }}
+                                                highlightGeometry={hoveredParcel?.geometry || null}
+                                                highlightMatcher={hoveredMatcher}
                                             />
                                             <div className="selected-parcel-info">
                                                 <h4>Selected: Parcel {selectedParcel.parcelNumber}</h4>

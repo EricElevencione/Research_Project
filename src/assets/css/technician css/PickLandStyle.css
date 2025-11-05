@@ -248,6 +248,28 @@
     background: #0056b3;
 }
 
+/* Back Button consistent with app UI */
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid #222;
+    background: #ffffff;
+    color: #222;
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 10px;
+}
+
+.back-button:hover {
+    background: #f5f5f5;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .content-body {
