@@ -21,8 +21,7 @@ const pool = new Pool({
     user: process.env.DB_USER || 'postgres', // Replace with your database username
     host: process.env.DB_HOST || 'localhost', // Replace with your database host
     database: process.env.DB_NAME || 'Masterlist', // Replace with your database name
-    password: process.env.DB_PASSWORD || 'postgresadmin', // Replace with your database password 
-    // password: process.env.DB_PASSWORD || 'postgresadmin', 
+    password: process.env.DB_PASSWORD || 'postgresadmin', // Replace with your database password
     port: process.env.DB_PORT || 5432, // Replace with your database port
 });
 
@@ -40,7 +39,9 @@ pool.connect((err, client, release) => { // Connect to the database
 // In production, frontend is served statically, so CORS is only needed for API calls from other origins if applicable
 // For this setup where backend serves frontend, cors() might not be strictly needed for the served files
 app.use(cors()); // Allows cross-origin requests (can be configured more restrictively)
-app.use(express.json()); // Parses incoming JSON requests
+// Increase body size limits to accept GeoJSON payloads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Get landowners endpoint (from structured rsbsa_submission)
 app.get('/api/landowners', async (req, res) => {
@@ -213,6 +214,31 @@ const frontendBuildPath = path.join(__dirname, '../dist'); // Assuming 'dist' is
 app.use(express.static(frontendBuildPath));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Simple file-backed storage for land plots if DB table is not available
+const LAND_PLOTS_STORE = path.join(__dirname, 'uploads', 'land_plots.json');
+function readLandPlots() {
+    try {
+        if (!fs.existsSync(LAND_PLOTS_STORE)) {
+            fs.mkdirSync(path.dirname(LAND_PLOTS_STORE), { recursive: true });
+            fs.writeFileSync(LAND_PLOTS_STORE, JSON.stringify([]));
+        }
+        const raw = fs.readFileSync(LAND_PLOTS_STORE, 'utf8');
+        return JSON.parse(raw || '[]');
+    } catch (e) {
+        console.error('Failed to read land plots store:', e);
+        return [];
+    }
+}
+function writeLandPlots(items) {
+    try {
+        fs.writeFileSync(LAND_PLOTS_STORE, JSON.stringify(items, null, 2));
+        return true;
+    } catch (e) {
+        console.error('Failed to write land plots store:', e);
+        return false;
+    }
+}
+
 // API endpoint to get land records for the table
 app.get('/api/lands', async (req, res) => { // Get land records in the table
     try {
@@ -259,6 +285,78 @@ app.get('/api/lands', async (req, res) => { // Get land records in the table
     }
 });
 
+
+<<<<<<< HEAD
+// API endpoint to get/create/update/delete land plots (file-backed fallback)
+app.get('/api/land-plots', async (req, res) => {
+    try {
+        const items = readLandPlots();
+        res.json(items);
+    } catch (e) {
+        console.error('Error in GET /api/land-plots:', e);
+        res.status(500).json({ message: 'Failed to load land plots' });
+    }
+});
+
+app.post('/api/land-plots', async (req, res) => {
+    try {
+        const body = req.body || {};
+        if (!body.id) {
+            // generate simple id
+            body.id = `plot-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+        if (!body.geometry) {
+            return res.status(400).json({ message: 'Missing geometry' });
+        }
+        const items = readLandPlots();
+        const exists = items.find(p => p.id === body.id);
+        if (exists) {
+            return res.status(409).json({ message: 'Plot with id already exists' });
+        }
+        const now = new Date().toISOString();
+        const toSave = {
+            ...body,
+            createdAt: body.createdAt || now,
+            updatedAt: body.updatedAt || now,
+        };
+        items.push(toSave);
+        writeLandPlots(items);
+        res.status(201).json(toSave);
+    } catch (e) {
+        console.error('Error in POST /api/land-plots:', e);
+        res.status(500).json({ message: 'Failed to save land plot' });
+    }
+});
+
+app.put('/api/land-plots/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const body = req.body || {};
+        const items = readLandPlots();
+        const idx = items.findIndex(p => p.id === id);
+        if (idx === -1) return res.status(404).json({ message: 'Plot not found' });
+        const now = new Date().toISOString();
+        items[idx] = { ...items[idx], ...body, id, updatedAt: now };
+        writeLandPlots(items);
+        res.json(items[idx]);
+    } catch (e) {
+        console.error('Error in PUT /api/land-plots/:id:', e);
+        res.status(500).json({ message: 'Failed to update land plot' });
+    }
+});
+
+app.delete('/api/land-plots/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const items = readLandPlots();
+        const next = items.filter(p => p.id !== id);
+        writeLandPlots(next);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Error in DELETE /api/land-plots/:id:', e);
+        res.status(500).json({ message: 'Failed to delete land plot' });
+    }
+});
 
 // Registration endpoint for admin and technician
 app.post('/api/register', async (req, res) => {
@@ -802,41 +900,44 @@ app.get('/api/rsbsa_submission', async (req, res) => {
             `;
         } else {
             // This is the structured table
-            // console.log('Using structured table');
-            // Build query dynamically based on available columns
-            let selectFields = `
-                id,
-                "FFRS_CODE" as "referenceNumber",
-                "LAST NAME",
-                "FIRST NAME", 
-                "MIDDLE NAME",
-                "EXT NAME",
-                "GENDER",
-                "BIRTHDATE",
-                "BARANGAY",
-                "MUNICIPALITY", 
-                "FARM LOCATION",
-                "PARCEL AREA",
-                "TOTAL FARM AREA",
-                "MAIN LIVELIHOOD",
-                status,
-                submitted_at,
-                created_at,
-                updated_at
-            `;
+            console.log('Using structured table');
 
-            if (hasOwnershipColumns) {
-                selectFields += `,
-                "OWNERSHIP_TYPE_REGISTERED_OWNER",
-                "OWNERSHIP_TYPE_TENANT",
-                "OWNERSHIP_TYPE_LESSEE"`;
-            }
+            // Build SELECT that coalesces PARCEL AREA from submission column or sum from farm_parcels
+            const ownershipFields = hasOwnershipColumns
+                ? `,
+                rs."OWNERSHIP_TYPE_REGISTERED_OWNER",
+                rs."OWNERSHIP_TYPE_TENANT",
+                rs."OWNERSHIP_TYPE_LESSEE"`
+                : '';
 
             query = `
-                SELECT ${selectFields}
-                FROM rsbsa_submission 
-                WHERE "LAST NAME" IS NOT NULL 
-                ORDER BY submitted_at DESC
+                SELECT 
+                    rs.id,
+                    rs."LAST NAME",
+                    rs."FIRST NAME",
+                    rs."MIDDLE NAME",
+                    rs."EXT NAME",
+                    rs."GENDER",
+                    rs."BIRTHDATE",
+                    rs."BARANGAY",
+                    rs."MUNICIPALITY",
+                    rs."FARM LOCATION",
+                    COALESCE(rs."PARCEL AREA", fp_sum.total_area) AS "PARCEL AREA",
+                    rs."TOTAL FARM AREA",
+                    rs."MAIN LIVELIHOOD",
+                    rs.status,
+                    rs.submitted_at,
+                    rs.created_at,
+                    rs.updated_at
+                    ${ownershipFields}
+                FROM rsbsa_submission rs
+                LEFT JOIN (
+                    SELECT submission_id, SUM(total_farm_area_ha) AS total_area
+                    FROM farm_parcels
+                    GROUP BY submission_id
+                ) fp_sum ON fp_sum.submission_id = rs.id
+                WHERE rs."LAST NAME" IS NOT NULL
+                ORDER BY rs.submitted_at DESC
             `;
         }
         const result = await pool.query(query);
@@ -929,6 +1030,124 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         console.error('Error fetching RSBSA submissions:', error);
         res.status(500).json({
             message: 'Error fetching RSBSA submissions',
+            error: error.message
+        });
+    }
+});
+
+<<<<<<< HEAD
+// GET endpoint to fetch a specific RSBSA submission by ID
+app.get('/api/rsbsa_submission/:id', async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        console.log(`Fetching RSBSA submission ${id}...`);
+
+        // Check if table exists
+        const tableCheck = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'rsbsa_submission'
+            );
+        `);
+
+        if (!tableCheck.rows[0].exists) {
+            return res.status(404).json({
+                error: 'rsbsa_submission table not found',
+                message: 'The rsbsa_submission table does not exist in the database.'
+            });
+        }
+
+        // Check table structure
+        const columnCheckQuery = `
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'rsbsa_submission' 
+            ORDER BY ordinal_position
+        `;
+        const columnResult = await pool.query(columnCheckQuery);
+        const hasJsonbColumn = columnResult.rows.some(row => row.column_name === 'data');
+        const hasStructuredColumns = columnResult.rows.some(row => row.column_name === 'LAST NAME');
+
+        let query;
+        if (hasJsonbColumn && !hasStructuredColumns) {
+            // JSONB version
+            query = `
+                SELECT id, data, created_at, updated_at, submitted_at, status
+                FROM rsbsa_submission 
+                WHERE id = $1
+            `;
+        } else {
+            // Structured version
+            query = `
+                SELECT *
+                FROM rsbsa_submission 
+                WHERE id = $1
+            `;
+        }
+
+        const result = await pool.query(query, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'RSBSA submission not found',
+                message: `No RSBSA submission found with ID ${id}`
+            });
+        }
+
+        const row = result.rows[0];
+        let submissionData;
+
+        if (hasJsonbColumn && !hasStructuredColumns) {
+            // Handle JSONB data
+            submissionData = {
+                id: row.id,
+                ...row.data,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                submitted_at: row.submitted_at,
+                status: row.status
+            };
+        } else {
+            // Handle structured data
+            submissionData = {
+                id: row.id,
+                firstName: row["FIRST NAME"] || '',
+                middleName: row["MIDDLE NAME"] || '',
+                surname: row["LAST NAME"] || '',
+                extName: row["EXT NAME"] || '',
+                gender: row["GENDER"] || '',
+                birthdate: row["BIRTHDATE"] || '',
+                municipality: row["MUNICIPALITY"] || '',
+                barangay: row["BARANGAY"] || '',
+                province: row["PROVINCE"] || '',
+                farmLocation: row["FARM LOCATION"] || '',
+                parcelArea: row["PARCEL AREA"] || '',
+                totalFarmArea: row["TOTAL FARM AREA"] || '',
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                submitted_at: row.submitted_at,
+                status: row.status
+            };
+        }
+
+        // Also fetch farm parcels for this submission
+        const parcelsQuery = `
+            SELECT *
+            FROM rsbsa_farm_parcels 
+            WHERE submission_id = $1
+            ORDER BY parcel_number
+        `;
+        const parcelsResult = await pool.query(parcelsQuery, [id]);
+        
+        submissionData.farmParcels = parcelsResult.rows;
+
+        res.json(submissionData);
+    } catch (error) {
+        console.error('Error fetching RSBSA submission:', error);
+        res.status(500).json({
+            message: 'Error fetching RSBSA submission',
             error: error.message
         });
     }
@@ -1068,7 +1287,6 @@ app.put('/api/rsbsa_submission/:id', async (req, res) => {
             WHERE id = $${paramCounter}
             RETURNING *;
         `;
-
         // Add the ID as the last parameter
         queryValues.push(id);
 
@@ -1907,6 +2125,7 @@ app.get('/api/land-owners-with-tenants', async (req, res) => {
 // ============================================================================
 // CATCH-ALL ROUTE - MUST BE AFTER ALL API ENDPOINTS
 // ============================================================================
+>>>>>>> a122bbe1c00732e148c213e80006ad232a933b01
 // For any requests not matching API routes, serve the frontend's index.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(frontendBuildPath, 'index.html'));

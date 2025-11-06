@@ -31,7 +31,7 @@ const TechRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
+  const [, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -269,6 +269,9 @@ const TechRsbsa: React.FC = () => {
       }
 
       const data = await response.json();
+      console.log('Received RSBSA data from API:', data.length, 'records');
+      console.log('Sample record:', data[0]);
+      
       setRsbsaRecords(data);
 
       // Automatically filter for registered owners only
@@ -285,7 +288,9 @@ const TechRsbsa: React.FC = () => {
 
   // Function to filter registered owners only
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
-    return records.filter(record => {
+    console.log('Filtering records:', records.length);
+    
+    const filtered = records.filter(record => {
       // Check if the record represents a registered owner
       // A registered owner is someone where OWNERSHIP_TYPE_REGISTERED_OWNER is true
       // and they are NOT a tenant or lessee
@@ -302,6 +307,9 @@ const TechRsbsa: React.FC = () => {
 
       return hasLandParcel && hasFarmLocation;
     });
+    
+    console.log('Filtered results:', filtered.length, 'out of', records.length);
+    return filtered;
   };
 
   // Load data on component mount

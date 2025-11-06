@@ -42,6 +42,7 @@ export interface LandPlottingMapRef {
 
 const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     ({ onShapeCreated, onShapeEdited, onShapeDeleted, selectedShape, onShapeSelected, barangayName, onShapeFinalized, drawingDisabled, geometryPreview, shapes, polygonExistsForCurrentParcel }, ref) => {
+        console.log('📍 LandPlottingMap received barangayName:', barangayName);
         const [boundaryData, setBoundaryData] = useState<any>(null);
         const [loading, setLoading] = useState(true);
         const [error, setError] = useState<string | null>(null);
@@ -170,14 +171,30 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                     setLoading(true);
                     setError(null);
 
-                    // Quick fix: Always load Dumangas_map.json
-                    const filename = '/Dumangas_map.json';
-                    console.log('Quick fix: Attempting to fetch:', filename);
-                    const boundaryResponse = await fetch(filename);
-                    if (!boundaryResponse.ok) {
-                        throw new Error(`Failed to fetch Dumangas boundary data: ${boundaryResponse.status} ${boundaryResponse.statusText}`);
+                    // Load boundary with BASE_URL-aware path and fallbacks
+                    const base = ((import.meta as any)?.env?.BASE_URL || '/').replace(/\/$/, '');
+                    const candidates = [
+                        `${base}/Dumangas_map.json`,
+                        '/Dumangas_map.json',
+                        'Dumangas_map.json'
+                    ];
+                    let boundaryData: any | null = null;
+                    let lastErr: any = null;
+                    for (const url of candidates) {
+                        try {
+                            console.log('Attempting to fetch boundary:', url);
+                            const resp = await fetch(url);
+                            if (resp.ok) {
+                                boundaryData = await resp.json();
+                                break;
+                            } else {
+                                lastErr = new Error(`Failed to fetch Dumangas boundary data: ${resp.status} ${resp.statusText}`);
+                            }
+                        } catch (e) {
+                            lastErr = e;
+                        }
                     }
-                    const boundaryData = await boundaryResponse.json();
+                    if (!boundaryData) throw lastErr || new Error('Failed to fetch boundary file');
                     if (!boundaryData || !boundaryData.type || !boundaryData.features || !Array.isArray(boundaryData.features)) {
                         throw new Error(`Invalid Dumangas GeoJSON data format`);
                     }
@@ -310,13 +327,8 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                 // Find the correct barangay boundary feature
                 let boundaryFeature = null;
                 if (!barangayName) {
-                    console.error('barangayName is not set! Cannot check boundary.');
-                    alert('Barangay is not selected. Please select a barangay before plotting.');
-                    console.warn("❗ No barangayName passed to LandPlottingMap");
-                    if (featureGroupRef.current && featureGroupRef.current.hasLayer(layer)) {
-                        featureGroupRef.current.removeLayer(layer);
-                    }
-                    return;
+                    // If no barangay is selected, allow plotting without boundary validation
+                    console.warn('No barangayName provided; skipping boundary validation.');
                 }
                 if (boundaryData && boundaryData.features && boundaryData.features.length > 0) {
                     boundaryFeature = boundaryData.features.find(
@@ -328,7 +340,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                     }
                     if (!boundaryFeature) boundaryFeature = boundaryData.features[0];
                 }
-                if (boundaryFeature) {
+                if (barangayName && boundaryFeature) {
                     try {
                         // Debug: Log the drawn shape and boundary feature
                         console.log('Drawn shape GeoJSON:', JSON.stringify(geoJson, null, 2));
@@ -355,7 +367,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                         name: '',
                         area: layer.getArea ? layer.getArea() : 0,
                         coordinateAccuracy: 'approximate',
-                        barangay: barangayName,
+                        barangay: barangayName || '',
                         firstName: '',
                         middleName: '',
                         surname: '',
@@ -579,11 +591,23 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                     />
 
                     {boundaryData && (
-                        <GeoJSON
-                            key={barangayName}
-                            data={boundaryData}
-                            style={style}
-                        />
+                        (() => {
+                            const features = Array.isArray(boundaryData.features) ? boundaryData.features : [];
+                            if (barangayName) {
+                                const filtered = features.filter((f: any) => normalizeName(f.properties?.NAME_3 || '') === normalizeName(barangayName || ''));
+                                if (filtered.length > 0) {
+                                    return (
+                                        <GeoJSON
+                                            key={barangayName}
+                                            data={{ type: 'FeatureCollection', features: filtered } as any}
+                                            style={style}
+                                        />
+                                    );
+                                }
+                                return null;
+                            }
+                            return null;
+                        })()
                     )}
 
                     <FeatureGroup ref={featureGroupRef}>
