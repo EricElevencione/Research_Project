@@ -241,7 +241,7 @@ const JoRsbsaPage: React.FC = () => {
         <div className="main-content">
           <h2>Registered Land Owners</h2>
 
-          <div className="content-card">
+          <div className="content-card-rsbsa">
             <div className="actions-bar">
               <div className="search-container">
                 <input
@@ -288,7 +288,7 @@ const JoRsbsaPage: React.FC = () => {
                     </p>
                   </div>
                 )}
-                <table className="owners-table">
+                <table className="owners-table-rsbsa">
                   <thead>
                     <tr>
                       <th>Last Name</th>
@@ -352,3 +352,8 @@ const JoRsbsaPage: React.FC = () => {
 };
 
 export default JoRsbsaPage;
+
+
+
+
+

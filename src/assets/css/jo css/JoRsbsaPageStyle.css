@@ -742,12 +742,77 @@ h2 {
 }
 
 /* Content Card */
-.content-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin: 20px 0;
-  overflow: hidden;
+
+.content-card-rsbsa>div {
+
+  .content-card-rsbsa {
+    max-width: 100%;
+
+    background: white;
+    margin: 0 auto;
+
+    border-radius: 12px;
+    padding: 0;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  padding: 32px;
+
+  margin-top: 20px;
+  /* Remove excessive padding from nested divs */
+
+  flex: 1;
+
+  .content-card-rsbsa .max-w-4xl {
+
+    overflow-y: auto;
+    max-width: 100% !important;
+
+  }
+
+  padding: 0 !important;
+
+}
+
+/* Remove Tailwind default styles from form container */
+
+.content-card-rsbsa>div {
+  /* Responsive adjustments */
+
+  max-width: 100%;
+
+  @media (max-width: 768px) {
+
+    margin: 0;
+
+    .dashboard-header {
+
+      padding: 0 !important;
+      width: 100%;
+
+    }
+  }
+
+
+
+  /* Form Title Styling */
+  .main-content {
+    .content-card h3 {
+      padding: 15px;
+      font-size: 24px;
+    }
+
+    font-weight: 600;
+    color: #111827;
+
+    .content-card-rsbsa {
+      margin: 0 0 8px 0;
+      padding: 16px;
+
+    }
+  }
+
 }
 
 /* Table Container */
@@ -756,19 +821,19 @@ h2 {
   background: white;
 }
 
-.owners-table {
+.owners-table-rsbsa {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
   min-width: 1000px;
 }
 
-.owners-table thead {
+.owners-table-rsbsa thead {
   background: #dee2e6;
   color: rgb(0, 0, 0);
 }
 
-.owners-table th {
+.owners-table-rsbsa th {
   padding: 12px 12px;
   text-align: left;
   font-weight: 600;
@@ -779,34 +844,34 @@ h2 {
   background-color: #A0C878;
 }
 
-.owners-table th:last-child {
+.owners-table-rsbsa th:last-child {
   border-right: none;
 }
 
-.owners-table tbody tr {
+.owners-table-rsbsa tbody tr {
   border-bottom: 1px solid #e5e7eb;
   transition: background-color 0.2s ease;
 }
 
-.owners-table tbody tr:hover {
+.owners-table-rsbsa tbody tr:hover {
   background-color: #f9fafb;
 }
 
-.owners-table tbody tr:last-child {
+.owners-table-rsbsa tbody tr:last-child {
   border-bottom: none;
 }
 
-.owners-table td {
+.owners-table-rsbsa td {
   padding: 16px 12px;
   color: #374151;
   border-right: 1px solid #f3f4f6;
 }
 
-.owners-table td:last-child {
+.owners-table-rsbsa td:last-child {
   border-right: none;
 }
 
-.owners-table tbody tr:nth-child(even) {
+.owners-table-rsbsa tbody tr:nth-child(even) {
   background-color: #fafafa;
   gap: 10px;
 }
@@ -858,7 +923,7 @@ h2 {
     overflow-x: auto;
   }
 
-  .owners-table {
+  .owners-table-rsbsa {
     min-width: 800px;
   }
 }

@@ -15,6 +15,7 @@ import JoMasterlist from './screens/JO/JoMasterlist';
 import JoIncentives from './screens/JO/JoIncentives';
 import JoLandrecords from './screens/JO/JoLandrecords';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
+import './index.css'; // Tailwind CSS
 import "../src/assets/css/admin css/index.css";
 import './assets/css/mobile.css';
 

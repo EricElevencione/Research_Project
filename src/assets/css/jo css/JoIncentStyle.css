@@ -1,0 +1,514 @@
+/* Page Layout */
+.page-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.page {
+    display: flex;
+    width: 100%;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #f8f9fa;
+    border-right: 1px solid #e9ecef;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+/* Main content start */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+}
+
+.dashboard-header-incent {
+    background-color: #f0f0f0;
+    margin-top: 20px;
+    padding: 5px 5px 5px 30px;
+    border: 1px solid #111112;
+    width: 600px;
+    display: flex;
+    border-radius: 40px 0 40px 0;
+}
+
+.page-header {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0 0 10px 0;
+}
+
+.content-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: 400px;
+}
+
+/* Main content styling to match other JO pages */
+
+.page-container {
+    .main-content {
+
+        display: flex;
+        width: 100%;
+
+        min-height: 100vh;
+        flex-grow: 1;
+
+        background-color: #f0f0f0;
+        padding: 20px;
+
+    }
+
+    display: flex;
+
+    flex-direction: column;
+
+    .page {
+        background-color: white;
+
+        display: flex;
+    }
+
+    width: 100%;
+
+}
+
+/* Dashboard header */
+
+/* Adjust Tailwind component wrapper inside content-card */
+
+/* Content card - matching other pages */
+.content-card>div {
+
+    .content-card {
+        max-width: 100%;
+
+        background: white;
+        margin: 0 auto;
+
+        border-radius: 12px;
+        padding: 0;
+
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    padding: 32px;
+
+    margin-top: 20px;
+    /* Remove excessive padding from nested divs */
+
+    flex: 1;
+
+    .content-card .max-w-4xl {
+
+        overflow-y: auto;
+        max-width: 100% !important;
+
+    }
+
+    padding: 0 !important;
+
+}
+
+/* Remove Tailwind default styles from form container */
+
+.content-card>div {
+    /* Responsive adjustments */
+
+    max-width: 100%;
+
+    @media (max-width: 768px) {
+
+        margin: 0;
+
+        .dashboard-header {
+
+            padding: 0 !important;
+            width: 100%;
+
+        }
+    }
+
+
+
+    /* Form Title Styling */
+    .main-content {
+        .content-card h3 {
+            padding: 15px;
+            font-size: 24px;
+        }
+
+        font-weight: 600;
+        color: #111827;
+
+        .content-card {
+            margin: 0 0 8px 0;
+            padding: 16px;
+
+        }
+    }
+
+}
+
+.content-card p {
+    color: #6b7280;
+    margin: 0 0 24px 0;
+    font-size: 14px;
+}
+
+/* Form Layout */
+.content-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Form Groups */
+.content-card form>div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Labels */
+.content-card label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.content-card label .text-red-500,
+.content-card label span[style*="color: red"] {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+/* Input Fields */
+.content-card input[type="text"],
+.content-card input[type="date"],
+.content-card input[type="number"],
+.content-card select,
+.content-card textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+    background-color: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.content-card input[type="text"]:focus,
+.content-card input[type="date"]:focus,
+.content-card input[type="number"]:focus,
+.content-card select:focus,
+.content-card textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Input with error state */
+.content-card input.border-red-500,
+.content-card select.border-red-500,
+.content-card textarea.border-red-500 {
+    border-color: #ef4444;
+}
+
+/* Search Input with Icon */
+.content-card input[type="text"][placeholder*="Search"] {
+    padding-left: 40px;
+}
+
+/* Dropdown/Select */
+.content-card select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+/* Textarea */
+.content-card textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+/* Grid Layout for Quantity Fields */
+.content-card form>div:has(input[type="number"]) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+/* Checkbox Container */
+.content-card div:has(input[type="checkbox"]) {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.content-card input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+.content-card input[type="checkbox"]+label {
+    display: inline;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* Buttons */
+.content-card button {
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Primary Button (Submit) */
+.content-card button[type="submit"],
+.content-card button.bg-blue-600 {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.content-card button[type="submit"]:hover,
+.content-card button.bg-blue-600:hover {
+    background-color: #2563eb;
+}
+
+.content-card button[type="submit"]:disabled,
+.content-card button.bg-blue-600:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Secondary Button (Reset) */
+.content-card button[type="button"],
+.content-card button.bg-gray-200 {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.content-card button[type="button"]:hover,
+.content-card button.bg-gray-200:hover {
+    background-color: #d1d5db;
+}
+
+/* Button Container */
+.content-card form>div:last-child {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Alert/Warning Messages */
+.content-card div[class*="bg-yellow-50"],
+.content-card div[class*="bg-green-100"],
+.content-card div[class*="bg-red-50"] {
+    padding: 12px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.content-card div[class*="bg-yellow-50"] {
+    background-color: #fef3c7;
+    border: 1px solid #fbbf24;
+    color: #92400e;
+}
+
+.content-card div[class*="bg-green-100"] {
+    background-color: #d1fae5;
+    border: 1px solid #34d399;
+    color: #065f46;
+}
+
+.content-card div[class*="bg-red-50"] {
+    background-color: #fee2e2;
+    border: 1px solid #f87171;
+    color: #991b1b;
+}
+
+/* Error Messages */
+.content-card p.text-sm.text-red-600,
+.content-card .text-red-600 {
+    color: #dc2626;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+/* Search Results Dropdown */
+.content-card div[class*="absolute"][class*="z-10"] {
+    position: absolute;
+    z-index: 10;
+    margin-top: 4px;
+    width: 100%;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.content-card div[class*="absolute"] button {
+    width: 100%;
+    padding: 12px 16px;
+    text-align: left;
+    background: white;
+    border: none;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.content-card div[class*="absolute"] button:hover {
+    background-color: #eff6ff;
+}
+
+.content-card div[class*="absolute"] button:last-child {
+    border-bottom: none;
+}
+
+.content-card div[class*="absolute"] button div:first-child {
+    font-weight: 500;
+    color: #111827;
+}
+
+.content-card div[class*="absolute"] button div:last-child {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+/* Loading Spinner */
+.content-card svg.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Icons */
+.content-card svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+/* Helper text */
+.content-card p.text-sm.text-gray-500 {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.content-card p.text-sm.text-gray-600 {
+    color: #4b5563;
+    font-size: 13px;
+}
+
+/* Relative positioning for search container */
+.content-card form>div:has(input[placeholder*="Search"]) {
+    position: relative;
+}
+
+/* Remove Tailwind utility classes that conflict */
+.content-card .max-w-4xl {
+    max-width: 100% !important;
+}
+
+.content-card .mx-auto {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.content-card .p-4,
+.content-card .p-6,
+.content-card .md\:p-6 {
+    padding: 0 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-header {
+        width: 100%;
+    }
+
+    .main-content {
+        padding: 15px;
+    }
+
+    .content-card {
+        padding: 20px;
+    }
+
+    /* Stack quantity fields on mobile */
+    .content-card form>div:has(input[type="number"]) {
+        grid-template-columns: 1fr;
+    }
+
+    /* Stack buttons on mobile */
+    .content-card form>div:last-child {
+        flex-direction: column-reverse;
+    }
+
+    .content-card button {
+        width: 100%;
+    }
+}
+
+/* Toast Notifications - Position them properly */
+.Toaster {
+    z-index: 9999;
+}
+
+/* Ensure proper layering */
+.content-card {
+    position: relative;
+    z-index: 1;
+}
