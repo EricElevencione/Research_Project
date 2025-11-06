@@ -48,5 +48,209 @@
     "id": "shape-1762341094808-421677369909b8",
     "createdAt": "2025-11-05T11:11:36.199Z",
     "updatedAt": "2025-11-05T11:11:36.199Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 1,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Calao",
+    "firstName": "Harv",
+    "middleName": "Solano",
+    "surname": "Kim",
+    "ext_name": "",
+    "gender": "Male",
+    "birthdate": "",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Calao, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.701144,
+            10.868614
+          ],
+          [
+            122.699964,
+            10.867434
+          ],
+          [
+            122.701787,
+            10.866507
+          ],
+          [
+            122.702795,
+            10.867918
+          ],
+          [
+            122.701144,
+            10.868614
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1762430121465-60fa54d14e7148",
+    "createdAt": "2025-11-06T11:55:23.303Z",
+    "updatedAt": "2025-11-06T11:55:23.303Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 1,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Calao",
+    "firstName": "harv",
+    "middleName": "tubo",
+    "surname": "mik",
+    "ext_name": "",
+    "gender": "Male",
+    "birthdate": "",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Calao, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.702387,
+            10.868993
+          ],
+          [
+            122.700457,
+            10.866907
+          ],
+          [
+            122.703309,
+            10.865833
+          ],
+          [
+            122.70406,
+            10.867518
+          ],
+          [
+            122.702387,
+            10.868993
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1762431507524-00e90725938258",
+    "createdAt": "2025-11-06T12:18:29.147Z",
+    "updatedAt": "2025-11-06T12:18:29.147Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 0,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Cayos",
+    "firstName": "Eric ",
+    "middleName": "Servita",
+    "surname": "Elev",
+    "ext_name": "",
+    "gender": "Male",
+    "birthdate": "",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Cayos, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "2",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.65563,
+            10.812364
+          ],
+          [
+            122.652478,
+            10.809963
+          ],
+          [
+            122.654793,
+            10.807498
+          ],
+          [
+            122.656445,
+            10.809162
+          ],
+          [
+            122.65563,
+            10.812364
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1762431538547-dbdfc25965a548",
+    "createdAt": "2025-11-06T12:19:00.201Z",
+    "updatedAt": "2025-11-06T12:19:00.202Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 0,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Baras",
+    "firstName": "Eric ",
+    "middleName": "Servita",
+    "surname": "Elev",
+    "ext_name": "",
+    "gender": "Male",
+    "birthdate": "",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Baras, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.709568,
+            10.829011
+          ],
+          [
+            122.708742,
+            10.828642
+          ],
+          [
+            122.709546,
+            10.827779
+          ],
+          [
+            122.710158,
+            10.828379
+          ],
+          [
+            122.709568,
+            10.829011
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1762431589242-d131315c31446",
+    "createdAt": "2025-11-06T12:19:52.635Z",
+    "updatedAt": "2025-11-06T12:19:52.635Z"
   }
 ]

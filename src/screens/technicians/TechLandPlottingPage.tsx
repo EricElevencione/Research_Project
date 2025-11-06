@@ -111,8 +111,8 @@ const LandPlottingPage: React.FC = () => {
                     errors.area = 'This field is required';
                 }
             } else if (field === 'barangay') {
-                // Use robust derived barangay when landAttributes.barangay is missing
-                const derivedBarangay = getDisplayBarangay();
+                // Use derived barangay for validation
+                const derivedBarangay = landAttributes.barangay || parcelBarangay || fallbackBarangayName;
                 if (!derivedBarangay || derivedBarangay === 'N/A') {
                     errors.barangay = 'This field is required';
                 }
@@ -122,8 +122,12 @@ const LandPlottingPage: React.FC = () => {
         });
         setValidationErrors(errors);
         if (Object.keys(errors).length > 0) {
-            // Show which fields are missing
-            alert('Please fill in all required fields:\n' + Object.keys(errors).join(', '));
+            // Show which fields are missing with better formatting
+            const missingFields = Object.keys(errors).map(key => {
+                // Convert camelCase to readable text
+                return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            });
+            alert('Please fill in all required fields:\n\n' + missingFields.join('\n'));
             return false;
         }
         return true;
@@ -135,6 +139,9 @@ const LandPlottingPage: React.FC = () => {
         }
 
         try {
+            // Ensure barangay is populated using derived value
+            const derivedBarangay = landAttributes.barangay || parcelBarangay || fallbackBarangayName;
+
             const landPlotData = {
                 ...landAttributes,
                 area: Number(landAttributes.area),
@@ -142,11 +149,11 @@ const LandPlottingPage: React.FC = () => {
                 id: shapeToSave.id,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                plotSource: landAttributes.plotSource || 'manual', // Ensure plotSource is sent
-                // Ensure barangay is populated using derived value if missing
-                barangay: landAttributes.barangay && landAttributes.barangay.trim() !== ''
-                    ? landAttributes.barangay
-                    : (getDisplayBarangay() === 'N/A' ? '' : getDisplayBarangay()),
+                plotSource: landAttributes.plotSource || 'manual',
+                // Ensure barangay is always populated
+                barangay: derivedBarangay,
+                // Ensure parcel_address is populated
+                parcel_address: landAttributes.parcel_address || `${derivedBarangay}, ${landAttributes.municipality || 'Dumangas'}`,
             };
 
             // Determine if this is a new or existing plot
@@ -268,24 +275,43 @@ const LandPlottingPage: React.FC = () => {
         if (!shape.id) {
             shape.id = `shape-${Date.now()}-${uuidv4()}`;
         }
-        // Assign the current landAttributes to the shape's properties
-        shape.properties = { ...landAttributes };
-        // Ensure birthdate is set if available
-        if (!shape.properties.birthdate && landAttributes.birthdate) {
-            shape.properties.birthdate = landAttributes.birthdate;
-        }
+
+        // Pre-populate shape properties with current farmer info and parcel data
+        const prefilledProperties = {
+            ...landAttributes,
+            // Ensure farmer info is included
+            surname: landAttributes.surname || rsbsaRecord?.surname || '',
+            firstName: landAttributes.firstName || rsbsaRecord?.firstName || '',
+            middleName: landAttributes.middleName || rsbsaRecord?.middleName || '',
+            gender: landAttributes.gender || rsbsaRecord?.gender || 'Male',
+            birthdate: landAttributes.birthdate || rsbsaRecord?.birthdate || '',
+            // Ensure location info is included
+            barangay: parcelBarangay || landAttributes.barangay || fallbackBarangayName || '',
+            municipality: landAttributes.municipality || currentParcel?.farm_location_city_municipality || 'Dumangas',
+            province: 'Iloilo',
+            parcel_address: landAttributes.parcel_address || `${parcelBarangay || fallbackBarangayName}, ${landAttributes.municipality || 'Dumangas'}`,
+        };
+
+        shape.properties = prefilledProperties;
+
         // Assign parcelNumber from currentParcel if available
         if (currentParcel && currentParcel.parcel_number !== undefined) {
             (shape.properties as any).parcelNumber = currentParcel.parcel_number;
         }
+
         // If the shape is a polygon, auto-calculate area
         const geo = shape.layer.toGeoJSON();
         if (geo.geometry.type === 'Polygon' && shape.layer.getArea) {
             shape.properties.area = shape.layer.getArea();
-            setLandAttributes(prev => ({ ...prev, area: shape.layer.getArea() }));
+            prefilledProperties.area = shape.layer.getArea();
         }
+
+        // Update landAttributes with prefilled data
+        setLandAttributes(prefilledProperties);
+
         setSelectedShape(shape);
         setIsEditingAttributes(true);
+
         // Add the new shape to the shapes array if not already present
         setShapesAndVersion((prevShapes: Shape[]) => {
             // Prevent duplicates by checking id
@@ -1001,12 +1027,12 @@ const LandPlottingPage: React.FC = () => {
                                 ? `Farm Parcel #${(selectedShape.properties as any).parcelNumber}`
                                 : 'Farm Parcel #1'}
                     </div>
-                     <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Details:</div>
-                     <div style={{ marginBottom: '1rem' }}>
-                         <div>
-                             <span style={{ fontWeight: 'bold' }}>Name:</span>
+                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Details:</div>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <div>
+                            <span style={{ fontWeight: 'bold' }}>Name:</span>
                             {` ${rsbsaRecord?.firstName || landAttributes.firstName || ''} ${rsbsaRecord?.middleName || landAttributes.middleName || ''} ${rsbsaRecord?.surname || landAttributes.surname || ''}`.trim() || 'N/A'}
-                         </div>
+                        </div>
                         <div>
                             <span style={{ fontWeight: 'bold' }}>Municipality:</span>
                             {` ${getDisplayMunicipality()}`}
@@ -1015,19 +1041,19 @@ const LandPlottingPage: React.FC = () => {
                             <span style={{ fontWeight: 'bold' }}>Barangay:</span>
                             {` ${getDisplayBarangay()}`}
                         </div>
-                         <div>
-                             <span style={{ fontWeight: 'bold' }}>Gender:</span>
+                        <div>
+                            <span style={{ fontWeight: 'bold' }}>Gender:</span>
                             {` ${rsbsaRecord?.gender || landAttributes.gender || 'N/A'}`}
-                         </div>
-                         <div>
-                             <span style={{ fontWeight: 'bold' }}>Birthdate:</span>
+                        </div>
+                        <div>
+                            <span style={{ fontWeight: 'bold' }}>Birthdate:</span>
                             {` ${(rsbsaRecord?.birthdate || landAttributes.birthdate) ? new Date(rsbsaRecord?.birthdate || landAttributes.birthdate).toLocaleDateString() : 'N/A'}`}
-                         </div>
+                        </div>
                         <div>
                             <span style={{ fontWeight: 'bold' }}>Parcel Area:</span>
                             {` ${getDisplayAreaHectares()}`}
                         </div>
-                     </div>
+                    </div>
                     {/* Editable plot-specific fields */}
                     {/* Removed Area (sqm) and Plot Source fields as requested */}
 

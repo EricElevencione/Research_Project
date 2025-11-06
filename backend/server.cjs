@@ -286,7 +286,6 @@ app.get('/api/lands', async (req, res) => { // Get land records in the table
 });
 
 
-<<<<<<< HEAD
 // API endpoint to get/create/update/delete land plots (file-backed fallback)
 app.get('/api/land-plots', async (req, res) => {
     try {
@@ -911,34 +910,40 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                 : '';
 
             query = `
-                SELECT 
-                    rs.id,
-                    rs."LAST NAME",
-                    rs."FIRST NAME",
-                    rs."MIDDLE NAME",
-                    rs."EXT NAME",
-                    rs."GENDER",
-                    rs."BIRTHDATE",
-                    rs."BARANGAY",
-                    rs."MUNICIPALITY",
-                    rs."FARM LOCATION",
-                    COALESCE(rs."PARCEL AREA", fp_sum.total_area) AS "PARCEL AREA",
-                    rs."TOTAL FARM AREA",
-                    rs."MAIN LIVELIHOOD",
-                    rs.status,
-                    rs.submitted_at,
-                    rs.created_at,
-                    rs.updated_at
-                    ${ownershipFields}
-                FROM rsbsa_submission rs
-                LEFT JOIN (
-                    SELECT submission_id, SUM(total_farm_area_ha) AS total_area
-                    FROM farm_parcels
-                    GROUP BY submission_id
-                ) fp_sum ON fp_sum.submission_id = rs.id
-                WHERE rs."LAST NAME" IS NOT NULL
-                ORDER BY rs.submitted_at DESC
-            `;
+    SELECT 
+        rs.id,
+        rs."LAST NAME",
+        rs."FIRST NAME",
+        rs."MIDDLE NAME",
+        rs."EXT NAME",
+        rs."GENDER",
+        rs."BIRTHDATE",
+        rs."BARANGAY",
+        rs."MUNICIPALITY",
+        rs."FARM LOCATION",
+        COALESCE(
+            CASE 
+                WHEN rs."PARCEL AREA" ~ '^[0-9.]+$' THEN rs."PARCEL AREA"::NUMERIC
+                ELSE NULL
+            END, 
+            fp_sum.total_area
+        )::TEXT AS "PARCEL AREA",
+        rs."TOTAL FARM AREA",
+        rs."MAIN LIVELIHOOD",
+        rs.status,
+        rs.submitted_at,
+        rs.created_at,
+        rs.updated_at
+        ${ownershipFields}
+    FROM rsbsa_submission rs
+    LEFT JOIN (
+        SELECT submission_id, SUM(total_farm_area_ha) AS total_area
+        FROM farm_parcels
+        GROUP BY submission_id
+    ) fp_sum ON fp_sum.submission_id = rs.id
+    WHERE rs."LAST NAME" IS NOT NULL
+    ORDER BY rs.submitted_at DESC
+`;
         }
         const result = await pool.query(query);
         // console.log(`Found ${result.rows.length} submissions in database`);
@@ -1035,11 +1040,10 @@ app.get('/api/rsbsa_submission', async (req, res) => {
     }
 });
 
-<<<<<<< HEAD
 // GET endpoint to fetch a specific RSBSA submission by ID
 app.get('/api/rsbsa_submission/:id', async (req, res) => {
     const { id } = req.params;
-    
+
     try {
         console.log(`Fetching RSBSA submission ${id}...`);
 
@@ -1088,7 +1092,7 @@ app.get('/api/rsbsa_submission/:id', async (req, res) => {
         }
 
         const result = await pool.query(query, [id]);
-        
+
         if (result.rows.length === 0) {
             return res.status(404).json({
                 error: 'RSBSA submission not found',
@@ -1140,7 +1144,7 @@ app.get('/api/rsbsa_submission/:id', async (req, res) => {
             ORDER BY parcel_number
         `;
         const parcelsResult = await pool.query(parcelsQuery, [id]);
-        
+
         submissionData.farmParcels = parcelsResult.rows;
 
         res.json(submissionData);
@@ -2125,7 +2129,8 @@ app.get('/api/land-owners-with-tenants', async (req, res) => {
 // ============================================================================
 // CATCH-ALL ROUTE - MUST BE AFTER ALL API ENDPOINTS
 // ============================================================================
->>>>>>> a122bbe1c00732e148c213e80006ad232a933b01
+
+
 // For any requests not matching API routes, serve the frontend's index.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(frontendBuildPath, 'index.html'));
