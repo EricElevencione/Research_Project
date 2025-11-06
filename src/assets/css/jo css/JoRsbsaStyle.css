@@ -48,10 +48,13 @@
 
 /* Stepper */
 .form-steps {
-  display: grid;
-  grid-template-columns: repeat(4, 2fr) !important;
-  gap: 12px;
-  margin: 12px 0 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  margin: 24px auto;
+  max-width: 800px;
+  padding: 0 20px;
 }
 
 .step {
@@ -59,21 +62,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 1;
+  min-width: 100px;
+  text-align: center;
 }
 
 .step::before {
-  content: "" !important;
-  position: absolute !important;
-  top: 12px !important;
-  /* Keeps vertical alignment with dot center */
-  left: calc(-50% - 6px) !important;
-  /* Half the step width left, minus half the gap for centering */
-  width: calc(100% + 12px) !important;
-  /* Full step width + gap to reach next dot */
-  height: 2px !important;
-  background: var(--gray-200) !important;
-  z-index: 1 !important;
-  /* Ensures line is behind dots if needed */
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--gray-200);
+  z-index: 1;
 }
 
 .step:first-child::before {
@@ -81,22 +83,39 @@
 }
 
 .dot {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   background: var(--gray-200);
   color: var(--gray-600);
+  position: relative;
+  z-index: 2;
+  border: 2px solid var(--gray-200);
+  transition: all 0.3s ease;
 }
 
+.step.active .dot {
+  background: #fff;
+  border-color: var(--green-500);
+  color: var(--green-500);
+}
+
+.step.completed .dot {
+  background: var(--green-500);
+  border-color: var(--green-500);
+  color: #fff;
+}
 
 .step .label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--gray-600);
+  margin-top: 8px;
+  font-weight: 500;
 }
 
 /* Enrollment metadata card */
@@ -250,6 +269,32 @@
   background: #f9fafb;
   font-size: 14px;
   transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+/* Validation error styles */
+.error {
+  color: #dc2626;
+  /* red-600 */
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.form-errors {
+  margin-top: 10px;
+}
+
+/* Input error visuals */
+.input-error {
+  border-color: #dc2626 !important;
+  /* red */
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.08) !important;
+}
+
+.ownership-error {
+  border: 1px solid #fca5a5;
+  /* light red */
+  padding: 10px;
+  border-radius: 8px;
 }
 
 .form-group input:focus,
@@ -458,6 +503,17 @@
 /* Ensure inner inputs span width nicely */
 .ownership-group .form-group {
   max-width: 520px;
+}
+
+.owners-table th {
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: #A0C878;
 }
 
 /* Responsive */

@@ -45,7 +45,7 @@ const TechRsbsa: React.FC = () => {
   const barangays = [
     "Aurora-Del Pilar",
     "Bacay",
-    "Bacong", 
+    "Bacong",
     "Balabag",
     "Balud",
     "Bantud",
@@ -65,7 +65,7 @@ const TechRsbsa: React.FC = () => {
     "Dacutan",
     "Ermita",
     "Ilaya 1st",
-    "Ilaya 2nd", 
+    "Ilaya 2nd",
     "Ilaya 3rd",
     "Jardin",
     "Lacturan",
@@ -138,12 +138,12 @@ const TechRsbsa: React.FC = () => {
   // Format parcel area to include "hectares" if it's just a number
   const formatParcelArea = (value: string): string => {
     if (!value || value.trim() === '') return '';
-    
+
     // If it's just a number, add "hectares"
     if (/^\d+(\.\d+)?$/.test(value.trim())) {
       return `${value.trim()} hectares`;
     }
-    
+
     // If it already contains "hectares" or other text, return as is
     return value;
   };
@@ -170,11 +170,32 @@ const TechRsbsa: React.FC = () => {
   const handleSave = async () => {
     if (editingRecord && editFormData) {
       try {
-        // Format parcel area before saving
-        const formattedData = {
-          ...editFormData,
-          parcelArea: editFormData.parcelArea ? formatParcelArea(editFormData.parcelArea) : editFormData.parcelArea
+        // Start with the existing record data
+        const existingData = {
+          farmerName: editingRecord.farmerName,
+          gender: editingRecord.gender,
+          birthdate: editingRecord.birthdate,
+          farmerAddress: editingRecord.farmerAddress,
+          farmLocation: editingRecord.farmLocation,
+          parcelArea: editingRecord.parcelArea
         };
+
+        // Format the data for submission
+        const formattedData = {
+          ...existingData,
+          ...editFormData,
+          // Format parcel area to include "hectares" if it's just a number
+          parcelArea: editFormData.parcelArea ? formatParcelArea(editFormData.parcelArea) : undefined,
+        };
+
+        // Remove any undefined or empty values
+        const cleanedData = Object.entries(formattedData)
+          .reduce((acc, [key, value]) => {
+            if (value !== undefined && value !== '') {
+              acc[key] = value;
+            }
+            return acc;
+          }, {} as Record<string, any>);
 
         // Update the record in the database
         const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${editingRecord.id}`, {
@@ -182,35 +203,46 @@ const TechRsbsa: React.FC = () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formattedData),
+          body: JSON.stringify(cleanedData),
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
 
-        // Update the record in the registeredOwners state
-        setRegisteredOwners(prev => 
-          prev.map(record => 
-            record.id === editingRecord.id 
-              ? { ...record, ...formattedData }
+        const updatedRecord = await response.json();
+
+        // Update the local state with the response from the server
+        const updatedRecordData = {
+          ...editingRecord,
+          ...formattedData,
+          // Use any additional fields returned from the server
+          ...updatedRecord.updatedRecord
+        };
+
+        // Update the registeredOwners state
+        setRegisteredOwners(prev =>
+          prev.map(record =>
+            record.id === editingRecord.id
+              ? updatedRecordData
               : record
           )
         );
-        
+
         // Also update the main rsbsaRecords state
         setRsbsaRecords(prev =>
           prev.map(record =>
             record.id === editingRecord.id
-              ? { ...record, ...formattedData }
+              ? updatedRecordData
               : record
           )
         );
-        
+
         // Close edit mode
         setEditingRecord(null);
         setEditFormData({});
-        
+
         // Show success message (optional)
         console.log('Record updated successfully');
       } catch (error) {
@@ -241,7 +273,7 @@ const TechRsbsa: React.FC = () => {
       console.log('Sample record:', data[0]);
       
       setRsbsaRecords(data);
-      
+
       // Automatically filter for registered owners only
       const registeredOwnersData = filterRegisteredOwners(data);
       setRegisteredOwners(registeredOwnersData);
@@ -263,34 +295,16 @@ const TechRsbsa: React.FC = () => {
       // A registered owner is someone where OWNERSHIP_TYPE_REGISTERED_OWNER is true
       // and they are NOT a tenant or lessee
       if (record.ownershipType) {
-        const isRegisteredOwner = record.ownershipType.registeredOwner === true;
-        const isNotTenant = record.ownershipType.tenant !== true;
-        const isNotLessee = record.ownershipType.lessee !== true;
-        
-        console.log(`Record ${record.id} (${record.farmerName}):`, {
-          registeredOwner: record.ownershipType.registeredOwner,
-          tenant: record.ownershipType.tenant,
-          lessee: record.ownershipType.lessee,
-          isRegisteredOwner,
-          isNotTenant,
-          isNotLessee,
-          passesFilter: isRegisteredOwner && isNotTenant && isNotLessee
-        });
-        
-        return isRegisteredOwner && isNotTenant && isNotLessee;
+        return record.ownershipType.registeredOwner === true &&
+          record.ownershipType.tenant === false &&
+          record.ownershipType.lessee === false;
       }
-      
+
       // Fallback: if ownershipType is not available, check for land parcel data
       // This is a safety net for records that might not have ownership type data
       const hasLandParcel = record.landParcel && record.landParcel !== 'N/A' && record.landParcel.trim() !== '';
       const hasFarmLocation = record.farmLocation && record.farmLocation !== 'N/A' && record.farmLocation.trim() !== '';
-      
-      console.log(`Record ${record.id} (${record.farmerName}): No ownershipType, using fallback:`, {
-        hasLandParcel,
-        hasFarmLocation,
-        passesFilter: hasLandParcel && hasFarmLocation
-      });
-      
+
       return hasLandParcel && hasFarmLocation;
     });
     
@@ -343,47 +357,47 @@ const TechRsbsa: React.FC = () => {
             </div>
 
             <button
-                            className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-dashboard')}
-                        >
-                            <span className="nav-icon">
-                                <img src={HomeIcon} alt="Home" />
-                            </span>
-                            <span className="nav-text">Home</span>
-                        </button>
+              className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
+              onClick={() => navigate('/technician-dashboard')}
+            >
+              <span className="nav-icon">
+                <img src={HomeIcon} alt="Home" />
+              </span>
+              <span className="nav-text">Home</span>
+            </button>
 
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-rsbsa')}
-                        >
-                            <span className="nav-icon">
-                                <img src={RSBSAIcon} alt="RSBSA" />
-                            </span>
-                            <span className="nav-text">RSBSA</span>
-                        </button>
+            <button
+              className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
+              onClick={() => navigate('/technician-rsbsa')}
+            >
+              <span className="nav-icon">
+                <img src={RSBSAIcon} alt="RSBSA" />
+              </span>
+              <span className="nav-text">RSBSA</span>
+            </button>
 
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={ApproveIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
+            <button
+              className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
+              onClick={() => navigate('/technician-masterlist')}
+            >
+              <span className="nav-icon">
+                <img src={ApproveIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Masterlist</span>
+            </button>
 
-                        <button
-                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
-                            onClick={() => navigate('/')}
-                        >
-                            <span className="nav-icon">
-                                <img src={LogoutIcon} alt="Logout" />
-                            </span>
-                            <span className="nav-text">Logout</span>
-                        </button>
-                    </nav>
-                </div>
-                {/* Sidebar ends here */}
+            <button
+              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+              onClick={() => navigate('/')}
+            >
+              <span className="nav-icon">
+                <img src={LogoutIcon} alt="Logout" />
+              </span>
+              <span className="nav-text">Logout</span>
+            </button>
+          </nav>
+        </div>
+        {/* Sidebar ends here */}
 
         {/* Main content starts here */}
         <div className="main-content">
@@ -435,8 +449,8 @@ const TechRsbsa: React.FC = () => {
                         const extName = nameParts[3] || '';
 
                         // Get parcel area from the record and format it
-                        const parcelArea = record.parcelArea ? 
-                          (record.parcelArea.includes('hectares') ? record.parcelArea : `${record.parcelArea} hectares`) 
+                        const parcelArea = record.parcelArea ?
+                          (record.parcelArea.includes('hectares') ? record.parcelArea : `${record.parcelArea} hectares`)
                           : 'N/A';
 
                         return (
@@ -450,19 +464,19 @@ const TechRsbsa: React.FC = () => {
                             <td>{record.farmerAddress || 'N/A'}</td>
                             <td>{record.farmLocation || 'N/A'}</td>
                             <td>{parcelArea}</td>
-                          <td>
-                            <div style={{ position: 'relative', display: 'inline-block' }}>
-                              <button
-                                className="more-button"
-                                onClick={(e) => toggleMenu(record.id, e)}
-                                aria-haspopup="true"
-                                aria-expanded={openMenuId === record.id}
-                                title="More actions"
-                              >
-                                ...
-                              </button>
-                            </div>
-                          </td>
+                            <td>
+                              <div style={{ position: 'relative', display: 'inline-block' }}>
+                                <button
+                                  className="more-button"
+                                  onClick={(e) => toggleMenu(record.id, e)}
+                                  aria-haspopup="true"
+                                  aria-expanded={openMenuId === record.id}
+                                  title="More actions"
+                                >
+                                  ...
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })
@@ -553,7 +567,7 @@ const TechRsbsa: React.FC = () => {
 
         {/* Action Menu - rendered outside table */}
         {openMenuId && menuPosition && (
-          <div 
+          <div
             className="actions-menu"
             style={{
               position: 'fixed',

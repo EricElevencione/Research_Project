@@ -41,6 +41,7 @@ const JoRsbsaPage: React.FC = () => {
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const isActive = (path: string) => location.pathname === path;
 
   // Fetch RSBSA records from API
@@ -53,10 +54,10 @@ const JoRsbsaPage: React.FC = () => {
       }
       const data = await response.json();
       console.log('Received data from API:', JSON.stringify(data, null, 2));
-      
+
       // Debug ownership types
       console.log('Sample record ownership type:', data[0]?.ownershipType);
-      console.log('Records with ownership types:', data.filter(r => r.ownershipType).length);
+      console.log('Records with ownership types:', data.filter((r: { ownershipType: any; }) => r.ownershipType).length);
 
       const dataWithTotalArea = data.map((record: RSBSARecord) => {
         const calculatedTotal = calculateTotalFarmArea(data, record.farmerName);
@@ -125,6 +126,28 @@ const JoRsbsaPage: React.FC = () => {
   useEffect(() => {
     fetchRSBSARecords();
   }, []);
+
+  // Filter registered owners based on search query
+  const filteredOwners = registeredOwners.filter(record => {
+    if (!searchQuery.trim()) return true;
+
+    const query = searchQuery.toLowerCase();
+    const nameParts = record.farmerName.split(', ');
+    const lastName = nameParts[0] || '';
+    const firstName = nameParts[1] || '';
+    const middleName = nameParts[2] || '';
+    const extName = nameParts[3] || '';
+
+    return (
+      lastName.toLowerCase().includes(query) ||
+      firstName.toLowerCase().includes(query) ||
+      middleName.toLowerCase().includes(query) ||
+      extName.toLowerCase().includes(query) ||
+      record.farmerAddress?.toLowerCase().includes(query) ||
+      record.gender?.toLowerCase().includes(query) ||
+      record.referenceNumber?.toLowerCase().includes(query)
+    );
+  });
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -220,6 +243,24 @@ const JoRsbsaPage: React.FC = () => {
 
           <div className="content-card">
             <div className="actions-bar">
+              <div className="search-container">
+                <input
+                  type="text"
+                  placeholder="Search by name, address, gender, or reference number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="clear-search-button"
+                    title="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
               <button onClick={() => navigate('/jo-rsbsa')} className="register-button">
                 Register Farmer
               </button>
@@ -237,6 +278,16 @@ const JoRsbsaPage: React.FC = () => {
               </div>
             ) : (
               <div className="table-container">
+                {searchQuery && (
+                  <div className="search-results-info">
+                    <p>
+                      Found <strong>{filteredOwners.length}</strong> result{filteredOwners.length !== 1 ? 's' : ''}
+                      {filteredOwners.length < registeredOwners.length &&
+                        ` out of ${registeredOwners.length} total registered owners`
+                      }
+                    </p>
+                  </div>
+                )}
                 <table className="owners-table">
                   <thead>
                     <tr>
@@ -245,21 +296,20 @@ const JoRsbsaPage: React.FC = () => {
                       <th>Middle Name</th>
                       <th>EXT Name</th>
                       <th>Gender</th>
-                      <th>Birthdate</th>
                       <th>Farmer Address</th>
                       <th>Number of Parcels</th>
                       <th>Total Farm Area</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {registeredOwners.length === 0 ? (
+                    {filteredOwners.length === 0 ? (
                       <tr>
                         <td colSpan={10} className="no-data">
-                          No registered owners found
+                          {searchQuery ? 'No results found for your search' : 'No registered owners found'}
                         </td>
                       </tr>
                     ) : (
-                      registeredOwners.map((record) => {
+                      filteredOwners.map((record) => {
                         // Parse the farmer name to extract individual components
                         const nameParts = record.farmerName.split(', ');
                         const lastName = nameParts[0] || '';
@@ -276,13 +326,13 @@ const JoRsbsaPage: React.FC = () => {
                             <td>{middleName}</td>
                             <td>{extName}</td>
                             <td>{record.gender || 'N/A'}</td>
-                            <td>{record.birthdate ? formatDate(record.birthdate) : 'N/A'}</td>
                             <td>{record.farmerAddress || 'N/A'}</td>
                             <td>{record.parcelCount || 0}</td>
                             <td>{(() => {
                               const area = typeof record.totalFarmArea === 'number' ? record.totalFarmArea : parseFloat(String(record.totalFarmArea || 0));
                               return !isNaN(area) && area > 0 ? `${area.toFixed(2)} ha` : 'N/A';
-                            })()}</td>
+                            })()}
+                            </td>
                           </tr>
                         );
                       })
@@ -293,6 +343,8 @@ const JoRsbsaPage: React.FC = () => {
             )}
           </div>
         </div>
+
+
       </div>
     </div>
 

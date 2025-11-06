@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
-import '../../assets/css/jo css/JoMasterlistStyle.css';
+import '../../assets/css/technician css/MasterlistPage.css';
 import '../../assets/css/navigation/nav.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
@@ -52,10 +52,11 @@ const TechMasterlist: React.FC = () => {
       const data = await response.json();
 
       const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any) => {
-        const referenceNumber = String(item.referenceNumber ?? item.id);
+        const farmLocation = String(item.farmLocation ?? '—');
+        // Use the FFRS code from database, fallback to RSBSA-{id} if not present
+        const referenceNumber = item.referenceNumber || `RSBSA-${item.id}`;
         const farmerName = String(item.farmerName || '—');
         const farmerAddress = String(item.farmerAddress ?? '—');
-        const farmLocation = String(item.farmLocation ?? '—');
         const landParcel = String(item.landParcel ?? item.farmLocation ?? '—');
         const parcelArea = String(item.parcelArea ?? '—');
         const dateSubmitted = item.dateSubmitted
@@ -89,6 +90,7 @@ const TechMasterlist: React.FC = () => {
     }
   };
 
+  // 
   const filteredRecords = rsbsaRecords.filter(record => {
     const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
     const q = searchQuery.toLowerCase();
@@ -117,52 +119,49 @@ const TechMasterlist: React.FC = () => {
   };
 
   const toggleStatus = async (id: string) => {
-    console.log('Toggle status clicked for ID:', id);
-    
     try {
+      // Find the current record
       const record = rsbsaRecords.find((r) => r.id === id);
       if (!record) {
-        console.error('Record not found for ID:', id);
-        setError('Record not found');
-        return;
+        throw new Error('Record not found');
       }
 
-      console.log('Found record:', record);
+      // Determine the new status
       const newStatus = record.status === 'Active Farmer' ? 'Not Active' : 'Active Farmer';
-      console.log('Updating status from', record.status, 'to', newStatus);
 
-      const requestBody = {
+      // Prepare the update data
+      const updateData = {
         status: newStatus
       };
-      console.log('Request body:', requestBody);
 
+      // Make the API call
       const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(updateData),
       });
-
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Error response:', errorData);
-        console.error('Error details:', errorData.details);
-        throw new Error(`Failed to update status: ${errorData.message || response.status}. Details: ${errorData.details || 'No additional details'}`);
+        throw new Error(errorData.message || 'Failed to update status');
       }
 
-      const responseData = await response.json();
-      console.log('Success response:', responseData);
+      // Success! Update the local state
+      setRsbsaRecords(prevRecords =>
+        prevRecords.map(record =>
+          record.id === id
+            ? { ...record, status: newStatus }
+            : record
+        )
+      );
 
-      console.log('Status updated successfully, refetching records...');
-      // Refetch records to ensure UI is in sync with backend
-      await fetchRSBSARecords();
-    } catch (error: any) {
-      console.error('Error updating farmer status:', error);
-      setError(`Failed to update farmer status: ${error.message}`);
+      // Clear any existing errors
+      setError(null);
+
+    } catch (err: any) {
+      setError(`Failed to update farmer status: ${err.message}`);
     }
   };
 
@@ -346,7 +345,7 @@ const TechMasterlist: React.FC = () => {
                   fontWeight: 'bold'
                 }}
               >
-                Print Active Farmers List
+                Print Active Farmers
               </button>
             </div>
             <div className="filters-section">

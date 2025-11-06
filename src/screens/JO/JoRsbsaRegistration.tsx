@@ -27,6 +27,11 @@ interface Parcel {
   ownershipOthersSpecify: string;
 }
 
+interface LandOwner {
+  id: string;
+  name: string;
+}
+
 interface FormData {
   // Basic Details
   surname: string;
@@ -78,6 +83,8 @@ interface FormData {
   ayOthersText?: string;
 }
 
+import { useEffect } from 'react';
+
 const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,6 +93,25 @@ const JoRsbsa: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   const [draftId, setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [landowners, setLandowners] = useState<LandOwner[]>([]);
+
+  // Fetch landowners from the database
+  useEffect(() => {
+    const fetchLandowners = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/landowners');
+        if (!response.ok) {
+          throw new Error('Failed to fetch landowners');
+        }
+        const data = await response.json();
+        setLandowners(data);
+      } catch (error) {
+        console.error('Error fetching landowners:', error);
+      }
+    };
+
+    fetchLandowners();
+  }, []);
   const [formData, setFormData] = useState<FormData>({
     surname: '',
     firstName: '',
@@ -123,8 +149,13 @@ const JoRsbsa: React.FC = () => {
     ],
   });
 
+  // validation errors (field name -> message)
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    // clear any existing error for this field
+    setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
   const handleParcelChange = (idx: number, field: keyof Parcel, value: any) => {
@@ -133,6 +164,8 @@ const JoRsbsa: React.FC = () => {
       parcels[idx] = { ...parcels[idx], [field]: value };
       return { ...prev, farmlandParcels: parcels };
     });
+    // clear parcel-related errors when user edits parcels
+    setErrors(prev => ({ ...prev, farmland: '', ownership: '' }));
   };
 
   const toggleParcelBool = (idx: number, field: keyof Parcel) => {
@@ -147,10 +180,14 @@ const JoRsbsa: React.FC = () => {
       };
       return { ...prev, farmlandParcels: parcels };
     });
+    // clear ownership error when toggling
+    setErrors(prev => ({ ...prev, ownership: '' }));
   };
 
   const toggleBool = (field: keyof FormData) => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
+    // Clear farmingActivity error when any activity checkbox is toggled
+    setErrors(prev => ({ ...prev, farmingActivity: '' }));
   };
 
   const addParcel = () => {
@@ -190,11 +227,11 @@ const JoRsbsa: React.FC = () => {
       ...prev,
       mainLivelihood: checked ? value : prev.mainLivelihood === value ? '' : prev.mainLivelihood,
     }));
+    // Clear errors when livelihood is selected
+    setErrors(prev => ({ ...prev, mainLivelihood: '', farmingActivity: '' }));
   };
 
-  const handleNextStep = () => {
-    if (currentStep < 4) setCurrentStep(currentStep + 1);
-  };
+  // Next step validation is handled by handleSubmitForm now
 
   const handlePrevStep = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
@@ -204,44 +241,146 @@ const JoRsbsa: React.FC = () => {
   const isStepCompleted = (step: number) => currentStep > step;
 
   const handleSubmitForm = () => {
-    // Define required fields
-    const requiredFields: (keyof FormData)[] = ['surname', 'firstName', 'barangay'];
-    const missingFields = requiredFields.filter(field => !formData[field]);
+    // We'll validate only what is relevant to the current step so users can progress step-by-step
+    const newErrors: Record<string, string> = {};
 
-    // Check if at least one farmland parcel has valid data
-    const hasValidFarmland = formData.farmlandParcels.some(
-      parcel => parcel.farmLocationBarangay && parcel.totalFarmAreaHa
+    if (currentStep === 1) {
+      // Validate basic details only
+      if (!formData.firstName?.trim()) newErrors.firstName = 'First name is required';
+      if (!formData.surname?.trim()) newErrors.surname = 'Surname is required';
+      if (!formData.barangay?.trim()) newErrors.barangay = 'Barangay is required';
+
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) return;
+
+      // clear any step-level errors and go to next step
+      setErrors({});
+      setCurrentStep(2);
+      return;
+    }
+
+    if (currentStep === 2) {
+      // Validate farm profile: require main livelihood selection
+      if (!formData.mainLivelihood) {
+        newErrors.mainLivelihood = 'Please select a main livelihood';
+      } else {
+        // Validate specific activities based on selected livelihood
+        if (formData.mainLivelihood === 'farmer') {
+          const hasFarmingActivity = (formData as any).farmerRice ||
+            (formData as any).farmerCorn ||
+            (formData as any).farmerOtherCrops ||
+            (formData as any).farmerLivestock ||
+            (formData as any).farmerPoultry;
+          if (!hasFarmingActivity) {
+            newErrors.farmingActivity = 'Please select at least one farming activity';
+          }
+        } else if (formData.mainLivelihood === 'farmworker') {
+          const hasWorkType = (formData as any).fwLandPrep ||
+            (formData as any).fwPlanting ||
+            (formData as any).fwCultivation ||
+            (formData as any).fwHarvesting ||
+            (formData as any).fwOthers;
+          if (!hasWorkType) {
+            newErrors.farmingActivity = 'Please select at least one kind of work';
+          }
+        } else if (formData.mainLivelihood === 'fisherfolk') {
+          const hasFishingActivity = (formData as any).ffFishCapture ||
+            (formData as any).ffAquaculture ||
+            (formData as any).ffGleaning ||
+            (formData as any).ffFishProcessing ||
+            (formData as any).ffFishVending ||
+            (formData as any).ffOthers;
+          if (!hasFishingActivity) {
+            newErrors.farmingActivity = 'Please select at least one fishing activity';
+          }
+        } else if (formData.mainLivelihood === 'agri-youth') {
+          const hasInvolvement = (formData as any).ayPartHousehold ||
+            (formData as any).ayFormalCourse ||
+            (formData as any).ayNonFormalCourse ||
+            (formData as any).ayParticipatedProgram ||
+            (formData as any).ayOthers;
+          if (!hasInvolvement) {
+            newErrors.farmingActivity = 'Please select at least one type of involvement';
+          }
+        }
+      }
+
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) return;
+
+      setErrors({});
+      setCurrentStep(3);
+      return;
+    }
+
+    if (currentStep === 3) {
+      // Validate farmland/ownership requirements
+      const hasValidFarmland = formData.farmlandParcels.some(
+        parcel => parcel.farmLocationBarangay?.toString().trim() && parcel.totalFarmAreaHa?.toString().trim()
+      );
+      if (!hasValidFarmland) newErrors.farmland = 'At least one parcel must include barangay and area';
+
+      const hasValidOwnershipType = formData.farmlandParcels.some(
+        parcel => parcel.ownershipTypeRegisteredOwner || parcel.ownershipTypeTenant || parcel.ownershipTypeLessee
+      );
+      if (!hasValidOwnershipType) newErrors.ownership = 'Select ownership type for at least one parcel';
+
+      // If Tenant/Lessee chosen, require landowner selection
+      const missingTenantOwner = formData.farmlandParcels.some(
+        parcel => parcel.ownershipTypeTenant && !parcel.tenantLandOwnerName?.toString().trim()
+      );
+      const missingLesseeOwner = formData.farmlandParcels.some(
+        parcel => parcel.ownershipTypeLessee && !parcel.lesseeLandOwnerName?.toString().trim()
+      );
+      if (missingTenantOwner || missingLesseeOwner) {
+        const msgParts: string[] = [];
+        if (missingTenantOwner) msgParts.push('select land owner for tenant parcels');
+        if (missingLesseeOwner) msgParts.push('select land owner for lessee parcels');
+        newErrors.ownership = (newErrors.ownership ? newErrors.ownership + ' ' : '') + msgParts.join(' and ');
+      }
+
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) return;
+
+      setErrors({});
+      setCurrentStep(4);
+      return;
+    }
+
+    // currentStep === 4 -> final submit: perform full validation then submit
+    // Full-form basic validation (repeat or extend as necessary)
+    if (!formData.firstName?.trim()) newErrors.firstName = 'First name is required';
+    if (!formData.surname?.trim()) newErrors.surname = 'Surname is required';
+    if (!formData.barangay?.trim()) newErrors.barangay = 'Barangay is required';
+
+    const hasValidFarmlandFinal = formData.farmlandParcels.some(
+      parcel => parcel.farmLocationBarangay?.toString().trim() && parcel.totalFarmAreaHa?.toString().trim()
     );
+    if (!hasValidFarmlandFinal) newErrors.farmland = 'At least one parcel must include barangay and area';
 
-    // Validate ownership type for at least one parcel
-    const hasValidOwnershipType = formData.farmlandParcels.some(
-      parcel =>
-        parcel.ownershipTypeRegisteredOwner ||
-        parcel.ownershipTypeTenant ||
-        parcel.ownershipTypeLessee
+    const hasValidOwnershipTypeFinal = formData.farmlandParcels.some(
+      parcel => parcel.ownershipTypeRegisteredOwner || parcel.ownershipTypeTenant || parcel.ownershipTypeLessee
     );
+    if (!hasValidOwnershipTypeFinal) newErrors.ownership = 'Select ownership type for at least one parcel';
 
-    // Combine validation checks
-    if (missingFields.length > 0) {
-      alert(`Please fill in required fields: ${missingFields.join(', ')}`);
-      return;
+    // Final check for tenant/lessee owner selection
+    const missingTenantOwnerFinal = formData.farmlandParcels.some(
+      parcel => parcel.ownershipTypeTenant && !parcel.tenantLandOwnerName?.toString().trim()
+    );
+    const missingLesseeOwnerFinal = formData.farmlandParcels.some(
+      parcel => parcel.ownershipTypeLessee && !parcel.lesseeLandOwnerName?.toString().trim()
+    );
+    if (missingTenantOwnerFinal || missingLesseeOwnerFinal) {
+      const msgParts: string[] = [];
+      if (missingTenantOwnerFinal) msgParts.push('select land owner for tenant parcels');
+      if (missingLesseeOwnerFinal) msgParts.push('select land owner for lessee parcels');
+      newErrors.ownership = (newErrors.ownership ? newErrors.ownership + ' ' : '') + msgParts.join(' and ');
     }
 
-    if (!hasValidFarmland) {
-      alert('Please fill in at least one farmland location (barangay) and area');
-      return;
-    }
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
-    if (!hasValidOwnershipType) {
-      alert('Please select at least one ownership type (Registered Owner, Tenant, or Lessee) for at least one parcel');
-      return;
-    }
-
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      handleFinalSubmit();
-    }
+    handleFinalSubmit();
   };
 
   const submitFinalToServer = async () => {
@@ -299,7 +438,8 @@ const JoRsbsa: React.FC = () => {
       const submitted = await submitFinalToServer();
       if (submitted && submitted.submissionId) {
         alert('RSBSA form submitted successfully!');
-        navigate(`/tech-pick-land-parcel/${submitted.submissionId}`);
+        // Navigate back to JO flow instead of technician route to avoid auth redirects
+        navigate('/jo-rsbsapage');
       }
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -420,11 +560,13 @@ const JoRsbsa: React.FC = () => {
                     <div className="form-row">
                       <div className="form-group">
                         <label>FIRST NAME</label>
-                        <input type="text" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} />
+                        <input type="text" value={formData.firstName} onChange={(e) => { handleInputChange('firstName', e.target.value); setErrors(prev => ({ ...prev, firstName: '' })); }} required aria-required="true" className={errors.firstName ? 'input-error' : ''} />
+                        {errors.firstName && <div className="error">{errors.firstName}</div>}
                       </div>
                       <div className="form-group">
                         <label>SURNAME</label>
-                        <input type="text" value={formData.surname} onChange={(e) => handleInputChange('surname', e.target.value)} />
+                        <input type="text" value={formData.surname} onChange={(e) => { handleInputChange('surname', e.target.value); setErrors(prev => ({ ...prev, surname: '' })); }} required aria-required="true" className={errors.surname ? 'input-error' : ''} />
+                        {errors.surname && <div className="error">{errors.surname}</div>}
                       </div>
                     </div>
                     <div className="form-row">
@@ -451,7 +593,8 @@ const JoRsbsa: React.FC = () => {
                       <div className="address-grid">
                         <div className="form-group">
                           <label>BARANGAY *</label>
-                          <input type="text" value={formData.barangay} onChange={(e) => handleInputChange('barangay', e.target.value)} />
+                          <input type="text" value={formData.barangay} onChange={(e) => { handleInputChange('barangay', e.target.value); setErrors(prev => ({ ...prev, barangay: '' })); }} required aria-required="true" className={errors.barangay ? 'input-error' : ''} />
+                          {errors.barangay && <div className="error">{errors.barangay}</div>}
                         </div>
                         <div className="form-group">
                           <label>MUNICIAPLITY</label>
@@ -477,6 +620,7 @@ const JoRsbsa: React.FC = () => {
                       <label><input type="checkbox" checked={formData.mainLivelihood === 'fisherfolk'} onChange={(e) => handleLivelihoodToggle('fisherfolk', e.target.checked)} /> FISHERFOLK</label>
                       <label><input type="checkbox" checked={formData.mainLivelihood === 'agri-youth'} onChange={(e) => handleLivelihoodToggle('agri-youth', e.target.checked)} /> AGRI YOUTH</label>
                     </div>
+                    {errors.mainLivelihood && <div className="error">{errors.mainLivelihood}</div>}
                   </div>
 
                   {formData.mainLivelihood === 'farmer' && (
@@ -502,6 +646,7 @@ const JoRsbsa: React.FC = () => {
                       {(formData as any).farmerPoultry && (
                         <input type="text" placeholder="Specify poultry" value={(formData as any).farmerPoultryText} onChange={(e) => handleInputChange('farmerPoultryText', e.target.value)} />
                       )}
+                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>
                   )}
 
@@ -518,6 +663,7 @@ const JoRsbsa: React.FC = () => {
                       {(formData as any).fwOthers && (
                         <input type="text" placeholder="Specify other work" value={(formData as any).fwOthersText} onChange={(e) => handleInputChange('fwOthersText', e.target.value)} />
                       )}
+                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>
                   )}
 
@@ -535,6 +681,7 @@ const JoRsbsa: React.FC = () => {
                       {(formData as any).ffOthers && (
                         <input type="text" placeholder="Specify other fishing activity" value={(formData as any).ffOthersText} onChange={(e) => handleInputChange('ffOthersText', e.target.value)} />
                       )}
+                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>
                   )}
 
@@ -551,6 +698,7 @@ const JoRsbsa: React.FC = () => {
                       {(formData as any).ayOthers && (
                         <input type="text" placeholder="Specify other involvement" value={(formData as any).ayOthersText} onChange={(e) => handleInputChange('ayOthersText', e.target.value)} />
                       )}
+                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>
                   )}
 
@@ -561,6 +709,14 @@ const JoRsbsa: React.FC = () => {
             {currentStep === 3 && (
               <div className="form-section">
                 <h3>PART III: FARMLAND</h3>
+
+                {/* Show validation summary for farmland/ownership */}
+                {(errors.farmland || errors.ownership) && (
+                  <div className="form-errors">
+                    {errors.farmland && <div className="error">{errors.farmland}</div>}
+                    {errors.ownership && <div className="error">{errors.ownership}</div>}
+                  </div>
+                )}
 
                 {/* Farmland Parcels */}
                 {(formData.farmlandParcels as any[]).map((p, idx) => (
@@ -577,7 +733,7 @@ const JoRsbsa: React.FC = () => {
                     <div className="form-row">
                       <div className="form-group">
                         <label>Farm Location (Barangay)</label>
-                        <select value={p.farmLocationBarangay} onChange={(e) => handleParcelChange(idx, 'farmLocationBarangay', e.target.value)}>
+                        <select value={p.farmLocationBarangay} onChange={(e) => handleParcelChange(idx, 'farmLocationBarangay', e.target.value)} className={errors.farmland ? 'input-error' : ''}>
                           <option value="">Select Barangay</option>
                           <option value="Aurora-Del Pilar">Aurora-Del Pilar</option>
                           <option value="Bacay">Bacay</option>
@@ -631,7 +787,7 @@ const JoRsbsa: React.FC = () => {
                     <div className="form-row">
                       <div className="form-group">
                         <label>Total Farm Area (in hectares)</label>
-                        <input type="number" value={p.totalFarmAreaHa} onChange={(e) => handleParcelChange(idx, 'totalFarmAreaHa', e.target.value)} />
+                        <input type="number" value={p.totalFarmAreaHa} onChange={(e) => handleParcelChange(idx, 'totalFarmAreaHa', e.target.value)} className={errors.farmland ? 'input-error' : ''} />
                       </div>
                       <div className="form-group">
                         <label>Within Ancestral Domain</label>
@@ -654,7 +810,7 @@ const JoRsbsa: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="ownership-group">
+                    <div className={`ownership-group ${errors.ownership ? 'ownership-error' : ''}`}>
                       <label>Ownership Type:</label>
                       <div className="ownership-options">
                         <label><input type="checkbox" checked={!!p.ownershipTypeRegisteredOwner} onChange={() => toggleParcelBool(idx, 'ownershipTypeRegisteredOwner')} /> Registered Owner</label>
@@ -665,14 +821,32 @@ const JoRsbsa: React.FC = () => {
 
                       {p.ownershipTypeTenant && (
                         <div className="form-group">
-                          <label>Tenant - Name of Land Owner</label>
-                          <input type="text" value={p.tenantLandOwnerName} onChange={(e) => handleParcelChange(idx, 'tenantLandOwnerName', e.target.value)} />
+                          <label>Tenant - Select Land Owner</label>
+                          <select
+                            value={p.tenantLandOwnerName}
+                            onChange={(e) => handleParcelChange(idx, 'tenantLandOwnerName', e.target.value)}
+                            className={errors.ownership ? 'input-error' : ''}
+                          >
+                            <option value="">Select Land Owner</option>
+                            {landowners.map(owner => (
+                              <option key={owner.id} value={owner.name}>{owner.name}</option>
+                            ))}
+                          </select>
                         </div>
                       )}
                       {p.ownershipTypeLessee && (
                         <div className="form-group">
-                          <label>Lessee - Name of Land Owner</label>
-                          <input type="text" value={p.lesseeLandOwnerName} onChange={(e) => handleParcelChange(idx, 'lesseeLandOwnerName', e.target.value)} />
+                          <label>Lessee - Select Land Owner</label>
+                          <select
+                            value={p.lesseeLandOwnerName}
+                            onChange={(e) => handleParcelChange(idx, 'lesseeLandOwnerName', e.target.value)}
+                            className={errors.ownership ? 'input-error' : ''}
+                          >
+                            <option value="">Select Land Owner</option>
+                            {landowners.map(owner => (
+                              <option key={owner.id} value={owner.name}>{owner.name}</option>
+                            ))}
+                          </select>
                         </div>
                       )}
                       {p.ownershipTypeOthers && (
@@ -855,7 +1029,7 @@ const JoRsbsa: React.FC = () => {
                 <button className="btn-save" onClick={handlePrevStep}>Previous</button>
               )}
               {currentStep < 4 ? (
-                <button className="btn-submit" onClick={handleNextStep}>Next Step</button>
+                <button className="btn-submit" onClick={handleSubmitForm}>Next Step</button>
               ) : (
                 <button className="btn-submit" onClick={handleSubmitForm}>Submit Form</button>
               )}

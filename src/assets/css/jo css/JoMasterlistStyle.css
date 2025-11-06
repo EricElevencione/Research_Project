@@ -92,6 +92,26 @@
     border-color: #4CAF50;
 }
 
+.refresh-filter {
+    min-width: 100px;
+}
+
+.refresh-button {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.refresh-button:hover {
+    background: #45a049;
+}
+
 /* Table container */
 .table-container {
     overflow-x: auto;
@@ -528,6 +548,25 @@
     }
 
     .form-steps {
-        grid-template-columns: 1fr 1fr 1fr;
+        flex-direction: column;
     }
+}
+
+/* Parcel validation error styles */
+.parcel-error-input {
+    border: 2px solid #d32f2f !important;
+    background-color: #ffebee !important;
+    outline: none !important;
+}
+
+.parcel-error-message {
+    color: #d32f2f;
+    font-size: 0.85em;
+    display: block;
+    margin-top: 5px;
+    font-weight: 500;
+}
+
+.parcel-error-border {
+    border: 2px solid #d32f2f !important;
 }
