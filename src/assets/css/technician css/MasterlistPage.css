@@ -1041,6 +1041,182 @@ label {
   flex: 1;
 }
 
+/* Printing section*/
+.print-section {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.print-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.print-button:hover {
+  background-color: #45a049;
+}
+
+/* Print Modal Styles */
+.print-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.print-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.print-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.print-modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.print-modal-body {
+  padding: 24px;
+}
+
+.print-filter-group {
+  margin-bottom: 20px;
+}
+
+.print-filter-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.print-filter-select,
+.print-value-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  background: white;
+  cursor: pointer;
+}
+
+.print-filter-select:focus,
+.print-value-select:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.print-match-count {
+  display: block;
+  margin-top: 12px;
+  padding: 10px;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #0369a1;
+  text-align: center;
+}
+
+.print-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.print-modal-cancel-button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.print-modal-cancel-button:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.print-modal-print-button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #4CAF50;
+  border: 1px solid #4CAF50;
+  color: white;
+}
+
+.print-modal-print-button:hover:not(:disabled) {
+  background: #45a049;
+  border-color: #45a049;
+}
+
+.print-modal-print-button:disabled {
+  background: #ccc;
+  border-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .print-modal {
+    width: 95%;
+    margin: 20px;
+  }
+
+  .print-modal-body {
+    padding: 16px;
+  }
+
+  .print-modal-footer {
+    padding: 16px;
+  }
+}
+
 /* Filters section */
 .filters-section {
   display: flex;
