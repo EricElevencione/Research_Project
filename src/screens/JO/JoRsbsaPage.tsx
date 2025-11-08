@@ -145,7 +145,8 @@ const JoRsbsaPage: React.FC = () => {
       extName.toLowerCase().includes(query) ||
       record.farmerAddress?.toLowerCase().includes(query) ||
       record.gender?.toLowerCase().includes(query) ||
-      record.referenceNumber?.toLowerCase().includes(query)
+      record.referenceNumber?.toLowerCase().includes(query) ||
+      record.referenceNumber?.replace(/-/g, '').toLowerCase().includes(query.replace(/-/g, ''))
     );
   });
 
@@ -246,7 +247,7 @@ const JoRsbsaPage: React.FC = () => {
               <div className="search-container">
                 <input
                   type="text"
-                  placeholder="Search by name, address, gender, or reference number..."
+                  placeholder="Search by FFRS ID, name, address, gender..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="search-input"
@@ -291,6 +292,7 @@ const JoRsbsaPage: React.FC = () => {
                 <table className="owners-table-rsbsa">
                   <thead>
                     <tr>
+                      <th>FFRS ID</th>
                       <th>Last Name</th>
                       <th>First Name</th>
                       <th>Middle Name</th>
@@ -304,7 +306,7 @@ const JoRsbsaPage: React.FC = () => {
                   <tbody>
                     {filteredOwners.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="no-data">
+                        <td colSpan={9} className="no-data">
                           {searchQuery ? 'No results found for your search' : 'No registered owners found'}
                         </td>
                       </tr>
@@ -321,6 +323,7 @@ const JoRsbsaPage: React.FC = () => {
 
                         return (
                           <tr key={record.id}>
+                            <td className="ffrs-id">{record.referenceNumber || 'N/A'}</td>
                             <td>{lastName}</td>
                             <td>{firstName}</td>
                             <td>{middleName}</td>

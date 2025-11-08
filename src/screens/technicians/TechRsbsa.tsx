@@ -33,6 +33,8 @@ const TechRsbsa: React.FC = () => {
 
   const [, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
+  const [filteredOwners, setFilteredOwners] = useState<RSBSARecord[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
@@ -271,7 +273,7 @@ const TechRsbsa: React.FC = () => {
       const data = await response.json();
       console.log('Received RSBSA data from API:', data.length, 'records');
       console.log('Sample record:', data[0]);
-      
+
       setRsbsaRecords(data);
 
       // Automatically filter for registered owners only
@@ -289,7 +291,7 @@ const TechRsbsa: React.FC = () => {
   // Function to filter registered owners only
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
     console.log('Filtering records:', records.length);
-    
+
     const filtered = records.filter(record => {
       // Check if the record represents a registered owner
       // A registered owner is someone where OWNERSHIP_TYPE_REGISTERED_OWNER is true
@@ -307,10 +309,41 @@ const TechRsbsa: React.FC = () => {
 
       return hasLandParcel && hasFarmLocation;
     });
-    
+
     console.log('Filtered results:', filtered.length, 'out of', records.length);
     return filtered;
   };
+
+  // Filter records based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredOwners(registeredOwners);
+      return;
+    }
+
+    const searchLower = searchTerm.toLowerCase();
+    const filtered = registeredOwners.filter(record => {
+      // Search in FFRS ID (both with and without dashes)
+      const ffrsMatch = record.referenceNumber?.toLowerCase().includes(searchLower) ||
+        record.referenceNumber?.replace(/-/g, '').toLowerCase().includes(searchLower);
+
+      // Search in farmer name
+      const nameMatch = record.farmerName?.toLowerCase().includes(searchLower);
+
+      // Search in farmer address
+      const addressMatch = record.farmerAddress?.toLowerCase().includes(searchLower);
+
+      // Search in farm location
+      const locationMatch = record.farmLocation?.toLowerCase().includes(searchLower);
+
+      // Search in gender
+      const genderMatch = record.gender?.toLowerCase().includes(searchLower);
+
+      return ffrsMatch || nameMatch || addressMatch || locationMatch || genderMatch;
+    });
+
+    setFilteredOwners(filtered);
+  }, [searchTerm, registeredOwners]);
 
   // Load data on component mount
   useEffect(() => {
@@ -416,74 +449,98 @@ const TechRsbsa: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="table-container">
-                <table className="owners-table">
-                  <thead>
-                    <tr>
-                      <th>Last Name</th>
-                      <th>First Name</th>
-                      <th>Middle Name</th>
-                      <th>EXT Name</th>
-                      <th>Gender</th>
-                      <th>Birthdate</th>
-                      <th>Farmer Address</th>
-                      <th>Farm Location</th>
-                      <th>Parcel Area</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registeredOwners.length === 0 ? (
+              <>
+                {/* Search Input */}
+                <div className="search-container">
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search by FFRS ID, Name, Address, Location, or Gender..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  {searchTerm && (
+                    <button
+                      className="clear-search-button"
+                      onClick={() => setSearchTerm('')}
+                      title="Clear search"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div className="table-container">
+                  <table className="owners-table">
+                    <thead>
                       <tr>
-                        <td colSpan={9} className="no-data">
-                          No registered owners found
-                        </td>
+                        <th>FFRS ID</th>
+                        <th>Last Name</th>
+                        <th>First Name</th>
+                        <th>Middle Name</th>
+                        <th>EXT Name</th>
+                        <th>Gender</th>
+                        <th>Birthdate</th>
+                        <th>Farmer Address</th>
+                        <th>Farm Location</th>
+                        <th>Parcel Area</th>
+                        <th>Action</th>
                       </tr>
-                    ) : (
-                      registeredOwners.map((record) => {
-                        // Parse the farmer name to extract individual components
-                        const nameParts = record.farmerName.split(', ');
-                        const lastName = nameParts[0] || '';
-                        const firstName = nameParts[1] || '';
-                        const middleName = nameParts[2] || '';
-                        const extName = nameParts[3] || '';
+                    </thead>
+                    <tbody>
+                      {filteredOwners.length === 0 ? (
+                        <tr>
+                          <td colSpan={11} className="no-data">
+                            {searchTerm ? 'No matching records found' : 'No registered owners found'}
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredOwners.map((record) => {
+                          // Parse the farmer name to extract individual components
+                          const nameParts = record.farmerName.split(', ');
+                          const lastName = nameParts[0] || '';
+                          const firstName = nameParts[1] || '';
+                          const middleName = nameParts[2] || '';
+                          const extName = nameParts[3] || '';
 
-                        // Get parcel area from the record and format it
-                        const parcelArea = record.parcelArea ?
-                          (record.parcelArea.includes('hectares') ? record.parcelArea : `${record.parcelArea} hectares`)
-                          : 'N/A';
+                          // Get parcel area from the record and format it
+                          const parcelArea = record.parcelArea ?
+                            (record.parcelArea.includes('hectares') ? record.parcelArea : `${record.parcelArea} hectares`)
+                            : 'N/A';
 
-                        return (
-                          <tr key={record.id}>
-                            <td>{lastName}</td>
-                            <td>{firstName}</td>
-                            <td>{middleName}</td>
-                            <td>{extName}</td>
-                            <td>{record.gender || 'N/A'}</td>
-                            <td>{record.birthdate ? formatDate(record.birthdate) : 'N/A'}</td>
-                            <td>{record.farmerAddress || 'N/A'}</td>
-                            <td>{record.farmLocation || 'N/A'}</td>
-                            <td>{parcelArea}</td>
-                            <td>
-                              <div style={{ position: 'relative', display: 'inline-block' }}>
-                                <button
-                                  className="more-button"
-                                  onClick={(e) => toggleMenu(record.id, e)}
-                                  aria-haspopup="true"
-                                  aria-expanded={openMenuId === record.id}
-                                  title="More actions"
-                                >
-                                  ...
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                          return (
+                            <tr key={record.id}>
+                              <td className="ffrs-id">{record.referenceNumber || 'N/A'}</td>
+                              <td>{lastName}</td>
+                              <td>{firstName}</td>
+                              <td>{middleName}</td>
+                              <td>{extName}</td>
+                              <td>{record.gender || 'N/A'}</td>
+                              <td>{record.birthdate ? formatDate(record.birthdate) : 'N/A'}</td>
+                              <td>{record.farmerAddress || 'N/A'}</td>
+                              <td>{record.farmLocation || 'N/A'}</td>
+                              <td>{parcelArea}</td>
+                              <td>
+                                <div style={{ position: 'relative', display: 'inline-block' }}>
+                                  <button
+                                    className="more-button"
+                                    onClick={(e) => toggleMenu(record.id, e)}
+                                    aria-haspopup="true"
+                                    aria-expanded={openMenuId === record.id}
+                                    title="More actions"
+                                  >
+                                    ...
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>

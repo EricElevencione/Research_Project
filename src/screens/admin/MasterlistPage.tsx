@@ -37,7 +37,7 @@ const Masterlist: React.FC = () => {
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [farmerStatus, setFarmerStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const isActive = (path: string) => location.pathname === path;
@@ -99,74 +99,26 @@ const Masterlist: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (recordId: string, newStatus: 'Approved' | 'Not Approved') => {
-    try {
-      // Update the record status
-      const updatedRecords = rsbsaRecords.map(record =>
-        record.id === recordId ? { ...record, status: newStatus } : record
-      );
-      setRsbsaRecords(updatedRecords);
-
-      // Here you would typically make an API call to update the backend
-      // await fetch(`http://localhost:5000/api/RSBSAform/${recordId}/status`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ status: newStatus })
-      // });
-
-      console.log(`Status updated for record ${recordId} to ${newStatus}`);
-    } catch (err: any) {
-      console.error('Error updating status:', err);
-      // Revert the change if the API call fails
-      fetchRSBSARecords();
-    }
-  };
-
-  const handleSaveDraft = async (recordId: string) => {
-    try {
-      const updatedRecords = rsbsaRecords.map(record =>
-        record.id === recordId ? { ...record, isDraft: true, status: 'Draft' as const } : record
-      );
-      setRsbsaRecords(updatedRecords);
-
-      // Here you would typically make an API call to save as draft
-      // await fetch(`http://localhost:5000/api/RSBSAform/${recordId}/draft`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ isDraft: true, status: 'Draft' })
-      // });
-
-      console.log(`Record ${recordId} saved as draft`);
-    } catch (err: any) {
-      console.error('Error saving draft:', err);
-      fetchRSBSARecords();
-    }
-  };
-
   const filteredRecords = rsbsaRecords.filter(record => {
-    const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
+    // Match based on the status field from database
+    const matchesFarmerStatus =
+      farmerStatus === 'all' ||
+      (farmerStatus === 'active' && record.status === 'Active Farmer') ||
+      (farmerStatus === 'inactive' && record.status === 'Not Active');
+
     const q = searchQuery.toLowerCase();
     const matchesSearch = record.farmerName.toLowerCase().includes(q) ||
       record.referenceNumber.toLowerCase().includes(q) ||
       record.farmerAddress.toLowerCase().includes(q) ||
       record.farmLocation.toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
-  });
 
-  const formatDate = (iso: string) => {
+    return matchesFarmerStatus && matchesSearch;
+  }); const formatDate = (iso: string) => {
     if (!iso) return '—';
     try {
       return new Date(iso).toLocaleDateString();
     } catch {
       return '—';
-    }
-  };
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'Submitted': return 'status-approved';
-      case 'Not Submitted': return 'status-not-approved';
-      default: return 'status-pending';
     }
   };
 
@@ -245,7 +197,7 @@ const Masterlist: React.FC = () => {
 
         {/* Main content starts here */}
         <div className="main-content">
-          <div className="dashboard-header">
+          <div className="admin-dashboard-header">
             <h2 className="page-header">Masterlist</h2>
           </div>
 
@@ -264,15 +216,13 @@ const Masterlist: React.FC = () => {
 
               <div className="status-filter">
                 <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  value={farmerStatus}
+                  onChange={(e) => setFarmerStatus(e.target.value as 'all' | 'active' | 'inactive')}
                   className="status-select"
                 >
-                  <option value="all">All Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Not Approved">Not Approved</option>
-                  <option value="Draft">Draft</option>
+                  <option value="all">All Farmers</option>
+                  <option value="active">Active Farmers</option>
+                  <option value="inactive">Inactive Farmers</option>
                 </select>
               </div>
             </div>
@@ -289,7 +239,7 @@ const Masterlist: React.FC = () => {
                       'Parcel Address',
                       'Parcel Area',
                       'Date Submitted',
-                      'Status'
+                      'Farmer Status'
                     ].map((header) => (
                       <th key={header}>{header}</th>
                     ))}
@@ -315,8 +265,8 @@ const Masterlist: React.FC = () => {
                           <td>{record.parcelArea}</td>
                           <td>{formatDate(record.dateSubmitted)}</td>
                           <td>
-                            <span className={`status-pill ${getStatusClass(record.status)}`}>
-                              {record.status}
+                            <span className={`status-pill ${record.status === 'Active Farmer' ? 'status-approved' : 'status-not-approved'}`}>
+                              {record.status || 'Not Active'}
                             </span>
                           </td>
                         </tr>
