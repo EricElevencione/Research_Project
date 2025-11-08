@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/navigation/nav.css';
 import '../../assets/css/jo css/JoDashStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
+import DashboardStats from '../../components/Dashboard/DashboardStats';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -94,53 +95,16 @@ const JoDashboard: React.FC = () => {
 
                 {/* Main content starts here */}
                 <div className="main-content jo-map-layout">
-				<h2>Dashboard</h2>
+                    <h2>Dashboard</h2>
 
                     <div className="map-area">
                         <FarmlandMap />
+
+                        {/* Statistics Section - Floating over map */}
+                        <div className="floating-stats-panel">
+                            <DashboardStats />
+                        </div>
                     </div>
-
-                    <aside className="floating-panel">
-                        <div className="panel-section">
-                            <div className="panel-header">
-                                <h3 className="panel-title">Total Farmers <span className="muted">4</span></h3>
-                            </div>
-                            <div className="panel-body">
-                                <div className="progress-row">
-                                    <div className="progress-circle">54%</div>
-                                    <div className="progress-text">
-                                        <div className="row-caps">
-                                            <span>3 Persons</span>
-                                            <span>1 Person</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="panel-section">
-                            <div className="panel-header with-bar">
-                                <h3 className="panel-title">Land Owners<span className="muted">170</span></h3>
-                            </div>
-                            <div className="panel-body grid-2">
-                                <div className="metric"><div className="metric-label">Phone Call</div><div className="metric-value">72</div></div>
-                                <div className="metric"><div className="metric-label">Voice Mail</div><div className="metric-value">35</div></div>
-                                <div className="metric"><div className="metric-label">Text Message</div><div className="metric-value">58</div></div>
-                                <div className="metric"><div className="metric-label">Offer Letter</div><div className="metric-value">15</div></div>
-                            </div>
-                        </div>
-
-                        <div className="panel-section">
-                            <div className="panel-header">
-                                <h3 className="panel-title">Total Registered Land Maps</h3>
-                            </div>
-                            <div className="panel-body grid-2">
-                                <div className="metric"><div className="metric-label">Great results</div><div className="metric-value">58%</div></div>
-                                <div className="metric"><div className="metric-label">Terrible results</div><div className="metric-value">10%</div></div>
-                                <div className="metric"><div className="metric-label">Not great, not terrible</div><div className="metric-value">32%</div></div>
-                            </div>
-                        </div>
-                    </aside>
                 </div>
             </div>
         </div>

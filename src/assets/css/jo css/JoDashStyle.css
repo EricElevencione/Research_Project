@@ -9,10 +9,45 @@
 
 .jo-map-layout .map-area {
     position: relative;
-    height: calc(104vh - 140px);
+    height: calc(100vh - 140px);
     background: #FAF6E9;
     border-radius: 12px;
     overflow: hidden;
+}
+
+/* Floating Stats Panel - positioned over the map */
+.floating-stats-panel {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    width: 420px;
+    max-height: calc(100% - 40px);
+    overflow-y: auto;
+    z-index: 2000;
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+/* Adjust dashboard stats inside floating panel */
+.floating-stats-panel .dashboard-stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0;
+    background: transparent;
+}
+
+.floating-stats-panel .stats-section {
+    margin: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.floating-stats-panel .stats-table-section {
+    grid-column: 1;
 }
 
 /* Hide Leaflet layers toggle button on JO Dashboard only */
@@ -20,21 +55,32 @@
     display: none !important;
 }
 
-.jo-map-layout .map-area > div {
+.jo-map-layout .map-area>div {
     height: 100% !important;
 }
 
+/* Custom scrollbar for floating stats panel */
+.floating-stats-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.floating-stats-panel::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+.floating-stats-panel::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.floating-stats-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Remove old floating panel styles */
 .floating-panel {
-    position: absolute;
-    right: 18px;
-    top: 188px; /* below the header */
-    width: 360px;
-    max-height: calc(100% - 120px);
-    overflow-y: auto;
-    background: transparent;
-    padding: 12px;
-    z-index: 2000; /* ensure above Leaflet map panes */
-    pointer-events: auto;
+    display: none;
 }
 
 .panel-section {
@@ -118,22 +164,28 @@
 }
 
 @media (max-width: 1024px) {
-    .floating-panel {
-        width: 320px;
+    .floating-stats-panel {
+        width: 360px;
+        right: 12px;
+        top: 12px;
     }
 }
 
 @media (max-width: 900px) {
-    .floating-panel {
-        position: static;
+    .floating-stats-panel {
+        position: relative;
         width: auto;
         max-height: none;
-        margin: 12px 0;
+        margin: 12px;
+        right: auto;
+        top: auto;
     }
+
     .jo-map-layout .map-area {
         height: 60vh;
     }
 }
+
 /* Page Layout */
 .page-container {
     display: flex;
@@ -178,7 +230,7 @@
     border-radius: 8px;
     padding: 12px;
     margin-top: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     min-height: 400px;
     z-index: 10;
 }
@@ -197,7 +249,7 @@
     padding: 20px;
     border-radius: 12px;
     text-align: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .stat-card h3 {
@@ -225,8 +277,8 @@
     color: #333;
 }
 
-.map-container{
-    position:relative
+.map-container {
+    position: relative
 }
 
 /* Responsive */
@@ -234,13 +286,13 @@
     .page {
         flex-direction: column;
     }
-    
+
     .sidebar {
         width: 100%;
         height: auto;
         position: relative;
     }
-    
+
     .dashboard-header {
         width: 100%;
     }
