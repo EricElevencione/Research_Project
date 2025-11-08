@@ -909,6 +909,8 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                 rs."OWNERSHIP_TYPE_LESSEE"`
                 : '';
 
+            const ffrsField = hasFFRSCode ? ', rs."FFRS_CODE"' : '';
+
             query = `
     SELECT 
         rs.id,
@@ -935,6 +937,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         rs.created_at,
         rs.updated_at
         ${ownershipFields}
+        ${ffrsField}
     FROM rsbsa_submission rs
     LEFT JOIN (
         SELECT submission_id, SUM(total_farm_area_ha) AS total_area
@@ -1014,7 +1017,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
 
                 return {
                     id: row.id,
-                    referenceNumber: row.referenceNumber || `RSBSA-${row.id}`,
+                    referenceNumber: row["FFRS_CODE"] || `RSBSA-${row.id}`,
                     farmerName: fullName || '—',
                     farmerAddress: `${row["BARANGAY"] || ''}, ${row["MUNICIPALITY"] || ''}`.replace(/^,\s*|,\s*$/g, '') || '—',
                     farmLocation: row["FARM LOCATION"] || '—',

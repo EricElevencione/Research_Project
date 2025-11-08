@@ -252,5 +252,72 @@
     "id": "shape-1762431589242-d131315c31446",
     "createdAt": "2025-11-06T12:19:52.635Z",
     "updatedAt": "2025-11-06T12:19:52.635Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 1,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Calao",
+    "firstName": "Harv",
+    "middleName": "Solano",
+    "surname": "Kim",
+    "ext_name": "",
+    "gender": "Male",
+    "birthdate": "",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Calao, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.692818,
+            10.868783
+          ],
+          [
+            122.692645,
+            10.868681
+          ],
+          [
+            122.692758,
+            10.868455
+          ],
+          [
+            122.692484,
+            10.868191
+          ],
+          [
+            122.692479,
+            10.868039
+          ],
+          [
+            122.69287,
+            10.867807
+          ],
+          [
+            122.693058,
+            10.867681
+          ],
+          [
+            122.693385,
+            10.868123
+          ],
+          [
+            122.692818,
+            10.868783
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1762568283189-6411c620eb29e8",
+    "createdAt": "2025-11-08T02:18:06.511Z",
+    "updatedAt": "2025-11-08T02:18:06.511Z"
   }
 ]
