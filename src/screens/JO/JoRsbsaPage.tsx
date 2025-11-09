@@ -243,8 +243,8 @@ const JoRsbsaPage: React.FC = () => {
           <h2>Registered Land Owners</h2>
 
           <div className="content-card-rsbsa">
-            <div className="actions-bar">
-              <div className="search-container">
+            <div className="jo-actions-bar">
+              <div className="jo-search-container">
                 <input
                   type="text"
                   placeholder="Search by FFRS ID, name, address, gender..."

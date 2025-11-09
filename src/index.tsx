@@ -8,6 +8,7 @@ import TechnicianDashboard from './screens/technicians/TechnicianDashboard';
 import TechMasterlist from './screens/technicians/TechMasterlist';
 import TechRsbsa from './screens/technicians/TechRsbsa';
 import TechPickLandParcel from './screens/technicians/TechPickLandParcel';
+import TechFarmerProfile from './screens/technicians/TechFarmerProf';
 import Incentives from './screens/admin/Incentives';
 import JoDashboard from './screens/JO/JoDashboard';
 import JoRsbsa from './screens/JO/JoRsbsaRegistration';
@@ -68,9 +69,9 @@ function App() {
                         <TechMasterlist />
                     </ProtectedRoute>
                 } />
-                <Route path="/technician-landplotting" element={
+                <Route path="/technician-farmerprofile/:id" element={
                     <ProtectedRoute>
-                        <TechLandPlotting />
+                        <TechFarmerProfile />
                     </ProtectedRoute>
                 } />
                 <Route path="/technician-rsbsa" element={

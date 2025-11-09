@@ -1117,25 +1117,40 @@ app.get('/api/rsbsa_submission/:id', async (req, res) => {
                 status: row.status
             };
         } else {
-            // Handle structured data
+            // Handle structured data - check for uppercase or lowercase column names
+            const fullName = [
+                row["LAST NAME"] || row["surname"] || row["lastName"] || '',
+                row["FIRST NAME"] || row["firstName"] || '',
+                row["MIDDLE NAME"] || row["middleName"] || '',
+                row["EXT NAME"] || row["extName"] || ''
+            ].filter(part => part).join(', ');
+
+            const barangay = row["BARANGAY"] || row["barangay"] || '';
+            const municipality = row["MUNICIPALITY"] || row["municipality"] || '';
+            const province = row["PROVINCE"] || row["province"] || '';
+
             submissionData = {
                 id: row.id,
-                firstName: row["FIRST NAME"] || '',
-                middleName: row["MIDDLE NAME"] || '',
-                surname: row["LAST NAME"] || '',
-                extName: row["EXT NAME"] || '',
-                gender: row["GENDER"] || '',
-                birthdate: row["BIRTHDATE"] || '',
-                municipality: row["MUNICIPALITY"] || '',
-                barangay: row["BARANGAY"] || '',
-                province: row["PROVINCE"] || '',
-                farmLocation: row["FARM LOCATION"] || '',
-                parcelArea: row["PARCEL AREA"] || '',
-                totalFarmArea: row["TOTAL FARM AREA"] || '',
+                referenceNumber: row["FFRS_CODE"] || row["ffrs_code"] || `RSBSA-${row.id}`,
+                farmerName: fullName,
+                firstName: row["FIRST NAME"] || row["firstName"] || '',
+                middleName: row["MIDDLE NAME"] || row["middleName"] || '',
+                lastName: row["LAST NAME"] || row["surname"] || row["lastName"] || '',
+                extName: row["EXT NAME"] || row["extName"] || '',
+                gender: row["GENDER"] || row["gender"] || '',
+                birthdate: row["BIRTHDATE"] || row["birthdate"] || '',
+                farmerAddress: [barangay, municipality, province].filter(Boolean).join(', ') || '',
+                farmLocation: row["FARM LOCATION"] || row["farmLocation"] || barangay || '',
+                parcelArea: row["PARCEL AREA"] || row["parcelArea"] || row["TOTAL FARM AREA"] || row["totalFarmArea"] || '',
+                status: row.status || 'Not Active',
+                dateSubmitted: row.submitted_at || row.created_at,
+                ownershipType: {
+                    registeredOwner: row["OWNERSHIP_TYPE_REGISTERED_OWNER"] || row["ownership_type_registered_owner"] || false,
+                    tenant: row["OWNERSHIP_TYPE_TENANT"] || row["ownership_type_tenant"] || false,
+                    lessee: row["OWNERSHIP_TYPE_LESSEE"] || row["ownership_type_lessee"] || false
+                },
                 created_at: row.created_at,
-                updated_at: row.updated_at,
-                submitted_at: row.submitted_at,
-                status: row.status
+                updated_at: row.updated_at
             };
         }
 

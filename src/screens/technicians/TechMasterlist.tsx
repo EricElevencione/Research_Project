@@ -373,6 +373,7 @@ const TechMasterlist: React.FC = () => {
             <div className='sidebar-logo'>
               <img src={LogoImage} alt="Logo" />
             </div>
+
             <button
               className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
               onClick={() => navigate('/technician-dashboard')}
@@ -382,6 +383,7 @@ const TechMasterlist: React.FC = () => {
               </span>
               <span className="nav-text">Home</span>
             </button>
+
             <button
               className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
               onClick={() => navigate('/technician-rsbsa')}
@@ -391,6 +393,7 @@ const TechMasterlist: React.FC = () => {
               </span>
               <span className="nav-text">RSBSA</span>
             </button>
+
             <button
               className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
               onClick={() => navigate('/technician-masterlist')}
@@ -400,6 +403,7 @@ const TechMasterlist: React.FC = () => {
               </span>
               <span className="nav-text">Masterlist</span>
             </button>
+
             <button
               className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
               onClick={() => navigate('/')}
@@ -409,6 +413,7 @@ const TechMasterlist: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
           </nav>
         </div>
         <div className="main-content">

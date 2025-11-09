@@ -632,6 +632,7 @@ const TechRsbsa: React.FC = () => {
               left: menuPosition.left,
             }}
           >
+            <button onClick={() => { navigate(`/technician-farmerprofile/${openMenuId}`); closeMenu(); }}>View Profile</button>
             <button onClick={() => { handleEdit(openMenuId); }}>Edit</button>
             <button onClick={() => { navigate(`/technician-pick-land-parcel/${openMenuId}`); closeMenu(); }}>Land Parcel</button>
           </div>
