@@ -8,6 +8,7 @@ import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
+import FarmerIcon from '../../assets/images/farmer (1).png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 
 const TechnicianDashboard: React.FC = () => {
@@ -59,6 +60,16 @@ const TechnicianDashboard: React.FC = () => {
                         </button>
 
                         <button
+                            className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-farmerprofpage')}
+                        >
+                            <span className="nav-icon">
+                                <img src={FarmerIcon} alt="farmerProf" />
+                            </span>
+                            <span className="nav-text">Farmers Profile</span>
+                        </button>
+
+                        <button
                             className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
                         >
@@ -67,6 +78,7 @@ const TechnicianDashboard: React.FC = () => {
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
+
                     </nav>
                 </div>
                 {/* Sidebar ends here */}

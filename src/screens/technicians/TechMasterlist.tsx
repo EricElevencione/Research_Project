@@ -8,6 +8,7 @@ import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
+import FarmerIcon from '../../assets/images/farmer (1).png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
 
@@ -368,6 +369,8 @@ const TechMasterlist: React.FC = () => {
   return (
     <div className="page-container">
       <div className="page">
+
+        {/* Sidebar starts here */}
         <div className="sidebar">
           <nav className="sidebar-nav">
             <div className='sidebar-logo'>
@@ -405,6 +408,16 @@ const TechMasterlist: React.FC = () => {
             </button>
 
             <button
+              className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
+              onClick={() => navigate('/technician-farmerprofpage')}
+            >
+              <span className="nav-icon">
+                <img src={FarmerIcon} alt="farmerProf" />
+              </span>
+              <span className="nav-text">Farmers Profile</span>
+            </button>
+
+            <button
               className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
@@ -416,6 +429,8 @@ const TechMasterlist: React.FC = () => {
 
           </nav>
         </div>
+        {/* Sidebar ends here */}
+
         <div className="main-content">
           <h2>Masterlist</h2>
           <div className="content-card">

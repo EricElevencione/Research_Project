@@ -528,7 +528,7 @@ const JoRsbsa: React.FC = () => {
           <h2>RSBSA Enrollment Form</h2>
 
           <div className="back-button">
-            <button className="btn-back" onClick={() => navigate('/jo-rsbsapage')}>Back</button>
+            <button className="btn-back" onClick={() => navigate('/jo-rsbsapage')}></button>
           </div>
 
           <div className="rsbsa-form-container">
@@ -616,9 +616,6 @@ const JoRsbsa: React.FC = () => {
                     <h4>MAIN LIVELIHOOD</h4>
                     <div className="checkbox-group">
                       <label><input type="checkbox" checked={formData.mainLivelihood === 'farmer'} onChange={(e) => handleLivelihoodToggle('farmer', e.target.checked)} /> FARMER</label>
-                      <label><input type="checkbox" checked={formData.mainLivelihood === 'farmworker'} onChange={(e) => handleLivelihoodToggle('farmworker', e.target.checked)} /> FARMWORKER/LABORER</label>
-                      <label><input type="checkbox" checked={formData.mainLivelihood === 'fisherfolk'} onChange={(e) => handleLivelihoodToggle('fisherfolk', e.target.checked)} /> FISHERFOLK</label>
-                      <label><input type="checkbox" checked={formData.mainLivelihood === 'agri-youth'} onChange={(e) => handleLivelihoodToggle('agri-youth', e.target.checked)} /> AGRI YOUTH</label>
                     </div>
                     {errors.mainLivelihood && <div className="error">{errors.mainLivelihood}</div>}
                   </div>
@@ -645,58 +642,6 @@ const JoRsbsa: React.FC = () => {
                       </div>
                       {(formData as any).farmerPoultry && (
                         <input type="text" placeholder="Specify poultry" value={(formData as any).farmerPoultryText} onChange={(e) => handleInputChange('farmerPoultryText', e.target.value)} />
-                      )}
-                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
-                    </div>
-                  )}
-
-                  {formData.mainLivelihood === 'farmworker' && (
-                    <div className="livelihood-details">
-                      <h4>Kind of Work</h4>
-                      <div className="checkbox-group">
-                        <label><input type="checkbox" checked={(formData as any).fwLandPrep} onChange={() => toggleBool('fwLandPrep')} /> Land Preparation</label>
-                        <label><input type="checkbox" checked={(formData as any).fwPlanting} onChange={() => toggleBool('fwPlanting')} /> Planting/Transplanting</label>
-                        <label><input type="checkbox" checked={(formData as any).fwCultivation} onChange={() => toggleBool('fwCultivation')} /> Cultivation</label>
-                        <label><input type="checkbox" checked={(formData as any).fwHarvesting} onChange={() => toggleBool('fwHarvesting')} /> Harvesting</label>
-                        <label><input type="checkbox" checked={(formData as any).fwOthers} onChange={() => toggleBool('fwOthers')} /> Others, please specify</label>
-                      </div>
-                      {(formData as any).fwOthers && (
-                        <input type="text" placeholder="Specify other work" value={(formData as any).fwOthersText} onChange={(e) => handleInputChange('fwOthersText', e.target.value)} />
-                      )}
-                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
-                    </div>
-                  )}
-
-                  {formData.mainLivelihood === 'fisherfolk' && (
-                    <div className="livelihood-details">
-                      <h4>Type of Fishing Activity</h4>
-                      <div className="checkbox-group">
-                        <label><input type="checkbox" checked={(formData as any).ffFishCapture} onChange={() => toggleBool('ffFishCapture')} /> Fish Capture</label>
-                        <label><input type="checkbox" checked={(formData as any).ffAquaculture} onChange={() => toggleBool('ffAquaculture')} /> Aquaculture</label>
-                        <label><input type="checkbox" checked={(formData as any).ffGleaning} onChange={() => toggleBool('ffGleaning')} /> Gleaning</label>
-                        <label><input type="checkbox" checked={(formData as any).ffFishProcessing} onChange={() => toggleBool('ffFishProcessing')} /> Fish Processing</label>
-                        <label><input type="checkbox" checked={(formData as any).ffFishVending} onChange={() => toggleBool('ffFishVending')} /> Fish Vending</label>
-                        <label><input type="checkbox" checked={(formData as any).ffOthers} onChange={() => toggleBool('ffOthers')} /> Others, please specify</label>
-                      </div>
-                      {(formData as any).ffOthers && (
-                        <input type="text" placeholder="Specify other fishing activity" value={(formData as any).ffOthersText} onChange={(e) => handleInputChange('ffOthersText', e.target.value)} />
-                      )}
-                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
-                    </div>
-                  )}
-
-                  {formData.mainLivelihood === 'agri-youth' && (
-                    <div className="livelihood-details">
-                      <h4>Type of involvement</h4>
-                      <div className="checkbox-group">
-                        <label><input type="checkbox" checked={(formData as any).ayPartHousehold} onChange={() => toggleBool('ayPartHousehold')} /> part of a farming household</label>
-                        <label><input type="checkbox" checked={(formData as any).ayFormalCourse} onChange={() => toggleBool('ayFormalCourse')} /> attending/attended formal agri-fishery related course</label>
-                        <label><input type="checkbox" checked={(formData as any).ayNonFormalCourse} onChange={() => toggleBool('ayNonFormalCourse')} /> attending/attended non-formal agri-fishery related course</label>
-                        <label><input type="checkbox" checked={(formData as any).ayParticipatedProgram} onChange={() => toggleBool('ayParticipatedProgram')} /> participated in any agricultural activity/program</label>
-                        <label><input type="checkbox" checked={(formData as any).ayOthers} onChange={() => toggleBool('ayOthers')} /> others, specify</label>
-                      </div>
-                      {(formData as any).ayOthers && (
-                        <input type="text" placeholder="Specify other involvement" value={(formData as any).ayOthersText} onChange={(e) => handleInputChange('ayOthersText', e.target.value)} />
                       )}
                       {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
                     </div>

@@ -7,6 +7,7 @@ import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
+import FarmerIcon from '../../assets/images/farmer (1).png';
 
 interface RSBSARecord {
   id: string;
@@ -421,6 +422,16 @@ const TechRsbsa: React.FC = () => {
 
             <button
               className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+              onClick={() => navigate('/technician-farmerprofpage')}
+            >
+              <span className="nav-icon">
+                <img src={FarmerIcon} alt="farmerProf" />
+              </span>
+              <span className="nav-text">Farmers Profile</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
               <span className="nav-icon">
@@ -428,6 +439,7 @@ const TechRsbsa: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
           </nav>
         </div>
         {/* Sidebar ends here */}
@@ -632,7 +644,6 @@ const TechRsbsa: React.FC = () => {
               left: menuPosition.left,
             }}
           >
-            <button onClick={() => { navigate(`/technician-farmerprofile/${openMenuId}`); closeMenu(); }}>View Profile</button>
             <button onClick={() => { handleEdit(openMenuId); }}>Edit</button>
             <button onClick={() => { navigate(`/technician-pick-land-parcel/${openMenuId}`); closeMenu(); }}>Land Parcel</button>
           </div>

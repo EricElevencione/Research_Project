@@ -131,9 +131,9 @@
 .farmers-table thead th {
     background: #A0C878;
     color: #333;
-    font-weight: 600;
+    font-weight: 550;
     text-align: left;
-    padding: 16px 12px;
+    padding: 12px 7px;
     border-bottom: 1px solid #dee2e6;
     white-space: nowrap;
 }

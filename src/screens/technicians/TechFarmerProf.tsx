@@ -7,6 +7,7 @@ import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
+import FarmerIcon from '../../assets/images/farmer (1).png';
 
 interface FarmerData {
     id: string;
@@ -198,7 +199,7 @@ const TechFarmerProf: React.FC = () => {
                     <div className="tech-prof-main-content">
                         <div className="error-container">
                             <p className="error-message">{error || 'Farmer not found'}</p>
-                            <button onClick={() => navigate('/technician-rsbsa')} className="btn-back">
+                            <button onClick={() => navigate('/technician-farmerprofpage')} className="btn-back">
                                 ← Back to List
                             </button>
                         </div>
@@ -251,6 +252,16 @@ const TechFarmerProf: React.FC = () => {
                         </button>
 
                         <button
+                            className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-farmerprofpage')}
+                        >
+                            <span className="nav-icon">
+                                <img src={FarmerIcon} alt="farmerProf" />
+                            </span>
+                            <span className="nav-text">Farmers Profile</span>
+                        </button>
+
+                        <button
                             className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
                         >
@@ -268,17 +279,9 @@ const TechFarmerProf: React.FC = () => {
                     {/* Header Section */}
                     <div className="profile-header">
                         <div className="header-top">
-                            <button onClick={() => navigate('/technician-rsbsa')} className="btn-back">
+                            <button onClick={() => navigate('/technician-farmerprofpage')} className="btn-back">
                                 ← Back to List
                             </button>
-                            <div className="header-actions">
-                                <button className="btn-action btn-edit" onClick={() => alert('Edit functionality coming soon')}>
-                                    ✏️ Edit Profile
-                                </button>
-                                <button className="btn-action btn-print" onClick={() => window.print()}>
-                                    🖨️ Print Profile
-                                </button>
-                            </div>
                         </div>
 
                         <div className="profile-hero">
@@ -295,27 +298,6 @@ const TechFarmerProf: React.FC = () => {
                                         {farmer.status || 'Not Active'}
                                     </span>
                                 </div>
-                            </div>
-                            <div className="profile-completion">
-                                <div className="completion-circle">
-                                    <svg viewBox="0 0 100 100">
-                                        <circle cx="50" cy="50" r="45" fill="none" stroke="#e0e0e0" strokeWidth="8" />
-                                        <circle
-                                            cx="50"
-                                            cy="50"
-                                            r="45"
-                                            fill="none"
-                                            stroke="#4CAF50"
-                                            strokeWidth="8"
-                                            strokeDasharray={`${getProfileCompleteness() * 2.827} 282.7`}
-                                            transform="rotate(-90 50 50)"
-                                        />
-                                        <text x="50" y="50" textAnchor="middle" dy="7" fontSize="20" fill="#333" fontWeight="bold">
-                                            {getProfileCompleteness()}%
-                                        </text>
-                                    </svg>
-                                </div>
-                                <p className="completion-label">Profile Complete</p>
                             </div>
                         </div>
                     </div>

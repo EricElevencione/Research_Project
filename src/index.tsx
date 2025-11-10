@@ -3,12 +3,12 @@ import Login from './login/PageLogin';
 import Dashboard from './screens/admin/Dashboard';
 import MasterlistPage from './screens/admin/MasterlistPage';
 import RSBSAPage from './screens/admin/RSBSAPage';
-import TechLandPlotting from './screens/technicians/TechLandPlottingPage';
 import TechnicianDashboard from './screens/technicians/TechnicianDashboard';
 import TechMasterlist from './screens/technicians/TechMasterlist';
 import TechRsbsa from './screens/technicians/TechRsbsa';
 import TechPickLandParcel from './screens/technicians/TechPickLandParcel';
 import TechFarmerProfile from './screens/technicians/TechFarmerProf';
+import TechFarmerProfPage from './screens/technicians/TechFarmerProfPage';
 import Incentives from './screens/admin/Incentives';
 import JoDashboard from './screens/JO/JoDashboard';
 import JoRsbsa from './screens/JO/JoRsbsaRegistration';
@@ -72,6 +72,11 @@ function App() {
                 <Route path="/technician-farmerprofile/:id" element={
                     <ProtectedRoute>
                         <TechFarmerProfile />
+                    </ProtectedRoute>
+                } />
+                <Route path="/technician-farmerprofpage" element={
+                    <ProtectedRoute>
+                        <TechFarmerProfPage />
                     </ProtectedRoute>
                 } />
                 <Route path="/technician-rsbsa" element={
