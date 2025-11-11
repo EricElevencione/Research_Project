@@ -443,3 +443,487 @@
     color: #6c757d;
     font-style: italic;
 }
+
+/* Owner Actions */
+.owner-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.transfer-ownership-btn {
+    background: #ff9800;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.transfer-ownership-btn:hover {
+    background: #f57c00;
+    transform: scale(1.05);
+}
+
+/* Transfer Modal Specific Styles */
+.transfer-modal {
+    max-width: 900px;
+}
+
+.transfer-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.transfer-section:last-child {
+    border-bottom: none;
+}
+
+.transfer-section h3 {
+    margin: 0 0 16px 0;
+    color: #2c5f2d;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.current-owner-info {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid #2c5f2d;
+}
+
+.current-owner-info p {
+    margin: 8px 0;
+    font-size: 14px;
+    color: #495057;
+}
+
+.current-owner-info strong {
+    color: #212529;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 14px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #2c5f2d;
+    box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.1);
+}
+
+.form-input:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+/* Radio Options */
+.radio-group {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+}
+
+.radio-option:hover {
+    background: #e9ecef;
+}
+
+.radio-option input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.radio-option input[type="radio"]:checked+span {
+    font-weight: 600;
+    color: #2c5f2d;
+}
+
+.radio-option span {
+    font-size: 14px;
+    color: #495057;
+}
+
+/* Search Results */
+.search-results {
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    margin-top: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    background: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.search-result-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background-color: #f8f9fa;
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.result-badges {
+    display: flex;
+    gap: 6px;
+}
+
+.ownership-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ownership-badge.owner {
+    background-color: #c8e6c9;
+    color: #2e7d32;
+}
+
+.ownership-badge.tenant {
+    background-color: #fff9c4;
+    color: #f57f17;
+}
+
+.ownership-badge.lessee {
+    background-color: #bbdefb;
+    color: #1565c0;
+}
+
+.result-name {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 4px;
+}
+
+.result-details {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.selected-farmer {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #d4edda;
+    border: 2px solid #c3e6cb;
+    border-radius: 6px;
+    color: #155724;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selected-farmer .ownership-badge {
+    margin-left: 8px;
+}
+
+/* New Farmer Form */
+.new-farmer-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+
+/* Parcel Selection Styles */
+.no-parcels {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.parcel-select-all {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #e7f3ff;
+    border-radius: 6px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+}
+
+.parcels-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.parcel-checkbox-item {
+    padding: 12px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s ease;
+}
+
+.parcel-checkbox-item:hover {
+    background: #f8f9fa;
+    border-color: #2c5f2d;
+}
+
+.parcel-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1;
+}
+
+.parcel-location {
+    font-weight: 600;
+    color: #333;
+}
+
+.parcel-area {
+    color: #666;
+    font-size: 0.9rem;
+    padding: 4px 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+}
+
+.selected-count {
+    margin-top: 12px;
+    padding: 10px;
+    text-align: center;
+    background: #d4edda;
+    color: #155724;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* Modal Footer */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 2px solid #e9ecef;
+}
+
+.btn-cancel,
+.btn-transfer,
+.btn-confirm {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #5a6268;
+}
+
+.btn-cancel:disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+}
+
+.btn-transfer {
+    background: #ff9800;
+    color: white;
+}
+
+.btn-transfer:hover {
+    background: #f57c00;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(245, 124, 0, 0.3);
+}
+
+.btn-transfer:disabled {
+    background: #ffb74d;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-confirm {
+    background: #d32f2f;
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: #c62828;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(211, 47, 47, 0.3);
+}
+
+.btn-confirm:disabled {
+    background: #ef5350;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Confirmation Dialog */
+.confirm-dialog {
+    max-width: 550px;
+}
+
+.confirm-message {
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: #495057;
+    line-height: 1.6;
+}
+
+.confirm-warning {
+    font-weight: 600;
+    color: #212529;
+    margin: 16px 0 8px 0;
+}
+
+.confirm-list {
+    margin: 12px 0;
+    padding-left: 24px;
+    color: #495057;
+}
+
+.confirm-list li {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.confirm-note {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    color: #856404;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .owner-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .owner-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .transfer-ownership-btn,
+    .full-history-btn {
+        width: 100%;
+    }
+
+    .tenant-item {
+        grid-template-columns: 80px 1fr;
+        gap: 12px;
+    }
+
+    .tenant-date {
+        grid-column: 2;
+        text-align: left;
+        margin-top: 4px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .radio-group {
+        flex-direction: column;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+}

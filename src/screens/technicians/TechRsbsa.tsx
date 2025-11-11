@@ -21,6 +21,7 @@ interface RSBSARecord {
   status: string;
   landParcel: string;
   parcelArea?: string; // Add parcelArea as optional field
+  parcelCount?: number; // Number of parcels owned by the farmer
   ownershipType: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -294,6 +295,11 @@ const TechRsbsa: React.FC = () => {
     console.log('Filtering records:', records.length);
 
     const filtered = records.filter(record => {
+      // Exclude farmers who have transferred ownership
+      if (record.status === 'Transferred Ownership') {
+        return false;
+      }
+
       // Check if the record represents a registered owner
       // A registered owner is someone where OWNERSHIP_TYPE_REGISTERED_OWNER is true
       // and they are NOT a tenant or lessee

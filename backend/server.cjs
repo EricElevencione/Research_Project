@@ -46,6 +46,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Get landowners endpoint (from structured rsbsa_submission)
 app.get('/api/landowners', async (req, res) => {
     try {
+        console.log('\n📋 GET /api/landowners - Fetching land owners list');
+
         // Check existence of tables and columns for robust querying
         const tableExists = async (tableName) => {
             const q = `
@@ -60,6 +62,7 @@ app.get('/api/landowners', async (req, res) => {
 
         const rsbsaExists = await tableExists('rsbsa_submission');
         if (!rsbsaExists) {
+            console.log('⚠️ rsbsa_submission table does not exist');
             return res.json([]);
         }
 
@@ -74,6 +77,14 @@ app.get('/api/landowners', async (req, res) => {
         const hasMiddle = columnNames.includes('MIDDLE NAME');
         const hasExt = columnNames.includes('EXT NAME');
         const hasOwnerFlag = columnNames.includes('OWNERSHIP_TYPE_REGISTERED_OWNER');
+
+        console.log('📊 Table columns available:', {
+            hasLast,
+            hasFirst,
+            hasMiddle,
+            hasExt,
+            hasOwnerFlag
+        });
 
         const farmParcelsExists = await tableExists('farm_parcels');
 
@@ -121,6 +132,7 @@ app.get('/api/landowners', async (req, res) => {
 
         if (!subSelects.length) {
             // Not enough structure to build names
+            console.log('⚠️ Not enough columns to build names');
             return res.json([]);
         }
 
@@ -134,9 +146,15 @@ app.get('/api/landowners', async (req, res) => {
         `;
 
         const result = await pool.query(finalQuery);
+        console.log(`✅ Found ${result.rows.length} land owners`);
+        if (result.rows.length <= 5) {
+            console.log('Land owners:', JSON.stringify(result.rows, null, 2));
+        } else {
+            console.log('First 5 land owners:', JSON.stringify(result.rows.slice(0, 5), null, 2));
+        }
         res.json(result.rows || []);
     } catch (error) {
-        console.error('Error fetching landowners:', error);
+        console.error('❌ Error fetching landowners:', error.message);
         res.status(500).json({ error: 'Failed to fetch landowners' });
     }
 });
@@ -935,7 +953,8 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         rs.status,
         rs.submitted_at,
         rs.created_at,
-        rs.updated_at
+        rs.updated_at,
+        COALESCE(fp_count.parcel_count, 0) AS parcel_count
         ${ownershipFields}
         ${ffrsField}
     FROM rsbsa_submission rs
@@ -944,6 +963,11 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         FROM farm_parcels
         GROUP BY submission_id
     ) fp_sum ON fp_sum.submission_id = rs.id
+    LEFT JOIN (
+        SELECT submission_id, COUNT(*) AS parcel_count
+        FROM rsbsa_farm_parcels
+        GROUP BY submission_id
+    ) fp_count ON fp_count.submission_id = rs.id
     WHERE rs."LAST NAME" IS NOT NULL
     ORDER BY rs.submitted_at DESC
 `;
@@ -1028,6 +1052,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                     parcelArea: row["PARCEL AREA"] ? String(row["PARCEL AREA"]) : '—',
                     totalFarmArea: parseFloat(row["TOTAL FARM AREA"]) || 0,
                     landParcel: parcelInfo,
+                    parcelCount: parseInt(row.parcel_count) || 0,
                     ownershipType: ownershipType
                 };
             }
@@ -2063,6 +2088,16 @@ console.log('✅ Land History API endpoints loaded successfully');
 // Returns land owners grouped with their tenants and lessees
 app.get('/api/land-owners-with-tenants', async (req, res) => {
     try {
+        console.log('\n📋 GET /api/land-owners-with-tenants - Fetching land owners with tenants/lessees');
+
+        // First, check how many farmers have transferred ownership
+        const transferredCheck = await pool.query(`
+            SELECT COUNT(*) as count
+            FROM rsbsa_submission
+            WHERE status = 'Transferred Ownership' OR "OWNERSHIP_TYPE_REGISTERED_OWNER" = false
+        `);
+        console.log(`🔍 Farmers with transferred ownership (filtered out): ${transferredCheck.rows[0].count}`);
+
         // Get all registered land owners with their parcels
         const query = `
             WITH land_owners AS (
@@ -2074,9 +2109,15 @@ app.get('/api/land-owners-with-tenants', async (req, res) => {
                         ELSE '' END as owner_name,
                     rs."FIRST NAME" as first_name,
                     rs."LAST NAME" as last_name,
-                    rs."MIDDLE NAME" as middle_name
+                    rs."MIDDLE NAME" as middle_name,
+                    rs.status
                 FROM rsbsa_submission rs
                 WHERE rs."OWNERSHIP_TYPE_REGISTERED_OWNER" = true
+                    AND COALESCE(rs.status, '') != 'Transferred Ownership'
+                    AND EXISTS (
+                        SELECT 1 FROM rsbsa_farm_parcels fp 
+                        WHERE fp.submission_id = rs.id
+                    )
             ),
             tenants_lessees AS (
                 SELECT 
@@ -2110,6 +2151,7 @@ app.get('/api/land-owners-with-tenants', async (req, res) => {
                 lo.first_name,
                 lo.last_name,
                 lo.middle_name,
+                lo.status,
                 COALESCE(
                     json_agg(
                         json_build_object(
@@ -2129,18 +2171,320 @@ app.get('/api/land-owners-with-tenants', async (req, res) => {
                 OR LOWER(TRIM(tl.land_owner_name)) LIKE LOWER(TRIM(lo.owner_name)) || '%'
                 OR LOWER(TRIM(lo.owner_name)) LIKE LOWER(TRIM(tl.land_owner_name)) || '%'
             )
-            GROUP BY lo.owner_id, lo.owner_name, lo.first_name, lo.last_name, lo.middle_name
+            GROUP BY lo.owner_id, lo.owner_name, lo.first_name, lo.last_name, lo.middle_name, lo.status
             ORDER BY lo.last_name, lo.first_name;
         `;
 
         const result = await pool.query(query);
+        console.log(`✅ Found ${result.rows.length} land owners with tenants/lessees`);
+        if (result.rows.length <= 3) {
+            console.log('All land owners:', JSON.stringify(result.rows, null, 2));
+        } else {
+            console.log('First 3 land owners:', JSON.stringify(result.rows.slice(0, 3), null, 2));
+        }
         res.json(result.rows);
     } catch (error) {
-        console.error('Error fetching land owners with tenants:', error);
+        console.error('❌ Error fetching land owners with tenants:', error.message);
+        console.error('Stack:', error.stack);
         res.status(500).json({
             error: 'Failed to fetch land owners with tenants',
             details: error.message
         });
+    }
+});
+
+// ============================================================================
+// TRANSFER OWNERSHIP API ENDPOINT
+// ============================================================================
+// POST /api/transfer-ownership
+// Transfers land ownership from one farmer to another (new or existing)
+app.post('/api/transfer-ownership', async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const {
+            oldOwnerId,
+            selectedParcelIds,
+            transferReason,
+            transferDate,
+            newOwnerOption,
+            newOwnerId,
+            newFarmerData
+        } = req.body;
+
+        console.log('\n========================================');
+        console.log('🔄 TRANSFER OWNERSHIP REQUEST');
+        console.log('========================================');
+        console.log('Request Body:', JSON.stringify(req.body, null, 2));
+        console.log('Old Owner ID:', oldOwnerId);
+        console.log('New Owner Option:', newOwnerOption);
+        console.log('New Owner ID:', newOwnerId);
+        console.log('Selected Parcel IDs:', selectedParcelIds);
+        console.log('Transfer Reason:', transferReason);
+        console.log('Transfer Date:', transferDate);
+
+        // Validate required fields
+        if (!oldOwnerId || !transferReason || !transferDate) {
+            throw new Error('Missing required fields: oldOwnerId, transferReason, or transferDate');
+        }
+
+        if (!selectedParcelIds || selectedParcelIds.length === 0) {
+            throw new Error('At least one parcel must be selected for transfer');
+        }
+
+        let finalNewOwnerId = newOwnerId;
+
+        // If creating a new farmer, insert into database
+        if (newOwnerOption === 'new') {
+            if (!newFarmerData) {
+                throw new Error('New farmer data is required when creating a new owner');
+            }
+
+            console.log('\n📝 Creating new farmer...');
+            console.log('New Farmer Data:', JSON.stringify(newFarmerData, null, 2));
+
+            // Generate FFRS code for new farmer
+            const ffrsQuery = `
+                SELECT COALESCE(MAX(CAST(SUBSTRING(ffrs_code FROM 16) AS INTEGER)), 0) + 1 as next_number
+                FROM rsbsa_submission
+                WHERE ffrs_code LIKE '06-30-18-%'
+            `;
+            const ffrsResult = await client.query(ffrsQuery);
+            const nextNumber = ffrsResult.rows[0].next_number;
+            const barangayCode = '007'; // Default, you can map this based on barangay
+            const newFfrsCode = `06-30-18-${barangayCode}-${String(nextNumber).padStart(6, '0')}`;
+
+            console.log('Generated FFRS Code:', newFfrsCode);
+
+            // Insert new farmer
+            const insertQuery = `
+                INSERT INTO rsbsa_submission (
+                    "FIRST NAME",
+                    "LAST NAME",
+                    "MIDDLE NAME",
+                    "EXT NAME",
+                    "BARANGAY",
+                    "MUNICIPALITY",
+                    "PROVINCE",
+                    "BIRTHDATE",
+                    "SEX",
+                    "FFRS_CODE",
+                    "OWNERSHIP_TYPE_REGISTERED_OWNER",
+                    status,
+                    "SUBMITTED_AT"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, 'Active Farmer', $11)
+                RETURNING id
+            `;
+
+            const insertResult = await client.query(insertQuery, [
+                newFarmerData.firstName,
+                newFarmerData.lastName,
+                newFarmerData.middleName || null,
+                newFarmerData.extensionName || null,
+                newFarmerData.barangay,
+                newFarmerData.municipality,
+                newFarmerData.province,
+                newFarmerData.birthdate,
+                newFarmerData.gender,
+                newFfrsCode,
+                transferDate
+            ]);
+
+            finalNewOwnerId = insertResult.rows[0].id;
+            console.log('✅ New farmer created with ID:', finalNewOwnerId);
+        } else {
+            console.log('\n👤 Using existing farmer ID:', finalNewOwnerId);
+        }
+
+        // Check if all parcels of old owner are being transferred
+        const allParcelsQuery = `
+            SELECT COUNT(*) as total
+            FROM rsbsa_farm_parcels
+            WHERE submission_id = $1
+        `;
+        const allParcelsResult = await client.query(allParcelsQuery, [oldOwnerId]);
+        const totalParcels = parseInt(allParcelsResult.rows[0].total);
+        const transferringAllParcels = selectedParcelIds.length >= totalParcels;
+
+        console.log('\n📊 Parcel Analysis:');
+        console.log('Total parcels owned by old owner:', totalParcels);
+        console.log('Parcels being transferred:', selectedParcelIds.length);
+        console.log('Transferring all parcels?', transferringAllParcels);
+
+        // Update old owner - mark as transferred only if all parcels are transferred
+        if (transferringAllParcels) {
+            console.log('\n🔄 Updating old owner status (all parcels transferred)...');
+            const updateOldOwnerQuery = `
+                UPDATE rsbsa_submission
+                SET 
+                    "OWNERSHIP_TYPE_REGISTERED_OWNER" = false,
+                    status = 'Transferred Ownership'
+                WHERE id = $1
+                RETURNING id, "FIRST NAME", "LAST NAME", status, "OWNERSHIP_TYPE_REGISTERED_OWNER"
+            `;
+            const oldOwnerUpdateResult = await client.query(updateOldOwnerQuery, [oldOwnerId]);
+            console.log('✅ Old owner updated:', oldOwnerUpdateResult.rows[0]);
+
+            // Verify the update
+            const verifyOldOwner = await client.query(`
+                SELECT id, "FIRST NAME", "LAST NAME", status, "OWNERSHIP_TYPE_REGISTERED_OWNER"
+                FROM rsbsa_submission WHERE id = $1
+            `, [oldOwnerId]);
+            console.log('🔍 Verification - Old owner in DB:', verifyOldOwner.rows[0]);
+        } else {
+            console.log('\n⚠️ Old owner keeps remaining parcels - status stays Active Farmer');
+        }
+
+        // Remove tenant/lessee status from new owner if they were tenant/lessee
+        console.log('\n🔄 Updating new owner status...');
+        const updateNewOwnerQuery = `
+            UPDATE rsbsa_submission
+            SET 
+                "OWNERSHIP_TYPE_REGISTERED_OWNER" = true,
+                "OWNERSHIP_TYPE_TENANT" = false,
+                "OWNERSHIP_TYPE_LESSEE" = false,
+                status = 'Active Farmer'
+            WHERE id = $1
+            RETURNING id, "FIRST NAME", "LAST NAME", status, 
+                      "OWNERSHIP_TYPE_REGISTERED_OWNER", "OWNERSHIP_TYPE_TENANT", "OWNERSHIP_TYPE_LESSEE"
+        `;
+        const newOwnerUpdateResult = await client.query(updateNewOwnerQuery, [finalNewOwnerId]);
+        console.log('✅ New owner updated:', newOwnerUpdateResult.rows[0]);
+
+        // Get old owner's name for history records
+        console.log('\n👤 Fetching owner names...');
+        const oldOwnerResult = await client.query(`
+            SELECT "FIRST NAME", "LAST NAME", "MIDDLE NAME" 
+            FROM rsbsa_submission 
+            WHERE id = $1
+        `, [oldOwnerId]);
+
+        const oldOwnerName = oldOwnerResult.rows[0]
+            ? `${oldOwnerResult.rows[0]['LAST NAME']}, ${oldOwnerResult.rows[0]['FIRST NAME']} ${oldOwnerResult.rows[0]['MIDDLE NAME'] || ''}`.trim()
+            : 'Unknown';
+
+        console.log('Old owner name:', oldOwnerName);
+
+        // Get new owner's name
+        const newOwnerResult = await client.query(`
+            SELECT "FIRST NAME", "LAST NAME", "MIDDLE NAME" 
+            FROM rsbsa_submission 
+            WHERE id = $1
+        `, [finalNewOwnerId]);
+
+        const newOwnerName = newOwnerResult.rows[0]
+            ? `${newOwnerResult.rows[0]['LAST NAME']}, ${newOwnerResult.rows[0]['FIRST NAME']} ${newOwnerResult.rows[0]['MIDDLE NAME'] || ''}`.trim()
+            : 'Unknown';
+
+        console.log('New owner name:', newOwnerName);
+
+        // Update only selected farm parcels
+        console.log('\n🔄 Transferring parcels...');
+        console.log('Updating submission_id from', oldOwnerId, 'to', finalNewOwnerId);
+        console.log('For parcel IDs:', selectedParcelIds);
+
+        const updateParcelsQuery = `
+            UPDATE rsbsa_farm_parcels
+            SET submission_id = $1
+            WHERE id = ANY($2::int[])
+            RETURNING id, parcel_number, farm_location_barangay, submission_id
+        `;
+        const parcelsUpdateResult = await client.query(updateParcelsQuery, [finalNewOwnerId, selectedParcelIds]);
+        console.log('✅ Parcels updated:', parcelsUpdateResult.rowCount, 'rows affected');
+        console.log('Updated parcels:', JSON.stringify(parcelsUpdateResult.rows, null, 2));
+
+        // Update tenant/lessee land owner names for the transferred parcels
+        console.log('\n🔄 Updating tenant/lessee land owner names...');
+        console.log('Searching for tenants with land_owner_name:', oldOwnerName);
+
+        const updateTenantsQuery = `
+            UPDATE rsbsa_farm_parcels
+            SET tenant_land_owner_name = $1
+            WHERE id = ANY($2::int[])
+              AND tenant_land_owner_name = $3
+              AND ownership_type_tenant = true
+            RETURNING id, parcel_number, tenant_land_owner_name
+        `;
+        const tenantsUpdateResult = await client.query(updateTenantsQuery, [newOwnerName, selectedParcelIds, oldOwnerName]);
+        console.log('✅ Tenant land owner names updated:', tenantsUpdateResult.rowCount, 'rows affected');
+        if (tenantsUpdateResult.rowCount > 0) {
+            console.log('Updated tenant parcels:', JSON.stringify(tenantsUpdateResult.rows, null, 2));
+        }
+
+        console.log('Searching for lessees with land_owner_name:', oldOwnerName);
+        const updateLesseesQuery = `
+            UPDATE rsbsa_farm_parcels
+            SET lessee_land_owner_name = $1
+            WHERE id = ANY($2::int[])
+              AND lessee_land_owner_name = $3
+              AND ownership_type_lessee = true
+            RETURNING id, parcel_number, lessee_land_owner_name
+        `;
+        const lesseesUpdateResult = await client.query(updateLesseesQuery, [newOwnerName, selectedParcelIds, oldOwnerName]);
+        console.log('✅ Lessee land owner names updated:', lesseesUpdateResult.rowCount, 'rows affected');
+        if (lesseesUpdateResult.rowCount > 0) {
+            console.log('Updated lessee parcels:', JSON.stringify(lesseesUpdateResult.rows, null, 2));
+        }
+
+        // Create ownership transfer history record
+        console.log('\n📝 Creating ownership transfer history...');
+        const createHistoryQuery = `
+            INSERT INTO ownership_transfers (
+                from_farmer_id,
+                to_farmer_id,
+                transfer_date,
+                transfer_type,
+                transfer_reason,
+                notes,
+                created_at
+            ) VALUES ($1, $2, $3, 'ownership_change', $4, $5, NOW())
+            RETURNING id
+        `;
+
+        try {
+            const parcelInfo = `Transferred ${selectedParcelIds.length} parcel(s): IDs ${selectedParcelIds.join(', ')}`;
+            const historyResult = await client.query(createHistoryQuery, [
+                oldOwnerId,
+                finalNewOwnerId,
+                transferDate,
+                transferReason,
+                parcelInfo
+            ]);
+            console.log(`✅ History record created with ID: ${historyResult.rows[0].id}`);
+            console.log(`   Parcels transferred: ${selectedParcelIds.join(', ')}`);
+        } catch (historyError) {
+            console.log('⚠️ Could not create history record:', historyError.message);
+            // Don't throw - history is optional, continue with transaction
+        }
+
+        await client.query('COMMIT');
+        console.log('\n✅ TRANSACTION COMMITTED SUCCESSFULLY');
+        console.log('========================================\n');
+
+        res.json({
+            success: true,
+            message: 'Ownership transferred successfully',
+            oldOwnerId,
+            newOwnerId: finalNewOwnerId,
+            newOwnerName,
+            parcelsTransferred: selectedParcelIds.length,
+            allParcelsTransferred: transferringAllParcels
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('\n❌ ERROR IN TRANSFER OWNERSHIP:');
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('========================================\n');
+        res.status(500).json({
+            error: 'Failed to transfer ownership',
+            message: error.message
+        });
+    } finally {
+        client.release();
     }
 });
 
@@ -2158,7 +2502,7 @@ app.get('*', (req, res) => {
 // START SERVER - MUST BE LAST
 // ============================================================================
 app.listen(port, () => {
-    console.log(`Backend server listening on port ${port}`);
+    console.log(`Backend server listening on port ${port} `);
     console.log(`✅ All API endpoints registered successfully`);
     console.log(`✅ Land History API endpoints are active`);
 });
