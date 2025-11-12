@@ -2247,9 +2247,9 @@ app.post('/api/transfer-ownership', async (req, res) => {
 
             // Generate FFRS code for new farmer
             const ffrsQuery = `
-                SELECT COALESCE(MAX(CAST(SUBSTRING(ffrs_code FROM 16) AS INTEGER)), 0) + 1 as next_number
+                SELECT COALESCE(MAX(CAST(SUBSTRING("FFRS_CODE" FROM 16) AS INTEGER)), 0) + 1 as next_number
                 FROM rsbsa_submission
-                WHERE ffrs_code LIKE '06-30-18-%'
+                WHERE "FFRS_CODE" LIKE '06-30-18-%'
             `;
             const ffrsResult = await client.query(ffrsQuery);
             const nextNumber = ffrsResult.rows[0].next_number;
@@ -2267,14 +2267,13 @@ app.post('/api/transfer-ownership', async (req, res) => {
                     "EXT NAME",
                     "BARANGAY",
                     "MUNICIPALITY",
-                    "PROVINCE",
                     "BIRTHDATE",
-                    "SEX",
+                    "GENDER",
                     "FFRS_CODE",
                     "OWNERSHIP_TYPE_REGISTERED_OWNER",
                     status,
-                    "SUBMITTED_AT"
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, 'Active Farmer', $11)
+                    submitted_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, 'Active Farmer', CURRENT_TIMESTAMP)
                 RETURNING id
             `;
 
@@ -2285,11 +2284,9 @@ app.post('/api/transfer-ownership', async (req, res) => {
                 newFarmerData.extensionName || null,
                 newFarmerData.barangay,
                 newFarmerData.municipality,
-                newFarmerData.province,
                 newFarmerData.birthdate,
                 newFarmerData.gender,
-                newFfrsCode,
-                transferDate
+                newFfrsCode
             ]);
 
             finalNewOwnerId = insertResult.rows[0].id;
