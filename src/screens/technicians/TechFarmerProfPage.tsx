@@ -50,8 +50,14 @@ const TechFarmerProfPage: React.FC = () => {
 
             const data = await response.json();
 
+            // Filter out farmers with 'No Parcels' status from the list view
+            const filteredData = (Array.isArray(data) ? data : []).filter((item: any) => {
+                const status = String(item.status ?? '').toLowerCase().trim();
+                return status !== 'no parcels';
+            });
+
             // Transform data to match our interface
-            const transformedData: FarmerRecord[] = data.map((record: any) => ({
+            const transformedData: FarmerRecord[] = filteredData.map((record: any) => ({
                 id: record.id,
                 referenceNumber: record.referenceNumber || `RSBSA-${record.id}`,
                 farmerName: record.farmerName || 'N/A',

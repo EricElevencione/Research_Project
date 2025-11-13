@@ -578,7 +578,7 @@ app.post('/api/rsbsa_submission', async (req, res) => {
             ownershipTypeRegisteredOwner,
             ownershipTypeTenant,
             ownershipTypeLessee,
-            'Submitted',
+            'Active Farmer',
         ];
 
         const submissionResult = await client.query(insertSubmissionQuery, submissionValues);
@@ -2105,13 +2105,13 @@ app.get('/api/land-owners-with-tenants', async (req, res) => {
     try {
         console.log('\n📋 GET /api/land-owners-with-tenants - Fetching land owners with tenants/lessees');
 
-        // First, check how many farmers have transferred ownership
+        // First, check how many farmers have transferred ownership or have no parcels
         const transferredCheck = await pool.query(`
             SELECT COUNT(*) as count
             FROM rsbsa_submission
-            WHERE status = 'Transferred Ownership' OR "OWNERSHIP_TYPE_REGISTERED_OWNER" = false
+            WHERE status IN ('Transferred Ownership', 'No Parcels') OR "OWNERSHIP_TYPE_REGISTERED_OWNER" = false
         `);
-        console.log(`🔍 Farmers with transferred ownership (filtered out): ${transferredCheck.rows[0].count}`);
+        console.log(`🔍 Farmers with transferred ownership or no parcels (filtered out): ${transferredCheck.rows[0].count}`);
 
         // Get all registered land owners with their parcels
         const query = `
@@ -2128,7 +2128,7 @@ app.get('/api/land-owners-with-tenants', async (req, res) => {
                     rs.status
                 FROM rsbsa_submission rs
                 WHERE rs."OWNERSHIP_TYPE_REGISTERED_OWNER" = true
-                    AND COALESCE(rs.status, '') != 'Transferred Ownership'
+                    AND COALESCE(rs.status, '') NOT IN ('Transferred Ownership', 'No Parcels')
                     AND EXISTS (
                         SELECT 1 FROM rsbsa_farm_parcels fp 
                         WHERE fp.submission_id = rs.id
@@ -2332,7 +2332,7 @@ app.post('/api/transfer-ownership', async (req, res) => {
                 UPDATE rsbsa_submission
                 SET 
                     "OWNERSHIP_TYPE_REGISTERED_OWNER" = false,
-                    status = 'Transferred Ownership'
+                    status = 'No Parcels'
                 WHERE id = $1
                 RETURNING id, "FIRST NAME", "LAST NAME", status, "OWNERSHIP_TYPE_REGISTERED_OWNER"
             `;

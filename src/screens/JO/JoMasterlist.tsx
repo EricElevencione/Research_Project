@@ -100,7 +100,13 @@ const JoMasterlist: React.FC = () => {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any, idx: number) => {
+      // Filter out farmers with 'No Parcels' status
+      const filteredData = (Array.isArray(data) ? data : []).filter((item: any) => {
+        const status = String(item.status ?? '').toLowerCase().trim();
+        return status !== 'no parcels';
+      });
+
+      const formattedRecords: RSBSARecord[] = filteredData.map((item: any, idx: number) => {
         // Prefer backend-transformed fields; fallback to raw
 
         const referenceNumber = String(item.referenceNumber ?? `RSBSA-${idx + 1}`);

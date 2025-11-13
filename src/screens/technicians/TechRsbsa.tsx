@@ -295,8 +295,8 @@ const TechRsbsa: React.FC = () => {
     console.log('Filtering records:', records.length);
 
     const filtered = records.filter(record => {
-      // Exclude farmers who have transferred ownership
-      if (record.status === 'Transferred Ownership') {
+      // Exclude farmers who have transferred ownership or have no parcels
+      if (record.status === 'Transferred Ownership' || record.status === 'No Parcels') {
         return false;
       }
 
