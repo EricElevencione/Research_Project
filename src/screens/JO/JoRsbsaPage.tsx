@@ -59,19 +59,9 @@ const JoRsbsaPage: React.FC = () => {
       console.log('Sample record ownership type:', data[0]?.ownershipType);
       console.log('Records with ownership types:', data.filter((r: { ownershipType: any; }) => r.ownershipType).length);
 
-      const dataWithTotalArea = data.map((record: RSBSARecord) => {
-        const calculatedTotal = calculateTotalFarmArea(data, record.farmerName);
-        const parcelCount = countFarmParcels(data, record.farmerName);
-        console.log(`Farmer: ${record.farmerName}, API totalFarmArea: ${record.totalFarmArea}, Calculated: ${calculatedTotal}, Parcels: ${parcelCount}`);
-        return {
-          ...record,
-          totalFarmArea: calculatedTotal,
-          parcelCount: parcelCount
-        };
-      });
-
-      setRsbsaRecords(dataWithTotalArea);
-      const registeredOwnersData = filterRegisteredOwners(dataWithTotalArea);
+      // Use the data directly from backend - it already has totalFarmArea and parcelCount calculated
+      setRsbsaRecords(data);
+      const registeredOwnersData = filterRegisteredOwners(data);
       console.log('Filtered registered owners:', JSON.stringify(registeredOwnersData, null, 2));
       setRegisteredOwners(registeredOwnersData);
       setError(null);
@@ -83,24 +73,20 @@ const JoRsbsaPage: React.FC = () => {
     }
   };
 
-  // Function to calculate total farm area for a farmer
+  // Function to calculate total farm area for a farmer (DEPRECATED - backend now handles this)
+  // Kept for reference but no longer used
   const calculateTotalFarmArea = (records: RSBSARecord[], farmerName: string) => {
-    // Find all records for the same farmer (by name)
     const farmerRecords = records.filter(record => record.farmerName === farmerName);
-
-    // Sum up all parcel areas for this farmer
     const totalArea = farmerRecords.reduce((sum, record) => {
       const area = parseFloat(String(record.parcelArea || 0)) || 0;
       return sum + area;
     }, 0);
-
     return totalArea;
   };
 
-  // Function to count the number of parcels for a farmer based on existing data
+  // Function to count the number of parcels for a farmer (DEPRECATED - backend now handles this)
+  // Kept for reference but no longer used
   const countFarmParcels = (records: RSBSARecord[], farmerName: string) => {
-    // Count how many records exist for this farmer
-    // Each record in rsbsa_submission represents one parcel
     const farmerRecords = records.filter(record => record.farmerName === farmerName);
     return farmerRecords.length;
   };

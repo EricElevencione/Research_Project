@@ -30,6 +30,8 @@ interface Parcel {
 interface LandOwner {
   id: string;
   name: string;
+  barangay?: string;
+  municipality?: string;
 }
 
 interface FormData {
@@ -85,6 +87,61 @@ interface FormData {
 
 import { useEffect } from 'react';
 
+// Utility function to convert text to Title Case with special handling
+const toTitleCase = (text: string): string => {
+  if (!text) return '';
+
+  // Special words that should remain lowercase (unless at start)
+  const lowercase = ['de', 'del', 'dela', 'ng', 'sa', 'and', 'or', 'the'];
+
+  // Special words that should be uppercase
+  const uppercase = ['ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+
+  // Extension name handling
+  const extensions: Record<string, string> = {
+    'jr': 'Jr.',
+    'sr': 'Sr.',
+    'jr.': 'Jr.',
+    'sr.': 'Sr.',
+  };
+
+  return text
+    .toLowerCase()
+    .split(' ')
+    .map((word, index) => {
+      // Handle empty strings
+      if (!word) return word;
+
+      // Check if it's an extension
+      const ext = extensions[word.replace(/\./g, '')];
+      if (ext) return ext;
+
+      // Check if it's a roman numeral
+      if (uppercase.includes(word)) return word.toUpperCase();
+
+      // Handle hyphenated words (e.g., "Aurora-Del Pilar")
+      if (word.includes('-')) {
+        return word
+          .split('-')
+          .map(part => {
+            if (!part) return part;
+            // Check if hyphenated part should be lowercase
+            if (lowercase.includes(part) && index !== 0) return part;
+            return part.charAt(0).toUpperCase() + part.slice(1);
+          })
+          .join('-');
+      }
+
+      // Check if word should remain lowercase (except at start)
+      if (lowercase.includes(word) && index !== 0) return word;
+
+      // Default: capitalize first letter
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ')
+    .trim();
+};
+
 const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -94,6 +151,12 @@ const JoRsbsa: React.FC = () => {
   const [draftId, setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [landowners, setLandowners] = useState<LandOwner[]>([]);
+
+  // New state for ownership category selection
+  const [ownershipCategory, setOwnershipCategory] = useState<'registeredOwner' | 'tenant' | 'lessee'>('registeredOwner');
+  const [selectedLandOwner, setSelectedLandOwner] = useState<any>(null);
+  const [landOwnerSearchTerm, setLandOwnerSearchTerm] = useState('');
+  const [showLandOwnerDropdown, setShowLandOwnerDropdown] = useState(false);
 
   // Fetch landowners from the database
   useEffect(() => {
@@ -152,6 +215,21 @@ const JoRsbsa: React.FC = () => {
   // validation errors (field name -> message)
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Handler for text inputs with Title Case formatting
+  const handleTextInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  // Handler for onBlur to format text fields
+  const handleTextInputBlur = (field: keyof FormData) => {
+    const value = formData[field];
+    if (typeof value === 'string' && value.trim()) {
+      const formatted = toTitleCase(value);
+      setFormData(prev => ({ ...prev, [field]: formatted }));
+    }
+  };
+
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // clear any existing error for this field
@@ -166,6 +244,19 @@ const JoRsbsa: React.FC = () => {
     });
     // clear parcel-related errors when user edits parcels
     setErrors(prev => ({ ...prev, farmland: '', ownership: '' }));
+  };
+
+  // Handler for parcel text field blur (Title Case formatting)
+  const handleParcelTextBlur = (idx: number, field: keyof Parcel) => {
+    const value = formData.farmlandParcels[idx][field];
+    if (typeof value === 'string' && value.trim()) {
+      const formatted = toTitleCase(value);
+      setFormData(prev => {
+        const parcels = [...prev.farmlandParcels];
+        parcels[idx] = { ...parcels[idx], [field]: formatted };
+        return { ...prev, farmlandParcels: parcels };
+      });
+    }
   };
 
   const toggleParcelBool = (idx: number, field: keyof Parcel) => {
@@ -221,6 +312,113 @@ const JoRsbsa: React.FC = () => {
       return { ...prev, farmlandParcels: parcels };
     });
   };
+
+  // Handle ownership category change (Registered Owner, Tenant, Lessee)
+  const handleOwnershipCategoryChange = (category: 'registeredOwner' | 'tenant' | 'lessee') => {
+    setOwnershipCategory(category);
+    setSelectedLandOwner(null);
+    setLandOwnerSearchTerm('');
+    setShowLandOwnerDropdown(false);
+    setErrors(prev => ({ ...prev, farmland: '', ownership: '', landOwner: '' }));
+
+    // Clear or set ownership type checkboxes based on selection
+    setFormData(prev => {
+      const parcels = prev.farmlandParcels.map(p => ({
+        ...p,
+        ownershipTypeRegisteredOwner: category === 'registeredOwner',
+        ownershipTypeTenant: category === 'tenant',
+        ownershipTypeLessee: category === 'lessee',
+        tenantLandOwnerName: '',
+        lesseeLandOwnerName: '',
+      }));
+      return { ...prev, farmlandParcels: parcels };
+    });
+  };
+
+  // Handle land owner selection for tenant/lessee
+  const handleLandOwnerSelect = async (owner: any) => {
+    setSelectedLandOwner(owner);
+    setLandOwnerSearchTerm(owner.name);
+    setShowLandOwnerDropdown(false);
+    setErrors(prev => ({ ...prev, landOwner: '' }));
+
+    // Fetch the land owner's parcels to populate farm data
+    try {
+      const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${owner.id}/parcels`);
+      if (response.ok) {
+        const ownerParcels = await response.json();
+        console.log('Fetched land owner parcels:', ownerParcels);
+
+        // Populate farm data from selected land owner's parcels
+        if (ownerParcels && ownerParcels.length > 0) {
+          // Map owner's parcels to tenant/lessee's parcels
+          setFormData(prev => {
+            const parcels = ownerParcels.map((ownerParcel: any, index: number) => ({
+              parcelNo: String(index + 1),
+              farmLocationBarangay: ownerParcel.farm_location_barangay || '',
+              farmLocationMunicipality: ownerParcel.farm_location_municipality || 'Dumangas',
+              totalFarmAreaHa: String(ownerParcel.total_farm_area_ha || ''),
+              withinAncestralDomain: ownerParcel.within_ancestral_domain || '',
+              ownershipDocumentNo: ownerParcel.ownership_document_no || '',
+              agrarianReformBeneficiary: ownerParcel.agrarian_reform_beneficiary || '',
+              ownershipTypeRegisteredOwner: false,
+              ownershipTypeTenant: ownershipCategory === 'tenant',
+              ownershipTypeLessee: ownershipCategory === 'lessee',
+              ownershipTypeOthers: false,
+              tenantLandOwnerName: ownershipCategory === 'tenant' ? owner.name : '',
+              lesseeLandOwnerName: ownershipCategory === 'lessee' ? owner.name : '',
+              ownershipOthersSpecify: '',
+            }));
+            return { ...prev, farmlandParcels: parcels };
+          });
+        } else {
+          // No parcels found, just set basic data
+          console.warn('No parcels found for land owner');
+          setFormData(prev => {
+            const parcels = prev.farmlandParcels.map(p => ({
+              ...p,
+              farmLocationBarangay: owner.barangay || '',
+              farmLocationMunicipality: owner.municipality || 'Dumangas',
+              tenantLandOwnerName: ownershipCategory === 'tenant' ? owner.name : '',
+              lesseeLandOwnerName: ownershipCategory === 'lessee' ? owner.name : '',
+            }));
+            return { ...prev, farmlandParcels: parcels };
+          });
+        }
+      } else {
+        console.error('Failed to fetch land owner parcels');
+        // Fallback: just populate basic location data
+        setFormData(prev => {
+          const parcels = prev.farmlandParcels.map(p => ({
+            ...p,
+            farmLocationBarangay: owner.barangay || '',
+            farmLocationMunicipality: owner.municipality || 'Dumangas',
+            tenantLandOwnerName: ownershipCategory === 'tenant' ? owner.name : '',
+            lesseeLandOwnerName: ownershipCategory === 'lessee' ? owner.name : '',
+          }));
+          return { ...prev, farmlandParcels: parcels };
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching land owner parcels:', error);
+      // Fallback: just populate basic location data
+      setFormData(prev => {
+        const parcels = prev.farmlandParcels.map(p => ({
+          ...p,
+          farmLocationBarangay: owner.barangay || '',
+          farmLocationMunicipality: owner.municipality || 'Dumangas',
+          tenantLandOwnerName: ownershipCategory === 'tenant' ? owner.name : '',
+          lesseeLandOwnerName: ownershipCategory === 'lessee' ? owner.name : '',
+        }));
+        return { ...prev, farmlandParcels: parcels };
+      });
+    }
+  };
+
+  // Filter land owners based on search term
+  const filteredLandOwners = landowners.filter(owner =>
+    owner.name.toLowerCase().includes(landOwnerSearchTerm.toLowerCase())
+  );
 
   const handleLivelihoodToggle = (value: string, checked: boolean) => {
     setFormData(prev => ({
@@ -314,30 +512,25 @@ const JoRsbsa: React.FC = () => {
     }
 
     if (currentStep === 3) {
-      // Validate farmland/ownership requirements
-      const hasValidFarmland = formData.farmlandParcels.some(
-        parcel => parcel.farmLocationBarangay?.toString().trim() && parcel.totalFarmAreaHa?.toString().trim()
-      );
-      if (!hasValidFarmland) newErrors.farmland = 'At least one parcel must include barangay and area';
+      // For Registered Owner: validate farmland fields
+      if (ownershipCategory === 'registeredOwner') {
+        const hasValidFarmland = formData.farmlandParcels.some(
+          parcel => parcel.farmLocationBarangay?.toString().trim() && parcel.totalFarmAreaHa?.toString().trim()
+        );
+        if (!hasValidFarmland) newErrors.farmland = 'Please fill in farm location and area';
+      }
+
+      // For Tenant/Lessee: validate land owner selection
+      if (ownershipCategory === 'tenant' || ownershipCategory === 'lessee') {
+        if (!selectedLandOwner) {
+          newErrors.landOwner = 'Please search and select the land owner';
+        }
+      }
 
       const hasValidOwnershipType = formData.farmlandParcels.some(
         parcel => parcel.ownershipTypeRegisteredOwner || parcel.ownershipTypeTenant || parcel.ownershipTypeLessee
       );
-      if (!hasValidOwnershipType) newErrors.ownership = 'Select ownership type for at least one parcel';
-
-      // If Tenant/Lessee chosen, require landowner selection
-      const missingTenantOwner = formData.farmlandParcels.some(
-        parcel => parcel.ownershipTypeTenant && !parcel.tenantLandOwnerName?.toString().trim()
-      );
-      const missingLesseeOwner = formData.farmlandParcels.some(
-        parcel => parcel.ownershipTypeLessee && !parcel.lesseeLandOwnerName?.toString().trim()
-      );
-      if (missingTenantOwner || missingLesseeOwner) {
-        const msgParts: string[] = [];
-        if (missingTenantOwner) msgParts.push('select land owner for tenant parcels');
-        if (missingLesseeOwner) msgParts.push('select land owner for lessee parcels');
-        newErrors.ownership = (newErrors.ownership ? newErrors.ownership + ' ' : '') + msgParts.join(' and ');
-      }
+      if (!hasValidOwnershipType) newErrors.ownership = 'Ownership type is required';
 
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) return;
@@ -353,29 +546,24 @@ const JoRsbsa: React.FC = () => {
     if (!formData.surname?.trim()) newErrors.surname = 'Surname is required';
     if (!formData.barangay?.trim()) newErrors.barangay = 'Barangay is required';
 
-    const hasValidFarmlandFinal = formData.farmlandParcels.some(
-      parcel => parcel.farmLocationBarangay?.toString().trim() && parcel.totalFarmAreaHa?.toString().trim()
-    );
-    if (!hasValidFarmlandFinal) newErrors.farmland = 'At least one parcel must include barangay and area';
+    // Validate based on ownership category
+    if (ownershipCategory === 'registeredOwner') {
+      const hasValidFarmlandFinal = formData.farmlandParcels.some(
+        parcel => parcel.farmLocationBarangay?.toString().trim() && parcel.totalFarmAreaHa?.toString().trim()
+      );
+      if (!hasValidFarmlandFinal) newErrors.farmland = 'At least one parcel must include barangay and area';
+    }
+
+    if (ownershipCategory === 'tenant' || ownershipCategory === 'lessee') {
+      if (!selectedLandOwner) {
+        newErrors.landOwner = 'Please select the land owner';
+      }
+    }
 
     const hasValidOwnershipTypeFinal = formData.farmlandParcels.some(
       parcel => parcel.ownershipTypeRegisteredOwner || parcel.ownershipTypeTenant || parcel.ownershipTypeLessee
     );
     if (!hasValidOwnershipTypeFinal) newErrors.ownership = 'Select ownership type for at least one parcel';
-
-    // Final check for tenant/lessee owner selection
-    const missingTenantOwnerFinal = formData.farmlandParcels.some(
-      parcel => parcel.ownershipTypeTenant && !parcel.tenantLandOwnerName?.toString().trim()
-    );
-    const missingLesseeOwnerFinal = formData.farmlandParcels.some(
-      parcel => parcel.ownershipTypeLessee && !parcel.lesseeLandOwnerName?.toString().trim()
-    );
-    if (missingTenantOwnerFinal || missingLesseeOwnerFinal) {
-      const msgParts: string[] = [];
-      if (missingTenantOwnerFinal) msgParts.push('select land owner for tenant parcels');
-      if (missingLesseeOwnerFinal) msgParts.push('select land owner for lessee parcels');
-      newErrors.ownership = (newErrors.ownership ? newErrors.ownership + ' ' : '') + msgParts.join(' and ');
-    }
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
@@ -560,23 +748,49 @@ const JoRsbsa: React.FC = () => {
                     <div className="form-row">
                       <div className="form-group">
                         <label>FIRST NAME</label>
-                        <input type="text" value={formData.firstName} onChange={(e) => { handleInputChange('firstName', e.target.value); setErrors(prev => ({ ...prev, firstName: '' })); }} required aria-required="true" className={errors.firstName ? 'input-error' : ''} />
+                        <input
+                          type="text"
+                          value={formData.firstName}
+                          onChange={(e) => handleTextInputChange('firstName', e.target.value)}
+                          onBlur={() => handleTextInputBlur('firstName')}
+                          required
+                          aria-required="true"
+                          className={errors.firstName ? 'input-error' : ''}
+                        />
                         {errors.firstName && <div className="error">{errors.firstName}</div>}
                       </div>
                       <div className="form-group">
                         <label>SURNAME</label>
-                        <input type="text" value={formData.surname} onChange={(e) => { handleInputChange('surname', e.target.value); setErrors(prev => ({ ...prev, surname: '' })); }} required aria-required="true" className={errors.surname ? 'input-error' : ''} />
+                        <input
+                          type="text"
+                          value={formData.surname}
+                          onChange={(e) => handleTextInputChange('surname', e.target.value)}
+                          onBlur={() => handleTextInputBlur('surname')}
+                          required
+                          aria-required="true"
+                          className={errors.surname ? 'input-error' : ''}
+                        />
                         {errors.surname && <div className="error">{errors.surname}</div>}
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
                         <label>MIDDLE NAME</label>
-                        <input type="text" value={formData.middleName} onChange={(e) => handleInputChange('middleName', e.target.value)} />
+                        <input
+                          type="text"
+                          value={formData.middleName}
+                          onChange={(e) => handleTextInputChange('middleName', e.target.value)}
+                          onBlur={() => handleTextInputBlur('middleName')}
+                        />
                       </div>
                       <div className="form-group">
                         <label>EXTENSION NAME</label>
-                        <input type="text" value={formData.extensionName} onChange={(e) => handleInputChange('extensionName', e.target.value)} />
+                        <input
+                          type="text"
+                          value={formData.extensionName}
+                          onChange={(e) => handleTextInputChange('extensionName', e.target.value)}
+                          onBlur={() => handleTextInputBlur('extensionName')}
+                        />
                       </div>
                       <div className="form-group">
                         <label>GENDER</label>
@@ -593,17 +807,28 @@ const JoRsbsa: React.FC = () => {
                       <div className="address-grid">
                         <div className="form-group">
                           <label>BARANGAY *</label>
-                          <input type="text" value={formData.barangay} onChange={(e) => { handleInputChange('barangay', e.target.value); setErrors(prev => ({ ...prev, barangay: '' })); }} required aria-required="true" className={errors.barangay ? 'input-error' : ''} />
+                          <input
+                            type="text"
+                            value={formData.barangay}
+                            onChange={(e) => handleTextInputChange('barangay', e.target.value)}
+                            onBlur={() => handleTextInputBlur('barangay')}
+                            required
+                            aria-required="true"
+                            className={errors.barangay ? 'input-error' : ''}
+                          />
                           {errors.barangay && <div className="error">{errors.barangay}</div>}
                         </div>
                         <div className="form-group">
                           <label>MUNICIAPLITY</label>
-                          <input type="text" value={formData.municipality} onChange={(e) => handleInputChange('municipality', e.target.value)} />
+                          <input
+                            type="text"
+                            value={formData.municipality}
+                            onChange={(e) => handleTextInputChange('municipality', e.target.value)}
+                            onBlur={() => handleTextInputBlur('municipality')}
+                          />
                         </div>
                       </div>
-                    </div>
-
-                  </div>
+                    </div>                  </div>
                 </div>
               </>
             )}
@@ -656,157 +881,259 @@ const JoRsbsa: React.FC = () => {
                 <h3>PART III: FARMLAND</h3>
 
                 {/* Show validation summary for farmland/ownership */}
-                {(errors.farmland || errors.ownership) && (
+                {(errors.farmland || errors.ownership || errors.landOwner) && (
                   <div className="form-errors">
                     {errors.farmland && <div className="error">{errors.farmland}</div>}
                     {errors.ownership && <div className="error">{errors.ownership}</div>}
+                    {errors.landOwner && <div className="error">{errors.landOwner}</div>}
                   </div>
                 )}
 
-                {/* Farmland Parcels */}
-                {(formData.farmlandParcels as any[]).map((p, idx) => (
-                  <div key={idx} className="parcel-card">
-                    <div className="parcel-header">
-                      <div className="parcel-no">Farm Parcel No. {p.parcelNo || idx + 1}</div>
-                      <div className="parcel-actions">
-                        {(formData.farmlandParcels as any[]).length > 1 && (
-                          <button className="btn-small" onClick={() => removeParcel(idx)}>Remove</button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Farm Location (Barangay)</label>
-                        <select value={p.farmLocationBarangay} onChange={(e) => handleParcelChange(idx, 'farmLocationBarangay', e.target.value)} className={errors.farmland ? 'input-error' : ''}>
-                          <option value="">Select Barangay</option>
-                          <option value="Aurora-Del Pilar">Aurora-Del Pilar</option>
-                          <option value="Bacay">Bacay</option>
-                          <option value="Bacong">Bacong</option>
-                          <option value="Balabag">Balabag</option>
-                          <option value="Balud">Balud</option>
-                          <option value="Bantud">Bantud</option>
-                          <option value="Bantud Fabrica">Bantud Fabrica</option>
-                          <option value="Baras">Baras</option>
-                          <option value="Barasan">Barasan</option>
-                          <option value="Basa-Mabini Bonifacio">Basa-Mabini Bonifacio</option>
-                          <option value="Bolilao">Bolilao</option>
-                          <option value="Buenaflor Embarkadero">Buenaflor Embarkadero</option>
-                          <option value="Burgos-Regidor">Burgos-Regidor</option>
-                          <option value="Calao">Calao</option>
-                          <option value="Cali">Cali</option>
-                          <option value="Cansilayan">Cansilayan</option>
-                          <option value="Capaliz">Capaliz</option>
-                          <option value="Cayos">Cayos</option>
-                          <option value="Compayan">Compayan</option>
-                          <option value="Dacutan">Dacutan</option>
-                          <option value="Ermita">Ermita</option>
-                          <option value="Ilaya 1st">Ilaya 1st</option>
-                          <option value="Ilaya 2nd">Ilaya 2nd</option>
-                          <option value="Ilaya 3rd">Ilaya 3rd</option>
-                          <option value="Jardin">Jardin</option>
-                          <option value="Lacturan">Lacturan</option>
-                          <option value="Lopez Jaena - Rizal">Lopez Jaena - Rizal</option>
-                          <option value="Managuit">Managuit</option>
-                          <option value="Maquina">Maquina</option>
-                          <option value="Nanding Lopez">Nanding Lopez</option>
-                          <option value="Pagdugue">Pagdugue</option>
-                          <option value="Paloc Bigque">Paloc Bigque</option>
-                          <option value="Paloc Sool">Paloc Sool</option>
-                          <option value="Patlad">Patlad</option>
-                          <option value="Pd Monfort North">Pd Monfort North</option>
-                          <option value="Pd Monfort South">Pd Monfort South</option>
-                          <option value="Pulao">Pulao</option>
-                          <option value="Rosario">Rosario</option>
-                          <option value="Sapao">Sapao</option>
-                          <option value="Sulangan">Sulangan</option>
-                          <option value="Tabucan">Tabucan</option>
-                          <option value="Talusan">Talusan</option>
-                          <option value="Tambobo">Tambobo</option>
-                          <option value="Tamboilan">Tamboilan</option>
-                          <option value="Victorias">Victorias</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Total Farm Area (in hectares)</label>
-                        <input type="number" value={p.totalFarmAreaHa} onChange={(e) => handleParcelChange(idx, 'totalFarmAreaHa', e.target.value)} className={errors.farmland ? 'input-error' : ''} />
-                      </div>
-                      <div className="form-group">
-                        <label>Within Ancestral Domain</label>
-                        <select value={p.withinAncestralDomain} onChange={(e) => handleParcelChange(idx, 'withinAncestralDomain', e.target.value)}>
-                          <option value="">Select</option>
-                          <option value="Yes">Yes</option>
-                          <option value="No">No</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Agrarian Reform Beneficiary</label>
-                        <select value={p.agrarianReformBeneficiary} onChange={(e) => handleParcelChange(idx, 'agrarianReformBeneficiary', e.target.value)}>
-                          <option value="">Select</option>
-                          <option value="Yes">Yes</option>
-                          <option value="No">No</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className={`ownership-group ${errors.ownership ? 'ownership-error' : ''}`}>
-                      <label>Ownership Type:</label>
-                      <div className="ownership-options">
-                        <label><input type="checkbox" checked={!!p.ownershipTypeRegisteredOwner} onChange={() => toggleParcelBool(idx, 'ownershipTypeRegisteredOwner')} /> Registered Owner</label>
-                        <label><input type="checkbox" checked={!!p.ownershipTypeTenant} onChange={() => toggleParcelBool(idx, 'ownershipTypeTenant')} /> Tenant</label>
-                        <label><input type="checkbox" checked={!!p.ownershipTypeLessee} onChange={() => toggleParcelBool(idx, 'ownershipTypeLessee')} /> Lessee</label>
-                        <label><input type="checkbox" checked={!!p.ownershipTypeOthers} onChange={() => toggleParcelBool(idx, 'ownershipTypeOthers')} /> Others</label>
-                      </div>
-
-                      {p.ownershipTypeTenant && (
-                        <div className="form-group">
-                          <label>Tenant - Select Land Owner</label>
-                          <select
-                            value={p.tenantLandOwnerName}
-                            onChange={(e) => handleParcelChange(idx, 'tenantLandOwnerName', e.target.value)}
-                            className={errors.ownership ? 'input-error' : ''}
-                          >
-                            <option value="">Select Land Owner</option>
-                            {landowners.map(owner => (
-                              <option key={owner.id} value={owner.name}>{owner.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {p.ownershipTypeLessee && (
-                        <div className="form-group">
-                          <label>Lessee - Select Land Owner</label>
-                          <select
-                            value={p.lesseeLandOwnerName}
-                            onChange={(e) => handleParcelChange(idx, 'lesseeLandOwnerName', e.target.value)}
-                            className={errors.ownership ? 'input-error' : ''}
-                          >
-                            <option value="">Select Land Owner</option>
-                            {landowners.map(owner => (
-                              <option key={owner.id} value={owner.name}>{owner.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {p.ownershipTypeOthers && (
-                        <div className="form-group">
-                          <label>Others - Please Specify</label>
-                          <input type="text" value={p.ownershipOthersSpecify} onChange={(e) => handleParcelChange(idx, 'ownershipOthersSpecify', e.target.value)} />
-                        </div>
-                      )}
-                    </div>
+                {/* Ownership Category Selection */}
+                <div className="ownership-category-section" style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '2px solid #dee2e6' }}>
+                  <h4 style={{ marginBottom: '1rem', color: '#2c3e50' }}>Select Your Role</h4>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <label style={{ flex: '1', minWidth: '200px', padding: '1rem', backgroundColor: ownershipCategory === 'registeredOwner' ? '#007bff' : 'white', color: ownershipCategory === 'registeredOwner' ? 'white' : '#2c3e50', border: '2px solid #007bff', borderRadius: '6px', cursor: 'pointer', textAlign: 'center', fontWeight: 'bold', transition: 'all 0.3s' }}>
+                      <input
+                        type="radio"
+                        name="ownershipCategory"
+                        value="registeredOwner"
+                        checked={ownershipCategory === 'registeredOwner'}
+                        onChange={() => handleOwnershipCategoryChange('registeredOwner')}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      Registered Owner
+                    </label>
+                    <label style={{ flex: '1', minWidth: '200px', padding: '1rem', backgroundColor: ownershipCategory === 'tenant' ? '#28a745' : 'white', color: ownershipCategory === 'tenant' ? 'white' : '#2c3e50', border: '2px solid #28a745', borderRadius: '6px', cursor: 'pointer', textAlign: 'center', fontWeight: 'bold', transition: 'all 0.3s' }}>
+                      <input
+                        type="radio"
+                        name="ownershipCategory"
+                        value="tenant"
+                        checked={ownershipCategory === 'tenant'}
+                        onChange={() => handleOwnershipCategoryChange('tenant')}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      Tenant
+                    </label>
+                    <label style={{ flex: '1', minWidth: '200px', padding: '1rem', backgroundColor: ownershipCategory === 'lessee' ? '#ffc107' : 'white', color: ownershipCategory === 'lessee' ? '#2c3e50' : '#2c3e50', border: '2px solid #ffc107', borderRadius: '6px', cursor: 'pointer', textAlign: 'center', fontWeight: 'bold', transition: 'all 0.3s' }}>
+                      <input
+                        type="radio"
+                        name="ownershipCategory"
+                        value="lessee"
+                        checked={ownershipCategory === 'lessee'}
+                        onChange={() => handleOwnershipCategoryChange('lessee')}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      Lessee
+                    </label>
                   </div>
-                ))}
-
-                <div className="parcel-actions-bar">
-                  <button className="btn-submit" onClick={addParcel}>+ Add Another Parcel</button>
+                  <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#6c757d' }}>
+                    {ownershipCategory === 'registeredOwner' && '✓ As a Registered Owner, you will provide your farm location and parcel details.'}
+                    {ownershipCategory === 'tenant' && '✓ As a Tenant, you will select your land owner. Farm details will be populated from the owner\'s data.'}
+                    {ownershipCategory === 'lessee' && '✓ As a Lessee, you will select your land owner. Farm details will be populated from the owner\'s data.'}
+                  </p>
                 </div>
+
+                {/* Land Owner Search for Tenant/Lessee */}
+                {(ownershipCategory === 'tenant' || ownershipCategory === 'lessee') && (
+                  <div className="land-owner-search-section" style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: '#fff8e1', borderRadius: '8px', border: '2px solid #ffc107' }}>
+                    <h4 style={{ marginBottom: '1rem', color: '#2c3e50' }}>Search and Select Land Owner</h4>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        placeholder="Type land owner name to search..."
+                        value={landOwnerSearchTerm}
+                        onChange={(e) => {
+                          setLandOwnerSearchTerm(e.target.value);
+                          setShowLandOwnerDropdown(true);
+                        }}
+                        onFocus={() => setShowLandOwnerDropdown(true)}
+                        style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', border: '2px solid #ffc107', borderRadius: '6px' }}
+                        className={errors.landOwner ? 'input-error' : ''}
+                      />
+                      {showLandOwnerDropdown && filteredLandOwners.length > 0 && (
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', border: '2px solid #ffc107', borderTop: 'none', borderRadius: '0 0 6px 6px', maxHeight: '200px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                          {filteredLandOwners.map(owner => (
+                            <div
+                              key={owner.id}
+                              onClick={() => handleLandOwnerSelect(owner)}
+                              style={{ padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #f0f0f0', transition: 'background-color 0.2s' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                            >
+                              <strong>{owner.name}</strong>
+                              {owner.barangay && <span style={{ marginLeft: '1rem', color: '#6c757d', fontSize: '0.9rem' }}>• {owner.barangay}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {selectedLandOwner && (
+                      <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#d4edda', border: '1px solid #c3e6cb', borderRadius: '6px' }}>
+                        <strong style={{ color: '#155724' }}>✓ Selected Land Owner:</strong>
+                        <div style={{ marginTop: '0.5rem', color: '#155724' }}>
+                          <div><strong>Name:</strong> {selectedLandOwner.name}</div>
+                          {selectedLandOwner.barangay && <div><strong>Barangay:</strong> {selectedLandOwner.barangay}</div>}
+                          {selectedLandOwner.municipality && <div><strong>Municipality:</strong> {selectedLandOwner.municipality}</div>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Farmland Parcels - Show only for Registered Owner */}
+                {ownershipCategory === 'registeredOwner' && (
+                  <>
+                    {(formData.farmlandParcels as any[]).map((p, idx) => (
+                      <div key={idx} className="parcel-card">
+                        <div className="parcel-header">
+                          <div className="parcel-no">Farm Parcel No. {p.parcelNo || idx + 1}</div>
+                          <div className="parcel-actions">
+                            {(formData.farmlandParcels as any[]).length > 1 && (
+                              <button className="btn-small" onClick={() => removeParcel(idx)}>Remove</button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label>Farm Location (Barangay)</label>
+                            <select value={p.farmLocationBarangay} onChange={(e) => handleParcelChange(idx, 'farmLocationBarangay', e.target.value)} className={errors.farmland ? 'input-error' : ''}>
+                              <option value="">Select Barangay</option>
+                              <option value="Aurora-Del Pilar">Aurora-Del Pilar</option>
+                              <option value="Bacay">Bacay</option>
+                              <option value="Bacong">Bacong</option>
+                              <option value="Balabag">Balabag</option>
+                              <option value="Balud">Balud</option>
+                              <option value="Bantud">Bantud</option>
+                              <option value="Bantud Fabrica">Bantud Fabrica</option>
+                              <option value="Baras">Baras</option>
+                              <option value="Barasan">Barasan</option>
+                              <option value="Basa-Mabini Bonifacio">Basa-Mabini Bonifacio</option>
+                              <option value="Bolilao">Bolilao</option>
+                              <option value="Buenaflor Embarkadero">Buenaflor Embarkadero</option>
+                              <option value="Burgos-Regidor">Burgos-Regidor</option>
+                              <option value="Calao">Calao</option>
+                              <option value="Cali">Cali</option>
+                              <option value="Cansilayan">Cansilayan</option>
+                              <option value="Capaliz">Capaliz</option>
+                              <option value="Cayos">Cayos</option>
+                              <option value="Compayan">Compayan</option>
+                              <option value="Dacutan">Dacutan</option>
+                              <option value="Ermita">Ermita</option>
+                              <option value="Ilaya 1st">Ilaya 1st</option>
+                              <option value="Ilaya 2nd">Ilaya 2nd</option>
+                              <option value="Ilaya 3rd">Ilaya 3rd</option>
+                              <option value="Jardin">Jardin</option>
+                              <option value="Lacturan">Lacturan</option>
+                              <option value="Lopez Jaena - Rizal">Lopez Jaena - Rizal</option>
+                              <option value="Managuit">Managuit</option>
+                              <option value="Maquina">Maquina</option>
+                              <option value="Nanding Lopez">Nanding Lopez</option>
+                              <option value="Pagdugue">Pagdugue</option>
+                              <option value="Paloc Bigque">Paloc Bigque</option>
+                              <option value="Paloc Sool">Paloc Sool</option>
+                              <option value="Patlad">Patlad</option>
+                              <option value="Pd Monfort North">Pd Monfort North</option>
+                              <option value="Pd Monfort South">Pd Monfort South</option>
+                              <option value="Pulao">Pulao</option>
+                              <option value="Rosario">Rosario</option>
+                              <option value="Sapao">Sapao</option>
+                              <option value="Sulangan">Sulangan</option>
+                              <option value="Tabucan">Tabucan</option>
+                              <option value="Talusan">Talusan</option>
+                              <option value="Tambobo">Tambobo</option>
+                              <option value="Tamboilan">Tamboilan</option>
+                              <option value="Victorias">Victorias</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label>Total Farm Area (in hectares)</label>
+                            <input type="number" value={p.totalFarmAreaHa} onChange={(e) => handleParcelChange(idx, 'totalFarmAreaHa', e.target.value)} className={errors.farmland ? 'input-error' : ''} />
+                          </div>
+                          <div className="form-group">
+                            <label>Within Ancestral Domain</label>
+                            <select value={p.withinAncestralDomain} onChange={(e) => handleParcelChange(idx, 'withinAncestralDomain', e.target.value)}>
+                              <option value="">Select</option>
+                              <option value="Yes">Yes</option>
+                              <option value="No">No</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label>Agrarian Reform Beneficiary</label>
+                            <select value={p.agrarianReformBeneficiary} onChange={(e) => handleParcelChange(idx, 'agrarianReformBeneficiary', e.target.value)}>
+                              <option value="">Select</option>
+                              <option value="Yes">Yes</option>
+                              <option value="No">No</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className={`ownership-group ${errors.ownership ? 'ownership-error' : ''}`}>
+                          <label>Ownership Type:</label>
+                          <div className="ownership-options">
+                            <label><input type="checkbox" checked={!!p.ownershipTypeRegisteredOwner} onChange={() => toggleParcelBool(idx, 'ownershipTypeRegisteredOwner')} /> Registered Owner</label>
+                            <label><input type="checkbox" checked={!!p.ownershipTypeTenant} onChange={() => toggleParcelBool(idx, 'ownershipTypeTenant')} /> Tenant</label>
+                            <label><input type="checkbox" checked={!!p.ownershipTypeLessee} onChange={() => toggleParcelBool(idx, 'ownershipTypeLessee')} /> Lessee</label>
+                            <label><input type="checkbox" checked={!!p.ownershipTypeOthers} onChange={() => toggleParcelBool(idx, 'ownershipTypeOthers')} /> Others</label>
+                          </div>
+
+                          {p.ownershipTypeTenant && (
+                            <div className="form-group">
+                              <label>Tenant - Select Land Owner</label>
+                              <select
+                                value={p.tenantLandOwnerName}
+                                onChange={(e) => handleParcelChange(idx, 'tenantLandOwnerName', e.target.value)}
+                                className={errors.ownership ? 'input-error' : ''}
+                              >
+                                <option value="">Select Land Owner</option>
+                                {landowners.map(owner => (
+                                  <option key={owner.id} value={owner.name}>{owner.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          {p.ownershipTypeLessee && (
+                            <div className="form-group">
+                              <label>Lessee - Select Land Owner</label>
+                              <select
+                                value={p.lesseeLandOwnerName}
+                                onChange={(e) => handleParcelChange(idx, 'lesseeLandOwnerName', e.target.value)}
+                                className={errors.ownership ? 'input-error' : ''}
+                              >
+                                <option value="">Select Land Owner</option>
+                                {landowners.map(owner => (
+                                  <option key={owner.id} value={owner.name}>{owner.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          {p.ownershipTypeOthers && (
+                            <div className="form-group">
+                              <label>Others - Please Specify</label>
+                              <input
+                                type="text"
+                                value={p.ownershipOthersSpecify}
+                                onChange={(e) => handleParcelChange(idx, 'ownershipOthersSpecify', e.target.value)}
+                                onBlur={() => handleParcelTextBlur(idx, 'ownershipOthersSpecify')}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="parcel-actions-bar">
+                      <button className="btn-submit" onClick={addParcel}>+ Add Another Parcel</button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

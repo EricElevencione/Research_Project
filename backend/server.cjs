@@ -77,13 +77,17 @@ app.get('/api/landowners', async (req, res) => {
         const hasMiddle = columnNames.includes('MIDDLE NAME');
         const hasExt = columnNames.includes('EXT NAME');
         const hasOwnerFlag = columnNames.includes('OWNERSHIP_TYPE_REGISTERED_OWNER');
+        const hasBarangay = columnNames.includes('BARANGAY');
+        const hasMunicipality = columnNames.includes('MUNICIPALITY');
 
         console.log('📊 Table columns available:', {
             hasLast,
             hasFirst,
             hasMiddle,
             hasExt,
-            hasOwnerFlag
+            hasOwnerFlag,
+            hasBarangay,
+            hasMunicipality
         });
 
         const farmParcelsExists = await tableExists('farm_parcels');
@@ -99,7 +103,9 @@ app.get('/api/landowners', async (req, res) => {
                         COALESCE(rs."LAST NAME", '') || ', ' || COALESCE(rs."FIRST NAME", '') ||
                         ${hasMiddle ? `CASE WHEN COALESCE(rs."MIDDLE NAME", '') <> '' THEN ' ' || rs."MIDDLE NAME" ELSE '' END ||` : `'' ||`}
                         ${hasExt ? `CASE WHEN COALESCE(rs."EXT NAME", '') <> '' THEN ' ' || rs."EXT NAME" ELSE '' END` : `''`}
-                    )) AS name
+                    )) AS name,
+                    ${hasBarangay ? `rs."BARANGAY"` : `''`} AS barangay,
+                    ${hasMunicipality ? `rs."MUNICIPALITY"` : `''`} AS municipality
                 FROM rsbsa_submission rs
                 WHERE EXISTS (
                     SELECT 1 FROM farm_parcels fp
@@ -121,7 +127,9 @@ app.get('/api/landowners', async (req, res) => {
                         COALESCE("LAST NAME", '') || ', ' || COALESCE("FIRST NAME", '') ||
                         ${hasMiddle ? `CASE WHEN COALESCE("MIDDLE NAME", '') <> '' THEN ' ' || "MIDDLE NAME" ELSE '' END ||` : `'' ||`}
                         ${hasExt ? `CASE WHEN COALESCE("EXT NAME", '') <> '' THEN ' ' || "EXT NAME" ELSE '' END` : `''`}
-                    )) AS name
+                    )) AS name,
+                    ${hasBarangay ? `"BARANGAY"` : `''`} AS barangay,
+                    ${hasMunicipality ? `"MUNICIPALITY"` : `''`} AS municipality
                 FROM rsbsa_submission
                 WHERE COALESCE("OWNERSHIP_TYPE_REGISTERED_OWNER", false) = true
                   AND LENGTH(TRIM(BOTH ' ' FROM (
@@ -137,7 +145,7 @@ app.get('/api/landowners', async (req, res) => {
         }
 
         const finalQuery = `
-            SELECT DISTINCT id, name
+            SELECT DISTINCT id, name, barangay, municipality
             FROM (
                 ${subSelects.join('\n                UNION ALL\n')}
             ) owners
@@ -941,14 +949,8 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         rs."BARANGAY",
         rs."MUNICIPALITY",
         rs."FARM LOCATION",
-        COALESCE(
-            CASE 
-                WHEN rs."PARCEL AREA" ~ '^[0-9.]+$' THEN rs."PARCEL AREA"::NUMERIC
-                ELSE NULL
-            END, 
-            fp_sum.total_area
-        )::TEXT AS "PARCEL AREA",
-        rs."TOTAL FARM AREA",
+        COALESCE(fp_sum.total_area, rs."TOTAL FARM AREA", 0)::TEXT AS "PARCEL AREA",
+        COALESCE(fp_sum.total_area, rs."TOTAL FARM AREA", 0) AS "TOTAL FARM AREA",
         rs."MAIN LIVELIHOOD",
         rs.status,
         rs.submitted_at,
@@ -960,7 +962,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
     FROM rsbsa_submission rs
     LEFT JOIN (
         SELECT submission_id, SUM(total_farm_area_ha) AS total_area
-        FROM farm_parcels
+        FROM rsbsa_farm_parcels
         GROUP BY submission_id
     ) fp_sum ON fp_sum.submission_id = rs.id
     LEFT JOIN (
@@ -1039,6 +1041,19 @@ app.get('/api/rsbsa_submission', async (req, res) => {
 
                 // console.log(`Processing ${fullName}: ownershipType=`, ownershipType, `(hasOwnershipColumns=${hasOwnershipColumns})`);
 
+                // Parse PARCEL AREA - it could be a single value or comma-separated list
+                let parcelAreaDisplay = '—';
+                if (row["PARCEL AREA"]) {
+                    const areaStr = String(row["PARCEL AREA"]);
+                    // If it's a number, format it as hectares
+                    const areaNum = parseFloat(areaStr);
+                    if (!isNaN(areaNum) && areaNum > 0) {
+                        parcelAreaDisplay = `${areaNum.toFixed(2)} ha`;
+                    } else {
+                        parcelAreaDisplay = areaStr;
+                    }
+                }
+
                 return {
                     id: row.id,
                     referenceNumber: row["FFRS_CODE"] || `RSBSA-${row.id}`,
@@ -1049,7 +1064,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                     birthdate: row["BIRTHDATE"] || null,
                     dateSubmitted: row.submitted_at || row.created_at,
                     status: row.status || 'Not Active',
-                    parcelArea: row["PARCEL AREA"] ? String(row["PARCEL AREA"]) : '—',
+                    parcelArea: parcelAreaDisplay,
                     totalFarmArea: parseFloat(row["TOTAL FARM AREA"]) || 0,
                     landParcel: parcelInfo,
                     parcelCount: parseInt(row.parcel_count) || 0,
