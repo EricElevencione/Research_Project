@@ -521,8 +521,15 @@ const JoRsbsa: React.FC = () => {
       if (ownershipCategory === 'tenant' || ownershipCategory === 'lessee') {
         if (!selectedLandOwner) {
           newErrors.landOwner = 'Please search and select the land owner';
-        } else if (ownerParcels.length > 0 && formData.farmlandParcels.length === 0) {
-          newErrors.parcelSelection = 'Please select at least one parcel from the land owner';
+        } else if (ownerParcels.length > 0) {
+          // Check if parcels were confirmed by checking if farmland data is populated with owner's parcel data
+          const parcelsConfirmed = formData.farmlandParcels.length > 0 &&
+            formData.farmlandParcels[0].farmLocationBarangay &&
+            (formData.farmlandParcels[0].tenantLandOwnerName || formData.farmlandParcels[0].lesseeLandOwnerName);
+
+          if (!parcelsConfirmed) {
+            newErrors.parcelSelection = 'Please click "Confirm Selected Parcels" button to apply your parcel selection';
+          }
         }
       }
 
@@ -1055,6 +1062,15 @@ const JoRsbsa: React.FC = () => {
                         ✓ Confirm Selected Parcels
                       </button>
                     </div>
+
+                    {/* Warning if parcels selected but not confirmed */}
+                    {selectedParcelIds.size > 0 && (!formData.farmlandParcels[0]?.farmLocationBarangay ||
+                      (!formData.farmlandParcels[0]?.tenantLandOwnerName && !formData.farmlandParcels[0]?.lesseeLandOwnerName)) && (
+                        <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '6px', color: '#856404', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                          <span style={{ fontWeight: 'bold' }}>Remember to click "Confirm Selected Parcels" button above to apply your selection!</span>
+                        </div>
+                      )}
                   </div>
                 )}
 

@@ -1881,6 +1881,53 @@ app.get('/api/land-history/changes/recent', async (req, res) => {
 });
 
 // ============================================================================
+// 7.5. GET LAND HISTORY FOR A SPECIFIC FARMER
+// ============================================================================
+// GET /api/land-history/farmer/:farmerId
+// Returns all land history records for a specific farmer
+app.get('/api/land-history/farmer/:farmerId', async (req, res) => {
+    try {
+        const { farmerId } = req.params;
+        console.log('Fetching land history for farmer ID:', farmerId);
+
+        const result = await pool.query(`
+            SELECT 
+                lh.id,
+                lh.farm_parcel_id,
+                lh.parcel_number,
+                lh.farm_location_barangay,
+                lh.farm_location_municipality,
+                lh.change_type,
+                lh.land_owner_name,
+                lh.farmer_name,
+                lh.farmer_rsbsa_id,
+                lh.period_start_date,
+                lh.period_end_date,
+                lh.is_current,
+                lh.is_registered_owner,
+                lh.is_tenant,
+                lh.is_lessee,
+                lh.change_reason,
+                lh.created_at,
+                TO_CHAR(lh.period_start_date, 'Month DD, YYYY') as formatted_start_date,
+                TO_CHAR(lh.period_end_date, 'Month DD, YYYY') as formatted_end_date
+            FROM land_history lh
+            WHERE lh.farmer_rsbsa_id = $1
+            ORDER BY lh.period_start_date DESC, lh.created_at DESC
+        `, [farmerId]);
+
+        console.log(`Found ${result.rows.length} history records for farmer ${farmerId}`);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching farmer land history:', error);
+        res.status(500).json({
+            error: 'Failed to fetch farmer land history',
+            details: error.message
+        });
+    }
+});
+
+// ============================================================================
 // 8. SEARCH LAND HISTORY
 // ============================================================================
 // GET /api/land-history/search?q=searchTerm

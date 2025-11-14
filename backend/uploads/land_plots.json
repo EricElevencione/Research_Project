@@ -319,5 +319,130 @@
     "id": "shape-1762568283189-6411c620eb29e8",
     "createdAt": "2025-11-08T02:18:06.511Z",
     "updatedAt": "2025-11-08T02:18:06.511Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 2,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Burgos-Regidor",
+    "firstName": "Jukka",
+    "middleName": "Anika",
+    "surname": "Iglesias",
+    "ext_name": "",
+    "gender": "Male",
+    "birthdate": "",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Burgos-Regidor, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.712185,
+            10.82195
+          ],
+          [
+            122.711896,
+            10.821645
+          ],
+          [
+            122.712217,
+            10.821498
+          ],
+          [
+            122.712464,
+            10.821803
+          ],
+          [
+            122.712185,
+            10.82195
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1763080323885-f219703724c968",
+    "createdAt": "2025-11-14T00:32:04.693Z",
+    "updatedAt": "2025-11-14T00:32:04.693Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 2,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Cali",
+    "firstName": "Jukka",
+    "middleName": "Anika",
+    "surname": "Iglesias",
+    "ext_name": "",
+    "gender": "Male",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Cali, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.701663,
+            10.832012
+          ],
+          [
+            122.702022,
+            10.831628
+          ],
+          [
+            122.702392,
+            10.831923
+          ],
+          [
+            122.702939,
+            10.831386
+          ],
+          [
+            122.703464,
+            10.831917
+          ],
+          [
+            122.703121,
+            10.832302
+          ],
+          [
+            122.702756,
+            10.831996
+          ],
+          [
+            122.70237,
+            10.832365
+          ],
+          [
+            122.701882,
+            10.831996
+          ],
+          [
+            122.701727,
+            10.832096
+          ],
+          [
+            122.701663,
+            10.832012
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1763081382104-af02dcdd35bae",
+    "createdAt": "2025-11-14T00:49:43.346Z",
+    "updatedAt": "2025-11-14T00:49:43.346Z"
   }
 ]

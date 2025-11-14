@@ -16,7 +16,6 @@ interface LandAttributes {
     surname: string;
     ext_name: string;
     gender: 'Male' | 'Female';
-    birthdate: string;
     municipality: string;
     province: string;
     parcel_address: string;
@@ -46,7 +45,6 @@ const LandPlottingPage: React.FC = () => {
     const mapRef = useRef<LandPlottingMapRef>(null);
     const [selectedShape, setSelectedShape] = useState<Shape | null>(null);
     const [isEditingAttributes, setIsEditingAttributes] = useState(false);
-    const [plottingMethod, setPlottingMethod] = useState<'manual' | 'geometry'>('manual');
 
     // New state for parcel context
     const [parcelContext, setParcelContext] = useState<{
@@ -70,7 +68,6 @@ const LandPlottingPage: React.FC = () => {
         surname: '',
         ext_name: '',
         gender: 'Male',
-        birthdate: '',
         municipality: 'Dumangas',
         province: 'Iloilo',
         parcel_address: '',
@@ -80,7 +77,6 @@ const LandPlottingPage: React.FC = () => {
         plotSource: 'manual', // Default to manual for new plots
     });
 
-    const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof LandAttributes, string>>>({});
     const [isSaving, setIsSaving] = useState(false);
 
     const requiredFields: (keyof LandAttributes)[] = [
@@ -88,20 +84,6 @@ const LandPlottingPage: React.FC = () => {
         'surname', 'firstName', 'gender',
         'barangay', 'municipality', 'province', 'parcel_address', 'area'
     ];
-
-    const handleAttributeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        let newValue = value;
-        // Convert last name, first name, and middle name to uppercase
-        if (name === 'surname' || name === 'firstName' || name === 'middleName') {
-            newValue = value.toUpperCase();
-        }
-        setLandAttributes(prev => ({
-            ...prev,
-            [name]: newValue,
-            barangay: parcelBarangay || fallbackBarangayName
-        }));
-    };
 
     const validateForm = (): boolean => {
         const errors: Partial<Record<keyof LandAttributes, string>> = {};
@@ -120,7 +102,6 @@ const LandPlottingPage: React.FC = () => {
                 errors[field] = 'This field is required';
             }
         });
-        setValidationErrors(errors);
         if (Object.keys(errors).length > 0) {
             // Show which fields are missing with better formatting
             const missingFields = Object.keys(errors).map(key => {
@@ -162,7 +143,7 @@ const LandPlottingPage: React.FC = () => {
             // For simplicity, check if the id exists in shapes state (could be improved with backend check)
             const isExisting = shapes.some(s => s.id === shapeToSave.id && s !== shapeToSave);
             const method = isExisting ? 'PUT' : 'POST';
-            const url = isExisting ? `/api/land-plots/${shapeToSave.id}` : '/api/land-plots';
+            const url = isExisting ? `http://localhost:5000/api/land-plots/${shapeToSave.id}` : 'http://localhost:5000/api/land-plots';
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
@@ -209,7 +190,7 @@ const LandPlottingPage: React.FC = () => {
         try {
             // 1. Delete removed shapes from backend
             for (const id of deletedShapeIds) {
-                await fetch(`/api/land-plots/${id}`, { method: 'DELETE' });
+                await fetch(`http://localhost:5000/api/land-plots/${id}`, { method: 'DELETE' });
             }
             setDeletedShapeIds([]); // Clear after deletion
 
@@ -251,7 +232,6 @@ const LandPlottingPage: React.FC = () => {
                     surname: '',
                     ext_name: '',
                     gender: 'Male',
-                    birthdate: '',
                     municipality: 'Dumangas',
                     province: 'Iloilo',
                     parcel_address: '',
@@ -284,7 +264,6 @@ const LandPlottingPage: React.FC = () => {
             firstName: landAttributes.firstName || rsbsaRecord?.firstName || '',
             middleName: landAttributes.middleName || rsbsaRecord?.middleName || '',
             gender: landAttributes.gender || rsbsaRecord?.gender || 'Male',
-            birthdate: landAttributes.birthdate || rsbsaRecord?.birthdate || '',
             // Ensure location info is included
             barangay: parcelBarangay || landAttributes.barangay || fallbackBarangayName || '',
             municipality: landAttributes.municipality || currentParcel?.farm_location_city_municipality || 'Dumangas',
@@ -348,7 +327,7 @@ const LandPlottingPage: React.FC = () => {
 
         // Persist the edit to the backend
         try {
-            const response = await fetch(`/api/land-plots/${shape.id}`, {
+            const response = await fetch(`http://localhost:5000/api/land-plots/${shape.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -376,7 +355,7 @@ const LandPlottingPage: React.FC = () => {
         // Persist deletions to the backend
         for (const deletedShape of e.shapes) {
             try {
-                await fetch(`/api/land-plots/${deletedShape.id}`, { method: 'DELETE' });
+                await fetch(`http://localhost:5000/api/land-plots/${deletedShape.id}`, { method: 'DELETE' });
             } catch (error) {
                 alert('Failed to delete land plot from the backend.');
             }
@@ -393,46 +372,12 @@ const LandPlottingPage: React.FC = () => {
             }));
         } else {
             setSelectedShape(null);
-            setGeometryPreview(null);
             setIsEditingAttributes(false);
             setLandAttributes(prev => ({
                 ...prev,
                 area: 0,
             }));
         }
-    };
-
-    const handleCancelEdit = () => {
-        setIsEditingAttributes(false);
-        if (selectedShape) {
-            setLandAttributes({
-                ...selectedShape.properties,
-                municipality: selectedShape.properties.municipality || 'Dumangas',
-                province: selectedShape.properties.province || 'Iloilo',
-            });
-        } else {
-            setLandAttributes({
-                name: '',
-                ffrs_id: '',
-                area: 0,
-                coordinateAccuracy: 'approximate',
-                barangay: parcelBarangay || fallbackBarangayName,
-                firstName: '',
-                middleName: '',
-                surname: '',
-                ext_name: '',
-                gender: 'Male',
-                birthdate: '',
-                municipality: 'Dumangas',
-                province: 'Iloilo',
-                parcel_address: '',
-                status: 'Tenant',
-                street: '',
-                farmType: 'Irrigated',
-                plotSource: 'manual', // Reset plotSource on cancel
-            });
-        }
-        setSelectedShape(null);
     };
 
     const handleBackClick = () => {
@@ -465,7 +410,7 @@ const LandPlottingPage: React.FC = () => {
                 surname: '',
                 ext_name: '',
                 gender: 'Male',
-                birthdate: '',
+
                 municipality: 'Dumangas',
                 province: 'Iloilo',
                 parcel_address: '',
@@ -561,9 +506,8 @@ const LandPlottingPage: React.FC = () => {
                         ...prev,
                         firstName: data.firstName || '',
                         middleName: data.middleName || '',
-                        surname: data.surname || '',
+                        surname: data.lastName || data.surname || '',
                         gender: data.gender || 'Male',
-                        birthdate: data.birthdate || '',
                         barangay: finalBarangay,
                         municipality: parcelMunicipalityLocation,
                         area: parseFloat(parcel.total_farm_area_ha || parcel.farm_size || parcel.total_farm_area || '0'),
@@ -593,7 +537,7 @@ const LandPlottingPage: React.FC = () => {
                             },
                         });
                     }
-                    const landPlotsRes = await fetch('/api/land-plots');
+                    const landPlotsRes = await fetch('http://localhost:5000/api/land-plots');
                     if (landPlotsRes.ok) {
                         const allPlots = await landPlotsRes.json();
                         // Diagnostic logging
@@ -601,7 +545,7 @@ const LandPlottingPage: React.FC = () => {
                         // Robust matching: ignore case, trim, allow missing middle names
                         const normalize = (str: string) => (str || '').trim().toLowerCase();
                         const parcelAddr = normalize(`${parcelBarangayLocation}, ${parcelMunicipalityLocation}`);
-                        const surname = normalize(data.surname);
+                        const surname = normalize(data.lastName || data.surname || '');
                         const firstName = normalize(data.firstName);
                         // Log filter values and all plots for debugging
                         console.log('Filtering for:', { parcelAddr, surname, firstName });
@@ -659,188 +603,13 @@ const LandPlottingPage: React.FC = () => {
 
     console.log('currentParcel:', currentParcel);
 
-    // Add DMS to decimal conversion function
-    function dmsToDecimal(dmsString: string): number | null {
-        // Handle formats like: "10°51'15.9"N", "122°42'47.9"E"
-        const match = dmsString.match(/(\d+)°(\d+)'([\d.]+)"([NSEW])/);
-        if (!match) return null;
-
-        const degrees = parseInt(match[1]);
-        const minutes = parseInt(match[2]);
-        const seconds = parseFloat(match[3]);
-        const direction = match[4];
-
-        let decimal = degrees + (minutes / 60) + (seconds / 3600);
-
-        // Apply direction
-        if (direction === 'S' || direction === 'W') {
-            decimal = -decimal;
-        }
-
-        return decimal;
-    }
-
-    // Add decimal to DMS conversion function
-    function decimalToDms(decimal: number, isLatitude: boolean): string {
-        const abs = Math.abs(decimal);
-        const degrees = Math.floor(abs);
-        const minutes = Math.floor((abs - degrees) * 60);
-        const seconds = ((abs - degrees - minutes / 60) * 3600).toFixed(1);
-
-        const direction = isLatitude
-            ? (decimal >= 0 ? 'N' : 'S')
-            : (decimal >= 0 ? 'E' : 'W');
-
-        return `${degrees}°${minutes}'${seconds}"${direction}`;
-    }
-
-    // Enhanced geometry start state to handle both decimal and DMS
-    const [geometryStart, setGeometryStart] = useState<{
-        lat: string;
-        lng: string;
-        inputMode: 'decimal' | 'dms';
-    }>({
-        lat: '',
-        lng: '',
-        inputMode: 'decimal'
-    });
-
-    // Support both DMS and decimal degrees, with a toggle
-    const [bearingInputMode, setBearingInputMode] = useState<'dms' | 'decimal'>('dms');
-    type GeometryPoint = {
-        pointNumber: number;
-        dir1: 'N' | 'S';
-        degrees: string;
-        minutes: string; // optional, can be ''
-        dir2: 'E' | 'W';
-        decimalDegrees: string; // for decimal mode
-        distance: string;
-    };
-    const [geometryPoints, setGeometryPoints] = useState<GeometryPoint[]>([
-        { pointNumber: 1, dir1: 'N', degrees: '', minutes: '', dir2: 'E', decimalDegrees: '', distance: '' }
-    ]);
-    const [geometryPreview, setGeometryPreview] = useState<any>(null); // GeoJSON geometry
-
-    // Helper: Convert DMS + directions to azimuth (degrees from north, clockwise)
-    function dmsToAzimuth(dir1: 'N' | 'S', degrees: string, minutes: string, dir2: 'E' | 'W') {
-        // Convert DMS to decimal
-        const deg = parseFloat(degrees) || 0;
-        const min = parseFloat(minutes) || 0;
-        const dec = deg + min / 60;
-        // Example: S 54° 30' E
-        // N/E: azimuth = dec
-        // S/E: azimuth = 180 - dec
-        // S/W: azimuth = 180 + dec
-        // N/W: azimuth = 360 - dec
-        if (dir1 === 'N' && dir2 === 'E') return dec;
-        if (dir1 === 'S' && dir2 === 'E') return 180 - dec;
-        if (dir1 === 'S' && dir2 === 'W') return 180 + dec;
-        if (dir1 === 'N' && dir2 === 'W') return 360 - dec;
-        return dec; // fallback
-    }
-
-    // Helper: Convert bearing in degrees to radians clockwise from north
-    function bearingToRadians(bearingDeg: number) {
-        return (90 - bearingDeg) * (Math.PI / 180);
-    }
-
-    // Helper: Compute next lat/lng given start, bearing (deg), and distance (meters)
-    function computeDestinationLatLng(lat: number, lng: number, bearingDeg: number, distance: number) {
-        const R = 6378137; // Earth radius in meters
-        const bearingRad = bearingToRadians(bearingDeg);
-        const latRad = lat * Math.PI / 180;
-        const lngRad = lng * Math.PI / 180;
-        const dByR = distance / R;
-        const newLatRad = Math.asin(Math.sin(latRad) * Math.cos(dByR) + Math.cos(latRad) * Math.sin(dByR) * Math.cos(bearingRad));
-        const newLngRad = lngRad + Math.atan2(Math.sin(bearingRad) * Math.sin(dByR) * Math.cos(latRad), Math.cos(dByR) - Math.sin(latRad) * Math.sin(newLatRad));
-        return {
-            lat: newLatRad * 180 / Math.PI,
-            lng: newLngRad * 180 / Math.PI
-        };
-    }
-
-    // Helper: Get azimuth from point (handles both modes)
-    function getAzimuth(pt: GeometryPoint) {
-        if (bearingInputMode === 'decimal') {
-            // Decimal degrees, assume N/E (or let user pick dir1/dir2)
-            const dec = parseFloat(pt.decimalDegrees) || 0;
-            // Use dir1/dir2 for quadrant
-            return dmsToAzimuth(pt.dir1, pt.decimalDegrees, '0', pt.dir2);
-        } else {
-            return dmsToAzimuth(pt.dir1, pt.degrees, pt.minutes, pt.dir2);
-        }
-    }
-
-    // Enhanced handleGenerateGeometry with DMS support
-    const handleGenerateGeometry = () => {
-        let startLat: number, startLng: number;
-
-        // Convert coordinates based on input mode
-        if (geometryStart.inputMode === 'dms') {
-            // Handle DMS format
-            startLat = geometryStart.lat.trim() === '' ? 0 : (dmsToDecimal(geometryStart.lat) || 0);
-            startLng = geometryStart.lng.trim() === '' ? 0 : (dmsToDecimal(geometryStart.lng) || 0);
-        } else {
-            // Handle decimal format
-            startLat = geometryStart.lat.trim() === '' ? 0 : parseFloat(geometryStart.lat);
-            startLng = geometryStart.lng.trim() === '' ? 0 : parseFloat(geometryStart.lng);
-        }
-
-        if (isNaN(startLat) || isNaN(startLng)) {
-            alert('Please enter valid starting coordinates or leave both blank for relative plotting.');
-            return;
-        }
-
-        let coords = [[startLng, startLat]];
-        let curr = { lat: startLat, lng: startLng };
-        for (const pt of geometryPoints) {
-            const azimuth = getAzimuth(pt);
-            const distance = parseFloat(pt.distance);
-            if (isNaN(azimuth) || isNaN(distance)) {
-                alert('Please enter valid bearing and distance values.');
-                return;
-            }
-            curr = computeDestinationLatLng(curr.lat, curr.lng, azimuth, distance);
-            coords.push([curr.lng, curr.lat]);
-        }
-        // Close the polygon
-        coords.push([startLng, startLat]);
-        const geojson = {
-            type: 'Polygon' as const,
-            coordinates: [coords]
-        };
-        setGeometryPreview(geojson);
-
-        // --- Add as a real shape ---
-        import('leaflet').then(L => {
-            const layer = L.geoJSON(geojson).getLayers()[0];
-            const newShape = {
-                id: `shape-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-                layer,
-                properties: { ...landAttributes, area: 0 },
-            };
-            // Only allow one generated shape at a time (remove previous preview shape if any)
-            setShapesAndVersion(prevShapes => {
-                // Remove any shape with a special flag (e.g., area 0 and coordinates at 0,0)
-                const filtered = prevShapes.filter(s => !(s.properties && s.properties._isGenerated));
-                newShape.properties._isGenerated = true; // Mark as generated for easy removal
-                return [...filtered, newShape];
-            });
-            setSelectedShape(newShape);
-            setIsEditingAttributes(true);
-            setGeometryPreview(null); // Clear preview after adding
-        });
-    };
-
     const [shapes, setShapes] = useState<Shape[]>([]);
-    const [shapesVersion, setShapesVersion] = useState(0);
     const [deletedShapeIds, setDeletedShapeIds] = useState<string[]>([]);
 
-    // When setting shapes, increment shapesVersion
+    // Helper function to set shapes
     const setShapesAndVersion = (newShapes: Shape[] | ((prevShapes: Shape[]) => Shape[])) => {
         setShapes(prev => {
             const updated = typeof newShapes === 'function' ? (newShapes as (prevShapes: Shape[]) => Shape[])(prev) : newShapes;
-            setShapesVersion(v => v + 1);
             return updated;
         });
     };
@@ -861,45 +630,30 @@ const LandPlottingPage: React.FC = () => {
     // Add at the top with other useState imports
     const [parcelHistory, setParcelHistory] = useState<any[]>([]);
 
-    // Replace the old parcelHistory logic and useEffect for currentParcel
+    // Fetch land history for current farmer
     useEffect(() => {
-        console.log('Effect: currentParcel =', currentParcel);
-        if (currentParcel && currentParcel.id) {
-            console.log('Fetching parcel history for parcel_id:', Number(currentParcel.parcel_number));
-            fetch(`/api/land_rights_history?parcel_id=${Number(currentParcel.parcel_number)}`)
+        console.log('Effect: Fetching land history for farmer');
+        if (rsbsaRecord && rsbsaRecord.id) {
+            console.log('Fetching land history for farmer ID:', rsbsaRecord.id);
+            // Fetch from land_history table filtered by farmer
+            fetch(`http://localhost:5000/api/land-history/farmer/${rsbsaRecord.id}`)
                 .then(res => res.json())
                 .then(data => {
-                    console.log('Fetched parcel history:', data);
-                    setParcelHistory(data);
+                    console.log('Fetched land history:', data);
+                    setParcelHistory(Array.isArray(data) ? data : []);
+                })
+                .catch(error => {
+                    console.error('Error fetching land history:', error);
+                    setParcelHistory([]);
                 });
         } else {
-            console.log('No currentParcel or no id, not fetching history');
+            console.log('No rsbsaRecord, not fetching history');
             setParcelHistory([]);
         }
-    }, [currentParcel]);
+    }, [rsbsaRecord]);
 
-    // Define the designated farmer's ID. Replace with the correct variable if needed.
-    const designatedFarmerId = currentParcel?.person_id || null;
-    // Filter parcelHistory for the designated farmer
-    const farmerHistory = designatedFarmerId ? parcelHistory.filter((entry: any) => entry.person_id === designatedFarmerId) : [];
-
-    // Filter history to show only records for the current farmer
-    const currentFarmerHistory = parcelHistory.filter((entry: any) => {
-        // Get current farmer's full name
-        const currentFarmerName = `${landAttributes.surname} ${landAttributes.firstName} ${landAttributes.middleName}`.trim();
-        const currentFarmerId = rsbsaRecord?.id;
-
-        // Match by farmer name (case-insensitive, handle variations)
-        const entryFarmerName = entry.farmer_name || '';
-        const nameMatches = currentFarmerName && entryFarmerName &&
-            entryFarmerName.toLowerCase().includes(currentFarmerName.toLowerCase()) ||
-            currentFarmerName.toLowerCase().includes(entryFarmerName.toLowerCase());
-
-        // Match by person ID
-        const idMatches = currentFarmerId && entry.person_id && entry.person_id === currentFarmerId;
-
-        return nameMatches || idMatches;
-    });
+    // Use all history records without filtering
+    const currentFarmerHistory = parcelHistory;
 
     console.log("📍 Barangay going to map:", landAttributes.barangay);
     console.log("📦 Current Parcel:", currentParcel);
@@ -984,9 +738,8 @@ const LandPlottingPage: React.FC = () => {
                                 onShapeDeleted={handleMapShapeDeleted}
                                 barangayName={getDisplayBarangay()}
                                 onShapeFinalized={handleShapeFinalized}
-                                // Only disable drawing if geometry mode
-                                drawingDisabled={plottingMethod === 'geometry'}
-                                geometryPreview={plottingMethod === 'geometry' ? geometryPreview : null}
+                                drawingDisabled={false}
+                                geometryPreview={null}
                                 shapes={shapes}
                                 polygonExistsForCurrentParcel={polygonExistsForCurrentParcel}
                             />
@@ -996,30 +749,6 @@ const LandPlottingPage: React.FC = () => {
                 </div>
                 {/* Right: Details Panel */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #ccc', padding: '2rem 2rem 2rem 2rem', justifyContent: 'flex-start', overflowY: 'auto', maxHeight: '100%' }}>
-                    {/* Plotting Method Selector */}
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ fontWeight: 'bold', marginRight: '1rem' }}>Plotting Method:</label>
-                        <label style={{ marginRight: '1rem' }}>
-                            <input
-                                type="radio"
-                                name="plottingMethod"
-                                value="manual"
-                                checked={plottingMethod === 'manual'}
-                                onChange={() => setPlottingMethod('manual')}
-                            />
-                            Manual Mapping
-                        </label>
-                        <label>
-                            <input
-                                type="radio"
-                                name="plottingMethod"
-                                value="geometry"
-                                checked={plottingMethod === 'geometry'}
-                                onChange={() => setPlottingMethod('geometry')}
-                            />
-                            Geometry Input
-                        </label>
-                    </div>
                     <div style={{ borderBottom: '2px solid #222', marginBottom: '1.5rem', paddingBottom: '0.5rem', fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '1px' }}>
                         {currentParcel && (currentParcel.parcel_number !== undefined && currentParcel.parcel_number !== null && currentParcel.parcel_number !== '')
                             ? `Farm Parcel #${currentParcel.parcel_number}`
@@ -1046,10 +775,6 @@ const LandPlottingPage: React.FC = () => {
                             {` ${rsbsaRecord?.gender || landAttributes.gender || 'N/A'}`}
                         </div>
                         <div>
-                            <span style={{ fontWeight: 'bold' }}>Birthdate:</span>
-                            {` ${(rsbsaRecord?.birthdate || landAttributes.birthdate) ? new Date(rsbsaRecord?.birthdate || landAttributes.birthdate).toLocaleDateString() : 'N/A'}`}
-                        </div>
-                        <div>
                             <span style={{ fontWeight: 'bold' }}>Parcel Area:</span>
                             {` ${getDisplayAreaHectares()}`}
                         </div>
@@ -1057,168 +782,7 @@ const LandPlottingPage: React.FC = () => {
                     {/* Editable plot-specific fields */}
                     {/* Removed Area (sqm) and Plot Source fields as requested */}
 
-                    {/* Geometry Input Form (only show if geometry mode) */}
-                    {plottingMethod === 'geometry' && (
-                        <div className="geometry-input-section">
-                            {/* UI note for relative plotting */}
-                            <div style={{ color: '#b36b00', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                                Note: If you leave the starting latitude and longitude blank, the lot will be plotted as a relative shape (not georeferenced to a real-world location).
-                            </div>
 
-                            {/* Starting Point Input Mode Toggle */}
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ fontWeight: 'bold', marginRight: '1rem' }}>Starting Point Format:</label>
-                                <label style={{ marginRight: '1rem' }}>
-                                    <input
-                                        type="radio"
-                                        name="startPointMode"
-                                        value="decimal"
-                                        checked={geometryStart.inputMode === 'decimal'}
-                                        onChange={() => setGeometryStart(s => ({ ...s, inputMode: 'decimal' }))}
-                                    /> Decimal (e.g., 10.8544, 122.7133)
-                                </label>
-                                <label>
-                                    <input
-                                        type="radio"
-                                        name="startPointMode"
-                                        value="dms"
-                                        checked={geometryStart.inputMode === 'dms'}
-                                        onChange={() => setGeometryStart(s => ({ ...s, inputMode: 'dms' }))}
-                                    /> DMS (e.g., 10°51'15.9"N, 122°42'47.9"E)
-                                </label>
-                            </div>
-
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ fontWeight: 'bold', marginRight: '1rem' }}>Starting Point:</label>
-                                {geometryStart.inputMode === 'dms' ? (
-                                    <>
-                                        <input
-                                            type="text"
-                                            placeholder={`10°51'15.9"N`}
-                                            value={geometryStart.lat}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setGeometryStart(s => ({ ...s, lat: e.target.value }))}
-                                            style={{ width: '12rem', marginRight: '0.5rem' }}
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder={`122°42'47.9"E`}
-                                            value={geometryStart.lng}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setGeometryStart(s => ({ ...s, lng: e.target.value }))}
-                                            style={{ width: '12rem' }}
-                                        />
-                                    </>
-                                ) : (
-                                    <>
-                                        <input
-                                            type="text"
-                                            placeholder="Latitude"
-                                            value={geometryStart.lat}
-                                            onChange={e => setGeometryStart(s => ({ ...s, lat: e.target.value }))}
-                                            style={{ width: '7rem', marginRight: '0.5rem' }}
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Longitude"
-                                            value={geometryStart.lng}
-                                            onChange={e => setGeometryStart(s => ({ ...s, lng: e.target.value }))}
-                                            style={{ width: '7rem' }}
-                                        />
-                                    </>
-                                )}
-                            </div>
-                            <div style={{ marginBottom: '0.5rem' }}>
-                                <label style={{ fontWeight: 'bold', marginRight: '1rem' }}>Bearing Input Mode:</label>
-                                <label style={{ marginRight: '1rem' }}>
-                                    <input type="radio" name="bearingMode" value="dms" checked={bearingInputMode === 'dms'} onChange={() => setBearingInputMode('dms')} /> DMS (Deg/Min)
-                                </label>
-                                <label>
-                                    <input type="radio" name="bearingMode" value="decimal" checked={bearingInputMode === 'decimal'} onChange={() => setBearingInputMode('decimal')} /> Decimal Degrees
-                                </label>
-                            </div>
-                            <div>
-                                <table style={{ width: '100%', marginBottom: '1rem', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr>
-                                            <th style={{ borderBottom: '1px solid #ccc' }}>Point #</th>
-                                            <th style={{ borderBottom: '1px solid #ccc' }}>Dir1</th>
-                                            {bearingInputMode === 'dms' ? <>
-                                                <th style={{ borderBottom: '1px solid #ccc' }}>Deg</th>
-                                                <th style={{ borderBottom: '1px solid #ccc' }}>Min</th>
-                                            </> : <>
-                                                <th style={{ borderBottom: '1px solid #ccc' }}>Decimal</th>
-                                            </>}
-                                            <th style={{ borderBottom: '1px solid #ccc' }}>Dir2</th>
-                                            <th style={{ borderBottom: '1px solid #ccc' }}>Distance (m)</th>
-                                            <th style={{ borderBottom: '1px solid #ccc' }}></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {geometryPoints.map((pt, idx) => (
-                                            <tr key={idx}>
-                                                <td>{pt.pointNumber}</td>
-                                                <td>
-                                                    <select value={pt.dir1} onChange={e => setGeometryPoints(points => points.map((p, i) => i === idx ? { ...p, dir1: e.target.value as 'N' | 'S' } : p))}>
-                                                        <option value="N">N</option>
-                                                        <option value="S">S</option>
-                                                    </select>
-                                                </td>
-                                                {bearingInputMode === 'dms' ? <>
-                                                    <td>
-                                                        <input
-                                                            type="text"
-                                                            value={pt.degrees}
-                                                            onChange={e => setGeometryPoints(points => points.map((p, i) => i === idx ? { ...p, degrees: e.target.value } : p))}
-                                                            style={{ width: '4rem' }}
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            type="text"
-                                                            value={pt.minutes}
-                                                            onChange={e => setGeometryPoints(points => points.map((p, i) => i === idx ? { ...p, minutes: e.target.value } : p))}
-                                                            style={{ width: '4rem' }}
-                                                        />
-                                                    </td>
-                                                </> : <>
-                                                    <td>
-                                                        <input
-                                                            type="text"
-                                                            value={pt.decimalDegrees}
-                                                            onChange={e => setGeometryPoints(points => points.map((p, i) => i === idx ? { ...p, decimalDegrees: e.target.value } : p))}
-                                                            style={{ width: '7rem' }}
-                                                        />
-                                                    </td>
-                                                </>}
-                                                <td>
-                                                    <select value={pt.dir2} onChange={e => setGeometryPoints(points => points.map((p, i) => i === idx ? { ...p, dir2: e.target.value as 'E' | 'W' } : p))}>
-                                                        <option value="E">E</option>
-                                                        <option value="W">W</option>
-                                                    </select>
-                                                </td>
-                                                <td>
-                                                    <input
-                                                        type="text"
-                                                        value={pt.distance}
-                                                        onChange={e => setGeometryPoints(points => points.map((p, i) => i === idx ? { ...p, distance: e.target.value } : p))}
-                                                        style={{ width: '6rem' }}
-                                                    />
-                                                </td>
-                                                <td>
-                                                    {geometryPoints.length > 1 && (
-                                                        <button onClick={() => setGeometryPoints(points => points.filter((_, i) => i !== idx))} style={{ color: 'red' }}>Remove</button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                <button onClick={() => setGeometryPoints(points => [...points, { pointNumber: points.length + 1, dir1: 'N', degrees: '', minutes: '', dir2: 'E', decimalDegrees: '', distance: '' }])} style={{ marginRight: '1rem' }}>Add Point</button>
-                            </div>
-                            <div>
-                                <button onClick={handleGenerateGeometry} style={{ marginTop: '1rem', fontWeight: 'bold' }}>Generate Shape</button>
-                            </div>
-                        </div>
-                    )}
 
                     <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
                         <button onClick={handleSaveAttributes} disabled={!isEditingAttributes || isSaving} style={{ padding: '0.5rem 2rem', borderRadius: '8px', border: '1px solid #222', background: '#fff', fontWeight: 'bold', cursor: isEditingAttributes && !isSaving ? 'pointer' : 'not-allowed' }}>
@@ -1228,38 +792,46 @@ const LandPlottingPage: React.FC = () => {
 
 
 
-                    {/* History Section */}
-                    <div className="history-section">
-                        <h3>History</h3>
-                        <table className="history-table">
+                    {/* Tenancy/Ownership History Section */}
+                    <div className="history-section" style={{ marginTop: '2rem' }}>
+                        <h3 style={{ marginBottom: '1rem', fontWeight: 'bold', fontSize: '1.2rem' }}>Ownership & Tenancy History</h3>
+                        <table className="history-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                    <th>Farmer</th>
-                                    <th>Reason</th>
-                                    <th>Changed At</th>
+                                <tr style={{ borderBottom: '2px solid #222' }}>
+                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Date Started</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Land Owner</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Parcel Location</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Status</th>
+                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Date Ended</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {currentFarmerHistory.length === 0 ? (
-                                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>No history found for this farmer.</td></tr>
+                                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#999' }}>No ownership or tenancy history available.</td></tr>
                                 ) : currentFarmerHistory.map((entry: any, idx: number) => (
-                                    <tr key={entry.id || idx}>
-                                        <td className="history-date">
-                                            {entry.changed_at ? new Date(entry.changed_at).toLocaleDateString() : ''}
+                                    <tr key={entry.id || idx} style={{ borderBottom: '1px solid #eee' }}>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            {entry.period_start_date ? new Date(entry.period_start_date).toLocaleDateString() : 'N/A'}
                                         </td>
-                                        <td>
-                                            <span className={`status-badge status-${entry.role?.toLowerCase().replace(/\s+/g, '-')}`}>
-                                                {entry.role || ''}
+                                        <td style={{ padding: '0.5rem' }}>
+                                            {entry.land_owner_name || 'N/A'}
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            {entry.farm_location_barangay ? `${entry.farm_location_barangay}, ${entry.farm_location_municipality || 'Dumangas'}` : 'N/A'}
+                                        </td>
+                                        <td style={{ padding: '0.5rem' }}>
+                                            <span style={{
+                                                padding: '0.25rem 0.5rem',
+                                                borderRadius: '4px',
+                                                fontSize: '0.85rem',
+                                                backgroundColor: entry.is_registered_owner ? '#4caf50' : entry.is_tenant ? '#ff9800' : entry.is_lessee ? '#2196f3' : '#999',
+                                                color: 'white'
+                                            }}>
+                                                {entry.is_registered_owner ? 'Owner' : entry.is_tenant ? 'Tenant' : entry.is_lessee ? 'Lessee' : 'Other'}
                                             </span>
                                         </td>
-                                        <td>{entry.farmer_name || entry.person_id || ''}</td>
-                                        <td className="history-reason" title={entry.reason || ''}>
-                                            {entry.reason || ''}
-                                        </td>
-                                        <td className="history-date">
-                                            {entry.changed_at ? new Date(entry.changed_at).toLocaleString() : ''}
+                                        <td style={{ padding: '0.5rem' }}>
+                                            {entry.period_end_date ? new Date(entry.period_end_date).toLocaleDateString() : entry.is_current ? 'Current' : 'N/A'}
                                         </td>
                                     </tr>
                                 ))}
