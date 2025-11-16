@@ -2548,6 +2548,599 @@ app.post('/api/transfer-ownership', async (req, res) => {
 });
 
 // ============================================================================
+// AGRICULTURAL INPUT DISTRIBUTION SYSTEM API ENDPOINTS
+// ============================================================================
+
+// ==================== REGIONAL ALLOCATIONS ====================
+
+// Get all regional allocations
+app.get('/api/distribution/allocations', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM regional_allocations
+            ORDER BY allocation_date DESC
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching allocations:', error);
+        res.status(500).json({ error: 'Failed to fetch allocations', message: error.message });
+    }
+});
+
+// Get allocation by season
+app.get('/api/distribution/allocations/:season', async (req, res) => {
+    const { season } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT * FROM regional_allocations
+            WHERE season = $1
+        `, [season]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Allocation not found for this season' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching allocation:', error);
+        res.status(500).json({ error: 'Failed to fetch allocation', message: error.message });
+    }
+});
+
+// Create or update regional allocation
+app.post('/api/distribution/allocations', async (req, res) => {
+    const {
+        season,
+        allocation_date,
+        season_start_date,
+        season_end_date,
+        urea_46_0_0_bags,
+        complete_14_14_14_bags,
+        complete_16_16_16_bags,
+        ammonium_sulfate_21_0_0_bags,
+        ammonium_phosphate_16_20_0_bags,
+        muriate_potash_0_0_60_bags,
+        rice_seeds_nsic_rc160_kg,
+        rice_seeds_nsic_rc222_kg,
+        rice_seeds_nsic_rc440_kg,
+        corn_seeds_hybrid_kg,
+        corn_seeds_opm_kg,
+        vegetable_seeds_kg,
+        notes,
+        created_by
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO regional_allocations (
+                season, allocation_date, season_start_date, season_end_date,
+                urea_46_0_0_bags, complete_14_14_14_bags, complete_16_16_16_bags,
+                ammonium_sulfate_21_0_0_bags, ammonium_phosphate_16_20_0_bags,
+                muriate_potash_0_0_60_bags, rice_seeds_nsic_rc160_kg,
+                rice_seeds_nsic_rc222_kg, rice_seeds_nsic_rc440_kg,
+                corn_seeds_hybrid_kg, corn_seeds_opm_kg, vegetable_seeds_kg,
+                notes, created_by
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+            )
+            ON CONFLICT (season) 
+            DO UPDATE SET
+                allocation_date = EXCLUDED.allocation_date,
+                season_start_date = EXCLUDED.season_start_date,
+                season_end_date = EXCLUDED.season_end_date,
+                urea_46_0_0_bags = EXCLUDED.urea_46_0_0_bags,
+                complete_14_14_14_bags = EXCLUDED.complete_14_14_14_bags,
+                complete_16_16_16_bags = EXCLUDED.complete_16_16_16_bags,
+                ammonium_sulfate_21_0_0_bags = EXCLUDED.ammonium_sulfate_21_0_0_bags,
+                ammonium_phosphate_16_20_0_bags = EXCLUDED.ammonium_phosphate_16_20_0_bags,
+                muriate_potash_0_0_60_bags = EXCLUDED.muriate_potash_0_0_60_bags,
+                rice_seeds_nsic_rc160_kg = EXCLUDED.rice_seeds_nsic_rc160_kg,
+                rice_seeds_nsic_rc222_kg = EXCLUDED.rice_seeds_nsic_rc222_kg,
+                rice_seeds_nsic_rc440_kg = EXCLUDED.rice_seeds_nsic_rc440_kg,
+                corn_seeds_hybrid_kg = EXCLUDED.corn_seeds_hybrid_kg,
+                corn_seeds_opm_kg = EXCLUDED.corn_seeds_opm_kg,
+                vegetable_seeds_kg = EXCLUDED.vegetable_seeds_kg,
+                notes = EXCLUDED.notes,
+                updated_at = NOW()
+            RETURNING *
+        `, [
+            season, allocation_date, season_start_date, season_end_date,
+            urea_46_0_0_bags || 0, complete_14_14_14_bags || 0, complete_16_16_16_bags || 0,
+            ammonium_sulfate_21_0_0_bags || 0, ammonium_phosphate_16_20_0_bags || 0,
+            muriate_potash_0_0_60_bags || 0, rice_seeds_nsic_rc160_kg || 0,
+            rice_seeds_nsic_rc222_kg || 0, rice_seeds_nsic_rc440_kg || 0,
+            corn_seeds_hybrid_kg || 0, corn_seeds_opm_kg || 0, vegetable_seeds_kg || 0,
+            notes, created_by
+        ]);
+
+        res.status(201).json({
+            message: 'Regional allocation saved successfully',
+            allocation: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error saving allocation:', error);
+        res.status(500).json({ error: 'Failed to save allocation', message: error.message });
+    }
+});
+
+// ==================== FARMER REQUESTS ====================
+
+// Get all farmer requests for a season
+app.get('/api/distribution/requests/:season', async (req, res) => {
+    const { season } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT 
+                fr.*,
+                r."FARMER_LASTNAME" || ', ' || r."FARMER_FIRSTNAME" as full_name
+            FROM farmer_requests fr
+            LEFT JOIN rsbsa_submission r ON fr.farmer_id = r.id
+            WHERE fr.season = $1
+            ORDER BY fr.priority_rank ASC NULLS LAST, fr.priority_score DESC
+        `, [season]);
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching requests:', error);
+        res.status(500).json({ error: 'Failed to fetch requests', message: error.message });
+    }
+});
+
+// Create farmer request
+app.post('/api/distribution/requests', async (req, res) => {
+    const {
+        season,
+        farmer_id,
+        farmer_name,
+        barangay,
+        farm_area_ha,
+        crop_type,
+        ownership_type,
+        num_parcels,
+        fertilizer_requested,
+        seeds_requested,
+        request_notes,
+        created_by
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO farmer_requests (
+                season, farmer_id, farmer_name, barangay, farm_area_ha,
+                crop_type, ownership_type, num_parcels,
+                fertilizer_requested, seeds_requested, request_notes, created_by
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+            )
+            RETURNING *
+        `, [
+            season, farmer_id, farmer_name, barangay, farm_area_ha,
+            crop_type, ownership_type, num_parcels || 1,
+            fertilizer_requested || false, seeds_requested || false,
+            request_notes, created_by
+        ]);
+
+        res.status(201).json({
+            message: 'Farmer request created successfully',
+            request: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error creating request:', error);
+        res.status(500).json({ error: 'Failed to create request', message: error.message });
+    }
+});
+
+// Update farmer request (assignment, acceptance, status)
+app.put('/api/distribution/requests/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        assigned_fertilizer_type,
+        assigned_fertilizer_bags,
+        assigned_seed_type,
+        assigned_seed_kg,
+        fertilizer_accepted,
+        seeds_accepted,
+        rejection_reason,
+        status
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            UPDATE farmer_requests
+            SET 
+                assigned_fertilizer_type = COALESCE($1, assigned_fertilizer_type),
+                assigned_fertilizer_bags = COALESCE($2, assigned_fertilizer_bags),
+                assigned_seed_type = COALESCE($3, assigned_seed_type),
+                assigned_seed_kg = COALESCE($4, assigned_seed_kg),
+                fertilizer_accepted = COALESCE($5, fertilizer_accepted),
+                seeds_accepted = COALESCE($6, seeds_accepted),
+                rejection_reason = COALESCE($7, rejection_reason),
+                status = COALESCE($8, status),
+                updated_at = NOW()
+            WHERE id = $9
+            RETURNING *
+        `, [
+            assigned_fertilizer_type,
+            assigned_fertilizer_bags,
+            assigned_seed_type,
+            assigned_seed_kg,
+            fertilizer_accepted,
+            seeds_accepted,
+            rejection_reason,
+            status,
+            id
+        ]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+
+        res.json({
+            message: 'Request updated successfully',
+            request: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating request:', error);
+        res.status(500).json({ error: 'Failed to update request', message: error.message });
+    }
+});
+
+// Delete farmer request
+app.delete('/api/distribution/requests/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(`
+            DELETE FROM farmer_requests WHERE id = $1 RETURNING *
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+
+        res.json({ message: 'Request deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting request:', error);
+        res.status(500).json({ error: 'Failed to delete request', message: error.message });
+    }
+});
+
+// ==================== PRIORITIZATION ====================
+
+// Calculate priority scores for all requests in a season
+app.post('/api/distribution/calculate-priorities/:season', async (req, res) => {
+    const { season } = req.params;
+
+    try {
+        // Get active priority configuration
+        const configResult = await pool.query(`
+            SELECT * FROM priority_configurations WHERE is_active = TRUE LIMIT 1
+        `);
+
+        if (configResult.rows.length === 0) {
+            return res.status(400).json({ error: 'No active priority configuration found' });
+        }
+
+        const config = configResult.rows[0];
+
+        // Get all requests for the season
+        const requestsResult = await pool.query(`
+            SELECT 
+                fr.id,
+                fr.farm_area_ha,
+                fr.ownership_type,
+                fr.barangay,
+                fr.crop_type,
+                COUNT(idl.id) as times_received_assistance
+            FROM farmer_requests fr
+            LEFT JOIN incentive_distribution_log idl ON fr.farmer_id = idl.farmer_id
+            WHERE fr.season = $1
+            GROUP BY fr.id, fr.farm_area_ha, fr.ownership_type, fr.barangay, fr.crop_type
+        `, [season]);
+
+        const requests = requestsResult.rows;
+
+        // Calculate priority score for each request
+        const updates = [];
+
+        for (const request of requests) {
+            let score = 0;
+
+            // 1. Farm area score (smaller = higher priority)
+            const farmAreaRules = config.farm_area_rules;
+            if (request.farm_area_ha < 1) {
+                score += farmAreaRules['<1ha'] || 30;
+            } else if (request.farm_area_ha < 2) {
+                score += farmAreaRules['1-2ha'] || 20;
+            } else if (request.farm_area_ha < 3) {
+                score += farmAreaRules['2-3ha'] || 10;
+            } else {
+                score += farmAreaRules['>3ha'] || 5;
+            }
+
+            // 2. Ownership type score (tenant/lessee = higher priority)
+            const ownershipRules = config.ownership_rules;
+            const ownershipScore = ownershipRules[request.ownership_type] || 10;
+            score += ownershipScore;
+
+            // 3. Historical assistance score (less received = higher priority)
+            if (request.times_received_assistance === 0) {
+                score += 30;
+            } else if (request.times_received_assistance === 1) {
+                score += 20;
+            } else if (request.times_received_assistance === 2) {
+                score += 10;
+            } else {
+                score += 5;
+            }
+
+            // 4. Location score (remote areas = higher priority)
+            // Define remote barangays (this can be configured)
+            const remoteBarangays = ['Calao', 'Mabini', 'San Nicolas'];
+            if (remoteBarangays.includes(request.barangay)) {
+                score += config.location_rules['remote'] || 15;
+            } else {
+                score += config.location_rules['accessible'] || 5;
+            }
+
+            // 5. Crop type score (food security crops = higher priority)
+            if (request.crop_type === 'rice' || request.crop_type === 'corn') {
+                score += 10;
+            } else {
+                score += 5;
+            }
+
+            updates.push({ id: request.id, score });
+        }
+
+        // Sort by score to assign ranks
+        updates.sort((a, b) => b.score - a.score);
+
+        // Update database with scores and ranks
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            for (let i = 0; i < updates.length; i++) {
+                await client.query(`
+                    UPDATE farmer_requests
+                    SET priority_score = $1, priority_rank = $2, updated_at = NOW()
+                    WHERE id = $3
+                `, [updates[i].score, i + 1, updates[i].id]);
+            }
+
+            await client.query('COMMIT');
+
+            res.json({
+                message: 'Priority scores calculated successfully',
+                total_requests: updates.length,
+                config_used: config.config_name
+            });
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    } catch (error) {
+        console.error('Error calculating priorities:', error);
+        res.status(500).json({ error: 'Failed to calculate priorities', message: error.message });
+    }
+});
+
+// Get priority configuration
+app.get('/api/distribution/priority-config', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM priority_configurations WHERE is_active = TRUE LIMIT 1
+        `);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No active configuration found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching config:', error);
+        res.status(500).json({ error: 'Failed to fetch configuration', message: error.message });
+    }
+});
+
+// ==================== GAP ANALYSIS ====================
+
+// Get gap analysis for a season (compare estimation vs allocation vs requests)
+app.get('/api/distribution/gap-analysis/:season', async (req, res) => {
+    const { season } = req.params;
+
+    try {
+        // 1. Get allocation data
+        const allocationResult = await pool.query(`
+            SELECT * FROM regional_allocations WHERE season = $1
+        `, [season]);
+
+        if (allocationResult.rows.length === 0) {
+            return res.status(404).json({ error: 'No allocation found for this season' });
+        }
+
+        const allocation = allocationResult.rows[0];
+
+        // 2. Get total farmer requests
+        const requestsResult = await pool.query(`
+            SELECT 
+                COUNT(*) as total_requests,
+                SUM(CASE WHEN fertilizer_requested THEN 1 ELSE 0 END) as fertilizer_requests,
+                SUM(CASE WHEN seeds_requested THEN 1 ELSE 0 END) as seeds_requests,
+                SUM(farm_area_ha) as total_farm_area
+            FROM farmer_requests
+            WHERE season = $1
+        `, [season]);
+
+        const requests = requestsResult.rows[0];
+
+        // 3. Calculate estimated needs (area-based)
+        const totalArea = parseFloat(requests.total_farm_area) || 0;
+        const estimatedFertilizerKg = totalArea * 150; // 150 kg/ha standard rate
+        const estimatedFertilizerBags = Math.ceil(estimatedFertilizerKg / 50); // 50kg per bag
+
+        // Breakdown by type (based on typical distribution)
+        const estimatedUreaBags = Math.ceil(estimatedFertilizerBags * 0.55);
+        const estimatedComplete14Bags = Math.ceil(estimatedFertilizerBags * 0.30);
+        const estimatedComplete16Bags = Math.ceil(estimatedFertilizerBags * 0.05);
+        const estimatedAmSulBags = Math.ceil(estimatedFertilizerBags * 0.10);
+
+        // Seeds estimation
+        const estimatedRiceSeedsKg = totalArea * 0.70 * 120; // 70% rice, 120 kg/ha
+        const estimatedCornSeedsKg = totalArea * 0.30 * 20;  // 30% corn, 20 kg/ha
+
+        // 4. Calculate gaps
+        const fertilizerGap = {
+            urea: {
+                estimated: estimatedUreaBags,
+                allocated: allocation.urea_46_0_0_bags,
+                gap: allocation.urea_46_0_0_bags - estimatedUreaBags,
+                percentage: allocation.urea_46_0_0_bags > 0 ?
+                    ((allocation.urea_46_0_0_bags / estimatedUreaBags) * 100).toFixed(1) : 0
+            },
+            complete_14_14_14: {
+                estimated: estimatedComplete14Bags,
+                allocated: allocation.complete_14_14_14_bags,
+                gap: allocation.complete_14_14_14_bags - estimatedComplete14Bags,
+                percentage: allocation.complete_14_14_14_bags > 0 ?
+                    ((allocation.complete_14_14_14_bags / estimatedComplete14Bags) * 100).toFixed(1) : 0
+            },
+            complete_16_16_16: {
+                estimated: estimatedComplete16Bags,
+                allocated: allocation.complete_16_16_16_bags,
+                gap: allocation.complete_16_16_16_bags - estimatedComplete16Bags,
+                percentage: allocation.complete_16_16_16_bags > 0 ?
+                    ((allocation.complete_16_16_16_bags / estimatedComplete16Bags) * 100).toFixed(1) : 0
+            },
+            ammonium_sulfate: {
+                estimated: estimatedAmSulBags,
+                allocated: allocation.ammonium_sulfate_21_0_0_bags,
+                gap: allocation.ammonium_sulfate_21_0_0_bags - estimatedAmSulBags,
+                percentage: allocation.ammonium_sulfate_21_0_0_bags > 0 ?
+                    ((allocation.ammonium_sulfate_21_0_0_bags / estimatedAmSulBags) * 100).toFixed(1) : 0
+            }
+        };
+
+        const seedsGap = {
+            rice_seeds: {
+                estimated: Math.ceil(estimatedRiceSeedsKg),
+                allocated: allocation.rice_seeds_nsic_rc160_kg +
+                    allocation.rice_seeds_nsic_rc222_kg +
+                    allocation.rice_seeds_nsic_rc440_kg,
+                gap: (allocation.rice_seeds_nsic_rc160_kg +
+                    allocation.rice_seeds_nsic_rc222_kg +
+                    allocation.rice_seeds_nsic_rc440_kg) - estimatedRiceSeedsKg,
+                percentage: (allocation.rice_seeds_nsic_rc160_kg +
+                    allocation.rice_seeds_nsic_rc222_kg +
+                    allocation.rice_seeds_nsic_rc440_kg) > 0 ?
+                    (((allocation.rice_seeds_nsic_rc160_kg +
+                        allocation.rice_seeds_nsic_rc222_kg +
+                        allocation.rice_seeds_nsic_rc440_kg) / estimatedRiceSeedsKg) * 100).toFixed(1) : 0
+            },
+            corn_seeds: {
+                estimated: Math.ceil(estimatedCornSeedsKg),
+                allocated: allocation.corn_seeds_hybrid_kg + allocation.corn_seeds_opm_kg,
+                gap: (allocation.corn_seeds_hybrid_kg + allocation.corn_seeds_opm_kg) - estimatedCornSeedsKg,
+                percentage: (allocation.corn_seeds_hybrid_kg + allocation.corn_seeds_opm_kg) > 0 ?
+                    (((allocation.corn_seeds_hybrid_kg + allocation.corn_seeds_opm_kg) / estimatedCornSeedsKg) * 100).toFixed(1) : 0
+            }
+        };
+
+        res.json({
+            season,
+            allocation_date: allocation.allocation_date,
+            total_requests: parseInt(requests.total_requests),
+            total_farm_area_ha: parseFloat(requests.total_farm_area).toFixed(2),
+            fertilizer_gap: fertilizerGap,
+            seeds_gap: seedsGap,
+            summary: {
+                has_shortages: Object.values(fertilizerGap).some(f => f.gap < 0) ||
+                    Object.values(seedsGap).some(s => s.gap < 0),
+                prioritization_needed: Object.values(fertilizerGap).some(f => f.percentage < 100) ||
+                    Object.values(seedsGap).some(s => s.percentage < 100)
+            }
+        });
+    } catch (error) {
+        console.error('Error generating gap analysis:', error);
+        res.status(500).json({ error: 'Failed to generate gap analysis', message: error.message });
+    }
+});
+
+// ==================== DISTRIBUTION RECORDS ====================
+
+// Create distribution record (when farmer claims)
+app.post('/api/distribution/records', async (req, res) => {
+    const {
+        request_id,
+        fertilizer_type,
+        fertilizer_bags_given,
+        seed_type,
+        seed_kg_given,
+        voucher_code,
+        farmer_signature,
+        verified_by
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO distribution_records (
+                request_id, fertilizer_type, fertilizer_bags_given,
+                seed_type, seed_kg_given, voucher_code,
+                farmer_signature, verified_by, claimed, claim_date
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, TRUE, NOW()
+            )
+            RETURNING *
+        `, [
+            request_id, fertilizer_type, fertilizer_bags_given,
+            seed_type, seed_kg_given, voucher_code,
+            farmer_signature || false, verified_by
+        ]);
+
+        // Update request status to 'distributed'
+        await pool.query(`
+            UPDATE farmer_requests SET status = 'distributed', updated_at = NOW()
+            WHERE id = $1
+        `, [request_id]);
+
+        res.status(201).json({
+            message: 'Distribution recorded successfully',
+            record: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error recording distribution:', error);
+        res.status(500).json({ error: 'Failed to record distribution', message: error.message });
+    }
+});
+
+// Get distribution records for a season
+app.get('/api/distribution/records/:season', async (req, res) => {
+    const { season } = req.params;
+    try {
+        const result = await pool.query(`
+            SELECT 
+                dr.*,
+                fr.farmer_name,
+                fr.barangay,
+                fr.farm_area_ha
+            FROM distribution_records dr
+            JOIN farmer_requests fr ON dr.request_id = fr.id
+            WHERE fr.season = $1
+            ORDER BY dr.distribution_date DESC
+        `, [season]);
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching distribution records:', error);
+        res.status(500).json({ error: 'Failed to fetch records', message: error.message });
+    }
+});
+
+// ============================================================================
+
+// ============================================================================
 // CATCH-ALL ROUTE - MUST BE AFTER ALL API ENDPOINTS
 // ============================================================================
 
@@ -2561,7 +3154,7 @@ app.get('*', (req, res) => {
 // START SERVER - MUST BE LAST
 // ============================================================================
 app.listen(port, () => {
-    console.log(`Backend server listening on port ${port} `);
+    console.log(`Backend server listening on port ${port}`);
     console.log(`✅ All API endpoints registered successfully`);
     console.log(`✅ Land History API endpoints are active`);
 });

@@ -3,12 +3,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/jo css/JoLandrecStyle.css';
 import '../../assets/css/navigation/nav.css';
 import LogoImage from '../../assets/images/Logo.png';
+import DistributionIcon from '../../assets/images/distribution.png'
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
-import ApproveIcon from '../../assets/images/approve.png';
+import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
+import FarmerRequestIcon from '../../assets/images/request.png';
 
 interface TenantLessee {
     id: string;
@@ -387,12 +389,32 @@ const JoLandrecords: React.FC = () => {
                             <span className="nav-text">Incentives</span>
                         </button>
 
+                        <div
+                            className={`sidebar-nav-item ${isActive('/jo-regional-allocation') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-regional-allocation')}
+                        >
+                            <div className="nav-icon">
+                                <img src={DistributionIcon} alt="Distribution" />
+                            </div>
+                            <span className="nav-text">Regional Allocation</span>
+                        </div>
+
+                        <div
+                            className={`sidebar-nav-item ${isActive('/jo-farmer-requests') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-farmer-requests')}
+                        >
+                            <div className="nav-icon">
+                                <img src={FarmerRequestIcon} alt="FarmerRequest" />
+                            </div>
+                            <span className="nav-text">Farmer Request</span>
+                        </div>
+
                         <button
                             className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-masterlist')}
                         >
                             <span className="nav-icon">
-                                <img src={ApproveIcon} alt="Masterlist" />
+                                <img src={MasterlistIcon} alt="Masterlist" />
                             </span>
                             <span className="nav-text">Masterlist</span>
                         </button>

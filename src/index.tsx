@@ -17,6 +17,8 @@ import JoMasterlist from './screens/JO/JoMasterlist';
 import JoIncentives from './screens/JO/JoIncentives';
 import JoLandrecords from './screens/JO/JoLandrecords';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
+import JoRegionalAllocation from './screens/JO/JoRegionalAllocation';
+import JoFarmerRequests from './screens/JO/JoFarmerRequests';
 import './index.css'; // Tailwind CSS
 import "../src/assets/css/admin css/index.css";
 import './assets/css/mobile.css';
@@ -123,6 +125,16 @@ function App() {
                 <Route path="/jo-rsbsapage" element={
                     <ProtectedRoute>
                         <JoRsbsaPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-regional-allocation" element={
+                    <ProtectedRoute>
+                        <JoRegionalAllocation />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-farmer-requests" element={
+                    <ProtectedRoute>
+                        <JoFarmerRequests />
                     </ProtectedRoute>
                 } />
                 <Route path="*" element={<Navigate to="/" />} />

@@ -1,4 +1,4 @@
-C:\Users\dblaz\Research-Project\backend
+cd C:\Users\dblaz\Research-Project\backend
 node server.cjs
 5N6_OwcFp$r% - carson345@gmail.com
 1PR6n77h+p4M - becknyc467@gmail.com

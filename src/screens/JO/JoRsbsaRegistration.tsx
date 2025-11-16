@@ -146,9 +146,9 @@ const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab] = useState('overview');
+  const [_activeTab] = useState('overview');
   const isActive = (path: string) => location.pathname === path;
-  const [draftId, setDraftId] = useState<string | null>(null);
+  const [draftId, _setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [landowners, setLandowners] = useState<LandOwner[]>([]);
 
@@ -246,33 +246,6 @@ const JoRsbsa: React.FC = () => {
     });
     // clear parcel-related errors when user edits parcels
     setErrors(prev => ({ ...prev, farmland: '' }));
-  };
-
-  // Handler for parcel text field blur (Title Case formatting)
-  const handleParcelTextBlur = (idx: number, field: keyof Parcel) => {
-    const value = formData.farmlandParcels[idx][field];
-    if (typeof value === 'string' && value.trim()) {
-      const formatted = toTitleCase(value);
-      setFormData(prev => {
-        const parcels = [...prev.farmlandParcels];
-        parcels[idx] = { ...parcels[idx], [field]: formatted };
-        return { ...prev, farmlandParcels: parcels };
-      });
-    }
-  };
-
-  const toggleParcelBool = (idx: number, field: keyof Parcel) => {
-    setFormData(prev => {
-      const parcels = [...prev.farmlandParcels];
-      parcels[idx] = {
-        ...parcels[idx],
-        ownershipTypeRegisteredOwner: field === 'ownershipTypeRegisteredOwner' ? !parcels[idx].ownershipTypeRegisteredOwner : false,
-        ownershipTypeTenant: field === 'ownershipTypeTenant' ? !parcels[idx].ownershipTypeTenant : false,
-        ownershipTypeLessee: field === 'ownershipTypeLessee' ? !parcels[idx].ownershipTypeLessee : false,
-        ownershipTypeOthers: field === 'ownershipTypeOthers' ? !parcels[idx].ownershipTypeOthers : false,
-      };
-      return { ...prev, farmlandParcels: parcels };
-    });
   };
 
   const toggleBool = (field: keyof FormData) => {
