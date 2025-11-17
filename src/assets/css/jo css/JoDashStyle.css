@@ -7,6 +7,58 @@
     margin-bottom: 22px;
 }
 
+/* Quick Access Section */
+.quick-access-section {
+    margin-bottom: 2rem;
+}
+
+.quick-access-section h3 {
+    color: #2c5f2d;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.quick-access-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.access-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.access-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    border-color: #2c5f2d;
+}
+
+.access-card .card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.access-card h4 {
+    color: #2c5f2d;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.access-card p {
+    color: #666;
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
 .jo-map-layout .map-area {
     position: relative;
     height: calc(100vh - 140px);

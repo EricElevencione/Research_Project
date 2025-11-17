@@ -188,6 +188,22 @@ const JoRegionalAllocation: React.FC = () => {
                         <span className="nav-text">Farmer Request</span>
                     </div>
 
+                    <div
+                        className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
+                        onClick={() => navigate('/jo-gap-analysis')}
+                    >
+                        <div className="nav-icon">📊</div>
+                        <span className="nav-text">Gap Analysis</span>
+                    </div>
+
+                    <div
+                        className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
+                        onClick={() => navigate('/jo-distribution')}
+                    >
+                        <div className="nav-icon">🚚</div>
+                        <span className="nav-text">Distribution Log</span>
+                    </div>
+
                     <button
                         className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
                         onClick={() => navigate('/jo-masterlist')}

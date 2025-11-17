@@ -82,6 +82,22 @@ const JoDashboard: React.FC = () => {
                             <span className="nav-text">Farmer Request</span>
                         </div>
 
+                        <div
+                            className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-gap-analysis')}
+                        >
+                            <div className="nav-icon">📊</div>
+                            <span className="nav-text">Gap Analysis</span>
+                        </div>
+
+                        <div
+                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-distribution')}
+                        >
+                            <div className="nav-icon">🚚</div>
+                            <span className="nav-text">Distribution Log</span>
+                        </div>
+
                         <button
                             className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-masterlist')}
@@ -118,6 +134,33 @@ const JoDashboard: React.FC = () => {
                 {/* Main content starts here */}
                 <div className="main-content jo-map-layout">
                     <h2>Dashboard</h2>
+
+                    {/* Distribution System Quick Access */}
+                    <div className="quick-access-section">
+                        <h3>Distribution Management System</h3>
+                        <div className="quick-access-cards">
+                            <div className="access-card" onClick={() => navigate('/jo-regional-allocation')}>
+                                <div className="card-icon">📦</div>
+                                <h4>Regional Allocation</h4>
+                                <p>Input fertilizer & seed allocation from Regional Office</p>
+                            </div>
+                            <div className="access-card" onClick={() => navigate('/jo-farmer-requests')}>
+                                <div className="card-icon">📋</div>
+                                <h4>Farmer Requests</h4>
+                                <p>Record farmer requests & view priority rankings</p>
+                            </div>
+                            <div className="access-card" onClick={() => navigate('/jo-gap-analysis')}>
+                                <div className="card-icon">📊</div>
+                                <h4>Gap Analysis</h4>
+                                <p>Compare supply vs demand to identify shortages</p>
+                            </div>
+                            <div className="access-card" onClick={() => navigate('/jo-distribution')}>
+                                <div className="card-icon">🚚</div>
+                                <h4>Distribution Log</h4>
+                                <p>Track actual distribution to farmers</p>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="map-area">
                         <FarmlandMap />

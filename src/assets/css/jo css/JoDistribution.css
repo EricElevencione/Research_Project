@@ -1,0 +1,300 @@
+/* Distribution Container */
+.distribution-container {
+    display: flex;
+    height: 100vh;
+    background-color: #f5f5f5;
+}
+
+/* Main Content */
+.distribution-main-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+/* Content Header */
+.distribution-content-header {
+    margin-bottom: 2rem;
+}
+
+.distribution-content-header h2 {
+    color: #2c5f2d;
+    margin-bottom: 0.5rem;
+}
+
+.distribution-content-header p {
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+/* View Toggle */
+.view-toggle {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.toggle-btn {
+    padding: 0.75rem 1.5rem;
+    background-color: white;
+    color: #2c5f2d;
+    border: 2px solid #2c5f2d;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.toggle-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.toggle-btn.active {
+    background-color: #2c5f2d;
+    color: white;
+}
+
+/* Success Message */
+.distribution-success-message {
+    padding: 1rem;
+    background-color: #d4edda;
+    color: #155724;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #c3e6cb;
+}
+
+/* Form */
+.distribution-form {
+    max-width: 1200px;
+}
+
+/* Card Styles */
+.distribution-card {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.distribution-card h3 {
+    margin-bottom: 1rem;
+    color: #2c5f2d;
+}
+
+.help-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+/* Request Selector */
+.request-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.request-selector label {
+    font-weight: 600;
+    color: #333;
+}
+
+.request-selector select {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+/* Form Grid */
+.distribution-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+/* Form Field */
+.distribution-form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.distribution-form-field label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.distribution-form-field input,
+.distribution-form-field select,
+.distribution-form-field textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.distribution-form-field input:disabled {
+    background-color: #f5f5f5;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.distribution-form-field input:focus,
+.distribution-form-field select:focus,
+.distribution-form-field textarea:focus {
+    outline: none;
+    border-color: #2c5f2d;
+}
+
+.distribution-form-field textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* Total Summary */
+.distribution-total-summary {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* Button Container */
+.distribution-button-container {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+/* Buttons */
+.distribution-btn {
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.distribution-btn-submit {
+    background-color: #2c5f2d;
+    color: white;
+}
+
+.distribution-btn-submit:hover:not(:disabled) {
+    background-color: #1e4620;
+}
+
+.distribution-btn-submit:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.distribution-btn-cancel {
+    background-color: #6c757d;
+    color: white;
+}
+
+.distribution-btn-cancel:hover {
+    background-color: #5a6268;
+}
+
+/* List Controls */
+.list-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.list-controls .distribution-form-field {
+    flex: 0 0 250px;
+}
+
+/* Distributions Table */
+.distributions-table-container {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.distributions-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.distributions-table thead {
+    background-color: #2c5f2d;
+    color: white;
+}
+
+.distributions-table th,
+.distributions-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.distributions-table th {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.distributions-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.distributions-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .distribution-main-content {
+        padding: 1rem;
+    }
+
+    .distribution-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .view-toggle {
+        flex-direction: column;
+    }
+
+    .list-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .list-controls .distribution-form-field {
+        flex: 1;
+    }
+
+    .distributions-table-container {
+        overflow-x: auto;
+    }
+
+    .distributions-table {
+        min-width: 800px;
+    }
+
+    .distribution-button-container {
+        flex-direction: column;
+    }
+
+    .distribution-btn {
+        width: 100%;
+    }
+}

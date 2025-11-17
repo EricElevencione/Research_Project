@@ -3,12 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import '../../assets/css/jo css/JoRsbsaPageStyle.css';
 import '../../assets/css/navigation/nav.css';
 import LogoImage from '../../assets/images/Logo.png';
+import DistributionIcon from '../../assets/images/distribution.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
-import ApproveIcon from '../../assets/images/approve.png';
+import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
+import FarmerRequestIcon from '../../assets/images/request.png';
 
 interface Parcel {
   parcelNo: string;
@@ -610,6 +612,7 @@ const JoRsbsa: React.FC = () => {
 
       <div className="page">
 
+        {/* Sidebar starts here */}
         <div className="sidebar">
           <nav className="sidebar-nav">
             <div className='sidebar-logo'>
@@ -627,8 +630,8 @@ const JoRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/jo-rsbsa') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-rsbsa')}
+              className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-rsbsapage')}
             >
               <span className="nav-icon">
                 <img src={RSBSAIcon} alt="RSBSA" />
@@ -646,12 +649,48 @@ const JoRsbsa: React.FC = () => {
               <span className="nav-text">Incentives</span>
             </button>
 
+            <div
+              className={`sidebar-nav-item ${isActive('/jo-regional-allocation') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-regional-allocation')}
+            >
+              <div className="nav-icon">
+                <img src={DistributionIcon} alt="Distribution" />
+              </div>
+              <span className="nav-text">Regional Allocation</span>
+            </div>
+
+            <div
+              className={`sidebar-nav-item ${isActive('/jo-farmer-requests') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-farmer-requests')}
+            >
+              <div className="nav-icon">
+                <img src={FarmerRequestIcon} alt="FarmerRequest" />
+              </div>
+              <span className="nav-text">Farmer Request</span>
+            </div>
+
+            <div
+              className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-gap-analysis')}
+            >
+              <div className="nav-icon">📊</div>
+              <span className="nav-text">Gap Analysis</span>
+            </div>
+
+            <div
+              className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-distribution')}
+            >
+              <div className="nav-icon">🚚</div>
+              <span className="nav-text">Distribution Log</span>
+            </div>
+
             <button
               className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
               onClick={() => navigate('/jo-masterlist')}
             >
               <span className="nav-icon">
-                <img src={ApproveIcon} alt="Incentives" />
+                <img src={MasterlistIcon} alt="Masterlist" />
               </span>
               <span className="nav-text">Masterlist</span>
             </button>
@@ -675,7 +714,6 @@ const JoRsbsa: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
           </nav>
         </div>
         {/* Sidebar ends here */}
