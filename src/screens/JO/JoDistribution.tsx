@@ -419,7 +419,7 @@ const JoDistribution: React.FC = () => {
                                     <p className="help-text">Adjust quantities if partial distribution</p>
                                     <div className="distribution-form-grid">
                                         <div className="distribution-form-field">
-                                            <label>Urea (46-0-0)</label>
+                                            <label>Euria</label>
                                             <input
                                                 type="number"
                                                 name="urea_46_0_0_bags"
@@ -429,7 +429,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Complete (14-14-14)</label>
+                                            <label>4600</label>
                                             <input
                                                 type="number"
                                                 name="complete_14_14_14_bags"
@@ -439,7 +439,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Complete (16-16-16)</label>
+                                            <label>141414</label>
                                             <input
                                                 type="number"
                                                 name="complete_16_16_16_bags"
@@ -449,7 +449,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Ammonium Sulfate (21-0-0)</label>
+                                            <label>0060</label>
                                             <input
                                                 type="number"
                                                 name="ammonium_sulfate_21_0_0_bags"
@@ -459,7 +459,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Ammonium Phosphate (16-20-0)</label>
+                                            <label>Other Fertilizer 1</label>
                                             <input
                                                 type="number"
                                                 name="ammonium_phosphate_16_20_0_bags"
@@ -469,7 +469,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Muriate of Potash (0-0-60)</label>
+                                            <label>Other Fertilizer 2</label>
                                             <input
                                                 type="number"
                                                 name="muriate_potash_0_0_60_bags"
@@ -490,7 +490,7 @@ const JoDistribution: React.FC = () => {
                                     <p className="help-text">Adjust quantities if partial distribution</p>
                                     <div className="distribution-form-grid">
                                         <div className="distribution-form-field">
-                                            <label>Rice Seeds (NSIC Rc160)</label>
+                                            <label>Jackpot</label>
                                             <input
                                                 type="number"
                                                 name="rice_seeds_nsic_rc160_kg"
@@ -501,7 +501,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Rice Seeds (NSIC Rc222)</label>
+                                            <label>US88</label>
                                             <input
                                                 type="number"
                                                 name="rice_seeds_nsic_rc222_kg"
@@ -512,7 +512,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Rice Seeds (NSIC Rc440)</label>
+                                            <label>TH82</label>
                                             <input
                                                 type="number"
                                                 name="rice_seeds_nsic_rc440_kg"
@@ -523,7 +523,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Corn Seeds (Hybrid)</label>
+                                            <label>RH9000</label>
                                             <input
                                                 type="number"
                                                 name="corn_seeds_hybrid_kg"
@@ -534,7 +534,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Corn Seeds (OPM)</label>
+                                            <label>Lumping143</label>
                                             <input
                                                 type="number"
                                                 name="corn_seeds_opm_kg"
@@ -545,7 +545,7 @@ const JoDistribution: React.FC = () => {
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Vegetable Seeds</label>
+                                            <label>LP296</label>
                                             <input
                                                 type="number"
                                                 name="vegetable_seeds_kg"

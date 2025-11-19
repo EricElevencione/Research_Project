@@ -301,12 +301,12 @@ const JoGapAnalysis: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {renderGapRow('Urea (46-0-0)', gapData.fertilizers.urea_46_0_0, 'bags')}
-                                        {renderGapRow('Complete (14-14-14)', gapData.fertilizers.complete_14_14_14, 'bags')}
-                                        {renderGapRow('Complete (16-16-16)', gapData.fertilizers.complete_16_16_16, 'bags')}
-                                        {renderGapRow('Ammonium Sulfate (21-0-0)', gapData.fertilizers.ammonium_sulfate_21_0_0, 'bags')}
-                                        {renderGapRow('Ammonium Phosphate (16-20-0)', gapData.fertilizers.ammonium_phosphate_16_20_0, 'bags')}
-                                        {renderGapRow('Muriate of Potash (0-0-60)', gapData.fertilizers.muriate_potash_0_0_60, 'bags')}
+                                        {renderGapRow('Euria', gapData.fertilizers.urea_46_0_0, 'bags')}
+                                        {renderGapRow('4600', gapData.fertilizers.complete_14_14_14, 'bags')}
+                                        {renderGapRow('141414', gapData.fertilizers.complete_16_16_16, 'bags')}
+                                        {renderGapRow('0060', gapData.fertilizers.ammonium_sulfate_21_0_0, 'bags')}
+                                        {renderGapRow('Other Fertilizer 1', gapData.fertilizers.ammonium_phosphate_16_20_0, 'bags')}
+                                        {renderGapRow('Other Fertilizer 2', gapData.fertilizers.muriate_potash_0_0_60, 'bags')}
                                     </tbody>
                                 </table>
                             </div>
@@ -328,12 +328,12 @@ const JoGapAnalysis: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {renderGapRow('Rice Seeds (NSIC Rc160)', gapData.seeds.rice_nsic_rc160, 'kg')}
-                                        {renderGapRow('Rice Seeds (NSIC Rc222)', gapData.seeds.rice_nsic_rc222, 'kg')}
-                                        {renderGapRow('Rice Seeds (NSIC Rc440)', gapData.seeds.rice_nsic_rc440, 'kg')}
-                                        {renderGapRow('Corn Seeds (Hybrid)', gapData.seeds.corn_hybrid, 'kg')}
-                                        {renderGapRow('Corn Seeds (OPM)', gapData.seeds.corn_opm, 'kg')}
-                                        {renderGapRow('Vegetable Seeds', gapData.seeds.vegetable, 'kg')}
+                                        {renderGapRow('Jackpot', gapData.seeds.rice_nsic_rc160, 'kg')}
+                                        {renderGapRow('US88', gapData.seeds.rice_nsic_rc222, 'kg')}
+                                        {renderGapRow('TH82', gapData.seeds.rice_nsic_rc440, 'kg')}
+                                        {renderGapRow('RH9000', gapData.seeds.corn_hybrid, 'kg')}
+                                        {renderGapRow('Lumping143', gapData.seeds.corn_opm, 'kg')}
+                                        {renderGapRow('LP296', gapData.seeds.vegetable, 'kg')}
                                     </tbody>
                                 </table>
                             </div>
