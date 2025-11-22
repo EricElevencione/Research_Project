@@ -2138,6 +2138,123 @@ app.get('/api/land-history/quality-check', async (req, res) => {
 });
 
 // ============================================================================
+// 11. SEARCH LAND HISTORY BY FARMER NAME AND LOCATION (for map popup)
+// ============================================================================
+// GET /api/land_rights_history?surname=&firstName=&barangay=
+// GET /api/land_rights_history?farmer_name=&barangay=
+// Returns land history records matching farmer name and barangay for map popup display
+app.get('/api/land_rights_history', async (req, res) => {
+    try {
+        const { surname, firstName, barangay, farmer_name } = req.query;
+
+        console.log('Land rights history query:', { surname, firstName, barangay, farmer_name });
+
+        let query;
+        let params;
+
+        if (surname && firstName && barangay) {
+            // Query by surname, firstName, and barangay
+            query = `
+                SELECT 
+                    lh.id,
+                    lh.farm_parcel_id,
+                    lh.parcel_number,
+                    lh.farm_location_barangay,
+                    lh.farm_location_municipality,
+                    lh.total_farm_area_ha,
+                    lh.land_owner_name,
+                    lh.farmer_name,
+                    lh.is_registered_owner,
+                    lh.is_tenant,
+                    lh.is_lessee,
+                    lh.ownership_document_type,
+                    lh.ownership_document_no,
+                    lh.change_type,
+                    lh.change_reason,
+                    lh.period_start_date,
+                    lh.period_end_date,
+                    lh.is_current,
+                    lh.created_at as changed_at,
+                    TO_CHAR(lh.period_start_date, 'Mon DD, YYYY') as formatted_start_date,
+                    TO_CHAR(lh.period_end_date, 'Mon DD, YYYY') as formatted_end_date,
+                    TO_CHAR(lh.created_at, 'Mon DD, YYYY HH24:MI') as formatted_changed_at,
+                    CASE 
+                        WHEN lh.is_registered_owner THEN 'Owner'
+                        WHEN lh.is_tenant THEN 'Tenant'
+                        WHEN lh.is_lessee THEN 'Lessee'
+                        ELSE 'Other'
+                    END as ownership_status
+                FROM land_history lh
+                WHERE (
+                    lh.farmer_name ILIKE $1 || '%' || $2 || '%'
+                    OR lh.land_owner_name ILIKE $1 || '%' || $2 || '%'
+                )
+                AND lh.farm_location_barangay ILIKE $3
+                ORDER BY lh.period_start_date DESC, lh.created_at DESC
+            `;
+            params = [surname, firstName, barangay];
+        } else if (farmer_name && barangay) {
+            // Query by full farmer_name and barangay
+            query = `
+                SELECT 
+                    lh.id,
+                    lh.farm_parcel_id,
+                    lh.parcel_number,
+                    lh.farm_location_barangay,
+                    lh.farm_location_municipality,
+                    lh.total_farm_area_ha,
+                    lh.land_owner_name,
+                    lh.farmer_name,
+                    lh.is_registered_owner,
+                    lh.is_tenant,
+                    lh.is_lessee,
+                    lh.ownership_document_type,
+                    lh.ownership_document_no,
+                    lh.change_type,
+                    lh.change_reason,
+                    lh.period_start_date,
+                    lh.period_end_date,
+                    lh.is_current,
+                    lh.created_at as changed_at,
+                    TO_CHAR(lh.period_start_date, 'Mon DD, YYYY') as formatted_start_date,
+                    TO_CHAR(lh.period_end_date, 'Mon DD, YYYY') as formatted_end_date,
+                    TO_CHAR(lh.created_at, 'Mon DD, YYYY HH24:MI') as formatted_changed_at,
+                    CASE 
+                        WHEN lh.is_registered_owner THEN 'Owner'
+                        WHEN lh.is_tenant THEN 'Tenant'
+                        WHEN lh.is_lessee THEN 'Lessee'
+                        ELSE 'Other'
+                    END as ownership_status
+                FROM land_history lh
+                WHERE (
+                    lh.farmer_name ILIKE '%' || $1 || '%'
+                    OR lh.land_owner_name ILIKE '%' || $1 || '%'
+                )
+                AND lh.farm_location_barangay ILIKE $2
+                ORDER BY lh.period_start_date DESC, lh.created_at DESC
+            `;
+            params = [farmer_name, barangay];
+        } else {
+            return res.status(400).json({
+                error: 'Invalid query parameters',
+                message: 'Provide either (surname, firstName, barangay) or (farmer_name, barangay)'
+            });
+        }
+
+        const result = await pool.query(query, params);
+
+        console.log(`Found ${result.rows.length} land history records`);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching land rights history:', error);
+        res.status(500).json({
+            error: 'Failed to fetch land rights history',
+            details: error.message
+        });
+    }
+});
+
+// ============================================================================
 // END OF LAND HISTORY API ENDPOINTS
 // ============================================================================
 

@@ -148,11 +148,11 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
 
     const getChoroplethColor = (value: number) => {
         return value > 20 ? '#14532d'
-             : value > 10 ? '#166534'
-             : value > 5  ? '#16a34a'
-             : value > 2  ? '#22c55e'
-             : value > 0  ? '#86efac'
-                          : '#d1fae5';
+            : value > 10 ? '#166534'
+                : value > 5 ? '#16a34a'
+                    : value > 2 ? '#22c55e'
+                        : value > 0 ? '#86efac'
+                            : '#d1fae5';
     };
 
     const choroplethStyle = (feature: any) => {
@@ -306,52 +306,96 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                                     // Debug: Log all available properties
                                     console.log('Feature properties:', JSON.stringify(feature.properties, null, 2));
                                     console.log('Available property keys:', Object.keys(feature.properties));
-                                    
+
                                     // Create a unique key for this feature based on farmer name and location
                                     const farmerName = [feature.properties.surname, feature.properties.firstName, feature.properties.middleName].filter(Boolean).join(' ');
                                     const location = feature.properties.barangay || '';
                                     const featureKey = `${farmerName}-${location}`;
-                                    
+
                                     console.log('Map click - featureKey:', featureKey, 'farmerName:', farmerName);
-                                    
-                                    // Initial popup content
-                                    let popupContent = `<div class="land-plot-popup">
-                                        <table>
-                                            <tr><th>Field</th><th>Value</th></tr>
-                                            <tr><td><b>Name:</b></td><td>${farmerName || 'N/A'}</td></tr>
-                                            <tr><td><b>Municipality:</b></td><td>${feature.properties.municipality || 'N/A'}</td></tr>
-                                            <tr><td><b>Barangay:</b></td><td>${location || 'N/A'}</td></tr>
-                                            <tr><td><b>History:</b></td><td id="history-cell-${featureKey}">Loading...</td></tr>
+
+                                    // Initial popup content with improved CSS
+                                    let popupContent = `<div class="land-plot-popup" style="min-width: 320px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+                                            <tr style="background: #f8f9fa;">
+                                                <th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057; width: 35%;">Field</th>
+                                                <th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Value</th>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6; font-weight: 500;">Name:</td>
+                                                <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6;">${farmerName || 'N/A'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6; font-weight: 500;">Municipality:</td>
+                                                <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6;">${feature.properties.municipality || 'N/A'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6; font-weight: 500;">Barangay:</td>
+                                                <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6;">${location || 'N/A'}</td>
+                                            </tr>
                                         </table>
+                                        <div style="border-top: 2px solid #28a745; padding-top: 8px;">
+                                            <div style="font-weight: 600; color: #28a745; margin-bottom: 6px; font-size: 0.9em;">📜 Land History</div>
+                                            <div id="history-cell-${featureKey}" style="color: #6c757d; font-style: italic;">Loading...</div>
+                                        </div>
                                     </div>`;
-                                    layer.bindPopup(popupContent);
+                                    layer.bindPopup(popupContent, { maxWidth: 600, maxHeight: 500 });
 
                                     layer.on({
                                         click: async () => {
                                             if (onLandPlotSelect) {
                                                 onLandPlotSelect(feature.properties);
                                             }
-                                            
+
                                             const surname = feature.properties.surname || '';
                                             const firstName = feature.properties.firstName || '';
                                             // Try to fetch history by surname, firstName, and barangay
                                             console.log('Fetching history for:', { surname, firstName, barangay: location });
                                             const history = await fetchHistoryByFarmer(farmerName, location, surname, firstName);
                                             setHistoryMap(prev => ({ ...prev, [featureKey]: history }));
-                                            
+
                                             setTimeout(() => {
                                                 const cell = document.getElementById(`history-cell-${featureKey}`);
                                                 if (cell) {
                                                     if (history.length === 0) {
-                                                        cell.innerHTML = '<span style="color:#888">No history found for this farmer.</span>';
+                                                        cell.innerHTML = '<div style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No land history records found.</div>';
                                                     } else {
-                                                        let html = `<div style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; background: white;">`;
-                                                        html += `<table class='history-table' style='width:100%;font-size:0.8em;'>`;
-                                                        html += `<tr><th style="position: sticky; top: 0; background: #6c757d; color: white; padding: 4px 6px; font-size: 0.75em;">Date of Change</th></tr>`;
-                                                        history.forEach((entry: any) => {
-                                                            html += `<tr><td style="padding: 4px 6px; border-bottom: 1px solid #dee2e6;">${entry.changed_at ? new Date(entry.changed_at).toLocaleDateString() : ''}</td></tr>`;
+                                                        let html = `<div style="max-height: 350px; overflow-y: auto; overflow-x: auto; border: 1px solid #dee2e6; border-radius: 6px; background: white;">`;
+                                                        html += `<table style='width: 100%; min-width: 500px; font-size: 0.75em; border-collapse: collapse;'>`;
+                                                        html += `<thead><tr style="position: sticky; top: 0; background: #28a745; color: white; z-index: 10;">
+                                                            <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #1e7e34; white-space: nowrap;">Period</th>
+                                                            <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #1e7e34;">Status</th>
+                                                            <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #1e7e34;">Owner</th>
+                                                            <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #1e7e34;">Document</th>
+                                                        </tr></thead><tbody>`;
+
+                                                        history.forEach((entry: any, index: number) => {
+                                                            const bgColor = index % 2 === 0 ? '#f8f9fa' : 'white';
+                                                            const statusColor = entry.is_current ? '#28a745' :
+                                                                entry.ownership_status === 'Owner' ? '#007bff' :
+                                                                    entry.ownership_status === 'Tenant' ? '#ffc107' : '#6c757d';
+                                                            const startDate = entry.formatted_start_date || 'Unknown';
+                                                            const endDate = entry.is_current ? 'Present' : (entry.formatted_end_date || 'Unknown');
+                                                            const owner = entry.land_owner_name || 'N/A';
+                                                            const docType = entry.ownership_document_type || 'N/A';
+                                                            const docNo = entry.ownership_document_no ? ` #${entry.ownership_document_no}` : '';
+
+                                                            html += `<tr style="background: ${bgColor};">
+                                                                <td style="padding: 8px 10px; border-bottom: 1px solid #dee2e6; white-space: nowrap;">${startDate} - ${endDate}</td>
+                                                                <td style="padding: 8px 10px; border-bottom: 1px solid #dee2e6;">
+                                                                    <span style="display: inline-block; background: ${statusColor}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 600;">
+                                                                        ${entry.ownership_status}${entry.is_current ? ' ✓' : ''}
+                                                                    </span>
+                                                                </td>
+                                                                <td style="padding: 8px 10px; border-bottom: 1px solid #dee2e6;">${owner}</td>
+                                                                <td style="padding: 8px 10px; border-bottom: 1px solid #dee2e6; font-size: 0.85em; color: #495057;">${docType}${docNo}</td>
+                                                            </tr>`;
                                                         });
-                                                        html += `</table></div>`;
+                                                        html += `</tbody></table></div>`;
+                                                        html += `<div style="margin-top: 8px; padding: 8px 10px; background: linear-gradient(135deg, #e7f3ff 0%, #d4edff 100%); border-radius: 6px; font-size: 0.75em; color: #004085; border: 1px solid #b8daff;">
+                                                            <span style="font-weight: 600;">📋 Total Records:</span> ${history.length} | 
+                                                            <span style="font-weight: 600;">✓ Current:</span> ${history.filter((h: any) => h.is_current).length}
+                                                        </div>`;
                                                         cell.innerHTML = html;
                                                     }
                                                 }
@@ -368,9 +412,11 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                     <LayersControl.Overlay checked name="Hovered Parcel">
                         <GeoJSON
                             key="highlight-geometry"
-                            data={{ type: 'FeatureCollection', features: [
-                                { type: 'Feature', geometry: highlightGeometry, properties: {} }
-                            ] } as any}
+                            data={{
+                                type: 'FeatureCollection', features: [
+                                    { type: 'Feature', geometry: highlightGeometry, properties: {} }
+                                ]
+                            } as any}
                             style={() => ({ color: '#e74c3c', weight: 3, opacity: 1, fillOpacity: 0.2 })}
                         />
                     </LayersControl.Overlay>
@@ -422,52 +468,96 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                             // Debug: Log all available properties
                             console.log('Feature properties:', JSON.stringify(feature.properties, null, 2));
                             console.log('Available property keys:', Object.keys(feature.properties));
-                            
+
                             // Create a unique key for this feature based on farmer name and location
                             const farmerName = [feature.properties.surname, feature.properties.firstName, feature.properties.middleName].filter(Boolean).join(' ');
                             const location = feature.properties.barangay || '';
                             const featureKey = `${farmerName}-${location}`;
-                            
+
                             console.log('Map click - featureKey:', featureKey, 'farmerName:', farmerName);
-                            
-                            // Initial popup content
-                            let popupContent = `<div class="land-plot-popup">
-                                <table>
-                                    <tr><th>Field</th><th>Value</th></tr>
-                                    <tr><td><b>Name:</b></td><td>${farmerName || 'N/A'}</td></tr>
-                                    <tr><td><b>Municipality:</b></td><td>${feature.properties.municipality || 'N/A'}</td></tr>
-                                    <tr><td><b>Barangay:</b></td><td>${location || 'N/A'}</td></tr>
-                                    <tr><td><b>History:</b></td><td id="history-cell-${featureKey}">Loading...</td></tr>
+
+                            // Initial popup content with improved CSS
+                            let popupContent = `<div class="land-plot-popup" style="min-width: 320px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+                                    <tr style="background: #f8f9fa;">
+                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057; width: 35%;">Field</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Value</th>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6; font-weight: 500;">Name:</td>
+                                        <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6;">${farmerName || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6; font-weight: 500;">Municipality:</td>
+                                        <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6;">${feature.properties.municipality || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6; font-weight: 500;">Barangay:</td>
+                                        <td style="padding: 6px 8px; border-bottom: 1px solid #dee2e6;">${location || 'N/A'}</td>
+                                    </tr>
                                 </table>
+                                <div style="border-top: 2px solid #28a745; padding-top: 8px;">
+                                    <div style="font-weight: 600; color: #28a745; margin-bottom: 6px; font-size: 0.9em;">📜 Land History</div>
+                                    <div id="history-cell-${featureKey}" style="color: #6c757d; font-style: italic;">Loading...</div>
+                                </div>
                             </div>`;
-                            layer.bindPopup(popupContent);
+                            layer.bindPopup(popupContent, { maxWidth: 600, maxHeight: 500 });
 
                             layer.on({
                                 click: async () => {
                                     if (onLandPlotSelect) {
                                         onLandPlotSelect(feature.properties);
                                     }
-                                    
+
                                     const surname = feature.properties.surname || '';
                                     const firstName = feature.properties.firstName || '';
                                     // Try to fetch history by surname, firstName, and barangay
                                     console.log('Fetching history for:', { surname, firstName, barangay: location });
                                     const history = await fetchHistoryByFarmer(farmerName, location, surname, firstName);
                                     setHistoryMap(prev => ({ ...prev, [featureKey]: history }));
-                                    
+
                                     setTimeout(() => {
                                         const cell = document.getElementById(`history-cell-${featureKey}`);
                                         if (cell) {
                                             if (history.length === 0) {
-                                                cell.innerHTML = '<span style="color:#888">No history found for this farmer.</span>';
+                                                cell.innerHTML = '<div style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No land history records found.</div>';
                                             } else {
-                                                let html = `<div style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; background: white;">`;
-                                                html += `<table class='history-table' style='width:100%;font-size:0.8em;'>`;
-                                                html += `<tr><th style="position: sticky; top: 0; background: #6c757d; color: white; padding: 4px 6px; font-size: 0.75em;">Date of Change</th></tr>`;
-                                                history.forEach((entry: any) => {
-                                                    html += `<tr><td style="padding: 4px 6px; border-bottom: 1px solid #dee2e6;">${entry.changed_at ? new Date(entry.changed_at).toLocaleDateString() : ''}</td></tr>`;
+                                                let html = `<div style="max-height: 350px; overflow-y: auto; overflow-x: auto; border: 1px solid #dee2e6; border-radius: 6px; background: white;">`;
+                                                html += `<table style='width: 100%; min-width: 500px; font-size: 0.75em; border-collapse: collapse;'>`;
+                                                html += `<thead><tr style="position: sticky; top: 0; background: #28a745; color: white; z-index: 10;">
+                                                    <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #1e7e34; white-space: nowrap;">Period</th>
+                                                    <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #1e7e34;">Status</th>
+                                                    <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #1e7e34;">Owner</th>
+                                                    <th style="padding: 8px 10px; text-align: left; border-bottom: 2px solid #1e7e34;">Document</th>
+                                                </tr></thead><tbody>`;
+
+                                                history.forEach((entry: any, index: number) => {
+                                                    const bgColor = index % 2 === 0 ? '#f8f9fa' : 'white';
+                                                    const statusColor = entry.is_current ? '#28a745' :
+                                                        entry.ownership_status === 'Owner' ? '#007bff' :
+                                                            entry.ownership_status === 'Tenant' ? '#ffc107' : '#6c757d';
+                                                    const startDate = entry.formatted_start_date || 'Unknown';
+                                                    const endDate = entry.is_current ? 'Present' : (entry.formatted_end_date || 'Unknown');
+                                                    const owner = entry.land_owner_name || 'N/A';
+                                                    const docType = entry.ownership_document_type || 'N/A';
+                                                    const docNo = entry.ownership_document_no ? ` #${entry.ownership_document_no}` : '';
+
+                                                    html += `<tr style="background: ${bgColor};">
+                                                        <td style="padding: 8px 10px; border-bottom: 1px solid #dee2e6; white-space: nowrap;">${startDate} - ${endDate}</td>
+                                                        <td style="padding: 8px 10px; border-bottom: 1px solid #dee2e6;">
+                                                            <span style="display: inline-block; background: ${statusColor}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 600;">
+                                                                ${entry.ownership_status}${entry.is_current ? ' ✓' : ''}
+                                                            </span>
+                                                        </td>
+                                                        <td style="padding: 8px 10px; border-bottom: 1px solid #dee2e6;">${owner}</td>
+                                                        <td style="padding: 8px 10px; border-bottom: 1px solid #dee2e6; font-size: 0.85em; color: #495057;">${docType}${docNo}</td>
+                                                    </tr>`;
                                                 });
-                                                html += `</table></div>`;
+                                                html += `</tbody></table></div>`;
+                                                html += `<div style="margin-top: 8px; padding: 8px 10px; background: linear-gradient(135deg, #e7f3ff 0%, #d4edff 100%); border-radius: 6px; font-size: 0.75em; color: #004085; border: 1px solid #b8daff;">
+                                                    <span style="font-weight: 600;">📋 Total Records:</span> ${history.length} | 
+                                                    <span style="font-weight: 600;">✓ Current:</span> ${history.filter((h: any) => h.is_current).length}
+                                                </div>`;
                                                 cell.innerHTML = html;
                                             }
                                         }
