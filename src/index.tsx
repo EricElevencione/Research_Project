@@ -15,10 +15,10 @@ import JoDashboard from './screens/JO/JoDashboard';
 import JoRsbsa from './screens/JO/JoRsbsaRegistration';
 import JoMasterlist from './screens/JO/JoMasterlist';
 import JoIncentives from './screens/JO/JoIncentives';
+import JoCreateAllocation from './screens/JO/JoCreateAllocation';
+import JoAddFarmerRequest from './screens/JO/JoAddFarmerRequest';
 import JoLandrecords from './screens/JO/JoLandrecords';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
-import JoRegionalAllocation from './screens/JO/JoRegionalAllocation';
-import JoFarmerRequests from './screens/JO/JoFarmerRequests';
 import JoGapAnalysis from './screens/JO/JoGapAnalysis';
 import JoDistribution from './screens/JO/JoDistribution';
 import './index.css'; // Tailwind CSS
@@ -114,6 +114,16 @@ function App() {
                         <JoIncentives />
                     </ProtectedRoute>
                 } />
+                <Route path="/jo-create-allocation" element={
+                    <ProtectedRoute>
+                        <JoCreateAllocation />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-add-farmer-request/:allocationId" element={
+                    <ProtectedRoute>
+                        <JoAddFarmerRequest />
+                    </ProtectedRoute>
+                } />
                 <Route path="/jo-masterlist" element={
                     <ProtectedRoute>
                         <JoMasterlist />
@@ -127,16 +137,6 @@ function App() {
                 <Route path="/jo-rsbsapage" element={
                     <ProtectedRoute>
                         <JoRsbsaPage />
-                    </ProtectedRoute>
-                } />
-                <Route path="/jo-regional-allocation" element={
-                    <ProtectedRoute>
-                        <JoRegionalAllocation />
-                    </ProtectedRoute>
-                } />
-                <Route path="/jo-farmer-requests" element={
-                    <ProtectedRoute>
-                        <JoFarmerRequests />
                     </ProtectedRoute>
                 } />
                 <Route path="/jo-gap-analysis" element={

@@ -2780,6 +2780,45 @@ app.post('/api/distribution/allocations', async (req, res) => {
     }
 });
 
+// Delete regional allocation
+app.delete('/api/distribution/allocations/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // First, get the season for this allocation
+        const allocationResult = await pool.query(
+            'SELECT season FROM regional_allocations WHERE id = $1',
+            [id]
+        );
+
+        if (allocationResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Allocation not found' });
+        }
+
+        const season = allocationResult.rows[0].season;
+
+        // Delete all farmer requests for this season
+        await pool.query(
+            'DELETE FROM farmer_requests WHERE season = $1',
+            [season]
+        );
+
+        // Delete the allocation
+        await pool.query(
+            'DELETE FROM regional_allocations WHERE id = $1',
+            [id]
+        );
+
+        res.json({
+            message: 'Regional allocation and associated requests deleted successfully',
+            season: season
+        });
+    } catch (error) {
+        console.error('Error deleting allocation:', error);
+        res.status(500).json({ error: 'Failed to delete allocation', message: error.message });
+    }
+});
+
 // ==================== FARMER REQUESTS ====================
 
 // Get all farmer requests for a season

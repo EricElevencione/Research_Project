@@ -162,26 +162,6 @@ const JoRsbsaPage: React.FC = () => {
             </button>
 
             <div
-              className={`sidebar-nav-item ${isActive('/jo-regional-allocation') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-regional-allocation')}
-            >
-              <div className="nav-icon">
-                <img src={DistributionIcon} alt="Distribution" />
-              </div>
-              <span className="nav-text">Regional Allocation</span>
-            </div>
-
-            <div
-              className={`sidebar-nav-item ${isActive('/jo-farmer-requests') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-farmer-requests')}
-            >
-              <div className="nav-icon">
-                <img src={FarmerRequestIcon} alt="FarmerRequest" />
-              </div>
-              <span className="nav-text">Farmer Request</span>
-            </div>
-
-            <div
               className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
               onClick={() => navigate('/jo-gap-analysis')}
             >

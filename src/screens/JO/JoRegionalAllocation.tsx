@@ -347,26 +347,6 @@ const JoRegionalAllocation: React.FC = () => {
                                     min="0"
                                 />
                             </div>
-                            <div className="regional-form-field">
-                                <label>Other Fertilizer 1</label>
-                                <input
-                                    type="number"
-                                    name="ammonium_phosphate_16_20_0_bags"
-                                    value={formData.ammonium_phosphate_16_20_0_bags}
-                                    onChange={handleInputChange}
-                                    min="0"
-                                />
-                            </div>
-                            <div className="regional-form-field">
-                                <label>Other Fertilizer 2</label>
-                                <input
-                                    type="number"
-                                    name="muriate_potash_0_0_60_bags"
-                                    value={formData.muriate_potash_0_0_60_bags}
-                                    onChange={handleInputChange}
-                                    min="0"
-                                />
-                            </div>
                         </div>
                         <div className="regional-total-summary">
                             Total Fertilizer Bags: {totalFertilizerBags.toLocaleString()} bags ({(totalFertilizerBags * 50).toLocaleString()} kg)

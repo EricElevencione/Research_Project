@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../assets/css/navigation/nav.css';
-import DistributionIcon from '../../assets/images/distribution.png'
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -10,8 +9,25 @@ import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
-import FarmerRequestIcon from '../../assets/images/request.png';
-import { useState } from 'react';
+
+interface RegionalAllocation {
+    id: number;
+    season: string;
+    allocation_date: string;
+    urea_46_0_0_bags: number;
+    complete_14_14_14_bags: number;
+    complete_16_16_16_bags: number;
+    ammonium_sulfate_21_0_0_bags: number;
+    ammonium_phosphate_16_20_0_bags: number;
+    muriate_potash_0_0_60_bags: number;
+    rice_seeds_nsic_rc160_kg: number;
+    rice_seeds_nsic_rc222_kg: number;
+    rice_seeds_nsic_rc440_kg: number;
+    corn_seeds_hybrid_kg: number;
+    corn_seeds_opm_kg: number;
+    vegetable_seeds_kg: number;
+    farmer_count?: number;
+}
 
 const JoIncentives: React.FC = () => {
     const navigate = useNavigate();
@@ -19,200 +35,108 @@ const JoIncentives: React.FC = () => {
 
     const isActive = (path: string) => location.pathname === path;
 
-    const [farmers, setFarmers] = useState([
-        { id: 1, name: "Juan Dela Cruz", qty_requested: 50 },
-        { id: 2, name: "Maria Santos", qty_requested: 30 },
-        { id: 3, name: "Pedro Reyes", qty_requested: 40 },
-        { id: 4, name: "Ana Garcia", qty_requested: 25 },
-    ]);
+    const [allocations, setAllocations] = useState<RegionalAllocation[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-    const [openFormId, setOpenFormId] = useState<number | null>(null);
-    const [formQty, setFormQty] = useState<string>('');
-    const [formType, setFormType] = useState<string>('');
+    useEffect(() => {
+        fetchAllocations();
+    }, []);
 
+    const fetchAllocations = async () => {
+        try {
+            setLoading(true);
+            setError(null);
 
-    const openRecordForm = (farmerId: number) => {
-        setOpenMenuId(null);
-        setOpenFormId(farmerId);
-        // Clear form inputs when opening
-        setFormQty('');
-        setFormType('');
-    };
+            const response = await fetch('http://localhost:5000/api/distribution/allocations');
 
-    const toggleMenu = (farmerId: number) => {
-        if (openMenuId === farmerId) {
-            setOpenMenuId(null);
-        } else {
-            setOpenMenuId(farmerId);
-        }
-    }
-
-    const saveIncentive = (farmerId: number, qtyReceived: string, incentiveType: string) => {
-        // Step 2: Prepare variables
-        const id = farmerId;
-        const qty = parseFloat(qtyReceived); // Convert text to number
-        const type = incentiveType;
-
-        // Step 3: Find the farmer
-        const farmer = farmers.find(f => f.id === id);
-
-        if (!farmer) {
-            alert('❌ Error: Farmer not found!');
-            return;
-        }
-
-        // Step 4: Validate quantity
-        if (!qtyReceived || qty <= 0) {
-            alert('❌ Error: Please enter a valid quantity!');
-            return;
-        }
-
-        if (qty > farmer.qty_requested) {
-            alert(`❌ Error: Received (${qty} kg) cannot exceed requested (${farmer.qty_requested} kg)!`);
-            return;
-        }
-
-        // Step 4b: Validate type
-        if (!type) {
-            alert('❌ Error: Please select an incentive type!');
-            return;
-        }
-
-        // Step 5: Update the farmer (we'll modify the array)
-        const updatedFarmers = farmers.map(f => {
-            if (f.id === id) {
-                return {
-                    ...f,
-                    qty_received: qty,
-                    incentive_type: type
-                };
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
             }
-            return f;
-        });
 
-        setFarmers(updatedFarmers);
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server did not return JSON. Backend server may not be running.');
+            }
 
-        // Step 6: Update state (this will re-render the table)
-        // Note: Since we used const [farmers] = useState(), 
-        // we need to change this to const [farmers, setFarmers] = useState()
-        // I'll show you how in Part C
+            const data = await response.json();
 
-        // Step 7: Close the form
-        setOpenFormId(null);
-        setOpenMenuId(null);
+            // Fetch farmer count for each allocation
+            const allocationsWithCounts = await Promise.all(
+                data.map(async (allocation: RegionalAllocation) => {
+                    try {
+                        const requestsResponse = await fetch(
+                            `http://localhost:5000/api/distribution/requests/${allocation.season}`
+                        );
+                        if (requestsResponse.ok) {
+                            const requests = await requestsResponse.json();
+                            return { ...allocation, farmer_count: requests.length };
+                        }
+                        return { ...allocation, farmer_count: 0 };
+                    } catch {
+                        return { ...allocation, farmer_count: 0 };
+                    }
+                })
+            );
+            setAllocations(allocationsWithCounts);
+        } catch (error: any) {
+            console.error('Error fetching allocations:', error);
+            setError(error.message || 'Failed to connect to server');
+            setAllocations([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        // Step 8: Clear form inputs
-        setFormQty('');
-        setFormType('');
+    const handleDelete = async (id: number, season: string) => {
+        if (!confirm(`Are you sure you want to delete ${season}? This will also delete all associated farmer requests.`)) {
+            return;
+        }
 
-        // Step 8: Show success message
-        alert(`✅ Success! Saved ${qty} kg of ${type} for ${farmer.name}`);
+        try {
+            const response = await fetch(`http://localhost:5000/api/distribution/allocations/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert('✅ Allocation deleted successfully');
+                fetchAllocations();
+            } else {
+                alert('❌ Failed to delete allocation');
+            }
+        } catch (error) {
+            console.error('Error deleting allocation:', error);
+            alert('❌ Error deleting allocation');
+        }
+    };
+
+    const formatSeasonName = (season: string) => {
+        const [type, year] = season.split('_');
+        return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+    };
+
+    const getTotalFertilizer = (allocation: RegionalAllocation) => {
+        const total = (Number(allocation.urea_46_0_0_bags) || 0) +
+            (Number(allocation.complete_14_14_14_bags) || 0) +
+            (Number(allocation.complete_16_16_16_bags) || 0) +
+            (Number(allocation.ammonium_sulfate_21_0_0_bags) || 0) +
+            (Number(allocation.ammonium_phosphate_16_20_0_bags) || 0) +
+            (Number(allocation.muriate_potash_0_0_60_bags) || 0);
+        return isNaN(total) ? 0 : total;
+    };
+
+    const getTotalSeeds = (allocation: RegionalAllocation) => {
+        const total = (Number(allocation.rice_seeds_nsic_rc160_kg) || 0) +
+            (Number(allocation.rice_seeds_nsic_rc222_kg) || 0) +
+            (Number(allocation.rice_seeds_nsic_rc440_kg) || 0) +
+            (Number(allocation.corn_seeds_hybrid_kg) || 0) +
+            (Number(allocation.corn_seeds_opm_kg) || 0) +
+            (Number(allocation.vegetable_seeds_kg) || 0);
+        return isNaN(total) ? 0 : total;
     };
 
 
 
-    const createFarmerRow = (farmer: any) => {
-
-        // Step 2: Prepare the pieces (get farmer's info)
-        const farmerName = farmer.name;           // e.g., "Juan Dela Cruz"
-        const qtyRequested = farmer.qty_requested; // e.g., 50
-        const qtyReceived = farmer.qty_received || '';      // Get from farmer data
-        const incentiveType = farmer.incentive_type || '';  // Get from farmer data
-
-        // Step 3: Build the row structure (HTML)
-        return (
-            <>
-                {/* First row: The farmer data */}
-                <tr key={farmer.id}>
-                    {/* Cell 1: Farmer Name */}
-                    <td>{farmerName}</td>
-
-                    {/* Cell 2: Quantity Requested */}
-                    <td>{qtyRequested} kg</td>
-
-                    {/* Cell 3: Quantity Received (empty at first) */}
-                    <td>{qtyReceived || '—'}</td>
-
-                    {/* Cell 4: Incentive Type (empty at first) */}
-                    <td>{incentiveType || '—'}</td>
-
-                    {/* Cell 5: Three-dot button with menu */}
-                    <td style={{ position: 'relative' }}>
-                        <button
-                            className="three-dot-btn"
-                            onClick={() => toggleMenu(farmer.id)}
-                        >
-                            ⋯
-                        </button>
-
-                        {openMenuId === farmer.id && (
-                            <div className="three-dot-menu">
-                                <button className="menu-item"
-                                    onClick={() => openRecordForm(farmer.id)}
-                                >
-                                    📝 Record Later
-                                </button>
-                            </div>
-                        )}
-                    </td>
-                </tr>
-
-                {/* Second row: The form (only shows when openFormId matches) */}
-                {openFormId === farmer.id && (
-                    <tr className="form-row">
-                        <td colSpan={5}>
-                            <div className="record-form">
-                                <h4>Record Incentive for {farmerName}</h4>
-
-                                <div className="form-fields">
-                                    <div className="form-field">
-                                        <label>Quantity Received (kg):</label>
-                                        <input
-                                            type="number"
-                                            placeholder="Enter quantity"
-                                            max={qtyRequested}
-                                            value={formQty}
-                                            onChange={(e) => setFormQty(e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="form-field">
-                                        <label>Incentive Type:</label>
-                                        <select
-                                            value={formType}
-                                            onChange={(e) => setFormType(e.target.value)}
-                                        >
-                                            <option value="">Select type...</option>
-                                            <option value="Cash">Cash</option>
-                                            <option value="Seeds">Seeds</option>
-                                            <option value="Tools">Tools</option>
-                                            <option value="Training">Training</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="form-actions">
-                                    <button
-                                        className="btn-save"
-                                        onClick={() => saveIncentive(farmer.id, formQty, formType)}
-                                    >
-                                        💾 Save
-                                    </button>
-                                    <button
-                                        className="btn-cancel"
-                                        onClick={() => setOpenFormId(null)}
-                                    >
-                                        ❌ Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                )}
-            </>
-        );
-    };
 
     return (
         <div className="page-container">
@@ -255,26 +179,6 @@ const JoIncentives: React.FC = () => {
                             </span>
                             <span className="nav-text">Incentives</span>
                         </button>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-regional-allocation') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-regional-allocation')}
-                        >
-                            <div className="nav-icon">
-                                <img src={DistributionIcon} alt="Distribution" />
-                            </div>
-                            <span className="nav-text">Regional Allocation</span>
-                        </div>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-farmer-requests') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-farmer-requests')}
-                        >
-                            <div className="nav-icon">
-                                <img src={FarmerRequestIcon} alt="FarmerRequest" />
-                            </div>
-                            <span className="nav-text">Farmer Request</span>
-                        </div>
 
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
@@ -329,25 +233,118 @@ const JoIncentives: React.FC = () => {
                 <div className="main-content">
 
                     <div className="dashboard-header-incent">
-                        <h2 className="page-header">Incentives Distribution</h2>
+                        <h2 className="page-header">🎯 Distribution Management</h2>
+                        <p className="page-subtitle">Manage regional allocations and farmer requests</p>
                     </div>
 
                     <div className="content-card-incent">
-                        <table className="farmers-table">
-                            <thead>
-                                <tr>
-                                    <th>Farmer Name</th>
-                                    <th>Quantity Requested</th>
-                                    <th>Quantity Received</th>
-                                    <th>Incentive Type</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {/* 🤖 USE ROBOT #1 HERE! */}
-                                {farmers.map((farmer: any) => createFarmerRow(farmer))}
-                            </tbody>
-                        </table>
+                        <div className="action-header">
+                            <button
+                                className="btn-create-allocation"
+                                onClick={() => {
+                                    console.log('Button clicked! Navigating to /jo-create-allocation');
+                                    navigate('/jo-create-allocation');
+                                }}
+                            >
+                                ➕ New Regional Allocation
+                            </button>
+                        </div>
+
+                        {loading ? (
+                            <div className="loading-message">Loading allocations...</div>
+                        ) : error ? (
+                            <div className="error-state">
+                                <div className="error-icon">⚠️</div>
+                                <h3>Unable to Connect to Server</h3>
+                                <p>{error}</p>
+                                <div className="error-help">
+                                    <p><strong>Please ensure:</strong></p>
+                                    <ul>
+                                        <li>Backend server is running on port 5000</li>
+                                        <li>Database table 'regional_allocations' exists</li>
+                                        <li>Run: <code>cd backend && node server.cjs</code></li>
+                                    </ul>
+                                </div>
+                                <button className="btn-retry" onClick={fetchAllocations}>
+                                    🔄 Retry Connection
+                                </button>
+                            </div>
+                        ) : allocations.length === 0 ? (
+                            <div className="empty-state">
+                                <div className="empty-icon">📦</div>
+                                <h3>No Allocations Yet</h3>
+                                <p>Create your first regional allocation to get started</p>
+                            </div>
+                        ) : (
+                            <div className="allocations-grid">
+                                {allocations.map((allocation) => (
+                                    <div key={allocation.id} className="allocation-card">
+                                        <div className="card-header">
+                                            <div className="season-info">
+                                                <h3>{formatSeasonName(allocation.season)}</h3>
+                                                <span className="allocation-date">
+                                                    {new Date(allocation.allocation_date).toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric'
+                                                    })}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="card-body">
+                                            <div className="stat-row">
+                                                <div className="stat-item">
+                                                    <span className="stat-label">Total Fertilizer</span>
+                                                    <span className="stat-value">{getTotalFertilizer(allocation).toLocaleString()} bags</span>
+                                                </div>
+                                                <div className="stat-item">
+                                                    <span className="stat-label">Total Seeds</span>
+                                                    <span className="stat-value">{getTotalSeeds(allocation).toFixed(2)} kg</span>
+                                                </div>
+                                            </div>
+                                            <div className="stat-row">
+                                                <div className="stat-item">
+                                                    <span className="stat-label">Farmer Requests</span>
+                                                    <span className="stat-value">{allocation.farmer_count || 0} farmers</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="card-actions">
+                                            <button
+                                                className="btn-action btn-view"
+                                                onClick={() => navigate(`/jo-view-allocation/${allocation.id}`)}
+                                                title="View Details"
+                                            >
+                                                👁️ View
+                                            </button>
+                                            <button
+                                                className="btn-action btn-add-request"
+                                                onClick={() => navigate(`/jo-add-farmer-request/${allocation.id}`)}
+                                                title="Add Farmer Request"
+                                            >
+                                                ➕ Add Request
+                                            </button>
+                                            <button
+                                                className="btn-action btn-manage"
+                                                onClick={() => navigate(`/jo-manage-requests/${allocation.id}`)}
+                                                title="Manage Requests"
+                                            >
+                                                📋 Manage
+                                            </button>
+                                            <button
+                                                className="btn-action btn-delete"
+                                                onClick={() => handleDelete(allocation.id, allocation.season)}
+                                                title="Delete"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
