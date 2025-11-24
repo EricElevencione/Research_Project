@@ -2723,6 +2723,12 @@ app.post('/api/distribution/allocations', async (req, res) => {
         corn_seeds_hybrid_kg,
         corn_seeds_opm_kg,
         vegetable_seeds_kg,
+        jackpot_kg,
+        us88_kg,
+        th82_kg,
+        rh9000_kg,
+        lumping143_kg,
+        lp296_kg,
         notes,
         created_by
     } = req.body;
@@ -2736,9 +2742,10 @@ app.post('/api/distribution/allocations', async (req, res) => {
                 muriate_potash_0_0_60_bags, rice_seeds_nsic_rc160_kg,
                 rice_seeds_nsic_rc222_kg, rice_seeds_nsic_rc440_kg,
                 corn_seeds_hybrid_kg, corn_seeds_opm_kg, vegetable_seeds_kg,
+                jackpot_kg, us88_kg, th82_kg, rh9000_kg, lumping143_kg, lp296_kg,
                 notes, created_by
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
             )
             ON CONFLICT (season) 
             DO UPDATE SET
@@ -2757,6 +2764,12 @@ app.post('/api/distribution/allocations', async (req, res) => {
                 corn_seeds_hybrid_kg = EXCLUDED.corn_seeds_hybrid_kg,
                 corn_seeds_opm_kg = EXCLUDED.corn_seeds_opm_kg,
                 vegetable_seeds_kg = EXCLUDED.vegetable_seeds_kg,
+                jackpot_kg = EXCLUDED.jackpot_kg,
+                us88_kg = EXCLUDED.us88_kg,
+                th82_kg = EXCLUDED.th82_kg,
+                rh9000_kg = EXCLUDED.rh9000_kg,
+                lumping143_kg = EXCLUDED.lumping143_kg,
+                lp296_kg = EXCLUDED.lp296_kg,
                 notes = EXCLUDED.notes,
                 updated_at = NOW()
             RETURNING *
@@ -2767,6 +2780,7 @@ app.post('/api/distribution/allocations', async (req, res) => {
             muriate_potash_0_0_60_bags || 0, rice_seeds_nsic_rc160_kg || 0,
             rice_seeds_nsic_rc222_kg || 0, rice_seeds_nsic_rc440_kg || 0,
             corn_seeds_hybrid_kg || 0, corn_seeds_opm_kg || 0, vegetable_seeds_kg || 0,
+            jackpot_kg || 0, us88_kg || 0, th82_kg || 0, rh9000_kg || 0, lumping143_kg || 0, lp296_kg || 0,
             notes, created_by
         ]);
 
@@ -2828,7 +2842,8 @@ app.get('/api/distribution/requests/:season', async (req, res) => {
         const result = await pool.query(`
             SELECT 
                 fr.*,
-                r."FARMER_LASTNAME" || ', ' || r."FARMER_FIRSTNAME" as full_name
+                r."LAST NAME" || ', ' || r."FIRST NAME" as full_name,
+                r."BARANGAY" as barangay
             FROM farmer_requests fr
             LEFT JOIN rsbsa_submission r ON fr.farmer_id = r.id
             WHERE fr.season = $1
@@ -2856,7 +2871,21 @@ app.post('/api/distribution/requests', async (req, res) => {
         fertilizer_requested,
         seeds_requested,
         request_notes,
-        created_by
+        created_by,
+        // Detailed fertilizer requests
+        requested_urea_bags,
+        requested_complete_14_bags,
+        requested_complete_16_bags,
+        requested_ammonium_sulfate_bags,
+        requested_ammonium_phosphate_bags,
+        requested_muriate_potash_bags,
+        // Detailed seed requests
+        requested_jackpot_kg,
+        requested_us88_kg,
+        requested_th82_kg,
+        requested_rh9000_kg,
+        requested_lumping143_kg,
+        requested_lp296_kg
     } = req.body;
 
     try {
@@ -2864,16 +2893,25 @@ app.post('/api/distribution/requests', async (req, res) => {
             INSERT INTO farmer_requests (
                 season, farmer_id, farmer_name, barangay, farm_area_ha,
                 crop_type, ownership_type, num_parcels,
-                fertilizer_requested, seeds_requested, request_notes, created_by
+                fertilizer_requested, seeds_requested, request_notes, created_by,
+                requested_urea_bags, requested_complete_14_bags, requested_complete_16_bags,
+                requested_ammonium_sulfate_bags, requested_ammonium_phosphate_bags, requested_muriate_potash_bags,
+                requested_jackpot_kg, requested_us88_kg, requested_th82_kg,
+                requested_rh9000_kg, requested_lumping143_kg, requested_lp296_kg
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
             )
             RETURNING *
         `, [
             season, farmer_id, farmer_name, barangay, farm_area_ha,
             crop_type, ownership_type, num_parcels || 1,
             fertilizer_requested || false, seeds_requested || false,
-            request_notes, created_by
+            request_notes, created_by,
+            requested_urea_bags || 0, requested_complete_14_bags || 0, requested_complete_16_bags || 0,
+            requested_ammonium_sulfate_bags || 0, requested_ammonium_phosphate_bags || 0, requested_muriate_potash_bags || 0,
+            requested_jackpot_kg || 0, requested_us88_kg || 0, requested_th82_kg || 0,
+            requested_rh9000_kg || 0, requested_lumping143_kg || 0, requested_lp296_kg || 0
         ]);
 
         res.status(201).json({

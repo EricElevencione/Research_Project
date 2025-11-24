@@ -30,16 +30,6 @@
     background-color: white;
 }
 
-.dashboard-header-incent {
-    background-color: #f0f0f0;
-    margin-top: 20px;
-    padding: 5px 5px 5px 30px;
-    border: 1px solid #111112;
-    width: 600px;
-    display: flex;
-    border-radius: 40px 0 40px 0;
-}
-
 .page-header {
     font-weight: 600;
     font-size: 28px;

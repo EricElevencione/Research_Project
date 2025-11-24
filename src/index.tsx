@@ -17,6 +17,8 @@ import JoMasterlist from './screens/JO/JoMasterlist';
 import JoIncentives from './screens/JO/JoIncentives';
 import JoCreateAllocation from './screens/JO/JoCreateAllocation';
 import JoAddFarmerRequest from './screens/JO/JoAddFarmerRequest';
+import JoManageRequests from './screens/JO/JoManageRequests';
+import JoViewAllocation from './screens/JO/JoViewAllocation';
 import JoLandrecords from './screens/JO/JoLandrecords';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
 import JoGapAnalysis from './screens/JO/JoGapAnalysis';
@@ -124,9 +126,19 @@ function App() {
                         <JoAddFarmerRequest />
                     </ProtectedRoute>
                 } />
-                <Route path="/jo-masterlist" element={
+                <Route path="/jo-manage-requests/:allocationId" element={
                     <ProtectedRoute>
-                        <JoMasterlist />
+                        <JoManageRequests />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-view-allocation/:allocationId" element={
+                    <ProtectedRoute>
+                        <JoViewAllocation />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-landrecords" element={
+                    <ProtectedRoute>
+                        <JoLandrecords />
                     </ProtectedRoute>
                 } />
                 <Route path="/jo-landrecords" element={

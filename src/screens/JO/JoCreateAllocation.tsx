@@ -15,9 +15,7 @@ interface AllocationFormData {
     allocation_date: string;
     urea_46_0_0_bags: number;
     complete_14_14_14_bags: number;
-    complete_16_16_16_bags: number;
     ammonium_sulfate_21_0_0_bags: number;
-    ammonium_phosphate_16_20_0_bags: number;
     muriate_potash_0_0_60_bags: number;
     jackpot_kg: number;
     us88_kg: number;
@@ -55,9 +53,7 @@ const JoCreateAllocation: React.FC = () => {
         allocation_date: todayDate,
         urea_46_0_0_bags: 0,
         complete_14_14_14_bags: 0,
-        complete_16_16_16_bags: 0,
         ammonium_sulfate_21_0_0_bags: 0,
-        ammonium_phosphate_16_20_0_bags: 0,
         muriate_potash_0_0_60_bags: 0,
         jackpot_kg: 0,
         us88_kg: 0,
@@ -113,10 +109,16 @@ const JoCreateAllocation: React.FC = () => {
             }
 
             const result = await response.json();
-            const allocationId = result.id;
+            console.log('✅ Allocation created:', result);
+            const allocationId = result.allocation?.id;
+
+            if (!allocationId) {
+                throw new Error('No allocation ID returned from server');
+            }
 
             // Success - navigate to add farmer request page
             alert('✅ Regional allocation created successfully! Now add farmers to this allocation.');
+            console.log('🔗 Navigating to:', `/jo-add-farmer-request/${allocationId}`);
             navigate(`/jo-add-farmer-request/${allocationId}`);
         } catch (err: any) {
             setError(err.message || 'Failed to save allocation');
@@ -294,7 +296,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.urea_46_0_0_bags}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -314,27 +316,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.complete_14_14_14_bags}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            Complete (16-16-16)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="complete_16_16_16_bags"
-                                            value={formData.complete_16_16_16_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -354,27 +336,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.ammonium_sulfate_21_0_0_bags}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            Ammonium Phosphate (16-20-0)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="ammonium_phosphate_16_20_0_bags"
-                                            value={formData.ammonium_phosphate_16_20_0_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -394,7 +356,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.muriate_potash_0_0_60_bags}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -423,7 +385,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.jackpot_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -443,7 +405,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.us88_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -463,7 +425,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.th82_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -483,7 +445,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.rh9000_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -503,7 +465,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.lumping143_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -523,7 +485,7 @@ const JoCreateAllocation: React.FC = () => {
                                             value={formData.lp296_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',

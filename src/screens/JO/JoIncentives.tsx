@@ -16,9 +16,7 @@ interface RegionalAllocation {
     allocation_date: string;
     urea_46_0_0_bags: number;
     complete_14_14_14_bags: number;
-    complete_16_16_16_bags: number;
     ammonium_sulfate_21_0_0_bags: number;
-    ammonium_phosphate_16_20_0_bags: number;
     muriate_potash_0_0_60_bags: number;
     rice_seeds_nsic_rc160_kg: number;
     rice_seeds_nsic_rc222_kg: number;
@@ -118,9 +116,7 @@ const JoIncentives: React.FC = () => {
     const getTotalFertilizer = (allocation: RegionalAllocation) => {
         const total = (Number(allocation.urea_46_0_0_bags) || 0) +
             (Number(allocation.complete_14_14_14_bags) || 0) +
-            (Number(allocation.complete_16_16_16_bags) || 0) +
             (Number(allocation.ammonium_sulfate_21_0_0_bags) || 0) +
-            (Number(allocation.ammonium_phosphate_16_20_0_bags) || 0) +
             (Number(allocation.muriate_potash_0_0_60_bags) || 0);
         return isNaN(total) ? 0 : total;
     };
@@ -233,8 +229,7 @@ const JoIncentives: React.FC = () => {
                 <div className="main-content">
 
                     <div className="dashboard-header-incent">
-                        <h2 className="page-header">🎯 Distribution Management</h2>
-                        <p className="page-subtitle">Manage regional allocations and farmer requests</p>
+                        <h2 className="page-header">Distribution Management</h2>
                     </div>
 
                     <div className="content-card-incent">

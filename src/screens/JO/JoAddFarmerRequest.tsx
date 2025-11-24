@@ -30,9 +30,7 @@ interface FarmerRequestForm {
     farmer_id: number;
     requested_urea_bags: number;
     requested_complete_14_bags: number;
-    requested_complete_16_bags: number;
     requested_ammonium_sulfate_bags: number;
-    requested_ammonium_phosphate_bags: number;
     requested_muriate_potash_bags: number;
     requested_jackpot_kg: number;
     requested_us88_kg: number;
@@ -57,9 +55,7 @@ const JoAddFarmerRequest: React.FC = () => {
         farmer_id: 0,
         requested_urea_bags: 0,
         requested_complete_14_bags: 0,
-        requested_complete_16_bags: 0,
         requested_ammonium_sulfate_bags: 0,
-        requested_ammonium_phosphate_bags: 0,
         requested_muriate_potash_bags: 0,
         requested_jackpot_kg: 0,
         requested_us88_kg: 0,
@@ -85,14 +81,33 @@ const JoAddFarmerRequest: React.FC = () => {
 
     const fetchAllocation = async () => {
         try {
+            console.log('🔍 Fetching allocation for ID:', allocationId, 'Type:', typeof allocationId);
             const response = await fetch(`http://localhost:5000/api/distribution/allocations`);
             if (response.ok) {
                 const allocations = await response.json();
-                const found = allocations.find((a: any) => a.id === parseInt(allocationId || '0'));
+                console.log('📦 All allocations returned:', allocations.length, 'allocations');
+                console.log('📋 Allocation IDs:', allocations.map((a: any) => ({ id: a.id, season: a.season, type: typeof a.id })));
+
+                const targetId = parseInt(allocationId || '0');
+                console.log('🎯 Looking for ID:', targetId);
+
+                const found = allocations.find((a: any) => {
+                    console.log(`Comparing: ${a.id} (${typeof a.id}) === ${targetId} (${typeof targetId}) = ${a.id === targetId}`);
+                    return a.id === targetId;
+                });
+
+                console.log('✅ Found allocation:', found);
                 setAllocation(found || null);
+                if (!found) {
+                    setError(`Allocation with ID ${allocationId} not found in database`);
+                }
+            } else {
+                console.error('❌ Response not OK:', response.status, response.statusText);
+                setError('Failed to fetch allocation data');
             }
         } catch (err) {
-            console.error('Failed to fetch allocation:', err);
+            console.error('❌ Failed to fetch allocation:', err);
+            setError('Error loading allocation data');
         }
     };
 
@@ -157,6 +172,13 @@ const JoAddFarmerRequest: React.FC = () => {
             return;
         }
 
+        // Check if allocation is loaded
+        if (!allocation || !allocation.season) {
+            console.error('Allocation not loaded:', allocation);
+            setError('Allocation data not loaded. Please refresh the page.');
+            return;
+        }
+
         // Get selected farmer details - compare as numbers
         const selectedFarmer = farmers.find(f => Number(f.id) === Number(formData.farmer_id));
         if (!selectedFarmer) {
@@ -176,9 +198,7 @@ const JoAddFarmerRequest: React.FC = () => {
             const totalFertilizerRequested = (
                 formData.requested_urea_bags +
                 formData.requested_complete_14_bags +
-                formData.requested_complete_16_bags +
                 formData.requested_ammonium_sulfate_bags +
-                formData.requested_ammonium_phosphate_bags +
                 formData.requested_muriate_potash_bags
             );
 
@@ -206,7 +226,19 @@ const JoAddFarmerRequest: React.FC = () => {
                     fertilizer_requested: totalFertilizerRequested > 0,
                     seeds_requested: totalSeedsRequested > 0,
                     request_notes: formData.notes || null,
-                    created_by: null // Can be set to user ID if available
+                    created_by: null,
+                    // Detailed fertilizer amounts
+                    requested_urea_bags: formData.requested_urea_bags,
+                    requested_complete_14_bags: formData.requested_complete_14_bags,
+                    requested_ammonium_sulfate_bags: formData.requested_ammonium_sulfate_bags,
+                    requested_muriate_potash_bags: formData.requested_muriate_potash_bags,
+                    // Detailed seed amounts
+                    requested_jackpot_kg: formData.requested_jackpot_kg,
+                    requested_us88_kg: formData.requested_us88_kg,
+                    requested_th82_kg: formData.requested_th82_kg,
+                    requested_rh9000_kg: formData.requested_rh9000_kg,
+                    requested_lumping143_kg: formData.requested_lumping143_kg,
+                    requested_lp296_kg: formData.requested_lp296_kg
                 })
             });
 
@@ -405,7 +437,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_urea_bags}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -425,27 +457,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_complete_14_bags}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            Complete (16-16-16)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_complete_16_bags"
-                                            value={formData.requested_complete_16_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -465,27 +477,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_ammonium_sulfate_bags}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            Ammonium Phosphate (16-20-0)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_ammonium_phosphate_bags"
-                                            value={formData.requested_ammonium_phosphate_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -505,7 +497,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_muriate_potash_bags}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -534,7 +526,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_jackpot_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -554,7 +546,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_us88_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -574,7 +566,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_th82_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -594,7 +586,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_rh9000_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -614,7 +606,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_lumping143_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
@@ -634,7 +626,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                             value={formData.requested_lp296_kg}
                                             onChange={handleInputChange}
                                             min="0"
-                                            step="1"
+                                            step="0.01"
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
