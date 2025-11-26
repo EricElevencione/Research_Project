@@ -552,12 +552,12 @@ app.post('/api/rsbsa_submission', async (req, res) => {
 
         const insertSubmissionQuery = `
             INSERT INTO rsbsa_submission (
-                "LAST NAME", "FIRST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE",
+                "LAST NAME", "FIRST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", age,
                 "BARANGAY", "MUNICIPALITY", "FARM LOCATION", "PARCEL AREA", "TOTAL FARM AREA",
                 "MAIN LIVELIHOOD", "OWNERSHIP_TYPE_REGISTERED_OWNER", "OWNERSHIP_TYPE_TENANT",
                 "OWNERSHIP_TYPE_LESSEE", status
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
             )
             RETURNING id, submitted_at
         `;
@@ -569,6 +569,7 @@ app.post('/api/rsbsa_submission', async (req, res) => {
             data.extensionName || '',
             data.gender || '',
             data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+            data.age ? parseInt(data.age) : null,
             data.barangay || '',
             data.municipality || '',
             farmLocation,
@@ -946,6 +947,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
         rs."EXT NAME",
         rs."GENDER",
         rs."BIRTHDATE",
+        rs.age,
         rs."BARANGAY",
         rs."MUNICIPALITY",
         rs."FARM LOCATION",
@@ -1062,6 +1064,7 @@ app.get('/api/rsbsa_submission', async (req, res) => {
                     farmLocation: row["FARM LOCATION"] || '—',
                     gender: row["GENDER"] || '—',
                     birthdate: row["BIRTHDATE"] || null,
+                    age: row.age || null,
                     dateSubmitted: row.submitted_at || row.created_at,
                     status: row.status || 'Not Active',
                     parcelArea: parcelAreaDisplay,
@@ -1179,6 +1182,7 @@ app.get('/api/rsbsa_submission/:id', async (req, res) => {
                 extName: row["EXT NAME"] || row["extName"] || '',
                 gender: row["GENDER"] || row["gender"] || '',
                 birthdate: row["BIRTHDATE"] || row["birthdate"] || '',
+                age: row.age || null,
                 farmerAddress: [barangay, municipality, province].filter(Boolean).join(', ') || '',
                 farmLocation: row["FARM LOCATION"] || row["farmLocation"] || barangay || '',
                 parcelArea: row["PARCEL AREA"] || row["parcelArea"] || row["TOTAL FARM AREA"] || row["totalFarmArea"] || '',

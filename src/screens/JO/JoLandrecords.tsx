@@ -511,7 +511,7 @@ const JoLandrecords: React.FC = () => {
                                                                 key={tenant.id}
                                                                 className={`tenant-item ${index === 0 && !isExpanded ? 'preview-item' : ''}`}
                                                             >
-                                                                <div className="tenant-type-badge">
+                                                                <div className={`tenant-type-badge ${tenant.type.toLowerCase()}`}>
                                                                     {tenant.type}
                                                                 </div>
                                                                 <div className="tenant-info">
@@ -560,7 +560,7 @@ const JoLandrecords: React.FC = () => {
                                             {selectedOwnerHistory.tenants_lessees.map((tenant, index) => (
                                                 <div key={tenant.id} className="history-item">
                                                     <div className="history-number">{index + 1}</div>
-                                                    <div className="history-type-badge">{tenant.type}</div>
+                                                    <div className={`history-type-badge ${tenant.type.toLowerCase()}`}>{tenant.type}</div>
                                                     <div className="history-details">
                                                         <div className="history-name">{tenant.name}</div>
                                                         <div className="history-meta">

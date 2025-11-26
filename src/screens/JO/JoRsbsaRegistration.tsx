@@ -47,6 +47,7 @@ interface FormData {
   municipality: string;
   province: string;
   dateOfBirth: string;
+  age: string;
   // Farm Profile
   mainLivelihood: string;
   farmingActivity: string;
@@ -189,6 +190,7 @@ const JoRsbsa: React.FC = () => {
     municipality: '',
     province: '',
     dateOfBirth: '',
+    age: '',
     mainLivelihood: '',
     farmingActivity: '',
     otherCrops: '',
@@ -684,8 +686,11 @@ const JoRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
-              onClick={() => navigate('/')}
+              className="sidebar-nav-item logout"
+              onClick={() => {
+                localStorage.removeItem('isAuthenticated');
+                navigate('/login');
+              }}
             >
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
@@ -784,6 +789,41 @@ const JoRsbsa: React.FC = () => {
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
                         </select>
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>DATE OF BIRTH</label>
+                        <input
+                          type="date"
+                          value={formData.dateOfBirth}
+                          onChange={(e) => {
+                            handleInputChange('dateOfBirth', e.target.value);
+                            // Auto-calculate age
+                            if (e.target.value) {
+                              const birthDate = new Date(e.target.value);
+                              const today = new Date();
+                              let age = today.getFullYear() - birthDate.getFullYear();
+                              const monthDiff = today.getMonth() - birthDate.getMonth();
+                              if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                                age--;
+                              }
+                              setFormData(prev => ({ ...prev, age: String(age) }));
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>AGE</label>
+                        <input
+                          type="number"
+                          value={formData.age}
+                          onChange={(e) => handleInputChange('age', e.target.value)}
+                          min="0"
+                          max="120"
+                          placeholder="Auto-calculated from birthdate"
+                        />
                       </div>
                     </div>
 
@@ -1196,6 +1236,18 @@ const JoRsbsa: React.FC = () => {
                         <span className="summary-label">Gender</span>
                         <span className="summary-value">
                           {formData.gender}
+                        </span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Date of Birth:</span>
+                        <span className="summary-value">
+                          {formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString() : 'Not provided'}
+                        </span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Age:</span>
+                        <span className="summary-value">
+                          {formData.age ? `${formData.age} years old` : 'Not provided'}
                         </span>
                       </div>
                       <div className="summary-item">

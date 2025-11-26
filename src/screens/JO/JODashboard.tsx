@@ -91,14 +91,17 @@ const JoDashboard: React.FC = () => {
                             onClick={() => navigate('/jo-landrecords')}
                         >
                             <span className="nav-icon">
-                                <img src={LandRecsIcon} alt="Masterlist" />
+                                <img src={LandRecsIcon} alt="LandRecords" />
                             </span>
                             <span className="nav-text">Land Records</span>
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
-                            onClick={() => navigate('/')}
+                            className="sidebar-nav-item logout"
+                            onClick={() => {
+                                localStorage.removeItem('isAuthenticated');
+                                navigate('/login');
+                            }}
                         >
                             <span className="nav-icon">
                                 <img src={LogoutIcon} alt="Logout" />

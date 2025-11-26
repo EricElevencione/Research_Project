@@ -216,6 +216,18 @@
     text-align: center;
 }
 
+.tenant-type-badge.tenant {
+    background: #fff9c4;
+    color: #f57f17;
+    border: 1px solid #fbc02d;
+}
+
+.tenant-type-badge.lessee {
+    background: #bbdefb;
+    color: #1565c0;
+    border: 1px solid #42a5f5;
+}
+
 .tenant-info {
     display: flex;
     flex-direction: column;
@@ -397,6 +409,18 @@
     font-weight: 600;
     text-align: center;
     height: fit-content;
+}
+
+.history-type-badge.tenant {
+    background: #fff9c4;
+    color: #f57f17;
+    border: 1px solid #fbc02d;
+}
+
+.history-type-badge.lessee {
+    background: #bbdefb;
+    color: #1565c0;
+    border: 1px solid #42a5f5;
 }
 
 .history-details {

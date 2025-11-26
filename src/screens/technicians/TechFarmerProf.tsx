@@ -19,6 +19,7 @@ interface FarmerData {
     extName: string;
     gender: string;
     birthdate: string;
+    age?: number | null;
     farmerAddress: string;
     farmLocation: string;
     parcelArea: string;
@@ -125,6 +126,15 @@ const TechFarmerProf: React.FC = () => {
             age--;
         }
         return age;
+    };
+
+    const getDisplayAge = () => {
+        // Use age from database if available, otherwise calculate from birthdate
+        if (farmer?.age !== null && farmer?.age !== undefined) {
+            return `${farmer.age} years old`;
+        }
+        const calculatedAge = calculateAge(farmer?.birthdate || '');
+        return calculatedAge !== 'N/A' ? `${calculatedAge} years old` : 'N/A';
     };
 
     const getTotalArea = () => {
@@ -326,7 +336,7 @@ const TechFarmerProf: React.FC = () => {
                                     </div>
                                     <div className="info-row">
                                         <span className="info-label">Age:</span>
-                                        <span className="info-value">{calculateAge(farmer.birthdate)} years old</span>
+                                        <span className="info-value">{getDisplayAge()}</span>
                                     </div>
                                 </div>
                             </div>

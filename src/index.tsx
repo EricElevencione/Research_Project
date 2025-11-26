@@ -141,9 +141,9 @@ function App() {
                         <JoLandrecords />
                     </ProtectedRoute>
                 } />
-                <Route path="/jo-landrecords" element={
+                <Route path="/jo-masterlist" element={
                     <ProtectedRoute>
-                        <JoLandrecords />
+                        <JoMasterlist />
                     </ProtectedRoute>
                 } />
                 <Route path="/jo-rsbsapage" element={
