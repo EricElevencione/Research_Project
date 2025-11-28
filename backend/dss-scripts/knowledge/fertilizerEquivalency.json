@@ -1,0 +1,326 @@
+{
+    "version": "1.0",
+    "last_updated": "2025-11-26",
+    "description": "Fertilizer equivalency knowledge base for agricultural input substitution recommendations",
+    "fertilizer_types": [
+        {
+            "id": "urea_46_0_0",
+            "common_name": "Urea",
+            "chemical_formula": "CO(NH2)2",
+            "npk_ratio": "46-0-0",
+            "nutrient_content": {
+                "nitrogen_percent": 46,
+                "phosphorus_percent": 0,
+                "potassium_percent": 0,
+                "sulfur_percent": 0
+            },
+            "bag_weight_kg": 50,
+            "description": "High-nitrogen fertilizer, most commonly used for rice and corn",
+            "substitutes": [
+                {
+                    "substitute_id": "ammonium_sulfate_21_0_0",
+                    "substitute_name": "Ammonium Sulfate (21-0-0)",
+                    "conversion_factor": 2.19,
+                    "calculation_explanation": "46% N ÷ 21% N = 2.19",
+                    "usage_note": "Need 2.19 kg of Ammonium Sulfate to match 1 kg of Urea for nitrogen content",
+                    "agronomic_notes": {
+                        "advantages": [
+                            "Provides sulfur (24%) which is beneficial for rice and vegetables",
+                            "Less nitrogen loss through volatilization compared to Urea",
+                            "Better performance in alkaline soils (pH > 7)",
+                            "Slower release reduces risk of nitrogen burn"
+                        ],
+                        "disadvantages": [
+                            "Requires more bags (2.19x) making transport heavier",
+                            "Acidifies soil over time - not suitable if pH is already low (<5.5)",
+                            "More expensive per nitrogen unit in some regions"
+                        ],
+                        "best_for_crops": [
+                            "rice",
+                            "corn",
+                            "vegetables",
+                            "sugarcane"
+                        ],
+                        "not_recommended_for": [
+                            "crops in acidic soils (pH < 5.5)"
+                        ],
+                        "application_timing": "Split application: 50% at basal (before planting), 50% at tillering (2-3 weeks after planting)"
+                    },
+                    "farmer_instructions": {
+                        "english": "Replace {original_amount} bags of Urea with {substitute_amount} bags of Ammonium Sulfate. Apply half before planting and half after 2-3 weeks.",
+                        "tagalog": "Palitan ang {original_amount} sakong Urea ng {substitute_amount} sakong Ammonium Sulfate. Ilagay ang kalahati bago magtanim at ang kalahati pagkatapos ng 2-3 linggo."
+                    },
+                    "confidence_score": 0.95,
+                    "source": "PhilRice Technical Bulletin No. 15, 2020",
+                    "validated_by": "Bureau of Soils and Water Management (BSWM)"
+                },
+                {
+                    "substitute_id": "complete_14_14_14",
+                    "substitute_name": "Complete Fertilizer (14-14-14)",
+                    "conversion_factor": 3.29,
+                    "calculation_explanation": "46% N ÷ 14% N = 3.29",
+                    "usage_note": "Need 3.29 kg of Complete 14-14-14 to match 1 kg of Urea for nitrogen content",
+                    "agronomic_notes": {
+                        "advantages": [
+                            "Provides balanced NPK nutrition (nitrogen, phosphorus, potassium)",
+                            "Reduces need for separate P and K fertilizers",
+                            "Excellent for nutrient-deficient soils",
+                            "Good for newly cultivated or marginal lands"
+                        ],
+                        "disadvantages": [
+                            "Significantly more expensive (approximately 50% higher cost per bag)",
+                            "May over-apply phosphorus and potassium if soil already has adequate levels",
+                            "Not nitrogen-efficient - paying for nutrients you may not need",
+                            "Requires much more bags (3.29x) - storage and transport issues"
+                        ],
+                        "best_for_crops": [
+                            "vegetables",
+                            "newly-cultivated land",
+                            "highland rice"
+                        ],
+                        "not_recommended_for": [
+                            "established rice fields with adequate P-K levels",
+                            "cost-sensitive farmers"
+                        ],
+                        "application_timing": "Basal application only (incorporate into soil 1-2 weeks before planting)"
+                    },
+                    "farmer_instructions": {
+                        "english": "Replace {original_amount} bags of Urea with {substitute_amount} bags of Complete 14-14-14. Apply all before planting and mix well with soil.",
+                        "tagalog": "Palitan ang {original_amount} sakong Urea ng {substitute_amount} sakong Complete 14-14-14. Ilagay lahat bago magtanim at haluin sa lupa."
+                    },
+                    "cost_consideration": {
+                        "urea_price_per_bag": 1200,
+                        "complete_price_per_bag": 1800,
+                        "cost_multiplier": 1.5,
+                        "cost_impact_note": "Complete fertilizer is 50% more expensive per bag. Total cost will be approximately 5x higher due to conversion factor."
+                    },
+                    "confidence_score": 0.88,
+                    "source": "DA-BAR Fertilizer Recommendation Guide 2021",
+                    "validated_by": "Department of Agriculture - Bureau of Agricultural Research"
+                }
+            ],
+            "incompatible_substitutes": [
+                {
+                    "type": "muriate_potash_0_0_60",
+                    "reason": "Contains zero nitrogen (0-0-60) - cannot substitute for nitrogen needs",
+                    "error_message": "❌ Muriate of Potash provides only potassium, not nitrogen. Cannot replace Urea."
+                },
+                {
+                    "type": "solophos_0_18_0",
+                    "reason": "Contains zero nitrogen (0-18-0) - only provides phosphorus",
+                    "error_message": "❌ Solophos provides only phosphorus, not nitrogen. Cannot replace Urea."
+                }
+            ]
+        },
+        {
+            "id": "complete_14_14_14",
+            "common_name": "Complete Fertilizer (14-14-14)",
+            "npk_ratio": "14-14-14",
+            "nutrient_content": {
+                "nitrogen_percent": 14,
+                "phosphorus_percent": 14,
+                "potassium_percent": 14,
+                "sulfur_percent": 0
+            },
+            "bag_weight_kg": 50,
+            "description": "Balanced NPK fertilizer for general crop nutrition",
+            "substitutes": [
+                {
+                    "substitute_id": "complete_16_16_16",
+                    "substitute_name": "Complete Fertilizer (16-16-16)",
+                    "conversion_factor": 0.875,
+                    "calculation_explanation": "14 ÷ 16 = 0.875",
+                    "usage_note": "Need 12.5% less of 16-16-16 due to higher concentration",
+                    "agronomic_notes": {
+                        "advantages": [
+                            "Nearly identical nutritional profile",
+                            "Slightly more concentrated - less bags needed",
+                            "Interchangeable in most situations"
+                        ],
+                        "disadvantages": [
+                            "May be slightly more expensive per bag",
+                            "Less commonly available in some areas"
+                        ],
+                        "best_for_crops": [
+                            "all crops suitable for 14-14-14"
+                        ],
+                        "application_timing": "Same as 14-14-14 - basal application"
+                    },
+                    "farmer_instructions": {
+                        "english": "Replace {original_amount} bags of Complete 14-14-14 with {substitute_amount} bags of Complete 16-16-16. Apply before planting.",
+                        "tagalog": "Palitan ang {original_amount} sakong Complete 14-14-14 ng {substitute_amount} sakong Complete 16-16-16. Ilagay bago magtanim."
+                    },
+                    "confidence_score": 0.99,
+                    "source": "Fertilizer and Pesticide Authority (FPA) Guidelines",
+                    "validated_by": "Fertilizer and Pesticide Authority"
+                }
+            ]
+        },
+        {
+            "id": "ammonium_sulfate_21_0_0",
+            "common_name": "Ammonium Sulfate",
+            "chemical_formula": "(NH4)2SO4",
+            "npk_ratio": "21-0-0",
+            "nutrient_content": {
+                "nitrogen_percent": 21,
+                "phosphorus_percent": 0,
+                "potassium_percent": 0,
+                "sulfur_percent": 24
+            },
+            "bag_weight_kg": 50,
+            "description": "Nitrogen and sulfur fertilizer, excellent for rice in sulfur-deficient soils",
+            "substitutes": [
+                {
+                    "substitute_id": "urea_46_0_0",
+                    "substitute_name": "Urea (46-0-0)",
+                    "conversion_factor": 0.46,
+                    "calculation_explanation": "21% N ÷ 46% N = 0.46",
+                    "usage_note": "Need only 0.46 kg of Urea to match 1 kg of Ammonium Sulfate for nitrogen",
+                    "agronomic_notes": {
+                        "advantages": [
+                            "Much fewer bags needed (less than half)",
+                            "Easier transport and storage",
+                            "Generally lower cost per nitrogen unit"
+                        ],
+                        "disadvantages": [
+                            "Does not provide sulfur - may need separate sulfur source",
+                            "Higher volatilization losses if not incorporated properly",
+                            "Not as effective in alkaline soils"
+                        ],
+                        "best_for_crops": [
+                            "rice",
+                            "corn",
+                            "sugarcane"
+                        ],
+                        "application_timing": "Split application with proper incorporation to reduce losses"
+                    },
+                    "farmer_instructions": {
+                        "english": "Replace {original_amount} bags of Ammonium Sulfate with {substitute_amount} bags of Urea. Apply in split doses.",
+                        "tagalog": "Palitan ang {original_amount} sakong Ammonium Sulfate ng {substitute_amount} sakong Urea. Ilagay nang paisa-isa."
+                    },
+                    "confidence_score": 0.93,
+                    "source": "PhilRice Technical Bulletin No. 15, 2020"
+                }
+            ]
+        },
+        {
+            "id": "muriate_potash_0_0_60",
+            "common_name": "Muriate of Potash",
+            "chemical_formula": "KCl",
+            "npk_ratio": "0-0-60",
+            "nutrient_content": {
+                "nitrogen_percent": 0,
+                "phosphorus_percent": 0,
+                "potassium_percent": 60,
+                "chloride_percent": 47
+            },
+            "bag_weight_kg": 50,
+            "description": "High-potassium fertilizer for fruit development and plant vigor",
+            "substitutes": [],
+            "note": "Potassium fertilizers are specialized - no common substitutes in typical municipal inventory"
+        }
+    ],
+    "crop_specific_recommendations": {
+        "rice": {
+            "preferred_nitrogen_source": "urea_46_0_0",
+            "acceptable_substitutes": [
+                "ammonium_sulfate_21_0_0",
+                "complete_14_14_14"
+            ],
+            "not_recommended": [
+                "calcium_nitrate"
+            ],
+            "reasoning": "Rice requires high nitrogen during vegetative and reproductive stages. Urea is most cost-effective. AmSul provides bonus sulfur for protein synthesis.",
+            "split_application_schedule": {
+                "basal": "30-40% of total N (before planting)",
+                "tillering": "30-40% of total N (14-21 days after transplanting)",
+                "panicle_initiation": "20-30% of total N (35-42 days after transplanting)"
+            }
+        },
+        "corn": {
+            "preferred_nitrogen_source": "urea_46_0_0",
+            "acceptable_substitutes": [
+                "ammonium_sulfate_21_0_0",
+                "complete_16_16_16"
+            ],
+            "reasoning": "Corn is heavy nitrogen feeder. Balanced nutrition important for yield.",
+            "split_application_schedule": {
+                "basal": "50% of total N (at planting)",
+                "v6_stage": "50% of total N (6-leaf stage, ~30 days after emergence)"
+            }
+        },
+        "vegetables": {
+            "preferred_nitrogen_source": "complete_14_14_14",
+            "acceptable_substitutes": [
+                "urea_46_0_0",
+                "ammonium_sulfate_21_0_0"
+            ],
+            "reasoning": "Vegetables need balanced NPK. Complete fertilizers preferred unless soil test shows adequate P and K.",
+            "application_note": "Apply complete fertilizer at basal, supplement with urea during growth if needed"
+        }
+    },
+    "decision_rules": [
+        {
+            "rule_id": "RULE001",
+            "name": "Primary Urea Substitution Rule",
+            "condition": "requested_fertilizer == 'urea_46_0_0' AND urea_stock_insufficient",
+            "priority": 1,
+            "action": "recommend_ammonium_sulfate_as_primary_substitute",
+            "rationale": "Ammonium Sulfate is the most agronomically sound and cost-effective substitute for Urea",
+            "check_stock": "ammonium_sulfate_21_0_0_bags >= (urea_shortage * 2.19)"
+        },
+        {
+            "rule_id": "RULE002",
+            "name": "Secondary Urea Substitution Rule",
+            "condition": "urea_stock_insufficient AND ammonium_sulfate_stock_insufficient",
+            "priority": 2,
+            "action": "recommend_complete_14_14_14_as_secondary_substitute",
+            "rationale": "If AmSul unavailable, Complete 14-14-14 can substitute but at higher cost",
+            "check_stock": "complete_14_14_14_bags >= (urea_shortage * 3.29)",
+            "warning": "Inform user of significantly higher cost and potential P-K over-application"
+        },
+        {
+            "rule_id": "RULE003",
+            "name": "Complete Fertilizer Interchangeability",
+            "condition": "requested_fertilizer == 'complete_14_14_14' AND stock_insufficient",
+            "priority": 1,
+            "action": "recommend_complete_16_16_16",
+            "rationale": "Nearly identical formulation - direct substitute with minor dosage adjustment",
+            "check_stock": "complete_16_16_16_bags >= (shortage * 0.875)"
+        },
+        {
+            "rule_id": "RULE004",
+            "name": "No Substitute Available",
+            "condition": "all_substitutes_insufficient",
+            "priority": 3,
+            "action": "recommend_waitlist_or_split_allocation",
+            "rationale": "No viable substitutes available - must waitlist or reduce allocation per farmer",
+            "alternative_actions": [
+                "Add farmer to waitlist",
+                "Request emergency allocation from Regional Office",
+                "Offer partial allocation (if some stock remains)",
+                "Suggest organic alternatives if available"
+            ]
+        },
+        {
+            "rule_id": "RULE005",
+            "name": "Crop Suitability Check",
+            "condition": "substitute_recommended",
+            "priority": 1,
+            "action": "validate_substitute_suitable_for_farmer_crop",
+            "rationale": "Ensure substitute is agronomically appropriate for the specific crop",
+            "validation": "Check crop_specific_recommendations before finalizing suggestion"
+        }
+    ],
+    "metadata": {
+        "sources": [
+            "PhilRice Technical Bulletin No. 15 (2020) - Fertilizer Management for Rice",
+            "DA-BAR Fertilizer Recommendation Guide (2021)",
+            "Bureau of Soils and Water Management - Nutrient Management Guidelines",
+            "Fertilizer and Pesticide Authority (FPA) - Registered Fertilizer Database"
+        ],
+        "validation_notes": "All conversion factors and agronomic recommendations validated by Philippine agricultural research institutions",
+        "update_frequency": "Review annually or when new research findings published",
+        "contact_for_updates": "Municipal Agriculturist Office"
+    }
+}

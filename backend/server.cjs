@@ -6,6 +6,8 @@ const multer = require('multer'); // Import multer
 const XLSX = require('xlsx');   // Import xlsx
 const fs = require('fs');       // Import file system module for cleanup
 const bcrypt = require('bcrypt'); // Add at the top if not present
+const FertilizerAlternativeEngine = require('./dss-scripts/engines/alternativeEngine.cjs'); // Import DSS alternative engine
+const RecommendationEngine = require('./dss-scripts/engines/recommendationEngine.cjs'); // Import DSS recommendation engine
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -2840,6 +2842,42 @@ app.delete('/api/distribution/allocations/:id', async (req, res) => {
 // ==================== FARMER REQUESTS ====================
 
 // Get all farmer requests for a season
+// Get farmer requests with optional status filter
+app.get('/api/distribution/requests', async (req, res) => {
+    const { season, status } = req.query;
+
+    try {
+        let query = `
+            SELECT 
+                fr.*,
+                r."LAST NAME" || ', ' || r."FIRST NAME" as full_name,
+                r."BARANGAY" as barangay
+            FROM farmer_requests fr
+            LEFT JOIN rsbsa_submission r ON fr.farmer_id = r.id
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (season) {
+            params.push(season);
+            query += ` AND fr.season = $${params.length}`;
+        }
+
+        if (status) {
+            params.push(status);
+            query += ` AND fr.status = $${params.length}`;
+        }
+
+        query += ` ORDER BY fr.priority_rank ASC NULLS LAST, fr.priority_score DESC`;
+
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching requests:', error);
+        res.status(500).json({ error: 'Failed to fetch requests', message: error.message });
+    }
+});
+
 app.get('/api/distribution/requests/:season', async (req, res) => {
     const { season } = req.params;
     try {
@@ -3002,6 +3040,180 @@ app.delete('/api/distribution/requests/:id', async (req, res) => {
     }
 });
 
+// ==================== SMART ALTERNATIVES (DSS Feature) ====================
+
+// Suggest fertilizer alternatives for a specific farmer request
+app.post('/api/distribution/suggest-alternatives', async (req, res) => {
+    const { request_id } = req.body;
+
+    try {
+        console.log(`\n🤖 Generating smart alternatives for request #${request_id}`);
+
+        // Validate input
+        if (!request_id) {
+            return res.status(400).json({ error: 'request_id is required' });
+        }
+
+        // 1. Get farmer request details
+        const requestResult = await pool.query(`
+            SELECT * FROM farmer_requests WHERE id = $1
+        `, [request_id]);
+
+        if (requestResult.rows.length === 0) {
+            console.log(`   ❌ Request #${request_id} not found in database`);
+            return res.status(404).json({
+                error: 'Farmer request not found',
+                message: `No farmer request with ID ${request_id} exists in the database`
+            });
+        }
+
+        const request = requestResult.rows[0];
+        console.log(`   Farmer: ${request.farmer_name}`);
+        console.log(`   Season: ${request.season}`);
+
+        // 2. Get current allocation for the season
+        const allocationResult = await pool.query(`
+            SELECT * FROM regional_allocations WHERE season = $1
+        `, [request.season]);
+
+        if (allocationResult.rows.length === 0) {
+            return res.status(404).json({ error: 'No allocation found for this season' });
+        }
+
+        const allocation = allocationResult.rows[0];
+
+        // 3. Calculate remaining stock after all approved requests
+        const approvedResult = await pool.query(`
+            SELECT 
+                COALESCE(SUM(requested_urea_bags), 0) as approved_urea,
+                COALESCE(SUM(requested_complete_14_bags), 0) as approved_complete_14,
+                COALESCE(SUM(requested_complete_16_bags), 0) as approved_complete_16,
+                COALESCE(SUM(requested_ammonium_sulfate_bags), 0) as approved_amsul,
+                COALESCE(SUM(requested_ammonium_phosphate_bags), 0) as approved_amph,
+                COALESCE(SUM(requested_muriate_potash_bags), 0) as approved_potash
+            FROM farmer_requests 
+            WHERE season = $1 AND status = 'approved' AND id != $2
+        `, [request.season, request_id]);
+
+        const approved = approvedResult.rows[0];
+
+        const remainingStock = {
+            urea_46_0_0_bags: (allocation.urea_46_0_0_bags || 0) - (approved.approved_urea || 0),
+            complete_14_14_14_bags: (allocation.complete_14_14_14_bags || 0) - (approved.approved_complete_14 || 0),
+            complete_16_16_16_bags: (allocation.complete_16_16_16_bags || 0) - (approved.approved_complete_16 || 0),
+            ammonium_sulfate_21_0_0_bags: (allocation.ammonium_sulfate_21_0_0_bags || 0) - (approved.approved_amsul || 0),
+            ammonium_phosphate_16_20_0_bags: (allocation.ammonium_phosphate_16_20_0_bags || 0) - (approved.approved_amph || 0),
+            muriate_potash_0_0_60_bags: (allocation.muriate_potash_0_0_60_bags || 0) - (approved.approved_potash || 0)
+        };
+
+        console.log('   Remaining stock:', remainingStock);
+
+        // 4. Use Alternative Engine to generate suggestions
+        const engine = new FertilizerAlternativeEngine();
+
+        const farmerRequestData = {
+            farmer_id: request.farmer_id,
+            farmer_name: request.farmer_name,
+            crop_type: request.crop_type || 'rice',
+            requested_urea_bags: request.requested_urea_bags || 0,
+            requested_complete_14_bags: request.requested_complete_14_bags || 0,
+            requested_complete_16_bags: request.requested_complete_16_bags || 0,
+            requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
+            requested_ammonium_phosphate_bags: request.requested_ammonium_phosphate_bags || 0,
+            requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0
+        };
+
+        const suggestions = await engine.suggestAlternatives(farmerRequestData, remainingStock);
+
+        console.log(`   ✅ Generated ${suggestions.suggestions?.length || 0} alternative suggestions`);
+
+        res.json({
+            request_id: request_id,
+            farmer_name: request.farmer_name,
+            season: request.season,
+            remaining_stock: remainingStock,
+            suggestions: suggestions
+        });
+
+    } catch (error) {
+        console.error('❌ Error generating alternatives:', error);
+        res.status(500).json({
+            error: 'Failed to generate alternatives',
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
+// Validate knowledge base integrity (for testing/debugging)
+app.get('/api/distribution/validate-knowledge-base', async (req, res) => {
+    try {
+        const engine = new FertilizerAlternativeEngine();
+        const validation = engine.validateKnowledgeBase();
+
+        res.json({
+            status: validation.valid ? 'valid' : 'invalid',
+            validation: validation,
+            message: validation.valid
+                ? '✅ Knowledge base is valid and ready to use'
+                : '❌ Knowledge base has errors - please check configuration'
+        });
+    } catch (error) {
+        console.error('Error validating knowledge base:', error);
+        res.status(500).json({
+            error: 'Failed to validate knowledge base',
+            message: error.message
+        });
+    }
+});
+
+// ==================== RECOMMENDATIONS (DSS Feature) ====================
+
+// Get smart recommendations for gap analysis
+app.get('/api/distribution/recommendations/:season', async (req, res) => {
+    const { season } = req.params;
+
+    try {
+        console.log(`\n🤖 Generating recommendations for season: ${season}`);
+
+        // 1. Get gap analysis data
+        const gapResponse = await fetch(`http://localhost:5000/api/distribution/gap-analysis/${season}`);
+
+        if (!gapResponse.ok) {
+            return res.status(404).json({
+                error: 'No gap analysis data found',
+                message: `Please ensure allocation and requests exist for season ${season}`
+            });
+        }
+
+        const gapData = await gapResponse.json();
+
+        // 2. Get all farmer requests for this season
+        const requestsResult = await pool.query(`
+            SELECT * FROM farmer_requests WHERE season = $1
+        `, [season]);
+
+        const farmerRequests = requestsResult.rows;
+
+        // 3. Generate recommendations
+        const engine = new RecommendationEngine();
+        const recommendations = engine.generateRecommendations(gapData, farmerRequests);
+
+        console.log(`   ✅ Generated ${recommendations.recommendations.length} recommendations`);
+        console.log(`   Summary: ${recommendations.summary.critical_issues} critical, ${recommendations.summary.high_priority_issues} high priority`);
+
+        res.json(recommendations);
+
+    } catch (error) {
+        console.error('❌ Error generating recommendations:', error);
+        res.status(500).json({
+            error: 'Failed to generate recommendations',
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
 // ==================== PRIORITIZATION ====================
 
 // Calculate priority scores for all requests in a season
@@ -3161,88 +3373,85 @@ app.get('/api/distribution/gap-analysis/:season', async (req, res) => {
 
         const allocation = allocationResult.rows[0];
 
-        // 2. Get total farmer requests
+        // 2. Get actual farmer requests (what they asked for)
         const requestsResult = await pool.query(`
             SELECT 
                 COUNT(*) as total_requests,
                 SUM(CASE WHEN fertilizer_requested THEN 1 ELSE 0 END) as fertilizer_requests,
                 SUM(CASE WHEN seeds_requested THEN 1 ELSE 0 END) as seeds_requests,
-                SUM(farm_area_ha) as total_farm_area
+                SUM(farm_area_ha) as total_farm_area,
+                COALESCE(SUM(requested_urea_bags), 0) as requested_urea,
+                COALESCE(SUM(requested_complete_14_bags), 0) as requested_complete_14,
+                COALESCE(SUM(requested_ammonium_sulfate_bags), 0) as requested_amsul,
+                COALESCE(SUM(requested_muriate_potash_bags), 0) as requested_potash,
+                COALESCE(SUM(requested_jackpot_kg), 0) as requested_jackpot,
+                COALESCE(SUM(requested_us88_kg), 0) as requested_us88,
+                COALESCE(SUM(requested_th82_kg), 0) as requested_th82,
+                COALESCE(SUM(requested_rh9000_kg), 0) as requested_rh9000,
+                COALESCE(SUM(requested_lumping143_kg), 0) as requested_lumping143,
+                COALESCE(SUM(requested_lp296_kg), 0) as requested_lp296
             FROM farmer_requests
             WHERE season = $1
         `, [season]);
 
         const requests = requestsResult.rows[0];
 
-        // 3. Calculate estimated needs (area-based)
-        const totalArea = parseFloat(requests.total_farm_area) || 0;
-        const estimatedFertilizerKg = totalArea * 150; // 150 kg/ha standard rate
-        const estimatedFertilizerBags = Math.ceil(estimatedFertilizerKg / 50); // 50kg per bag
+        // 3. Calculate gaps using ACTUAL REQUESTED amounts
+        const requestedUrea = parseFloat(requests.requested_urea) || 0.01; // Avoid division by zero
+        const requestedComplete14 = parseFloat(requests.requested_complete_14) || 0.01;
+        const requestedAmSul = parseFloat(requests.requested_amsul) || 0.01;
+        const requestedPotash = parseFloat(requests.requested_potash) || 0.01;
 
-        // Breakdown by type (based on typical distribution)
-        const estimatedUreaBags = Math.ceil(estimatedFertilizerBags * 0.55);
-        const estimatedComplete14Bags = Math.ceil(estimatedFertilizerBags * 0.30);
-        const estimatedComplete16Bags = Math.ceil(estimatedFertilizerBags * 0.05);
-        const estimatedAmSulBags = Math.ceil(estimatedFertilizerBags * 0.10);
+        const totalRiceSeeds = parseFloat(requests.requested_jackpot) + parseFloat(requests.requested_us88) + parseFloat(requests.requested_th82);
+        const totalCornSeeds = parseFloat(requests.requested_rh9000) + parseFloat(requests.requested_lumping143) + parseFloat(requests.requested_lp296);
 
-        // Seeds estimation
-        const estimatedRiceSeedsKg = totalArea * 0.70 * 120; // 70% rice, 120 kg/ha
-        const estimatedCornSeedsKg = totalArea * 0.30 * 20;  // 30% corn, 20 kg/ha
-
-        // 4. Calculate gaps
+        // 4. Calculate gaps (Allocated - Requested)
+        // Positive gap = surplus, Negative gap = shortage
         const fertilizerGap = {
             urea: {
-                estimated: estimatedUreaBags,
+                requested: requestedUrea,
                 allocated: allocation.urea_46_0_0_bags,
-                gap: allocation.urea_46_0_0_bags - estimatedUreaBags,
-                percentage: allocation.urea_46_0_0_bags > 0 ?
-                    ((allocation.urea_46_0_0_bags / estimatedUreaBags) * 100).toFixed(1) : 0
+                gap: allocation.urea_46_0_0_bags - requestedUrea,
+                percentage: requestedUrea > 0 ?
+                    ((allocation.urea_46_0_0_bags / requestedUrea) * 100).toFixed(1) : '0'
             },
             complete_14_14_14: {
-                estimated: estimatedComplete14Bags,
+                requested: requestedComplete14,
                 allocated: allocation.complete_14_14_14_bags,
-                gap: allocation.complete_14_14_14_bags - estimatedComplete14Bags,
-                percentage: allocation.complete_14_14_14_bags > 0 ?
-                    ((allocation.complete_14_14_14_bags / estimatedComplete14Bags) * 100).toFixed(1) : 0
-            },
-            complete_16_16_16: {
-                estimated: estimatedComplete16Bags,
-                allocated: allocation.complete_16_16_16_bags,
-                gap: allocation.complete_16_16_16_bags - estimatedComplete16Bags,
-                percentage: allocation.complete_16_16_16_bags > 0 ?
-                    ((allocation.complete_16_16_16_bags / estimatedComplete16Bags) * 100).toFixed(1) : 0
+                gap: allocation.complete_14_14_14_bags - requestedComplete14,
+                percentage: requestedComplete14 > 0 ?
+                    ((allocation.complete_14_14_14_bags / requestedComplete14) * 100).toFixed(1) : '0'
             },
             ammonium_sulfate: {
-                estimated: estimatedAmSulBags,
+                requested: requestedAmSul,
                 allocated: allocation.ammonium_sulfate_21_0_0_bags,
-                gap: allocation.ammonium_sulfate_21_0_0_bags - estimatedAmSulBags,
-                percentage: allocation.ammonium_sulfate_21_0_0_bags > 0 ?
-                    ((allocation.ammonium_sulfate_21_0_0_bags / estimatedAmSulBags) * 100).toFixed(1) : 0
+                gap: allocation.ammonium_sulfate_21_0_0_bags - requestedAmSul,
+                percentage: requestedAmSul > 0 ?
+                    ((allocation.ammonium_sulfate_21_0_0_bags / requestedAmSul) * 100).toFixed(1) : '0'
+            },
+            muriate_potash: {
+                requested: requestedPotash,
+                allocated: allocation.muriate_potash_0_0_60_bags,
+                gap: allocation.muriate_potash_0_0_60_bags - requestedPotash,
+                percentage: requestedPotash > 0 ?
+                    ((allocation.muriate_potash_0_0_60_bags / requestedPotash) * 100).toFixed(1) : '0'
             }
         };
 
         const seedsGap = {
             rice_seeds: {
-                estimated: Math.ceil(estimatedRiceSeedsKg),
-                allocated: allocation.rice_seeds_nsic_rc160_kg +
-                    allocation.rice_seeds_nsic_rc222_kg +
-                    allocation.rice_seeds_nsic_rc440_kg,
-                gap: (allocation.rice_seeds_nsic_rc160_kg +
-                    allocation.rice_seeds_nsic_rc222_kg +
-                    allocation.rice_seeds_nsic_rc440_kg) - estimatedRiceSeedsKg,
-                percentage: (allocation.rice_seeds_nsic_rc160_kg +
-                    allocation.rice_seeds_nsic_rc222_kg +
-                    allocation.rice_seeds_nsic_rc440_kg) > 0 ?
-                    (((allocation.rice_seeds_nsic_rc160_kg +
-                        allocation.rice_seeds_nsic_rc222_kg +
-                        allocation.rice_seeds_nsic_rc440_kg) / estimatedRiceSeedsKg) * 100).toFixed(1) : 0
+                requested: totalRiceSeeds || 0.01,
+                allocated: parseFloat(allocation.jackpot_kg || 0) + parseFloat(allocation.us88_kg || 0) + parseFloat(allocation.th82_kg || 0),
+                gap: (parseFloat(allocation.jackpot_kg || 0) + parseFloat(allocation.us88_kg || 0) + parseFloat(allocation.th82_kg || 0)) - totalRiceSeeds,
+                percentage: totalRiceSeeds > 0 ?
+                    (((parseFloat(allocation.jackpot_kg || 0) + parseFloat(allocation.us88_kg || 0) + parseFloat(allocation.th82_kg || 0)) / totalRiceSeeds) * 100).toFixed(1) : '0'
             },
             corn_seeds: {
-                estimated: Math.ceil(estimatedCornSeedsKg),
-                allocated: allocation.corn_seeds_hybrid_kg + allocation.corn_seeds_opm_kg,
-                gap: (allocation.corn_seeds_hybrid_kg + allocation.corn_seeds_opm_kg) - estimatedCornSeedsKg,
-                percentage: (allocation.corn_seeds_hybrid_kg + allocation.corn_seeds_opm_kg) > 0 ?
-                    (((allocation.corn_seeds_hybrid_kg + allocation.corn_seeds_opm_kg) / estimatedCornSeedsKg) * 100).toFixed(1) : 0
+                requested: totalCornSeeds || 0.01,
+                allocated: parseFloat(allocation.rh9000_kg || 0) + parseFloat(allocation.lumping143_kg || 0) + parseFloat(allocation.lp296_kg || 0),
+                gap: (parseFloat(allocation.rh9000_kg || 0) + parseFloat(allocation.lumping143_kg || 0) + parseFloat(allocation.lp296_kg || 0)) - totalCornSeeds,
+                percentage: totalCornSeeds > 0 ?
+                    (((parseFloat(allocation.rh9000_kg || 0) + parseFloat(allocation.lumping143_kg || 0) + parseFloat(allocation.lp296_kg || 0)) / totalCornSeeds) * 100).toFixed(1) : '0'
             }
         };
 
@@ -3253,6 +3462,9 @@ app.get('/api/distribution/gap-analysis/:season', async (req, res) => {
             total_farm_area_ha: parseFloat(requests.total_farm_area).toFixed(2),
             fertilizer_gap: fertilizerGap,
             seeds_gap: seedsGap,
+            // Add aliases for recommendation engine compatibility
+            fertilizers: fertilizerGap,
+            seeds: seedsGap,
             summary: {
                 has_shortages: Object.values(fertilizerGap).some(f => f.gap < 0) ||
                     Object.values(seedsGap).some(s => s.gap < 0),

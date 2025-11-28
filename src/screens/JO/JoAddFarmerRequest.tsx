@@ -159,7 +159,7 @@ const JoAddFarmerRequest: React.FC = () => {
         setFormData(prev => ({
             ...prev,
             [name]: name === 'farmer_id' || name === 'priority_score' || name.includes('requested_')
-                ? parseFloat(value) || 0
+                ? (value === '' ? 0 : parseFloat(value))
                 : value
         }));
     };
@@ -383,42 +383,85 @@ const JoAddFarmerRequest: React.FC = () => {
                                         }}
                                     />
                                 </div>
-                                <style>
-                                    {`
-                                        select[name="farmer_id"] option:checked,
-                                        select[name="farmer_id"] option:hover {
-                                            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-                                            color: white !important;
-                                        }
-                                        select[name="farmer_id"] option {
-                                            padding: 8px;
-                                        }
-                                    `}
-                                </style>
-                                <select
-                                    name="farmer_id"
-                                    value={formData.farmer_id}
-                                    onChange={handleInputChange}
-                                    required
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '6px',
-                                        fontSize: '14px',
-                                        maxHeight: '200px'
-                                    }}
-                                    size={8}
-                                >
-                                    <option value="">-- Select Farmer --</option>
-                                    {filteredFarmers.map(farmer => (
-                                        <option key={farmer.id} value={farmer.id}>
-                                            {farmer.last_name}, {farmer.first_name} {farmer.middle_name ? farmer.middle_name + ' ' : ''}
-                                            {farmer.extension_name ? farmer.extension_name + ' ' : ''}
-                                            ({farmer.barangay}) - RSBSA: {farmer.rsbsa_no}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div style={{
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '6px',
+                                    maxHeight: '300px',
+                                    overflowY: 'auto',
+                                    backgroundColor: '#f9fafb'
+                                }}>
+                                    {filteredFarmers.length === 0 ? (
+                                        <div style={{
+                                            padding: '24px',
+                                            textAlign: 'center',
+                                            color: '#6b7280'
+                                        }}>
+                                            No farmers found
+                                        </div>
+                                    ) : (
+                                        filteredFarmers.map(farmer => (
+                                            <label
+                                                key={farmer.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    padding: '12px 16px',
+                                                    borderBottom: '1px solid #e5e7eb',
+                                                    cursor: 'pointer',
+                                                    transition: 'background-color 0.2s',
+                                                    backgroundColor: Number(formData.farmer_id) === Number(farmer.id) ? '#d1fae5' : 'white'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (Number(formData.farmer_id) !== Number(farmer.id)) {
+                                                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (Number(formData.farmer_id) !== Number(farmer.id)) {
+                                                        e.currentTarget.style.backgroundColor = 'white';
+                                                    }
+                                                }}
+                                                onClick={() => {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        farmer_id: Number(farmer.id)
+                                                    }));
+                                                }}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="farmer_id"
+                                                    value={farmer.id}
+                                                    checked={Number(formData.farmer_id) === Number(farmer.id)}
+                                                    onChange={() => { }} // Handled by label onClick
+                                                    style={{
+                                                        width: '18px',
+                                                        height: '18px',
+                                                        marginRight: '12px',
+                                                        cursor: 'pointer',
+                                                        accentColor: '#10b981'
+                                                    }}
+                                                />
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{
+                                                        fontWeight: '500',
+                                                        color: '#1f2937',
+                                                        marginBottom: '2px'
+                                                    }}>
+                                                        {farmer.last_name}, {farmer.first_name} {farmer.middle_name ? farmer.middle_name + ' ' : ''}
+                                                        {farmer.extension_name ? farmer.extension_name + ' ' : ''}
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '13px',
+                                                        color: '#6b7280'
+                                                    }}>
+                                                        📍 {farmer.barangay} • RSBSA: {farmer.rsbsa_no}
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        ))
+                                    )}
+                                </div>
                             </div>
 
                             {/* Fertilizer Requests */}
