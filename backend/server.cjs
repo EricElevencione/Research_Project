@@ -2868,7 +2868,7 @@ app.get('/api/distribution/requests', async (req, res) => {
             query += ` AND fr.status = $${params.length}`;
         }
 
-        query += ` ORDER BY fr.priority_rank ASC NULLS LAST, fr.priority_score DESC`;
+        query += ` ORDER BY fr.request_date ASC, fr.id ASC`;
 
         const result = await pool.query(query, params);
         res.json(result.rows);
@@ -2889,7 +2889,7 @@ app.get('/api/distribution/requests/:season', async (req, res) => {
             FROM farmer_requests fr
             LEFT JOIN rsbsa_submission r ON fr.farmer_id = r.id
             WHERE fr.season = $1
-            ORDER BY fr.priority_rank ASC NULLS LAST, fr.priority_score DESC
+            ORDER BY fr.request_date ASC, fr.id ASC
         `, [season]);
 
         res.json(result.rows);
@@ -3090,7 +3090,13 @@ app.post('/api/distribution/suggest-alternatives', async (req, res) => {
                 COALESCE(SUM(requested_complete_16_bags), 0) as approved_complete_16,
                 COALESCE(SUM(requested_ammonium_sulfate_bags), 0) as approved_amsul,
                 COALESCE(SUM(requested_ammonium_phosphate_bags), 0) as approved_amph,
-                COALESCE(SUM(requested_muriate_potash_bags), 0) as approved_potash
+                COALESCE(SUM(requested_muriate_potash_bags), 0) as approved_potash,
+                COALESCE(SUM(requested_jackpot_kg), 0) as approved_jackpot,
+                COALESCE(SUM(requested_us88_kg), 0) as approved_us88,
+                COALESCE(SUM(requested_th82_kg), 0) as approved_th82,
+                COALESCE(SUM(requested_rh9000_kg), 0) as approved_rh9000,
+                COALESCE(SUM(requested_lumping143_kg), 0) as approved_lumping143,
+                COALESCE(SUM(requested_lp296_kg), 0) as approved_lp296
             FROM farmer_requests 
             WHERE season = $1 AND status = 'approved' AND id != $2
         `, [request.season, request_id]);
@@ -3103,7 +3109,13 @@ app.post('/api/distribution/suggest-alternatives', async (req, res) => {
             complete_16_16_16_bags: (allocation.complete_16_16_16_bags || 0) - (approved.approved_complete_16 || 0),
             ammonium_sulfate_21_0_0_bags: (allocation.ammonium_sulfate_21_0_0_bags || 0) - (approved.approved_amsul || 0),
             ammonium_phosphate_16_20_0_bags: (allocation.ammonium_phosphate_16_20_0_bags || 0) - (approved.approved_amph || 0),
-            muriate_potash_0_0_60_bags: (allocation.muriate_potash_0_0_60_bags || 0) - (approved.approved_potash || 0)
+            muriate_potash_0_0_60_bags: (allocation.muriate_potash_0_0_60_bags || 0) - (approved.approved_potash || 0),
+            jackpot_kg: (allocation.jackpot_kg || 0) - (approved.approved_jackpot || 0),
+            us88_kg: (allocation.us88_kg || 0) - (approved.approved_us88 || 0),
+            th82_kg: (allocation.th82_kg || 0) - (approved.approved_th82 || 0),
+            rh9000_kg: (allocation.rh9000_kg || 0) - (approved.approved_rh9000 || 0),
+            lumping143_kg: (allocation.lumping143_kg || 0) - (approved.approved_lumping143 || 0),
+            lp296_kg: (allocation.lp296_kg || 0) - (approved.approved_lp296 || 0)
         };
 
         console.log('   Remaining stock:', remainingStock);
@@ -3120,7 +3132,13 @@ app.post('/api/distribution/suggest-alternatives', async (req, res) => {
             requested_complete_16_bags: request.requested_complete_16_bags || 0,
             requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
             requested_ammonium_phosphate_bags: request.requested_ammonium_phosphate_bags || 0,
-            requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0
+            requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0,
+            requested_jackpot_kg: request.requested_jackpot_kg || 0,
+            requested_us88_kg: request.requested_us88_kg || 0,
+            requested_th82_kg: request.requested_th82_kg || 0,
+            requested_rh9000_kg: request.requested_rh9000_kg || 0,
+            requested_lumping143_kg: request.requested_lumping143_kg || 0,
+            requested_lp296_kg: request.requested_lp296_kg || 0
         };
 
         const suggestions = await engine.suggestAlternatives(farmerRequestData, remainingStock);
@@ -3215,145 +3233,28 @@ app.get('/api/distribution/recommendations/:season', async (req, res) => {
 });
 
 // ==================== PRIORITIZATION ====================
+// DISABLED: DA uses first-come, first-serve with alternatives for shortages
+// Priority-based allocation removed to avoid bias in distribution
 
+/* 
 // Calculate priority scores for all requests in a season
 app.post('/api/distribution/calculate-priorities/:season', async (req, res) => {
-    const { season } = req.params;
-
-    try {
-        // Get active priority configuration
-        const configResult = await pool.query(`
-            SELECT * FROM priority_configurations WHERE is_active = TRUE LIMIT 1
-        `);
-
-        if (configResult.rows.length === 0) {
-            return res.status(400).json({ error: 'No active priority configuration found' });
-        }
-
-        const config = configResult.rows[0];
-
-        // Get all requests for the season
-        const requestsResult = await pool.query(`
-            SELECT 
-                fr.id,
-                fr.farm_area_ha,
-                fr.ownership_type,
-                fr.barangay,
-                fr.crop_type,
-                COUNT(idl.id) as times_received_assistance
-            FROM farmer_requests fr
-            LEFT JOIN incentive_distribution_log idl ON fr.farmer_id = idl.farmer_id
-            WHERE fr.season = $1
-            GROUP BY fr.id, fr.farm_area_ha, fr.ownership_type, fr.barangay, fr.crop_type
-        `, [season]);
-
-        const requests = requestsResult.rows;
-
-        // Calculate priority score for each request
-        const updates = [];
-
-        for (const request of requests) {
-            let score = 0;
-
-            // 1. Farm area score (smaller = higher priority)
-            const farmAreaRules = config.farm_area_rules;
-            if (request.farm_area_ha < 1) {
-                score += farmAreaRules['<1ha'] || 30;
-            } else if (request.farm_area_ha < 2) {
-                score += farmAreaRules['1-2ha'] || 20;
-            } else if (request.farm_area_ha < 3) {
-                score += farmAreaRules['2-3ha'] || 10;
-            } else {
-                score += farmAreaRules['>3ha'] || 5;
-            }
-
-            // 2. Ownership type score (tenant/lessee = higher priority)
-            const ownershipRules = config.ownership_rules;
-            const ownershipScore = ownershipRules[request.ownership_type] || 10;
-            score += ownershipScore;
-
-            // 3. Historical assistance score (less received = higher priority)
-            if (request.times_received_assistance === 0) {
-                score += 30;
-            } else if (request.times_received_assistance === 1) {
-                score += 20;
-            } else if (request.times_received_assistance === 2) {
-                score += 10;
-            } else {
-                score += 5;
-            }
-
-            // 4. Location score (remote areas = higher priority)
-            // Define remote barangays (this can be configured)
-            const remoteBarangays = ['Calao', 'Mabini', 'San Nicolas'];
-            if (remoteBarangays.includes(request.barangay)) {
-                score += config.location_rules['remote'] || 15;
-            } else {
-                score += config.location_rules['accessible'] || 5;
-            }
-
-            // 5. Crop type score (food security crops = higher priority)
-            if (request.crop_type === 'rice' || request.crop_type === 'corn') {
-                score += 10;
-            } else {
-                score += 5;
-            }
-
-            updates.push({ id: request.id, score });
-        }
-
-        // Sort by score to assign ranks
-        updates.sort((a, b) => b.score - a.score);
-
-        // Update database with scores and ranks
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-
-            for (let i = 0; i < updates.length; i++) {
-                await client.query(`
-                    UPDATE farmer_requests
-                    SET priority_score = $1, priority_rank = $2, updated_at = NOW()
-                    WHERE id = $3
-                `, [updates[i].score, i + 1, updates[i].id]);
-            }
-
-            await client.query('COMMIT');
-
-            res.json({
-                message: 'Priority scores calculated successfully',
-                total_requests: updates.length,
-                config_used: config.config_name
-            });
-        } catch (error) {
-            await client.query('ROLLBACK');
-            throw error;
-        } finally {
-            client.release();
-        }
-    } catch (error) {
-        console.error('Error calculating priorities:', error);
-        res.status(500).json({ error: 'Failed to calculate priorities', message: error.message });
-    }
+    // Endpoint disabled - using first-come, first-serve instead
+    res.status(410).json({ 
+        error: 'Priority calculation disabled',
+        message: 'DA uses first-come, first-serve distribution model'
+    });
 });
 
 // Get priority configuration
 app.get('/api/distribution/priority-config', async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT * FROM priority_configurations WHERE is_active = TRUE LIMIT 1
-        `);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'No active configuration found' });
-        }
-
-        res.json(result.rows[0]);
-    } catch (error) {
-        console.error('Error fetching config:', error);
-        res.status(500).json({ error: 'Failed to fetch configuration', message: error.message });
-    }
+    // Endpoint disabled - using first-come, first-serve instead
+    res.status(410).json({ 
+        error: 'Priority configuration disabled',
+        message: 'DA uses first-come, first-serve distribution model'
+    });
 });
+*/
 
 // ==================== GAP ANALYSIS ====================
 

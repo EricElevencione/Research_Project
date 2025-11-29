@@ -23,7 +23,6 @@ import JoLandrecords from './screens/JO/JoLandrecords';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
 import JoGapAnalysis from './screens/JO/JoGapAnalysis';
 import JoDistribution from './screens/JO/JoDistribution';
-import './index.css'; // Tailwind CSS
 import "../src/assets/css/admin css/index.css";
 import './assets/css/mobile.css';
 

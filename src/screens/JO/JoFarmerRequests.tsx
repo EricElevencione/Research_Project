@@ -154,29 +154,6 @@ const JoFarmerRequests: React.FC = () => {
         }
     };
 
-    const calculatePriorities = async () => {
-        if (!confirm(`Calculate priority scores for all ${selectedSeason} requests?`)) return;
-
-        setLoading(true);
-        try {
-            const response = await fetch(`http://localhost:5000/api/distribution/calculate-priorities/${selectedSeason}`, {
-                method: 'POST'
-            });
-
-            if (response.ok) {
-                alert('Priority scores calculated successfully!');
-                fetchRequests();
-            } else {
-                alert('Failed to calculate priorities');
-            }
-        } catch (error) {
-            console.error('Error calculating priorities:', error);
-            alert('Error calculating priorities');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const totalFertilizerBags = formData.urea_46_0_0_bags +
         formData.complete_14_14_14_bags +
         formData.complete_16_16_16_bags +
@@ -614,20 +591,12 @@ const JoFarmerRequests: React.FC = () => {
                                     <option value="wet_2025">Wet Season 2025</option>
                                 </select>
                             </div>
-                            <button
-                                onClick={calculatePriorities}
-                                disabled={loading}
-                                className="farmer-btn farmer-btn-priority"
-                            >
-                                🔢 Calculate Priorities
-                            </button>
                         </div>
 
                         <div className="requests-table-container">
                             <table className="requests-table">
                                 <thead>
                                     <tr>
-                                        <th>Priority Score</th>
                                         <th>Farmer Name</th>
                                         <th>RSBSA #</th>
                                         <th>Farm Size</th>
@@ -642,7 +611,7 @@ const JoFarmerRequests: React.FC = () => {
                                 <tbody>
                                     {requests.length === 0 ? (
                                         <tr>
-                                            <td colSpan={10} style={{ textAlign: 'center', padding: '2rem' }}>
+                                            <td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
                                                 No requests found for {selectedSeason}
                                             </td>
                                         </tr>
@@ -664,11 +633,6 @@ const JoFarmerRequests: React.FC = () => {
 
                                             return (
                                                 <tr key={req.id}>
-                                                    <td>
-                                                        <span className="priority-badge">
-                                                            {req.priority_score ? req.priority_score.toFixed(2) : 'N/A'}
-                                                        </span>
-                                                    </td>
                                                     <td>{req.farmer_name}</td>
                                                     <td>{req.rsbsa_number}</td>
                                                     <td>{req.farm_size_ha} ha</td>

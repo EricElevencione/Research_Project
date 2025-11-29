@@ -1,0 +1,382 @@
+{
+    "metadata": {
+        "version": "1.0.0",
+        "lastUpdated": "2025-11-29",
+        "source": "Temporary placeholder - pending PhilRice/DA-BAR validation",
+        "description": "Seed variety equivalency and substitution rules for rice varieties in the Philippines. All ratios are 1:1 pending agronomic validation."
+    },
+    "seedEquivalencies": {
+        "jackpot": {
+            "name": "Jackpot",
+            "category": "certified_seeds",
+            "substitutes": [
+                {
+                    "id": "us88",
+                    "name": "US-88",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.92,
+                    "reason": "Similar yield characteristics and maturity period",
+                    "instructions": {
+                        "english": "US-88 is a proven variety with similar characteristics to Jackpot. Apply same cultivation practices.",
+                        "tagalog": "Ang US-88 ay isang proven variety na may katulad na katangian sa Jackpot. Gamitin ang parehong pamamaraan ng pagtatanim."
+                    }
+                },
+                {
+                    "id": "th82",
+                    "name": "TH-82",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.88,
+                    "reason": "Good alternative with reliable performance",
+                    "instructions": {
+                        "english": "TH-82 is suitable for most growing conditions. Maintain same planting density.",
+                        "tagalog": "Ang TH-82 ay angkop sa karamihan ng kondisyon ng pagtatanim. Panatilihin ang parehong planting density."
+                    }
+                },
+                {
+                    "id": "rh9000",
+                    "name": "RH-9000",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.85,
+                    "reason": "Compatible variety with good yield potential",
+                    "instructions": {
+                        "english": "RH-9000 offers good yield potential. Follow standard cultivation practices.",
+                        "tagalog": "Ang RH-9000 ay nag-aalok ng magandang ani. Sundin ang standard na pamamaraan ng pagtatanim."
+                    }
+                },
+                {
+                    "id": "lumping143",
+                    "name": "Lumping-143",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.82,
+                    "reason": "Traditional variety with consistent results",
+                    "instructions": {
+                        "english": "Lumping-143 is a traditional variety known for consistency. Use same seed rate.",
+                        "tagalog": "Ang Lumping-143 ay traditional variety na kilala sa consistency. Gamitin ang parehong seed rate."
+                    }
+                },
+                {
+                    "id": "lp296",
+                    "name": "LP-296",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.80,
+                    "reason": "Alternative variety suitable for local conditions",
+                    "instructions": {
+                        "english": "LP-296 is suitable for local conditions. Apply recommended seeding rate.",
+                        "tagalog": "Ang LP-296 ay angkop sa lokal na kondisyon. Gamitin ang recommended seeding rate."
+                    }
+                }
+            ]
+        },
+        "us88": {
+            "name": "US-88",
+            "category": "certified_seeds",
+            "substitutes": [
+                {
+                    "id": "jackpot",
+                    "name": "Jackpot",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.92,
+                    "reason": "Similar yield characteristics and maturity period",
+                    "instructions": {
+                        "english": "Jackpot is a proven variety with similar characteristics to US-88.",
+                        "tagalog": "Ang Jackpot ay proven variety na may katulad na katangian sa US-88."
+                    }
+                },
+                {
+                    "id": "th82",
+                    "name": "TH-82",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.90,
+                    "reason": "Excellent alternative with proven track record",
+                    "instructions": {
+                        "english": "TH-82 has excellent track record. Maintain same cultivation practices.",
+                        "tagalog": "Ang TH-82 ay may magandang track record. Panatilihin ang parehong pamamaraan."
+                    }
+                },
+                {
+                    "id": "rh9000",
+                    "name": "RH-9000",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.87,
+                    "reason": "Good substitute with reliable performance",
+                    "instructions": {
+                        "english": "RH-9000 provides reliable performance. Follow standard practices.",
+                        "tagalog": "Ang RH-9000 ay nagbibigay ng reliable performance. Sundin ang standard practices."
+                    }
+                },
+                {
+                    "id": "lumping143",
+                    "name": "Lumping-143",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.83,
+                    "reason": "Traditional variety with good adaptation",
+                    "instructions": {
+                        "english": "Lumping-143 shows good adaptation. Use same seed rate.",
+                        "tagalog": "Ang Lumping-143 ay may magandang adaptation. Gamitin ang parehong seed rate."
+                    }
+                },
+                {
+                    "id": "lp296",
+                    "name": "LP-296",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.81,
+                    "reason": "Suitable alternative for local conditions",
+                    "instructions": {
+                        "english": "LP-296 is suitable for local conditions.",
+                        "tagalog": "Ang LP-296 ay angkop sa lokal na kondisyon."
+                    }
+                }
+            ]
+        },
+        "th82": {
+            "name": "TH-82",
+            "category": "certified_seeds",
+            "substitutes": [
+                {
+                    "id": "us88",
+                    "name": "US-88",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.90,
+                    "reason": "Similar performance characteristics",
+                    "instructions": {
+                        "english": "US-88 has similar performance to TH-82.",
+                        "tagalog": "Ang US-88 ay may katulad na performance sa TH-82."
+                    }
+                },
+                {
+                    "id": "jackpot",
+                    "name": "Jackpot",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.88,
+                    "reason": "Comparable yield potential",
+                    "instructions": {
+                        "english": "Jackpot offers comparable yield potential.",
+                        "tagalog": "Ang Jackpot ay nag-aalok ng comparable yield potential."
+                    }
+                },
+                {
+                    "id": "rh9000",
+                    "name": "RH-9000",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.89,
+                    "reason": "Good alternative with consistent results",
+                    "instructions": {
+                        "english": "RH-9000 provides consistent results.",
+                        "tagalog": "Ang RH-9000 ay nagbibigay ng consistent results."
+                    }
+                },
+                {
+                    "id": "lumping143",
+                    "name": "Lumping-143",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.84,
+                    "reason": "Reliable traditional variety",
+                    "instructions": {
+                        "english": "Lumping-143 is a reliable traditional variety.",
+                        "tagalog": "Ang Lumping-143 ay reliable traditional variety."
+                    }
+                },
+                {
+                    "id": "lp296",
+                    "name": "LP-296",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.82,
+                    "reason": "Suitable substitute for local adaptation",
+                    "instructions": {
+                        "english": "LP-296 is suitable for local adaptation.",
+                        "tagalog": "Ang LP-296 ay angkop sa lokal na adaptation."
+                    }
+                }
+            ]
+        },
+        "rh9000": {
+            "name": "RH-9000",
+            "category": "certified_seeds",
+            "substitutes": [
+                {
+                    "id": "th82",
+                    "name": "TH-82",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.89,
+                    "reason": "Similar maturity and yield characteristics",
+                    "instructions": {
+                        "english": "TH-82 has similar characteristics to RH-9000.",
+                        "tagalog": "Ang TH-82 ay may katulad na katangian sa RH-9000."
+                    }
+                },
+                {
+                    "id": "us88",
+                    "name": "US-88",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.87,
+                    "reason": "Good alternative with proven performance",
+                    "instructions": {
+                        "english": "US-88 offers proven performance.",
+                        "tagalog": "Ang US-88 ay nag-aalok ng proven performance."
+                    }
+                },
+                {
+                    "id": "jackpot",
+                    "name": "Jackpot",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.85,
+                    "reason": "Compatible variety with good yield",
+                    "instructions": {
+                        "english": "Jackpot is compatible with good yield potential.",
+                        "tagalog": "Ang Jackpot ay compatible na may magandang yield potential."
+                    }
+                },
+                {
+                    "id": "lumping143",
+                    "name": "Lumping-143",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.83,
+                    "reason": "Traditional alternative",
+                    "instructions": {
+                        "english": "Lumping-143 is a traditional alternative.",
+                        "tagalog": "Ang Lumping-143 ay traditional alternative."
+                    }
+                },
+                {
+                    "id": "lp296",
+                    "name": "LP-296",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.81,
+                    "reason": "Suitable for local conditions",
+                    "instructions": {
+                        "english": "LP-296 is suitable for local conditions.",
+                        "tagalog": "Ang LP-296 ay angkop sa lokal na kondisyon."
+                    }
+                }
+            ]
+        },
+        "lumping143": {
+            "name": "Lumping-143",
+            "category": "certified_seeds",
+            "substitutes": [
+                {
+                    "id": "th82",
+                    "name": "TH-82",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.84,
+                    "reason": "Modern variety with better yield",
+                    "instructions": {
+                        "english": "TH-82 offers modern characteristics with better yield.",
+                        "tagalog": "Ang TH-82 ay nag-aalok ng modern characteristics na may mas magandang ani."
+                    }
+                },
+                {
+                    "id": "us88",
+                    "name": "US-88",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.83,
+                    "reason": "Proven variety with good results",
+                    "instructions": {
+                        "english": "US-88 is a proven variety with good results.",
+                        "tagalog": "Ang US-88 ay proven variety na may magandang resulta."
+                    }
+                },
+                {
+                    "id": "jackpot",
+                    "name": "Jackpot",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.82,
+                    "reason": "Good alternative variety",
+                    "instructions": {
+                        "english": "Jackpot is a good alternative variety.",
+                        "tagalog": "Ang Jackpot ay magandang alternative variety."
+                    }
+                },
+                {
+                    "id": "rh9000",
+                    "name": "RH-9000",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.83,
+                    "reason": "Compatible substitute",
+                    "instructions": {
+                        "english": "RH-9000 is a compatible substitute.",
+                        "tagalog": "Ang RH-9000 ay compatible substitute."
+                    }
+                },
+                {
+                    "id": "lp296",
+                    "name": "LP-296",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.85,
+                    "reason": "Similar traditional variety",
+                    "instructions": {
+                        "english": "LP-296 is a similar traditional variety.",
+                        "tagalog": "Ang LP-296 ay katulad na traditional variety."
+                    }
+                }
+            ]
+        },
+        "lp296": {
+            "name": "LP-296",
+            "category": "certified_seeds",
+            "substitutes": [
+                {
+                    "id": "lumping143",
+                    "name": "Lumping-143",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.85,
+                    "reason": "Similar traditional characteristics",
+                    "instructions": {
+                        "english": "Lumping-143 has similar traditional characteristics.",
+                        "tagalog": "Ang Lumping-143 ay may katulad na traditional characteristics."
+                    }
+                },
+                {
+                    "id": "th82",
+                    "name": "TH-82",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.82,
+                    "reason": "Modern alternative with good yield",
+                    "instructions": {
+                        "english": "TH-82 is a modern alternative with good yield.",
+                        "tagalog": "Ang TH-82 ay modern alternative na may magandang ani."
+                    }
+                },
+                {
+                    "id": "us88",
+                    "name": "US-88",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.81,
+                    "reason": "Proven variety",
+                    "instructions": {
+                        "english": "US-88 is a proven variety.",
+                        "tagalog": "Ang US-88 ay proven variety."
+                    }
+                },
+                {
+                    "id": "jackpot",
+                    "name": "Jackpot",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.80,
+                    "reason": "Good substitute",
+                    "instructions": {
+                        "english": "Jackpot is a good substitute.",
+                        "tagalog": "Ang Jackpot ay magandang substitute."
+                    }
+                },
+                {
+                    "id": "rh9000",
+                    "name": "RH-9000",
+                    "conversionRatio": 1.0,
+                    "confidenceScore": 0.81,
+                    "reason": "Compatible variety",
+                    "instructions": {
+                        "english": "RH-9000 is a compatible variety.",
+                        "tagalog": "Ang RH-9000 ay compatible variety."
+                    }
+                }
+            ]
+        }
+    },
+    "notes": {
+        "conversionRatio": "All seed substitutions use 1:1 ratio (1kg = 1kg) pending agronomic validation",
+        "confidenceScores": "Confidence scores (0.80-0.92) are placeholder values based on general popularity and should be validated with actual field data from PhilRice/DA-BAR",
+        "instructions": "Farmer instructions are general guidelines and should be reviewed by agricultural technicians",
+        "validation": "This knowledge base requires validation and refinement based on actual agronomic research data"
+    }
+}

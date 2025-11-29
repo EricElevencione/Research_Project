@@ -24,7 +24,6 @@ interface FarmerRequest {
     requested_rh9000_kg: number;
     requested_lumping143_kg: number;
     requested_lp296_kg: number;
-    priority_score: number;
     status: string;
 }
 

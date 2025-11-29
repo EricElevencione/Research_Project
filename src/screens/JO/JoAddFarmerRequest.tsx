@@ -38,7 +38,6 @@ interface FarmerRequestForm {
     requested_rh9000_kg: number;
     requested_lumping143_kg: number;
     requested_lp296_kg: number;
-    priority_score: number;
     notes: string;
 }
 
@@ -50,6 +49,7 @@ const JoAddFarmerRequest: React.FC = () => {
     const [farmers, setFarmers] = useState<Farmer[]>([]);
     const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [existingRequests, setExistingRequests] = useState<number[]>([]); // farmer_ids with existing requests
 
     const [formData, setFormData] = useState<FarmerRequestForm>({
         farmer_id: 0,
@@ -63,7 +63,6 @@ const JoAddFarmerRequest: React.FC = () => {
         requested_rh9000_kg: 0,
         requested_lumping143_kg: 0,
         requested_lp296_kg: 0,
-        priority_score: 5,
         notes: ''
     });
 
@@ -78,6 +77,12 @@ const JoAddFarmerRequest: React.FC = () => {
         fetchAllocation();
         fetchFarmers();
     }, [allocationId]);
+
+    useEffect(() => {
+        if (allocation?.season) {
+            fetchExistingRequests();
+        }
+    }, [allocation]);
 
     const fetchAllocation = async () => {
         try {
@@ -108,6 +113,23 @@ const JoAddFarmerRequest: React.FC = () => {
         } catch (err) {
             console.error('❌ Failed to fetch allocation:', err);
             setError('Error loading allocation data');
+        }
+    };
+
+    const fetchExistingRequests = async () => {
+        if (!allocation?.season) return;
+
+        try {
+            const response = await fetch(`http://localhost:5000/api/distribution/requests/${allocation.season}`);
+            if (response.ok) {
+                const requests = await response.json();
+                // Extract farmer_ids who already have requests in this season
+                const farmerIds = requests.map((req: any) => Number(req.farmer_id));
+                setExistingRequests(farmerIds);
+                console.log('🚫 Farmers with existing requests:', farmerIds.length);
+            }
+        } catch (err) {
+            console.error('Failed to fetch existing requests:', err);
         }
     };
 
@@ -158,7 +180,7 @@ const JoAddFarmerRequest: React.FC = () => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'farmer_id' || name === 'priority_score' || name.includes('requested_')
+            [name]: name === 'farmer_id' || name.includes('requested_')
                 ? (value === '' ? 0 : parseFloat(value))
                 : value
         }));
@@ -257,6 +279,11 @@ const JoAddFarmerRequest: React.FC = () => {
     };
 
     const filteredFarmers = farmers.filter(farmer => {
+        // Exclude farmers who already have a request in this season
+        if (existingRequests.includes(Number(farmer.id))) {
+            return false;
+        }
+
         const searchLower = searchTerm.toLowerCase();
         const fullName = `${farmer.first_name} ${farmer.middle_name} ${farmer.last_name}`.toLowerCase();
         const rsbsa = farmer.rsbsa_no?.toLowerCase() || '';
@@ -382,6 +409,24 @@ const JoAddFarmerRequest: React.FC = () => {
                                             marginBottom: '8px'
                                         }}
                                     />
+                                    {existingRequests.length > 0 && (
+                                        <div style={{
+                                            padding: '8px 12px',
+                                            background: '#fef3c7',
+                                            border: '1px solid #f59e0b',
+                                            borderRadius: '6px',
+                                            fontSize: '13px',
+                                            color: '#92400e',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}>
+                                            <span>ℹ️</span>
+                                            <span>
+                                                {existingRequests.length} farmer{existingRequests.length !== 1 ? 's' : ''} hidden (already have request{existingRequests.length !== 1 ? 's' : ''} for this season)
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div style={{
                                     border: '1px solid #d1d5db',
@@ -682,30 +727,8 @@ const JoAddFarmerRequest: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Priority and Notes */}
+                            {/* Notes */}
                             <div style={{ marginBottom: '32px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: '16px', marginBottom: '16px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            Priority Score (1-10)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="priority_score"
-                                            value={formData.priority_score}
-                                            onChange={handleInputChange}
-                                            min="1"
-                                            max="10"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                </div>
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
                                     Notes / Remarks
                                 </label>

@@ -18,9 +18,7 @@ interface DistributionRecord {
     distribution_date: string;
     urea_46_0_0_bags: number;
     complete_14_14_14_bags: number;
-    complete_16_16_16_bags: number;
     ammonium_sulfate_21_0_0_bags: number;
-    ammonium_phosphate_16_20_0_bags: number;
     muriate_potash_0_0_60_bags: number;
     rice_seeds_nsic_rc160_kg: number;
     rice_seeds_nsic_rc222_kg: number;
@@ -36,7 +34,13 @@ interface FarmerRequest {
     farmer_name: string;
     rsbsa_number: string;
     season: string;
-    priority_score?: number;
+    status: string;
+}
+
+interface RegionalAllocation {
+    id: number;
+    season: string;
+    allocation_date: string;
     status: string;
 }
 
@@ -46,9 +50,11 @@ const JoDistribution: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [distributions, setDistributions] = useState<DistributionRecord[]>([]);
-    const [selectedSeason, setSelectedSeason] = useState('dry_2024');
+    const [selectedSeason, setSelectedSeason] = useState('');
     const [pendingRequests, setPendingRequests] = useState<FarmerRequest[]>([]);
     const [selectedRequest, setSelectedRequest] = useState<number | null>(null);
+    const [allocations, setAllocations] = useState<RegionalAllocation[]>([]);
+    const [loadingAllocations, setLoadingAllocations] = useState(true);
 
     const [formData, setFormData] = useState<DistributionRecord>({
         request_id: 0,
@@ -57,9 +63,7 @@ const JoDistribution: React.FC = () => {
         distribution_date: new Date().toISOString().split('T')[0],
         urea_46_0_0_bags: 0,
         complete_14_14_14_bags: 0,
-        complete_16_16_16_bags: 0,
         ammonium_sulfate_21_0_0_bags: 0,
-        ammonium_phosphate_16_20_0_bags: 0,
         muriate_potash_0_0_60_bags: 0,
         rice_seeds_nsic_rc160_kg: 0,
         rice_seeds_nsic_rc222_kg: 0,
@@ -75,12 +79,39 @@ const JoDistribution: React.FC = () => {
     };
 
     useEffect(() => {
-        if (activeView === 'form') {
-            fetchPendingRequests();
-        } else {
-            fetchDistributions();
+        fetchAllocations();
+    }, []);
+
+    useEffect(() => {
+        if (selectedSeason) {
+            if (activeView === 'form') {
+                fetchPendingRequests();
+            } else {
+                fetchDistributions();
+            }
         }
     }, [activeView, selectedSeason]);
+
+    const fetchAllocations = async () => {
+        setLoadingAllocations(true);
+        try {
+            const response = await fetch('http://localhost:5000/api/distribution/allocations');
+            if (response.ok) {
+                const data = await response.json();
+                setAllocations(data);
+                if (data.length > 0) {
+                    const mostRecent = data.sort((a: RegionalAllocation, b: RegionalAllocation) =>
+                        new Date(b.allocation_date).getTime() - new Date(a.allocation_date).getTime()
+                    )[0];
+                    setSelectedSeason(mostRecent.season);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching allocations:', error);
+        } finally {
+            setLoadingAllocations(false);
+        }
+    };
 
     const fetchPendingRequests = async () => {
         try {
@@ -95,8 +126,9 @@ const JoDistribution: React.FC = () => {
     };
 
     const fetchDistributions = async () => {
+        if (!selectedSeason) return;
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/records?season=${selectedSeason}`);
+            const response = await fetch(`http://localhost:5000/api/distribution/records/${selectedSeason}`);
             if (response.ok) {
                 const data = await response.json();
                 setDistributions(data);
@@ -117,12 +149,10 @@ const JoDistribution: React.FC = () => {
                     farmer_name: request.farmer_name,
                     rsbsa_number: request.rsbsa_number,
                     distribution_date: new Date().toISOString().split('T')[0],
-                    urea_46_0_0_bags: request.urea_46_0_0_bags || 0,
-                    complete_14_14_14_bags: request.complete_14_14_14_bags || 0,
-                    complete_16_16_16_bags: request.complete_16_16_16_bags || 0,
-                    ammonium_sulfate_21_0_0_bags: request.ammonium_sulfate_21_0_0_bags || 0,
-                    ammonium_phosphate_16_20_0_bags: request.ammonium_phosphate_16_20_0_bags || 0,
-                    muriate_potash_0_0_60_bags: request.muriate_potash_0_0_60_bags || 0,
+                    urea_46_0_0_bags: request.requested_urea_bags || 0,
+                    complete_14_14_14_bags: request.requested_complete_14_bags || 0,
+                    ammonium_sulfate_21_0_0_bags: request.requested_ammonium_sulfate_bags || 0,
+                    muriate_potash_0_0_60_bags: request.requested_muriate_potash_bags || 0,
                     rice_seeds_nsic_rc160_kg: request.rice_seeds_nsic_rc160_kg || 0,
                     rice_seeds_nsic_rc222_kg: request.rice_seeds_nsic_rc222_kg || 0,
                     rice_seeds_nsic_rc440_kg: request.rice_seeds_nsic_rc440_kg || 0,
@@ -177,9 +207,7 @@ const JoDistribution: React.FC = () => {
                     distribution_date: new Date().toISOString().split('T')[0],
                     urea_46_0_0_bags: 0,
                     complete_14_14_14_bags: 0,
-                    complete_16_16_16_bags: 0,
                     ammonium_sulfate_21_0_0_bags: 0,
-                    ammonium_phosphate_16_20_0_bags: 0,
                     muriate_potash_0_0_60_bags: 0,
                     rice_seeds_nsic_rc160_kg: 0,
                     rice_seeds_nsic_rc222_kg: 0,
@@ -204,9 +232,7 @@ const JoDistribution: React.FC = () => {
 
     const totalFertilizerBags = formData.urea_46_0_0_bags +
         formData.complete_14_14_14_bags +
-        formData.complete_16_16_16_bags +
         formData.ammonium_sulfate_21_0_0_bags +
-        formData.ammonium_phosphate_16_20_0_bags +
         formData.muriate_potash_0_0_60_bags;
 
     const totalSeedsKg = formData.rice_seeds_nsic_rc160_kg +
@@ -349,7 +375,7 @@ const JoDistribution: React.FC = () => {
                                     <option value="">-- Select a farmer --</option>
                                     {pendingRequests.map((req) => (
                                         <option key={req.id} value={req.id}>
-                                            {req.farmer_name} ({req.rsbsa_number}) - Priority: {req.priority_score?.toFixed(2) || 'N/A'}
+                                            {req.farmer_name} ({req.rsbsa_number})
                                         </option>
                                     ))}
                                 </select>
@@ -397,68 +423,52 @@ const JoDistribution: React.FC = () => {
                                     <p className="help-text">Adjust quantities if partial distribution</p>
                                     <div className="distribution-form-grid">
                                         <div className="distribution-form-field">
-                                            <label>Euria</label>
+                                            <label>Urea (46-0-0)</label>
                                             <input
                                                 type="number"
                                                 name="urea_46_0_0_bags"
                                                 value={formData.urea_46_0_0_bags}
                                                 onChange={handleInputChange}
                                                 min="0"
+                                                step="0.01"
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>4600</label>
+                                            <label>Complete (14-14-14)</label>
                                             <input
                                                 type="number"
                                                 name="complete_14_14_14_bags"
                                                 value={formData.complete_14_14_14_bags}
                                                 onChange={handleInputChange}
                                                 min="0"
+                                                step="0.01"
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>141414</label>
-                                            <input
-                                                type="number"
-                                                name="complete_16_16_16_bags"
-                                                value={formData.complete_16_16_16_bags}
-                                                onChange={handleInputChange}
-                                                min="0"
-                                            />
-                                        </div>
-                                        <div className="distribution-form-field">
-                                            <label>0060</label>
+                                            <label>Ammonium Sulfate (21-0-0)</label>
                                             <input
                                                 type="number"
                                                 name="ammonium_sulfate_21_0_0_bags"
                                                 value={formData.ammonium_sulfate_21_0_0_bags}
                                                 onChange={handleInputChange}
                                                 min="0"
+                                                step="0.01"
                                             />
                                         </div>
                                         <div className="distribution-form-field">
-                                            <label>Other Fertilizer 1</label>
-                                            <input
-                                                type="number"
-                                                name="ammonium_phosphate_16_20_0_bags"
-                                                value={formData.ammonium_phosphate_16_20_0_bags}
-                                                onChange={handleInputChange}
-                                                min="0"
-                                            />
-                                        </div>
-                                        <div className="distribution-form-field">
-                                            <label>Other Fertilizer 2</label>
+                                            <label>Muriate of Potash (0-0-60)</label>
                                             <input
                                                 type="number"
                                                 name="muriate_potash_0_0_60_bags"
                                                 value={formData.muriate_potash_0_0_60_bags}
                                                 onChange={handleInputChange}
                                                 min="0"
+                                                step="0.01"
                                             />
                                         </div>
                                     </div>
                                     <div className="distribution-total-summary">
-                                        Total Fertilizer: {totalFertilizerBags} bags
+                                        Total Fertilizer: {totalFertilizerBags.toFixed(2)} bags
                                     </div>
                                 </div>
 
@@ -566,9 +576,7 @@ const JoDistribution: React.FC = () => {
                                                 distribution_date: new Date().toISOString().split('T')[0],
                                                 urea_46_0_0_bags: 0,
                                                 complete_14_14_14_bags: 0,
-                                                complete_16_16_16_bags: 0,
                                                 ammonium_sulfate_21_0_0_bags: 0,
-                                                ammonium_phosphate_16_20_0_bags: 0,
                                                 muriate_potash_0_0_60_bags: 0,
                                                 rice_seeds_nsic_rc160_kg: 0,
                                                 rice_seeds_nsic_rc222_kg: 0,
@@ -601,15 +609,30 @@ const JoDistribution: React.FC = () => {
                     <div className="distributions-list">
                         <div className="list-controls">
                             <div className="distribution-form-field">
-                                <label>Filter by Season:</label>
+                                <label>Select Regional Allocation:</label>
                                 <select
                                     value={selectedSeason}
                                     onChange={(e) => setSelectedSeason(e.target.value)}
+                                    disabled={loadingAllocations}
                                 >
-                                    <option value="dry_2024">Dry Season 2024</option>
-                                    <option value="wet_2024">Wet Season 2024</option>
-                                    <option value="dry_2025">Dry Season 2025</option>
-                                    <option value="wet_2025">Wet Season 2025</option>
+                                    {loadingAllocations ? (
+                                        <option value="">Loading allocations...</option>
+                                    ) : allocations.length === 0 ? (
+                                        <option value="">No allocations found</option>
+                                    ) : (
+                                        <>
+                                            <option value="">-- Select an allocation --</option>
+                                            {allocations.map((alloc) => (
+                                                <option key={alloc.id} value={alloc.season}>
+                                                    {alloc.season.replace('_', ' ').toUpperCase()} - {new Date(alloc.allocation_date).toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })} ({alloc.status})
+                                                </option>
+                                            ))}
+                                        </>
+                                    )}
                                 </select>
                             </div>
                         </div>
@@ -637,9 +660,7 @@ const JoDistribution: React.FC = () => {
                                         distributions.map((dist) => {
                                             const totalFert = (dist.urea_46_0_0_bags || 0) +
                                                 (dist.complete_14_14_14_bags || 0) +
-                                                (dist.complete_16_16_16_bags || 0) +
                                                 (dist.ammonium_sulfate_21_0_0_bags || 0) +
-                                                (dist.ammonium_phosphate_16_20_0_bags || 0) +
                                                 (dist.muriate_potash_0_0_60_bags || 0);
 
                                             const totalSeeds = (dist.rice_seeds_nsic_rc160_kg || 0) +

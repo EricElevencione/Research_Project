@@ -2,20 +2,31 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Fertilizer Alternative Engine
- * Provides intelligent fertilizer substitution recommendations based on agronomic equivalency
+ * Fertilizer & Seed Alternative Engine
+ * Provides intelligent fertilizer and seed substitution recommendations based on agronomic equivalency
  */
 class FertilizerAlternativeEngine {
     constructor() {
-        // Load knowledge base
-        const kbPath = path.join(__dirname, '../knowledge/fertilizerEquivalency.json');
+        // Load fertilizer knowledge base
+        const fertKbPath = path.join(__dirname, '../knowledge/fertilizerEquivalency.json');
         try {
-            const kbData = fs.readFileSync(kbPath, 'utf8');
-            this.knowledgeBase = JSON.parse(kbData);
+            const fertKbData = fs.readFileSync(fertKbPath, 'utf8');
+            this.knowledgeBase = JSON.parse(fertKbData);
             console.log('✅ Fertilizer Knowledge Base loaded successfully');
         } catch (error) {
-            console.error('❌ Failed to load knowledge base:', error.message);
+            console.error('❌ Failed to load fertilizer knowledge base:', error.message);
             this.knowledgeBase = null;
+        }
+
+        // Load seed knowledge base
+        const seedKbPath = path.join(__dirname, '../knowledge/seedEquivalency.json');
+        try {
+            const seedKbData = fs.readFileSync(seedKbPath, 'utf8');
+            this.seedKnowledgeBase = JSON.parse(seedKbData);
+            console.log('✅ Seed Knowledge Base loaded successfully');
+        } catch (error) {
+            console.error('❌ Failed to load seed knowledge base:', error.message);
+            this.seedKnowledgeBase = null;
         }
     }
 
@@ -26,11 +37,13 @@ class FertilizerAlternativeEngine {
      * @returns {Object} Alternatives and recommendations
      */
     async suggestAlternatives(farmerRequest, currentStock) {
-        if (!this.knowledgeBase) {
-            return { error: 'Knowledge base not loaded' };
+        if (!this.knowledgeBase && !this.seedKnowledgeBase) {
+            return { error: 'Knowledge bases not loaded' };
         }
 
         const suggestions = [];
+
+        // === FERTILIZER SHORTAGES ===
         const fertilizerTypes = [
             { field: 'requested_urea_bags', type: 'urea_46_0_0', stockField: 'urea_46_0_0_bags' },
             { field: 'requested_complete_14_bags', type: 'complete_14_14_14', stockField: 'complete_14_14_14_bags' },
@@ -60,6 +73,7 @@ class FertilizerAlternativeEngine {
 
                 if (alternatives.length > 0) {
                     suggestions.push({
+                        category: 'fertilizer',
                         original_fertilizer: fertType.type,
                         original_fertilizer_name: this.getFertilizerName(fertType.type),
                         requested_bags: requestedAmount,
@@ -70,6 +84,7 @@ class FertilizerAlternativeEngine {
                 } else {
                     // No alternatives available
                     suggestions.push({
+                        category: 'fertilizer',
                         original_fertilizer: fertType.type,
                         original_fertilizer_name: this.getFertilizerName(fertType.type),
                         requested_bags: requestedAmount,
@@ -77,12 +92,75 @@ class FertilizerAlternativeEngine {
                         shortage_bags: shortage,
                         alternatives: [],
                         recommendation: {
-                            action: 'WAITLIST',
+                            action: 'REDUCE_QUANTITY',
                             rationale: 'No suitable alternatives available in current stock',
                             next_steps: [
-                                'Add farmer to waitlist',
-                                'Request emergency allocation from Regional Office',
-                                'Notify farmer of expected delivery date'
+                                `Request farmer to reduce quantity to ${availableStock} bags (available stock)`,
+                                'Reject request and ask farmer to submit new request with lower amount',
+                                'Contact Regional Office for additional allocation if critically needed'
+                            ]
+                        }
+                    });
+                }
+            }
+        }
+
+        // === SEED SHORTAGES ===
+        const seedTypes = [
+            { field: 'requested_jackpot_kg', type: 'jackpot', stockField: 'jackpot_kg' },
+            { field: 'requested_us88_kg', type: 'us88', stockField: 'us88_kg' },
+            { field: 'requested_th82_kg', type: 'th82', stockField: 'th82_kg' },
+            { field: 'requested_rh9000_kg', type: 'rh9000', stockField: 'rh9000_kg' },
+            { field: 'requested_lumping143_kg', type: 'lumping143', stockField: 'lumping143_kg' },
+            { field: 'requested_lp296_kg', type: 'lp296', stockField: 'lp296_kg' }
+        ];
+
+        // Check each requested seed type
+        for (const seedType of seedTypes) {
+            const requestedAmount = farmerRequest[seedType.field] || 0;
+            if (requestedAmount <= 0) continue;
+
+            const availableStock = currentStock[seedType.stockField] || 0;
+
+            // Check if there's a shortage
+            if (requestedAmount > availableStock) {
+                const shortage = requestedAmount - availableStock;
+
+                // Generate alternatives for this seed shortage
+                const alternatives = this.generateAlternativesForSeed(
+                    seedType.type,
+                    shortage,
+                    availableStock,
+                    currentStock
+                );
+
+                if (alternatives.length > 0) {
+                    suggestions.push({
+                        category: 'seed',
+                        original_seed: seedType.type,
+                        original_seed_name: this.getSeedName(seedType.type),
+                        requested_kg: requestedAmount,
+                        available_kg: availableStock,
+                        shortage_kg: shortage,
+                        alternatives: alternatives
+                    });
+                } else {
+                    // No alternatives available
+                    suggestions.push({
+                        category: 'seed',
+                        original_seed: seedType.type,
+                        original_seed_name: this.getSeedName(seedType.type),
+                        requested_kg: requestedAmount,
+                        available_kg: availableStock,
+                        shortage_kg: shortage,
+                        alternatives: [],
+                        recommendation: {
+                            action: 'REDUCE_QUANTITY',
+                            rationale: 'No suitable seed alternatives available in current stock',
+                            next_steps: [
+                                `Request farmer to reduce quantity to ${availableStock} kg (available stock)`,
+                                'Reject request and ask farmer to submit new request with lower amount',
+                                'Contact Regional Office for additional allocation if critically needed'
                             ]
                         }
                     });
@@ -98,6 +176,78 @@ class FertilizerAlternativeEngine {
             suggestions: suggestions,
             overall_recommendation: this.generateOverallRecommendation(suggestions)
         };
+    }
+
+    /**
+     * Generate alternative options for a specific seed shortage
+     */
+    generateAlternativesForSeed(seedType, shortage, partialStock, allStock) {
+        if (!this.seedKnowledgeBase) {
+            return [];
+        }
+
+        // Find seed in knowledge base
+        const seedInfo = this.seedKnowledgeBase.seedEquivalencies[seedType];
+
+        if (!seedInfo || !seedInfo.substitutes) {
+            return [];
+        }
+
+        const validAlternatives = [];
+
+        // Check each possible substitute
+        for (const substitute of seedInfo.substitutes) {
+            const substituteStockField = `${substitute.id}_kg`;
+            const substituteAvailable = allStock[substituteStockField] || 0;
+
+            // Calculate how much substitute is needed (1:1 ratio for seeds)
+            const requiredAmount = Math.ceil(shortage * substitute.conversionRatio);
+
+            if (substituteAvailable >= requiredAmount) {
+                // Full substitution possible
+                validAlternatives.push({
+                    substitute_id: substitute.id,
+                    substitute_name: substitute.name,
+                    can_fulfill: true,
+                    needed_kg: requiredAmount,
+                    available_kg: substituteAvailable,
+                    remaining_after_use: substituteAvailable - requiredAmount,
+                    conversion_ratio: substitute.conversionRatio,
+                    explanation: substitute.reason,
+                    farmer_instructions: substitute.instructions,
+                    confidence_score: substitute.confidenceScore,
+                    recommendation_type: 'FULL_SUBSTITUTE'
+                });
+            } else if (substituteAvailable > 0) {
+                // Partial substitution possible
+                const partialCoverage = Math.floor(substituteAvailable / substitute.conversionRatio);
+                const remainingShortage = shortage - partialCoverage;
+
+                validAlternatives.push({
+                    substitute_id: substitute.id,
+                    substitute_name: substitute.name,
+                    can_fulfill: false,
+                    needed_kg: requiredAmount,
+                    available_kg: substituteAvailable,
+                    partial_coverage: partialCoverage,
+                    remaining_shortage: remainingShortage,
+                    conversion_ratio: substitute.conversionRatio,
+                    explanation: `Can partially substitute ${partialCoverage} kg using available ${substitute.name}`,
+                    recommendation: {
+                        action: `Use ${partialStock} kg of original + ${substituteAvailable} kg of ${substitute.name}`,
+                        rationale: 'Hybrid approach to maximize coverage with available stock',
+                        remaining_gap: `Still need ${remainingShortage} kg - recommend waitlist for remaining farmers`
+                    },
+                    confidence_score: substitute.confidenceScore * 0.8,
+                    recommendation_type: 'PARTIAL_SUBSTITUTE'
+                });
+            }
+        }
+
+        // Sort by confidence score (highest first)
+        validAlternatives.sort((a, b) => b.confidence_score - a.confidence_score);
+
+        return validAlternatives;
     }
 
     /**
@@ -217,6 +367,17 @@ class FertilizerAlternativeEngine {
     }
 
     /**
+     * Get human-readable seed name
+     */
+    getSeedName(seedType) {
+        if (!this.seedKnowledgeBase) {
+            return seedType.toUpperCase();
+        }
+        const seed = this.seedKnowledgeBase.seedEquivalencies[seedType];
+        return seed ? seed.name : seedType.toUpperCase();
+    }
+
+    /**
      * Format instruction templates with actual amounts
      */
     formatInstructions(template, originalAmount, substituteAmount) {
@@ -258,14 +419,14 @@ class FertilizerAlternativeEngine {
             return {
                 status: 'PARTIAL_SOLUTION',
                 message: 'Some shortages can be partially addressed with substitutes',
-                action: 'Apply partial substitutes and waitlist remaining farmers',
+                action: 'Apply partial substitutes and ask farmer to reduce remaining quantity',
                 priority: 'HIGH'
             };
         } else if (hasNoSolutions) {
             return {
                 status: 'CRITICAL_SHORTAGE',
-                message: 'No substitutes available - immediate action required',
-                action: 'Request emergency allocation from Regional Office',
+                message: 'No substitutes available - request must be reduced',
+                action: 'Ask farmer to reduce quantity to available stock levels',
                 priority: 'CRITICAL'
             };
         }
