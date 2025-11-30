@@ -206,7 +206,7 @@ const TechFarmerProfPage: React.FC = () => {
                                         />
                                     </div>
 
-                                    <div className="sort-container">
+                                    <div className="sort-container flex items-center gap-2">
                                         <label htmlFor="sort-select">Sort by:</label>
                                         <select
                                             id="sort-select"

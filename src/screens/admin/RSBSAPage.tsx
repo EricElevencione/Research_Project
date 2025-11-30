@@ -46,21 +46,23 @@ const JoRsbsa: React.FC = () => {
   // Fetch RSBSA records from API and shii
   const fetchRSBSARecords = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      setLoading(true); // Set loading to true to show loading state
+      const response = await fetch('http://localhost:5000/api/rsbsa_submission'); // Get data from API
+      if (!response.ok) { // Check for HTTP errors
+        throw new Error(`HTTP error! status: ${response.status}`); // Throw an error if response is not ok
       }
-      const data = await response.json();
+      const data = await response.json(); // Parse JSON response
+
+      // Debug fetched data
       console.log('Received data from API:', JSON.stringify(data, null, 2));
 
       // Debug ownership types
       console.log('Sample record ownership type:', data[0]?.ownershipType);
       console.log('Records with ownership types:', data.filter((r: { ownershipType: any; }) => r.ownershipType).length);
 
-      const dataWithTotalArea = data.map((record: RSBSARecord) => {
-        const calculatedTotal = calculateTotalFarmArea(data, record.farmerName);
-        const parcelCount = countFarmParcels(data, record.farmerName);
+      const dataWithTotalArea = data.map((record: RSBSARecord) => { // Calculate total farm area
+        const calculatedTotal = calculateTotalFarmArea(data, record.farmerName); // Calculate total area for this farmer
+        const parcelCount = countFarmParcels(data, record.farmerName); // Count parcels for this farmer
         console.log(`Farmer: ${record.farmerName}, API totalFarmArea: ${record.totalFarmArea}, Calculated: ${calculatedTotal}, Parcels: ${parcelCount}`);
         return {
           ...record,
@@ -83,15 +85,15 @@ const JoRsbsa: React.FC = () => {
   };
 
   // Function to calculate total farm area for a farmer
-  const calculateTotalFarmArea = (records: RSBSARecord[], farmerName: string) => {
+  const calculateTotalFarmArea = (records: RSBSARecord[], farmerName: string) => { // Get all records for the farmer and sum parcel areas
     // Find all records for the same farmer (by name)
     const farmerRecords = records.filter(record => record.farmerName === farmerName);
 
     // Sum up all parcel areas for this farmer
-    const totalArea = farmerRecords.reduce((sum, record) => {
-      const area = parseFloat(String(record.parcelArea || 0)) || 0;
-      return sum + area;
-    }, 0);
+    const totalArea = farmerRecords.reduce((sum, record) => { // Ensure parcelArea is a number
+      const area = parseFloat(String(record.parcelArea || 0)) || 0; // Default to 0 if null or invalid
+      return sum + area; // Sum the areas
+    }, 0); // Initial sum is 0
 
     return totalArea;
   };
