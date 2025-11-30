@@ -122,6 +122,25 @@ const JoIncentives: React.FC = () => {
     };
 
     const getTotalSeeds = (allocation: RegionalAllocation) => {
+        // Prefer detailed allocation fields (jackpot_kg, us88_kg, etc.) if present
+        const jackpot = (allocation as any).jackpot_kg;
+        const us88 = (allocation as any).us88_kg;
+        const th82 = (allocation as any).th82_kg;
+        const rh9000 = (allocation as any).rh9000_kg;
+        const lumping143 = (allocation as any).lumping143_kg;
+        const lp296 = (allocation as any).lp296_kg;
+
+        if (jackpot !== undefined || us88 !== undefined || th82 !== undefined || rh9000 !== undefined || lumping143 !== undefined || lp296 !== undefined) {
+            const total = (Number(jackpot) || 0) +
+                (Number(us88) || 0) +
+                (Number(th82) || 0) +
+                (Number(rh9000) || 0) +
+                (Number(lumping143) || 0) +
+                (Number(lp296) || 0);
+            return isNaN(total) ? 0 : total;
+        }
+
+        // Fallback to legacy rice/corn/vegetable seed fields
         const total = (Number(allocation.rice_seeds_nsic_rc160_kg) || 0) +
             (Number(allocation.rice_seeds_nsic_rc222_kg) || 0) +
             (Number(allocation.rice_seeds_nsic_rc440_kg) || 0) +

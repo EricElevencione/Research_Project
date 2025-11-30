@@ -26,6 +26,12 @@ interface DistributionRecord {
     corn_seeds_hybrid_kg: number;
     corn_seeds_opm_kg: number;
     vegetable_seeds_kg: number;
+    // Aggregate fields from backend distribution_records
+    fertilizer_bags_given?: number;
+    seed_kg_given?: number;
+    fertilizer_type?: string;
+    seed_type?: string;
+    verification_notes?: string;
     notes?: string;
 }
 
@@ -153,12 +159,12 @@ const JoDistribution: React.FC = () => {
                     complete_14_14_14_bags: request.requested_complete_14_bags || 0,
                     ammonium_sulfate_21_0_0_bags: request.requested_ammonium_sulfate_bags || 0,
                     muriate_potash_0_0_60_bags: request.requested_muriate_potash_bags || 0,
-                    rice_seeds_nsic_rc160_kg: request.rice_seeds_nsic_rc160_kg || 0,
-                    rice_seeds_nsic_rc222_kg: request.rice_seeds_nsic_rc222_kg || 0,
-                    rice_seeds_nsic_rc440_kg: request.rice_seeds_nsic_rc440_kg || 0,
-                    corn_seeds_hybrid_kg: request.corn_seeds_hybrid_kg || 0,
-                    corn_seeds_opm_kg: request.corn_seeds_opm_kg || 0,
-                    vegetable_seeds_kg: request.vegetable_seeds_kg || 0,
+                    rice_seeds_nsic_rc160_kg: request.requested_jackpot_kg || 0,
+                    rice_seeds_nsic_rc222_kg: request.requested_us88_kg || 0,
+                    rice_seeds_nsic_rc440_kg: request.requested_th82_kg || 0,
+                    corn_seeds_hybrid_kg: request.requested_rh9000_kg || 0,
+                    corn_seeds_opm_kg: request.requested_lumping143_kg || 0,
+                    vegetable_seeds_kg: request.requested_lp296_kg || 0,
                     notes: ''
                 });
             }
@@ -187,14 +193,49 @@ const JoDistribution: React.FC = () => {
         setLoading(true);
         setSaveSuccess(false);
 
+        // Compute totals and build type summaries to match backend schema
+        const totalFertilizer = Math.round((formData.urea_46_0_0_bags || 0) +
+            (formData.complete_14_14_14_bags || 0) +
+            (formData.ammonium_sulfate_21_0_0_bags || 0) +
+            (formData.muriate_potash_0_0_60_bags || 0));
+
+        const totalSeeds = Number(((formData.rice_seeds_nsic_rc160_kg || 0) +
+            (formData.rice_seeds_nsic_rc222_kg || 0) +
+            (formData.rice_seeds_nsic_rc440_kg || 0) +
+            (formData.corn_seeds_hybrid_kg || 0) +
+            (formData.corn_seeds_opm_kg || 0) +
+            (formData.vegetable_seeds_kg || 0)).toFixed(2));
+
+        const fertilizerTypes: string[] = [];
+        if (formData.urea_46_0_0_bags) fertilizerTypes.push(`Urea:${formData.urea_46_0_0_bags}`);
+        if (formData.complete_14_14_14_bags) fertilizerTypes.push(`Complete:${formData.complete_14_14_14_bags}`);
+        if (formData.ammonium_sulfate_21_0_0_bags) fertilizerTypes.push(`Ammonium Sulfate:${formData.ammonium_sulfate_21_0_0_bags}`);
+        if (formData.muriate_potash_0_0_60_bags) fertilizerTypes.push(`Muriate Potash:${formData.muriate_potash_0_0_60_bags}`);
+
+        const seedTypes: string[] = [];
+        if (formData.rice_seeds_nsic_rc160_kg) seedTypes.push(`Jackpot:${formData.rice_seeds_nsic_rc160_kg}`);
+        if (formData.rice_seeds_nsic_rc222_kg) seedTypes.push(`US88:${formData.rice_seeds_nsic_rc222_kg}`);
+        if (formData.rice_seeds_nsic_rc440_kg) seedTypes.push(`TH82:${formData.rice_seeds_nsic_rc440_kg}`);
+        if (formData.corn_seeds_hybrid_kg) seedTypes.push(`RH9000:${formData.corn_seeds_hybrid_kg}`);
+        if (formData.corn_seeds_opm_kg) seedTypes.push(`Lumping143:${formData.corn_seeds_opm_kg}`);
+        if (formData.vegetable_seeds_kg) seedTypes.push(`LP296:${formData.vegetable_seeds_kg}`);
+
+        const payload = {
+            request_id: formData.request_id,
+            fertilizer_type: fertilizerTypes.join(', ') || null,
+            fertilizer_bags_given: totalFertilizer,
+            seed_type: seedTypes.join(', ') || null,
+            seed_kg_given: totalSeeds,
+            voucher_code: null,
+            farmer_signature: false,
+            verified_by: null
+        };
+
         try {
             const response = await fetch('http://localhost:5000/api/distribution/records', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...formData,
-                    distributed_by: 1 // TODO: Get from auth context
-                })
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
@@ -220,6 +261,8 @@ const JoDistribution: React.FC = () => {
                 fetchPendingRequests();
                 setTimeout(() => setSaveSuccess(false), 3000);
             } else {
+                const errText = await response.text();
+                console.error('Failed to save distribution record', errText);
                 alert('Failed to save distribution record');
             }
         } catch (error) {
@@ -658,17 +701,9 @@ const JoDistribution: React.FC = () => {
                                         </tr>
                                     ) : (
                                         distributions.map((dist) => {
-                                            const totalFert = (dist.urea_46_0_0_bags || 0) +
-                                                (dist.complete_14_14_14_bags || 0) +
-                                                (dist.ammonium_sulfate_21_0_0_bags || 0) +
-                                                (dist.muriate_potash_0_0_60_bags || 0);
-
-                                            const totalSeeds = (dist.rice_seeds_nsic_rc160_kg || 0) +
-                                                (dist.rice_seeds_nsic_rc222_kg || 0) +
-                                                (dist.rice_seeds_nsic_rc440_kg || 0) +
-                                                (dist.corn_seeds_hybrid_kg || 0) +
-                                                (dist.corn_seeds_opm_kg || 0) +
-                                                (dist.vegetable_seeds_kg || 0);
+                                            // Database uses simple schema: fertilizer_bags_given and seed_kg_given
+                                            const totalFert = dist.fertilizer_bags_given || 0;
+                                            const totalSeeds = dist.seed_kg_given || 0;
 
                                             return (
                                                 <tr key={dist.id}>
@@ -677,7 +712,7 @@ const JoDistribution: React.FC = () => {
                                                     <td>{dist.rsbsa_number}</td>
                                                     <td>{totalFert} bags</td>
                                                     <td>{totalSeeds.toFixed(2)} kg</td>
-                                                    <td>{dist.notes || '-'}</td>
+                                                    <td>{dist.verification_notes || '-'}</td>
                                                 </tr>
                                             );
                                         })

@@ -2969,7 +2969,21 @@ app.post('/api/distribution/requests', async (req, res) => {
 // Update farmer request (assignment, acceptance, status)
 app.put('/api/distribution/requests/:id', async (req, res) => {
     const { id } = req.params;
+
+    // COMMENT: Extract all possible fields from request body (both assigned and requested fields)
     const {
+        // Requested quantities (editable by JO staff)
+        requested_urea_bags,
+        requested_complete_14_bags,
+        requested_ammonium_sulfate_bags,
+        requested_muriate_potash_bags,
+        requested_jackpot_kg,
+        requested_us88_kg,
+        requested_th82_kg,
+        requested_rh9000_kg,
+        requested_lumping143_kg,
+        requested_lp296_kg,
+        // Assigned/approval fields
         assigned_fertilizer_type,
         assigned_fertilizer_bags,
         assigned_seed_type,
@@ -2977,25 +2991,50 @@ app.put('/api/distribution/requests/:id', async (req, res) => {
         fertilizer_accepted,
         seeds_accepted,
         rejection_reason,
-        status
+        status,
+        notes,
+        request_notes
     } = req.body;
 
     try {
+        // COMMENT: Update query now includes all requested_* fields so edits actually save
+        // COMMENT: Removed 'notes' field - it doesn't exist in farmer_requests table (only request_notes exists)
         const result = await pool.query(`
             UPDATE farmer_requests
             SET 
-                assigned_fertilizer_type = COALESCE($1, assigned_fertilizer_type),
-                assigned_fertilizer_bags = COALESCE($2, assigned_fertilizer_bags),
-                assigned_seed_type = COALESCE($3, assigned_seed_type),
-                assigned_seed_kg = COALESCE($4, assigned_seed_kg),
-                fertilizer_accepted = COALESCE($5, fertilizer_accepted),
-                seeds_accepted = COALESCE($6, seeds_accepted),
-                rejection_reason = COALESCE($7, rejection_reason),
-                status = COALESCE($8, status),
+                requested_urea_bags = COALESCE($1, requested_urea_bags),
+                requested_complete_14_bags = COALESCE($2, requested_complete_14_bags),
+                requested_ammonium_sulfate_bags = COALESCE($3, requested_ammonium_sulfate_bags),
+                requested_muriate_potash_bags = COALESCE($4, requested_muriate_potash_bags),
+                requested_jackpot_kg = COALESCE($5, requested_jackpot_kg),
+                requested_us88_kg = COALESCE($6, requested_us88_kg),
+                requested_th82_kg = COALESCE($7, requested_th82_kg),
+                requested_rh9000_kg = COALESCE($8, requested_rh9000_kg),
+                requested_lumping143_kg = COALESCE($9, requested_lumping143_kg),
+                requested_lp296_kg = COALESCE($10, requested_lp296_kg),
+                assigned_fertilizer_type = COALESCE($11, assigned_fertilizer_type),
+                assigned_fertilizer_bags = COALESCE($12, assigned_fertilizer_bags),
+                assigned_seed_type = COALESCE($13, assigned_seed_type),
+                assigned_seed_kg = COALESCE($14, assigned_seed_kg),
+                fertilizer_accepted = COALESCE($15, fertilizer_accepted),
+                seeds_accepted = COALESCE($16, seeds_accepted),
+                rejection_reason = COALESCE($17, rejection_reason),
+                status = COALESCE($18, status),
+                request_notes = COALESCE($19, request_notes),
                 updated_at = NOW()
-            WHERE id = $9
+            WHERE id = $20
             RETURNING *
         `, [
+            requested_urea_bags,
+            requested_complete_14_bags,
+            requested_ammonium_sulfate_bags,
+            requested_muriate_potash_bags,
+            requested_jackpot_kg,
+            requested_us88_kg,
+            requested_th82_kg,
+            requested_rh9000_kg,
+            requested_lumping143_kg,
+            requested_lp296_kg,
             assigned_fertilizer_type,
             assigned_fertilizer_bags,
             assigned_seed_type,
@@ -3004,6 +3043,7 @@ app.put('/api/distribution/requests/:id', async (req, res) => {
             seeds_accepted,
             rejection_reason,
             status,
+            request_notes,
             id
         ]);
 

@@ -82,7 +82,43 @@ class FertilizerAlternativeEngine {
                         alternatives: alternatives
                     });
                 } else {
-                    // No alternatives available
+                    // COMMENT: No alternatives available - provide smart recommendations based on stock situation
+                    // Check if stock is already over-allocated (negative) or just insufficient (positive but less than requested)
+                    const isOverAllocated = availableStock < 0;
+                    const canPartiallyFulfill = availableStock > 0;
+
+                    let nextSteps = [];
+                    let rationale = '';
+
+                    if (isOverAllocated) {
+                        // COMMENT: Stock already over-allocated - current allocation exhausted by previous approvals
+                        rationale = `Current allocation exhausted. Already over-allocated by ${Math.abs(availableStock)} bags.`;
+                        nextSteps = [
+                            `❌ Cannot fulfill this request - stock already over-allocated by ${Math.abs(availableStock)} bags`,
+                            `✋ Reject this request - inform farmer that all ${this.getFertilizerName(fertType.type)} has been allocated`,
+                            `📞 Contact Regional Office for emergency allocation if critically needed`,
+                            `⏸️ Alternative: Put farmer on waitlist for next allocation period`
+                        ];
+                    } else if (canPartiallyFulfill) {
+                        // COMMENT: Positive stock but insufficient - can partially fulfill
+                        const reductionNeeded = requestedAmount - availableStock;
+                        rationale = `Insufficient stock. Only ${availableStock} bags available, but farmer requested ${requestedAmount} bags.`;
+                        nextSteps = [
+                            `✅ Option 1: Approve partial amount of ${availableStock} bags (reduce by ${reductionNeeded} bags)`,
+                            `✏️ Option 2: Ask farmer to reduce request from ${requestedAmount} to ${availableStock} bags`,
+                            `❌ Option 3: Reject entire request and ask farmer to resubmit with ${availableStock} bags or less`,
+                            `📞 Contact Regional Office for additional allocation if this farmer has critical need`
+                        ];
+                    } else {
+                        // COMMENT: Exactly 0 stock (rare edge case)
+                        rationale = 'Stock completely depleted - no inventory available.';
+                        nextSteps = [
+                            `❌ Reject request - no ${this.getFertilizerName(fertType.type)} stock remaining`,
+                            `📞 Contact Regional Office for emergency allocation`,
+                            `⏸️ Put farmer on waitlist for next allocation period`
+                        ];
+                    }
+
                     suggestions.push({
                         category: 'fertilizer',
                         original_fertilizer: fertType.type,
@@ -92,13 +128,9 @@ class FertilizerAlternativeEngine {
                         shortage_bags: shortage,
                         alternatives: [],
                         recommendation: {
-                            action: 'REDUCE_QUANTITY',
-                            rationale: 'No suitable alternatives available in current stock',
-                            next_steps: [
-                                `Request farmer to reduce quantity to ${availableStock} bags (available stock)`,
-                                'Reject request and ask farmer to submit new request with lower amount',
-                                'Contact Regional Office for additional allocation if critically needed'
-                            ]
+                            action: isOverAllocated ? 'REJECT_OVERALLOCATED' : (canPartiallyFulfill ? 'PARTIAL_FULFILLMENT' : 'REJECT_DEPLETED'),
+                            rationale: rationale,
+                            next_steps: nextSteps
                         }
                     });
                 }
@@ -145,7 +177,43 @@ class FertilizerAlternativeEngine {
                         alternatives: alternatives
                     });
                 } else {
-                    // No alternatives available
+                    // COMMENT: No seed alternatives available - provide smart recommendations based on stock situation
+                    // Check if stock is already over-allocated (negative) or just insufficient (positive but less than requested)
+                    const isOverAllocated = availableStock < 0;
+                    const canPartiallyFulfill = availableStock > 0;
+
+                    let nextSteps = [];
+                    let rationale = '';
+
+                    if (isOverAllocated) {
+                        // COMMENT: Stock already over-allocated - current allocation exhausted by previous approvals
+                        rationale = `Current seed allocation exhausted. Already over-allocated by ${Math.abs(availableStock)} kg.`;
+                        nextSteps = [
+                            `❌ Cannot fulfill this request - seed stock already over-allocated by ${Math.abs(availableStock)} kg`,
+                            `✋ Reject this request - inform farmer that all ${this.getSeedName(seedType.type)} seeds have been allocated`,
+                            `📞 Contact Regional Office for emergency seed allocation if critically needed`,
+                            `⏸️ Alternative: Put farmer on waitlist for next planting season allocation`
+                        ];
+                    } else if (canPartiallyFulfill) {
+                        // COMMENT: Positive stock but insufficient - can partially fulfill
+                        const reductionNeeded = requestedAmount - availableStock;
+                        rationale = `Insufficient seed stock. Only ${availableStock} kg available, but farmer requested ${requestedAmount} kg.`;
+                        nextSteps = [
+                            `✅ Option 1: Approve partial amount of ${availableStock} kg (reduce by ${reductionNeeded} kg)`,
+                            `✏️ Option 2: Ask farmer to reduce request from ${requestedAmount} to ${availableStock} kg`,
+                            `❌ Option 3: Reject entire request and ask farmer to resubmit with ${availableStock} kg or less`,
+                            `📞 Contact Regional Office for additional seed allocation if this farmer has critical need`
+                        ];
+                    } else {
+                        // COMMENT: Exactly 0 stock (rare edge case)
+                        rationale = 'Seed stock completely depleted - no inventory available.';
+                        nextSteps = [
+                            `❌ Reject request - no ${this.getSeedName(seedType.type)} seed stock remaining`,
+                            `📞 Contact Regional Office for emergency seed allocation`,
+                            `⏸️ Put farmer on waitlist for next planting season`
+                        ];
+                    }
+
                     suggestions.push({
                         category: 'seed',
                         original_seed: seedType.type,
@@ -155,13 +223,9 @@ class FertilizerAlternativeEngine {
                         shortage_kg: shortage,
                         alternatives: [],
                         recommendation: {
-                            action: 'REDUCE_QUANTITY',
-                            rationale: 'No suitable seed alternatives available in current stock',
-                            next_steps: [
-                                `Request farmer to reduce quantity to ${availableStock} kg (available stock)`,
-                                'Reject request and ask farmer to submit new request with lower amount',
-                                'Contact Regional Office for additional allocation if critically needed'
-                            ]
+                            action: isOverAllocated ? 'REJECT_OVERALLOCATED' : (canPartiallyFulfill ? 'PARTIAL_FULFILLMENT' : 'REJECT_DEPLETED'),
+                            rationale: rationale,
+                            next_steps: nextSteps
                         }
                     });
                 }

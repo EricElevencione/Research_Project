@@ -468,6 +468,7 @@ const JoManageRequests: React.FC = () => {
     // Edit request functionality
     const handleEdit = (request: FarmerRequest) => {
         setEditingRequest(request.id);
+        // COMMENT: Using request_notes instead of notes (notes column doesn't exist in DB)
         setEditFormData({
             requested_urea_bags: request.requested_urea_bags,
             requested_complete_14_bags: request.requested_complete_14_bags,
@@ -479,7 +480,7 @@ const JoManageRequests: React.FC = () => {
             requested_rh9000_kg: request.requested_rh9000_kg,
             requested_lumping143_kg: request.requested_lumping143_kg,
             requested_lp296_kg: request.requested_lp296_kg,
-            notes: request.notes || ''
+            request_notes: request.request_notes || ''
         });
     };
 
@@ -487,27 +488,41 @@ const JoManageRequests: React.FC = () => {
         if (!editingRequest) return;
 
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/farmer-requests/${editingRequest}`, {
+            // FIX: Get the full original request and merge with edited data
+            // This ensures all required fields are sent to the backend
+            const originalRequest = requests.find(r => r.id === editingRequest);
+            if (!originalRequest) {
+                throw new Error('Original request not found');
+            }
+
+            // Merge original request with edited form data
+            const updatedRequest = {
+                ...originalRequest,  // Keep all original fields (farmer_id, season, etc.)
+                ...editFormData      // Override with edited values
+            };
+
+            // FIX: Changed endpoint from /farmer-requests/ to /requests/ to match backend API
+            const response = await fetch(`http://localhost:5000/api/distribution/requests/${editingRequest}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editFormData)
+                body: JSON.stringify(updatedRequest)  // Send complete merged object
             });
 
             if (!response.ok) {
                 throw new Error('Failed to update request');
             }
 
-            // Refresh requests
+            // Refresh requests list to show updated data
             await fetchRequests();
 
             // Close edit modal
             setEditingRequest(null);
             setEditFormData({});
 
-            alert('Request updated successfully!');
+            alert('✅ Request updated successfully!');
         } catch (err) {
             console.error('Error updating request:', err);
-            alert('Failed to update request. Please try again.');
+            alert(`❌ Failed to update request: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
     };
 
@@ -1689,11 +1704,12 @@ const JoManageRequests: React.FC = () => {
                         </div>
 
                         {/* Notes Section */}
+                        {/* COMMENT: Changed from 'notes' to 'request_notes' to match database column */}
                         <div style={{ marginBottom: '24px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: '#6b7280' }}>Notes (Optional)</label>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: '#6b7280' }}>Request Notes (Optional)</label>
                             <textarea
-                                value={editFormData.notes || ''}
-                                onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                                value={editFormData.request_notes || ''}
+                                onChange={(e) => setEditFormData({ ...editFormData, request_notes: e.target.value })}
                                 rows={3}
                                 style={{
                                     width: '100%',
@@ -1703,7 +1719,7 @@ const JoManageRequests: React.FC = () => {
                                     fontSize: '14px',
                                     resize: 'vertical'
                                 }}
-                                placeholder="Add any notes about this edit..."
+                                placeholder="Add any notes about this request..."
                             />
                         </div>
 
