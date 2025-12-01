@@ -262,6 +262,10 @@ const JoManageRequests: React.FC = () => {
             });
 
             if (response.ok) {
+                // If status is approved, automatically create distribution log
+                if (newStatus === 'approved') {
+                    await createDistributionLog(id);
+                }
                 alert(`✅ Status updated to ${newStatus}`);
                 fetchRequests();
             } else {
@@ -270,6 +274,72 @@ const JoManageRequests: React.FC = () => {
         } catch (error) {
             console.error('Error updating status:', error);
             alert('❌ Error updating status');
+        }
+    };
+
+    // Automatically create distribution log when request is approved
+    const createDistributionLog = async (requestId: number) => {
+        try {
+            // Find the request details
+            const request = requests.find(r => r.id === requestId);
+            if (!request) return;
+
+            // Build fertilizer and seed type strings
+            const fertilizerTypes: string[] = [];
+            if (request.requested_urea_bags) fertilizerTypes.push(`Urea:${request.requested_urea_bags}`);
+            if (request.requested_complete_14_bags) fertilizerTypes.push(`Complete:${request.requested_complete_14_bags}`);
+            if (request.requested_ammonium_sulfate_bags) fertilizerTypes.push(`Ammonium Sulfate:${request.requested_ammonium_sulfate_bags}`);
+            if (request.requested_muriate_potash_bags) fertilizerTypes.push(`Muriate Potash:${request.requested_muriate_potash_bags}`);
+
+            const seedTypes: string[] = [];
+            if (request.requested_jackpot_kg) seedTypes.push(`Jackpot:${request.requested_jackpot_kg}`);
+            if (request.requested_us88_kg) seedTypes.push(`US88:${request.requested_us88_kg}`);
+            if (request.requested_th82_kg) seedTypes.push(`TH82:${request.requested_th82_kg}`);
+            if (request.requested_rh9000_kg) seedTypes.push(`RH9000:${request.requested_rh9000_kg}`);
+            if (request.requested_lumping143_kg) seedTypes.push(`Lumping143:${request.requested_lumping143_kg}`);
+            if (request.requested_lp296_kg) seedTypes.push(`LP296:${request.requested_lp296_kg}`);
+
+            // Calculate totals
+            const totalFertilizer = Math.round(
+                (Number(request.requested_urea_bags) || 0) +
+                (Number(request.requested_complete_14_bags) || 0) +
+                (Number(request.requested_ammonium_sulfate_bags) || 0) +
+                (Number(request.requested_muriate_potash_bags) || 0)
+            );
+
+            const totalSeeds = Number(
+                ((Number(request.requested_jackpot_kg) || 0) +
+                    (Number(request.requested_us88_kg) || 0) +
+                    (Number(request.requested_th82_kg) || 0) +
+                    (Number(request.requested_rh9000_kg) || 0) +
+                    (Number(request.requested_lumping143_kg) || 0) +
+                    (Number(request.requested_lp296_kg) || 0)).toFixed(2)
+            );
+
+            const payload = {
+                request_id: requestId,
+                fertilizer_type: fertilizerTypes.join(', ') || null,
+                fertilizer_bags_given: totalFertilizer,
+                seed_type: seedTypes.join(', ') || null,
+                seed_kg_given: totalSeeds,
+                voucher_code: null,
+                farmer_signature: false,
+                verified_by: null
+            };
+
+            const distResponse = await fetch('http://localhost:5000/api/distribution/records', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (distResponse.ok) {
+                console.log('✅ Distribution log created automatically');
+            } else {
+                console.error('❌ Failed to create distribution log');
+            }
+        } catch (error) {
+            console.error('Error creating distribution log:', error);
         }
     };
 

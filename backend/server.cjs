@@ -3450,12 +3450,6 @@ app.post('/api/distribution/records', async (req, res) => {
             farmer_signature || false, verified_by
         ]);
 
-        // Update request status to 'distributed'
-        await pool.query(`
-            UPDATE farmer_requests SET status = 'distributed', updated_at = NOW()
-            WHERE id = $1
-        `, [request_id]);
-
         res.status(201).json({
             message: 'Distribution recorded successfully',
             record: result.rows[0]
@@ -3486,6 +3480,60 @@ app.get('/api/distribution/records/:season', async (req, res) => {
     } catch (error) {
         console.error('Error fetching distribution records:', error);
         res.status(500).json({ error: 'Failed to fetch records', message: error.message });
+    }
+});
+
+// Update distribution record
+app.put('/api/distribution/records/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        fertilizer_type,
+        fertilizer_bags_given,
+        seed_type,
+        seed_kg_given,
+        voucher_code,
+        farmer_signature,
+        verified_by,
+        verification_notes
+    } = req.body;
+
+    try {
+        const result = await pool.query(`
+            UPDATE distribution_records 
+            SET 
+                fertilizer_type = $1,
+                fertilizer_bags_given = $2,
+                seed_type = $3,
+                seed_kg_given = $4,
+                voucher_code = $5,
+                farmer_signature = $6,
+                verified_by = $7,
+                verification_notes = $8
+            WHERE id = $9
+            RETURNING *
+        `, [
+            fertilizer_type,
+            fertilizer_bags_given,
+            seed_type,
+            seed_kg_given,
+            voucher_code,
+            farmer_signature || false,
+            verified_by,
+            verification_notes,
+            id
+        ]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Distribution record not found' });
+        }
+
+        res.json({
+            message: 'Distribution record updated successfully',
+            record: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating distribution record:', error);
+        res.status(500).json({ error: 'Failed to update record', message: error.message });
     }
 });
 

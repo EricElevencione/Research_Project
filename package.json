@@ -13,6 +13,7 @@
     "@turf/turf": "^7.2.0",
     "@types/uuid": "^10.0.0",
     "axios": "^1.9.0",
+    "bcrypt": "^6.0.0",
     "firebase": "^11.6.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.552.0",

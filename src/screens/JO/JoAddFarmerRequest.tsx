@@ -68,15 +68,15 @@ const JoAddFarmerRequest: React.FC = () => {
 
     const isActive = (path: string) => location.pathname === path;
 
-    const handleLogout = () => {
-        localStorage.removeItem('isAuthenticated');
-        navigate('/login');
+    const handleLogout = () => { // logout function
+        localStorage.removeItem('isAuthenticated'); // clear auth flag
+        navigate('/login'); // redirect to login page
     };
 
-    useEffect(() => {
-        fetchAllocation();
-        fetchFarmers();
-    }, [allocationId]);
+    useEffect(() => { // Fetch allocation and farmers on mount
+        fetchAllocation();  // Fetch allocation details
+        fetchFarmers(); // Fetch farmers list
+    }, [allocationId]); // Re-run if allocationId changes
 
     useEffect(() => {
         if (allocation?.season) {
@@ -270,7 +270,7 @@ const JoAddFarmerRequest: React.FC = () => {
             }
 
             alert('✅ Farmer request added successfully!');
-            navigate('/jo-incentives');
+            navigate(`/jo-manage-requests/${allocationId}`);
         } catch (err: any) {
             setError(err.message || 'Failed to save farmer request');
         } finally {
