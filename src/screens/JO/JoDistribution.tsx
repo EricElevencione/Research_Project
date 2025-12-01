@@ -73,7 +73,7 @@ const JoDistribution: React.FC = () => {
         }
     };
 
-    const fetchDistributions = async () => {
+    const fetchDistributions = async () => { // Fetch distribution records based on selected season
         if (!selectedSeason) return;
         try {
             const response = await fetch(`http://localhost:5000/api/distribution/records/${selectedSeason}`);
