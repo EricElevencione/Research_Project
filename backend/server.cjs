@@ -2577,34 +2577,33 @@ app.post('/api/transfer-ownership', async (req, res) => {
         console.log('✅ Parcels updated:', parcelsUpdateResult.rowCount, 'rows affected');
         console.log('Updated parcels:', JSON.stringify(parcelsUpdateResult.rows, null, 2));
 
-        // Update tenant/lessee land owner names for the transferred parcels
+        // Update tenant/lessee land owner names - Update ALL parcels where tenants/lessees reference the old owner
+        // This ensures that when ownership is transferred, the tenant/lessee records follow the new owner
         console.log('\n🔄 Updating tenant/lessee land owner names...');
-        console.log('Searching for tenants with land_owner_name:', oldOwnerName);
+        console.log('Searching for ALL tenants with land_owner_name:', oldOwnerName);
 
         const updateTenantsQuery = `
             UPDATE rsbsa_farm_parcels
             SET tenant_land_owner_name = $1
-            WHERE id = ANY($2::int[])
-              AND tenant_land_owner_name = $3
+            WHERE tenant_land_owner_name = $2
               AND ownership_type_tenant = true
-            RETURNING id, parcel_number, tenant_land_owner_name
+            RETURNING id, parcel_number, submission_id, tenant_land_owner_name
         `;
-        const tenantsUpdateResult = await client.query(updateTenantsQuery, [newOwnerName, selectedParcelIds, oldOwnerName]);
+        const tenantsUpdateResult = await client.query(updateTenantsQuery, [newOwnerName, oldOwnerName]);
         console.log('✅ Tenant land owner names updated:', tenantsUpdateResult.rowCount, 'rows affected');
         if (tenantsUpdateResult.rowCount > 0) {
             console.log('Updated tenant parcels:', JSON.stringify(tenantsUpdateResult.rows, null, 2));
         }
 
-        console.log('Searching for lessees with land_owner_name:', oldOwnerName);
+        console.log('Searching for ALL lessees with land_owner_name:', oldOwnerName);
         const updateLesseesQuery = `
             UPDATE rsbsa_farm_parcels
             SET lessee_land_owner_name = $1
-            WHERE id = ANY($2::int[])
-              AND lessee_land_owner_name = $3
+            WHERE lessee_land_owner_name = $2
               AND ownership_type_lessee = true
-            RETURNING id, parcel_number, lessee_land_owner_name
+            RETURNING id, parcel_number, submission_id, lessee_land_owner_name
         `;
-        const lesseesUpdateResult = await client.query(updateLesseesQuery, [newOwnerName, selectedParcelIds, oldOwnerName]);
+        const lesseesUpdateResult = await client.query(updateLesseesQuery, [newOwnerName, oldOwnerName]);
         console.log('✅ Lessee land owner names updated:', lesseesUpdateResult.rowCount, 'rows affected');
         if (lesseesUpdateResult.rowCount > 0) {
             console.log('Updated lessee parcels:', JSON.stringify(lesseesUpdateResult.rows, null, 2));

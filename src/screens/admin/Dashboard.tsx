@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/navigation/nav.css';
-import '../../assets/css/jo css/JoDashStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import DashboardStats from '../../components/Dashboard/DashboardStats';
 import LogoImage from '../../assets/images/Logo.png';
@@ -21,7 +20,7 @@ const Dashboard: React.FC = () => {
     return (
         <div className="page-container">
 
-            <div className="page">
+            <div className="page gap-10">
 
                 {/* Sidebar starts here */}
                 <div className="sidebar">
@@ -105,16 +104,13 @@ const Dashboard: React.FC = () => {
                 {/* Sidebar ends here */}
 
                 {/* Main content starts here */}
-                <div className="main-content jo-map-layout">
-                    <h2>Dashboard</h2>
+                <div className="flex flex-1 flex-col bg-white !p-5">
+                    <h2 className="mb-[22px] text-2xl font-semibold">Dashboard</h2>
 
                     <div className="map-area">
                         <FarmlandMap />
-
                         {/* Statistics Section - Floating over map */}
-                        <div className="floating-stats-panel">
-                            <DashboardStats />
-                        </div>
+
                     </div>
                 </div>
             </div>

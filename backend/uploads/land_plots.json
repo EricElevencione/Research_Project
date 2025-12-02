@@ -256,5 +256,105 @@
     "id": "shape-1764595689575-acad2d602788b",
     "createdAt": "2025-12-01T13:28:10.517Z",
     "updatedAt": "2025-12-01T13:28:10.517Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 1.5,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Barasan",
+    "firstName": "Rosa",
+    "middleName": "Bautista",
+    "surname": "Martinez",
+    "ext_name": "",
+    "gender": "Female",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Barasan, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.734574,
+            10.882206
+          ],
+          [
+            122.735756,
+            10.883654
+          ],
+          [
+            122.73537,
+            10.884013
+          ],
+          [
+            122.734041,
+            10.882464
+          ],
+          [
+            122.734574,
+            10.882206
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1764652326839-ddc68559c02da8",
+    "createdAt": "2025-12-02T05:12:11.471Z",
+    "updatedAt": "2025-12-02T05:12:11.471Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 1.5,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Balabag",
+    "firstName": "Harvey",
+    "middleName": "Kim",
+    "surname": "Solano",
+    "ext_name": "",
+    "gender": "Male",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Balabag, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "2",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.6553,
+            10.848583
+          ],
+          [
+            122.65663,
+            10.849763
+          ],
+          [
+            122.655086,
+            10.850858
+          ],
+          [
+            122.653671,
+            10.849426
+          ],
+          [
+            122.6553,
+            10.848583
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1764660773717-584fc992dc1fb",
+    "createdAt": "2025-12-02T07:32:57.554Z",
+    "updatedAt": "2025-12-02T07:32:57.555Z"
   }
 ]

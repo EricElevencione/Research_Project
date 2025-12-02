@@ -262,6 +262,15 @@ const ManageRequests: React.FC = () => {
             });
 
             if (response.ok) {
+                // If status is rejected, hide alternatives panel
+                if (newStatus === 'rejected') {
+                    setShowAlternatives(prev => ({ ...prev, [id]: false }));
+                    setAlternatives(prev => {
+                        const updated = { ...prev };
+                        delete updated[id];
+                        return updated;
+                    });
+                }
                 // If status is approved, automatically create distribution log
                 if (newStatus === 'approved') {
                     await createDistributionLog(id);

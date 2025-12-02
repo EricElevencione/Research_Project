@@ -1,11 +1,5 @@
 /* Map-first layout with floating panel (keeps Dashboard title) */
-.jo-map-layout {
-    position: relative;
-}
 
-.jo-map-layout .dashboard-header {
-    margin-bottom: 22px;
-}
 
 /* Quick Access Section */
 .quick-access-section {
@@ -252,13 +246,6 @@
 
 
 /* Main content start */
-.main-content {
-    flex: 1;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    background-color: white;
-}
 
 .dashboard-header {
     background-color: #f0f0f0;
