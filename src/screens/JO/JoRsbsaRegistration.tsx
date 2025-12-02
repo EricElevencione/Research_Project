@@ -1355,18 +1355,6 @@ const JoRsbsa: React.FC = () => {
                             </span>
                           </div>
                           <div className="summary-item">
-                            <span className="summary-label">Within Ancestral Domain:</span>
-                            <span className="summary-value">{parcel.withinAncestralDomain || 'Not specified'}</span>
-                          </div>
-                          <div className="summary-item">
-                            <span className="summary-label">Ownership Document:</span>
-                            <span className="summary-value">{parcel.ownershipDocumentNo || 'Not provided'}</span>
-                          </div>
-                          <div className="summary-item">
-                            <span className="summary-label">Agrarian Reform Beneficiary:</span>
-                            <span className="summary-value">{parcel.agrarianReformBeneficiary || 'Not specified'}</span>
-                          </div>
-                          <div className="summary-item">
                             <span className="summary-label">Ownership Type:</span>
                             <span className="summary-value">
                               {[

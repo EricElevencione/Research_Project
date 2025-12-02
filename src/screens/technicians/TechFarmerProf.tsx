@@ -8,6 +8,7 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import FarmerIcon from '../../assets/images/farmer (1).png';
+import IncentivesIcon from '../../assets/images/incentives.png';
 
 interface FarmerData {
     id: string;
@@ -252,6 +253,16 @@ const TechFarmerProf: React.FC = () => {
                         </button>
 
                         <button
+                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-incentives')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Incentives" />
+                            </span>
+                            <span className="nav-text">Incentives</span>
+                        </button>
+
+                        <button
                             className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-masterlist')}
                         >
@@ -437,10 +448,6 @@ const TechFarmerProf: React.FC = () => {
                                                                     </span>
                                                                 </div>
                                                             )}
-                                                            <div className="info-row">
-                                                                <span className="info-label">Ownership Document No:</span>
-                                                                <span className="info-value">{parcel.ownership_document_no || 'N/A'}</span>
-                                                            </div>
                                                             <div className="info-row">
                                                                 <span className="info-label">Agrarian Reform Beneficiary:</span>
                                                                 <span className="info-value">{parcel.agrarian_reform_beneficiary || 'N/A'}</span>

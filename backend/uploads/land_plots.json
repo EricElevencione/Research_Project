@@ -2,65 +2,14 @@
   {
     "name": "",
     "ffrs_id": "",
-    "area": 0,
+    "area": 5,
     "coordinateAccuracy": "approximate",
     "barangay": "Calao",
-    "firstName": "Kelly",
-    "middleName": "noca",
-    "surname": "John",
+    "firstName": "Ensio",
+    "middleName": "Idk",
+    "surname": "Arendt",
     "ext_name": "",
     "gender": "Male",
-    "birthdate": "2002-07-09T16:00:00.000Z",
-    "municipality": "Dumangas",
-    "province": "Iloilo",
-    "parcel_address": ", Dumangas",
-    "status": "Tenant",
-    "street": "",
-    "farmType": "Irrigated",
-    "plotSource": "manual",
-    "geometry": {
-      "type": "Polygon",
-      "coordinates": [
-        [
-          [
-            122.70413,
-            10.869211
-          ],
-          [
-            122.704377,
-            10.869612
-          ],
-          [
-            122.703229,
-            10.870465
-          ],
-          [
-            122.702982,
-            10.870065
-          ],
-          [
-            122.70413,
-            10.869211
-          ]
-        ]
-      ]
-    },
-    "id": "shape-1762341094808-421677369909b8",
-    "createdAt": "2025-11-05T11:11:36.199Z",
-    "updatedAt": "2025-11-05T11:11:36.199Z"
-  },
-  {
-    "name": "",
-    "ffrs_id": "",
-    "area": 1,
-    "coordinateAccuracy": "approximate",
-    "barangay": "Calao",
-    "firstName": "Harv",
-    "middleName": "Solano",
-    "surname": "Kim",
-    "ext_name": "",
-    "gender": "Male",
-    "birthdate": "",
     "municipality": "Dumangas",
     "province": "Iloilo",
     "parcel_address": "Calao, Dumangas",
@@ -74,302 +23,35 @@
       "coordinates": [
         [
           [
-            122.701144,
-            10.868614
+            122.691095,
+            10.870358
           ],
           [
-            122.699964,
-            10.867434
+            122.69088,
+            10.870464
           ],
           [
-            122.701787,
-            10.866507
+            122.690709,
+            10.870137
           ],
           [
-            122.702795,
-            10.867918
+            122.691084,
+            10.86979
           ],
           [
-            122.701144,
-            10.868614
+            122.691309,
+            10.870169
+          ],
+          [
+            122.691095,
+            10.870358
           ]
         ]
       ]
     },
-    "id": "shape-1762430121465-60fa54d14e7148",
-    "createdAt": "2025-11-06T11:55:23.303Z",
-    "updatedAt": "2025-11-06T11:55:23.303Z"
-  },
-  {
-    "name": "",
-    "ffrs_id": "",
-    "area": 1,
-    "coordinateAccuracy": "approximate",
-    "barangay": "Calao",
-    "firstName": "harv",
-    "middleName": "tubo",
-    "surname": "mik",
-    "ext_name": "",
-    "gender": "Male",
-    "birthdate": "",
-    "municipality": "Dumangas",
-    "province": "Iloilo",
-    "parcel_address": "Calao, Dumangas",
-    "status": "Tenant",
-    "street": "",
-    "farmType": "Irrigated",
-    "plotSource": "manual",
-    "parcelNumber": "1",
-    "geometry": {
-      "type": "Polygon",
-      "coordinates": [
-        [
-          [
-            122.702387,
-            10.868993
-          ],
-          [
-            122.700457,
-            10.866907
-          ],
-          [
-            122.703309,
-            10.865833
-          ],
-          [
-            122.70406,
-            10.867518
-          ],
-          [
-            122.702387,
-            10.868993
-          ]
-        ]
-      ]
-    },
-    "id": "shape-1762431507524-00e90725938258",
-    "createdAt": "2025-11-06T12:18:29.147Z",
-    "updatedAt": "2025-11-06T12:18:29.147Z"
-  },
-  {
-    "name": "",
-    "ffrs_id": "",
-    "area": 0,
-    "coordinateAccuracy": "approximate",
-    "barangay": "Cayos",
-    "firstName": "Eric ",
-    "middleName": "Servita",
-    "surname": "Elev",
-    "ext_name": "",
-    "gender": "Male",
-    "birthdate": "",
-    "municipality": "Dumangas",
-    "province": "Iloilo",
-    "parcel_address": "Cayos, Dumangas",
-    "status": "Tenant",
-    "street": "",
-    "farmType": "Irrigated",
-    "plotSource": "manual",
-    "parcelNumber": "2",
-    "geometry": {
-      "type": "Polygon",
-      "coordinates": [
-        [
-          [
-            122.65563,
-            10.812364
-          ],
-          [
-            122.652478,
-            10.809963
-          ],
-          [
-            122.654793,
-            10.807498
-          ],
-          [
-            122.656445,
-            10.809162
-          ],
-          [
-            122.65563,
-            10.812364
-          ]
-        ]
-      ]
-    },
-    "id": "shape-1762431538547-dbdfc25965a548",
-    "createdAt": "2025-11-06T12:19:00.201Z",
-    "updatedAt": "2025-11-06T12:19:00.202Z"
-  },
-  {
-    "name": "",
-    "ffrs_id": "",
-    "area": 0,
-    "coordinateAccuracy": "approximate",
-    "barangay": "Baras",
-    "firstName": "Eric ",
-    "middleName": "Servita",
-    "surname": "Elev",
-    "ext_name": "",
-    "gender": "Male",
-    "birthdate": "",
-    "municipality": "Dumangas",
-    "province": "Iloilo",
-    "parcel_address": "Baras, Dumangas",
-    "status": "Tenant",
-    "street": "",
-    "farmType": "Irrigated",
-    "plotSource": "manual",
-    "parcelNumber": "1",
-    "geometry": {
-      "type": "Polygon",
-      "coordinates": [
-        [
-          [
-            122.709568,
-            10.829011
-          ],
-          [
-            122.708742,
-            10.828642
-          ],
-          [
-            122.709546,
-            10.827779
-          ],
-          [
-            122.710158,
-            10.828379
-          ],
-          [
-            122.709568,
-            10.829011
-          ]
-        ]
-      ]
-    },
-    "id": "shape-1762431589242-d131315c31446",
-    "createdAt": "2025-11-06T12:19:52.635Z",
-    "updatedAt": "2025-11-06T12:19:52.635Z"
-  },
-  {
-    "name": "",
-    "ffrs_id": "",
-    "area": 1,
-    "coordinateAccuracy": "approximate",
-    "barangay": "Calao",
-    "firstName": "Harv",
-    "middleName": "Solano",
-    "surname": "Kim",
-    "ext_name": "",
-    "gender": "Male",
-    "birthdate": "",
-    "municipality": "Dumangas",
-    "province": "Iloilo",
-    "parcel_address": "Calao, Dumangas",
-    "status": "Tenant",
-    "street": "",
-    "farmType": "Irrigated",
-    "plotSource": "manual",
-    "parcelNumber": "1",
-    "geometry": {
-      "type": "Polygon",
-      "coordinates": [
-        [
-          [
-            122.692818,
-            10.868783
-          ],
-          [
-            122.692645,
-            10.868681
-          ],
-          [
-            122.692758,
-            10.868455
-          ],
-          [
-            122.692484,
-            10.868191
-          ],
-          [
-            122.692479,
-            10.868039
-          ],
-          [
-            122.69287,
-            10.867807
-          ],
-          [
-            122.693058,
-            10.867681
-          ],
-          [
-            122.693385,
-            10.868123
-          ],
-          [
-            122.692818,
-            10.868783
-          ]
-        ]
-      ]
-    },
-    "id": "shape-1762568283189-6411c620eb29e8",
-    "createdAt": "2025-11-08T02:18:06.511Z",
-    "updatedAt": "2025-11-08T02:18:06.511Z"
-  },
-  {
-    "name": "",
-    "ffrs_id": "",
-    "area": 2,
-    "coordinateAccuracy": "approximate",
-    "barangay": "Burgos-Regidor",
-    "firstName": "Jukka",
-    "middleName": "Anika",
-    "surname": "Iglesias",
-    "ext_name": "",
-    "gender": "Male",
-    "birthdate": "",
-    "municipality": "Dumangas",
-    "province": "Iloilo",
-    "parcel_address": "Burgos-Regidor, Dumangas",
-    "status": "Tenant",
-    "street": "",
-    "farmType": "Irrigated",
-    "plotSource": "manual",
-    "parcelNumber": "1",
-    "geometry": {
-      "type": "Polygon",
-      "coordinates": [
-        [
-          [
-            122.712185,
-            10.82195
-          ],
-          [
-            122.711896,
-            10.821645
-          ],
-          [
-            122.712217,
-            10.821498
-          ],
-          [
-            122.712464,
-            10.821803
-          ],
-          [
-            122.712185,
-            10.82195
-          ]
-        ]
-      ]
-    },
-    "id": "shape-1763080323885-f219703724c968",
-    "createdAt": "2025-11-14T00:32:04.693Z",
-    "updatedAt": "2025-11-14T00:32:04.693Z"
+    "id": "shape-1764588315710-5bde571994ed7",
+    "createdAt": "2025-12-01T11:25:16.901Z",
+    "updatedAt": "2025-12-01T11:25:16.901Z"
   },
   {
     "name": "",
@@ -395,54 +77,184 @@
       "coordinates": [
         [
           [
-            122.701663,
-            10.832012
+            122.703117,
+            10.83452
           ],
           [
-            122.702022,
-            10.831628
+            122.703567,
+            10.834936
           ],
           [
-            122.702392,
-            10.831923
+            122.703846,
+            10.834736
           ],
           [
-            122.702939,
-            10.831386
+            122.703444,
+            10.83422
           ],
           [
-            122.703464,
-            10.831917
-          ],
-          [
-            122.703121,
-            10.832302
-          ],
-          [
-            122.702756,
-            10.831996
-          ],
-          [
-            122.70237,
-            10.832365
-          ],
-          [
-            122.701882,
-            10.831996
-          ],
-          [
-            122.701727,
-            10.832096
-          ],
-          [
-            122.701663,
-            10.832012
+            122.703117,
+            10.83452
           ]
         ]
       ]
     },
-    "id": "shape-1763081382104-af02dcdd35bae",
-    "createdAt": "2025-11-14T00:49:43.346Z",
-    "updatedAt": "2025-11-14T00:49:43.346Z"
+    "id": "shape-1764588790380-830b7abdbe99a",
+    "createdAt": "2025-12-01T11:33:11.882Z",
+    "updatedAt": "2025-12-01T11:33:11.882Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 2,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Burgos-Regidor",
+    "firstName": "Marja",
+    "middleName": "Ward",
+    "surname": "Ramos",
+    "ext_name": "",
+    "gender": "Female",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Burgos-Regidor, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.71341,
+            10.826015
+          ],
+          [
+            122.713169,
+            10.825857
+          ],
+          [
+            122.713372,
+            10.825668
+          ],
+          [
+            122.713522,
+            10.825926
+          ],
+          [
+            122.71341,
+            10.826015
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1764595669240-b0c6ae724ccae8",
+    "createdAt": "2025-12-01T13:27:50.981Z",
+    "updatedAt": "2025-12-01T13:27:50.981Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 2,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Capaliz",
+    "firstName": "Marja",
+    "middleName": "Ward",
+    "surname": "Ramos",
+    "ext_name": "",
+    "gender": "Female",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Capaliz, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "1",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.705154,
+            10.844969
+          ],
+          [
+            122.704489,
+            10.844232
+          ],
+          [
+            122.70539,
+            10.843747
+          ],
+          [
+            122.706205,
+            10.844295
+          ],
+          [
+            122.705132,
+            10.845243
+          ],
+          [
+            122.705154,
+            10.844969
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1764595681287-e0df690c69c8",
+    "createdAt": "2025-12-01T13:28:02.124Z",
+    "updatedAt": "2025-12-01T13:28:02.124Z"
+  },
+  {
+    "name": "",
+    "ffrs_id": "",
+    "area": 2,
+    "coordinateAccuracy": "approximate",
+    "barangay": "Calao",
+    "firstName": "Marja",
+    "middleName": "Ward",
+    "surname": "Ramos",
+    "ext_name": "",
+    "gender": "Female",
+    "municipality": "Dumangas",
+    "province": "Iloilo",
+    "parcel_address": "Calao, Dumangas",
+    "status": "Tenant",
+    "street": "",
+    "farmType": "Irrigated",
+    "plotSource": "manual",
+    "parcelNumber": "2",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            122.702366,
+            10.869267
+          ],
+          [
+            122.701701,
+            10.86834
+          ],
+          [
+            122.702087,
+            10.868108
+          ],
+          [
+            122.702773,
+            10.868887
+          ],
+          [
+            122.702366,
+            10.869267
+          ]
+        ]
+      ]
+    },
+    "id": "shape-1764595689575-acad2d602788b",
+    "createdAt": "2025-12-01T13:28:10.517Z",
+    "updatedAt": "2025-12-01T13:28:10.517Z"
   }
 ]

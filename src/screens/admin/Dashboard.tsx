@@ -10,7 +10,6 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import LandRecsIcon from '../../assets/images/landrecord.png';
 
 
 const Dashboard: React.FC = () => {
@@ -32,7 +31,7 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-dashboard') ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/dashboard') ? 'active' : ''}`}
                             onClick={() => navigate('/dashboard')}
                         >
                             <span className="nav-icon">
@@ -42,7 +41,7 @@ const Dashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/rsbsa') ? 'active' : ''}`}
                             onClick={() => navigate('/rsbsa')}
                         >
                             <span className="nav-icon">
@@ -52,7 +51,27 @@ const Dashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/gap-analysis') ? 'active' : ''}`}
+                            onClick={() => navigate('/gap-analysis')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Gap-analysis" />
+                            </span>
+                            <span className="nav-text">Gap Analysis</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/land-records') ? 'active' : ''}`}
+                            onClick={() => navigate('/land-records')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Land Records" />
+                            </span>
+                            <span className="nav-text">Land Records</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/incentives') ? 'active' : ''}`}
                             onClick={() => navigate('/incentives')}
                         >
                             <span className="nav-icon">
@@ -62,7 +81,7 @@ const Dashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/masterlist')}
                         >
                             <span className="nav-icon">
@@ -72,17 +91,7 @@ const Dashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-landrecords')}
-                        >
-                            <span className="nav-icon">
-                                <img src={LandRecsIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Land Records</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/logout') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
                         >
                             <span className="nav-icon">
@@ -90,6 +99,7 @@ const Dashboard: React.FC = () => {
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
+
                     </nav>
                 </div>
                 {/* Sidebar ends here */}

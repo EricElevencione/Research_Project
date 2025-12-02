@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import '../../assets/css/navigation/nav.css';
 import '../../assets/css/technician css/PickLandStyle.css';
-import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
+import FarmerIcon from '../../assets/images/farmer (1).png';
+import IncentivesIcon from '../../assets/images/incentives.png';
 
 interface LandOwner {
     id: string;
@@ -201,6 +202,7 @@ const TechPickLandParcel: React.FC = () => {
                         <div className="sidebar-logo">
                             <img src={LogoImage} alt="Logo" />
                         </div>
+
                         <button
                             className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-dashboard')}
@@ -210,8 +212,9 @@ const TechPickLandParcel: React.FC = () => {
                             </span>
                             <span className="nav-text">Home</span>
                         </button>
+
                         <button
-                            className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/technician-rsbsapage') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-rsbsa')}
                         >
                             <span className="nav-icon">
@@ -219,6 +222,17 @@ const TechPickLandParcel: React.FC = () => {
                             </span>
                             <span className="nav-text">RSBSA</span>
                         </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-incentives')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Incentives" />
+                            </span>
+                            <span className="nav-text">Incentives</span>
+                        </button>
+
                         <button
                             className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-masterlist')}
@@ -228,6 +242,17 @@ const TechPickLandParcel: React.FC = () => {
                             </span>
                             <span className="nav-text">Masterlist</span>
                         </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-farmerprofpage')}
+                        >
+                            <span className="nav-icon">
+                                <img src={FarmerIcon} alt="farmerProf" />
+                            </span>
+                            <span className="nav-text">Farmers Profile</span>
+                        </button>
+
                         <button
                             className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
@@ -237,6 +262,7 @@ const TechPickLandParcel: React.FC = () => {
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
+
                     </nav>
                 </div>
                 {/* Sidebar ends here */}
@@ -292,13 +318,6 @@ const TechPickLandParcel: React.FC = () => {
                                                 >
                                                     <div className="parcel-header">
                                                         <h4>Parcel {parcel.parcelNumber}</h4>
-                                                        <span
-                                                            className={`status-badge ${parcel.plotStatus
-                                                                .toLowerCase()
-                                                                .replace(' ', '-')}`}
-                                                        >
-                                                            {parcel.plotStatus}
-                                                        </span>
                                                     </div>
                                                     <div className="parcel-details">
                                                         <p>
@@ -309,50 +328,11 @@ const TechPickLandParcel: React.FC = () => {
                                                             <strong>Area:</strong> {parcel.totalFarmArea} hectares
                                                         </p>
                                                         <p>
-                                                            <strong>Crop:</strong> {parcel.cropCommodity || 'N/A'}
-                                                        </p>
-                                                        <p>
-                                                            <strong>Farm Type:</strong> {parcel.farmType || 'N/A'}
-                                                        </p>
-                                                        <p>
-                                                            <strong>Organic:</strong>{' '}
-                                                            {parcel.organicPractitioner ? 'Yes' : 'No'}
-                                                        </p>
-                                                        <p>
                                                             <strong>Created:</strong> {formatDate(parcel.createdAt)}
                                                         </p>
                                                     </div>
                                                 </div>
                                             ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Map Section */}
-                                <div className="map-section">
-                                    <h3>Parcel Visualization</h3>
-                                    {selectedParcel ? (
-                                        <div className="map-container">
-                                            <FarmlandMap
-                                                onLandPlotSelect={(properties) => {
-                                                    console.log('Selected land plot:', properties);
-                                                }}
-                                                highlightGeometry={hoveredParcel?.geometry || null}
-                                                highlightMatcher={hoveredMatcher}
-                                            />
-                                            <div className="selected-parcel-info">
-                                                <h4>Selected: Parcel {selectedParcel.parcelNumber}</h4>
-                                                <p>
-                                                    <strong>Area:</strong> {selectedParcel.totalFarmArea} hectares
-                                                </p>
-                                                <p>
-                                                    <strong>Location:</strong> {selectedParcel.farmLocationBarangay}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="no-selection">
-                                            <p>Select a land parcel to view it on the map</p>
                                         </div>
                                     )}
                                 </div>

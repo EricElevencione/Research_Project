@@ -50,7 +50,7 @@ interface AllocationDetails {
     lp296_kg: number;
 }
 
-const JoManageRequests: React.FC = () => {
+const ManageRequests: React.FC = () => {
     const navigate = useNavigate();
     const { allocationId } = useParams<{ allocationId: string }>();
     const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
@@ -169,7 +169,7 @@ const JoManageRequests: React.FC = () => {
                     try {
                         setLoadingAlternatives(prev => ({ ...prev, [request.id]: true }));
 
-                        console.log(`Fetching alternatives for request #${request.id}...`);
+                        console.log(`🤖 Fetching alternatives for request #${request.id}...`);
                         const response = await fetch('http://localhost:5000/api/distribution/suggest-alternatives', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -348,7 +348,7 @@ const JoManageRequests: React.FC = () => {
         try {
             setLoadingAlternatives(prev => ({ ...prev, [requestId]: true }));
 
-            console.log('Fetching alternatives for request:', requestId);
+            console.log('🤖 Fetching alternatives for request:', requestId);
 
             const response = await fetch('http://localhost:5000/api/distribution/suggest-alternatives', {
                 method: 'POST',
@@ -746,8 +746,8 @@ const JoManageRequests: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-dashboard') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-dashboard')}
+                            className={`sidebar-nav-item ${isActive('/dashboard') ? 'active' : ''}`}
+                            onClick={() => navigate('/dashboard')}
                         >
                             <span className="nav-icon">
                                 <img src={HomeIcon} alt="Home" />
@@ -756,8 +756,8 @@ const JoManageRequests: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-rsbsapage')}
+                            className={`sidebar-nav-item ${isActive('/rsbsa') ? 'active' : ''}`}
+                            onClick={() => navigate('/rsbsa')}
                         >
                             <span className="nav-icon">
                                 <img src={RSBSAIcon} alt="RSBSA" />
@@ -766,8 +766,28 @@ const JoManageRequests: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-incentives')}
+                            className={`sidebar-nav-item ${isActive('/gap-analysis') ? 'active' : ''}`}
+                            onClick={() => navigate('/gap-analysis')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Gap-analysis" />
+                            </span>
+                            <span className="nav-text">Gap Analysis</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/land-records') ? 'active' : ''}`}
+                            onClick={() => navigate('/land-records')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Land Records" />
+                            </span>
+                            <span className="nav-text">Land Records</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/incentives') ? 'active' : ''}`}
+                            onClick={() => navigate('/incentives')}
                         >
                             <span className="nav-icon">
                                 <img src={IncentivesIcon} alt="Incentives" />
@@ -775,40 +795,14 @@ const JoManageRequests: React.FC = () => {
                             <span className="nav-text">Incentives</span>
                         </button>
 
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-gap-analysis')}
-                        >
-                            <div className="nav-icon">📊</div>
-                            <span className="nav-text">Gap Analysis</span>
-                        </div>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-distribution')}
-                        >
-                            <div className="nav-icon">🚚</div>
-                            <span className="nav-text">Distribution Log</span>
-                        </div>
-
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-masterlist')}
+                            className={`sidebar-nav-item ${isActive('/masterlist') ? 'active' : ''}`}
+                            onClick={() => navigate('/masterlist')}
                         >
                             <span className="nav-icon">
                                 <img src={MasterlistIcon} alt="Masterlist" />
                             </span>
                             <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-landrecords')}
-                        >
-                            <span className="nav-icon">
-                                <img src={LandRecsIcon} alt="Land Records" />
-                            </span>
-                            <span className="nav-text">Land Records</span>
                         </button>
 
                         <button
@@ -827,11 +821,11 @@ const JoManageRequests: React.FC = () => {
                 <div className="main-content">
                     <div className="dashboard-header-incent">
                         <div>
-                            <h2 className="page-header">Manage Farmer Requests</h2>
+                            <h2 className="page-header">View Farmer Requests</h2>
                         </div>
                         <button
                             className="btn-create-allocation"
-                            onClick={() => navigate('/jo-incentives')}
+                            onClick={() => navigate('/incentives')}
                         >
                             ← Back to Allocations
                         </button>
@@ -1123,7 +1117,7 @@ const JoManageRequests: React.FC = () => {
                                         <span style={{ fontSize: '24px' }}>💡</span>
                                         <div style={{ flex: 1 }}>
                                             <strong style={{ color: '#92400e', fontSize: '14px' }}>
-                                                Alternatives Auto-Loaded & Displayed
+                                                🤖 Smart Alternatives Auto-Loaded & Displayed
                                             </strong>
                                             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#78350f' }}>
                                                 Rows highlighted in yellow (⚠️) show automatic suggestions below.
@@ -1147,7 +1141,6 @@ const JoManageRequests: React.FC = () => {
                                                 <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Fertilizers (bags)</th>
                                                 <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Seeds (kg)</th>
                                                 <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Status</th>
-                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1220,87 +1213,6 @@ const JoManageRequests: React.FC = () => {
                                                                     {request.status.toUpperCase()}
                                                                 </span>
                                                             </td>
-                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                                                    {request.status === 'pending' && (
-                                                                        <>
-                                                                            <button
-                                                                                onClick={() => handleStatusChange(request.id, 'approved')}
-                                                                                style={{
-                                                                                    padding: '6px 12px',
-                                                                                    background: '#10b981',
-                                                                                    color: 'white',
-                                                                                    border: 'none',
-                                                                                    borderRadius: '4px',
-                                                                                    cursor: 'pointer',
-                                                                                    fontSize: '12px'
-                                                                                }}
-                                                                            >
-                                                                                ✓ Approve
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => handleEdit(request)}
-                                                                                style={{
-                                                                                    padding: '6px 12px',
-                                                                                    background: '#f59e0b',
-                                                                                    color: 'white',
-                                                                                    border: 'none',
-                                                                                    borderRadius: '4px',
-                                                                                    cursor: 'pointer',
-                                                                                    fontSize: '12px'
-                                                                                }}
-                                                                            >
-                                                                                ✏️ Edit
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => handleStatusChange(request.id, 'rejected')}
-                                                                                style={{
-                                                                                    padding: '6px 12px',
-                                                                                    background: '#ef4444',
-                                                                                    color: 'white',
-                                                                                    border: 'none',
-                                                                                    borderRadius: '4px',
-                                                                                    cursor: 'pointer',
-                                                                                    fontSize: '12px'
-                                                                                }}
-                                                                            >
-                                                                                ✕ Reject
-                                                                            </button>
-                                                                            {/* Show/Hide Alternatives button - only for requests with alternatives */}
-                                                                            {hasShortage && alternatives[request.id] && (
-                                                                                <button
-                                                                                    onClick={() => setShowAlternatives(prev => ({ ...prev, [request.id]: !prev[request.id] }))}
-                                                                                    style={{
-                                                                                        padding: '6px 12px',
-                                                                                        background: showAlternatives[request.id] ? '#6b7280' : '#3b82f6',
-                                                                                        color: 'white',
-                                                                                        border: 'none',
-                                                                                        borderRadius: '4px',
-                                                                                        cursor: 'pointer',
-                                                                                        fontSize: '12px'
-                                                                                    }}
-                                                                                >
-                                                                                    {showAlternatives[request.id] ? '🔼 Hide' : '🔽 Show'} Alternatives
-                                                                                </button>
-                                                                            )}
-                                                                        </>
-                                                                    )}
-                                                                    <button
-                                                                        onClick={() => handleDelete(request.id, request.farmer_name)}
-                                                                        style={{
-                                                                            padding: '6px 12px',
-                                                                            background: '#6b7280',
-                                                                            color: 'white',
-                                                                            border: 'none',
-                                                                            borderRadius: '4px',
-                                                                            cursor: 'pointer',
-                                                                            fontSize: '12px'
-                                                                        }}
-                                                                    >
-                                                                        🗑️
-                                                                    </button>
-                                                                </div>
-                                                            </td>
                                                         </tr>
 
                                                         {/* Alternatives Panel - Appears below the row when button is clicked */}
@@ -1310,7 +1222,7 @@ const JoManageRequests: React.FC = () => {
                                                                     <div style={{ maxWidth: '100%' }}>
                                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                                                             <h3 style={{ margin: '0', color: '#1e40af', fontSize: '16px' }}>
-                                                                                Alternatives for {request.farmer_name}
+                                                                                🤖 Smart Alternatives for {request.farmer_name}
                                                                             </h3>
                                                                             <button
                                                                                 onClick={() => setShowAlternatives(prev => ({ ...prev, [request.id]: false }))}
@@ -1818,4 +1730,4 @@ const JoManageRequests: React.FC = () => {
     );
 };
 
-export default JoManageRequests;
+export default ManageRequests;

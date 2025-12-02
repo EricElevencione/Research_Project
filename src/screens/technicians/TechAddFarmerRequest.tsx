@@ -8,7 +8,7 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import LandRecsIcon from '../../assets/images/landrecord.png';
+import FarmerIcon from '../../assets/images/farmer (1).png';
 
 interface Farmer {
     id: number;
@@ -41,7 +41,7 @@ interface FarmerRequestForm {
     notes: string;
 }
 
-const JoAddFarmerRequest: React.FC = () => {
+const TechAddFarmerRequest: React.FC = () => {
     const navigate = useNavigate();
     const { allocationId } = useParams<{ allocationId: string }>();
     const [loading, setLoading] = useState(false);
@@ -49,7 +49,7 @@ const JoAddFarmerRequest: React.FC = () => {
     const [farmers, setFarmers] = useState<Farmer[]>([]);
     const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [existingRequests, setExistingRequests] = useState<number[]>([]); // farmer_ids with existing requests
+    const [existingRequests, setExistingRequests] = useState<number[]>([]);
 
     const [formData, setFormData] = useState<FarmerRequestForm>({
         farmer_id: 0,
@@ -68,15 +68,15 @@ const JoAddFarmerRequest: React.FC = () => {
 
     const isActive = (path: string) => location.pathname === path;
 
-    const handleLogout = () => { // logout function
-        localStorage.removeItem('isAuthenticated'); // clear auth flag
-        navigate('/login'); // redirect to login page
+    const handleLogout = () => {
+        localStorage.removeItem('isAuthenticated');
+        navigate('/login');
     };
 
-    useEffect(() => { // Fetch allocation and farmers on mount
-        fetchAllocation();  // Fetch allocation details
-        fetchFarmers(); // Fetch farmers list
-    }, [allocationId]); // Re-run if allocationId changes
+    useEffect(() => {
+        fetchAllocation();
+        fetchFarmers();
+    }, [allocationId]);
 
     useEffect(() => {
         if (allocation?.season) {
@@ -86,32 +86,20 @@ const JoAddFarmerRequest: React.FC = () => {
 
     const fetchAllocation = async () => {
         try {
-            console.log('🔍 Fetching allocation for ID:', allocationId, 'Type:', typeof allocationId);
             const response = await fetch(`http://localhost:5000/api/distribution/allocations`);
             if (response.ok) {
                 const allocations = await response.json();
-                console.log('📦 All allocations returned:', allocations.length, 'allocations');
-                console.log('📋 Allocation IDs:', allocations.map((a: any) => ({ id: a.id, season: a.season, type: typeof a.id })));
-
                 const targetId = parseInt(allocationId || '0');
-                console.log('🎯 Looking for ID:', targetId);
-
-                const found = allocations.find((a: any) => {
-                    console.log(`Comparing: ${a.id} (${typeof a.id}) === ${targetId} (${typeof targetId}) = ${a.id === targetId}`);
-                    return a.id === targetId;
-                });
-
-                console.log('✅ Found allocation:', found);
+                const found = allocations.find((a: any) => a.id === targetId);
                 setAllocation(found || null);
                 if (!found) {
-                    setError(`Allocation with ID ${allocationId} not found in database`);
+                    setError(`Allocation with ID ${allocationId} not found`);
                 }
             } else {
-                console.error('❌ Response not OK:', response.status, response.statusText);
                 setError('Failed to fetch allocation data');
             }
         } catch (err) {
-            console.error('❌ Failed to fetch allocation:', err);
+            console.error('Failed to fetch allocation:', err);
             setError('Error loading allocation data');
         }
     };
@@ -123,10 +111,8 @@ const JoAddFarmerRequest: React.FC = () => {
             const response = await fetch(`http://localhost:5000/api/distribution/requests/${allocation.season}`);
             if (response.ok) {
                 const requests = await response.json();
-                // Extract farmer_ids who already have requests in this season
                 const farmerIds = requests.map((req: any) => Number(req.farmer_id));
                 setExistingRequests(farmerIds);
-                console.log('🚫 Farmers with existing requests:', farmerIds.length);
             }
         } catch (err) {
             console.error('Failed to fetch existing requests:', err);
@@ -138,23 +124,17 @@ const JoAddFarmerRequest: React.FC = () => {
             const response = await fetch('http://localhost:5000/api/rsbsa_submission');
             if (response.ok) {
                 const data = await response.json();
-                console.log('Fetched farmers data:', data.slice(0, 2)); // Debug first 2 records
-
-                // Transform data to match Farmer interface
                 const transformedFarmers = data
                     .filter((item: any) => {
                         const status = String(item.status ?? '').toLowerCase().trim();
-                        return status !== 'no parcels';
+                        // Only show active farmers - exclude 'no parcels' and non-active statuses
+                        return status !== 'no parcels' && status === 'active farmer';
                     })
                     .map((item: any) => {
-                        // Backend already provides farmerName as formatted string "Last, First Middle"
-                        // We need to parse it back to individual components
                         const nameParts = (item.farmerName || '').split(', ');
                         const lastName = nameParts[0] || '';
                         const firstAndMiddle = nameParts[1] || '';
                         const [firstName, ...middleNameParts] = firstAndMiddle.split(' ');
-
-                        // Extract barangay from farmerAddress (format: "Barangay, Municipality")
                         const addressParts = (item.farmerAddress || '').split(', ');
                         const barangay = addressParts[0] || '';
 
@@ -168,7 +148,6 @@ const JoAddFarmerRequest: React.FC = () => {
                             barangay: barangay
                         };
                     });
-                console.log('Transformed farmers:', transformedFarmers.slice(0, 2)); // Debug
                 setFarmers(transformedFarmers);
             }
         } catch (err) {
@@ -194,18 +173,13 @@ const JoAddFarmerRequest: React.FC = () => {
             return;
         }
 
-        // Check if allocation is loaded
         if (!allocation || !allocation.season) {
-            console.error('Allocation not loaded:', allocation);
             setError('Allocation data not loaded. Please refresh the page.');
             return;
         }
 
-        // Get selected farmer details - compare as numbers
         const selectedFarmer = farmers.find(f => Number(f.id) === Number(formData.farmer_id));
         if (!selectedFarmer) {
-            console.error('Farmer not found. Looking for ID:', formData.farmer_id, 'Type:', typeof formData.farmer_id);
-            console.error('Available farmers:', farmers.map(f => ({ id: f.id, type: typeof f.id, name: f.last_name })));
             setError('Selected farmer not found');
             return;
         }
@@ -216,7 +190,6 @@ const JoAddFarmerRequest: React.FC = () => {
         setError(null);
 
         try {
-            // Calculate totals for fertilizer and seeds
             const totalFertilizerRequested = (
                 formData.requested_urea_bags +
                 formData.requested_complete_14_bags +
@@ -241,20 +214,18 @@ const JoAddFarmerRequest: React.FC = () => {
                     farmer_id: formData.farmer_id,
                     farmer_name: farmerFullName,
                     barangay: selectedFarmer.barangay,
-                    farm_area_ha: 0, // Default, can be updated later
-                    crop_type: 'Rice', // Default
-                    ownership_type: 'Owner', // Default
+                    farm_area_ha: 0,
+                    crop_type: 'Rice',
+                    ownership_type: 'Owner',
                     num_parcels: 1,
                     fertilizer_requested: totalFertilizerRequested > 0,
                     seeds_requested: totalSeedsRequested > 0,
                     request_notes: formData.notes || null,
                     created_by: null,
-                    // Detailed fertilizer amounts
                     requested_urea_bags: formData.requested_urea_bags,
                     requested_complete_14_bags: formData.requested_complete_14_bags,
                     requested_ammonium_sulfate_bags: formData.requested_ammonium_sulfate_bags,
                     requested_muriate_potash_bags: formData.requested_muriate_potash_bags,
-                    // Detailed seed amounts
                     requested_jackpot_kg: formData.requested_jackpot_kg,
                     requested_us88_kg: formData.requested_us88_kg,
                     requested_th82_kg: formData.requested_th82_kg,
@@ -270,7 +241,7 @@ const JoAddFarmerRequest: React.FC = () => {
             }
 
             alert('✅ Farmer request added successfully!');
-            navigate(`/jo-manage-requests/${allocationId}`);
+            navigate(`/technician-manage-requests/${allocationId}`);
         } catch (err: any) {
             setError(err.message || 'Failed to save farmer request');
         } finally {
@@ -279,7 +250,6 @@ const JoAddFarmerRequest: React.FC = () => {
     };
 
     const filteredFarmers = farmers.filter(farmer => {
-        // Exclude farmers who already have a request in this season
         if (existingRequests.includes(Number(farmer.id))) {
             return false;
         }
@@ -301,8 +271,8 @@ const JoAddFarmerRequest: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-dashboard') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-dashboard')}
+                            className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-dashboard')}
                         >
                             <span className="nav-icon">
                                 <img src={HomeIcon} alt="Home" />
@@ -311,8 +281,8 @@ const JoAddFarmerRequest: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-rsbsapage')}
+                            className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-rsbsa')}
                         >
                             <span className="nav-icon">
                                 <img src={RSBSAIcon} alt="RSBSA" />
@@ -321,8 +291,8 @@ const JoAddFarmerRequest: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-incentives')}
+                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-incentives')}
                         >
                             <span className="nav-icon">
                                 <img src={IncentivesIcon} alt="Incentives" />
@@ -330,25 +300,9 @@ const JoAddFarmerRequest: React.FC = () => {
                             <span className="nav-text">Incentives</span>
                         </button>
 
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-gap-analysis')}
-                        >
-                            <div className="nav-icon">📊</div>
-                            <span className="nav-text">Gap Analysis</span>
-                        </div>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-distribution')}
-                        >
-                            <div className="nav-icon">🚚</div>
-                            <span className="nav-text">Distribution Log</span>
-                        </div>
-
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-masterlist')}
+                            className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-masterlist')}
                         >
                             <span className="nav-icon">
                                 <img src={MasterlistIcon} alt="Masterlist" />
@@ -357,13 +311,13 @@ const JoAddFarmerRequest: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-landrecords')}
+                            className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-farmerprofpage')}
                         >
                             <span className="nav-icon">
-                                <img src={LandRecsIcon} alt="Land Records" />
+                                <img src={FarmerIcon} alt="farmerProf" />
                             </span>
-                            <span className="nav-text">Land Records</span>
+                            <span className="nav-text">Farmers Profile</span>
                         </button>
 
                         <button
@@ -385,6 +339,12 @@ const JoAddFarmerRequest: React.FC = () => {
                         <p className="page-subtitle">
                             {allocation ? `Season: ${allocation.season.replace('_', ' ').toUpperCase()}` : 'Loading...'}
                         </p>
+                        <button
+                            className="btn-create-allocation"
+                            onClick={() => navigate(`/technician-manage-requests/${allocationId}`)}
+                        >
+                            ← Back to Manage Requests
+                        </button>
                     </div>
 
                     <div className="content-card-incent">
@@ -478,7 +438,7 @@ const JoAddFarmerRequest: React.FC = () => {
                                                     name="farmer_id"
                                                     value={farmer.id}
                                                     checked={Number(formData.farmer_id) === Number(farmer.id)}
-                                                    onChange={() => { }} // Handled by label onClick
+                                                    onChange={() => { }}
                                                     style={{
                                                         width: '18px',
                                                         height: '18px',
@@ -604,126 +564,28 @@ const JoAddFarmerRequest: React.FC = () => {
                                     🌾 Requested Seeds (kg)
                                 </h3>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            Jackpot
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_jackpot_kg"
-                                            value={formData.requested_jackpot_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            US88
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_us88_kg"
-                                            value={formData.requested_us88_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            TH82
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_th82_kg"
-                                            value={formData.requested_th82_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            RH9000
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_rh9000_kg"
-                                            value={formData.requested_rh9000_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            Lumping143
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_lumping143_kg"
-                                            value={formData.requested_lumping143_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            LP296
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_lp296_kg"
-                                            value={formData.requested_lp296_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
+                                    {['Jackpot', 'US88', 'TH82', 'RH9000', 'Lumping143', 'LP296'].map((seedType) => (
+                                        <div key={seedType}>
+                                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                                {seedType}
+                                            </label>
+                                            <input
+                                                type="number"
+                                                name={`requested_${seedType.toLowerCase()}_kg`}
+                                                value={(formData as any)[`requested_${seedType.toLowerCase()}_kg`]}
+                                                onChange={handleInputChange}
+                                                min="0"
+                                                step="0.01"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px',
+                                                    border: '1px solid #d1d5db',
+                                                    borderRadius: '6px',
+                                                    fontSize: '14px'
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
@@ -767,7 +629,7 @@ const JoAddFarmerRequest: React.FC = () => {
                             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
-                                    onClick={() => navigate('/jo-incentives')}
+                                    onClick={() => navigate(`/technician-manage-requests/${allocationId}`)}
                                     style={{
                                         padding: '12px 24px',
                                         border: '1px solid #d1d5db',
@@ -808,4 +670,4 @@ const JoAddFarmerRequest: React.FC = () => {
     );
 };
 
-export default JoAddFarmerRequest;
+export default TechAddFarmerRequest;

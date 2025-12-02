@@ -13,7 +13,7 @@
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .content-header h2 {
@@ -60,7 +60,7 @@
     background: white;
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
     max-height: 100%;
 }
@@ -90,14 +90,14 @@
 
 .parcel-card:hover {
     border-color: #007bff;
-    box-shadow: 0 4px 8px rgba(0,123,255,0.15);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.15);
     transform: translateY(-2px);
 }
 
 .parcel-card.selected {
     border-color: #28a745;
     background: #f8fff9;
-    box-shadow: 0 4px 12px rgba(40,167,69,0.2);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
 }
 
 .parcel-header {
@@ -136,9 +136,15 @@
     color: #856404;
 }
 
+.parcel-details {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
 .parcel-details p {
     margin: 5px 0;
-    font-size: 13px;
+    font-size: 14px;
     color: #6c757d;
 }
 
@@ -157,7 +163,7 @@
     background: white;
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
 }
@@ -177,7 +183,7 @@
     min-height: 400px;
 }
 
-.map-container > div:first-child {
+.map-container>div:first-child {
     flex: 1;
     border: 1px solid #e9ecef;
     border-radius: 6px;
@@ -262,7 +268,7 @@
     font-size: 20px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     margin-bottom: 10px;
 }
 
@@ -275,15 +281,15 @@
     .content-body {
         flex-direction: column;
     }
-    
+
     .parcel-selection-container {
         flex-direction: column;
     }
-    
+
     .parcel-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .jo-map-layout {
         padding: 10px;
     }
@@ -294,9 +300,11 @@
     0% {
         transform: scale(1);
     }
+
     50% {
         transform: scale(1.02);
     }
+
     100% {
         transform: scale(1);
     }
@@ -305,8 +313,3 @@
 .parcel-card.selected {
     animation: selectParcel 0.3s ease;
 }
-
-
-
-
-

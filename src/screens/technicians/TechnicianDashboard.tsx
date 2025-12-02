@@ -28,7 +28,6 @@ const TechnicianDashboard: React.FC = () => {
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
                         </div>
-
                         <button
                             className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-dashboard')}
@@ -40,13 +39,23 @@ const TechnicianDashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/technician-rsbsapage') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-rsbsa')}
                         >
                             <span className="nav-icon">
                                 <img src={RSBSAIcon} alt="RSBSA" />
                             </span>
                             <span className="nav-text">RSBSA</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-incentives')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Incentives" />
+                            </span>
+                            <span className="nav-text">Incentives</span>
                         </button>
 
                         <button

@@ -157,8 +157,12 @@ const JoMasterlist: React.FC = () => {
   const filteredRecords = rsbsaRecords.filter(record => {
     // Normalize status to handle casing/spacing differences and map to active groups
     const normalizedStatus = (record.status || '').toLowerCase().trim();
-    const activeStatuses = new Set(['submitted', 'approved', 'active']);
-    const notActiveStatuses = new Set(['not submitted', 'not_active', 'not active', 'draft', 'pending', 'not approved']);
+
+    // Active statuses: Submitted, Active Farmer, Approved
+    const activeStatuses = new Set(['submitted', 'approved', 'active', 'active farmer']);
+
+    // Not Active statuses: Not Submitted, Not Active, Draft, Pending
+    const notActiveStatuses = new Set(['not submitted', 'not_active', 'not active', 'draft', 'pending', 'not approved', 'inactive']);
 
     let matchesStatus = true;
     if (selectedStatus === 'active') {

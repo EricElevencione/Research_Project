@@ -133,7 +133,7 @@ const Masterlist: React.FC = () => {
             </div>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/dashboard') ? 'active' : ''}`}
               onClick={() => navigate('/dashboard')}
             >
               <span className="nav-icon">
@@ -143,7 +143,7 @@ const Masterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'rsbsa-page' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/rsbsa') ? 'active' : ''}`}
               onClick={() => navigate('/rsbsa')}
             >
               <span className="nav-icon">
@@ -153,7 +153,27 @@ const Masterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'incentives' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/gap-analysis') ? 'active' : ''}`}
+              onClick={() => navigate('/gap-analysis')}
+            >
+              <span className="nav-icon">
+                <img src={IncentivesIcon} alt="Gap-analysis" />
+              </span>
+              <span className="nav-text">Gap Analysis</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive('/land-records') ? 'active' : ''}`}
+              onClick={() => navigate('/land-records')}
+            >
+              <span className="nav-icon">
+                <img src={IncentivesIcon} alt="Land Records" />
+              </span>
+              <span className="nav-text">Land Records</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive('/incentives') ? 'active' : ''}`}
               onClick={() => navigate('/incentives')}
             >
               <span className="nav-icon">
@@ -163,7 +183,7 @@ const Masterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${activeTab === 'masterlist' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/masterlist') ? 'active' : ''}`}
               onClick={() => navigate('/masterlist')}
             >
               <span className="nav-icon">
@@ -173,17 +193,7 @@ const Masterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-landrecords')}
-            >
-              <span className="nav-icon">
-                <img src={LandRecsIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Land Records</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${activeTab === 'logout' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${isActive('/logout') ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
               <span className="nav-icon">
@@ -191,6 +201,7 @@ const Masterlist: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
           </nav>
         </div>
         {/* Sidebar ends here */}

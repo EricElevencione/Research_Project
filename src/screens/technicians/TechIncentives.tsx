@@ -5,9 +5,11 @@ import '../../assets/css/navigation/nav.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
+import ApproveIcon from '../../assets/images/approve.png';
+import FarmerIcon from '../../assets/images/farmer (1).png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import ApproveIcon from '../../assets/images/approve.png';
+
 
 interface RegionalAllocation {
     id: number;
@@ -26,7 +28,7 @@ interface RegionalAllocation {
     farmer_count?: number;
 }
 
-const Incentives: React.FC = () => {
+const TechIncentives: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -127,9 +129,6 @@ const Incentives: React.FC = () => {
         return isNaN(total) ? 0 : total;
     };
 
-
-
-
     return (
         <div className="page-container">
 
@@ -143,8 +142,8 @@ const Incentives: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/dashboard') ? 'active' : ''}`}
-                            onClick={() => navigate('/dashboard')}
+                            className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-dashboard')}
                         >
                             <span className="nav-icon">
                                 <img src={HomeIcon} alt="Home" />
@@ -153,8 +152,8 @@ const Incentives: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/rsbsa') ? 'active' : ''}`}
-                            onClick={() => navigate('/rsbsa')}
+                            className={`sidebar-nav-item ${isActive('/technician-rsbsapage') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-rsbsa')}
                         >
                             <span className="nav-icon">
                                 <img src={RSBSAIcon} alt="RSBSA" />
@@ -163,28 +162,8 @@ const Incentives: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/gap-analysis') ? 'active' : ''}`}
-                            onClick={() => navigate('/gap-analysis')}
-                        >
-                            <span className="nav-icon">
-                                <img src={IncentivesIcon} alt="Gap-analysis" />
-                            </span>
-                            <span className="nav-text">Gap Analysis</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/land-records') ? 'active' : ''}`}
-                            onClick={() => navigate('/land-records')}
-                        >
-                            <span className="nav-icon">
-                                <img src={IncentivesIcon} alt="Land Records" />
-                            </span>
-                            <span className="nav-text">Land Records</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/incentives') ? 'active' : ''}`}
-                            onClick={() => navigate('/incentives')}
+                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-incentives')}
                         >
                             <span className="nav-icon">
                                 <img src={IncentivesIcon} alt="Incentives" />
@@ -193,8 +172,8 @@ const Incentives: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/masterlist')}
+                            className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-masterlist')}
                         >
                             <span className="nav-icon">
                                 <img src={ApproveIcon} alt="Masterlist" />
@@ -203,7 +182,17 @@ const Incentives: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/logout') ? 'active' : ''}`}
+                            className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
+                            onClick={() => navigate('/technician-farmerprofpage')}
+                        >
+                            <span className="nav-icon">
+                                <img src={FarmerIcon} alt="farmerProf" />
+                            </span>
+                            <span className="nav-text">Farmers Profile</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
                         >
                             <span className="nav-icon">
@@ -211,7 +200,6 @@ const Incentives: React.FC = () => {
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
-
                     </nav>
                 </div>
                 {/* Sidebar ends here */}
@@ -220,13 +208,33 @@ const Incentives: React.FC = () => {
                 <div className="main-content">
 
                     <div className="dashboard-header-incent">
-                        <h2 className="page-header">Distribution Management</h2>
+                        <div>
+                            <h2 className="page-header">Farmer Incentive Requests</h2>
+                            <p className="page-subtitle">Add farmer requests to available regional allocations</p>
+                        </div>
+                        <button
+                            className="btn-create-allocation"
+                            onClick={() => navigate('/technician-create-allocation')}
+                            style={{
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                color: 'white',
+                                padding: '12px 24px',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '15px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                        >
+                            ➕ Create New Allocation
+                        </button>
                     </div>
 
                     <div className="content-card-incent">
-                        <div className="action-header">
-                        </div>
-
                         {loading ? (
                             <div className="loading-message">Loading allocations...</div>
                         ) : error ? (
@@ -249,8 +257,8 @@ const Incentives: React.FC = () => {
                         ) : allocations.length === 0 ? (
                             <div className="empty-state">
                                 <div className="empty-icon">📦</div>
-                                <h3>No Allocations Yet</h3>
-                                <p>Create your first regional allocation to get started</p>
+                                <h3>No Allocations Available</h3>
+                                <p>Contact the JO officer to create regional allocations</p>
                             </div>
                         ) : (
                             <div className="allocations-grid">
@@ -291,17 +299,24 @@ const Incentives: React.FC = () => {
                                         <div className="card-actions">
                                             <button
                                                 className="btn-action btn-view"
-                                                onClick={() => navigate(`/view-allocation/${allocation.id}`)}
-                                                title="View Allocation Details"
+                                                onClick={() => navigate(`/technician-view-allocation/${allocation.id}`)}
+                                                title="View Details"
                                             >
-                                                👁️ View Allocation
+                                                👁️ View
                                             </button>
                                             <button
-                                                className="btn-action btn-manage"
-                                                onClick={() => navigate(`/manage-requests/${allocation.id}`)}
-                                                title="View Requests"
+                                                className="btn-action btn-add-request"
+                                                onClick={() => navigate(`/technician-manage-requests/${allocation.id}`)}
+                                                title="Manage Requests"
                                             >
-                                                📋 View Requests
+                                                📋 Manage
+                                            </button>
+                                            <button
+                                                className="btn-action btn-add-request"
+                                                onClick={() => navigate(`/technician-add-farmer-request/${allocation.id}`)}
+                                                title="Add Farmer Request"
+                                            >
+                                                ➕ Add Farmer
                                             </button>
                                         </div>
                                     </div>
@@ -316,4 +331,4 @@ const Incentives: React.FC = () => {
     );
 };
 
-export default Incentives;
+export default TechIncentives;

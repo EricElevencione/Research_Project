@@ -402,6 +402,8 @@
     background-color: white;
     border-top: 1px solid #e0e0e0;
     animation: slideDown 0.3s ease;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 @keyframes slideDown {
