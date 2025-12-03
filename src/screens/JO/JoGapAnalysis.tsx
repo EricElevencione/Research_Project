@@ -8,7 +8,7 @@ import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
 import '../../assets/css/jo css/JoGapAnalysis.css';
-import '../../assets/css/navigation/nav.css';
+import '../../components/layout/sidebarStyle.css';
 
 interface GapAnalysisData {
     season: string;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/jo css/JoRsbsaPageStyle.css';
-import '../../assets/css/navigation/nav.css';
+import '../../components/layout/sidebarStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';

@@ -15,21 +15,23 @@
     --gray-200: #e5e7eb;
     --gray-100: #f3f4f6;
     --surface: #ffffff;
-    --font-sans: "Inter", sans-serif;;
+    --font-sans: "Inter", sans-serif;
+    ;
 }
 
 /* Sidebar Navigation Styles */
 .sidebar {
     background-color: #FFFDF6 !important;
     border-radius: 14px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.09);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.09);
     width: 200px;
     max-width: 250px;
     height: 100%;
     max-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: visible; /* allow active pill to protrude */
+    overflow: visible;
+    /* allow active pill to protrude */
     font-family: var(--font-sans);
     position: relative;
 }
@@ -82,7 +84,8 @@
     width: 100%;
     text-align: left;
     justify-content: flex-start;
-    border-radius: 999px; /* fully rounded */
+    border-radius: 999px;
+    /* fully rounded */
     position: relative;
     z-index: 1;
 }
@@ -128,6 +131,7 @@
 .sidebar-nav-item.active .nav-text {
     color: var(--green-700);
 }
+
 .sidebar-nav-item.active .nav-icon img {
     filter: hue-rotate(60deg) saturate(1.3);
 }

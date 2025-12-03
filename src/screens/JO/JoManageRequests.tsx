@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../../assets/css/jo css/JoIncentStyle.css';
-import '../../assets/css/navigation/nav.css';
+import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';

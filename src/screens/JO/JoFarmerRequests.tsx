@@ -10,7 +10,7 @@ import IncentivesIcon from '../../assets/images/incentives.png';
 import LandRecsIcon from '../../assets/images/landrecord.png';
 import FarmerRequestIcon from '../../assets/images/request.png';
 import '../../assets/css/jo css/JoFarmerRequests.css';
-import '../../assets/css/navigation/nav.css';
+import '../../components/layout/sidebarStyle.css';
 
 interface FarmerRequest {
     id?: number;

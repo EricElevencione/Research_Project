@@ -6,7 +6,7 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 import '../../assets/css/jo css/JoGapAnalysis.css';
-import '../../assets/css/navigation/nav.css';
+import '../../components/layout/sidebarStyle.css';
 import ApproveIcon from '../../assets/images/approve.png';
 
 interface GapAnalysisData {

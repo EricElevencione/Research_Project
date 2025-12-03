@@ -32,7 +32,6 @@ import JoRsbsaPage from './screens/JO/JoRsbsaPage';
 import JoGapAnalysis from './screens/JO/JoGapAnalysis';
 import JoDistribution from './screens/JO/JoDistribution';
 import "../src/assets/css/admin css/index.css";
-import './assets/css/mobile.css';
 
 
 // Protected Route component

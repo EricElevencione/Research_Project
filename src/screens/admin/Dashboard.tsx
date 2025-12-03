@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
-import '../../assets/css/navigation/nav.css';
+import '../../components/layout/sidebarStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import DashboardStats from '../../components/Dashboard/DashboardStats';
 import LogoImage from '../../assets/images/Logo.png';
