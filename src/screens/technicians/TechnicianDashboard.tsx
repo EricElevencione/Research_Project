@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../components/layout/sidebarStyle.css';
-import '../../assets/css/jo css/JoDashStyle.css';
+import '../../assets/css/technician css/TechnicianDashboardStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -18,9 +18,9 @@ const TechnicianDashboard: React.FC = () => {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="page-container">
+        <div className="tech-dashboard-page-container">
 
-            <div className="page">
+            <div className="tech-dashboard-page">
 
                 {/* Sidebar starts here */}
                 <div className="sidebar">
@@ -93,10 +93,10 @@ const TechnicianDashboard: React.FC = () => {
                 {/* Sidebar ends here */}
 
                 {/* Main content starts here */}
-                <div className="main-content jo-map-layout">
-                    <h2>Dashboard</h2>
+                <div className="tech-dashboard-main-content">
+                    <h2 className="tech-dashboard-page-title">Dashboard</h2>
 
-                    <div className="map-area">
+                    <div className="tech-dashboard-map-area">
                         <FarmlandMap />
                     </div>
                 </div>

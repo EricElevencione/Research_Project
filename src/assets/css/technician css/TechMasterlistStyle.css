@@ -1,0 +1,409 @@
+/* ============================================
+   Technician Masterlist Page - Farmer Records Management
+   Unique class names to avoid conflicts
+   ============================================ */
+
+/* Main Layout */
+.tech-masterlist-page-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.tech-masterlist-page {
+    display: flex;
+    width: 100%;
+}
+
+/* Main Content Area */
+.tech-masterlist-main-content {
+    width: 100%;
+    flex-grow: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tech-masterlist-page-title {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0 0 20px 0;
+}
+
+/* Content Card */
+.tech-masterlist-content-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    margin-top: 20px;
+    flex: 1;
+}
+
+/* Print Section */
+.tech-masterlist-print-section {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+.tech-masterlist-print-button {
+    background-color: #4CAF50 !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 20px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    transition: background-color 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+.tech-masterlist-print-button:hover {
+    background-color: #45a049 !important;
+}
+
+/* Filters Section */
+.tech-masterlist-filters-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.tech-masterlist-search-filter {
+    flex: 1;
+    min-width: 300px;
+}
+
+.tech-masterlist-search-input {
+    width: 100% !important;
+    padding: 12px 16px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+.tech-masterlist-search-input:focus {
+    outline: none !important;
+    border-color: #4CAF50 !important;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1) !important;
+}
+
+.tech-masterlist-status-filter {
+    min-width: 150px;
+}
+
+.tech-masterlist-status-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.tech-masterlist-status-select:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+/* Table Container */
+.tech-masterlist-table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Table Styles */
+.tech-masterlist-farmers-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 14px;
+}
+
+.tech-masterlist-farmers-table thead th {
+    background: #A0C878;
+    color: #333;
+    font-weight: 600;
+    text-align: left;
+    padding: 12px 7px;
+    border: 1px solid #dee2e6;
+    white-space: nowrap;
+}
+
+.tech-masterlist-farmers-table tbody td {
+    padding: 12px;
+    border: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.tech-masterlist-farmers-table tbody tr:hover {
+    background-color: #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+
+.tech-masterlist-farmers-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Status Button */
+.tech-masterlist-status-button {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    min-width: 100px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tech-masterlist-status-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tech-masterlist-status-button:active {
+    transform: translateY(0);
+}
+
+.tech-masterlist-status-approved {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.tech-masterlist-status-not-approved {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Loading and Error States */
+.tech-masterlist-loading-cell,
+.tech-masterlist-error-cell {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.tech-masterlist-error-cell {
+    color: #dc3545;
+}
+
+/* Print Modal */
+.tech-masterlist-print-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.tech-masterlist-print-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.tech-masterlist-print-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.tech-masterlist-print-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.tech-masterlist-close-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.tech-masterlist-close-button:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.tech-masterlist-print-modal-body {
+    padding: 24px;
+}
+
+.tech-masterlist-print-filter-group {
+    margin-bottom: 20px;
+}
+
+.tech-masterlist-print-filter-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+}
+
+.tech-masterlist-print-filter-select,
+.tech-masterlist-print-value-select {
+    width: 100% !important;
+    padding: 10px 12px !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    transition: border-color 0.2s !important;
+    background: white !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+}
+
+.tech-masterlist-print-filter-select:focus,
+.tech-masterlist-print-value-select:focus {
+    outline: none !important;
+    border-color: #4CAF50 !important;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1) !important;
+}
+
+.tech-masterlist-print-match-count {
+    display: block;
+    margin-top: 12px;
+    padding: 10px;
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #0369a1;
+    text-align: center;
+}
+
+.tech-masterlist-print-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.tech-masterlist-print-modal-cancel-button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.tech-masterlist-print-modal-cancel-button:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.tech-masterlist-print-modal-print-button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #4CAF50;
+    border: 1px solid #4CAF50;
+    color: white;
+}
+
+.tech-masterlist-print-modal-print-button:hover:not(:disabled) {
+    background: #45a049;
+    border-color: #45a049;
+}
+
+.tech-masterlist-print-modal-print-button:disabled {
+    background: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .tech-masterlist-filters-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tech-masterlist-search-filter,
+    .tech-masterlist-status-filter {
+        min-width: auto;
+    }
+
+    .tech-masterlist-table-container {
+        font-size: 12px;
+    }
+
+    .tech-masterlist-farmers-table thead th,
+    .tech-masterlist-farmers-table tbody td {
+        padding: 8px 6px;
+    }
+
+    .tech-masterlist-main-content {
+        padding: 10px;
+    }
+
+    .tech-masterlist-content-card {
+        padding: 16px;
+    }
+
+    .tech-masterlist-print-modal {
+        width: 95%;
+        margin: 20px;
+    }
+
+    .tech-masterlist-print-modal-body {
+        padding: 16px;
+    }
+
+    .tech-masterlist-print-modal-footer {
+        padding: 16px;
+    }
+}

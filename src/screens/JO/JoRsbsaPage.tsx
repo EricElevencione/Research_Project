@@ -120,9 +120,9 @@ const JoRsbsaPage: React.FC = () => {
   });
 
   return (
-    <div className="page-container">
+    <div className="jo-rsbsa-page-container">
 
-      <div className="page">
+      <div className="jo-rsbsa-page">
 
         {/* Sidebar starts here */}
         <div className="sidebar">
@@ -211,48 +211,50 @@ const JoRsbsaPage: React.FC = () => {
         {/* Sidebar ends here */}
 
         {/* Main content starts here */}
-        <div className="main-content">
-          <h2>Registered Land Owners</h2>
+        <div className="jo-rsbsa-main-content">
+          <h2 className="jo-rsbsa-page-title">Registered Land Owners</h2>
 
-          <div className="content-card-rsbsa">
-            <div className="jo-actions-bar">
-              <div className="jo-search-container">
+          <div className="jo-rsbsa-content-card">
+            <div className="jo-rsbsa-actions-bar">
+              <div className="jo-rsbsa-search-container">
                 <input
                   type="text"
                   placeholder="Search by FFRS ID, name, address, gender..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="search-input"
+                  className="jo-rsbsa-search-input"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="clear-search-button"
+                    className="jo-rsbsa-clear-search-button"
                     title="Clear search"
                   >
                     ×
                   </button>
                 )}
               </div>
-              <button onClick={() => navigate('/jo-rsbsa')} className="register-button">
-                Register Farmer
-              </button>
+              <div className="jo-rsbsa-register-button">
+                <button onClick={() => navigate('/jo-rsbsa')}>
+                  Register Farmer
+                </button>
+              </div>
             </div>
             {loading ? (
-              <div className="loading-container">
+              <div className="jo-rsbsa-loading-container">
                 <p>Loading registered land owners...</p>
               </div>
             ) : error ? (
-              <div className="error-container">
+              <div className="jo-rsbsa-error-container">
                 <p>Error: {error}</p>
-                <button onClick={fetchRSBSARecords} className="retry-button">
+                <button onClick={fetchRSBSARecords} className="jo-rsbsa-retry-button">
                   Retry
                 </button>
               </div>
             ) : (
-              <div className="table-container">
+              <div className="jo-rsbsa-table-container">
                 {searchQuery && (
-                  <div className="search-results-info">
+                  <div className="jo-rsbsa-search-results-info">
                     <p>
                       Found <strong>{filteredOwners.length}</strong> result{filteredOwners.length !== 1 ? 's' : ''}
                       {filteredOwners.length < registeredOwners.length &&
@@ -261,7 +263,7 @@ const JoRsbsaPage: React.FC = () => {
                     </p>
                   </div>
                 )}
-                <table className="owners-table-rsbsa">
+                <table className="jo-rsbsa-owners-table">
                   <thead>
                     <tr>
                       <th>FFRS ID</th>
@@ -278,7 +280,7 @@ const JoRsbsaPage: React.FC = () => {
                   <tbody>
                     {filteredOwners.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="no-data">
+                        <td colSpan={9} className="jo-rsbsa-no-data">
                           {searchQuery ? 'No results found for your search' : 'No registered owners found'}
                         </td>
                       </tr>
@@ -295,7 +297,7 @@ const JoRsbsaPage: React.FC = () => {
 
                         return (
                           <tr key={record.id}>
-                            <td className="ffrs-id">{record.referenceNumber || 'N/A'}</td>
+                            <td className="jo-rsbsa-ffrs-id">{record.referenceNumber || 'N/A'}</td>
                             <td>{lastName}</td>
                             <td>{firstName}</td>
                             <td>{middleName}</td>

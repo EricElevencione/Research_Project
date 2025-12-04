@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
-import '../../assets/css/technician css/MasterlistPage.css';
+import '../../assets/css/technician css/TechMasterlistStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -371,8 +371,8 @@ const TechMasterlist: React.FC = () => {
   };
 
   return (
-    <div className="page-container">
-      <div className="page">
+    <div className="tech-masterlist-page-container">
+      <div className="tech-masterlist-page">
 
         {/* Sidebar starts here */}
         <div className="sidebar">
@@ -445,32 +445,32 @@ const TechMasterlist: React.FC = () => {
         </div>
         {/* Sidebar ends here */}
 
-        <div className="main-content">
-          <h2>Masterlist</h2>
-          <div className="content-card">
-            <div className="print-section">
+        <div className="tech-masterlist-main-content">
+          <h2 className="tech-masterlist-page-title">Masterlist</h2>
+          <div className="tech-masterlist-content-card">
+            <div className="tech-masterlist-print-section">
               <button
                 onClick={() => setShowPrintModal(true)}
-                className="print-button"
+                className="tech-masterlist-print-button"
               >
                 🖨️ Print Active Farmers
               </button>
             </div>
-            <div className="filters-section">
-              <div className="search-filter">
+            <div className="tech-masterlist-filters-section">
+              <div className="tech-masterlist-search-filter">
                 <input
                   type="text"
                   placeholder="Search by farmer name, reference number, or barangay..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="search-input"
+                  className="tech-masterlist-search-input"
                 />
               </div>
-              <div className="status-filter">
+              <div className="tech-masterlist-status-filter">
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="status-select"
+                  className="tech-masterlist-status-select"
                 >
                   <option value="all">All Status</option>
                   <option value="Active Farmer">Active Farmer</option>
@@ -478,8 +478,8 @@ const TechMasterlist: React.FC = () => {
                 </select>
               </div>
             </div>
-            <div className="table-container">
-              <table className="farmers-table">
+            <div className="tech-masterlist-table-container">
+              <table className="tech-masterlist-farmers-table">
                 <thead>
                   <tr>
                     {[
@@ -497,10 +497,10 @@ const TechMasterlist: React.FC = () => {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={7} className="loading-cell">Loading...</td></tr>
+                    <tr><td colSpan={7} className="tech-masterlist-loading-cell">Loading...</td></tr>
                   )}
                   {error && !loading && (
-                    <tr><td colSpan={7} className="error-cell">Error: {error}</td></tr>
+                    <tr><td colSpan={7} className="tech-masterlist-error-cell">Error: {error}</td></tr>
                   )}
                   {!loading && !error && filteredRecords.length > 0 && (
                     filteredRecords.map((record) => (
@@ -513,7 +513,7 @@ const TechMasterlist: React.FC = () => {
                         <td>{formatDate(record.dateSubmitted)}</td>
                         <td>
                           <button
-                            className={`status-button ${getStatusClass(record.status)}`}
+                            className={`tech-masterlist-status-button tech-masterlist-${getStatusClass(record.status)}`}
                             onClick={() => toggleStatus(record.id)}
                           >
                             {record.status}
@@ -537,12 +537,12 @@ const TechMasterlist: React.FC = () => {
 
         {/* Print Filter Modal */}
         {showPrintModal && (
-          <div className="print-modal-overlay">
-            <div className="print-modal">
-              <div className="print-modal-header">
+          <div className="tech-masterlist-print-modal-overlay">
+            <div className="tech-masterlist-print-modal">
+              <div className="tech-masterlist-print-modal-header">
                 <h3>Print Active Farmers</h3>
                 <button
-                  className="close-button"
+                  className="tech-masterlist-close-button"
                   onClick={() => {
                     setShowPrintModal(false);
                     setPrintFilter({ type: 'all', value: '' });
@@ -551,13 +551,13 @@ const TechMasterlist: React.FC = () => {
                   ×
                 </button>
               </div>
-              <div className="print-modal-body">
-                <div className="print-filter-group">
+              <div className="tech-masterlist-print-modal-body">
+                <div className="tech-masterlist-print-filter-group">
                   <label>Filter Type</label>
                   <select
                     value={printFilter.type}
                     onChange={(e) => setPrintFilter({ type: e.target.value, value: '' })}
-                    className="print-filter-select"
+                    className="tech-masterlist-print-filter-select"
                   >
                     <option value="all">Print All Active Farmers</option>
                     <option value="lastname">Filter by Family Name</option>
@@ -567,12 +567,12 @@ const TechMasterlist: React.FC = () => {
                 </div>
 
                 {printFilter.type === 'lastname' && (
-                  <div className="print-filter-group">
+                  <div className="tech-masterlist-print-filter-group">
                     <label>Select Family Name</label>
                     <select
                       value={printFilter.value}
                       onChange={(e) => setPrintFilter({ ...printFilter, value: e.target.value })}
-                      className="print-value-select"
+                      className="tech-masterlist-print-value-select"
                     >
                       <option value="">Choose a family name...</option>
                       {getUniqueLastNames().map((name) => (
@@ -583,12 +583,12 @@ const TechMasterlist: React.FC = () => {
                 )}
 
                 {printFilter.type === 'barangay' && (
-                  <div className="print-filter-group">
+                  <div className="tech-masterlist-print-filter-group">
                     <label>Select Barangay</label>
                     <select
                       value={printFilter.value}
                       onChange={(e) => setPrintFilter({ ...printFilter, value: e.target.value })}
-                      className="print-value-select"
+                      className="tech-masterlist-print-value-select"
                     >
                       <option value="">Choose a barangay...</option>
                       {getUniqueBarangays().map((barangay) => (
@@ -599,12 +599,12 @@ const TechMasterlist: React.FC = () => {
                 )}
 
                 {printFilter.type === 'date' && (
-                  <div className="print-filter-group">
+                  <div className="tech-masterlist-print-filter-group">
                     <label>Select Date Submitted</label>
                     <select
                       value={printFilter.value}
                       onChange={(e) => setPrintFilter({ ...printFilter, value: e.target.value })}
-                      className="print-value-select"
+                      className="tech-masterlist-print-value-select"
                     >
                       <option value="">Choose a date...</option>
                       {getUniqueDates().map((date) => (
@@ -615,14 +615,14 @@ const TechMasterlist: React.FC = () => {
                 )}
 
                 {(printFilter.type === 'all' || printFilter.value) && (
-                  <div className="print-match-count">
+                  <div className="tech-masterlist-print-match-count">
                     📊 {getFilteredPrintRecords().length} active farmer{getFilteredPrintRecords().length !== 1 ? 's' : ''} will be printed
                   </div>
                 )}
               </div>
-              <div className="print-modal-footer">
+              <div className="tech-masterlist-print-modal-footer">
                 <button
-                  className="print-modal-cancel-button"
+                  className="tech-masterlist-print-modal-cancel-button"
                   onClick={() => {
                     setShowPrintModal(false);
                     setPrintFilter({ type: 'all', value: '' });
@@ -631,7 +631,7 @@ const TechMasterlist: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  className="print-modal-print-button"
+                  className="tech-masterlist-print-modal-print-button"
                   onClick={printActiveFarmers}
                   disabled={printFilter.type !== 'all' && !printFilter.value}
                 >

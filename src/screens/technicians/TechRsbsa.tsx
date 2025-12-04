@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
-import '../../assets/css/technician css/MasterlistPage.css';
+import '../../assets/css/technician css/TechRsbsaStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -361,7 +361,7 @@ const TechRsbsa: React.FC = () => {
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (openMenuId && !(event.target as Element).closest('.more-button') && !(event.target as Element).closest('.actions-menu')) {
+      if (openMenuId && !(event.target as Element).closest('.tech-rsbsa-more-button') && !(event.target as Element).closest('.tech-rsbsa-actions-menu')) {
         closeMenu();
       }
     };
@@ -386,9 +386,9 @@ const TechRsbsa: React.FC = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="tech-rsbsa-page-container">
 
-      <div className="page">
+      <div className="tech-rsbsa-page">
 
         {/* Sidebar starts here */}
         <div className="sidebar">
@@ -462,35 +462,35 @@ const TechRsbsa: React.FC = () => {
         {/* Sidebar ends here */}
 
         {/* Main content starts here */}
-        <div className="main-content">
-          <h2>Registered Land Owners</h2>
+        <div className="tech-rsbsa-main-content">
+          <h2 className="tech-rsbsa-page-title">Registered Land Owners</h2>
 
-          <div className="content-card">
+          <div className="tech-rsbsa-content-card">
             {loading ? (
-              <div className="loading-container">
+              <div className="tech-rsbsa-loading-container">
                 <p>Loading registered land owners...</p>
               </div>
             ) : error ? (
-              <div className="error-container">
+              <div className="tech-rsbsa-error-container">
                 <p>Error: {error}</p>
-                <button onClick={fetchRSBSARecords} className="retry-button">
+                <button onClick={fetchRSBSARecords} className="tech-rsbsa-retry-button">
                   Retry
                 </button>
               </div>
             ) : (
               <>
                 {/* Search Input */}
-                <div className="search-container">
+                <div className="tech-rsbsa-search-container">
                   <input
                     type="text"
-                    className="search-input"
+                    className="tech-rsbsa-search-input"
                     placeholder="Search by FFRS ID, Name, Address, Location, or Gender..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                   {searchTerm && (
                     <button
-                      className="clear-search-button"
+                      className="tech-rsbsa-clear-search-button"
                       onClick={() => setSearchTerm('')}
                       title="Clear search"
                     >
@@ -499,8 +499,8 @@ const TechRsbsa: React.FC = () => {
                   )}
                 </div>
 
-                <div className="table-container">
-                  <table className="owners-table">
+                <div className="tech-rsbsa-table-container">
+                  <table className="tech-rsbsa-owners-table">
                     <thead>
                       <tr>
                         <th>FFRS ID</th>
@@ -519,7 +519,7 @@ const TechRsbsa: React.FC = () => {
                     <tbody>
                       {filteredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={11} className="no-data">
+                          <td colSpan={11} className="tech-rsbsa-no-data">
                             {searchTerm ? 'No matching records found' : 'No registered owners found'}
                           </td>
                         </tr>
@@ -539,7 +539,7 @@ const TechRsbsa: React.FC = () => {
 
                           return (
                             <tr key={record.id}>
-                              <td className="ffrs-id">{record.referenceNumber || 'N/A'}</td>
+                              <td className="tech-rsbsa-ffrs-id">{record.referenceNumber || 'N/A'}</td>
                               <td>{lastName}</td>
                               <td>{firstName}</td>
                               <td>{middleName}</td>
@@ -552,7 +552,7 @@ const TechRsbsa: React.FC = () => {
                               <td>
                                 <div style={{ position: 'relative', display: 'inline-block' }}>
                                   <button
-                                    className="more-button"
+                                    className="tech-rsbsa-more-button"
                                     onClick={(e) => toggleMenu(record.id, e)}
                                     aria-haspopup="true"
                                     aria-expanded={openMenuId === record.id}
@@ -576,14 +576,14 @@ const TechRsbsa: React.FC = () => {
 
         {/* Edit Modal */}
         {editingRecord && (
-          <div className="edit-modal-overlay">
-            <div className="edit-modal">
-              <div className="edit-modal-header">
+          <div className="tech-rsbsa-edit-modal-overlay">
+            <div className="tech-rsbsa-edit-modal">
+              <div className="tech-rsbsa-edit-modal-header">
                 <h3>Edit Land Owner Information</h3>
-                <button className="close-button" onClick={handleCancel}>×</button>
+                <button className="tech-rsbsa-close-button" onClick={handleCancel}>×</button>
               </div>
-              <div className="edit-modal-body">
-                <div className="form-group">
+              <div className="tech-rsbsa-edit-modal-body">
+                <div className="tech-rsbsa-form-group">
                   <label>Farmer Name:</label>
                   <input
                     type="text"
@@ -592,7 +592,7 @@ const TechRsbsa: React.FC = () => {
                     placeholder="Last Name, First Name, Middle Name, Ext Name"
                   />
                 </div>
-                <div className="form-group">
+                <div className="tech-rsbsa-form-group">
                   <label>Gender:</label>
                   <select
                     value={editFormData.gender || ''}
@@ -603,7 +603,7 @@ const TechRsbsa: React.FC = () => {
                     <option value="Female">Female</option>
                   </select>
                 </div>
-                <div className="form-group">
+                <div className="tech-rsbsa-form-group">
                   <label>Birthdate:</label>
                   <input
                     type="date"
@@ -611,7 +611,7 @@ const TechRsbsa: React.FC = () => {
                     onChange={(e) => handleInputChange('birthdate', e.target.value)}
                   />
                 </div>
-                <div className="form-group">
+                <div className="tech-rsbsa-form-group">
                   <label>Farmer Address:</label>
                   <input
                     type="text"
@@ -619,7 +619,7 @@ const TechRsbsa: React.FC = () => {
                     onChange={(e) => handleInputChange('farmerAddress', e.target.value)}
                   />
                 </div>
-                <div className="form-group">
+                <div className="tech-rsbsa-form-group">
                   <label>Farm Location (Barangay):</label>
                   <select
                     value={editFormData.farmLocation || ''}
@@ -633,7 +633,7 @@ const TechRsbsa: React.FC = () => {
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
+                <div className="tech-rsbsa-form-group">
                   <label>Parcel Area:</label>
                   <input
                     type="text"
@@ -643,9 +643,9 @@ const TechRsbsa: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="edit-modal-footer">
-                <button className="cancel-button" onClick={handleCancel}>Cancel</button>
-                <button className="save-button" onClick={handleSave}>Save Changes</button>
+              <div className="tech-rsbsa-edit-modal-footer">
+                <button className="tech-rsbsa-cancel-button" onClick={handleCancel}>Cancel</button>
+                <button className="tech-rsbsa-save-button" onClick={handleSave}>Save Changes</button>
               </div>
             </div>
           </div>
@@ -654,7 +654,7 @@ const TechRsbsa: React.FC = () => {
         {/* Action Menu - rendered outside table */}
         {openMenuId && menuPosition && (
           <div
-            className="actions-menu"
+            className="tech-rsbsa-actions-menu"
             style={{
               position: 'fixed',
               top: menuPosition.top,

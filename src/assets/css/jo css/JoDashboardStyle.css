@@ -1,0 +1,236 @@
+/* ============================================
+   JO Dashboard Page - Map Layout with Stats
+   Unique class names to avoid conflicts
+   ============================================ */
+
+/* Main Layout */
+.jo-dashboard-page-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.jo-dashboard-page {
+    display: flex;
+    width: 100%;
+}
+
+/* Main Content Area */
+.jo-dashboard-main-content {
+    width: 100%;
+    flex-grow: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.jo-dashboard-page-title {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0 0 20px 0;
+}
+
+/* Quick Access Section */
+.jo-dashboard-quick-access-section {
+    margin-bottom: 2rem;
+}
+
+.jo-dashboard-quick-access-section h3 {
+    color: #2c5f2d;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.jo-dashboard-quick-access-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.jo-dashboard-access-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.jo-dashboard-access-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    border-color: #2c5f2d;
+}
+
+.jo-dashboard-access-card .jo-dashboard-card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.jo-dashboard-access-card h4 {
+    color: #2c5f2d;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.jo-dashboard-access-card p {
+    color: #666;
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Map Area */
+.jo-dashboard-map-layout .jo-dashboard-map-area {
+    position: relative;
+    height: calc(100vh - 140px);
+    background: #FAF6E9;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.jo-dashboard-map-layout .jo-dashboard-map-area>div {
+    height: 100% !important;
+}
+
+/* Hide Leaflet layers toggle button on JO Dashboard only */
+.jo-dashboard-map-layout .jo-dashboard-map-area .leaflet-control-layers-toggle {
+    display: none !important;
+}
+
+/* Floating Stats Panel - positioned over the map */
+.jo-dashboard-floating-stats-panel {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    width: 420px;
+    max-height: calc(100% - 40px);
+    overflow-y: auto;
+    z-index: 2000;
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+/* Adjust dashboard stats inside floating panel */
+.jo-dashboard-floating-stats-panel .dashboard-stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0;
+    background: transparent;
+}
+
+.jo-dashboard-floating-stats-panel .stats-section {
+    margin: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.jo-dashboard-floating-stats-panel .stats-table-section {
+    grid-column: 1;
+}
+
+/* Custom scrollbar for floating stats panel */
+.jo-dashboard-floating-stats-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.jo-dashboard-floating-stats-panel::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+.jo-dashboard-floating-stats-panel::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.jo-dashboard-floating-stats-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Panel Sections (if needed) */
+.jo-dashboard-panel-section {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+    margin: 10px;
+}
+
+.jo-dashboard-panel-header {
+    padding: 14px 16px 8px 16px;
+}
+
+.jo-dashboard-panel-header.with-bar {
+    border-bottom: 4px solid #7c3aed;
+}
+
+.jo-dashboard-panel-title {
+    margin: 0;
+    font-size: 16px;
+}
+
+.jo-dashboard-panel-title .muted {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.jo-dashboard-panel-body {
+    padding: 8px 16px 14px 16px;
+    z-index: 10;
+}
+
+/* Content Card (if needed) */
+.jo-dashboard-content-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: 400px;
+    z-index: 10;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .jo-dashboard-floating-stats-panel {
+        width: 360px;
+        right: 12px;
+        top: 12px;
+    }
+}
+
+@media (max-width: 900px) {
+    .jo-dashboard-floating-stats-panel {
+        position: relative;
+        width: auto;
+        max-height: none;
+        margin: 12px;
+        right: auto;
+        top: auto;
+    }
+
+    .jo-dashboard-map-layout .jo-dashboard-map-area {
+        height: 60vh;
+    }
+}
+
+@media (max-width: 768px) {
+    .jo-dashboard-page {
+        flex-direction: column;
+    }
+
+    .jo-dashboard-main-content {
+        padding: 10px;
+    }
+
+    .jo-dashboard-quick-access-cards {
+        grid-template-columns: 1fr;
+    }
+}

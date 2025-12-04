@@ -550,8 +550,8 @@ const JoMasterlist: React.FC = () => {
   };
 
   return (
-    <div className="page-container">
-      <div className="page">
+    <div className="jo-masterlist-page-container">
+      <div className="jo-masterlist-page">
         {/* Sidebar starts here */}
         <div className="sidebar">
           <nav className="sidebar-nav">
@@ -639,27 +639,27 @@ const JoMasterlist: React.FC = () => {
         {/* Sidebar ends here */}
 
         {/* Main content starts here */}
-        <div className="main-content">
-          <h2>Masterlist</h2>
+        <div className="jo-masterlist-main-content">
+          <h2 className="jo-masterlist-page-title">Masterlist</h2>
 
-          <div className="content-card">
+          <div className="jo-masterlist-content-card">
             {/* Filters and Search */}
-            <div className="filters-section">
-              <div className="search-filter">
+            <div className="jo-masterlist-filters-section">
+              <div className="jo-masterlist-search-filter">
                 <input
                   type="text"
                   placeholder="Search by farmer name, reference number, or barangay..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="search-input"
+                  className="jo-masterlist-search-input"
                 />
               </div>
 
-              <div className="status-filter">
+              <div className="jo-masterlist-status-filter">
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="status-select"
+                  className="jo-masterlist-status-select"
                 >
                   <option value="all">All</option>
                   <option value="active">Active</option>
@@ -683,8 +683,8 @@ const JoMasterlist: React.FC = () => {
             </div>
 
             {/* RSBSA Records Table */}
-            <div className="table-container">
-              <table className="farmers-table">
+            <div className="jo-masterlist-table-container">
+              <table className="jo-masterlist-farmers-table">
                 <thead>
                   <tr>
                     {[
@@ -703,11 +703,11 @@ const JoMasterlist: React.FC = () => {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={8} className="loading-cell">Loading...</td></tr>
+                    <tr><td colSpan={8} className="jo-masterlist-loading-cell">Loading...</td></tr>
                   )}
 
                   {error && !loading && (
-                    <tr><td colSpan={8} className="error-cell">Error: {error}</td></tr>
+                    <tr><td colSpan={8} className="jo-masterlist-error-cell">Error: {error}</td></tr>
                   )}
 
                   {!loading && !error && filteredRecords.length > 0 && (
@@ -721,7 +721,7 @@ const JoMasterlist: React.FC = () => {
                           <td>{record.parcelArea}</td>
                           <td>{formatDate(record.dateSubmitted)}</td>
                           <td>
-                            <span className={`status-pill ${getStatusClass(record.status)}`}>
+                            <span className={`jo-masterlist-status-pill jo-masterlist-${getStatusClass(record.status)}`}>
                               {record.status}
                               {/* {record.totalFarmArea || 'N/A'}*/}
                             </span>
@@ -729,7 +729,7 @@ const JoMasterlist: React.FC = () => {
                           <td>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
                               <button
-                                className="more-button"
+                                className="jo-masterlist-more-button"
                                 onClick={(e) => toggleMenu(record.id, e)}
                                 aria-haspopup="true"
                                 aria-expanded={openMenuId === record.id}
@@ -758,18 +758,11 @@ const JoMasterlist: React.FC = () => {
           {/* Global dropdown/menu for row actions */}
           {openMenuId && menuPosition && (
             <div
-              className="more-menu"
+              className="jo-masterlist-more-menu"
               style={{
                 position: 'absolute',
                 top: menuPosition.top,
-                left: menuPosition.left,
-                minWidth: 160,
-                background: '#ffffff',
-                border: '1px solid #ddd',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                borderRadius: 6,
-                zIndex: 1000,
-                padding: 8
+                left: menuPosition.left
               }}
               role="menu"
             >
@@ -808,13 +801,13 @@ const JoMasterlist: React.FC = () => {
 
         {/* Edit Modal */}
         {editingRecord && (
-          <div className="edit-modal-overlay">
-            <div className="edit-modal">
-              <div className="edit-modal-header">
+          <div className="jo-masterlist-edit-modal-overlay">
+            <div className="jo-masterlist-edit-modal">
+              <div className="jo-masterlist-edit-modal-header">
                 <h3>Edit Land Owner Information</h3>
-                <button className="close-button" onClick={handleCancel}>×</button>
+                <button className="jo-masterlist-close-button" onClick={handleCancel}>×</button>
               </div>
-              <div className="edit-modal-body">
+              <div className="jo-masterlist-edit-modal-body">
                 <div className="form-group">
                   <label>Last Name:</label>
                   <input
@@ -854,7 +847,7 @@ const JoMasterlist: React.FC = () => {
                     placeholder="Barangay"
                   />
                 </div>
-                <div className="form-group">
+                <div className="jo-masterlist-form-group">
                   <label>Municipality:</label>
                   <input
                     type="text"
@@ -865,23 +858,17 @@ const JoMasterlist: React.FC = () => {
                 </div>
 
                 {/* Individual Parcel Areas */}
-                <div style={{ marginTop: '20px', borderTop: '2px solid #e0e0e0', paddingTop: '15px' }}>
-                  <h4 style={{ marginBottom: '15px', color: '#2c5f2d' }}>Parcel Areas</h4>
+                <div className="jo-masterlist-parcel-section">
+                  <h4>Parcel Areas</h4>
                   {loadingParcels ? (
                     <p>Loading parcels...</p>
                   ) : editingParcels.length > 0 ? (
                     editingParcels.map((parcel, index) => (
                       <div
                         key={parcel.id}
-                        style={{
-                          marginBottom: '15px',
-                          padding: '15px',
-                          backgroundColor: '#f9f9f9',
-                          borderRadius: '8px',
-                          border: parcelErrors[parcel.id] ? '2px solid #d32f2f' : '1px solid #e0e0e0'
-                        }}
+                        className={`jo-masterlist-parcel-item ${parcelErrors[parcel.id] ? 'error' : ''}`}
                       >
-                        <div className="form-group">
+                        <div className="jo-masterlist-form-group">
                           <label style={{ fontWeight: 'bold', color: '#2c5f2d' }}>
                             Parcel Area {index + 1} (Parcel No. {parcel.parcel_number}):
                           </label>
@@ -898,7 +885,7 @@ const JoMasterlist: React.FC = () => {
                             }}
                           />
                           {parcelErrors[parcel.id] && (
-                            <small style={{ color: '#d32f2f', fontSize: '0.85em', display: 'block', marginTop: '5px' }}>
+                            <small className="jo-masterlist-parcel-error">
                               {parcelErrors[parcel.id]}
                             </small>
                           )}
@@ -913,9 +900,9 @@ const JoMasterlist: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className="edit-modal-footer">
-                <button className="cancel-button" onClick={handleCancel}>Cancel</button>
-                <button className="save-button" onClick={handleSave}>Save Changes</button>
+              <div className="jo-masterlist-edit-modal-footer">
+                <button className="jo-masterlist-cancel-button" onClick={handleCancel}>Cancel</button>
+                <button className="jo-masterlist-save-button" onClick={handleSave}>Save Changes</button>
               </div>
             </div>
           </div>

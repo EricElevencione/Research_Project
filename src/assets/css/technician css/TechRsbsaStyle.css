@@ -1,0 +1,433 @@
+/* ============================================
+   Technician RSBSA Page - Registered Land Owners
+   Unique class names to avoid conflicts
+   ============================================ */
+
+/* Main Layout */
+.tech-rsbsa-page-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.tech-rsbsa-page {
+    display: flex;
+    width: 100%;
+}
+
+/* Main Content Area */
+.tech-rsbsa-main-content {
+    width: 100%;
+    flex-grow: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tech-rsbsa-page-title {
+    font-weight: 600;
+    font-size: 28px;
+    color: #2e3d27;
+    margin: 0 0 20px 0;
+}
+
+/* Content Card */
+.tech-rsbsa-content-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    flex: 1;
+}
+
+/* Search Container */
+.tech-rsbsa-search-container {
+    position: relative;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.tech-rsbsa-search-input {
+    width: 100% !important;
+    padding: 12px 40px 12px 16px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+.tech-rsbsa-search-input:focus {
+    outline: none !important;
+    border-color: #A0C878 !important;
+    box-shadow: 0 0 0 3px rgba(160, 200, 120, 0.1) !important;
+}
+
+.tech-rsbsa-search-input::placeholder {
+    color: #6c757d;
+}
+
+.tech-rsbsa-clear-search-button {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.tech-rsbsa-clear-search-button:hover {
+    color: #dc3545;
+}
+
+/* Table Container */
+.tech-rsbsa-table-container {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tech-rsbsa-owners-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    min-width: 1200px;
+}
+
+.tech-rsbsa-owners-table thead {
+    background: #A0C878;
+    color: rgb(0, 0, 0);
+}
+
+.tech-rsbsa-owners-table th {
+    padding: 12px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tech-rsbsa-owners-table th:last-child {
+    border-right: none;
+}
+
+.tech-rsbsa-owners-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background-color 0.2s ease;
+}
+
+.tech-rsbsa-owners-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.tech-rsbsa-owners-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.tech-rsbsa-owners-table td {
+    padding: 14px 12px;
+    color: #374151;
+    border-right: 1px solid #f3f4f6;
+}
+
+.tech-rsbsa-owners-table td:last-child {
+    border-right: none;
+}
+
+.tech-rsbsa-owners-table tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.tech-rsbsa-owners-table td.tech-rsbsa-ffrs-id {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #2c5f2d;
+}
+
+/* More Button */
+.tech-rsbsa-more-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 6px 12px;
+    margin: 0;
+    font: inherit;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 32px;
+    height: 32px;
+}
+
+.tech-rsbsa-more-button:hover {
+    background: #e9ecef;
+}
+
+.tech-rsbsa-more-button:active {
+    background: #dee2e6;
+    transform: translateY(1px);
+}
+
+/* Action Menu */
+.tech-rsbsa-actions-menu {
+    position: fixed;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    z-index: 10000 !important;
+    min-width: 160px;
+    overflow: hidden;
+    margin-top: 4px;
+    display: block !important;
+}
+
+.tech-rsbsa-actions-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: #495057;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.tech-rsbsa-actions-menu button:last-child {
+    border-bottom: none;
+}
+
+.tech-rsbsa-actions-menu button:hover {
+    background: #f8f9fa;
+    color: #212529;
+}
+
+.tech-rsbsa-actions-menu button:active {
+    background: #e9ecef;
+}
+
+/* Loading, Error, and No Data States */
+.tech-rsbsa-loading-container,
+.tech-rsbsa-error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.tech-rsbsa-loading-container p,
+.tech-rsbsa-error-container p {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0 0 16px 0;
+}
+
+.tech-rsbsa-retry-button {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.tech-rsbsa-retry-button:hover {
+    background: #1d4ed8;
+}
+
+.tech-rsbsa-no-data {
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+    padding: 40px 20px;
+}
+
+/* Edit Modal */
+.tech-rsbsa-edit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.tech-rsbsa-edit-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.tech-rsbsa-edit-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.tech-rsbsa-edit-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.tech-rsbsa-close-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.tech-rsbsa-close-button:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.tech-rsbsa-edit-modal-body {
+    padding: 24px;
+}
+
+.tech-rsbsa-form-group {
+    margin-bottom: 20px;
+}
+
+.tech-rsbsa-form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 14px;
+}
+
+.tech-rsbsa-form-group input,
+.tech-rsbsa-form-group select {
+    width: 100% !important;
+    padding: 10px 12px !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    transition: border-color 0.2s !important;
+    box-sizing: border-box !important;
+}
+
+.tech-rsbsa-form-group input:focus,
+.tech-rsbsa-form-group select:focus {
+    outline: none !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.tech-rsbsa-edit-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.tech-rsbsa-cancel-button,
+.tech-rsbsa-save-button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tech-rsbsa-cancel-button {
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.tech-rsbsa-cancel-button:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.tech-rsbsa-save-button {
+    background: #3b82f6;
+    border: 1px solid #3b82f6;
+    color: white;
+}
+
+.tech-rsbsa-save-button:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tech-rsbsa-table-container {
+        overflow-x: auto;
+    }
+
+    .tech-rsbsa-owners-table {
+        min-width: 1000px;
+    }
+
+    .tech-rsbsa-main-content {
+        padding: 10px;
+    }
+
+    .tech-rsbsa-content-card {
+        padding: 16px;
+    }
+
+    .tech-rsbsa-edit-modal {
+        width: 95%;
+        margin: 20px;
+    }
+
+    .tech-rsbsa-edit-modal-body {
+        padding: 16px;
+    }
+
+    .tech-rsbsa-edit-modal-footer {
+        padding: 16px;
+    }
+}

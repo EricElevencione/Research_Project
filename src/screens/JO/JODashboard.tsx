@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../components/layout/sidebarStyle.css';
-import '../../assets/css/jo css/JoDashStyle.css';
+import '../../assets/css/jo css/JoDashboardStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import DashboardStats from '../../components/Dashboard/DashboardStats';
 import LogoImage from '../../assets/images/Logo.png';
@@ -19,9 +19,9 @@ const JoDashboard: React.FC = () => {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="page-container">
+        <div className="jo-dashboard-page-container">
 
-            <div className="page">
+            <div className="jo-dashboard-page">
 
                 {/* Sidebar starts here */}
                 <div className="sidebar">
@@ -113,36 +113,14 @@ const JoDashboard: React.FC = () => {
                 {/* Sidebar ends here */}
 
                 {/* Main content starts here */}
-                <div className="main-content jo-map-layout">
-                    <h2>Dashboard</h2>
+                <div className="jo-dashboard-main-content jo-dashboard-map-layout">
+                    <h2 className="jo-dashboard-page-title">Dashboard</h2>
 
-                    {/* Distribution System Quick Access */}
-                    <div className="quick-access-section">
-                        <h3>Distribution Management System</h3>
-                        <div className="quick-access-cards">
-                            <div className="access-card" onClick={() => navigate('/jo-incentives')}>
-                                <div className="card-icon">💰</div>
-                                <h4>Incentives</h4>
-                                <p>Manage regional allocations & farmer requests</p>
-                            </div>
-                            <div className="access-card" onClick={() => navigate('/jo-gap-analysis')}>
-                                <div className="card-icon">📊</div>
-                                <h4>Gap Analysis</h4>
-                                <p>Compare supply vs demand to identify shortages</p>
-                            </div>
-                            <div className="access-card" onClick={() => navigate('/jo-distribution')}>
-                                <div className="card-icon">🚚</div>
-                                <h4>Distribution Log</h4>
-                                <p>Track actual distribution to farmers</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="map-area">
+                    <div className="jo-dashboard-map-area">
                         <FarmlandMap />
 
                         {/* Statistics Section - Floating over map */}
-                        <div className="floating-stats-panel">
+                        <div className="jo-dashboard-floating-stats-panel">
                             <DashboardStats />
                         </div>
                     </div>

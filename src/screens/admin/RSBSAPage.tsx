@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
-import '../../assets/css/jo css/JoRsbsaPageStyle.css';
+import '../../assets/css/admin css/RSBSAStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
@@ -145,9 +145,9 @@ const JoRsbsa: React.FC = () => {
 
 
   return (
-    <div className="page-container">
+    <div className="rsbsa-admin-page-container">
 
-      <div className="page">
+      <div className="rsbsa-admin-page">
 
         {/* Sidebar starts here */}
         <div className="sidebar">
@@ -231,24 +231,24 @@ const JoRsbsa: React.FC = () => {
         {/* Sidebar ends here */}
 
         {/* Main content starts here */}
-        <div className="main-content">
-          <h2>Registered Land Owners</h2>
+        <div className="rsbsa-admin-main-content">
+          <h2 className="rsbsa-admin-page-title">Registered Land Owners</h2>
 
-          <div className="content-card">
+          <div className="rsbsa-admin-content-card">
             {loading ? (
-              <div className="loading-container">
+              <div className="rsbsa-admin-loading-container">
                 <p>Loading registered land owners...</p>
               </div>
             ) : error ? (
-              <div className="error-container">
+              <div className="rsbsa-admin-error-container">
                 <p>Error: {error}</p>
-                <button onClick={fetchRSBSARecords} className="retry-button">
+                <button onClick={fetchRSBSARecords} className="rsbsa-admin-retry-button">
                   Retry
                 </button>
               </div>
             ) : (
-              <div className="table-container">
-                <table className="owners-table">
+              <div className="rsbsa-admin-table-container">
+                <table className="rsbsa-admin-owners-table">
                   <thead>
                     <tr>
                       <th>Last Name</th>
@@ -265,7 +265,7 @@ const JoRsbsa: React.FC = () => {
                   <tbody>
                     {registeredOwners.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="no-data">
+                        <td colSpan={10} className="rsbsa-admin-no-data">
                           No registered owners found
                         </td>
                       </tr>

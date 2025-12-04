@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import '../../assets/css/jo css/JoMasterlistStyle.css';
+import '../../assets/css/admin css/MasterlistStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import LogoImage from '../../assets/images/Logo.png';
@@ -123,8 +123,8 @@ const Masterlist: React.FC = () => {
   };
 
   return (
-    <div className="page-container">
-      <div className="page">
+    <div className="masterlist-admin-page-container">
+      <div className="masterlist-admin-page">
         {/* Sidebar starts here */}
         <div className="sidebar">
           <nav className="sidebar-nav">
@@ -207,29 +207,29 @@ const Masterlist: React.FC = () => {
         {/* Sidebar ends here */}
 
         {/* Main content starts here */}
-        <div className="main-content">
-          <div className="admin-dashboard-header">
-            <h2 className="page-header">Masterlist</h2>
+        <div className="masterlist-admin-main-content">
+          <div className="masterlist-admin-dashboard-header">
+            <h2 className="masterlist-admin-page-header">Masterlist</h2>
           </div>
 
-          <div className="content-card">
+          <div className="masterlist-admin-content-card">
             {/* Filters and Search */}
-            <div className="filters-section">
-              <div className="search-filter">
+            <div className="masterlist-admin-filters-section">
+              <div className="masterlist-admin-search-filter">
                 <input
                   type="text"
                   placeholder="Search by farmer name, reference number, or barangay..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="search-input"
+                  className="masterlist-admin-search-input"
                 />
               </div>
 
-              <div className="status-filter">
+              <div className="masterlist-admin-status-filter">
                 <select
                   value={farmerStatus}
                   onChange={(e) => setFarmerStatus(e.target.value as 'all' | 'active' | 'inactive')}
-                  className="status-select"
+                  className="masterlist-admin-status-select"
                 >
                   <option value="all">All Farmers</option>
                   <option value="active">Active Farmers</option>
@@ -239,8 +239,8 @@ const Masterlist: React.FC = () => {
             </div>
 
             {/* RSBSA Records Table */}
-            <div className="table-container">
-              <table className="farmers-table">
+            <div className="masterlist-admin-table-container">
+              <table className="masterlist-admin-farmers-table">
                 <thead>
                   <tr>
                     {[
@@ -258,11 +258,11 @@ const Masterlist: React.FC = () => {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={7} className="loading-cell">Loading...</td></tr>
+                    <tr><td colSpan={7} className="masterlist-admin-loading-cell">Loading...</td></tr>
                   )}
 
                   {error && !loading && (
-                    <tr><td colSpan={7} className="error-cell">Error: {error}</td></tr>
+                    <tr><td colSpan={7} className="masterlist-admin-error-cell">Error: {error}</td></tr>
                   )}
 
                   {!loading && !error && filteredRecords.length > 0 && (
@@ -276,7 +276,7 @@ const Masterlist: React.FC = () => {
                           <td>{record.parcelArea}</td>
                           <td>{formatDate(record.dateSubmitted)}</td>
                           <td>
-                            <span className={`status-pill ${record.status === 'Active Farmer' ? 'status-approved' : 'status-not-approved'}`}>
+                            <span className={`masterlist-admin-status-pill ${record.status === 'Active Farmer' ? 'masterlist-admin-status-approved' : 'masterlist-admin-status-not-approved'}`}>
                               {record.status || 'Not Active'}
                             </span>
                           </td>

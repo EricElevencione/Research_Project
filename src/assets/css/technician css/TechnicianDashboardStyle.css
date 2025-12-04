@@ -1,0 +1,66 @@
+/* ============================================
+   Technician Dashboard - Map Layout
+   Unique class names to avoid conflicts
+   ============================================ */
+
+/* Main Layout */
+.tech-dashboard-page-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.tech-dashboard-page {
+    display: flex;
+    width: 100%;
+}
+
+/* Main Content Area */
+.tech-dashboard-main-content {
+    width: 100%;
+    flex-grow: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tech-dashboard-page-title {
+    font-weight: 600;
+    font-size: 28px;
+    color: #2e3d27;
+    margin: 0 0 20px 0;
+}
+
+/* Map Area */
+.tech-dashboard-map-area {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .tech-dashboard-main-content {
+        padding: 10px;
+    }
+
+    .tech-dashboard-map-area {
+        min-height: 400px;
+    }
+
+    .tech-dashboard-page-title {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tech-dashboard-map-area {
+        min-height: 300px;
+        border-radius: 8px;
+    }
+}
