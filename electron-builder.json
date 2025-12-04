@@ -1,0 +1,27 @@
+{
+    "appId": "com.research-project.app",
+    "productName": "Research Project",
+    "directories": {
+        "output": "dist-electron"
+    },
+    "files": [
+        "dist/**/*",
+        "electron/**/*",
+        "package.json",
+        "!node_modules/bcrypt/**/*",
+        "!backend/**/*"
+    ],
+    "win": {
+        "target": [
+            "nsis"
+        ],
+        "icon": "public/favicon.ico",
+        "signtoolOptions": null,
+        "signAndEditExecutable": false
+    },
+    "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true
+    },
+    "npmRebuild": false
+}

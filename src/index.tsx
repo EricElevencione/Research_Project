@@ -1,10 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './login/PageLogin';
 import Dashboard from './screens/admin/Dashboard';
 import MasterlistPage from './screens/admin/MasterlistPage';
 import RSBSAPage from './screens/admin/RSBSAPage';
 import GapAnalysis from './screens/admin/GapAnalysis';
-import LandRecords from './screens/admin/LandRecords';
 import Incentives from './screens/admin/Incentives';
 import ManageRequests from './screens/admin/ManageRequest';
 import ViewAllocation from './screens/admin/ViewAllocation';
@@ -27,7 +26,6 @@ import JoIncentives from './screens/JO/JoIncentives';
 import JoCreateAllocation from './screens/JO/JoCreateAllocation';
 import JoManageRequests from './screens/JO/JoManageRequests';
 import JoViewAllocation from './screens/JO/JoViewAllocation';
-import JoLandrecords from './screens/JO/JoLandrecords';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
 import JoGapAnalysis from './screens/JO/JoGapAnalysis';
 import JoDistribution from './screens/JO/JoDistribution';
@@ -48,7 +46,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
     return (
-        <BrowserRouter>
+        <HashRouter>
             <Routes>
                 <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/login" element={<Login />} />
@@ -70,11 +68,6 @@ function App() {
                 <Route path="/gap-analysis" element={
                     <ProtectedRoute>
                         <GapAnalysis />
-                    </ProtectedRoute>
-                } />
-                <Route path="/land-records" element={
-                    <ProtectedRoute>
-                        <LandRecords />
                     </ProtectedRoute>
                 } />
                 <Route path="/Incentives" element={
@@ -187,11 +180,6 @@ function App() {
                         <JoViewAllocation />
                     </ProtectedRoute>
                 } />
-                <Route path="/jo-landrecords" element={
-                    <ProtectedRoute>
-                        <JoLandrecords />
-                    </ProtectedRoute>
-                } />
                 <Route path="/jo-masterlist" element={
                     <ProtectedRoute>
                         <JoMasterlist />
@@ -214,7 +202,7 @@ function App() {
                 } />
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
-        </BrowserRouter>
+        </HashRouter>
     );
 }
 
