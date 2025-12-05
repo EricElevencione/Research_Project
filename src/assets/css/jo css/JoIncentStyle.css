@@ -641,7 +641,7 @@
     background: #f3f4f6;
     padding: 3px 8px;
     border-radius: 4px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-family);
     font-size: 13px;
     color: #dc2626;
     border: 1px solid #e5e7eb;
@@ -841,3 +841,4 @@
         flex: 1 1 100%;
     }
 }
+

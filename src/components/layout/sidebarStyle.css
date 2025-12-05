@@ -15,8 +15,8 @@
     --gray-200: #e5e7eb;
     --gray-100: #f3f4f6;
     --surface: #ffffff;
-    --font-sans: "Inter", sans-serif;
-    ;
+    /* Use global font family from index.css */
+    --font-sans: var(--font-family);
 }
 
 /* Sidebar Navigation Styles */
@@ -32,18 +32,14 @@
     flex-direction: column;
     overflow: visible;
     /* allow active pill to protrude */
-    font-family: var(--font-sans);
+    font-family: var(--font-family);
     position: relative;
-}
-
-* {
-    font-family: var(--font-sans);
 }
 
 /* Ensure buttons use the same system font */
 .sidebar button,
 .sidebar .sidebar-nav-item {
-    font-family: var(--font-sans) !important;
+    font-family: var(--font-family) !important;
     font-size: 14px;
 }
 

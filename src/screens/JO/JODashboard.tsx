@@ -10,7 +10,6 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import LandRecsIcon from '../../assets/images/landrecord.png';
 
 const JoDashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -87,16 +86,6 @@ const JoDashboard: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-landrecords')}
-                        >
-                            <span className="nav-icon">
-                                <img src={LandRecsIcon} alt="LandRecords" />
-                            </span>
-                            <span className="nav-text">Land Records</span>
-                        </button>
-
-                        <button
                             className="sidebar-nav-item logout"
                             onClick={() => {
                                 localStorage.removeItem('isAuthenticated');
@@ -113,16 +102,24 @@ const JoDashboard: React.FC = () => {
                 {/* Sidebar ends here */}
 
                 {/* Main content starts here */}
-                <div className="jo-dashboard-main-content jo-dashboard-map-layout">
-                    <h2 className="jo-dashboard-page-title">Dashboard</h2>
+                <div className="jo-dashboard-main-content">
+                    <div className="jo-dashboard-map-section">
+                        <h2 className="jo-dashboard-page-title">Dashboard</h2>
 
-                    <div className="jo-dashboard-map-area">
-                        <FarmlandMap />
-
-                        {/* Statistics Section - Floating over map */}
-                        <div className="jo-dashboard-floating-stats-panel">
-                            <DashboardStats />
+                        <div className="jo-dashboard-map-area">
+                            <FarmlandMap />
                         </div>
+
+                        <div className="jo-dashboard-stats">
+                            <div className="jo-dashboard-active-farmers"></div>
+                            <div className="jo-dashboard-farmers"></div>
+                        </div>
+                    </div>
+
+                    <div className="jo-dashboard-reports">
+                        <div className='jo-dashboard-reports-1'></div>
+                        <div className='jo-dashboard-reports-2'></div>
+                        <div className='jo-dashboard-reports-3'></div>
                     </div>
                 </div>
             </div>

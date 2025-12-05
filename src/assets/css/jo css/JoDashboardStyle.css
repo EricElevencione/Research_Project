@@ -2,6 +2,12 @@
    JO Dashboard Page - Map Layout with Stats
    Unique class names to avoid conflicts
    ============================================ */
+/* Global Font */
+* {
+    font-family: var(--font-family) !important;
+}
+
+
 
 /* Main Layout */
 .jo-dashboard-page-container {
@@ -21,7 +27,8 @@
     flex-grow: 1;
     padding: 20px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    gap: 20px;
 }
 
 .jo-dashboard-page-title {
@@ -83,12 +90,20 @@
     line-height: 1.4;
 }
 
+/* Left Section (Map + Stats) */
+.jo-dashboard-map-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 /* Map Area */
-.jo-dashboard-map-layout .jo-dashboard-map-area {
+.jo-dashboard-map-area {
     position: relative;
-    height: calc(100vh - 140px);
+    height: calc(100vh - 320px);
     background: #FAF6E9;
-    border-radius: 12px;
+    border-radius: 5px;
     overflow: hidden;
 }
 
@@ -101,21 +116,61 @@
     display: none !important;
 }
 
-/* Floating Stats Panel - positioned over the map */
-.jo-dashboard-floating-stats-panel {
-    position: absolute;
-    right: 20px;
-    top: 20px;
-    width: 420px;
-    max-height: calc(100% - 40px);
+/* Stats below the map */
+.jo-dashboard-stats {
+    display: flex;
+    border: #111827 1px solid;
+    width: 100%;
+    max-height: 200px;
+    height: 185px;
+    gap: 10px;
+}
+
+.jo-dashboard-active-farmers {
+    background-color: #A0C878;
+    color: white;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+}
+
+.jo-dashboard-farmers {
+    background-color: #F4A261;
+    color: white;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+}
+
+/* Reports sidebar on the right */
+.jo-dashboard-reports {
+    background-color: #2A9D8F;
+    color: white;
+    padding: 20px;
+    width: 350px;
+    min-width: 350px;
+    max-width: 350px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    border-radius: 8px;
     overflow-y: auto;
-    z-index: 2000;
-    pointer-events: auto;
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(10px);
+    margin-top: 83px;
+}
+
+.jo-dashboard-reports-1,
+.jo-dashboard-reports-2,
+.jo-dashboard-reports-3 {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 6px;
+    min-height: 150px;
 }
 
 /* Adjust dashboard stats inside floating panel */
@@ -234,3 +289,4 @@
         grid-template-columns: 1fr;
     }
 }
+

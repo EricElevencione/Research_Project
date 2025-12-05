@@ -194,16 +194,6 @@ const JoCreateAllocation: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-landrecords')}
-                        >
-                            <span className="nav-icon">
-                                <img src={LandRecsIcon} alt="Land Records" />
-                            </span>
-                            <span className="nav-text">Land Records</span>
-                        </button>
-
-                        <button
                             className="sidebar-nav-item logout"
                             onClick={handleLogout}
                         >

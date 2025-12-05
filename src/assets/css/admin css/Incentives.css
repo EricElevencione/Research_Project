@@ -4,7 +4,7 @@
     padding: 20px;
     max-width: 1400px;
     margin: 0 auto;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-family);
 }
 
 /* Header Styles */
@@ -714,3 +714,4 @@
         gap: 10px;
     }
 }
+

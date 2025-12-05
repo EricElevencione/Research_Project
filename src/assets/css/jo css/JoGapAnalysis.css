@@ -187,7 +187,7 @@
 
 .number-cell {
     text-align: right;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-family);
     font-weight: 600;
 }
 
@@ -317,3 +317,4 @@
         padding: 0.2rem 0.5rem;
     }
 }
+

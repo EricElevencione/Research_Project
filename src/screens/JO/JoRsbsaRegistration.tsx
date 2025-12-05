@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import '../../assets/css/jo css/JoRsbsaPageStyle.css';
+import '../../assets/css/jo css/JoRsbsaRegistrationStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -8,7 +8,6 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import LandRecsIcon from '../../assets/images/landrecord.png';
 
 interface Parcel {
   parcelNo: string;
@@ -191,7 +190,7 @@ const JoRsbsa: React.FC = () => {
     province: '',
     dateOfBirth: '',
     age: '',
-    mainLivelihood: '',
+    mainLivelihood: 'farmer',
     farmingActivity: '',
     otherCrops: '',
     livestock: '',
@@ -430,49 +429,14 @@ const JoRsbsa: React.FC = () => {
     }
 
     if (currentStep === 2) {
-      // Validate farm profile: require main livelihood selection
-      if (!formData.mainLivelihood) {
-        newErrors.mainLivelihood = 'Please select a main livelihood';
-      } else {
-        // Validate specific activities based on selected livelihood
-        if (formData.mainLivelihood === 'farmer') {
-          const hasFarmingActivity = (formData as any).farmerRice ||
-            (formData as any).farmerCorn ||
-            (formData as any).farmerOtherCrops ||
-            (formData as any).farmerLivestock ||
-            (formData as any).farmerPoultry;
-          if (!hasFarmingActivity) {
-            newErrors.farmingActivity = 'Please select at least one farming activity';
-          }
-        } else if (formData.mainLivelihood === 'farmworker') {
-          const hasWorkType = (formData as any).fwLandPrep ||
-            (formData as any).fwPlanting ||
-            (formData as any).fwCultivation ||
-            (formData as any).fwHarvesting ||
-            (formData as any).fwOthers;
-          if (!hasWorkType) {
-            newErrors.farmingActivity = 'Please select at least one kind of work';
-          }
-        } else if (formData.mainLivelihood === 'fisherfolk') {
-          const hasFishingActivity = (formData as any).ffFishCapture ||
-            (formData as any).ffAquaculture ||
-            (formData as any).ffGleaning ||
-            (formData as any).ffFishProcessing ||
-            (formData as any).ffFishVending ||
-            (formData as any).ffOthers;
-          if (!hasFishingActivity) {
-            newErrors.farmingActivity = 'Please select at least one fishing activity';
-          }
-        } else if (formData.mainLivelihood === 'agri-youth') {
-          const hasInvolvement = (formData as any).ayPartHousehold ||
-            (formData as any).ayFormalCourse ||
-            (formData as any).ayNonFormalCourse ||
-            (formData as any).ayParticipatedProgram ||
-            (formData as any).ayOthers;
-          if (!hasInvolvement) {
-            newErrors.farmingActivity = 'Please select at least one type of involvement';
-          }
-        }
+      // Validate farm profile: require at least one farming activity
+      const hasFarmingActivity = (formData as any).farmerRice ||
+        (formData as any).farmerCorn ||
+        (formData as any).farmerOtherCrops ||
+        (formData as any).farmerLivestock ||
+        (formData as any).farmerPoultry;
+      if (!hasFarmingActivity) {
+        newErrors.farmingActivity = 'Please select at least one farming activity';
       }
 
       setErrors(newErrors);
@@ -608,9 +572,9 @@ const JoRsbsa: React.FC = () => {
 
 
   return (
-    <div className="page-container">
+    <div className="jo-registration-page-container">
 
-      <div className="page">
+      <div className="jo-registration-page">
 
         {/* Sidebar starts here */}
         <div className="sidebar">
@@ -676,16 +640,6 @@ const JoRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/jo-landrecords') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-landrecords')}
-            >
-              <span className="nav-icon">
-                <img src={LandRecsIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Land Records</span>
-            </button>
-
-            <button
               className="sidebar-nav-item logout"
               onClick={() => {
                 localStorage.removeItem('isAuthenticated');
@@ -702,41 +656,41 @@ const JoRsbsa: React.FC = () => {
         {/* Sidebar ends here */}
 
         {/* Main content starts here */}
-        <div className="main-content">
+        <div className="jo-registration-main-content">
           <h2>RSBSA Enrollment Form</h2>
 
-          <div className="back-button">
-            <button className="btn-back" onClick={() => navigate('/jo-rsbsapage')}></button>
+          <div className="jo-registration-back-button">
+            <button className="jo-registration-btn-back" onClick={() => navigate('/jo-rsbsapage')}></button>
           </div>
 
-          <div className="rsbsa-form-container">
-            <div className="form-steps">
-              <div className={`step ${isStepActive(1) ? 'active' : ''} ${isStepCompleted(1) ? 'completed' : ''}`}>
-                <span className="dot">{isStepCompleted(1) ? '✓' : '1'}</span>
-                <span className="label">Basic Details</span>
+          <div className="jo-registration-form-container">
+            <div className="jo-registration-form-steps">
+              <div className={`jo-registration-step ${isStepActive(1) ? 'jo-registration-active' : ''} ${isStepCompleted(1) ? 'jo-registration-completed' : ''}`}>
+                <span className="jo-registration-dot">{isStepCompleted(1) ? '✓' : '1'}</span>
+                <span className="jo-registration-label">Basic Details</span>
               </div>
-              <div className={`step ${isStepActive(2) ? 'active' : ''} ${isStepCompleted(2) ? 'completed' : ''}`}>
-                <span className="dot">{isStepCompleted(2) ? '✓' : '2'}</span>
-                <span className="label">Farm Profile</span>
+              <div className={`jo-registration-step ${isStepActive(2) ? 'jo-registration-active' : ''} ${isStepCompleted(2) ? 'jo-registration-completed' : ''}`}>
+                <span className="jo-registration-dot">{isStepCompleted(2) ? '✓' : '2'}</span>
+                <span className="jo-registration-label">Farm Profile</span>
               </div>
-              <div className={`step ${isStepActive(3) ? 'active' : ''} ${isStepCompleted(3) ? 'completed' : ''}`}>
-                <span className="dot">{isStepCompleted(3) ? '✓' : '3'}</span>
-                <span className="label">Farmland</span>
+              <div className={`jo-registration-step ${isStepActive(3) ? 'jo-registration-active' : ''} ${isStepCompleted(3) ? 'jo-registration-completed' : ''}`}>
+                <span className="jo-registration-dot">{isStepCompleted(3) ? '✓' : '3'}</span>
+                <span className="jo-registration-label">Farmland</span>
               </div>
-              <div className={`step ${isStepActive(4) ? 'active' : ''}${isStepCompleted(4) ? 'completed' : ''}`}>
-                <span className="dot">4</span>
-                <span className="label">Verification</span>
+              <div className={`jo-registration-step ${isStepActive(4) ? 'jo-registration-active' : ''}${isStepCompleted(4) ? 'jo-registration-completed' : ''}`}>
+                <span className="jo-registration-dot">4</span>
+                <span className="jo-registration-label">Verification</span>
               </div>
             </div>
 
             {currentStep === 1 && (
               <>
 
-                <div className="form-section">
+                <div className="jo-registration-form-section">
                   <h3>PART I: PERSONAL INFORMATION</h3>
-                  <div className="form-grid">
-                    <div className="form-row">
-                      <div className="form-group">
+                  <div className="jo-registration-form-grid">
+                    <div className="jo-registration-form-row">
+                      <div className="jo-registration-form-group">
                         <label>FIRST NAME</label>
                         <input
                           type="text"
@@ -745,11 +699,11 @@ const JoRsbsa: React.FC = () => {
                           onBlur={() => handleTextInputBlur('firstName')}
                           required
                           aria-required="true"
-                          className={errors.firstName ? 'input-error' : ''}
+                          className={errors.firstName ? 'jo-registration-input-error' : ''}
                         />
-                        {errors.firstName && <div className="error">{errors.firstName}</div>}
+                        {errors.firstName && <div className="jo-registration-error">{errors.firstName}</div>}
                       </div>
-                      <div className="form-group">
+                      <div className="jo-registration-form-group">
                         <label>SURNAME</label>
                         <input
                           type="text"
@@ -758,13 +712,13 @@ const JoRsbsa: React.FC = () => {
                           onBlur={() => handleTextInputBlur('surname')}
                           required
                           aria-required="true"
-                          className={errors.surname ? 'input-error' : ''}
+                          className={errors.surname ? 'jo-registration-input-error' : ''}
                         />
-                        {errors.surname && <div className="error">{errors.surname}</div>}
+                        {errors.surname && <div className="jo-registration-error">{errors.surname}</div>}
                       </div>
                     </div>
-                    <div className="form-row">
-                      <div className="form-group">
+                    <div className="jo-registration-form-row">
+                      <div className="jo-registration-form-group">
                         <label>MIDDLE NAME</label>
                         <input
                           type="text"
@@ -773,7 +727,7 @@ const JoRsbsa: React.FC = () => {
                           onBlur={() => handleTextInputBlur('middleName')}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="jo-registration-form-group">
                         <label>EXTENSION NAME</label>
                         <input
                           type="text"
@@ -782,7 +736,7 @@ const JoRsbsa: React.FC = () => {
                           onBlur={() => handleTextInputBlur('extensionName')}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="jo-registration-form-group">
                         <label>GENDER</label>
                         <select value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)}>
                           <option value="">Select Gender</option>
@@ -792,8 +746,8 @@ const JoRsbsa: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="form-row">
-                      <div className="form-group">
+                    <div className="jo-registration-form-row">
+                      <div className="jo-registration-form-group">
                         <label>DATE OF BIRTH</label>
                         <input
                           type="date"
@@ -814,7 +768,7 @@ const JoRsbsa: React.FC = () => {
                           }}
                         />
                       </div>
-                      <div className="form-group">
+                      <div className="jo-registration-form-group">
                         <label>AGE</label>
                         <input
                           type="number"
@@ -827,10 +781,10 @@ const JoRsbsa: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="address-section">
+                    <div className="jo-registration-address-section">
                       <h4>ADDRESS</h4>
-                      <div className="address-grid">
-                        <div className="form-group">
+                      <div className="jo-registration-address-grid">
+                        <div className="jo-registration-form-group">
                           <label>BARANGAY *</label>
                           <input
                             type="text"
@@ -839,11 +793,11 @@ const JoRsbsa: React.FC = () => {
                             onBlur={() => handleTextInputBlur('barangay')}
                             required
                             aria-required="true"
-                            className={errors.barangay ? 'input-error' : ''}
+                            className={errors.barangay ? 'jo-registration-input-error' : ''}
                           />
-                          {errors.barangay && <div className="error">{errors.barangay}</div>}
+                          {errors.barangay && <div className="jo-registration-error">{errors.barangay}</div>}
                         </div>
-                        <div className="form-group">
+                        <div className="jo-registration-form-group">
                           <label>MUNICIPALITY</label>
                           <input
                             type="text"
@@ -859,57 +813,47 @@ const JoRsbsa: React.FC = () => {
             )}
 
             {currentStep === 2 && (
-              <div className="form-section">
+              <div className="jo-registration-form-section">
                 <h3>PART II: FARM PROFILE</h3>
-                <div className="form-grid">
-                  <div className="livelihood-section">
-                    <h4>MAIN LIVELIHOOD</h4>
-                    <div className="checkbox-group">
-                      <label><input type="checkbox" checked={formData.mainLivelihood === 'farmer'} onChange={(e) => handleLivelihoodToggle('farmer', e.target.checked)} /> FARMER</label>
+                <div className="jo-registration-form-grid">
+                  <div className="jo-registration-livelihood-details">
+                    <h4>Type of Farming Activity</h4>
+                    <p style={{ color: '#666', fontSize: '14px', marginBottom: '15px' }}>Select all farming activities that apply:</p>
+                    <div className="jo-registration-checkbox-group">
+                      <label><input type="checkbox" checked={(formData as any).farmerRice} onChange={() => toggleBool('farmerRice')} /> Rice</label>
+                      <label><input type="checkbox" checked={(formData as any).farmerCorn} onChange={() => toggleBool('farmerCorn')} /> Corn</label>
+                      <label><input type="checkbox" checked={(formData as any).farmerOtherCrops} onChange={() => toggleBool('farmerOtherCrops')} /> Other crops, please specify</label>
                     </div>
-                    {errors.mainLivelihood && <div className="error">{errors.mainLivelihood}</div>}
+                    {(formData as any).farmerOtherCrops && (
+                      <input type="text" placeholder="Specify other crops" value={(formData as any).farmerOtherCropsText} onChange={(e) => handleInputChange('farmerOtherCropsText', e.target.value)} />
+                    )}
+                    <div className="jo-registration-checkbox-group">
+                      <label><input type="checkbox" checked={(formData as any).farmerLivestock} onChange={() => toggleBool('farmerLivestock')} /> Livestock, please specify</label>
+                    </div>
+                    {(formData as any).farmerLivestock && (
+                      <input type="text" placeholder="Specify livestock" value={(formData as any).farmerLivestockText} onChange={(e) => handleInputChange('farmerLivestockText', e.target.value)} />
+                    )}
+                    <div className="jo-registration-checkbox-group">
+                      <label><input type="checkbox" checked={(formData as any).farmerPoultry} onChange={() => toggleBool('farmerPoultry')} /> Poultry, please specify</label>
+                    </div>
+                    {(formData as any).farmerPoultry && (
+                      <input type="text" placeholder="Specify poultry" value={(formData as any).farmerPoultryText} onChange={(e) => handleInputChange('farmerPoultryText', e.target.value)} />
+                    )}
+                    {errors.farmingActivity && <div className="jo-registration-error">{errors.farmingActivity}</div>}
                   </div>
-
-                  {formData.mainLivelihood === 'farmer' && (
-                    <div className="livelihood-details">
-                      <h4>Type of Farming Activity</h4>
-                      <div className="checkbox-group">
-                        <label><input type="checkbox" checked={(formData as any).farmerRice} onChange={() => toggleBool('farmerRice')} /> Rice</label>
-                        <label><input type="checkbox" checked={(formData as any).farmerCorn} onChange={() => toggleBool('farmerCorn')} /> Corn</label>
-                        <label><input type="checkbox" checked={(formData as any).farmerOtherCrops} onChange={() => toggleBool('farmerOtherCrops')} /> Other crops, please specify</label>
-                      </div>
-                      {(formData as any).farmerOtherCrops && (
-                        <input type="text" placeholder="Specify other crops" value={(formData as any).farmerOtherCropsText} onChange={(e) => handleInputChange('farmerOtherCropsText', e.target.value)} />
-                      )}
-                      <div className="checkbox-group">
-                        <label><input type="checkbox" checked={(formData as any).farmerLivestock} onChange={() => toggleBool('farmerLivestock')} /> Livestock, please specify</label>
-                      </div>
-                      {(formData as any).farmerLivestock && (
-                        <input type="text" placeholder="Specify livestock" value={(formData as any).farmerLivestockText} onChange={(e) => handleInputChange('farmerLivestockText', e.target.value)} />
-                      )}
-                      <div className="checkbox-group">
-                        <label><input type="checkbox" checked={(formData as any).farmerPoultry} onChange={() => toggleBool('farmerPoultry')} /> Poultry, please specify</label>
-                      </div>
-                      {(formData as any).farmerPoultry && (
-                        <input type="text" placeholder="Specify poultry" value={(formData as any).farmerPoultryText} onChange={(e) => handleInputChange('farmerPoultryText', e.target.value)} />
-                      )}
-                      {errors.farmingActivity && <div className="error">{errors.farmingActivity}</div>}
-                    </div>
-                  )}
-
                 </div>
               </div>
             )}
 
             {currentStep === 3 && (
-              <div className="form-section">
+              <div className="jo-registration-form-section">
                 <h3>PART III: FARMLAND</h3>
 
                 {/* Show validation summary for farmland */}
                 {(errors.farmland || errors.landOwner) && (
-                  <div className="form-errors">
-                    {errors.farmland && <div className="error">{errors.farmland}</div>}
-                    {errors.landOwner && <div className="error">{errors.landOwner}</div>}
+                  <div className="jo-registration-form-errors">
+                    {errors.farmland && <div className="jo-registration-error">{errors.farmland}</div>}
+                    {errors.landOwner && <div className="jo-registration-error">{errors.landOwner}</div>}
                   </div>
                 )}
 
@@ -973,7 +917,7 @@ const JoRsbsa: React.FC = () => {
                         }}
                         onFocus={() => setShowLandOwnerDropdown(true)}
                         style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', border: '2px solid #ffc107', borderRadius: '6px' }}
-                        className={errors.landOwner ? 'input-error' : ''}
+                        className={errors.landOwner ? 'jo-registration-input-error' : ''}
                       />
                       {showLandOwnerDropdown && filteredLandOwners.length > 0 && (
                         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', border: '2px solid #ffc107', borderTop: 'none', borderRadius: '0 0 6px 6px', maxHeight: '200px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
@@ -1114,20 +1058,20 @@ const JoRsbsa: React.FC = () => {
                 {ownershipCategory === 'registeredOwner' && (
                   <>
                     {(formData.farmlandParcels as any[]).map((p, idx) => (
-                      <div key={idx} className="parcel-card">
-                        <div className="parcel-header">
-                          <div className="parcel-no">Farm Parcel No. {p.parcelNo || idx + 1}</div>
-                          <div className="parcel-actions">
+                      <div key={idx} className="jo-registration-parcel-card">
+                        <div className="jo-registration-parcel-card-header">
+                          <div className="jo-registration-parcel-no">Farm Parcel No. {p.parcelNo || idx + 1}</div>
+                          <div className="jo-registration-parcel-card-actions">
                             {(formData.farmlandParcels as any[]).length > 1 && (
-                              <button className="btn-small" onClick={() => removeParcel(idx)}>Remove</button>
+                              <button className="jo-registration-btn-small" onClick={() => removeParcel(idx)}>Remove</button>
                             )}
                           </div>
                         </div>
 
-                        <div className="form-row">
-                          <div className="form-group">
+                        <div className="jo-registration-form-row">
+                          <div className="jo-registration-form-group">
                             <label>Farm Location (Barangay)</label>
-                            <select value={p.farmLocationBarangay} onChange={(e) => handleParcelChange(idx, 'farmLocationBarangay', e.target.value)} className={errors.farmland ? 'input-error' : ''}>
+                            <select value={p.farmLocationBarangay} onChange={(e) => handleParcelChange(idx, 'farmLocationBarangay', e.target.value)} className={errors.farmland ? 'jo-registration-input-error' : ''}>
                               <option value="">Select Barangay</option>
                               <option value="Aurora-Del Pilar">Aurora-Del Pilar</option>
                               <option value="Bacay">Bacay</option>
@@ -1178,12 +1122,12 @@ const JoRsbsa: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="form-row">
-                          <div className="form-group">
+                        <div className="jo-registration-form-row">
+                          <div className="jo-registration-form-group">
                             <label>Total Farm Area (in hectares)</label>
-                            <input type="number" value={p.totalFarmAreaHa} onChange={(e) => handleParcelChange(idx, 'totalFarmAreaHa', e.target.value)} className={errors.farmland ? 'input-error' : ''} />
+                            <input type="number" value={p.totalFarmAreaHa} onChange={(e) => handleParcelChange(idx, 'totalFarmAreaHa', e.target.value)} className={errors.farmland ? 'jo-registration-input-error' : ''} />
                           </div>
-                          <div className="form-group">
+                          <div className="jo-registration-form-group">
                             <label>Within Ancestral Domain</label>
                             <select value={p.withinAncestralDomain} onChange={(e) => handleParcelChange(idx, 'withinAncestralDomain', e.target.value)}>
                               <option value="">Select</option>
@@ -1193,8 +1137,8 @@ const JoRsbsa: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="form-row">
-                          <div className="form-group">
+                        <div className="jo-registration-form-row">
+                          <div className="jo-registration-form-group">
                             <label>Agrarian Reform Beneficiary</label>
                             <select value={p.agrarianReformBeneficiary} onChange={(e) => handleParcelChange(idx, 'agrarianReformBeneficiary', e.target.value)}>
                               <option value="">Select</option>
@@ -1206,8 +1150,8 @@ const JoRsbsa: React.FC = () => {
                       </div>
                     ))}
 
-                    <div className="parcel-actions-bar">
-                      <button className="btn-submit" onClick={addParcel}>+ Add Another Parcel</button>
+                    <div className="jo-registration-parcel-actions-bar">
+                      <button className="jo-registration-btn-submit" onClick={addParcel}>+ Add Another Parcel</button>
                     </div>
                   </>
                 )}
@@ -1215,44 +1159,44 @@ const JoRsbsa: React.FC = () => {
             )}
 
             {currentStep === 4 && (
-              <div className="form-section">
+              <div className="jo-registration-form-section">
                 <h3>PART IV: VERIFICATION</h3>
 
                 {/* Compilation of Previous Steps */}
-                <div className="compilation-section">
+                <div className="jo-registration-compilation">
                   <h4>FORM SUMMARY - PLEASE REVIEW ALL INFORMATION</h4>
 
                   {/* Step 1: Personal Information Summary */}
-                  <div className="summary-section">
+                  <div className="jo-registration-summary-section">
                     <h3>PART I: PERSONAL INFORMATION</h3>
-                    <div className="summary-grid">
-                      <div className="summary-item">
-                        <span className="summary-label">Name:</span>
-                        <span className="summary-value">
+                    <div className="jo-registration-summary-grid">
+                      <div className="jo-registration-summary-item">
+                        <span className="jo-registration-summary-label">Name:</span>
+                        <span className="jo-registration-summary-value">
                           {formData.firstName}, {formData.middleName}, {formData.surname}, {formData.extensionName}
                         </span>
                       </div>
-                      <div className="summary-item">
-                        <span className="summary-label">Gender</span>
-                        <span className="summary-value">
+                      <div className="jo-registration-summary-item">
+                        <span className="jo-registration-summary-label">Gender</span>
+                        <span className="jo-registration-summary-value">
                           {formData.gender}
                         </span>
                       </div>
-                      <div className="summary-item">
-                        <span className="summary-label">Date of Birth:</span>
-                        <span className="summary-value">
+                      <div className="jo-registration-summary-item">
+                        <span className="jo-registration-summary-label">Date of Birth:</span>
+                        <span className="jo-registration-summary-value">
                           {formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString() : 'Not provided'}
                         </span>
                       </div>
-                      <div className="summary-item">
-                        <span className="summary-label">Age:</span>
-                        <span className="summary-value">
+                      <div className="jo-registration-summary-item">
+                        <span className="jo-registration-summary-label">Age:</span>
+                        <span className="jo-registration-summary-value">
                           {formData.age ? `${formData.age} years old` : 'Not provided'}
                         </span>
                       </div>
-                      <div className="summary-item">
-                        <span className="summary-label">Address:</span>
-                        <span className="summary-value">
+                      <div className="jo-registration-summary-item">
+                        <span className="jo-registration-summary-label">Address:</span>
+                        <span className="jo-registration-summary-value">
                           {formData.barangay}, {formData.municipality}
                         </span>
                       </div>
@@ -1260,19 +1204,19 @@ const JoRsbsa: React.FC = () => {
                   </div>
 
                   {/* Step 2: Farm Profile Summary */}
-                  <div className="summary-section">
+                  <div className="jo-registration-summary-section">
                     <h3>PART II: FARM PROFILE</h3>
-                    <div className="summary-grid">
-                      <div className="summary-item">
-                        <span className="summary-label">Main Livelihood:</span>
-                        <span className="summary-value">{formData.mainLivelihood || 'Not selected'}</span>
+                    <div className="jo-registration-summary-grid">
+                      <div className="jo-registration-summary-item">
+                        <span className="jo-registration-summary-label">Main Livelihood:</span>
+                        <span className="jo-registration-summary-value">{formData.mainLivelihood || 'Not selected'}</span>
                       </div>
 
                       {/* Farmer Details */}
                       {formData.mainLivelihood === 'farmer' && (
-                        <div className="summary-item">
-                          <span className="summary-label">Farming Activities:</span>
-                          <span className="summary-value">
+                        <div className="jo-registration-summary-item">
+                          <span className="jo-registration-summary-label">Farming Activities:</span>
+                          <span className="jo-registration-summary-value">
                             {[
                               (formData as any).farmerRice && 'Rice',
                               (formData as any).farmerCorn && 'Corn',
@@ -1286,9 +1230,9 @@ const JoRsbsa: React.FC = () => {
 
                       {/* Farmworker Details */}
                       {formData.mainLivelihood === 'farmworker' && (
-                        <div className="summary-item">
-                          <span className="summary-label">Kind of Work:</span>
-                          <span className="summary-value">
+                        <div className="jo-registration-summary-item">
+                          <span className="jo-registration-summary-label">Kind of Work:</span>
+                          <span className="jo-registration-summary-value">
                             {[
                               (formData as any).fwLandPrep && 'Land Preparation',
                               (formData as any).fwPlanting && 'Planting/Transplanting',
@@ -1302,9 +1246,9 @@ const JoRsbsa: React.FC = () => {
 
                       {/* Fisherfolk Details */}
                       {formData.mainLivelihood === 'fisherfolk' && (
-                        <div className="summary-item">
-                          <span className="summary-label">Fishing Activities:</span>
-                          <span className="summary-value">
+                        <div className="jo-registration-summary-item">
+                          <span className="jo-registration-summary-label">Fishing Activities:</span>
+                          <span className="jo-registration-summary-value">
                             {[
                               (formData as any).ffFishCapture && 'Fish Capture',
                               (formData as any).ffAquaculture && 'Aquaculture',
@@ -1319,9 +1263,9 @@ const JoRsbsa: React.FC = () => {
 
                       {/* Agri Youth Details */}
                       {formData.mainLivelihood === 'agri-youth' && (
-                        <div className="summary-item">
-                          <span className="summary-label">Type of Involvement:</span>
-                          <span className="summary-value">
+                        <div className="jo-registration-summary-item">
+                          <span className="jo-registration-summary-label">Type of Involvement:</span>
+                          <span className="jo-registration-summary-value">
                             {[
                               (formData as any).ayPartHousehold && 'Part of farming household',
                               (formData as any).ayFormalCourse && 'Formal agri-fishery course',
@@ -1336,27 +1280,27 @@ const JoRsbsa: React.FC = () => {
                   </div>
 
                   {/* Step 3: Farmland Summary */}
-                  <div className="summary-section">
+                  <div className="jo-registration-summary-section">
                     <h3>PART III: FARMLAND</h3>
                     {(formData.farmlandParcels as any[]).map((parcel, idx) => (
-                      <div key={idx} className="parcel-summary">
+                      <div key={idx} className="jo-registration-parcel-summary">
                         <h6>Farm Parcel No. {parcel.parcelNo || idx + 1}</h6>
-                        <div className="summary-grid">
-                          <div className="summary-item">
-                            <span className="summary-label">Location:</span>
-                            <span className="summary-value">
+                        <div className="jo-registration-summary-grid">
+                          <div className="jo-registration-summary-item">
+                            <span className="jo-registration-summary-label">Location:</span>
+                            <span className="jo-registration-summary-value">
                               {parcel.farmLocationBarangay}, {parcel.farmLocationMunicipality}
                             </span>
                           </div>
-                          <div className="summary-item">
-                            <span className="summary-label">Total Area:</span>
-                            <span className="summary-value">
+                          <div className="jo-registration-summary-item">
+                            <span className="jo-registration-summary-label">Total Area:</span>
+                            <span className="jo-registration-summary-value">
                               {parcel.totalFarmAreaHa ? `${parcel.totalFarmAreaHa} hectares` : 'Not specified'}
                             </span>
                           </div>
-                          <div className="summary-item">
-                            <span className="summary-label">Ownership Type:</span>
-                            <span className="summary-value">
+                          <div className="jo-registration-summary-item">
+                            <span className="jo-registration-summary-label">Ownership Type:</span>
+                            <span className="jo-registration-summary-value">
                               {[
                                 parcel.ownershipTypeRegisteredOwner && 'Registered Owner',
                                 parcel.ownershipTypeTenant && `Tenant (${parcel.tenantLandOwnerName})`,
@@ -1373,14 +1317,14 @@ const JoRsbsa: React.FC = () => {
               </div>
             )}
 
-            <div className="form-actions">
+            <div className="jo-registration-form-actions">
               {currentStep > 1 && (
-                <button className="btn-save" onClick={handlePrevStep}>Previous</button>
+                <button className="jo-registration-btn-save" onClick={handlePrevStep}>Previous</button>
               )}
               {currentStep < 4 ? (
-                <button className="btn-submit" onClick={handleSubmitForm}>Next Step</button>
+                <button className="jo-registration-btn-submit" onClick={handleSubmitForm}>Next Step</button>
               ) : (
-                <button className="btn-submit" onClick={handleSubmitForm}>Submit Form</button>
+                <button className="jo-registration-btn-submit" onClick={handleSubmitForm}>Submit Form</button>
               )}
             </div>
           </div>
@@ -1391,3 +1335,4 @@ const JoRsbsa: React.FC = () => {
 };
 
 export default JoRsbsa;
+

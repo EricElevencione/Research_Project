@@ -29,7 +29,7 @@
 
 /* Page font (ensure this is last so it wins the cascade) */
 .RSBSA-page {
-  font-family: "Arial", Helvetica, sans-serif;
+  font-family: var(--font-family);
 }
 
 
@@ -926,7 +926,7 @@
 
 /* Page font (ensure this is last so it wins the cascade) */
 .RSBSA-page {
-  font-family: "Arial", Helvetica, sans-serif;
+  font-family: var(--font-family);
 }
 
 /* Content card styling */
@@ -1663,3 +1663,4 @@
     grid-template-columns: 1fr 1fr 1fr;
   }
 }
+

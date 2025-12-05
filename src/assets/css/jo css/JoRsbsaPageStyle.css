@@ -207,7 +207,7 @@
 }
 
 .jo-rsbsa-owners-table td.jo-rsbsa-ffrs-id {
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-family);
     font-weight: 600;
     color: #2c5f2d;
 }
@@ -280,3 +280,4 @@
         max-width: 100%;
     }
 }
+

@@ -1,0 +1,722 @@
+/* ============================================
+   JO RSBSA Registration Form Page
+   Unique class names to avoid conflicts
+   ============================================ */
+/* Global Font */
+* {
+    font-family: var(--font-family) !important;
+}
+
+
+
+/* Main Layout */
+.jo-registration-page-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.jo-registration-page {
+    display: flex;
+    width: 100%;
+}
+
+/* Main Content Area */
+.jo-registration-main-content {
+    width: 100%;
+    flex-grow: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.jo-registration-main-content h2 {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0 0 20px 0;
+}
+
+/* Back Button */
+.jo-registration-back-button {
+    margin-bottom: 20px;
+}
+
+.jo-registration-btn-back {
+    padding: 10px 20px !important;
+    background-color: #6c757d !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 5px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    transition: background-color 0.3s !important;
+}
+
+.jo-registration-btn-back:hover {
+    background-color: #5a6268 !important;
+}
+
+.jo-registration-btn-back::before {
+    content: '← Back' !important;
+}
+
+/* Form Container */
+.jo-registration-form-container {
+    background: white;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Form Steps Progress Indicator */
+.jo-registration-form-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.jo-registration-form-steps::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 0;
+}
+
+.jo-registration-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+}
+
+.jo-registration-step .jo-registration-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+    transition: all 0.3s;
+}
+
+.jo-registration-step.jo-registration-active .jo-registration-dot {
+    background: #2c5f2d;
+    color: white;
+    transform: scale(1.1);
+}
+
+.jo-registration-step.jo-registration-completed .jo-registration-dot {
+    background: #4caf50;
+    color: white;
+}
+
+.jo-registration-step .jo-registration-label {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+}
+
+.jo-registration-step.jo-registration-active .jo-registration-label {
+    color: #2c5f2d;
+    font-weight: bold;
+}
+
+/* Form Sections */
+.jo-registration-form-section {
+    margin-bottom: 30px;
+}
+
+.jo-registration-form-section h3 {
+    font-size: 20px;
+    color: #2c5f2d;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2c5f2d;
+}
+
+.jo-registration-form-section h4 {
+    font-size: 16px;
+    color: #333;
+    margin: 20px 0 15px 0;
+}
+
+/* Form Grid Layout */
+.jo-registration-form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.jo-registration-form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+/* Form Group */
+.jo-registration-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.jo-registration-form-group label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.jo-registration-form-group input,
+.jo-registration-form-group select,
+.jo-registration-form-group textarea {
+    padding: 10px 12px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 14px !important;
+    transition: border-color 0.3s !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.jo-registration-form-group input:focus,
+.jo-registration-form-group select:focus,
+.jo-registration-form-group textarea:focus {
+    outline: none !important;
+    border-color: #2c5f2d !important;
+    box-shadow: 0 0 0 2px rgba(44, 95, 45, 0.1) !important;
+}
+
+.jo-registration-form-group input.jo-registration-input-error {
+    border-color: #dc3545 !important;
+}
+
+.jo-registration-form-group .jo-registration-error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* Address Section */
+.jo-registration-address-section {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.jo-registration-address-section h4 {
+    margin-top: 0;
+}
+
+.jo-registration-address-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+/* Livelihood Section */
+.jo-registration-livelihood-section {
+    margin-bottom: 20px;
+}
+
+.jo-registration-livelihood-details {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.jo-registration-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.jo-registration-checkbox-group label {
+    display: flex;
+    align-items: center;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.jo-registration-checkbox-group input[type="checkbox"] {
+    margin-right: 10px !important;
+    width: 18px !important;
+    height: 18px !important;
+    cursor: pointer !important;
+}
+
+.jo-registration-checkbox-group input[type="text"] {
+    margin-left: 28px;
+    margin-top: 5px;
+}
+
+/* Ownership Category Section */
+.jo-registration-ownership-category {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+}
+
+.jo-registration-ownership-category h4 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.jo-registration-ownership-options {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.jo-registration-ownership-label {
+    flex: 1;
+    min-width: 200px;
+    padding: 1rem;
+    border: 2px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.jo-registration-ownership-label input[type="radio"] {
+    margin-right: 0.5rem !important;
+}
+
+.jo-registration-ownership-label.jo-registration-owner-selected {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.jo-registration-ownership-label.jo-registration-tenant-selected {
+    background-color: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.jo-registration-ownership-label.jo-registration-lessee-selected {
+    background-color: #ffc107;
+    color: #2c3e50;
+    border-color: #ffc107;
+}
+
+.jo-registration-ownership-note {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Land Owner Search */
+.jo-registration-landowner-search {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: #fff8e1;
+    border-radius: 8px;
+    border: 2px solid #ffc107;
+}
+
+.jo-registration-landowner-search h4 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.jo-registration-landowner-input-wrapper {
+    position: relative;
+}
+
+.jo-registration-landowner-input {
+    width: 100% !important;
+    padding: 0.75rem !important;
+    font-size: 1rem !important;
+    border: 2px solid #ffc107 !important;
+    border-radius: 6px !important;
+}
+
+.jo-registration-landowner-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border: 2px solid #ffc107;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.jo-registration-landowner-item {
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.jo-registration-landowner-item:hover {
+    background-color: #f8f9fa;
+}
+
+.jo-registration-landowner-selected-info {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 6px;
+    color: #155724;
+}
+
+/* Parcel Selection */
+.jo-registration-parcel-selection {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: #e8f5e9;
+    border-radius: 8px;
+    border: 2px solid #4caf50;
+}
+
+.jo-registration-parcel-selection h4 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.jo-registration-parcel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.jo-registration-parcel-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 1rem;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    background-color: white;
+}
+
+.jo-registration-parcel-item.jo-registration-selected {
+    background-color: #c8e6c9;
+    border-color: #4caf50;
+}
+
+.jo-registration-parcel-item input[type="checkbox"] {
+    margin-right: 1rem !important;
+    margin-top: 0.25rem !important;
+    width: 18px !important;
+    height: 18px !important;
+    cursor: pointer !important;
+}
+
+.jo-registration-parcel-details {
+    flex: 1;
+}
+
+.jo-registration-parcel-header {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.jo-registration-parcel-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.jo-registration-parcel-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.jo-registration-parcel-count {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.jo-registration-btn-confirm-parcels {
+    padding: 0.75rem 1.5rem !important;
+    background-color: #4caf50 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    transition: all 0.3s !important;
+}
+
+.jo-registration-btn-confirm-parcels:disabled {
+    background-color: #6c757d !important;
+    cursor: not-allowed !important;
+}
+
+.jo-registration-parcel-warning {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    color: #856404;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.jo-registration-parcel-confirmed {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 6px;
+    color: #0c5460;
+}
+
+/* Parcel Card */
+.jo-registration-parcel-card {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.jo-registration-parcel-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2c5f2d;
+}
+
+.jo-registration-parcel-no {
+    font-weight: bold;
+    font-size: 16px;
+    color: #2c5f2d;
+}
+
+.jo-registration-parcel-card-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.jo-registration-btn-small {
+    padding: 5px 15px !important;
+    background-color: #dc3545 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    transition: background-color 0.3s !important;
+}
+
+.jo-registration-btn-small:hover {
+    background-color: #c82333 !important;
+}
+
+.jo-registration-parcel-actions-bar {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 20px;
+}
+
+/* Summary/Verification Section */
+.jo-registration-compilation {
+    margin-bottom: 30px;
+}
+
+.jo-registration-compilation h4 {
+    font-size: 18px;
+    color: #2c5f2d;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.jo-registration-summary-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+}
+
+.jo-registration-summary-section h3 {
+    font-size: 18px;
+    color: #2c5f2d;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2c5f2d;
+}
+
+.jo-registration-summary-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.jo-registration-summary-item {
+    display: flex;
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+}
+
+.jo-registration-summary-label {
+    font-weight: bold;
+    color: #555;
+    min-width: 180px;
+    margin-right: 15px;
+}
+
+.jo-registration-summary-value {
+    color: #333;
+    flex: 1;
+}
+
+.jo-registration-parcel-summary {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.jo-registration-parcel-summary h6 {
+    font-size: 14px;
+    color: #2c5f2d;
+    margin: 0 0 10px 0;
+    font-weight: bold;
+}
+
+/* Form Errors */
+.jo-registration-form-errors {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.jo-registration-form-errors .jo-registration-error {
+    margin: 5px 0;
+}
+
+/* Form Actions */
+.jo-registration-form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #dee2e6;
+}
+
+.jo-registration-btn-save {
+    padding: 12px 30px !important;
+    background-color: #6c757d !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 5px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    transition: background-color 0.3s !important;
+}
+
+.jo-registration-btn-save:hover {
+    background-color: #5a6268 !important;
+}
+
+.jo-registration-btn-submit {
+    padding: 12px 30px !important;
+    background-color: #2c5f2d !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 5px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    transition: background-color 0.3s !important;
+}
+
+.jo-registration-btn-submit:hover {
+    background-color: #1f4320 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .jo-registration-page {
+        flex-direction: column;
+    }
+
+    .jo-registration-main-content {
+        padding: 10px;
+    }
+
+    .jo-registration-form-container {
+        padding: 20px;
+    }
+
+    .jo-registration-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .jo-registration-address-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .jo-registration-form-steps {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .jo-registration-step {
+        min-width: 120px;
+    }
+
+    .jo-registration-ownership-options {
+        flex-direction: column;
+    }
+
+    .jo-registration-ownership-label {
+        min-width: 100%;
+    }
+
+    .jo-registration-form-actions {
+        flex-direction: column;
+    }
+
+    .jo-registration-btn-save,
+    .jo-registration-btn-submit {
+        width: 100%;
+    }
+}
+

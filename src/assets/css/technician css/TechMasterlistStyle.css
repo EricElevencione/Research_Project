@@ -2,6 +2,12 @@
    Technician Masterlist Page - Farmer Records Management
    Unique class names to avoid conflicts
    ============================================ */
+/* Global Font */
+* {
+    font-family: var(--font-family) !important;
+}
+
+
 
 /* Main Layout */
 .tech-masterlist-page-container {
@@ -407,3 +413,4 @@
         padding: 16px;
     }
 }
+

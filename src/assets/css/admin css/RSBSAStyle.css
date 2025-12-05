@@ -2,6 +2,12 @@
    RSBSA Admin Page - Registered Land Owners
    Unique class names to avoid conflicts
    ============================================ */
+/* Global Font */
+* {
+    font-family: var(--font-family) !important;
+}
+
+
 
 /* Main Layout */
 .rsbsa-admin-page-container {
@@ -163,3 +169,4 @@
         padding: 12px;
     }
 }
+

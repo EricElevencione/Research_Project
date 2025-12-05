@@ -233,16 +233,6 @@ const GapAnalysis: React.FC = () => {
                     </button>
 
                     <button
-                        className={`sidebar-nav-item ${isActive('/land-records') ? 'active' : ''}`}
-                        onClick={() => navigate('/land-records')}
-                    >
-                        <span className="nav-icon">
-                            <img src={IncentivesIcon} alt="Land Records" />
-                        </span>
-                        <span className="nav-text">Land Records</span>
-                    </button>
-
-                    <button
                         className={`sidebar-nav-item ${isActive('/incentives') ? 'active' : ''}`}
                         onClick={() => navigate('/incentives')}
                     >

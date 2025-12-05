@@ -162,15 +162,6 @@ const Masterlist: React.FC = () => {
               <span className="nav-text">Gap Analysis</span>
             </button>
 
-            <button
-              className={`sidebar-nav-item ${isActive('/land-records') ? 'active' : ''}`}
-              onClick={() => navigate('/land-records')}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Land Records" />
-              </span>
-              <span className="nav-text">Land Records</span>
-            </button>
 
             <button
               className={`sidebar-nav-item ${isActive('/incentives') ? 'active' : ''}`}

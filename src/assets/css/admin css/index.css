@@ -33,7 +33,7 @@ body,
 }
 
 body {
-  font-family: 'Arial', sans-serif;
+  font-family: var(--font-family);
   line-height: 1.6;
   color: var(--text-color);
   background-color: var(--background-color);
@@ -489,3 +489,4 @@ select:focus {
     height: 400px;
   }
 }
+

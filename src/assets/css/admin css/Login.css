@@ -1,5 +1,5 @@
 .login-page {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-family);
   background: linear-gradient(to right, #e6f4ea, #d0e8c8);
   display: flex;
   justify-content: center;
@@ -156,3 +156,4 @@ input[type="password"]:focus {
   font-size: 14px;
   border: 1px solid #ffcdd2;
 }
+

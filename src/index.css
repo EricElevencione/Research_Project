@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@font-face {
+    font-family: 'Poppins Light';
+    src: url('../assets/components/common/font-family/Poppins/Poppins-Light.ttf') format('truetype');
+}
+
 /* Your custom CSS variables and base styles */
 :root {
     --primary-color: #4bc1c5;
@@ -9,16 +14,20 @@
     --text-light: #666;
     --border-radius: 5px;
     --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+    /* Global Font Family - Change this one variable to update all fonts */
+    --font-family: 'Poppins Light', Arial, sans-serif;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: var(--font-family) !important;
 }
 
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: var(--font-family);
     line-height: 1.6;
     color: var(--text-color);
     background-color: var(--background-color);
