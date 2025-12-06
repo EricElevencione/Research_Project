@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/jo css/JoMasterlistStyle.css';
+import '../../assets/css/jo css/FarmerDetailModal.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -44,6 +45,30 @@ interface Parcel {
   ownership_others_specify: string;
 }
 
+interface FarmerDetail {
+  id: string;
+  farmerName: string;
+  farmerAddress: string;
+  age: number | string;
+  gender: string;
+  mainLivelihood: string;
+  farmingActivities: string[];
+  parcels: ParcelDetail[];
+}
+
+interface ParcelDetail {
+  id: string;
+  parcelNumber: string;
+  farmLocationBarangay: string;
+  farmLocationMunicipality: string;
+  totalFarmAreaHa: number;
+  ownershipTypeRegisteredOwner: boolean;
+  ownershipTypeTenant: boolean;
+  ownershipTypeLessee: boolean;
+  tenantLandOwnerName: string;
+  lesseeLandOwnerName: string;
+}
+
 const JoMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,6 +80,10 @@ const JoMasterlist: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(null);
+  const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const [editingRecord, setEditingRecord] = useState<RSBSARecord | null>(null);
   type EditForm = Partial<RSBSARecord> & { firstName?: string; middleName?: string; lastName?: string; barangay?: string; municipality?: string };
@@ -87,6 +116,89 @@ const JoMasterlist: React.FC = () => {
       console.error('Error deleting record:', err);
       alert(`Failed to delete record: ${err.message}`);
     } finally {
+    }
+  };
+
+  // Fetch farmer details when row is clicked
+  const fetchFarmerDetails = async (farmerId: string) => {
+    try {
+      setLoadingFarmerDetail(true);
+
+      // Fetch basic farmer info
+      const farmerResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}`);
+      if (!farmerResponse.ok) throw new Error('Failed to fetch farmer details');
+      const farmerData = await farmerResponse.json();
+
+      // Fetch parcels
+      const parcelsResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}/parcels`);
+      if (!parcelsResponse.ok) throw new Error('Failed to fetch parcels');
+      const parcelsData = await parcelsResponse.json();
+
+      // Handle both JSONB (data property) and structured column formats
+      const data = farmerData.data || farmerData;
+
+      // Parse farming activities from the data
+      const activities: string[] = [];
+
+      // Check for farming activities in various possible field names
+      if (data.farmerRice || data.FARMER_RICE || data.farmer_rice) activities.push('Rice');
+      if (data.farmerCorn || data.FARMER_CORN || data.farmer_corn) activities.push('Corn');
+      if (data.farmerOtherCrops || data.FARMER_OTHER_CROPS || data.farmer_other_crops) {
+        activities.push(`Other Crops: ${data.farmerOtherCropsText || data.FARMER_OTHER_CROPS_TEXT || data.farmer_other_crops_text || ''}`);
+      }
+      if (data.farmerLivestock || data.FARMER_LIVESTOCK || data.farmer_livestock) {
+        activities.push(`Livestock: ${data.farmerLivestockText || data.FARMER_LIVESTOCK_TEXT || data.farmer_livestock_text || ''}`);
+      }
+      if (data.farmerPoultry || data.FARMER_POULTRY || data.farmer_poultry) {
+        activities.push(`Poultry: ${data.farmerPoultryText || data.FARMER_POULTRY_TEXT || data.farmer_poultry_text || ''}`);
+      }
+
+      // If no activities found, check if mainLivelihood indicates farming type
+      if (activities.length === 0) {
+        if (data.mainLivelihood || data['MAIN LIVELIHOOD'] || data.main_livelihood) {
+          activities.push(data.mainLivelihood || data['MAIN LIVELIHOOD'] || data.main_livelihood);
+        }
+      } const calculateAge = (birthdate: string): number | string => {
+        if (!birthdate || birthdate === 'N/A') return 'N/A';
+        const today = new Date();
+        const birthDate = new Date(birthdate);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        return age;
+      };
+
+      const farmerDetail: FarmerDetail = {
+        id: farmerId,
+        farmerName: farmerData.farmerName || 'N/A',
+        farmerAddress: farmerData.farmerAddress || 'N/A',
+        age: calculateAge(data.dateOfBirth || data.birthdate || 'N/A'),
+        gender: data.gender || 'N/A',
+        mainLivelihood: data.mainLivelihood || 'N/A',
+        farmingActivities: activities,
+        parcels: parcelsData.map((p: any) => ({
+          id: p.id,
+          parcelNumber: p.parcel_number || 'N/A',
+          farmLocationBarangay: p.farm_location_barangay || 'N/A',
+          farmLocationMunicipality: p.farm_location_municipality || 'N/A',
+          totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
+          ownershipTypeRegisteredOwner: p.ownership_type_registered_owner || false,
+          ownershipTypeTenant: p.ownership_type_tenant || false,
+          ownershipTypeLessee: p.ownership_type_lessee || false,
+          tenantLandOwnerName: p.tenant_land_owner_name || '',
+          lesseeLandOwnerName: p.lessee_land_owner_name || ''
+        }))
+      };
+
+      setSelectedFarmer(farmerDetail);
+      setShowModal(true);
+    } catch (err: any) {
+      console.error('Error fetching farmer details:', err);
+      alert('Failed to load farmer details');
+    } finally {
+      setLoadingFarmerDetail(false);
     }
   };
 
@@ -703,7 +815,12 @@ const JoMasterlist: React.FC = () => {
                   {!loading && !error && filteredRecords.length > 0 && (
                     filteredRecords.map((record) => {
                       return (
-                        <tr key={record.id}>
+                        <tr
+                          key={record.id}
+                          className="jo-masterlist-clickable-row"
+                          onClick={() => fetchFarmerDetails(record.id)}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <td>{record.referenceNumber}</td>
                           <td>{record.farmerName}</td>
                           <td>{record.farmerAddress}</td>
@@ -716,11 +833,14 @@ const JoMasterlist: React.FC = () => {
                               {/* {record.totalFarmArea || 'N/A'}*/}
                             </span>
                           </td>
-                          <td>
+                          <td onClick={(e) => e.stopPropagation()}>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
                               <button
                                 className="jo-masterlist-more-button"
-                                onClick={(e) => toggleMenu(record.id, e)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMenu(record.id, e);
+                                }}
                                 aria-haspopup="true"
                                 aria-expanded={openMenuId === record.id}
                                 title="More actions"
@@ -893,6 +1013,117 @@ const JoMasterlist: React.FC = () => {
               <div className="jo-masterlist-edit-modal-footer">
                 <button className="jo-masterlist-cancel-button" onClick={handleCancel}>Cancel</button>
                 <button className="jo-masterlist-save-button" onClick={handleSave}>Save Changes</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Farmer Detail Modal */}
+        {showModal && selectedFarmer && (
+          <div className="farmer-modal-overlay" onClick={() => setShowModal(false)}>
+            <div className="farmer-modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="farmer-modal-header">
+                <h2>Farmer Details</h2>
+                <button className="farmer-modal-close" onClick={() => setShowModal(false)}>×</button>
+              </div>
+
+              <div className="farmer-modal-body">
+                {loadingFarmerDetail ? (
+                  <div className="farmer-modal-loading">Loading farmer details...</div>
+                ) : (
+                  <>
+                    {/* Personal Information */}
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">👤 Personal Information</h3>
+                      <div className="farmer-modal-info-grid">
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Farmer Name:</span>
+                          <span className="farmer-modal-value">{selectedFarmer.farmerName}</span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Farmer Address:</span>
+                          <span className="farmer-modal-value">{selectedFarmer.farmerAddress}</span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Age:</span>
+                          <span className="farmer-modal-value">
+                            {typeof selectedFarmer.age === 'number' ? `${selectedFarmer.age} years old` : selectedFarmer.age}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Gender:</span>
+                          <span className="farmer-modal-value">{selectedFarmer.gender}</span>
+                        </div>
+                        <div className="farmer-modal-info-item farmer-modal-full-width">
+                          <span className="farmer-modal-label">Main Livelihood:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.farmingActivities.length > 0
+                              ? selectedFarmer.farmingActivities.join(', ')
+                              : 'Not Available'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Farm Information */}
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">🌾 Farm Information</h3>
+                      {selectedFarmer.parcels.length === 0 ? (
+                        <p className="farmer-modal-no-data">No parcels found</p>
+                      ) : (
+                        <div className="farmer-modal-parcels-container">
+                          {selectedFarmer.parcels.map((parcel, index) => (
+                            <div key={parcel.id} className="farmer-modal-parcel-card">
+                              <div className="farmer-modal-parcel-header">
+                                <h4>Parcel #{parcel.parcelNumber}</h4>
+                              </div>
+                              <div className="farmer-modal-parcel-details">
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">Land Ownership:</span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.ownershipTypeRegisteredOwner && 'Registered Owner'}
+                                    {parcel.ownershipTypeTenant && (
+                                      <>
+                                        Tenant
+                                        {parcel.tenantLandOwnerName && (
+                                          <span className="farmer-modal-owner-name">
+                                            {' '}(Owner: {parcel.tenantLandOwnerName})
+                                          </span>
+                                        )}
+                                      </>
+                                    )}
+                                    {parcel.ownershipTypeLessee && (
+                                      <>
+                                        Lessee
+                                        {parcel.lesseeLandOwnerName && (
+                                          <span className="farmer-modal-owner-name">
+                                            {' '}(Owner: {parcel.lesseeLandOwnerName})
+                                          </span>
+                                        )}
+                                      </>
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">Parcel Location:</span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.farmLocationBarangay}, {parcel.farmLocationMunicipality}
+                                  </span>
+                                </div>
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">Parcel Size:</span>
+                                  <span className="farmer-modal-value">
+                                    {typeof parcel.totalFarmAreaHa === 'number' ? parcel.totalFarmAreaHa.toFixed(2) : parseFloat(String(parcel.totalFarmAreaHa || 0)).toFixed(2)} hectares
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

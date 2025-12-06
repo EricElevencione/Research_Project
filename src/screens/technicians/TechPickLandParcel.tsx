@@ -244,16 +244,6 @@ const TechPickLandParcel: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-farmerprofpage')}
-                        >
-                            <span className="nav-icon">
-                                <img src={FarmerIcon} alt="farmerProf" />
-                            </span>
-                            <span className="nav-text">Farmers Profile</span>
-                        </button>
-
-                        <button
                             className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
                         >

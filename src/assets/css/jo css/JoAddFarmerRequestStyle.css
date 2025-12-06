@@ -1,0 +1,378 @@
+/* JO Add Farmer Request - Unique Styling */
+/* Color scheme: Purple/Blue gradient theme for JO role */
+
+.jo-add-farmer-page-container {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.jo-add-farmer-page {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+.jo-add-farmer-main-content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+    background-color: #f8f9fd;
+}
+
+.jo-add-farmer-header {
+    margin-bottom: 30px;
+    padding: 25px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+}
+
+.jo-add-farmer-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 8px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.jo-add-farmer-subtitle {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 20px 0;
+    font-weight: 500;
+}
+
+.jo-add-farmer-back-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.jo-add-farmer-back-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateX(-5px);
+}
+
+.jo-add-farmer-content-card {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+}
+
+/* Section Styling */
+.jo-add-farmer-section {
+    margin-bottom: 40px;
+}
+
+.jo-add-farmer-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #5a67d8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #e0e7ff;
+}
+
+/* Search Container */
+.jo-add-farmer-search-container {
+    margin-bottom: 16px;
+}
+
+.jo-add-farmer-search-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #c7d2fe;
+    border-radius: 10px;
+    font-size: 15px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    background: #fafbff;
+}
+
+.jo-add-farmer-search-input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.jo-add-farmer-info-box {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+    border: 2px solid #c7d2fe;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #4c1d95;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+/* Farmer List Container */
+.jo-add-farmer-list-container {
+    border: 2px solid #c7d2fe;
+    border-radius: 12px;
+    max-height: 350px;
+    overflow-y: auto;
+    background: #fafbff;
+}
+
+.jo-add-farmer-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.jo-add-farmer-list-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.jo-add-farmer-list-container::-webkit-scrollbar-thumb {
+    background: #c7d2fe;
+    border-radius: 4px;
+}
+
+.jo-add-farmer-list-container::-webkit-scrollbar-thumb:hover {
+    background: #a5b4fc;
+}
+
+.jo-add-farmer-empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* Farmer Item */
+.jo-add-farmer-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e0e7ff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.jo-add-farmer-item:last-child {
+    border-bottom: none;
+}
+
+.jo-add-farmer-item:hover {
+    background: #f5f7ff;
+}
+
+.jo-add-farmer-item.selected {
+    background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+    border-left: 4px solid #667eea;
+}
+
+.jo-add-farmer-radio {
+    width: 20px;
+    height: 20px;
+    margin-right: 16px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.jo-add-farmer-item-content {
+    flex: 1;
+}
+
+.jo-add-farmer-name {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 4px;
+    font-size: 15px;
+}
+
+.jo-add-farmer-details {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Form Grid */
+.jo-add-farmer-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.jo-add-farmer-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.jo-add-farmer-label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #475569;
+    font-size: 14px;
+}
+
+.jo-add-farmer-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #c7d2fe;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    background: #fafbff;
+}
+
+.jo-add-farmer-input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.jo-add-farmer-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #c7d2fe;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: vertical;
+    transition: all 0.3s ease;
+    background: #fafbff;
+}
+
+.jo-add-farmer-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+/* Error Box */
+.jo-add-farmer-error-box {
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border: 2px solid #ef4444;
+    border-radius: 10px;
+    color: #991b1b;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+/* Action Buttons */
+.jo-add-farmer-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: flex-end;
+    margin-top: 32px;
+}
+
+.jo-add-farmer-cancel-btn {
+    padding: 14px 32px;
+    border: 2px solid #c7d2fe;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    background: white;
+    color: #5a67d8;
+    transition: all 0.3s ease;
+}
+
+.jo-add-farmer-cancel-btn:hover:not(:disabled) {
+    background: #f5f7ff;
+    border-color: #a5b4fc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.jo-add-farmer-cancel-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.jo-add-farmer-submit-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+}
+
+.jo-add-farmer-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.5);
+}
+
+.jo-add-farmer-submit-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .jo-add-farmer-main-content {
+        padding: 20px;
+    }
+
+    .jo-add-farmer-content-card {
+        padding: 24px;
+    }
+
+    .jo-add-farmer-form-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .jo-add-farmer-title {
+        font-size: 24px;
+    }
+
+    .jo-add-farmer-actions {
+        flex-direction: column;
+    }
+
+    .jo-add-farmer-cancel-btn,
+    .jo-add-farmer-submit-btn {
+        width: 100%;
+    }
+}
+
+/* Animation */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.jo-add-farmer-content-card {
+    animation: slideInUp 0.4s ease-out;
+}

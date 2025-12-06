@@ -1,0 +1,321 @@
+/* Farmer Detail Modal - Green Theme */
+
+/* Clickable Row Hover Effect */
+.jo-rsbsa-clickable-row:hover,
+.jo-masterlist-clickable-row:hover {
+    background-color: #d1fae5 !important;
+    transition: background-color 0.2s ease;
+}
+
+/* Modal Overlay */
+.farmer-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Modal Content */
+.farmer-modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Modal Header */
+.farmer-modal-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 24px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #047857;
+}
+
+.farmer-modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.farmer-modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 32px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.farmer-modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+/* Modal Body */
+.farmer-modal-body {
+    padding: 32px;
+    max-height: calc(90vh - 100px);
+    overflow-y: auto;
+}
+
+.farmer-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.farmer-modal-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.farmer-modal-body::-webkit-scrollbar-thumb {
+    background: #10b981;
+    border-radius: 4px;
+}
+
+.farmer-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #059669;
+}
+
+.farmer-modal-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+    font-size: 16px;
+}
+
+/* Modal Sections */
+.farmer-modal-section {
+    margin-bottom: 32px;
+}
+
+.farmer-modal-section:last-child {
+    margin-bottom: 0;
+}
+
+.farmer-modal-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #047857;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #d1fae5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Info Grid (Personal Information) */
+.farmer-modal-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.farmer-modal-info-item {
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.farmer-modal-info-item:hover {
+    border-color: #10b981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.farmer-modal-full-width {
+    grid-column: 1 / -1;
+}
+
+.farmer-modal-label {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+
+.farmer-modal-value {
+    display: block;
+    color: #1f2937;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* No Data Message */
+.farmer-modal-no-data {
+    text-align: center;
+    padding: 40px;
+    color: #9ca3af;
+    font-size: 15px;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 2px dashed #e5e7eb;
+}
+
+/* Parcels Container */
+.farmer-modal-parcels-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+}
+
+/* Parcel Card */
+.farmer-modal-parcel-card {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 2px solid #10b981;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.farmer-modal-parcel-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+}
+
+.farmer-modal-parcel-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    padding: 16px 20px;
+    border-bottom: 2px solid #047857;
+}
+
+.farmer-modal-parcel-header h4 {
+    margin: 0;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.farmer-modal-parcel-details {
+    padding: 20px;
+}
+
+.farmer-modal-parcel-item {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.farmer-modal-parcel-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.farmer-modal-parcel-item .farmer-modal-label {
+    color: #047857;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.farmer-modal-parcel-item .farmer-modal-value {
+    color: #1f2937;
+}
+
+.farmer-modal-owner-name {
+    color: #059669;
+    font-style: italic;
+    font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .farmer-modal-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+
+    .farmer-modal-header {
+        padding: 20px 24px;
+    }
+
+    .farmer-modal-header h2 {
+        font-size: 20px;
+    }
+
+    .farmer-modal-body {
+        padding: 24px;
+    }
+
+    .farmer-modal-info-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .farmer-modal-parcels-container {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .farmer-modal-close {
+        width: 40px;
+        height: 40px;
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 480px) {
+    .farmer-modal-content {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .farmer-modal-header {
+        padding: 16px 20px;
+    }
+
+    .farmer-modal-body {
+        padding: 20px;
+    }
+
+    .farmer-modal-section-title {
+        font-size: 18px;
+    }
+}

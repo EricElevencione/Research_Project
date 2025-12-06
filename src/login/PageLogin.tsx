@@ -66,7 +66,6 @@ const Login: React.FC = () => {
             <div className="login-container">
                 {/* Left section containing branding and marketing text */}
                 <div className="login-left">
-                    <h1>Welcome Back</h1>
                 </div>
 
                 {/* Right section containing login form */}

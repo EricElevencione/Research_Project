@@ -832,7 +832,20 @@ const JoManageRequests: React.FC = () => {
                             className="btn-create-allocation"
                             onClick={() => navigate('/jo-incentives')}
                         >
-                            ← Back to Allocations
+                            ←
+                        </button>
+                        <button
+                            className="btn-create-allocation"
+                            onClick={() => navigate(`/jo-add-farmer-request/${allocationId}`)}
+                            style={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                            }}
+                        >
+                            ➕ Add Farmer Request
                         </button>
                     </div>
 

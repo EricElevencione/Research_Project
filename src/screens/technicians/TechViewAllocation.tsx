@@ -230,16 +230,6 @@ const TechViewAllocation: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-farmerprofpage')}
-                        >
-                            <span className="nav-icon">
-                                <img src={FarmerIcon} alt="Farmer Profile" />
-                            </span>
-                            <span className="nav-text">Farmers Profile</span>
-                        </button>
-
-                        <button
                             className="sidebar-nav-item logout"
                             onClick={handleLogout}
                         >

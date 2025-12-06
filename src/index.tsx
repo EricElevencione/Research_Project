@@ -13,7 +13,6 @@ import TechRsbsa from './screens/technicians/TechRsbsa';
 import TechPickLandParcel from './screens/technicians/TechPickLandParcel';
 import TechLandPlottingPage from './screens/technicians/TechLandPlottingPage';
 import TechFarmerProfile from './screens/technicians/TechFarmerProf';
-import TechFarmerProfPage from './screens/technicians/TechFarmerProfPage';
 import TechIncentives from './screens/technicians/TechIncentives';
 import TechCreateAllocation from './screens/technicians/TechCreateAllocation';
 import TechAddFarmerRequest from './screens/technicians/TechAddFarmerRequest';
@@ -24,6 +23,7 @@ import JoRsbsa from './screens/JO/JoRsbsaRegistration';
 import JoMasterlist from './screens/JO/JoMasterlist';
 import JoIncentives from './screens/JO/JoIncentives';
 import JoCreateAllocation from './screens/JO/JoCreateAllocation';
+import JoAddFarmerRequest from './screens/JO/JoAddFarmerRequest';
 import JoManageRequests from './screens/JO/JoManageRequests';
 import JoViewAllocation from './screens/JO/JoViewAllocation';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
@@ -105,11 +105,6 @@ function App() {
                         <TechFarmerProfile />
                     </ProtectedRoute>
                 } />
-                <Route path="/technician-farmerprofpage" element={
-                    <ProtectedRoute>
-                        <TechFarmerProfPage />
-                    </ProtectedRoute>
-                } />
                 <Route path="/technician-rsbsa" element={
                     <ProtectedRoute>
                         <TechRsbsa />
@@ -168,6 +163,11 @@ function App() {
                 <Route path="/jo-create-allocation" element={
                     <ProtectedRoute>
                         <JoCreateAllocation />
+                    </ProtectedRoute>
+                } />
+                <Route path="/jo-add-farmer-request/:allocationId" element={
+                    <ProtectedRoute>
+                        <JoAddFarmerRequest />
                     </ProtectedRoute>
                 } />
                 <Route path="/jo-manage-requests/:allocationId" element={
