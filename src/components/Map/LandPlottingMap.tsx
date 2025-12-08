@@ -593,9 +593,17 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                     {boundaryData && (
                         (() => {
                             const features = Array.isArray(boundaryData.features) ? boundaryData.features : [];
-                            if (barangayName) {
+                            console.log('🗺️ Map boundary filtering:', {
+                                barangayName,
+                                totalFeatures: features.length,
+                                featureNames: features.map((f: any) => f.properties?.NAME_3),
+                                normalizedBarangayName: normalizeName(barangayName || '')
+                            });
+                            if (barangayName && barangayName !== 'N/A') {
                                 const filtered = features.filter((f: any) => normalizeName(f.properties?.NAME_3 || '') === normalizeName(barangayName || ''));
+                                console.log('🎯 Filtered features:', filtered.length, 'matches found');
                                 if (filtered.length > 0) {
+                                    console.log('✅ Showing boundary for:', filtered[0].properties?.NAME_3);
                                     return (
                                         <GeoJSON
                                             key={barangayName}
@@ -603,9 +611,12 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
                                             style={style}
                                         />
                                     );
+                                } else {
+                                    console.warn('⚠️ No boundary features matched barangay:', barangayName);
                                 }
                                 return null;
                             }
+                            console.log('❌ No barangayName provided or barangayName is N/A, not showing boundary');
                             return null;
                         })()
                     )}

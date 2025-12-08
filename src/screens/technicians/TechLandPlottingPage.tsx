@@ -1,5 +1,5 @@
 // unchanged imports
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import LandPlottingMap, { LandPlottingMapRef } from '../../components/Map/LandPlottingMap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid'; // Add at the top for unique id generation
@@ -655,10 +655,16 @@ const LandPlottingPage: React.FC = () => {
     // Use all history records without filtering
     const currentFarmerHistory = parcelHistory;
 
-    console.log("📍 Barangay going to map:", landAttributes.barangay);
-    console.log("📦 Current Parcel:", currentParcel);
-    console.log("👤 Current Farmer:", `${landAttributes.surname} ${landAttributes.firstName} ${landAttributes.middleName}`);
+    // Comprehensive debugging for barangay resolution
+    console.log("=== BARANGAY DEBUG START ===");
+    console.log("📍 landAttributes.barangay:", landAttributes.barangay);
+    console.log("📍 parcelBarangay state:", parcelBarangay);
+    console.log("📍 fallbackBarangayName:", fallbackBarangayName);
+    console.log("📦 currentParcel:", currentParcel);
+    console.log("📦 currentParcel?.farm_location_barangay:", currentParcel?.farm_location_barangay);
+    console.log("👤 rsbsaRecord:", rsbsaRecord);
     console.log("📋 Filtered History Count:", currentFarmerHistory.length, "of", parcelHistory.length, "total records");
+    console.log("=== BARANGAY DEBUG END ===");
 
     // Helpers to robustly derive display values from various possible field names
     function getDisplayBarangay() {
@@ -673,8 +679,33 @@ const LandPlottingPage: React.FC = () => {
             (rsbsaRecord as any)?.barangay,
         ];
         const value = candidates.find(v => typeof v === 'string' && v.trim().length > 0);
+        console.log("🔍 getDisplayBarangay candidates:", candidates);
+        console.log("✅ getDisplayBarangay selected value:", value);
         return value || 'N/A';
     }
+
+    // Compute barangay for map using useMemo to reactively update when dependencies change
+    const barangayForMap = useMemo(() => {
+        const candidates = [
+            currentParcel?.farm_location_barangay,
+            currentParcel?.farmLocation?.barangay,
+            (currentParcel as any)?.farmLocationBarangay,
+            (currentParcel as any)?.barangay,
+            landAttributes.barangay,
+            parcelBarangay,
+            fallbackBarangayName,
+            (rsbsaRecord as any)?.farmLocationBarangay,
+            rsbsaRecord?.addressBarangay,
+            (rsbsaRecord as any)?.barangay,
+        ];
+        console.log("🗺️ useMemo barangayForMap - ALL CANDIDATES WITH DETAILS:");
+        candidates.forEach((c, i) => {
+            console.log(`  [${i}]:`, typeof c, `"${c}"`);
+        });
+        const value = candidates.find(v => typeof v === 'string' && v.trim().length > 0 && v !== 'N/A');
+        console.log("✅ useMemo barangayForMap - FINAL selected value:", `"${value}"`);
+        return value || '';
+    }, [currentParcel, landAttributes.barangay, parcelBarangay, fallbackBarangayName, rsbsaRecord]);
 
     function getDisplayMunicipality() {
         const candidates = [
@@ -736,7 +767,7 @@ const LandPlottingPage: React.FC = () => {
                                 onShapeCreated={handleShapeCreated}
                                 onShapeEdited={handleShapeEdited}
                                 onShapeDeleted={handleMapShapeDeleted}
-                                barangayName={getDisplayBarangay()}
+                                barangayName={barangayForMap}
                                 onShapeFinalized={handleShapeFinalized}
                                 drawingDisabled={false}
                                 geometryPreview={null}
