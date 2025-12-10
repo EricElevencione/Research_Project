@@ -117,9 +117,52 @@ const JoDashboard: React.FC = () => {
                     </div>
 
                     <div className="jo-dashboard-reports">
-                        <div className='jo-dashboard-reports-1'></div>
-                        <div className='jo-dashboard-reports-2'></div>
-                        <div className='jo-dashboard-reports-3'></div>
+                        {/* Pure CSS Accordion - Radio buttons control which section is open */}
+                        <input type="radio" name="accordion" id="section-1" className="accordion-radio" defaultChecked />
+                        <input type="radio" name="accordion" id="section-2" className="accordion-radio" />
+                        <input type="radio" name="accordion" id="section-3" className="accordion-radio" />
+
+                        <div className='jo-dashboard-reports-section'>
+                            <label htmlFor="section-1" className="accordion-header">
+                                <span className="accordion-title">Section 1</span>
+                                <span className="accordion-icon">+</span>
+                            </label>
+                            <div className="accordion-content">
+                                <div className="accordion-content-inner">
+                                    <h4>Report Section 1</h4>
+                                    <p>This is the content for section 1. It contains important information and statistics.</p>
+                                    <p>Add your dashboard data, charts, or reports here.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className='jo-dashboard-reports-section'>
+                            <label htmlFor="section-2" className="accordion-header">
+                                <span className="accordion-title">Section 2</span>
+                                <span className="accordion-icon">+</span>
+                            </label>
+                            <div className="accordion-content">
+                                <div className="accordion-content-inner">
+                                    <h4>Report Section 2</h4>
+                                    <p>This is the content for section 2. Different data and metrics can be displayed here.</p>
+                                    <p>Customize this section with your specific needs.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className='jo-dashboard-reports-section'>
+                            <label htmlFor="section-3" className="accordion-header">
+                                <span className="accordion-title">Section 3</span>
+                                <span className="accordion-icon">+</span>
+                            </label>
+                            <div className="accordion-content">
+                                <div className="accordion-content-inner">
+                                    <h4>Report Section 3</h4>
+                                    <p>This is the content for section 3. Additional reports and analytics go here.</p>
+                                    <p>Perfect for summary information or quick access data.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -152,25 +152,191 @@
 .jo-dashboard-reports {
     background-color: #2A9D8F;
     color: white;
-    padding: 20px;
+    padding: 10px;
     width: 350px;
     min-width: 350px;
     max-width: 350px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    /* Normal column direction */
+    justify-content: flex-end;
+    /* Push sections to the bottom */
+    gap: 10px;
     border-radius: 8px;
     overflow-y: auto;
     margin-top: 83px;
+    height: calc(100vh - 103px);
 }
 
-.jo-dashboard-reports-1,
-.jo-dashboard-reports-2,
-.jo-dashboard-reports-3 {
+/* ============================================
+   Pure CSS Accordion Styles
+   ============================================ */
+
+/* Hide radio buttons but keep them accessible */
+.accordion-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Section container */
+.jo-dashboard-reports-section {
     background-color: rgba(255, 255, 255, 0.1);
-    padding: 15px;
     border-radius: 6px;
-    min-height: 150px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column-reverse;
+    /* Reverse so header is at bottom, content grows upward */
+}
+
+/* Make the expanded section grow to fill available space upward */
+#section-1:checked~.jo-dashboard-reports-section:nth-of-type(1),
+#section-2:checked~.jo-dashboard-reports-section:nth-of-type(2),
+#section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) {
+    flex-grow: 1;
+}
+
+/* Header/Label - Always visible clickable area */
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+    background-color: transparent;
+    border: none;
+    outline: none;
+}
+
+/* Header hover effect */
+.accordion-header:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Title text */
+.accordion-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: white;
+}
+
+/* Plus/Minus indicator */
+.accordion-icon {
+    font-size: 20px;
+    font-weight: bold;
+    transition: transform 0.3s ease;
+    color: white;
+}
+
+/* Content area - Hidden by default */
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    overflow-y: auto;
+    transition: max-height 0.4s ease-out;
+    background-color: rgba(0, 0, 0, 0.1);
+    flex-grow: 1;
+    /* Allows content to grow upward when expanded */
+    order: -1;
+    /* Place content above the header (since flex-direction is column-reverse) */
+}
+
+/* Inner content wrapper for padding */
+.accordion-content-inner {
+    padding: 0 18px;
+    color: white;
+}
+
+.accordion-content-inner h4 {
+    margin: 15px 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.accordion-content-inner p {
+    margin: 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* ============================================
+   State: When Section 1 is checked (default)
+   ============================================ */
+#section-1:checked~.jo-dashboard-reports-section:nth-of-type(1) .accordion-content {
+    max-height: 2000px;
+    /* Increased to fill remaining space */
+    padding: 0;
+}
+
+#section-1:checked~.jo-dashboard-reports-section:nth-of-type(1) .accordion-header {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+#section-1:checked~.jo-dashboard-reports-section:nth-of-type(1) .accordion-icon {
+    transform: rotate(45deg);
+    /* Turns + into × */
+}
+
+/* ============================================
+   State: When Section 2 is checked
+   ============================================ */
+#section-2:checked~.jo-dashboard-reports-section:nth-of-type(2) .accordion-content {
+    max-height: 2000px;
+    /* Increased to fill remaining space */
+    padding: 0;
+}
+
+#section-2:checked~.jo-dashboard-reports-section:nth-of-type(2) .accordion-header {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+#section-2:checked~.jo-dashboard-reports-section:nth-of-type(2) .accordion-icon {
+    transform: rotate(45deg);
+}
+
+/* ============================================
+   State: When Section 3 is checked
+   ============================================ */
+#section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) .accordion-content {
+    max-height: 2000px;
+    /* Increased to fill remaining space */
+    padding: 0;
+}
+
+#section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) .accordion-header {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+#section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) .accordion-icon {
+    transform: rotate(45deg);
+}
+
+/* ============================================
+   Accessibility: Focus styles for keyboard navigation
+   ============================================ */
+.accordion-radio:focus+.jo-dashboard-reports-section .accordion-header {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 2px;
+}
+
+/* ============================================
+   Responsive adjustments
+   ============================================ */
+@media (max-width: 1024px) {
+    .accordion-content {
+        max-height: 0 !important;
+    }
+
+    #section-1:checked~.jo-dashboard-reports-section:nth-of-type(1) .accordion-content,
+    #section-2:checked~.jo-dashboard-reports-section:nth-of-type(2) .accordion-content,
+    #section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) .accordion-content {
+        max-height: 400px;
+    }
 }
 
 /* Adjust dashboard stats inside floating panel */
@@ -289,4 +455,3 @@
         grid-template-columns: 1fr;
     }
 }
-

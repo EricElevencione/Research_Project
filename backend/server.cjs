@@ -139,117 +139,6 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-
-
-/*
-Purpose: Fetches a summary of farmers along with their parcel counts and total farm area. Useful for overview dashboards or reports.
-Where: Used in backend API route '/api/farmers/summary' in server.cjs. Consumed by frontend farmer page/component.
-Description: This endpoint fetches a summary of farmers along with their parcel counts and total farm area. 
-Handles both legacy JSONB and structured table formats. 
-Returns a list of farmers with their details, parcel counts, total farm area, and submission timestamps.
-*/
-app.get('/api/rsbsa_submission/:id/parcels', async (req, res) => {
-    try {
-        const submissionId = req.params.id;
-        // console.log(`Fetching farm parcels for submission ID: ${submissionId}`);
-
-        const tableCheck = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'rsbsa_farm_parcels'
-            );
-        `);
-
-        if (!tableCheck.rows[0].exists) {
-            console.log('rsbsa_farm_parcels table does not exist');
-            return res.status(500).json({
-                message: 'Database error: rsbsa_farm_parcels table not found',
-            });
-        }
-
-        const query = `
-            SELECT 
-                id,
-                submission_id,
-                parcel_number,
-                farm_location_barangay,
-                farm_location_municipality,
-                total_farm_area_ha,
-                within_ancestral_domain,
-                ownership_document_no,
-                agrarian_reform_beneficiary,
-                ownership_type_registered_owner,
-                ownership_type_tenant,
-                ownership_type_lessee,
-                tenant_land_owner_name,
-                lessee_land_owner_name,
-                ownership_others_specify,
-                created_at,
-                updated_at
-            FROM rsbsa_farm_parcels 
-            WHERE submission_id = $1
-            ORDER BY parcel_number
-        `;
-
-        const result = await pool.query(query, [submissionId]);
-        console.log(`Found ${result.rows.length} farm parcels for submission ${submissionId}`);
-
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error fetching farm parcels:', error);
-        res.status(500).json({ message: 'Error fetching farm parcels', error: error.message });
-    }
-});
-
-/*
-Purpose: Fetches all farm parcels along with associated farmer details. Useful for overview dashboards or reports.
-Where: Used in backend API route '/api/rsbsa_farm_parcels' in server.cjs. Consumed by frontend farmer page/component.
-Description: This endpoint fetches all farm parcels along with associated farmer details by joining the parcels with submission data. 
-Returns a list of parcels with detailed information including farmer names and parcel specifics.
-*/
-app.get('/api/rsbsa_farm_parcels', async (req, res) => {
-    try {
-        console.log('Fetching all farm parcels...');
-
-        const query = `
-            SELECT 
-                fp.id,
-                fp.submission_id,
-                fp.parcel_number,
-                fp.farm_location_barangay,
-                fp.farm_location_municipality,
-                fp.total_farm_area_ha,
-                fp.within_ancestral_domain,
-                fp.ownership_document_no,
-                fp.agrarian_reform_beneficiary,
-                fp.ownership_type_registered_owner,
-                fp.ownership_type_tenant,
-                fp.ownership_type_lessee,
-                fp.ownership_type_others,
-                fp.tenant_land_owner_name,
-                fp.lessee_land_owner_name,
-                fp.ownership_others_specify,
-                fp.created_at,
-                fp.updated_at,
-                rs."LAST NAME",
-                rs."FIRST NAME",
-                rs."MIDDLE NAME"
-            FROM rsbsa_farm_parcels fp
-            JOIN rsbsa_submission rs ON fp.submission_id = rs.id
-            ORDER BY fp.submission_id, fp.parcel_number
-        `;
-
-        const result = await pool.query(query);
-        console.log(`Found ${result.rows.length} farm parcels`);
-
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error fetching farm parcels:', error);
-        res.status(500).json({ message: 'Error fetching farm parcels', error: error.message });
-    }
-});
-
 /*
 Purpose: Fetches farm parcels associated with a specific farmer identified by their last and first names. Useful for detailed farmer views.
 Where: Used in backend API route '/api/rsbsa_farm_parcels/by-farmer' in server.cjs. Consumed by frontend farmer detail page/component.
@@ -348,7 +237,6 @@ app.get('/api/farmers/summary', async (req, res) => {
     }
 });
 
-// GET endpoint to fetch RSBSA submissions for masterlist for the 
 
 /*
 Purpose: Fetches RSBSA submissions for the masterlist. Dynamically adapts to table structure (JSONB or structured columns) and transforms results for frontend use.
@@ -358,30 +246,13 @@ Handles both legacy JSONB and structured table formats, including ownership type
 */
 app.get('/api/rsbsa_submission', async (req, res) => {
     try {
-        // console.log('Fetching RSBSA submissions...');
-
-        // Check if table exists
-        const tableCheck = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'rsbsa_submission'
-            );
-        `);
-
-        if (!tableCheck.rows[0].exists) {
-            console.log('rsbsa_submission table does not exist');
-            return res.status(404).json({ // Table not found
-                error: 'rsbsa_submission table not found',
-                message: 'The rsbsa_submission table does not exist in the database.'
-            });
-        }
         /*
-        Purpose: Fetches RSBSA submissions for the masterlist. Dynamically adapts to table structure (JSONB or structured columns) and transforms results for frontend use.
+        Purpose: Fetches RSBSA submissions for the masterlist using structured columns.
         Where: Used in backend API route '/api/rsbsa_submission' in server.cjs. Consumed by frontend masterlist page/component.
-        Description: This endpoint checks the database table structure, builds the appropriate query, fetches all RSBSA submissions, and transforms the data to match frontend expectations. Handles both legacy JSONB and structured table formats, including ownership type fields if present. Returns a list of submissions with farmer details, parcel info, and status.
+        Description: This endpoint fetches all RSBSA submissions from the structured table format and transforms the data to match frontend expectations. Returns a list of submissions with farmer details, parcel info, and status.
         */
-        // First, let's check what columns actually exist
+
+        // Check for optional columns that may not exist in all database versions
         const columnCheckQuery = `
             SELECT column_name 
             FROM information_schema.columns 
@@ -389,50 +260,20 @@ app.get('/api/rsbsa_submission', async (req, res) => {
             ORDER BY ordinal_position
         `;
         const columnResult = await pool.query(columnCheckQuery);
-        // console.log('Available columns:', columnResult.rows.map(row => row.column_name));
-
-        // Check if this is the JSONB version or structured version
-        const hasJsonbColumn = columnResult.rows.some(row => row.column_name === 'data'); // This is the JSONB column
-        const hasStructuredColumns = columnResult.rows.some(row => row.column_name === 'LAST NAME'); // These are the structured columns
         const hasOwnershipColumns = columnResult.rows.some(row => row.column_name === 'OWNERSHIP_TYPE_REGISTERED_OWNER');
-
-        // console.log('Table structure check:', {
-        //     hasJsonbColumn,
-        //     hasStructuredColumns,
-        //     hasOwnershipColumns
-        // });
-
-        let query;
         const hasFFRSCode = columnResult.rows.some(row => row.column_name === 'FFRS_CODE');
 
-        if (hasJsonbColumn && !hasStructuredColumns) {
-            // This is the original JSONB table
-            // console.log('Using JSONB table structure');
-            query = `
-                SELECT 
-                    id,
-                    data,
-                    submitted_at,
-                    created_at
-                FROM rsbsa_submission 
-                WHERE data IS NOT NULL 
-                ORDER BY submitted_at DESC
-            `;
-        } else {
-            // This is the structured table
-            console.log('Using structured table');
+        // Build SELECT that coalesces PARCEL AREA from submission column or sum from farm_parcels
+        const ownershipFields = hasOwnershipColumns
+            ? `,
+            rs."OWNERSHIP_TYPE_REGISTERED_OWNER",
+            rs."OWNERSHIP_TYPE_TENANT",
+            rs."OWNERSHIP_TYPE_LESSEE"`
+            : '';
 
-            // Build SELECT that coalesces PARCEL AREA from submission column or sum from farm_parcels
-            const ownershipFields = hasOwnershipColumns
-                ? `,
-                rs."OWNERSHIP_TYPE_REGISTERED_OWNER",
-                rs."OWNERSHIP_TYPE_TENANT",
-                rs."OWNERSHIP_TYPE_LESSEE"`
-                : '';
+        const ffrsField = hasFFRSCode ? ', rs."FFRS_CODE"' : '';
 
-            const ffrsField = hasFFRSCode ? ', rs."FFRS_CODE"' : '';
-
-            query = `
+        const query = `
     SELECT 
         rs.id,
         rs."LAST NAME",
@@ -469,105 +310,54 @@ app.get('/api/rsbsa_submission', async (req, res) => {
     WHERE rs."LAST NAME" IS NOT NULL
     ORDER BY rs.submitted_at DESC
 `;
-        }
         const result = await pool.query(query);
-        // console.log(`Found ${result.rows.length} submissions in database`);
-
-        // // Debug: Check ownership type data in raw results
-        // if (result.rows.length > 0) {
-        //     console.log('Sample raw record:', JSON.stringify(result.rows[0], null, 2));
-        //     console.log('Ownership type fields in raw data:', {
-        //         registeredOwner: result.rows[0]["OWNERSHIP_TYPE_REGISTERED_OWNER"],
-        //         tenant: result.rows[0]["OWNERSHIP_TYPE_TENANT"],
-        //         lessee: result.rows[0]["OWNERSHIP_TYPE_LESSEE"]
-        //     });
-        // }
 
         // Transform the data to match the frontend's expected format
         const submissions = result.rows.map(row => {
-            if (hasJsonbColumn && !hasStructuredColumns) {
-                // Handle JSONB data
-                const data = row.data;
-                const fullName = [data.surname, data.firstName, data.middleName]
-                    .filter(Boolean)
-                    .join(', ');
+            const fullName = [row["LAST NAME"], row["FIRST NAME"], row["MIDDLE NAME"], row["EXT NAME"]]
+                .filter(Boolean)
+                .join(', ');
 
-                const farmLocation = data.farmlandParcels && data.farmlandParcels.length > 0
-                    ? `${data.farmlandParcels[0].farmLocationBarangay || ''}, ${data.farmlandParcels[0].farmLocationMunicipality || ''}`.replace(/^,\s*|,\s*$/g, '')
-                    : 'N/A';
+            const parcelInfo = row["FARM LOCATION"]
+                ? `${row["FARM LOCATION"]}${row["PARCEL AREA"] ? ` (${row["PARCEL AREA"]} ha)` : ''}`
+                : 'N/A';
 
-                const parcelArea = data.farmlandParcels && data.farmlandParcels.length > 0
-                    ? data.farmlandParcels[0].totalFarmAreaHa
-                    : 'N/A';
+            const ownershipType = {
+                registeredOwner: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_REGISTERED_OWNER"] : false,
+                tenant: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_TENANT"] : false,
+                lessee: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_LESSEE"] : false
+            };
 
-                return {
-                    id: row.id,
-                    referenceNumber: `RSBSA-${row.id}`,
-                    farmerName: fullName || '—',
-                    farmerAddress: `${data.barangay || ''}, ${data.municipality || ''}`.replace(/^,\s*|,\s*$/g, '') || '—',
-                    farmLocation: farmLocation || '—',
-                    gender: data.gender || '—',
-                    birthdate: data.dateOfBirth || null,
-                    dateSubmitted: row.submitted_at || row.created_at,
-                    status: 'Not Active', // Default status for JSONB records
-                    parcelArea: parcelArea ? String(parcelArea) : '—',
-                    totalFarmArea: 0,
-                    landParcel: farmLocation || 'N/A',
-                    ownershipType: {
-                        registeredOwner: false,
-                        tenant: false,
-                        lessee: false
-                    }
-                };
-            } else {
-                // Handle structured data
-                const fullName = [row["LAST NAME"], row["FIRST NAME"], row["MIDDLE NAME"], row["EXT NAME"]]
-                    .filter(Boolean)
-                    .join(', ');
-
-                const parcelInfo = row["FARM LOCATION"]
-                    ? `${row["FARM LOCATION"]}${row["PARCEL AREA"] ? ` (${row["PARCEL AREA"]} ha)` : ''}`
-                    : 'N/A';
-
-                const ownershipType = {
-                    registeredOwner: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_REGISTERED_OWNER"] : false,
-                    tenant: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_TENANT"] : false,
-                    lessee: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_LESSEE"] : false
-                };
-
-                // console.log(`Processing ${fullName}: ownershipType=`, ownershipType, `(hasOwnershipColumns=${hasOwnershipColumns})`);
-
-                // Parse PARCEL AREA - it could be a single value or comma-separated list
-                let parcelAreaDisplay = '—';
-                if (row["PARCEL AREA"]) {
-                    const areaStr = String(row["PARCEL AREA"]);
-                    // If it's a number, format it as hectares
-                    const areaNum = parseFloat(areaStr);
-                    if (!isNaN(areaNum) && areaNum > 0) {
-                        parcelAreaDisplay = `${areaNum.toFixed(2)} ha`;
-                    } else {
-                        parcelAreaDisplay = areaStr;
-                    }
+            // Parse PARCEL AREA - it could be a single value or comma-separated list
+            let parcelAreaDisplay = '—';
+            if (row["PARCEL AREA"]) {
+                const areaStr = String(row["PARCEL AREA"]);
+                // If it's a number, format it as hectares
+                const areaNum = parseFloat(areaStr);
+                if (!isNaN(areaNum) && areaNum > 0) {
+                    parcelAreaDisplay = `${areaNum.toFixed(2)} ha`;
+                } else {
+                    parcelAreaDisplay = areaStr;
                 }
-
-                return {
-                    id: row.id,
-                    referenceNumber: row["FFRS_CODE"] || `RSBSA-${row.id}`,
-                    farmerName: fullName || '—',
-                    farmerAddress: `${row["BARANGAY"] || ''}, ${row["MUNICIPALITY"] || ''}`.replace(/^,\s*|,\s*$/g, '') || '—',
-                    farmLocation: row["FARM LOCATION"] || '—',
-                    gender: row["GENDER"] || '—',
-                    birthdate: row["BIRTHDATE"] || null,
-                    age: row.age || null,
-                    dateSubmitted: row.submitted_at || row.created_at,
-                    status: row.status || 'Not Active',
-                    parcelArea: parcelAreaDisplay,
-                    totalFarmArea: parseFloat(row["TOTAL FARM AREA"]) || 0,
-                    landParcel: parcelInfo,
-                    parcelCount: parseInt(row.parcel_count) || 0,
-                    ownershipType: ownershipType
-                };
             }
+
+            return {
+                id: row.id,
+                referenceNumber: row["FFRS_CODE"] || `RSBSA-${row.id}`,
+                farmerName: fullName || '—',
+                farmerAddress: `${row["BARANGAY"] || ''}, ${row["MUNICIPALITY"] || ''}`.replace(/^,\s*|,\s*$/g, '') || '—',
+                farmLocation: row["FARM LOCATION"] || '—',
+                gender: row["GENDER"] || '—',
+                birthdate: row["BIRTHDATE"] || null,
+                age: row.age || null,
+                dateSubmitted: row.submitted_at || row.created_at,
+                status: row.status || 'Not Active',
+                parcelArea: parcelAreaDisplay,
+                totalFarmArea: parseFloat(row["TOTAL FARM AREA"]) || 0,
+                landParcel: parcelInfo,
+                parcelCount: parseInt(row.parcel_count) || 0,
+                ownershipType: ownershipType
+            };
         });
 
         res.json(submissions);
@@ -587,49 +377,12 @@ app.get('/api/rsbsa_submission/:id', async (req, res) => {
     try {
         console.log(`Fetching RSBSA submission ${id}...`);
 
-        // Check if table exists
-        const tableCheck = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'rsbsa_submission'
-            );
-        `);
-
-        if (!tableCheck.rows[0].exists) {
-            return res.status(404).json({
-                error: 'rsbsa_submission table not found',
-                message: 'The rsbsa_submission table does not exist in the database.'
-            });
-        }
-
-        // Check table structure
-        const columnCheckQuery = `
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'rsbsa_submission' 
-            ORDER BY ordinal_position
+        // Fetch submission from structured table
+        const query = `
+            SELECT *
+            FROM rsbsa_submission 
+            WHERE id = $1
         `;
-        const columnResult = await pool.query(columnCheckQuery);
-        const hasJsonbColumn = columnResult.rows.some(row => row.column_name === 'data');
-        const hasStructuredColumns = columnResult.rows.some(row => row.column_name === 'LAST NAME');
-
-        let query;
-        if (hasJsonbColumn && !hasStructuredColumns) {
-            // JSONB version
-            query = `
-                SELECT id, data, created_at, updated_at, submitted_at, status
-                FROM rsbsa_submission 
-                WHERE id = $1
-            `;
-        } else {
-            // Structured version
-            query = `
-                SELECT *
-                FROM rsbsa_submission 
-                WHERE id = $1
-            `;
-        }
 
         const result = await pool.query(query, [id]);
 
@@ -641,65 +394,52 @@ app.get('/api/rsbsa_submission/:id', async (req, res) => {
         }
 
         const row = result.rows[0];
-        let submissionData;
 
-        if (hasJsonbColumn && !hasStructuredColumns) {
-            // Handle JSONB data
-            submissionData = {
-                id: row.id,
-                ...row.data,
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-                submitted_at: row.submitted_at,
-                status: row.status
-            };
-        } else {
-            // Handle structured data - check for uppercase or lowercase column names
-            const fullName = [
-                row["LAST NAME"] || row["surname"] || row["lastName"] || '',
-                row["FIRST NAME"] || row["firstName"] || '',
-                row["MIDDLE NAME"] || row["middleName"] || '',
-                row["EXT NAME"] || row["extName"] || ''
-            ].filter(part => part).join(', ');
+        // Transform structured data for frontend
+        const fullName = [
+            row["LAST NAME"] || row["surname"] || row["lastName"] || '',
+            row["FIRST NAME"] || row["firstName"] || '',
+            row["MIDDLE NAME"] || row["middleName"] || '',
+            row["EXT NAME"] || row["extName"] || ''
+        ].filter(part => part).join(', ');
 
-            const barangay = row["BARANGAY"] || row["barangay"] || '';
-            const municipality = row["MUNICIPALITY"] || row["municipality"] || '';
-            const province = row["PROVINCE"] || row["province"] || '';
+        const barangay = row["BARANGAY"] || row["barangay"] || '';
+        const municipality = row["MUNICIPALITY"] || row["municipality"] || '';
+        const province = row["PROVINCE"] || row["province"] || '';
 
-            submissionData = {
-                id: row.id,
-                referenceNumber: row["FFRS_CODE"] || row["ffrs_code"] || `RSBSA-${row.id}`,
-                farmerName: fullName,
-                firstName: row["FIRST NAME"] || row["firstName"] || '',
-                middleName: row["MIDDLE NAME"] || row["middleName"] || '',
-                lastName: row["LAST NAME"] || row["surname"] || row["lastName"] || '',
-                extName: row["EXT NAME"] || row["extName"] || '',
-                gender: row["GENDER"] || row["gender"] || '',
-                birthdate: row["BIRTHDATE"] || row["birthdate"] || '',
-                age: row.age || null,
-                mainLivelihood: row["MAIN LIVELIHOOD"] || row["mainLivelihood"] || row["main_livelihood"] || '',
-                farmerRice: row["FARMER_RICE"] || row["farmerRice"] || false,
-                farmerCorn: row["FARMER_CORN"] || row["farmerCorn"] || false,
-                farmerOtherCrops: row["FARMER_OTHER_CROPS"] || row["farmerOtherCrops"] || false,
-                farmerOtherCropsText: row["FARMER_OTHER_CROPS_TEXT"] || row["farmerOtherCropsText"] || '',
-                farmerLivestock: row["FARMER_LIVESTOCK"] || row["farmerLivestock"] || false,
-                farmerLivestockText: row["FARMER_LIVESTOCK_TEXT"] || row["farmerLivestockText"] || '',
-                farmerPoultry: row["FARMER_POULTRY"] || row["farmerPoultry"] || false,
-                farmerPoultryText: row["FARMER_POULTRY_TEXT"] || row["farmerPoultryText"] || '',
-                farmerAddress: [barangay, municipality, province].filter(Boolean).join(', ') || '',
-                farmLocation: row["FARM LOCATION"] || row["farmLocation"] || barangay || '',
-                parcelArea: row["PARCEL AREA"] || row["parcelArea"] || row["TOTAL FARM AREA"] || row["totalFarmArea"] || '',
-                status: row.status || 'Not Active',
-                dateSubmitted: row.submitted_at || row.created_at,
-                ownershipType: {
-                    registeredOwner: row["OWNERSHIP_TYPE_REGISTERED_OWNER"] || row["ownership_type_registered_owner"] || false,
-                    tenant: row["OWNERSHIP_TYPE_TENANT"] || row["ownership_type_tenant"] || false,
-                    lessee: row["OWNERSHIP_TYPE_LESSEE"] || row["ownership_type_lessee"] || false
-                },
-                created_at: row.created_at,
-                updated_at: row.updated_at
-            };
-        }
+        const submissionData = {
+            id: row.id,
+            referenceNumber: row["FFRS_CODE"] || row["ffrs_code"] || `RSBSA-${row.id}`,
+            farmerName: fullName,
+            firstName: row["FIRST NAME"] || row["firstName"] || '',
+            middleName: row["MIDDLE NAME"] || row["middleName"] || '',
+            lastName: row["LAST NAME"] || row["surname"] || row["lastName"] || '',
+            extName: row["EXT NAME"] || row["extName"] || '',
+            gender: row["GENDER"] || row["gender"] || '',
+            birthdate: row["BIRTHDATE"] || row["birthdate"] || '',
+            age: row.age || null,
+            mainLivelihood: row["MAIN LIVELIHOOD"] || row["mainLivelihood"] || row["main_livelihood"] || '',
+            farmerRice: row["FARMER_RICE"] || row["farmerRice"] || false,
+            farmerCorn: row["FARMER_CORN"] || row["farmerCorn"] || false,
+            farmerOtherCrops: row["FARMER_OTHER_CROPS"] || row["farmerOtherCrops"] || false,
+            farmerOtherCropsText: row["FARMER_OTHER_CROPS_TEXT"] || row["farmerOtherCropsText"] || '',
+            farmerLivestock: row["FARMER_LIVESTOCK"] || row["farmerLivestock"] || false,
+            farmerLivestockText: row["FARMER_LIVESTOCK_TEXT"] || row["farmerLivestockText"] || '',
+            farmerPoultry: row["FARMER_POULTRY"] || row["farmerPoultry"] || false,
+            farmerPoultryText: row["FARMER_POULTRY_TEXT"] || row["farmerPoultryText"] || '',
+            farmerAddress: [barangay, municipality, province].filter(Boolean).join(', ') || '',
+            farmLocation: row["FARM LOCATION"] || row["farmLocation"] || barangay || '',
+            parcelArea: row["PARCEL AREA"] || row["parcelArea"] || row["TOTAL FARM AREA"] || row["totalFarmArea"] || '',
+            status: row.status || 'Not Active',
+            dateSubmitted: row.submitted_at || row.created_at,
+            ownershipType: {
+                registeredOwner: row["OWNERSHIP_TYPE_REGISTERED_OWNER"] || row["ownership_type_registered_owner"] || false,
+                tenant: row["OWNERSHIP_TYPE_TENANT"] || row["ownership_type_tenant"] || false,
+                lessee: row["OWNERSHIP_TYPE_LESSEE"] || row["ownership_type_lessee"] || false
+            },
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        };
 
         // Also fetch farm parcels for this submission
         const parcelsQuery = `
