@@ -8,5 +8,13 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5000'
     }
+  },
+  optimizeDeps: {
+    include: [
+      '@emotion/react',
+      '@emotion/styled',
+      '@mui/x-charts',
+      '@mui/x-charts/BarChart'
+    ]
   }
 });

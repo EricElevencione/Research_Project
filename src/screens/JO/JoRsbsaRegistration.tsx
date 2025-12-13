@@ -786,15 +786,54 @@ const JoRsbsa: React.FC = () => {
                       <div className="jo-registration-address-grid">
                         <div className="jo-registration-form-group">
                           <label>BARANGAY *</label>
-                          <input
-                            type="text"
+                          <select
                             value={formData.barangay}
-                            onChange={(e) => handleTextInputChange('barangay', e.target.value)}
-                            onBlur={() => handleTextInputBlur('barangay')}
+                            onChange={(e) => handleInputChange('barangay', e.target.value)}
                             required
                             aria-required="true"
                             className={errors.barangay ? 'jo-registration-input-error' : ''}
-                          />
+                          >
+                            <option value="">Select Barangay</option>
+                            <option value="Aurora-Del Pilar">Aurora-Del Pilar</option>
+                            <option value="Bacay">Bacay</option>
+                            <option value="Bacong">Bacong</option>
+                            <option value="Balabag">Balabag</option>
+                            <option value="Balud">Balud</option>
+                            <option value="Bantud">Bantud</option>
+                            <option value="Bantud Fabrica">Bantud Fabrica</option>
+                            <option value="Baras">Baras</option>
+                            <option value="Barasan">Barasan</option>
+                            <option value="Basa">Basa</option>
+                            <option value="Bisayan">Bisayan</option>
+                            <option value="Bolilao">Bolilao</option>
+                            <option value="Cabalagnan">Cabalagnan</option>
+                            <option value="Caduhaan">Caduhaan</option>
+                            <option value="Cali">Cali</option>
+                            <option value="Calicuang">Calicuang</option>
+                            <option value="Cambagtican">Cambagtican</option>
+                            <option value="Calumbuyan">Calumbuyan</option>
+                            <option value="Dawis">Dawis</option>
+                            <option value="Lacturan">Lacturan</option>
+                            <option value="Lawis">Lawis</option>
+                            <option value="Manlabang">Manlabang</option>
+                            <option value="Maraguit">Maraguit</option>
+                            <option value="Nanding Lopez">Nanding Lopez</option>
+                            <option value="Pagotpot">Pagotpot</option>
+                            <option value="Panamucan">Panamucan</option>
+                            <option value="Panguiranan">Panguiranan</option>
+                            <option value="Pasi">Pasi</option>
+                            <option value="Zone I Poblacion">Zone I Poblacion</option>
+                            <option value="Zone II Poblacion">Zone II Poblacion</option>
+                            <option value="Zone III Poblacion">Zone III Poblacion</option>
+                            <option value="Zone IV Poblacion">Zone IV Poblacion</option>
+                            <option value="Punta Barangay">Punta Barangay</option>
+                            <option value="Quinabonglan">Quinabonglan</option>
+                            <option value="Sapao">Sapao</option>
+                            <option value="Sulangan">Sulangan</option>
+                            <option value="Tambal">Tambal</option>
+                            <option value="Tibongan">Tibongan</option>
+                            <option value="Zarrague">Zarrague</option>
+                          </select>
                           {errors.barangay && <div className="jo-registration-error">{errors.barangay}</div>}
                         </div>
                         <div className="jo-registration-form-group">
