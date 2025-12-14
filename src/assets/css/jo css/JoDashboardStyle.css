@@ -291,7 +291,7 @@
 
 /* Inner content wrapper for padding */
 .accordion-content-inner {
-    padding: 0 18px;
+    padding: 0;
     color: white;
 }
 
@@ -315,7 +315,7 @@
 #section-1:checked~.jo-dashboard-reports-section:nth-of-type(1) .accordion-content {
     max-height: 2000px;
     /* Increased to fill remaining space */
-    padding: 0;
+    padding: 0px;
 }
 
 #section-1:checked~.jo-dashboard-reports-section:nth-of-type(1) .accordion-header {
@@ -333,7 +333,7 @@
 #section-2:checked~.jo-dashboard-reports-section:nth-of-type(2) .accordion-content {
     max-height: 2000px;
     /* Increased to fill remaining space */
-    padding: 0;
+    padding: 10px;
 }
 
 #section-2:checked~.jo-dashboard-reports-section:nth-of-type(2) .accordion-header {
@@ -350,7 +350,7 @@
 #section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) .accordion-content {
     max-height: 2000px;
     /* Increased to fill remaining space */
-    padding: 0;
+    padding: 10px;
 }
 
 #section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) .accordion-header {

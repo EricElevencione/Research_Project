@@ -757,6 +757,8 @@
     padding: 16px;
     background: white;
     border-top: 1px solid #e5e7eb;
+    width: 377px;
+    flex-wrap: wrap;
 }
 
 .btn-action {
@@ -841,4 +843,3 @@
         flex: 1 1 100%;
     }
 }
-
