@@ -185,7 +185,8 @@
 }
 
 .jo-rsbsa-owners-table tbody tr:hover {
-    background-color: #f9fafb;
+    background-color: #d1fae5;
+    cursor: pointer;
 }
 
 .jo-rsbsa-owners-table tbody tr:last-child {
@@ -208,7 +209,7 @@
 
 .jo-rsbsa-owners-table td.jo-rsbsa-ffrs-id {
     font-family: var(--font-family);
-    font-weight: 600;
+    font-weight: 500;
     color: #2c5f2d;
 }
 
@@ -280,4 +281,3 @@
         max-width: 100%;
     }
 }
-

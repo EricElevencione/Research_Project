@@ -5,7 +5,7 @@
     width: 100%;
     height: 100vh;
     overflow: hidden;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #667eea 0%, #4ba260 100% 100%);
 }
 
 .jo-add-farmer-page {
@@ -24,7 +24,7 @@
 .jo-add-farmer-header {
     margin-bottom: 30px;
     padding: 25px 30px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #667eea 0%, #4ba260 100% 100%);
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
 }
@@ -80,7 +80,7 @@
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 20px;
-    color: #5a67d8;
+    color: #5ad884;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -113,11 +113,11 @@
 
 .jo-add-farmer-info-box {
     padding: 12px 16px;
-    background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
+    background: linear-gradient(135deg, #66b4ea 0%, #4ba260 100% 100%);
     border: 2px solid #c7d2fe;
     border-radius: 10px;
     font-size: 14px;
-    color: #4c1d95;
+    color: #1a1a1a;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -126,7 +126,7 @@
 
 /* Farmer List Container */
 .jo-add-farmer-list-container {
-    border: 2px solid #c7d2fe;
+    border: 2px solid #b1ffb1;
     border-radius: 12px;
     max-height: 350px;
     overflow-y: auto;
@@ -179,8 +179,8 @@
 }
 
 .jo-add-farmer-item.selected {
-    background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%);
-    border-left: 4px solid #667eea;
+    background: linear-gradient(135deg, #e0fff2 0%, #c4f4d4 100%);
+    border-left: 4px solid #66ea75;
 }
 
 .jo-add-farmer-radio {
@@ -230,7 +230,7 @@
 .jo-add-farmer-input {
     width: 100%;
     padding: 12px 16px;
-    border: 2px solid #c7d2fe;
+    border: 2px solid #c7fedb;
     border-radius: 10px;
     font-size: 15px;
     transition: all 0.3s ease;
@@ -239,9 +239,9 @@
 
 .jo-add-farmer-input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #66ea9b;
     background: white;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 4px rgba(139, 234, 102, 0.398);
 }
 
 .jo-add-farmer-textarea {

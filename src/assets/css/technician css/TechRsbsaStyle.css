@@ -154,7 +154,7 @@
 
 .tech-rsbsa-owners-table td.tech-rsbsa-ffrs-id {
     font-family: var(--font-family);
-    font-weight: 600;
+    font-weight: 500;
     color: #2c5f2d;
 }
 
@@ -431,4 +431,3 @@
         padding: 16px;
     }
 }
-

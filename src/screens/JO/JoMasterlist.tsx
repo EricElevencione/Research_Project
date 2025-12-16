@@ -73,6 +73,54 @@ const JoMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // List of barangays in Dumangas
+  const barangays = [
+    "Aurora-Del Pilar",
+    "Bacay",
+    "Bacong",
+    "Balabag",
+    "Balud",
+    "Bantud",
+    "Bantud Fabrica",
+    "Baras",
+    "Barasan",
+    "Basa-Mabini Bonifacio",
+    "Bolilao",
+    "Buenaflor Embarkadero",
+    "Burgos-Regidor",
+    "Calao",
+    "Cali",
+    "Cansilayan",
+    "Capaliz",
+    "Cayos",
+    "Compayan",
+    "Dacutan",
+    "Ermita",
+    "Ilaya 1st",
+    "Ilaya 2nd",
+    "Ilaya 3rd",
+    "Jardin",
+    "Lacturan",
+    "Lopez Jaena - Rizal",
+    "Managuit",
+    "Maquina",
+    "Nanding Lopez",
+    "Pagdugue",
+    "Paloc Bigque",
+    "Paloc Sool",
+    "Patlad",
+    "Pd Monfort North",
+    "Pd Monfort South",
+    "Pulao",
+    "Rosario",
+    "Sapao",
+    "Sulangan",
+    "Tabucan",
+    "Talusan",
+    "Tambobo",
+    "Tamboilan",
+    "Victorias"
+  ].sort();
 
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
 
@@ -170,9 +218,22 @@ const JoMasterlist: React.FC = () => {
         return age;
       };
 
+      // Reformat the farmer name from "Last, First, Middle, Ext" to "Last, First Middle Ext"
+      const backendName = farmerData.farmerName || '';
+      const reformattedFarmerName = (() => {
+        if (!backendName || backendName === 'N/A') return 'N/A';
+        const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+        if (parts.length === 0) return 'N/A';
+        if (parts.length === 1) return parts[0]; // Just last name
+        // Join all parts after the first with spaces (First Middle Ext)
+        const lastName = parts[0];
+        const restOfName = parts.slice(1).join(' ');
+        return `${lastName}, ${restOfName}`;
+      })();
+
       const farmerDetail: FarmerDetail = {
         id: farmerId,
-        farmerName: farmerData.farmerName || 'N/A',
+        farmerName: reformattedFarmerName,
         farmerAddress: farmerData.farmerAddress || 'N/A',
         age: calculateAge(data.dateOfBirth || data.birthdate || 'N/A'),
         gender: data.gender || 'N/A',
@@ -222,9 +283,20 @@ const JoMasterlist: React.FC = () => {
         // Prefer backend-transformed fields; fallback to raw
 
         const referenceNumber = String(item.referenceNumber ?? `RSBSA-${idx + 1}`);
-        const composedName = [item.surname, item.firstName, item.middleName].filter(Boolean).join(', ');
-        const preferredName = (item.farmerName ?? composedName);
-        const farmerName = String(preferredName || '—');
+        // Backend returns farmerName as "Last, First, Middle, Ext"
+        // Convert it to "Last, First Middle Ext" (comma after last name only)
+        const backendName = item.farmerName || '';
+        const reformattedName = (() => {
+          if (!backendName || backendName === '—') return '—';
+          const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+          if (parts.length === 0) return '—';
+          if (parts.length === 1) return parts[0]; // Just last name
+          // Join all parts after the first with spaces (First Middle Ext)
+          const lastName = parts[0];
+          const restOfName = parts.slice(1).join(' ');
+          return `${lastName}, ${restOfName}`;
+        })();
+        const farmerName = String(reformattedName);
         const farmerAddress = String(item.farmerAddress ?? item.addressBarangay ?? '—');
         const farmLocation = String(item.farmLocation ?? '—');
         const landParcel = String(item.landParcel ?? '—');
@@ -323,15 +395,23 @@ const JoMasterlist: React.FC = () => {
   const parseName = (fullName: string): { lastName: string; firstName: string; middleName: string } => {
     if (!fullName) return { lastName: '', firstName: '', middleName: '' };
     const parts = fullName.split(',').map(p => p.trim()).filter(Boolean);
+
+    if (parts.length === 0) {
+      return { lastName: '', firstName: '', middleName: '' };
+    }
     if (parts.length === 1) {
       return { lastName: parts[0] || '', firstName: '', middleName: '' };
     }
-    if (parts.length === 2) {
-      const [last, first] = parts;
-      return { lastName: last || '', firstName: first || '', middleName: '' };
-    }
-    const [last, first, middle] = parts;
-    return { lastName: last || '', firstName: first || '', middleName: middle || '' };
+
+    // parts.length >= 2: format is "LastName, FirstName MiddleName"
+    const [last, firstMiddle] = parts;
+    const firstMiddleParts = (firstMiddle || '').split(' ').map(p => p.trim()).filter(Boolean);
+
+    return {
+      lastName: last || '',
+      firstName: firstMiddleParts[0] || '',
+      middleName: firstMiddleParts.slice(1).join(' ') || ''
+    };
   };
 
   const parseAddress = (address: string): { barangay: string; municipality: string } => {
@@ -522,15 +602,20 @@ const JoMasterlist: React.FC = () => {
           parcelArea: editingRecord.parcelArea
         };
 
-        // Compose farmerName from discrete name fields (Last, First, Middle)
+        // Compose farmerName from discrete name fields (Last, First Middle)
         const composedFarmerName = (() => {
           const last = (editFormData.lastName ?? '').trim();
           const first = (editFormData.firstName ?? '').trim();
           const middle = (editFormData.middleName ?? '').trim();
+
+          // Combine first and middle with space
+          const firstMiddle = [first, middle].filter(Boolean).join(' ');
+
+          // Combine last name with firstMiddle using comma
           const parts: string[] = [];
           if (last) parts.push(last);
-          if (first) parts.push(first);
-          if (middle) parts.push(middle);
+          if (firstMiddle) parts.push(firstMiddle);
+
           return parts.length > 0 ? parts.join(', ') : (editFormData.farmerName ?? editingRecord.farmerName);
         })();
 
@@ -701,6 +786,16 @@ const JoMasterlist: React.FC = () => {
               <span className="nav-text">Incentives</span>
             </button>
 
+            <button
+              className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-masterlist')}
+            >
+              <span className="nav-icon">
+                <img src={MasterlistIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Masterlist</span>
+            </button>
+
             <div
               className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
               onClick={() => navigate('/jo-gap-analysis')}
@@ -718,16 +813,6 @@ const JoMasterlist: React.FC = () => {
             </div>
 
             <button
-              className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-masterlist')}
-            >
-              <span className="nav-icon">
-                <img src={MasterlistIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button
               className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
@@ -736,6 +821,7 @@ const JoMasterlist: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
           </nav>
         </div>
         {/* Sidebar ends here */}
@@ -950,12 +1036,18 @@ const JoMasterlist: React.FC = () => {
                 {/*Barangay function kung may jan*/}
                 <div className="form-group">
                   <label>Barangay:</label>
-                  <input
-                    type="text"
+                  <select
                     value={editFormData.barangay || ''}
                     onChange={(e) => handleInputChange('barangay', e.target.value)}
-                    placeholder="Barangay"
-                  />
+                    style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                  >
+                    <option value="">Select Barangay</option>
+                    {barangays.map((barangay) => (
+                      <option key={barangay} value={barangay}>
+                        {barangay}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="jo-masterlist-form-group">
                   <label>Municipality:</label>

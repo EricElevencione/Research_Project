@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -53,6 +53,7 @@ interface RegionalAllocation {
 
 const JoDistribution: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [distributions, setDistributions] = useState<DistributionRecord[]>([]);
     const [selectedSeason, setSelectedSeason] = useState('');
     const [allocations, setAllocations] = useState<RegionalAllocation[]>([]);
@@ -63,9 +64,7 @@ const JoDistribution: React.FC = () => {
     const [requestCount, setRequestCount] = useState<number>(0);
     const [savingEdit, setSavingEdit] = useState(false);
 
-    const isActive = (path: string) => {
-        return window.location.pathname === path;
-    };
+    const isActive = (path: string) => location.pathname === path;
 
     useEffect(() => {
         fetchAllocations();
@@ -247,6 +246,16 @@ const JoDistribution: React.FC = () => {
                         <span className="nav-text">Incentives</span>
                     </button>
 
+                    <button
+                        className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+                        onClick={() => navigate('/jo-masterlist')}
+                    >
+                        <span className="nav-icon">
+                            <img src={MasterlistIcon} alt="Masterlist" />
+                        </span>
+                        <span className="nav-text">Masterlist</span>
+                    </button>
+
                     <div
                         className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
                         onClick={() => navigate('/jo-gap-analysis')}
@@ -264,16 +273,6 @@ const JoDistribution: React.FC = () => {
                     </div>
 
                     <button
-                        className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                        onClick={() => navigate('/jo-masterlist')}
-                    >
-                        <span className="nav-icon">
-                            <img src={MasterlistIcon} alt="Masterlist" />
-                        </span>
-                        <span className="nav-text">Masterlist</span>
-                    </button>
-
-                    <button
                         className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                         onClick={() => navigate('/')}
                     >
@@ -282,6 +281,7 @@ const JoDistribution: React.FC = () => {
                         </span>
                         <span className="nav-text">Logout</span>
                     </button>
+
                 </nav>
             </div>
             {/* Sidebar ends here */}
@@ -323,28 +323,6 @@ const JoDistribution: React.FC = () => {
                                 )}
                             </select>
                         </div>
-                        {selectedSeason && (
-                            <button
-                                className="distribution-btn-edit-allocation"
-                                onClick={handleEditAllocation}
-                                style={{
-                                    padding: '10px 20px',
-                                    backgroundColor: '#3b82f6',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                ✏️ Edit Allocation
-                            </button>
-                        )}
                     </div>
 
                     <div className="distributions-table-container">

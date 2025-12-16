@@ -154,6 +154,16 @@ const JoDashboard: React.FC = () => {
 							<span className="nav-text">Incentives</span>
 						</button>
 
+						<button
+							className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+							onClick={() => navigate('/jo-masterlist')}
+						>
+							<span className="nav-icon">
+								<img src={MasterlistIcon} alt="Masterlist" />
+							</span>
+							<span className="nav-text">Masterlist</span>
+						</button>
+
 						<div
 							className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
 							onClick={() => navigate('/jo-gap-analysis')}
@@ -171,27 +181,15 @@ const JoDashboard: React.FC = () => {
 						</div>
 
 						<button
-							className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-							onClick={() => navigate('/jo-masterlist')}
-						>
-							<span className="nav-icon">
-								<img src={MasterlistIcon} alt="Masterlist" />
-							</span>
-							<span className="nav-text">Masterlist</span>
-						</button>
-
-						<button
-							className="sidebar-nav-item logout"
-							onClick={() => {
-								localStorage.removeItem('isAuthenticated');
-								navigate('/login');
-							}}
+							className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+							onClick={() => navigate('/')}
 						>
 							<span className="nav-icon">
 								<img src={LogoutIcon} alt="Logout" />
 							</span>
 							<span className="nav-text">Logout</span>
 						</button>
+
 					</nav>
 				</div>
 				{/* Sidebar ends here */}
@@ -285,10 +283,8 @@ const JoDashboard: React.FC = () => {
 											<DataGrid
 												rows={registeredOwners.farmers}
 												columns={columns}
-												pageSizeOptions={[5, 10, 25]}
-												initialState={{
-													pagination: { paginationModel: { pageSize: 10 } }
-												}}
+												hideFooterPagination
+												hideFooter
 												disableRowSelectionOnClick
 												sx={{
 													'& .MuiDataGrid-columnHeaders': {
@@ -336,10 +332,8 @@ const JoDashboard: React.FC = () => {
 											<DataGrid
 												rows={tenants.farmers}
 												columns={columns}
-												pageSizeOptions={[5, 10, 25]}
-												initialState={{
-													pagination: { paginationModel: { pageSize: 10 } }
-												}}
+												hideFooterPagination
+												hideFooter
 												disableRowSelectionOnClick
 												sx={{
 													'& .MuiDataGrid-columnHeaders': {
@@ -375,10 +369,8 @@ const JoDashboard: React.FC = () => {
 											<DataGrid
 												rows={lessees.farmers}
 												columns={columns}
-												pageSizeOptions={[5, 10, 25]}
-												initialState={{
-													pagination: { paginationModel: { pageSize: 10 } }
-												}}
+												hideFooterPagination
+												hideFooter
 												disableRowSelectionOnClick
 												sx={{
 													'& .MuiDataGrid-columnHeaders': {

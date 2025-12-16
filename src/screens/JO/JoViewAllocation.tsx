@@ -219,6 +219,16 @@ const JoViewAllocation: React.FC = () => {
                             <span className="nav-text">Incentives</span>
                         </button>
 
+                        <button
+                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-masterlist')}
+                        >
+                            <span className="nav-icon">
+                                <img src={MasterlistIcon} alt="Masterlist" />
+                            </span>
+                            <span className="nav-text">Masterlist</span>
+                        </button>
+
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-gap-analysis')}
@@ -236,24 +246,15 @@ const JoViewAllocation: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={MasterlistIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
-                            className="sidebar-nav-item logout"
-                            onClick={handleLogout}
+                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+                            onClick={() => navigate('/')}
                         >
                             <span className="nav-icon">
                                 <img src={LogoutIcon} alt="Logout" />
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
+
                     </nav>
                 </div>
 

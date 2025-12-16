@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -47,6 +47,7 @@ interface RegionalAllocation {
 
 const JoGapAnalysis: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [loading, setLoading] = useState(false);
     const [selectedSeason, setSelectedSeason] = useState('');
     const [gapData, setGapData] = useState<GapAnalysisData | null>(null);
@@ -61,9 +62,7 @@ const JoGapAnalysis: React.FC = () => {
     const [loadingRecs, setLoadingRecs] = useState(false);
     const [showRecommendations, setShowRecommendations] = useState(true);
 
-    const isActive = (path: string) => {
-        return window.location.pathname === path;
-    };
+    const isActive = (path: string) => location.pathname === path;
 
     // Fetch available allocations on mount
     useEffect(() => {
@@ -233,6 +232,16 @@ const JoGapAnalysis: React.FC = () => {
                         <span className="nav-text">Incentives</span>
                     </button>
 
+                    <button
+                        className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+                        onClick={() => navigate('/jo-masterlist')}
+                    >
+                        <span className="nav-icon">
+                            <img src={MasterlistIcon} alt="Masterlist" />
+                        </span>
+                        <span className="nav-text">Masterlist</span>
+                    </button>
+
                     <div
                         className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
                         onClick={() => navigate('/jo-gap-analysis')}
@@ -250,16 +259,6 @@ const JoGapAnalysis: React.FC = () => {
                     </div>
 
                     <button
-                        className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                        onClick={() => navigate('/jo-masterlist')}
-                    >
-                        <span className="nav-icon">
-                            <img src={MasterlistIcon} alt="Masterlist" />
-                        </span>
-                        <span className="nav-text">Masterlist</span>
-                    </button>
-
-                    <button
                         className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                         onClick={() => navigate('/')}
                     >
@@ -268,6 +267,7 @@ const JoGapAnalysis: React.FC = () => {
                         </span>
                         <span className="nav-text">Logout</span>
                     </button>
+
                 </nav>
             </div>
             {/* Sidebar ends here */}
@@ -355,7 +355,7 @@ const JoGapAnalysis: React.FC = () => {
                             <div className="gap-card" style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', border: '2px solid #0ea5e9' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                     <h3 style={{ margin: 0, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        🤖 Smart Recommendations ({recommendations.summary.total_recommendations})
+                                        Recommendations ({recommendations.summary.total_recommendations})
                                     </h3>
                                     <button
                                         onClick={() => setShowRecommendations(false)}

@@ -281,8 +281,8 @@ const JoAddFarmerRequest: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-rsbsa') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-rsbsa')}
+                            className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-rsbsapage')}
                         >
                             <span className="nav-icon">
                                 <img src={RSBSAIcon} alt="RSBSA" />
@@ -310,15 +310,32 @@ const JoAddFarmerRequest: React.FC = () => {
                             <span className="nav-text">Masterlist</span>
                         </button>
 
+                        <div
+                            className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-gap-analysis')}
+                        >
+                            <div className="nav-icon">📊</div>
+                            <span className="nav-text">Gap Analysis</span>
+                        </div>
+
+                        <div
+                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-distribution')}
+                        >
+                            <div className="nav-icon">🚚</div>
+                            <span className="nav-text">Distribution Log</span>
+                        </div>
+
                         <button
-                            className="sidebar-nav-item logout"
-                            onClick={handleLogout}
+                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+                            onClick={() => navigate('/')}
                         >
                             <span className="nav-icon">
                                 <img src={LogoutIcon} alt="Logout" />
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
+
                     </nav>
                 </div>
 

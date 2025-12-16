@@ -125,8 +125,9 @@
 }
 
 .jo-masterlist-farmers-table tbody tr:hover {
-    background-color: #f8f9fa;
+    background-color: #d1fae5;
     transition: background-color 0.2s ease;
+    cursor: pointer;
 }
 
 .jo-masterlist-farmers-table tbody tr:last-child td {

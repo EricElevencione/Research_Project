@@ -187,9 +187,18 @@ const JoIncentives: React.FC = () => {
         const { name, value } = e.target;
         if (!editFormData) return;
 
+        let parsedValue: any = value;
+        if (name.includes('bags')) {
+            // Bags should be integers
+            parsedValue = parseInt(value) || 0;
+        } else if (name.includes('kg')) {
+            // Seeds can have decimals
+            parsedValue = parseFloat(value) || 0;
+        }
+
         setEditFormData({
             ...editFormData,
-            [name]: name.includes('bags') || name.includes('kg') ? parseFloat(value) || 0 : value
+            [name]: parsedValue
         });
     };
 
@@ -276,6 +285,16 @@ const JoIncentives: React.FC = () => {
                             <span className="nav-text">Incentives</span>
                         </button>
 
+                        <button
+                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-masterlist')}
+                        >
+                            <span className="nav-icon">
+                                <img src={MasterlistIcon} alt="Masterlist" />
+                            </span>
+                            <span className="nav-text">Masterlist</span>
+                        </button>
+
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-gap-analysis')}
@@ -293,16 +312,6 @@ const JoIncentives: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={MasterlistIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
                             className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                             onClick={() => navigate('/')}
                         >
@@ -311,6 +320,7 @@ const JoIncentives: React.FC = () => {
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
+
                     </nav>
                 </div>
                 {/* Sidebar ends here */}
@@ -398,35 +408,35 @@ const JoIncentives: React.FC = () => {
 
                                         <div className="card-actions">
                                             <button
-                                                className="btn-action btn-view"
+                                                className="btn-action-incentives btn-view"
                                                 onClick={() => navigate(`/jo-view-allocation/${allocation.id}`)}
                                                 title="View Details"
                                             >
                                                 👁️ View
                                             </button>
                                             <button
-                                                className="btn-action btn-edit"
+                                                className="btn-action-incentives btn-edit-incentives"
                                                 onClick={() => handleEditAllocation(allocation)}
                                                 title="Edit Allocation"
                                             >
                                                 ✏️ Edit
                                             </button>
                                             <button
-                                                className="btn-action btn-add-request"
+                                                className="btn-action-incentives btn-add-request"
                                                 onClick={() => navigate(`/jo-add-farmer-request/${allocation.id}`)}
                                                 title="Add Farmer Request"
                                             >
                                                 ➕ Add Request
                                             </button>
                                             <button
-                                                className="btn-action btn-manage"
+                                                className="btn-action-incentives btn-manage"
                                                 onClick={() => navigate(`/jo-manage-requests/${allocation.id}`)}
                                                 title="Manage Requests"
                                             >
                                                 📋 Manage
                                             </button>
                                             <button
-                                                className="btn-action btn-delete"
+                                                className="btn-action-incentives btn-delete"
                                                 onClick={() => handleDelete(allocation.id, allocation.season)}
                                                 title="Delete"
                                             >

@@ -88,9 +88,28 @@ const JoRsbsaPage: React.FC = () => {
       console.log('Sample record ownership type:', data[0]?.ownershipType);
       console.log('Records with ownership types:', data.filter((r: { ownershipType: any; }) => r.ownershipType).length);
 
+      // Reformat farmer names from "Last, First, Middle, Ext" to "Last, First Middle Ext"
+      const formattedData = data.map((record: RSBSARecord) => {
+        const backendName = record.farmerName || '';
+        const reformattedName = (() => {
+          if (!backendName || backendName === '—' || backendName === 'N/A') return backendName;
+          const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+          if (parts.length === 0) return backendName;
+          if (parts.length === 1) return parts[0]; // Just last name
+          // Join all parts after the first with spaces (First Middle Ext)
+          const lastName = parts[0];
+          const restOfName = parts.slice(1).join(' ');
+          return `${lastName}, ${restOfName}`;
+        })();
+        return {
+          ...record,
+          farmerName: reformattedName
+        };
+      });
+
       // Use the data directly from backend - it already has totalFarmArea and parcelCount calculated
-      _setRsbsaRecords(data);
-      const registeredOwnersData = filterRegisteredOwners(data);
+      _setRsbsaRecords(formattedData);
+      const registeredOwnersData = filterRegisteredOwners(formattedData);
       console.log('Filtered registered owners:', JSON.stringify(registeredOwnersData, null, 2));
       setRegisteredOwners(registeredOwnersData);
       setError(null);
@@ -173,9 +192,22 @@ const JoRsbsaPage: React.FC = () => {
         return age;
       };
 
+      // Reformat the farmer name from "Last, First, Middle, Ext" to "Last, First Middle Ext"
+      const backendName = farmerData.farmerName || '';
+      const reformattedFarmerName = (() => {
+        if (!backendName || backendName === 'N/A') return 'N/A';
+        const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+        if (parts.length === 0) return 'N/A';
+        if (parts.length === 1) return parts[0]; // Just last name
+        // Join all parts after the first with spaces (First Middle Ext)
+        const lastName = parts[0];
+        const restOfName = parts.slice(1).join(' ');
+        return `${lastName}, ${restOfName}`;
+      })();
+
       const farmerDetail: FarmerDetail = {
         id: farmerId,
-        farmerName: farmerData.farmerName || 'N/A',
+        farmerName: reformattedFarmerName,
         farmerAddress: farmerData.farmerAddress || 'N/A',
         age: calculateAge(data.dateOfBirth || data.birthdate || 'N/A'),
         gender: data.gender || 'N/A',
@@ -275,6 +307,16 @@ const JoRsbsaPage: React.FC = () => {
               <span className="nav-text">Incentives</span>
             </button>
 
+            <button
+              className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-masterlist')}
+            >
+              <span className="nav-icon">
+                <img src={MasterlistIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Masterlist</span>
+            </button>
+
             <div
               className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
               onClick={() => navigate('/jo-gap-analysis')}
@@ -292,16 +334,6 @@ const JoRsbsaPage: React.FC = () => {
             </div>
 
             <button
-              className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-masterlist')}
-            >
-              <span className="nav-icon">
-                <img src={MasterlistIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button
               className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
@@ -310,6 +342,7 @@ const JoRsbsaPage: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
           </nav>
         </div>
         {/* Sidebar ends here */}
@@ -391,11 +424,14 @@ const JoRsbsaPage: React.FC = () => {
                     ) : (
                       filteredOwners.map((record) => {
                         // Parse the farmer name to extract individual components
+                        // Backend returns "Last, First, Middle, Ext" but we display as "Last, First Middle Ext"
                         const nameParts = record.farmerName.split(', ');
                         const lastName = nameParts[0] || '';
-                        const firstName = nameParts[1] || '';
-                        const middleName = nameParts[2] || '';
-                        const extName = nameParts[3] || '';
+                        // The rest after the comma is "First Middle Ext" - split by spaces
+                        const restOfName = (nameParts[1] || '').split(' ').map(p => p.trim()).filter(Boolean);
+                        const firstName = restOfName[0] || '';
+                        const middleName = restOfName[1] || '';
+                        const extName = restOfName[2] || '';
 
                         // Parcel count is now calculated and stored in record.parcelCount
 

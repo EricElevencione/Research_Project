@@ -168,25 +168,15 @@ const JoRegionalAllocation: React.FC = () => {
                         <span className="nav-text">Incentives</span>
                     </button>
 
-                    <div
-                        className={`sidebar-nav-item ${isActive('/jo-regional-allocation') ? 'active' : ''}`}
-                        onClick={() => navigate('/jo-regional-allocation')}
+                    <button
+                        className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+                        onClick={() => navigate('/jo-masterlist')}
                     >
-                        <div className="nav-icon">
-                            <img src={DistributionIcon} alt="Distribution" />
-                        </div>
-                        <span className="nav-text">Regional Allocation</span>
-                    </div>
-
-                    <div
-                        className={`sidebar-nav-item ${isActive('/jo-farmer-requests') ? 'active' : ''}`}
-                        onClick={() => navigate('/jo-farmer-requests')}
-                    >
-                        <div className="nav-icon">
-                            <img src={FarmerRequestIcon} alt="FarmerRequest" />
-                        </div>
-                        <span className="nav-text">Farmer Request</span>
-                    </div>
+                        <span className="nav-icon">
+                            <img src={MasterlistIcon} alt="Masterlist" />
+                        </span>
+                        <span className="nav-text">Masterlist</span>
+                    </button>
 
                     <div
                         className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
@@ -205,16 +195,6 @@ const JoRegionalAllocation: React.FC = () => {
                     </div>
 
                     <button
-                        className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                        onClick={() => navigate('/jo-masterlist')}
-                    >
-                        <span className="nav-icon">
-                            <img src={MasterlistIcon} alt="Masterlist" />
-                        </span>
-                        <span className="nav-text">Masterlist</span>
-                    </button>
-
-                    <button
                         className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
                         onClick={() => navigate('/')}
                     >
@@ -223,6 +203,7 @@ const JoRegionalAllocation: React.FC = () => {
                         </span>
                         <span className="nav-text">Logout</span>
                     </button>
+
                 </nav>
             </div>
             {/* Sidebar ends here */}

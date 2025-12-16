@@ -784,6 +784,16 @@ const JoManageRequests: React.FC = () => {
                             <span className="nav-text">Incentives</span>
                         </button>
 
+                        <button
+                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-masterlist')}
+                        >
+                            <span className="nav-icon">
+                                <img src={MasterlistIcon} alt="Masterlist" />
+                            </span>
+                            <span className="nav-text">Masterlist</span>
+                        </button>
+
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-gap-analysis')}
@@ -801,24 +811,15 @@ const JoManageRequests: React.FC = () => {
                         </div>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={MasterlistIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
-                            className="sidebar-nav-item logout"
-                            onClick={handleLogout}
+                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+                            onClick={() => navigate('/')}
                         >
                             <span className="nav-icon">
                                 <img src={LogoutIcon} alt="Logout" />
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
+
                     </nav>
                 </div>
 
@@ -828,25 +829,20 @@ const JoManageRequests: React.FC = () => {
                         <div>
                             <h2 className="page-header">Manage Farmer Requests</h2>
                         </div>
-                        <button
-                            className="btn-create-allocation"
-                            onClick={() => navigate('/jo-incentives')}
-                        >
-                            ←
-                        </button>
-                        <button
-                            className="btn-create-allocation"
-                            onClick={() => navigate(`/jo-add-farmer-request/${allocationId}`)}
-                            style={{
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
-                            }}
-                        >
-                            ➕ Add Farmer Request
-                        </button>
+                        <div className="back-create-allocation">
+                            <button
+                                className="back-btn-allocation"
+                                onClick={() => navigate('/jo-incentives')}
+                            >
+                                ←
+                            </button>
+                            <button
+                                className="btn-create-allocation"
+                                onClick={() => navigate(`/jo-add-farmer-request/${allocationId}`)}
+                            >
+                                ➕ Add Farmer Request
+                            </button>
+                        </div>
                     </div>
 
                     <div className="content-card-incent">

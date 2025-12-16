@@ -529,7 +529,12 @@
     margin-bottom: 24px;
 }
 
-.btn-create-allocation {
+.back-create-allocation {
+    display: flex;
+    justify-content: space-between;
+}
+
+.back-btn-allocation {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
     padding: 12px 24px;
@@ -543,6 +548,21 @@
     gap: 8px;
     transition: all 0.3s ease;
     box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+}
+
+
+.btn-create-allocation {
+    background: linear-gradient(135deg, #667eea 0%, #4ba260 100% 100%);
+    gap: 8px;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .btn-create-allocation:hover {
@@ -761,13 +781,13 @@
     flex-wrap: wrap;
 }
 
-.btn-action {
+.btn-action-incentives {
     flex: 1;
-    padding: 10px 12px;
+    padding: 0.6rem 1.2rem;
     border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -775,6 +795,7 @@
     justify-content: center;
     gap: 6px;
 }
+
 
 .btn-view {
     background: #eff6ff;
@@ -791,7 +812,17 @@
 }
 
 .btn-add-request:hover {
-    background: #dcfce7;
+    background: #d7ffeb;
+}
+
+.btn-edit-incentives {
+    background-color: rgb(242 240 240);
+    color: #667eea;
+}
+
+.btn-edit-incentives:hover {
+    background-color: #e3e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .btn-manage {
