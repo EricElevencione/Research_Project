@@ -244,9 +244,9 @@ const JoIncentives: React.FC = () => {
 
 
     return (
-        <div className="page-container">
+        <div className="jo-incent-page-container">
 
-            <div className="page">
+            <div className="jo-incent-page">
 
                 {/* Sidebar starts here */}
                 <div className="sidebar">
@@ -326,16 +326,16 @@ const JoIncentives: React.FC = () => {
                 {/* Sidebar ends here */}
 
                 {/* Main content starts here */}
-                <div className="main-content">
+                <div className="jo-incent-main-content">
 
-                    <div className="dashboard-header-incent">
-                        <h2 className="page-header">Distribution Management</h2>
+                    <div className="jo-incent-dashboard-header">
+                        <h2 className="jo-incent-page-header">Distribution Management</h2>
                     </div>
 
-                    <div className="content-card-incent">
-                        <div className="action-header">
+                    <div className="jo-incent-content-card">
+                        <div className="jo-incent-action-header">
                             <button
-                                className="btn-create-allocation"
+                                className="jo-incent-btn-create"
                                 onClick={() => {
                                     console.log('Button clicked! Navigating to /jo-create-allocation');
                                     navigate('/jo-create-allocation');
@@ -346,13 +346,13 @@ const JoIncentives: React.FC = () => {
                         </div>
 
                         {loading ? (
-                            <div className="loading-message">Loading allocations...</div>
+                            <div className="jo-incent-loading">Loading allocations...</div>
                         ) : error ? (
-                            <div className="error-state">
-                                <div className="error-icon">⚠️</div>
+                            <div className="jo-incent-error-state">
+                                <div className="jo-incent-error-icon">⚠️</div>
                                 <h3>Unable to Connect to Server</h3>
                                 <p>{error}</p>
-                                <div className="error-help">
+                                <div className="jo-incent-error-help">
                                     <p><strong>Please ensure:</strong></p>
                                     <ul>
                                         <li>Backend server is running on port 5000</li>
@@ -360,24 +360,24 @@ const JoIncentives: React.FC = () => {
                                         <li>Run: <code>cd backend && node server.cjs</code></li>
                                     </ul>
                                 </div>
-                                <button className="btn-retry" onClick={fetchAllocations}>
+                                <button className="jo-incent-btn-retry" onClick={fetchAllocations}>
                                     🔄 Retry Connection
                                 </button>
                             </div>
                         ) : allocations.length === 0 ? (
-                            <div className="empty-state">
-                                <div className="empty-icon">📦</div>
+                            <div className="jo-incent-empty-state">
+                                <div className="jo-incent-empty-icon">📦</div>
                                 <h3>No Allocations Yet</h3>
                                 <p>Create your first regional allocation to get started</p>
                             </div>
                         ) : (
-                            <div className="allocations-grid">
+                            <div className="jo-incent-grid">
                                 {allocations.map((allocation) => (
-                                    <div key={allocation.id} className="allocation-card">
-                                        <div className="card-header">
-                                            <div className="season-info">
+                                    <div key={allocation.id} className="jo-incent-card">
+                                        <div className="jo-incent-card-header">
+                                            <div className="jo-incent-season-info">
                                                 <h3>{formatSeasonName(allocation.season)}</h3>
-                                                <span className="allocation-date">
+                                                <span className="jo-incent-date">
                                                     {new Date(allocation.allocation_date).toLocaleDateString('en-US', {
                                                         year: 'numeric',
                                                         month: 'long',
@@ -387,61 +387,62 @@ const JoIncentives: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="card-body">
-                                            <div className="stat-row">
-                                                <div className="stat-item">
-                                                    <span className="stat-label">Total Fertilizer</span>
-                                                    <span className="stat-value">{getTotalFertilizer(allocation).toLocaleString()} bags</span>
+                                        <div className="jo-incent-card-body">
+                                            <div className="jo-incent-stat-row">
+                                                <div className="jo-incent-stat-item">
+                                                    <span className="jo-incent-stat-label">Total Fertilizer</span>
+                                                    <span className="jo-incent-stat-value">{getTotalFertilizer(allocation).toLocaleString()} bags</span>
                                                 </div>
-                                                <div className="stat-item">
-                                                    <span className="stat-label">Total Seeds</span>
-                                                    <span className="stat-value">{getTotalSeeds(allocation).toFixed(2)} kg</span>
+                                                <div className="jo-incent-stat-item">
+                                                    <span className="jo-incent-stat-label">Total Seeds</span>
+                                                    <span className="jo-incent-stat-value">{getTotalSeeds(allocation).toFixed(2)} kg</span>
                                                 </div>
                                             </div>
-                                            <div className="stat-row">
-                                                <div className="stat-item">
-                                                    <span className="stat-label">Farmer Requests</span>
-                                                    <span className="stat-value">{allocation.farmer_count || 0} farmers</span>
+                                            <div className="jo-incent-stat-row">
+                                                <div className="jo-incent-stat-item">
+                                                    <span className="jo-incent-stat-label">Farmer Requests</span>
+                                                    <span className="jo-incent-stat-value">{allocation.farmer_count || 0} farmers</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="card-actions">
+                                        <div className="jo-incent-card-actions">
                                             <button
-                                                className="btn-action-incentives btn-view"
+                                                className="jo-incent-btn-action jo-incent-btn-view"
                                                 onClick={() => navigate(`/jo-view-allocation/${allocation.id}`)}
                                                 title="View Details"
                                             >
                                                 👁️ View
                                             </button>
                                             <button
-                                                className="btn-action-incentives btn-edit-incentives"
+                                                className="jo-incent-btn-action jo-incent-btn-edit"
                                                 onClick={() => handleEditAllocation(allocation)}
                                                 title="Edit Allocation"
                                             >
                                                 ✏️ Edit
                                             </button>
                                             <button
-                                                className="btn-action-incentives btn-add-request"
+                                                className="jo-incent-btn-action jo-incent-btn-add"
                                                 onClick={() => navigate(`/jo-add-farmer-request/${allocation.id}`)}
                                                 title="Add Farmer Request"
                                             >
                                                 ➕ Add Request
                                             </button>
                                             <button
-                                                className="btn-action-incentives btn-manage"
+                                                className="jo-incent-btn-action jo-incent-btn-manage"
                                                 onClick={() => navigate(`/jo-manage-requests/${allocation.id}`)}
                                                 title="Manage Requests"
                                             >
                                                 📋 Manage
                                             </button>
                                             <button
-                                                className="btn-action-incentives btn-delete"
+                                                className="jo-incent-btn-action jo-incent-btn-delete"
                                                 onClick={() => handleDelete(allocation.id, allocation.season)}
                                                 title="Delete"
                                             >
                                                 🗑️
                                             </button>
+
                                         </div>
                                     </div>
                                 ))}
@@ -450,7 +451,7 @@ const JoIncentives: React.FC = () => {
 
                         {/* Edit Allocation Modal */}
                         {editAllocationModal && editFormData && (
-                            <div className="distribution-modal-overlay" onClick={() => setEditAllocationModal(null)} style={{
+                            <div className="jo-incent-modal-overlay" onClick={() => setEditAllocationModal(null)} style={{
                                 position: 'fixed',
                                 top: 0,
                                 left: 0,
@@ -463,7 +464,7 @@ const JoIncentives: React.FC = () => {
                                 zIndex: 1000
                             }}>
                                 <div
-                                    className="distribution-modal-content"
+                                    className="jo-incent-modal-content"
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
                                         backgroundColor: 'white',

@@ -1,28 +1,21 @@
+/* ============================================
+   JO INCENTIVES - UNIQUE STYLING
+   ============================================ */
+
 /* Page Layout */
-.page-container {
+.jo-incent-page-container {
     display: flex;
     min-height: 100vh;
     background-color: #f0f0f0;
 }
 
-.page {
+.jo-incent-page {
     display: flex;
     width: 100%;
 }
 
-.sidebar {
-    width: 250px;
-    background-color: #f8f9fa;
-    border-right: 1px solid #e9ecef;
-    height: 100vh;
-    position: sticky;
-    top: 0;
-    overflow-y: auto;
-    z-index: 100;
-}
-
-/* Main content start */
-.main-content {
+/* Main content */
+.jo-incent-main-content {
     flex: 1;
     padding: 20px;
     display: flex;
@@ -30,151 +23,60 @@
     background-color: white;
 }
 
-.page-header {
+.jo-incent-page-header {
     font-weight: 600;
     font-size: 28px;
     color: #111827;
     margin: 0 0 10px 0;
 }
 
-.content-card {
+.jo-incent-page-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 8px 0 0 0;
+    font-weight: 400;
+}
+
+/* Content Card for Forms */
+.jo-incent-content-card {
     background-color: white;
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 24px;
     margin-top: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     min-height: 400px;
 }
 
-/* Main content styling to match other JO pages */
-
-.page-container {
-    .main-content {
-
-        display: flex;
-        width: 100%;
-
-        min-height: 100vh;
-        flex-grow: 1;
-
-        background-color: #f0f0f0;
-        padding: 20px;
-
-    }
-
-    display: flex;
-
-    flex-direction: column;
-
-    .page {
-        background-color: white;
-
-        display: flex;
-    }
-
-    width: 100%;
-
+/* Form Title Styling */
+.jo-incent-content-card h3 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px 0;
 }
 
-/* Dashboard header */
-
-/* Adjust Tailwind component wrapper inside content-card */
-
-/* Content card - matching other pages */
-.content-card>div {
-
-    .content-card {
-        max-width: 100%;
-
-        background: white;
-        margin: 0 auto;
-
-        border-radius: 12px;
-        padding: 0;
-
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    padding: 32px;
-
-    margin-top: 20px;
-    /* Remove excessive padding from nested divs */
-
-    flex: 1;
-
-    .content-card .max-w-4xl {
-
-        overflow-y: auto;
-        max-width: 100% !important;
-
-    }
-
-    padding: 0 !important;
-
-}
-
-/* Remove Tailwind default styles from form container */
-
-.content-card>div {
-    /* Responsive adjustments */
-
-    max-width: 100%;
-
-    @media (max-width: 768px) {
-
-        margin: 0;
-
-        .dashboard-header {
-
-            padding: 0 !important;
-            width: 100%;
-
-        }
-    }
-
-
-
-    /* Form Title Styling */
-    .main-content {
-        .content-card h3 {
-            padding: 15px;
-            font-size: 24px;
-        }
-
-        font-weight: 600;
-        color: #111827;
-
-        .content-card {
-            margin: 0 0 8px 0;
-            padding: 16px;
-
-        }
-    }
-
-}
-
-.content-card p {
+.jo-incent-content-card p {
     color: #6b7280;
     margin: 0 0 24px 0;
     font-size: 14px;
 }
 
 /* Form Layout */
-.content-card form {
+.jo-incent-content-card form {
     display: flex;
     flex-direction: column;
     gap: 24px;
 }
 
 /* Form Groups */
-.content-card form>div {
+.jo-incent-content-card form>div {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
 /* Labels */
-.content-card label {
+.jo-incent-content-card label {
     display: block;
     font-size: 14px;
     font-weight: 500;
@@ -182,18 +84,18 @@
     margin-bottom: 6px;
 }
 
-.content-card label .text-red-500,
-.content-card label span[style*="color: red"] {
+.jo-incent-content-card label .text-red-500,
+.jo-incent-content-card label span[style*="color: red"] {
     color: #ef4444;
     margin-left: 2px;
 }
 
 /* Input Fields */
-.content-card input[type="text"],
-.content-card input[type="date"],
-.content-card input[type="number"],
-.content-card select,
-.content-card textarea {
+.jo-incent-content-card input[type="text"],
+.jo-incent-content-card input[type="date"],
+.jo-incent-content-card input[type="number"],
+.jo-incent-content-card select,
+.jo-incent-content-card textarea {
     width: 100%;
     padding: 12px 16px;
     border: 1px solid #d1d5db;
@@ -204,30 +106,30 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.content-card input[type="text"]:focus,
-.content-card input[type="date"]:focus,
-.content-card input[type="number"]:focus,
-.content-card select:focus,
-.content-card textarea:focus {
+.jo-incent-content-card input[type="text"]:focus,
+.jo-incent-content-card input[type="date"]:focus,
+.jo-incent-content-card input[type="number"]:focus,
+.jo-incent-content-card select:focus,
+.jo-incent-content-card textarea:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* Input with error state */
-.content-card input.border-red-500,
-.content-card select.border-red-500,
-.content-card textarea.border-red-500 {
+.jo-incent-content-card input.border-red-500,
+.jo-incent-content-card select.border-red-500,
+.jo-incent-content-card textarea.border-red-500 {
     border-color: #ef4444;
 }
 
 /* Search Input with Icon */
-.content-card input[type="text"][placeholder*="Search"] {
+.jo-incent-content-card input[type="text"][placeholder*="Search"] {
     padding-left: 20px;
 }
 
 /* Dropdown/Select */
-.content-card select {
+.jo-incent-content-card select {
     cursor: pointer;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -238,28 +140,28 @@
 }
 
 /* Textarea */
-.content-card textarea {
+.jo-incent-content-card textarea {
     resize: vertical;
     min-height: 80px;
     font-family: inherit;
 }
 
 /* Grid Layout for Quantity Fields */
-.content-card form>div:has(input[type="number"]) {
+.jo-incent-content-card form>div:has(input[type="number"]) {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
 }
 
 /* Checkbox Container */
-.content-card div:has(input[type="checkbox"]) {
+.jo-incent-content-card div:has(input[type="checkbox"]) {
     background-color: #eff6ff;
     border: 1px solid #bfdbfe;
     border-radius: 8px;
     padding: 16px;
 }
 
-.content-card input[type="checkbox"] {
+.jo-incent-content-card input[type="checkbox"] {
     width: 18px;
     height: 18px;
     margin-right: 8px;
@@ -267,17 +169,17 @@
     accent-color: #3b82f6;
 }
 
-.content-card input[type="checkbox"]+label {
+.jo-incent-content-card input[type="checkbox"]+label {
     display: inline;
     cursor: pointer;
     font-weight: 500;
 }
 
 /* Buttons */
-.content-card button {
+.jo-incent-content-card button {
     padding: 12px 24px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -289,37 +191,37 @@
 }
 
 /* Primary Button (Submit) */
-.content-card button[type="submit"],
-.content-card button.bg-blue-600 {
+.jo-incent-content-card button[type="submit"],
+.jo-incent-content-card button.bg-blue-600 {
     background-color: #3b82f6;
     color: white;
 }
 
-.content-card button[type="submit"]:hover,
-.content-card button.bg-blue-600:hover {
+.jo-incent-content-card button[type="submit"]:hover,
+.jo-incent-content-card button.bg-blue-600:hover {
     background-color: #2563eb;
 }
 
-.content-card button[type="submit"]:disabled,
-.content-card button.bg-blue-600:disabled {
+.jo-incent-content-card button[type="submit"]:disabled,
+.jo-incent-content-card button.bg-blue-600:disabled {
     background-color: #9ca3af;
     cursor: not-allowed;
 }
 
 /* Secondary Button (Reset) */
-.content-card button[type="button"],
-.content-card button.bg-gray-200 {
+.jo-incent-content-card button[type="button"],
+.jo-incent-content-card button.bg-gray-200 {
     background-color: #e5e7eb;
     color: #374151;
 }
 
-.content-card button[type="button"]:hover,
-.content-card button.bg-gray-200:hover {
+.jo-incent-content-card button[type="button"]:hover,
+.jo-incent-content-card button.bg-gray-200:hover {
     background-color: #d1d5db;
 }
 
 /* Button Container */
-.content-card form>div:last-child {
+.jo-incent-content-card form>div:last-child {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -328,9 +230,9 @@
 }
 
 /* Alert/Warning Messages */
-.content-card div[class*="bg-yellow-50"],
-.content-card div[class*="bg-green-100"],
-.content-card div[class*="bg-red-50"] {
+.jo-incent-content-card div[class*="bg-yellow-50"],
+.jo-incent-content-card div[class*="bg-green-100"],
+.jo-incent-content-card div[class*="bg-red-50"] {
     padding: 12px 16px;
     border-radius: 8px;
     display: flex;
@@ -339,34 +241,34 @@
     font-size: 14px;
 }
 
-.content-card div[class*="bg-yellow-50"] {
+.jo-incent-content-card div[class*="bg-yellow-50"] {
     background-color: #fef3c7;
     border: 1px solid #fbbf24;
     color: #92400e;
 }
 
-.content-card div[class*="bg-green-100"] {
+.jo-incent-content-card div[class*="bg-green-100"] {
     background-color: #d1fae5;
     border: 1px solid #34d399;
     color: #065f46;
 }
 
-.content-card div[class*="bg-red-50"] {
+.jo-incent-content-card div[class*="bg-red-50"] {
     background-color: #fee2e2;
     border: 1px solid #f87171;
     color: #991b1b;
 }
 
 /* Error Messages */
-.content-card p.text-sm.text-red-600,
-.content-card .text-red-600 {
+.jo-incent-content-card p.text-sm.text-red-600,
+.jo-incent-content-card .text-red-600 {
     color: #dc2626;
     font-size: 13px;
     margin-top: 4px;
 }
 
 /* Search Results Dropdown */
-.content-card div[class*="absolute"][class*="z-10"] {
+.jo-incent-content-card div[class*="absolute"][class*="z-10"] {
     position: absolute;
     z-index: 10;
     margin-top: 4px;
@@ -379,7 +281,7 @@
     overflow-y: auto;
 }
 
-.content-card div[class*="absolute"] button {
+.jo-incent-content-card div[class*="absolute"] button {
     width: 100%;
     padding: 12px 16px;
     text-align: left;
@@ -390,31 +292,31 @@
     transition: background-color 0.15s ease;
 }
 
-.content-card div[class*="absolute"] button:hover {
+.jo-incent-content-card div[class*="absolute"] button:hover {
     background-color: #eff6ff;
 }
 
-.content-card div[class*="absolute"] button:last-child {
+.jo-incent-content-card div[class*="absolute"] button:last-child {
     border-bottom: none;
 }
 
-.content-card div[class*="absolute"] button div:first-child {
+.jo-incent-content-card div[class*="absolute"] button div:first-child {
     font-weight: 500;
     color: #111827;
 }
 
-.content-card div[class*="absolute"] button div:last-child {
+.jo-incent-content-card div[class*="absolute"] button div:last-child {
     font-size: 13px;
     color: #6b7280;
     margin-top: 2px;
 }
 
 /* Loading Spinner */
-.content-card svg.animate-spin {
-    animation: spin 1s linear infinite;
+.jo-incent-content-card svg.animate-spin {
+    animation: jo-spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes jo-spin {
     from {
         transform: rotate(0deg);
     }
@@ -425,116 +327,82 @@
 }
 
 /* Icons */
-.content-card svg {
+.jo-incent-content-card svg {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
 }
 
 /* Helper text */
-.content-card p.text-sm.text-gray-500 {
+.jo-incent-content-card p.text-sm.text-gray-500 {
     color: #6b7280;
     font-size: 13px;
 }
 
-.content-card p.text-sm.text-gray-600 {
+.jo-incent-content-card p.text-sm.text-gray-600 {
     color: #4b5563;
     font-size: 13px;
 }
 
 /* Relative positioning for search container */
-.content-card form>div:has(input[placeholder*="Search"]) {
+.jo-incent-content-card form>div:has(input[placeholder*="Search"]) {
     position: relative;
 }
 
 /* Remove Tailwind utility classes that conflict */
-.content-card .max-w-4xl {
+.jo-incent-content-card .max-w-4xl {
     max-width: 100% !important;
 }
 
-.content-card .mx-auto {
+.jo-incent-content-card .mx-auto {
     margin-left: 0 !important;
     margin-right: 0 !important;
 }
 
-.content-card .p-4,
-.content-card .p-6,
-.content-card .md\:p-6 {
+.jo-incent-content-card .p-4,
+.jo-incent-content-card .p-6,
+.jo-incent-content-card .md\:p-6 {
     padding: 0 !important;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .dashboard-header {
-        width: 100%;
-    }
-
-    .main-content {
-        padding: 15px;
-    }
-
-    .content-card {
-        padding: 20px;
-    }
-
-    /* Stack quantity fields on mobile */
-    .content-card form>div:has(input[type="number"]) {
-        grid-template-columns: 1fr;
-    }
-
-    /* Stack buttons on mobile */
-    .content-card form>div:last-child {
-        flex-direction: column-reverse;
-    }
-
-    .content-card button {
-        width: 100%;
-    }
-}
-
-/* Toast Notifications - Position them properly */
-.Toaster {
+/* Toast Notifications */
+.jo-incent-toaster {
     z-index: 9999;
 }
 
 /* Ensure proper layering */
-.content-card {
+.jo-incent-content-card {
     position: relative;
     z-index: 1;
 }
 
 /* ============================================
-   NEW DISTRIBUTION MANAGEMENT STYLES
+   DISTRIBUTION MANAGEMENT STYLES
    ============================================ */
 
-.page-subtitle {
-    font-size: 14px;
-    color: #6b7280;
-    margin: 8px 0 0 0;
-    font-weight: 400;
+/* Dashboard Header */
+.jo-incent-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
 }
 
-.content-card-incent {
-    background-color: white;
-    border-radius: 12px;
-    padding: 24px;
-    margin-top: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    min-height: 400px;
-}
-
-.action-header {
+/* Action Header */
+.jo-incent-action-header {
     display: flex;
     justify-content: flex-end;
     margin-bottom: 24px;
 }
 
-.back-create-allocation {
+/* Back and Create Buttons Container */
+.jo-incent-back-create {
     display: flex;
     justify-content: space-between;
 }
 
-.back-btn-allocation {
+/* Back Button */
+.jo-incent-btn-back {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
     padding: 12px 24px;
@@ -550,10 +418,14 @@
     box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
 }
 
+.jo-incent-btn-back:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
+}
 
-.btn-create-allocation {
-    background: linear-gradient(135deg, #667eea 0%, #4ba260 100% 100%);
-    gap: 8px;
+/* Create Allocation Button */
+.jo-incent-btn-create {
+    background: linear-gradient(135deg, #667eea 0%, #4ba260 100%);
     color: white;
     padding: 12px 24px;
     border: none;
@@ -561,48 +433,52 @@
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-.btn-create-allocation:hover {
+.jo-incent-btn-create:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
 }
 
-/* Loading and Empty States */
-.loading-message {
+/* Loading State */
+.jo-incent-loading {
     text-align: center;
     padding: 60px 20px;
     color: #6b7280;
     font-size: 16px;
 }
 
-.empty-state {
+/* Empty State */
+.jo-incent-empty-state {
     text-align: center;
     padding: 80px 20px;
 }
 
-.empty-icon {
+.jo-incent-empty-icon {
     font-size: 64px;
     margin-bottom: 16px;
 }
 
-.empty-state h3 {
+.jo-incent-empty-state h3 {
     font-size: 20px;
     font-weight: 600;
     color: #111827;
     margin: 0 0 8px 0;
 }
 
-.empty-state p {
+.jo-incent-empty-state p {
     color: #6b7280;
     font-size: 14px;
     margin: 0;
 }
 
 /* Error State */
-.error-state {
+.jo-incent-error-state {
     text-align: center;
     padding: 60px 40px;
     background: #fef2f2;
@@ -611,26 +487,26 @@
     margin: 20px;
 }
 
-.error-icon {
+.jo-incent-error-icon {
     font-size: 64px;
     margin-bottom: 16px;
 }
 
-.error-state h3 {
+.jo-incent-error-state h3 {
     font-size: 22px;
     font-weight: 700;
     color: #991b1b;
     margin: 0 0 12px 0;
 }
 
-.error-state>p {
+.jo-incent-error-state>p {
     color: #dc2626;
     font-size: 15px;
     margin: 0 0 20px 0;
     font-weight: 500;
 }
 
-.error-help {
+.jo-incent-error-help {
     background: white;
     border: 1px solid #fca5a5;
     border-radius: 8px;
@@ -640,24 +516,24 @@
     text-align: left;
 }
 
-.error-help p {
+.jo-incent-error-help p {
     margin: 0 0 12px 0;
     color: #111827;
     font-weight: 600;
 }
 
-.error-help ul {
+.jo-incent-error-help ul {
     margin: 0;
     padding-left: 24px;
     color: #374151;
     line-height: 1.8;
 }
 
-.error-help li {
+.jo-incent-error-help li {
     margin: 8px 0;
 }
 
-.error-help code {
+.jo-incent-error-help code {
     background: #f3f4f6;
     padding: 3px 8px;
     border-radius: 4px;
@@ -667,7 +543,7 @@
     border: 1px solid #e5e7eb;
 }
 
-.btn-retry {
+.jo-incent-btn-retry {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
     padding: 12px 32px;
@@ -684,20 +560,20 @@
     box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
 }
 
-.btn-retry:hover {
+.jo-incent-btn-retry:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(239, 68, 68, 0.3);
 }
 
 /* Allocations Grid */
-.allocations-grid {
+.jo-incent-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 24px;
 }
 
 /* Allocation Card */
-.allocation-card {
+.jo-incent-card {
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
@@ -706,46 +582,49 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.allocation-card:hover {
+.jo-incent-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     border-color: #10b981;
 }
 
-.card-header {
+/* Card Header */
+.jo-incent-card-header {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     padding: 20px;
     color: white;
 }
 
-.season-info h3 {
+.jo-incent-season-info h3 {
     font-size: 20px;
     font-weight: 700;
     margin: 0 0 8px 0;
+    color: #f0f0f0;
 }
 
-.allocation-date {
+.jo-incent-date {
     font-size: 13px;
     opacity: 0.9;
     font-weight: 400;
 }
 
-.card-body {
+/* Card Body */
+.jo-incent-card-body {
     padding: 20px;
     background: #f9fafb;
 }
 
-.stat-row {
+.jo-incent-stat-row {
     display: flex;
     gap: 12px;
     margin-bottom: 12px;
 }
 
-.stat-row:last-child {
+.jo-incent-stat-row:last-child {
     margin-bottom: 0;
 }
 
-.stat-item {
+.jo-incent-stat-item {
     flex: 1;
     background: white;
     border: 1px solid #e5e7eb;
@@ -756,7 +635,7 @@
     gap: 6px;
 }
 
-.stat-label {
+.jo-incent-stat-label {
     font-size: 12px;
     color: #6b7280;
     font-weight: 500;
@@ -764,29 +643,28 @@
     letter-spacing: 0.5px;
 }
 
-.stat-value {
+.jo-incent-stat-value {
     font-size: 18px;
     font-weight: 700;
     color: #111827;
 }
 
 /* Card Actions */
-.card-actions {
+.jo-incent-card-actions {
     display: flex;
     gap: 8px;
     padding: 16px;
     background: white;
     border-top: 1px solid #e5e7eb;
-    width: 377px;
     flex-wrap: wrap;
 }
 
-.btn-action-incentives {
+.jo-incent-btn-action {
     flex: 1;
-    padding: 0.6rem 1.2rem;
+    padding: 10px 16px;
     border: none;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -796,81 +674,129 @@
     gap: 6px;
 }
 
-
-.btn-view {
+.jo-incent-btn-view {
     background: #eff6ff;
     color: #1e40af;
 }
 
-.btn-view:hover {
+.jo-incent-btn-view:hover {
     background: #dbeafe;
 }
 
-.btn-add-request {
+.jo-incent-btn-add {
     background: #f0fdf4;
     color: #166534;
 }
 
-.btn-add-request:hover {
+.jo-incent-btn-add:hover {
     background: #d7ffeb;
 }
 
-.btn-edit-incentives {
+.jo-incent-btn-edit {
     background-color: rgb(242 240 240);
     color: #667eea;
 }
 
-.btn-edit-incentives:hover {
+.jo-incent-btn-edit:hover {
     background-color: #e3e0e0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.btn-manage {
+.jo-incent-btn-manage {
     background: #fef3c7;
     color: #92400e;
 }
 
-.btn-manage:hover {
+.jo-incent-btn-manage:hover {
     background: #fde68a;
 }
 
-.btn-delete {
+.jo-incent-btn-delete {
     background: #fee2e2;
     color: #991b1b;
     flex: 0 0 auto;
     min-width: 48px;
 }
 
-.btn-delete:hover {
+.jo-incent-btn-delete:hover {
     background: #fecaca;
 }
 
 /* Responsive Design */
 @media (max-width: 1200px) {
-    .allocations-grid {
+    .jo-incent-grid {
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     }
 }
 
 @media (max-width: 768px) {
-    .dashboard-header-incent {
-        width: 100%;
-        padding: 10px 20px;
+    .jo-incent-main-content {
+        padding: 15px;
     }
 
-    .allocations-grid {
+    .jo-incent-dashboard-header {
+        width: 100%;
+        padding: 10px 20px;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .jo-incent-page-header {
+        font-size: 24px;
+    }
+
+    .jo-incent-content-card {
+        padding: 20px;
+    }
+
+    .jo-incent-grid {
         grid-template-columns: 1fr;
     }
 
-    .card-actions {
+    .jo-incent-card-actions {
         flex-wrap: wrap;
     }
 
-    .btn-action {
+    .jo-incent-btn-action {
         flex: 1 1 calc(50% - 4px);
     }
 
-    .btn-delete {
+    .jo-incent-btn-delete {
         flex: 1 1 100%;
+    }
+
+    /* Stack quantity fields on mobile */
+    .jo-incent-content-card form>div:has(input[type="number"]) {
+        grid-template-columns: 1fr;
+    }
+
+    /* Stack buttons on mobile */
+    .jo-incent-content-card form>div:last-child {
+        flex-direction: column-reverse;
+    }
+
+    .jo-incent-content-card button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .jo-incent-page-header {
+        font-size: 22px;
+    }
+
+    .jo-incent-btn-create {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    .jo-incent-card-actions {
+        gap: 8px;
+    }
+
+    .jo-incent-btn-action {
+        flex: 1 1 100%;
+        padding: 10px 14px;
+        font-size: 13px;
     }
 }
