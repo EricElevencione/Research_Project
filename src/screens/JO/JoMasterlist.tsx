@@ -828,7 +828,12 @@ const JoMasterlist: React.FC = () => {
 
         {/* Main content starts here */}
         <div className="jo-masterlist-main-content">
-          <h2 className="jo-masterlist-page-title">Masterlist</h2>
+          <div className="jo-masterlist-dashboard-header">
+            <div>
+              <h2 className="jo-masterlist-page-title">Masterlist</h2>
+              <p className="jo-masterlist-page-subtitle">Browse all RSBSA farmers, filter by status, and manage records</p>
+            </div>
+          </div>
 
           <div className="jo-masterlist-content-card">
             {/* Filters and Search */}

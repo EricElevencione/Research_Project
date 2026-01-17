@@ -21,7 +21,7 @@
     padding: 20px;
     display: flex;
     flex-direction: column;
-    background-color: white;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
 }
 
 .tech-incent-page-header {
@@ -85,6 +85,7 @@
     align-items: center;
     gap: 8px;
     transition: all 0.3s ease;
+    width: max-content;
 }
 
 .tech-incent-btn-create:hover {
@@ -568,5 +569,267 @@
         flex: 1 1 100%;
         padding: 10px 14px;
         font-size: 13px;
+    }
+}
+
+/* ===== MODAL STYLES ===== */
+@keyframes tech-incent-fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes tech-incent-slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tech-incent-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: tech-incent-fadeIn 0.2s ease;
+}
+
+.tech-incent-modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: tech-incent-slideUp 0.3s ease;
+}
+
+.tech-incent-modal-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 24px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #047857;
+}
+
+.tech-incent-modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+}
+
+.tech-incent-modal-close {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    color: white !important;
+    font-size: 32px !important;
+    width: 45px !important;
+    height: 45px !important;
+    min-width: 45px !important;
+    min-height: 45px !important;
+    border-radius: 50% !important;
+    cursor: pointer;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease;
+    padding: 0 !important;
+    line-height: 1 !important;
+    font-weight: 400 !important;
+    font-family: Arial, sans-serif !important;
+}
+
+.tech-incent-modal-close:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: rotate(90deg);
+}
+
+.tech-incent-modal-body {
+    padding: 32px;
+    max-height: calc(90vh - 100px);
+    overflow-y: auto;
+}
+
+.tech-incent-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tech-incent-modal-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.tech-incent-modal-body::-webkit-scrollbar-thumb {
+    background: #10b981;
+    border-radius: 4px;
+}
+
+.tech-incent-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #059669;
+}
+
+.tech-incent-modal-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #047857;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #d1fae5;
+}
+
+.tech-incent-modal-warning {
+    padding: 12px 16px;
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    color: #92400e;
+}
+
+.tech-incent-modal-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.tech-incent-modal-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.tech-incent-modal-form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.tech-incent-modal-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.tech-incent-modal-form-group input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tech-incent-modal-form-group input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.tech-incent-modal-form-group input:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+}
+
+.tech-incent-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.tech-incent-modal-btn-cancel {
+    padding: 10px 20px;
+    background-color: #f3f4f6;
+    color: #374151;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.tech-incent-modal-btn-cancel:hover {
+    background-color: #e5e7eb;
+}
+
+.tech-incent-modal-btn-cancel:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.tech-incent-modal-btn-save {
+    padding: 10px 20px;
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.tech-incent-modal-btn-save:hover {
+    background-color: #059669;
+}
+
+.tech-incent-modal-btn-save:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Modal Responsive */
+@media (max-width: 768px) {
+    .tech-incent-modal-content {
+        width: 95%;
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+
+    .tech-incent-modal-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tech-incent-modal-header {
+        padding: 20px 24px;
+    }
+
+    .tech-incent-modal-header h2 {
+        font-size: 20px;
+    }
+
+    .tech-incent-modal-close {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+        font-size: 26px !important;
+    }
+
+    .tech-incent-modal-body {
+        padding: 24px;
+    }
+
+    .tech-incent-modal-section-title {
+        font-size: 18px;
     }
 }

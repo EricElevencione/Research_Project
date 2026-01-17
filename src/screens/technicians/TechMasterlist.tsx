@@ -70,6 +70,7 @@ const TechMasterlist: React.FC = () => {
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(null);
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [selectedOwnershipType, setSelectedOwnershipType] = useState<string>('all');
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -223,7 +224,7 @@ const TechMasterlist: React.FC = () => {
     }
   };
 
-  // 
+  // Filter records by status, search, and ownership type
   const filteredRecords = rsbsaRecords.filter(record => {
     const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
     const q = searchQuery.toLowerCase();
@@ -231,7 +232,26 @@ const TechMasterlist: React.FC = () => {
       record.referenceNumber.toLowerCase().includes(q) ||
       record.farmerAddress.toLowerCase().includes(q) ||
       record.farmLocation.toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
+
+    // Ownership type filter
+    let matchesOwnership = true;
+    if (selectedOwnershipType !== 'all' && record.ownershipType) {
+      switch (selectedOwnershipType) {
+        case 'registeredOwner':
+          matchesOwnership = record.ownershipType.registeredOwner === true;
+          break;
+        case 'tenant':
+          matchesOwnership = record.ownershipType.tenant === true;
+          break;
+        case 'lessee':
+          matchesOwnership = record.ownershipType.lessee === true;
+          break;
+        default:
+          matchesOwnership = true;
+      }
+    }
+
+    return matchesStatus && matchesSearch && matchesOwnership;
   });
 
   const formatDate = (iso: string) => {
@@ -559,16 +579,21 @@ const TechMasterlist: React.FC = () => {
         {/* Sidebar ends here */}
 
         <div className="tech-masterlist-main-content">
-          <h2 className="tech-masterlist-page-title">Masterlist</h2>
-          <div className="tech-masterlist-content-card">
-            <div className="tech-masterlist-print-section">
-              <button
-                onClick={() => setShowPrintModal(true)}
-                className="tech-masterlist-print-button"
-              >
-                🖨️ Print Active Farmers
-              </button>
+          <div className="tech-masterlist-dashboard-header">
+            <div>
+              <h2 className="tech-masterlist-page-title">Masterlist</h2>
+              <p className="tech-masterlist-page-subtitle">Browse all RSBSA farmers, filter by status, and generate reports</p>
             </div>
+          </div>
+          <div className="tech-masterlist-print-section">
+            <button
+              onClick={() => setShowPrintModal(true)}
+              className="tech-masterlist-print-button"
+            >
+              🖨️ Print Active Farmers
+            </button>
+          </div>
+          <div className="tech-masterlist-content-card">
             <div className="tech-masterlist-filters-section">
               <div className="tech-masterlist-search-filter">
                 <input
@@ -588,6 +613,18 @@ const TechMasterlist: React.FC = () => {
                   <option value="all">All Status</option>
                   <option value="Active Farmer">Active Farmer</option>
                   <option value="Not Active">Not Active</option>
+                </select>
+              </div>
+              <div className="tech-masterlist-ownership-filter">
+                <select
+                  value={selectedOwnershipType}
+                  onChange={(e) => setSelectedOwnershipType(e.target.value)}
+                  className="tech-masterlist-status-select"
+                >
+                  <option value="all">All Ownership Types</option>
+                  <option value="registeredOwner">🏠 Registered Owner</option>
+                  <option value="tenant">👤 Tenant</option>
+                  <option value="lessee">📋 Lessee</option>
                 </select>
               </div>
             </div>

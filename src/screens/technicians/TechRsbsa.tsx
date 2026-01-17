@@ -63,6 +63,7 @@ const TechRsbsa: React.FC = () => {
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [filteredOwners, setFilteredOwners] = useState<RSBSARecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBarangay, setSelectedBarangay] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
@@ -445,36 +446,57 @@ const TechRsbsa: React.FC = () => {
     return filtered;
   };
 
-  // Filter records based on search term
+  // Get unique barangays from registered owners
+  const uniqueBarangays = React.useMemo(() => {
+    const barangays = new Set<string>();
+    registeredOwners.forEach(record => {
+      if (record.farmerAddress) {
+        // Extract barangay (first part before comma)
+        const barangay = record.farmerAddress.split(',')[0]?.trim();
+        if (barangay) barangays.add(barangay);
+      }
+    });
+    return Array.from(barangays).sort();
+  }, [registeredOwners]);
+
+  // Filter records based on search term and barangay
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredOwners(registeredOwners);
-      return;
-    }
-
-    const searchLower = searchTerm.toLowerCase();
     const filtered = registeredOwners.filter(record => {
-      // Search in FFRS ID (both with and without dashes)
-      const ffrsMatch = record.referenceNumber?.toLowerCase().includes(searchLower) ||
-        record.referenceNumber?.replace(/-/g, '').toLowerCase().includes(searchLower);
+      // Barangay filter
+      if (selectedBarangay !== 'all') {
+        const barangay = record.farmerAddress?.split(',')[0]?.trim();
+        if (barangay !== selectedBarangay) return false;
+      }
 
-      // Search in farmer name
-      const nameMatch = record.farmerName?.toLowerCase().includes(searchLower);
+      // Search term filter
+      if (searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase();
+        // Search in FFRS ID (both with and without dashes)
+        const ffrsMatch = record.referenceNumber?.toLowerCase().includes(searchLower) ||
+          record.referenceNumber?.replace(/-/g, '').toLowerCase().includes(searchLower);
 
-      // Search in farmer address
-      const addressMatch = record.farmerAddress?.toLowerCase().includes(searchLower);
+        // Search in farmer name
+        const nameMatch = record.farmerName?.toLowerCase().includes(searchLower);
 
-      // Search in farm location
-      const locationMatch = record.farmLocation?.toLowerCase().includes(searchLower);
+        // Search in farmer address
+        const addressMatch = record.farmerAddress?.toLowerCase().includes(searchLower);
 
-      // Search in gender
-      const genderMatch = record.gender?.toLowerCase().includes(searchLower);
+        // Search in farm location
+        const locationMatch = record.farmLocation?.toLowerCase().includes(searchLower);
 
-      return ffrsMatch || nameMatch || addressMatch || locationMatch || genderMatch;
+        // Search in gender
+        const genderMatch = record.gender?.toLowerCase().includes(searchLower);
+
+        if (!(ffrsMatch || nameMatch || addressMatch || locationMatch || genderMatch)) {
+          return false;
+        }
+      }
+
+      return true;
     });
 
     setFilteredOwners(filtered);
-  }, [searchTerm, registeredOwners]);
+  }, [searchTerm, selectedBarangay, registeredOwners]);
 
   // Load data on component mount
   useEffect(() => {
@@ -576,7 +598,12 @@ const TechRsbsa: React.FC = () => {
 
         {/* Main content starts here */}
         <div className="tech-rsbsa-main-content">
-          <h2 className="tech-rsbsa-page-title">Registered Land Owners</h2>
+          <div className="tech-rsbsa-dashboard-header">
+            <div>
+              <h2 className="tech-rsbsa-page-title">Registered Land Owners</h2>
+              <p className="tech-rsbsa-page-subtitle">View and manage registered land owners from RSBSA submissions</p>
+            </div>
+          </div>
 
           <div className="tech-rsbsa-content-card">
             {loading ? (
@@ -592,24 +619,38 @@ const TechRsbsa: React.FC = () => {
               </div>
             ) : (
               <>
-                {/* Search Input */}
-                <div className="tech-rsbsa-search-container">
-                  <input
-                    type="text"
-                    className="tech-rsbsa-search-input"
-                    placeholder="Search by FFRS ID, Name, Address, Location, or Gender..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  {searchTerm && (
-                    <button
-                      className="tech-rsbsa-clear-search-button"
-                      onClick={() => setSearchTerm('')}
-                      title="Clear search"
+                {/* Search and Filter Container */}
+                <div className="tech-rsbsa-search-filter-container">
+                  <div className="tech-rsbsa-search-container">
+                    <input
+                      type="text"
+                      className="tech-rsbsa-search-input"
+                      placeholder="Search by FFRS ID, Name, Address, Location, or Gender..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    {searchTerm && (
+                      <button
+                        className="tech-rsbsa-clear-search-button"
+                        onClick={() => setSearchTerm('')}
+                        title="Clear search"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  <div className="tech-rsbsa-filter-container">
+                    <select
+                      value={selectedBarangay}
+                      onChange={(e) => setSelectedBarangay(e.target.value)}
+                      className="tech-rsbsa-filter-select"
                     >
-                      ×
-                    </button>
-                  )}
+                      <option value="all">All Barangays</option>
+                      {uniqueBarangays.map(barangay => (
+                        <option key={barangay} value={barangay}>{barangay}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="tech-rsbsa-table-container">

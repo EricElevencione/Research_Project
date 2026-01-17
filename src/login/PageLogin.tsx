@@ -71,7 +71,9 @@ const Login: React.FC = () => {
                 {/* Right section containing login form */}
                 <div className="login-right">
                     {/* Dynamic heading showing user role */}
-                    <h2>LOGIN</h2>
+                    <h1>Welcome back</h1>
+
+                    <h3>LOGIN</h3>
 
                     {error && <div className="error-message">{error}</div>}
 

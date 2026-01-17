@@ -34,6 +34,7 @@ const healthRoutes = require('./routes/health.cjs');
 const landownerRoutes = require('./routes/landowner.cjs');
 const landsRoutes = require('./routes/lands.cjs');
 const landPlotsRoutes = require('./routes/land-plots.cjs');
+const spatialQueriesRoutes = require('./routes/spatial-queries.cjs');
 const rsbsaSubmissionRoutes = require('./routes/rsbsa_submission.cjs');
 
 const app = express();
@@ -54,6 +55,7 @@ app.use('/api/landowners', landownerRoutes); // Get landowners endpoint
 // API endpoint to get land records for the table
 app.use('/api/lands', landsRoutes); // Get landowners endpoint (from structured rsbsa_submission)
 app.use('/api/land-plots', landPlotsRoutes); // Get land plots endpoint (database-backed)
+app.use('/api/spatial', spatialQueriesRoutes); // Spatial analysis endpoints (PostGIS)
 app.use('/api/rsbsa_submission', rsbsaSubmissionRoutes);
 
 // Serve static files from the frontend build directory
@@ -1506,6 +1508,145 @@ app.get('/api/land_rights_history', async (req, res) => {
 // ============================================================================
 
 console.log('✅ Land History API endpoints loaded successfully');
+
+// ============================================================================
+// CROP/PLANTING INFO API ENDPOINT
+// ============================================================================
+// GET /api/crop-planting-info?surname=&firstName=&barangay=
+// Returns crop/planting information for owner and tenant on this land
+app.get('/api/crop-planting-info', async (req, res) => {
+    try {
+        const { surname, firstName, barangay } = req.query;
+
+        console.log('Crop/Planting info query:', { surname, firstName, barangay });
+
+        if (!surname || !firstName || !barangay) {
+            return res.status(400).json({ error: 'surname, firstName, and barangay are required' });
+        }
+
+        // Query to get the land owner and their crops
+        const ownerQuery = `
+            SELECT 
+                rs.id,
+                rs."LAST NAME" || ', ' || rs."FIRST NAME" || 
+                    CASE WHEN rs."MIDDLE NAME" IS NOT NULL AND rs."MIDDLE NAME" != '' 
+                    THEN ' ' || rs."MIDDLE NAME" 
+                    ELSE '' END as farmer_name,
+                rs."FIRST NAME" as first_name,
+                rs."LAST NAME" as last_name,
+                rs."BARANGAY" as barangay,
+                rs."FARMER_RICE" as farmer_rice,
+                rs."FARMER_CORN" as farmer_corn,
+                rs."FARMER_OTHER_CROPS" as farmer_other_crops,
+                rs."FARMER_OTHER_CROPS_TEXT" as farmer_other_crops_text,
+                rs."FARMER_LIVESTOCK" as farmer_livestock,
+                rs."FARMER_LIVESTOCK_TEXT" as farmer_livestock_text,
+                rs."FARMER_POULTRY" as farmer_poultry,
+                rs."FARMER_POULTRY_TEXT" as farmer_poultry_text,
+                CASE 
+                    WHEN rs."OWNERSHIP_TYPE_REGISTERED_OWNER" = true THEN 'Owner'
+                    WHEN rs."OWNERSHIP_TYPE_TENANT" = true THEN 'Tenant'
+                    WHEN rs."OWNERSHIP_TYPE_LESSEE" = true THEN 'Lessee'
+                    ELSE 'Other'
+                END as ownership_status,
+                rs."OWNERSHIP_TYPE_REGISTERED_OWNER" as is_owner,
+                rs."OWNERSHIP_TYPE_TENANT" as is_tenant,
+                rs."OWNERSHIP_TYPE_LESSEE" as is_lessee,
+                rs.status as farmer_status
+            FROM rsbsa_submission rs
+            WHERE rs."LAST NAME" ILIKE $1
+                AND rs."FIRST NAME" ILIKE $2
+                AND rs."BARANGAY" ILIKE $3
+        `;
+
+        const ownerResult = await pool.query(ownerQuery, [surname, firstName, barangay]);
+
+        // Also check if there are tenants working on this land (through land_history)
+        const tenantsQuery = `
+            SELECT DISTINCT
+                rs.id,
+                rs."LAST NAME" || ', ' || rs."FIRST NAME" || 
+                    CASE WHEN rs."MIDDLE NAME" IS NOT NULL AND rs."MIDDLE NAME" != '' 
+                    THEN ' ' || rs."MIDDLE NAME" 
+                    ELSE '' END as farmer_name,
+                rs."FIRST NAME" as first_name,
+                rs."LAST NAME" as last_name,
+                rs."BARANGAY" as barangay,
+                rs."FARMER_RICE" as farmer_rice,
+                rs."FARMER_CORN" as farmer_corn,
+                rs."FARMER_OTHER_CROPS" as farmer_other_crops,
+                rs."FARMER_OTHER_CROPS_TEXT" as farmer_other_crops_text,
+                rs."FARMER_LIVESTOCK" as farmer_livestock,
+                rs."FARMER_LIVESTOCK_TEXT" as farmer_livestock_text,
+                rs."FARMER_POULTRY" as farmer_poultry,
+                rs."FARMER_POULTRY_TEXT" as farmer_poultry_text,
+                'Tenant' as ownership_status,
+                false as is_owner,
+                true as is_tenant,
+                false as is_lessee,
+                rs.status as farmer_status,
+                lh.land_owner_name
+            FROM land_history lh
+            JOIN rsbsa_submission rs ON (
+                lh.farmer_name ILIKE rs."LAST NAME" || '%' || rs."FIRST NAME" || '%'
+            )
+            WHERE lh.land_owner_name ILIKE $1 || '%' || $2 || '%'
+                AND lh.farm_location_barangay ILIKE $3
+                AND lh.is_tenant = true
+                AND lh.is_current = true
+        `;
+
+        const tenantsResult = await pool.query(tenantsQuery, [surname, firstName, barangay]);
+
+        // Combine results
+        const plantingInfo = {
+            owner: ownerResult.rows.length > 0 ? ownerResult.rows[0] : null,
+            tenants: tenantsResult.rows || []
+        };
+
+        // Build crops list for each person
+        const buildCropsList = (row) => {
+            if (!row) return [];
+            const crops = [];
+            if (row.farmer_rice) crops.push('Rice');
+            if (row.farmer_corn) crops.push('Corn');
+            if (row.farmer_other_crops && row.farmer_other_crops_text) {
+                crops.push(row.farmer_other_crops_text);
+            }
+            if (row.farmer_livestock && row.farmer_livestock_text) {
+                crops.push(`Livestock: ${row.farmer_livestock_text}`);
+            }
+            if (row.farmer_poultry && row.farmer_poultry_text) {
+                crops.push(`Poultry: ${row.farmer_poultry_text}`);
+            }
+            return crops.length > 0 ? crops : ['Not specified'];
+        };
+
+        // Format the response
+        const response = {
+            owner: plantingInfo.owner ? {
+                ...plantingInfo.owner,
+                crops: buildCropsList(plantingInfo.owner)
+            } : null,
+            tenants: plantingInfo.tenants.map(t => ({
+                ...t,
+                crops: buildCropsList(t)
+            }))
+        };
+
+        console.log('Crop/Planting info response:', JSON.stringify(response, null, 2));
+        res.json(response);
+
+    } catch (error) {
+        console.error('Error fetching crop/planting info:', error);
+        res.status(500).json({
+            error: 'Failed to fetch crop/planting info',
+            details: error.message
+        });
+    }
+});
+
+console.log('✅ Crop/Planting Info API endpoint loaded successfully');
 
 // ============================================================================
 // LAND OWNERS WITH TENANTS/LESSEES API ENDPOINT

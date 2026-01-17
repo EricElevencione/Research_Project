@@ -68,6 +68,7 @@ const JoRsbsaPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBarangay, setSelectedBarangay] = useState<string>('all');
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(null);
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -242,27 +243,53 @@ const JoRsbsaPage: React.FC = () => {
     fetchRSBSARecords();
   }, []);
 
-  // Filter registered owners based on search query
-  const filteredOwners = registeredOwners.filter(record => {
-    if (!searchQuery.trim()) return true;
+  // Get unique barangays from registered owners
+  const uniqueBarangays = React.useMemo(() => {
+    const barangays = new Set<string>();
+    registeredOwners.forEach(record => {
+      if (record.farmerAddress) {
+        // Extract barangay (first part before comma)
+        const barangay = record.farmerAddress.split(',')[0]?.trim();
+        if (barangay) barangays.add(barangay);
+      }
+    });
+    return Array.from(barangays).sort();
+  }, [registeredOwners]);
 
-    const query = searchQuery.toLowerCase();
+  // Filter registered owners based on search query and filters
+  const filteredOwners = registeredOwners.filter(record => {
+    // Parse name parts once
     const nameParts = record.farmerName.split(', ');
     const lastName = nameParts[0] || '';
-    const firstName = nameParts[1] || '';
-    const middleName = nameParts[2] || '';
-    const extName = nameParts[3] || '';
+    const restOfName = (nameParts[1] || '').split(' ').map(p => p.trim()).filter(Boolean);
+    const firstName = restOfName[0] || '';
+    const middleName = restOfName[1] || '';
+    const extName = restOfName[2] || '';
 
-    return (
-      lastName.toLowerCase().includes(query) ||
-      firstName.toLowerCase().includes(query) ||
-      middleName.toLowerCase().includes(query) ||
-      extName.toLowerCase().includes(query) ||
-      record.farmerAddress?.toLowerCase().includes(query) ||
-      record.gender?.toLowerCase().includes(query) ||
-      record.referenceNumber?.toLowerCase().includes(query) ||
-      record.referenceNumber?.replace(/-/g, '').toLowerCase().includes(query.replace(/-/g, ''))
-    );
+    // Search query filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = (
+        lastName.toLowerCase().includes(query) ||
+        firstName.toLowerCase().includes(query) ||
+        middleName.toLowerCase().includes(query) ||
+        extName.toLowerCase().includes(query) ||
+        record.farmerAddress?.toLowerCase().includes(query) ||
+        record.gender?.toLowerCase().includes(query) ||
+        record.referenceNumber?.toLowerCase().includes(query) ||
+        record.referenceNumber?.replace(/-/g, '').toLowerCase().includes(query.replace(/-/g, ''))
+      );
+
+      if (!matchesSearch) return false;
+    }
+
+    // Barangay filter
+    if (selectedBarangay !== 'all') {
+      const barangay = record.farmerAddress?.split(',')[0]?.trim();
+      if (barangay !== selectedBarangay) return false;
+    }
+
+    return true;
   });
 
   return (
@@ -350,6 +377,7 @@ const JoRsbsaPage: React.FC = () => {
         {/* Main content starts here */}
         <div className="jo-rsbsa-main-content">
           <h2 className="jo-rsbsa-page-title">Registered Land Owners</h2>
+          <p className="jo-rsbsa-page-subtitle">View and manage registered land owners from RSBSA submissions</p>
 
           <div className="jo-rsbsa-content-card">
             <div className="jo-rsbsa-actions-bar">
@@ -370,6 +398,18 @@ const JoRsbsaPage: React.FC = () => {
                     ×
                   </button>
                 )}
+              </div>
+              <div className="jo-rsbsa-filter-container">
+                <select
+                  value={selectedBarangay}
+                  onChange={(e) => setSelectedBarangay(e.target.value)}
+                  className="jo-rsbsa-filter-select"
+                >
+                  <option value="all">All Barangays</option>
+                  {uniqueBarangays.map(barangay => (
+                    <option key={barangay} value={barangay}>{barangay}</option>
+                  ))}
+                </select>
               </div>
               <div className="jo-rsbsa-register-button">
                 <button onClick={() => navigate('/jo-rsbsa')}>

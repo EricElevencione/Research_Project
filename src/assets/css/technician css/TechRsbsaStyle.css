@@ -6,14 +6,15 @@
 /* Main Layout */
 .tech-rsbsa-page-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
 }
 
 .tech-rsbsa-page {
     display: flex;
     width: 100%;
-    height: 100vh;
+    height: 100%;
 }
 
 /* Main Content Area */
@@ -23,14 +24,26 @@
     padding: 24px;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+    overflow: auto;
+    min-height: 0;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
 }
 
 .tech-rsbsa-page-title {
     font-weight: 600;
     font-size: 28px;
     color: #2e3d27;
-    margin: 0 0 20px 0;
+}
+
+.tech-rsbsa-dashboard-header {
+    margin-bottom: 24px;
+}
+
+.tech-rsbsa-page-subtitle {
+    color: #6b7280;
+    font-size: 14px;
+    margin-top: 4px;
+    margin-bottom: 0;
 }
 
 /* Content Card */
@@ -42,11 +55,21 @@
     flex: 1;
 }
 
+/* Search and Filter Container */
+.tech-rsbsa-search-filter-container {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: space-between;
+}
+
 /* Search Container */
 .tech-rsbsa-search-container {
     position: relative;
-    margin-bottom: 20px;
-    width: 100%;
+    flex: 1;
+    max-width: 100%;
+
 }
 
 .tech-rsbsa-search-input {
@@ -67,6 +90,52 @@
 
 .tech-rsbsa-search-input::placeholder {
     color: #6c757d;
+}
+
+.tech-rsbsa-clear-search-button {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.tech-rsbsa-clear-search-button:hover {
+    color: #dc3545;
+}
+
+/* Filter Container */
+.tech-rsbsa-filter-container {
+    min-width: 200px;
+}
+
+.tech-rsbsa-filter-select {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.tech-rsbsa-filter-select:focus {
+    outline: none;
+    border-color: #A0C878;
+    box-shadow: 0 0 0 3px rgba(160, 200, 120, 0.1);
 }
 
 .tech-rsbsa-clear-search-button {

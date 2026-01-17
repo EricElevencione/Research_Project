@@ -1,0 +1,622 @@
+/* JoManageRequests.tsx - Dedicated Styles */
+
+/* ============================================
+   PAGE LAYOUT
+   ============================================ */
+
+/* Page Container */
+.page-container {
+    display: flex;
+    height: 100vh;
+    background-color: #f0f0f0;
+    overflow: hidden;
+}
+
+.page {
+    display: flex;
+    width: 100%;
+}
+
+/* Sidebar is styled in sidebarStyle.css */
+
+/* Main content area */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+    overflow: hidden;
+}
+
+/* Dashboard Header */
+.jo-manage-page-header {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0 0 20px 0;
+}
+
+/* Content Card */
+.jo-manage-content-card-incent {
+    background-color: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+/* Loading and Error States */
+.loading-message {
+    text-align: center;
+    padding: 40px;
+    font-size: 16px;
+    color: #6b7280;
+}
+
+.error-state,
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.error-icon,
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.error-state h3,
+.empty-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 8px 0;
+}
+
+.error-state p,
+.empty-state p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* ============================================
+   COMPONENT-SPECIFIC STYLES
+   ============================================ */
+
+/* Animation Keyframes */
+@keyframes jo-manage-requests-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Filters Section */
+.jo-manage-requests-filters {
+    margin-bottom: 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.jo-manage-requests-search-input {
+    flex: 1;
+    min-width: 250px;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.jo-manage-requests-filter-select {
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* Allocation vs Requests Comparison Grid */
+.jo-manage-requests-comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    border: 2px solid #0ea5e9;
+}
+
+.jo-manage-requests-allocation-card,
+.jo-manage-requests-farmer-requests-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.jo-manage-requests-card-header {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.jo-manage-requests-card-header.allocation {
+    color: #1e40af;
+}
+
+.jo-manage-requests-card-header.farmer-requests {
+    color: #059669;
+}
+
+.jo-manage-requests-card-header.total-requests {
+    color: #6366f1;
+}
+
+.jo-manage-requests-card-header.farmer-requests-rejected {
+    color: #dc2626;
+}
+
+/* Approved card styling */
+.jo-manage-requests-farmer-requests-card.approved {
+    border-left: 4px solid #10b981;
+}
+
+/* Rejected card styling */
+.jo-manage-requests-farmer-requests-card.rejected {
+    border-left: 4px solid #ef4444;
+}
+
+.jo-manage-requests-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Stat boxes inside cards */
+.jo-manage-requests-stat-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.jo-manage-requests-stat-box.fertilizers {
+    background: #fef3c7;
+}
+
+.jo-manage-requests-stat-box.seeds {
+    background: #dbeafe;
+}
+
+.jo-manage-requests-stat-label {
+    font-weight: 500;
+}
+
+.jo-manage-requests-stat-label.fertilizers {
+    color: #92400e;
+}
+
+.jo-manage-requests-stat-label.seeds {
+    color: #1e40af;
+}
+
+.jo-manage-requests-stat-value {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.jo-manage-requests-stat-value.fertilizers {
+    color: #92400e;
+}
+
+.jo-manage-requests-stat-value.seeds {
+    color: #1e40af;
+}
+
+/* Summary Cards Grid */
+.jo-manage-requests-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.jo-manage-requests-summary-card {
+    padding: 16px;
+    border-radius: 8px;
+}
+
+.jo-manage-requests-summary-card.total {
+    background: #f3f4f6;
+}
+
+.jo-manage-requests-summary-card.pending {
+    background: #fef3c7;
+}
+
+.jo-manage-requests-summary-card.approved {
+    background: #d1fae5;
+}
+
+.jo-manage-requests-summary-card.rejected {
+    background: #fee2e2;
+}
+
+.jo-manage-requests-summary-card.shortage {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+    position: relative;
+}
+
+.jo-manage-requests-summary-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.jo-manage-requests-summary-label.pending {
+    color: #92400e;
+}
+
+.jo-manage-requests-summary-label.approved {
+    color: #065f46;
+}
+
+.jo-manage-requests-summary-label.rejected {
+    color: #991b1b;
+}
+
+.jo-manage-requests-summary-label.shortage {
+    color: #92400e;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.jo-manage-requests-summary-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.jo-manage-requests-summary-value.pending {
+    color: #92400e;
+}
+
+.jo-manage-requests-summary-value.approved {
+    color: #065f46;
+}
+
+.jo-manage-requests-summary-value.rejected {
+    color: #991b1b;
+}
+
+.jo-manage-requests-summary-value.shortage {
+    color: #92400e;
+}
+
+.jo-manage-requests-summary-note {
+    font-size: 11px;
+    color: #78350f;
+    margin-top: 4px;
+}
+
+.jo-manage-requests-pulse-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ef4444;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 12px;
+    animation: jo-manage-requests-pulse 1.5s infinite;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+/* Info Box */
+.jo-manage-requests-info-box {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.jo-manage-requests-info-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.jo-manage-requests-info-content h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #92400e;
+}
+
+.jo-manage-requests-info-content p {
+    margin: 0;
+    font-size: 14px;
+    color: #78350f;
+    line-height: 1.5;
+}
+
+/* Table Container */
+.jo-manage-requests-table-container {
+    overflow-x: auto;
+}
+
+/* Edit Modal */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.jo-manage-requests-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease;
+}
+
+.jo-manage-requests-modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+/* Modal Header */
+.jo-manage-requests-modal-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 24px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #047857;
+}
+
+.jo-manage-requests-modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.jo-manage-requests-modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 32px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.jo-manage-requests-modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+/* Modal Body */
+.jo-manage-requests-modal-body {
+    padding: 32px;
+    max-height: calc(90vh - 100px);
+    overflow-y: auto;
+}
+
+.jo-manage-requests-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.jo-manage-requests-modal-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.jo-manage-requests-modal-body::-webkit-scrollbar-thumb {
+    background: #10b981;
+    border-radius: 4px;
+}
+
+.jo-manage-requests-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #059669;
+}
+
+.jo-manage-requests-modal-section {
+    margin-bottom: 32px;
+}
+
+.jo-manage-requests-modal-section:last-child {
+    margin-bottom: 0;
+}
+
+.jo-manage-requests-modal-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #047857;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #d1fae5;
+}
+
+.jo-manage-requests-modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.jo-manage-requests-modal-field label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.jo-manage-requests-modal-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.jo-manage-requests-modal-textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.jo-manage-requests-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.jo-manage-requests-modal-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.jo-manage-requests-modal-btn.cancel {
+    background: #6b7280;
+    color: white;
+}
+
+.jo-manage-requests-modal-btn.save {
+    background: #10b981;
+    color: white;
+}
+
+.jo-manage-requests-modal-btn:hover {
+    opacity: 0.9;
+}
+
+/* Header Section */
+.jo-manage-requests-back-create-section {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.jo-manage-requests-back-btn {
+    padding: 10px 20px;
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.jo-manage-requests-add-btn {
+    padding: 10px 20px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Suggestions Summary Card */
+.jo-manage-requests-summary-card.suggestions {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    position: relative;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.jo-manage-requests-summary-card.suggestions:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+    border-color: #a78bfa;
+}
+
+.jo-manage-requests-summary-card.suggestions .jo-manage-requests-summary-label {
+    color: #ede9fe;
+}
+
+.jo-manage-requests-summary-card.suggestions .jo-manage-requests-summary-value {
+    color: white;
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}

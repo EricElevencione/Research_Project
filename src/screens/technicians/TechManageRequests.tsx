@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import '../../assets/css/jo css/JoIncentStyle.css';
+import '../../assets/css/technician css/TechManageRequestsStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
-import FarmerIcon from '../../assets/images/farmer (1).png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 
@@ -64,17 +63,25 @@ const TechManageRequests: React.FC = () => {
     const [barangayFilter, setBarangayFilter] = useState<string>('all');
 
     // DSS Feature: Alternative suggestions
-    const [showAlternatives, setShowAlternatives] = useState<{ [key: number]: boolean }>({});
+    const [, setShowAlternatives] = useState<{ [key: number]: boolean }>({});
     const [alternatives, setAlternatives] = useState<{ [key: number]: any }>({});
-    const [loadingAlternatives, setLoadingAlternatives] = useState<{ [key: number]: boolean }>({});
+    const [, setLoadingAlternatives] = useState<{ [key: number]: boolean }>({});
 
     // DSS Feature: Apply alternatives
     const [selectedAlternative, setSelectedAlternative] = useState<{ [key: number]: { suggestionIdx: number, alternativeIdx: number } }>({});
     const [applyingAlternative, setApplyingAlternative] = useState<{ [key: number]: boolean }>({});
 
+    // Auto-suggestion notifications
+    const [autoSuggestionsCount, setAutoSuggestionsCount] = useState<number>(0);
+    const [newSuggestionsCount, setNewSuggestionsCount] = useState<number>(0);
+
     // Edit Feature
     const [editingRequest, setEditingRequest] = useState<number | null>(null);
     const [editFormData, setEditFormData] = useState<Partial<FarmerRequest>>({});
+
+    // Suggestions Modal Feature
+    const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
+    const [expandedFarmerInModal, setExpandedFarmerInModal] = useState<number | null>(null);
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -163,18 +170,44 @@ const TechManageRequests: React.FC = () => {
                 // Auto-fetch if not already loaded
                 if (!alternatives[request.id]) {
                     try {
-                        await fetchAlternatives(request.id);
-                        newSuggestions++;
+                        setLoadingAlternatives(prev => ({ ...prev, [request.id]: true }));
+
+                        console.log(`Fetching alternatives for request #${request.id}...`);
+                        const response = await fetch('http://localhost:5000/api/distribution/suggest-alternatives', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ request_id: request.id })
+                        });
+
+                        console.log(`📡 API Response status: ${response.status}`);
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log(`✅ Alternatives received for request #${request.id}:`, data);
+                            setAlternatives(prev => ({ ...prev, [request.id]: data }));
+                            setShowAlternatives(prev => ({ ...prev, [request.id]: true }));
+                            newSuggestions++;
+                        } else {
+                            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                            console.error(`❌ API Error for request #${request.id}:`, response.status, errorData);
+                        }
                     } catch (error) {
-                        console.error(`Failed to fetch alternatives for request ${request.id}:`, error);
+                        console.error(`❌ Failed to auto-fetch alternatives for request ${request.id}:`, error);
+                    } finally {
+                        setLoadingAlternatives(prev => ({ ...prev, [request.id]: false }));
                     }
+
+                    // Small delay between requests to avoid overloading
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 } else {
-                    console.log(`✅ Alternatives already loaded for request #${request.id}`);
+                    console.log(`ℹ️ Alternatives already loaded for request #${request.id}`);
                 }
             }
         }
 
         console.log(`📈 Summary: ${countWithShortages} requests with shortages, ${newSuggestions} new alternatives fetched`);
+        setAutoSuggestionsCount(countWithShortages);
+        setNewSuggestionsCount(newSuggestions);
     };
 
     const filterRequests = () => {
@@ -183,8 +216,8 @@ const TechManageRequests: React.FC = () => {
         // Search filter
         if (searchTerm) {
             filtered = filtered.filter(req =>
-                req.farmer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                req.barangay.toLowerCase().includes(searchTerm.toLowerCase())
+                (req.farmer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (req.barangay || '').toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
 
@@ -232,9 +265,8 @@ const TechManageRequests: React.FC = () => {
             });
 
             if (response.ok) {
-                // If status is rejected, hide alternatives panel
+                // If status is rejected, clear alternatives for this request
                 if (newStatus === 'rejected') {
-                    setShowAlternatives(prev => ({ ...prev, [id]: false }));
                     setAlternatives(prev => {
                         const updated = { ...prev };
                         delete updated[id];
@@ -381,11 +413,6 @@ const TechManageRequests: React.FC = () => {
                 delete updated[editingRequest];
                 return updated;
             });
-            setShowAlternatives(prev => {
-                const updated = { ...prev };
-                delete updated[editingRequest];
-                return updated;
-            });
             setSelectedAlternative(prev => {
                 const updated = { ...prev };
                 delete updated[editingRequest];
@@ -439,7 +466,6 @@ const TechManageRequests: React.FC = () => {
                 const data = await response.json();
                 console.log('✅ Alternatives data:', data);
                 setAlternatives(prev => ({ ...prev, [requestId]: data }));
-                setShowAlternatives(prev => ({ ...prev, [requestId]: true }));
             } else {
                 const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                 console.error('❌ Server error:', errorData);
@@ -450,17 +476,6 @@ const TechManageRequests: React.FC = () => {
             alert(`❌ Error fetching alternatives: ${error instanceof Error ? error.message : 'Network error'}`);
         } finally {
             setLoadingAlternatives(prev => ({ ...prev, [requestId]: false }));
-        }
-    };
-
-    // Toggle alternatives panel visibility
-    const toggleAlternatives = (requestId: number) => {
-        if (showAlternatives[requestId]) {
-            // Hide if already showing
-            setShowAlternatives(prev => ({ ...prev, [requestId]: false }));
-        } else {
-            // Fetch and show alternatives
-            fetchAlternatives(requestId);
         }
     };
 
@@ -612,7 +627,8 @@ const TechManageRequests: React.FC = () => {
 
                 // Refresh from backend to ensure consistency
                 await fetchRequests();
-                setShowAlternatives(prev => ({ ...prev, [requestId]: false }));
+                // Collapse the farmer in the modal after applying
+                setExpandedFarmerInModal(null);
             } else {
                 throw new Error('Failed to update request');
             }
@@ -717,17 +733,6 @@ const TechManageRequests: React.FC = () => {
 
     return (
         <div className="page-container">
-            <style>{`
-                .shortage-warning {
-                    background: #fef3c7;
-                    border: 2px solid #f59e0b;
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    color: #92400e;
-                    font-weight: 600;
-                }
-            `}</style>
             <div className="page">
                 {/* Sidebar */}
                 <div className="sidebar">
@@ -789,29 +794,23 @@ const TechManageRequests: React.FC = () => {
                 </div>
 
                 {/* Main Content */}
-                <div className="main-content">
-                    <div className="dashboard-header-incent">
-                        <div>
-                            <h2 className="page-header">Manage Farmer Requests</h2>
+                <div className="tech-main-content">
+                    <div className="tech-manage-dashboard-header-incent">
+                        <div className="tech-manage-header-sub">
+                            <h2 className="tech-manage-page-header">Manage Farmer Requests</h2>
                             {allocation && (
                                 <p className="page-subtitle">{formatSeasonName(allocation.season)}</p>
                             )}
                         </div>
-                        <div style={{ display: 'flex', gap: '12px' }}>
+                        <div className="tech-manage-requests-back-create-section">
                             <button
-                                className="btn-create-allocation"
+                                className="tech-manage-requests-add-btn"
                                 onClick={() => navigate(`/technician-add-farmer-request/${allocationId}`)}
-                                style={{
-                                    background: '#10b981',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                }}
                             >
                                 ➕ Add Farmer Request
                             </button>
                             <button
-                                className="btn-create-allocation"
+                                className="tech-manage-requests-back-btn"
                                 onClick={() => navigate('/technician-incentives')}
                             >
                                 ←
@@ -834,31 +833,18 @@ const TechManageRequests: React.FC = () => {
                         ) : (
                             <>
                                 {/* Filters */}
-                                <div style={{ marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                                <div className="tech-manage-requests-filters">
                                     <input
                                         type="text"
                                         placeholder="🔍 Search farmer or barangay..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        style={{
-                                            flex: '1',
-                                            minWidth: '250px',
-                                            padding: '12px 16px',
-                                            border: '2px solid #e5e7eb',
-                                            borderRadius: '8px',
-                                            fontSize: '14px'
-                                        }}
+                                        className="tech-manage-requests-search-input"
                                     />
                                     <select
                                         value={statusFilter}
                                         onChange={(e) => setStatusFilter(e.target.value)}
-                                        style={{
-                                            padding: '12px 16px',
-                                            border: '2px solid #e5e7eb',
-                                            borderRadius: '8px',
-                                            fontSize: '14px',
-                                            background: 'white'
-                                        }}
+                                        className="tech-manage-requests-filter-select"
                                     >
                                         <option value="all">All Status</option>
                                         <option value="pending">Pending</option>
@@ -868,13 +854,7 @@ const TechManageRequests: React.FC = () => {
                                     <select
                                         value={barangayFilter}
                                         onChange={(e) => setBarangayFilter(e.target.value)}
-                                        style={{
-                                            padding: '12px 16px',
-                                            border: '2px solid #e5e7eb',
-                                            borderRadius: '8px',
-                                            fontSize: '14px',
-                                            background: 'white'
-                                        }}
+                                        className="tech-manage-requests-filter-select"
                                     >
                                         <option value="all">All Barangays</option>
                                         {getUniqueBarangays().map(brgy => (
@@ -884,45 +864,16 @@ const TechManageRequests: React.FC = () => {
                                 </div>
 
                                 {/* Allocation vs Requests Comparison */}
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr 1fr',
-                                    gap: '16px',
-                                    marginBottom: '24px',
-                                    padding: '20px',
-                                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                                    borderRadius: '12px',
-                                    border: '2px solid #0ea5e9'
-                                }}>
+                                <div className="tech-manage-requests-comparison-grid">
                                     {/* Regional Allocation Card */}
-                                    <div style={{
-                                        background: 'white',
-                                        borderRadius: '10px',
-                                        padding: '20px',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                    }}>
-                                        <h3 style={{
-                                            margin: '0 0 16px 0',
-                                            fontSize: '16px',
-                                            fontWeight: '600',
-                                            color: '#1e40af',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}>
+                                    <div className="tech-manage-requests-comparison-card">
+                                        <h3 className="tech-manage-requests-comparison-title">
                                             📦 Regional Allocation (Total Received)
                                         </h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                padding: '12px',
-                                                background: '#fef3c7',
-                                                borderRadius: '8px'
-                                            }}>
-                                                <span style={{ fontWeight: '500', color: '#92400e' }}>🌱 Total Fertilizers</span>
-                                                <span style={{ fontSize: '20px', fontWeight: '700', color: '#92400e' }}>
+                                        <div className="tech-manage-requests-comparison-stats">
+                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
+                                                <span className="tech-manage-requests-stat-label">🌱 Total Fertilizers</span>
+                                                <span className="tech-manage-requests-stat-value">
                                                     {allocation ? (
                                                         (Number(allocation.urea_46_0_0_bags || 0) +
                                                             Number(allocation.complete_14_14_14_bags || 0) +
@@ -931,16 +882,9 @@ const TechManageRequests: React.FC = () => {
                                                     ) : '0.00'} bags
                                                 </span>
                                             </div>
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                padding: '12px',
-                                                background: '#dbeafe',
-                                                borderRadius: '8px'
-                                            }}>
-                                                <span style={{ fontWeight: '500', color: '#1e40af' }}>🌾 Total Seeds</span>
-                                                <span style={{ fontSize: '20px', fontWeight: '700', color: '#1e40af' }}>
+                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
+                                                <span className="tech-manage-requests-stat-label">🌾 Total Seeds</span>
+                                                <span className="tech-manage-requests-stat-value">
                                                     {allocation ? (
                                                         (Number(allocation.jackpot_kg || 0) +
                                                             Number(allocation.us88_kg || 0) +
@@ -955,50 +899,23 @@ const TechManageRequests: React.FC = () => {
                                     </div>
 
                                     {/* Total Farmer Requests Card */}
-                                    <div style={{
-                                        background: 'white',
-                                        borderRadius: '10px',
-                                        padding: '20px',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                    }}>
-                                        <h3 style={{
-                                            margin: '0 0 16px 0',
-                                            fontSize: '16px',
-                                            fontWeight: '600',
-                                            color: '#1e40af',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}>
+                                    <div className="tech-manage-requests-comparison-card">
+                                        <h3 className="tech-manage-requests-comparison-title">
                                             📊 Total Farmer Requests
                                         </h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                padding: '12px',
-                                                background: '#fef3c7',
-                                                borderRadius: '8px'
-                                            }}>
-                                                <span style={{ fontWeight: '500', color: '#92400e' }}>🌱 Total Fertilizers Requested</span>
-                                                <span style={{ fontSize: '20px', fontWeight: '700', color: '#92400e' }}>
+                                        <div className="tech-manage-requests-comparison-stats">
+                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
+                                                <span className="tech-manage-requests-stat-label">🌱 Total Fertilizers Requested</span>
+                                                <span className="tech-manage-requests-stat-value">
                                                     {getTotalRequested('requested_urea_bags') +
                                                         getTotalRequested('requested_complete_14_bags') +
                                                         getTotalRequested('requested_ammonium_sulfate_bags') +
                                                         getTotalRequested('requested_muriate_potash_bags')} bags
                                                 </span>
                                             </div>
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                padding: '12px',
-                                                background: '#dbeafe',
-                                                borderRadius: '8px'
-                                            }}>
-                                                <span style={{ fontWeight: '500', color: '#1e40af' }}>🌾 Total Seeds Requested</span>
-                                                <span style={{ fontSize: '20px', fontWeight: '700', color: '#1e40af' }}>
+                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
+                                                <span className="tech-manage-requests-stat-label">🌾 Total Seeds Requested</span>
+                                                <span className="tech-manage-requests-stat-value">
                                                     {getTotalRequested('requested_jackpot_kg') +
                                                         getTotalRequested('requested_us88_kg') +
                                                         getTotalRequested('requested_th82_kg') +
@@ -1009,27 +926,161 @@ const TechManageRequests: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Approved Farmer Requests Card */}
+                                    <div className="tech-manage-requests-comparison-card tech-manage-requests-comparison-card-approved">
+                                        <h3 className="tech-manage-requests-comparison-title">
+                                            ✅ Approved Farmer Requests
+                                        </h3>
+                                        <div className="tech-manage-requests-comparison-stats">
+                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
+                                                <span className="tech-manage-requests-stat-label">🌱 Total Fertilizers</span>
+                                                <span className="tech-manage-requests-stat-value">
+                                                    {(() => {
+                                                        const approvedRequests = requests.filter(r => r.status === 'approved');
+                                                        const total = approvedRequests.reduce((sum, r) =>
+                                                            sum + Number(r.requested_urea_bags || 0) +
+                                                            Number(r.requested_complete_14_bags || 0) +
+                                                            Number(r.requested_ammonium_sulfate_bags || 0) +
+                                                            Number(r.requested_muriate_potash_bags || 0), 0
+                                                        );
+                                                        return Number(total).toFixed(2);
+                                                    })()} bags
+                                                </span>
+                                            </div>
+                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
+                                                <span className="tech-manage-requests-stat-label">🌾 Total Seeds</span>
+                                                <span className="tech-manage-requests-stat-value">
+                                                    {(() => {
+                                                        const approvedRequests = requests.filter(r => r.status === 'approved');
+                                                        const total = approvedRequests.reduce((sum, r) =>
+                                                            sum + Number(r.requested_jackpot_kg || 0) +
+                                                            Number(r.requested_us88_kg || 0) +
+                                                            Number(r.requested_th82_kg || 0) +
+                                                            Number(r.requested_rh9000_kg || 0) +
+                                                            Number(r.requested_lumping143_kg || 0) +
+                                                            Number(r.requested_lp296_kg || 0), 0
+                                                        );
+                                                        return Number(total).toFixed(2);
+                                                    })()} kg
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Rejected Farmer Requests Card */}
+                                    <div className="tech-manage-requests-comparison-card tech-manage-requests-comparison-card-rejected">
+                                        <h3 className="tech-manage-requests-comparison-title">
+                                            ❌ Rejected Farmer Requests
+                                        </h3>
+                                        <div className="tech-manage-requests-comparison-stats">
+                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
+                                                <span className="tech-manage-requests-stat-label">🌱 Total Fertilizers</span>
+                                                <span className="tech-manage-requests-stat-value">
+                                                    {(() => {
+                                                        const rejectedRequests = requests.filter(r => r.status === 'rejected');
+                                                        const total = rejectedRequests.reduce((sum, r) =>
+                                                            sum + Number(r.requested_urea_bags || 0) +
+                                                            Number(r.requested_complete_14_bags || 0) +
+                                                            Number(r.requested_ammonium_sulfate_bags || 0) +
+                                                            Number(r.requested_muriate_potash_bags || 0), 0
+                                                        );
+                                                        return Number(total).toFixed(2);
+                                                    })()} bags
+                                                </span>
+                                            </div>
+                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
+                                                <span className="tech-manage-requests-stat-label">🌾 Total Seeds</span>
+                                                <span className="tech-manage-requests-stat-value">
+                                                    {(() => {
+                                                        const rejectedRequests = requests.filter(r => r.status === 'rejected');
+                                                        const total = rejectedRequests.reduce((sum, r) =>
+                                                            sum + Number(r.requested_jackpot_kg || 0) +
+                                                            Number(r.requested_us88_kg || 0) +
+                                                            Number(r.requested_th82_kg || 0) +
+                                                            Number(r.requested_rh9000_kg || 0) +
+                                                            Number(r.requested_lumping143_kg || 0) +
+                                                            Number(r.requested_lp296_kg || 0), 0
+                                                        );
+                                                        return Number(total).toFixed(2);
+                                                    })()} kg
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Summary Stats */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                                    <div style={{ padding: '16px', background: '#f3f4f6', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Total Requests</div>
-                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>{filteredRequests.length}</div>
+                                <div className="tech-manage-requests-summary-cards">
+                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-total">
+                                        <div className="tech-manage-requests-summary-label">Total Requests</div>
+                                        <div className="tech-manage-requests-summary-value">{filteredRequests.length}</div>
                                     </div>
-                                    <div style={{ padding: '16px', background: '#fef3c7', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '12px', color: '#92400e', marginBottom: '4px' }}>Pending</div>
-                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#92400e' }}>
+                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-pending">
+                                        <div className="tech-manage-requests-summary-label">Pending</div>
+                                        <div className="tech-manage-requests-summary-value">
                                             {filteredRequests.filter(r => r.status === 'pending').length}
                                         </div>
                                     </div>
-                                    <div style={{ padding: '16px', background: '#d1fae5', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '12px', color: '#065f46', marginBottom: '4px' }}>Approved</div>
-                                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#065f46' }}>
+                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-approved">
+                                        <div className="tech-manage-requests-summary-label">Approved</div>
+                                        <div className="tech-manage-requests-summary-value">
                                             {filteredRequests.filter(r => r.status === 'approved').length}
                                         </div>
                                     </div>
+                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-rejected">
+                                        <div className="tech-manage-requests-summary-label">Rejected</div>
+                                        <div className="tech-manage-requests-summary-value">
+                                            {filteredRequests.filter(r => r.status === 'rejected').length}
+                                        </div>
+                                    </div>
+                                    {/* Shortage Warning Card */}
+                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-shortage">
+                                        {newSuggestionsCount > 0 && (
+                                            <div className="tech-manage-requests-shortage-pulse-badge">
+                                                {newSuggestionsCount}
+                                            </div>
+                                        )}
+                                        <div className="tech-manage-requests-summary-label">⚠️ Needs Alternatives</div>
+                                        <div className="tech-manage-requests-summary-value">
+                                            {autoSuggestionsCount}
+                                        </div>
+                                        <div className="tech-manage-requests-summary-hint">
+                                            {newSuggestionsCount > 0 ? '🔴 New suggestions loaded!' : 'Auto-loaded alternatives'}
+                                        </div>
+                                    </div>
+                                    <div
+                                        className="tech-manage-requests-summary-card tech-manage-requests-summary-suggestions"
+                                        onClick={() => setShowSuggestionsModal(true)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <div className="tech-manage-requests-summary-label">💡 Suggestions</div>
+                                        <div className="tech-manage-requests-summary-value">
+                                            {Object.keys(alternatives).filter(key => {
+                                                const alt = alternatives[parseInt(key)];
+                                                return alt?.suggestions?.suggestions?.length > 0;
+                                            }).length}
+                                        </div>
+                                        <div className="tech-manage-requests-summary-hint">Click to view</div>
+                                    </div>
                                 </div>
+
+                                {/* Info Box for Visual Indicators */}
+                                {filteredRequests.filter(r => r.status === 'pending' && checkPotentialShortage(r)).length > 0 && (
+                                    <div className="tech-manage-requests-info-box">
+                                        <span className="tech-manage-requests-info-box-icon">💡</span>
+                                        <div className="tech-manage-requests-info-box-content">
+                                            <strong className="tech-manage-requests-info-box-title">
+                                                Alternatives Auto-Loaded & Displayed
+                                            </strong>
+                                            <p className="tech-manage-requests-info-box-text">
+                                                Rows highlighted in yellow (⚠️) show automatic suggestions.
+                                                Alternative fertilizer options are displayed automatically based on agronomic equivalency.
+                                                Click the "💡 Suggestions" card above to view and apply alternatives.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Requests Table */}
                                 {filteredRequests.length === 0 ? (
@@ -1039,16 +1090,16 @@ const TechManageRequests: React.FC = () => {
                                         <p>No farmer requests match your filters</p>
                                     </div>
                                 ) : (
-                                    <div style={{ overflowX: 'auto' }}>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                            <thead>
-                                                <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                                                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>Farmer</th>
-                                                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>Barangay</th>
-                                                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', fontSize: '14px' }}>Status</th>
-                                                    <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', fontSize: '14px' }}>Fertilizers (bags)</th>
-                                                    <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', fontSize: '14px' }}>Seeds (kg)</th>
-                                                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600', fontSize: '14px' }}>Actions</th>
+                                    <div className="tech-manage-requests-table-container">
+                                        <table className="tech-manage-requests-table">
+                                            <thead className="tech-manage-requests-table-header">
+                                                <tr>
+                                                    <th>Farmer</th>
+                                                    <th>Barangay</th>
+                                                    <th>Status</th>
+                                                    <th>Fertilizers (bags)</th>
+                                                    <th>Seeds (kg)</th>
+                                                    <th>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1066,259 +1117,59 @@ const TechManageRequests: React.FC = () => {
                                                         (Number(request.requested_lp296_kg) || 0);
 
                                                     const hasShortage = checkPotentialShortage(request);
-                                                    const hasAlternatives = alternatives[request.id];
-                                                    const isLoadingAlt = loadingAlternatives[request.id];
 
                                                     return (
                                                         <React.Fragment key={request.id}>
-                                                            <tr style={{ borderBottom: '1px solid #e5e7eb', background: hasShortage ? '#fef3c7' : 'transparent' }}>
-                                                                <td style={{ padding: '12px', fontSize: '14px', fontWeight: '600' }}>
+                                                            <tr className={`tech-manage-requests-table-row ${hasShortage ? 'shortage-warning' : ''}`}>
+                                                                <td>
                                                                     {request.farmer_name}
                                                                     {hasShortage && request.status === 'pending' && (
-                                                                        <div style={{ fontSize: '11px', color: '#d97706', marginTop: '4px' }}>
+                                                                        <div className="tech-manage-requests-shortage-badge">
                                                                             ⚠️ Shortage detected
                                                                         </div>
                                                                     )}
                                                                 </td>
-                                                                <td style={{ padding: '12px', fontSize: '14px' }}>{request.barangay}</td>
-                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <span style={{
-                                                                        padding: '4px 12px',
-                                                                        borderRadius: '12px',
-                                                                        fontSize: '12px',
-                                                                        fontWeight: '600',
-                                                                        background: request.status === 'approved' ? '#d1fae5' : request.status === 'rejected' ? '#fee2e2' : '#fef3c7',
-                                                                        color: request.status === 'approved' ? '#065f46' : request.status === 'rejected' ? '#991b1b' : '#92400e'
-                                                                    }}>
+                                                                <td>{request.barangay}</td>
+                                                                <td>
+                                                                    <span className={`tech-manage-requests-status-badge tech-manage-requests-status-${request.status}`}>
                                                                         {request.status}
                                                                     </span>
                                                                 </td>
-                                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{totalFertilizer.toFixed(2)}</td>
-                                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px' }}>{totalSeeds.toFixed(2)}</td>
-                                                                <td style={{ padding: '12px', textAlign: 'center' }}>
-                                                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                                                <td>{totalFertilizer.toFixed(2)}</td>
+                                                                <td>{totalSeeds.toFixed(2)}</td>
+                                                                <td>
+                                                                    <div className="tech-manage-requests-action-buttons">
                                                                         {request.status === 'pending' && (
                                                                             <>
                                                                                 <button
                                                                                     onClick={() => handleStatusChange(request.id, 'approved')}
-                                                                                    style={{
-                                                                                        padding: '6px 12px',
-                                                                                        background: '#10b981',
-                                                                                        color: 'white',
-                                                                                        border: 'none',
-                                                                                        borderRadius: '6px',
-                                                                                        cursor: 'pointer',
-                                                                                        fontSize: '12px',
-                                                                                        fontWeight: '600'
-                                                                                    }}
+                                                                                    className="tech-manage-requests-btn-approve"
                                                                                 >
                                                                                     ✓ Approve
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => handleEdit(request)}
-                                                                                    style={{
-                                                                                        padding: '6px 12px',
-                                                                                        background: '#f59e0b',
-                                                                                        color: 'white',
-                                                                                        border: 'none',
-                                                                                        borderRadius: '6px',
-                                                                                        cursor: 'pointer',
-                                                                                        fontSize: '12px',
-                                                                                        fontWeight: '600'
-                                                                                    }}
+                                                                                    className="tech-manage-requests-btn-edit"
                                                                                 >
                                                                                     ✏️ Edit
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => handleStatusChange(request.id, 'rejected')}
-                                                                                    style={{
-                                                                                        padding: '6px 12px',
-                                                                                        background: '#ef4444',
-                                                                                        color: 'white',
-                                                                                        border: 'none',
-                                                                                        borderRadius: '6px',
-                                                                                        cursor: 'pointer',
-                                                                                        fontSize: '12px',
-                                                                                        fontWeight: '600'
-                                                                                    }}
+                                                                                    className="tech-manage-requests-btn-reject"
                                                                                 >
                                                                                     ✕ Reject
                                                                                 </button>
-                                                                                {hasShortage && hasAlternatives && (
-                                                                                    <button
-                                                                                        onClick={() => toggleAlternatives(request.id)}
-                                                                                        disabled={isLoadingAlt}
-                                                                                        style={{
-                                                                                            padding: '6px 12px',
-                                                                                            background: showAlternatives[request.id] ? '#7c3aed' : '#8b5cf6',
-                                                                                            color: 'white',
-                                                                                            border: 'none',
-                                                                                            borderRadius: '6px',
-                                                                                            cursor: isLoadingAlt ? 'wait' : 'pointer',
-                                                                                            fontSize: '12px',
-                                                                                            fontWeight: '600',
-                                                                                            opacity: isLoadingAlt ? 0.6 : 1
-                                                                                        }}
-                                                                                    >
-                                                                                        {isLoadingAlt ? '⏳ Loading...' : showAlternatives[request.id] ? '🔼 Hide' : '🔽 Show'} Alternatives
-                                                                                    </button>
-                                                                                )}
                                                                             </>
                                                                         )}
                                                                         <button
                                                                             onClick={() => handleDelete(request.id, request.farmer_name)}
-                                                                            style={{
-                                                                                padding: '6px 12px',
-                                                                                background: '#6b7280',
-                                                                                color: 'white',
-                                                                                border: 'none',
-                                                                                borderRadius: '6px',
-                                                                                cursor: 'pointer',
-                                                                                fontSize: '12px',
-                                                                                fontWeight: '600'
-                                                                            }}
+                                                                            className="tech-manage-requests-btn-delete"
                                                                         >
                                                                             🗑️ Delete
                                                                         </button>
                                                                     </div>
                                                                 </td>
                                                             </tr>
-                                                            {/* Alternatives Panel */}
-                                                            {showAlternatives[request.id] && hasAlternatives && (
-                                                                <tr>
-                                                                    <td colSpan={6} style={{ padding: '0', background: '#f9fafb' }}>
-                                                                        <div style={{
-                                                                            padding: '20px',
-                                                                            border: '2px solid #8b5cf6',
-                                                                            margin: '8px',
-                                                                            borderRadius: '8px',
-                                                                            background: 'linear-gradient(to right, #faf5ff, #f3e8ff)'
-                                                                        }}>
-                                                                            <h4 style={{ margin: '0 0 16px 0', color: '#6b21a8', fontSize: '16px', fontWeight: '700' }}>
-                                                                                Alternative Suggestions
-                                                                            </h4>
-
-                                                                            {hasAlternatives.suggestions?.suggestions && hasAlternatives.suggestions.suggestions.length > 0 && (
-                                                                                hasAlternatives.suggestions.suggestions.map((suggestion: any, idx: number) => (
-                                                                                    <div key={idx} style={{
-                                                                                        background: 'white',
-                                                                                        padding: '16px',
-                                                                                        borderRadius: '8px',
-                                                                                        marginBottom: '12px',
-                                                                                        border: '1px solid #e9d5ff'
-                                                                                    }}>
-                                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                                                                            <div>
-                                                                                                <strong style={{ color: '#dc2626' }}>⚠️ Shortage:</strong> {suggestion.original_fertilizer_name}
-                                                                                                <span style={{ color: '#dc2626', fontWeight: '700', marginLeft: '8px' }}>
-                                                                                                    {suggestion.shortage_bags} bags
-                                                                                                </span>
-                                                                                            </div>
-                                                                                        </div>
-
-                                                                                        {suggestion.alternatives && suggestion.alternatives.length > 0 ? (
-                                                                                            <div style={{ marginTop: '12px' }}>
-                                                                                                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#6b21a8' }}>
-                                                                                                    Select Alternative:
-                                                                                                </label>
-                                                                                                <select
-                                                                                                    onChange={(e) => {
-                                                                                                        const altIdx = parseInt(e.target.value);
-                                                                                                        if (!isNaN(altIdx)) {
-                                                                                                            setSelectedAlternative(prev => ({
-                                                                                                                ...prev,
-                                                                                                                [request.id]: { suggestionIdx: idx, alternativeIdx: altIdx }
-                                                                                                            }));
-                                                                                                        }
-                                                                                                    }}
-                                                                                                    style={{
-                                                                                                        width: '100%',
-                                                                                                        padding: '10px',
-                                                                                                        border: '2px solid #c4b5fd',
-                                                                                                        borderRadius: '6px',
-                                                                                                        fontSize: '14px'
-                                                                                                    }}
-                                                                                                >
-                                                                                                    <option value="">-- Choose a substitute --</option>
-                                                                                                    {suggestion.alternatives.map((alt: any, altIdx: number) => (
-                                                                                                        <option key={altIdx} value={altIdx}>
-                                                                                                            {alt.substitute_name} - {alt.needed_bags} bags
-                                                                                                            ({(alt.confidence_score * 100).toFixed(0)}% confidence)
-                                                                                                            {alt.can_fulfill ? ' ✅ Full' : ` ⚠️ Partial (${alt.remaining_shortage} short)`}
-                                                                                                        </option>
-                                                                                                    ))}
-                                                                                                </select>
-
-                                                                                                {selectedAlternative[request.id]?.suggestionIdx === idx && suggestion.alternatives[selectedAlternative[request.id].alternativeIdx] && (
-                                                                                                    <div style={{
-                                                                                                        marginTop: '12px',
-                                                                                                        padding: '12px',
-                                                                                                        background: '#f0fdf4',
-                                                                                                        border: '1px solid #86efac',
-                                                                                                        borderRadius: '6px'
-                                                                                                    }}>
-                                                                                                        <div style={{ fontSize: '13px', color: '#15803d' }}>
-                                                                                                            <strong>Selected Alternative:</strong>
-                                                                                                            <div style={{ marginTop: '8px' }}>
-                                                                                                                • Substitute: {suggestion.alternatives[selectedAlternative[request.id].alternativeIdx].substitute_name}<br />
-                                                                                                                • Amount needed: {suggestion.alternatives[selectedAlternative[request.id].alternativeIdx].needed_bags} bags<br />
-                                                                                                                • Available: {suggestion.alternatives[selectedAlternative[request.id].alternativeIdx].available_bags} bags<br />
-                                                                                                                • Confidence: {(suggestion.alternatives[selectedAlternative[request.id].alternativeIdx].confidence_score * 100).toFixed(0)}%
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                )}
-                                                                                            </div>
-                                                                                        ) : (
-                                                                                            <div style={{
-                                                                                                padding: '12px',
-                                                                                                background: '#fef2f2',
-                                                                                                borderRadius: '6px',
-                                                                                                color: '#991b1b',
-                                                                                                marginTop: '12px'
-                                                                                            }}>
-                                                                                                ❌ No suitable alternatives available in stock
-                                                                                                {suggestion.recommendation?.next_steps && suggestion.recommendation.next_steps.length > 0 ? (
-                                                                                                    <div style={{ margin: '8px 0 0 0', fontSize: '12px' }}>
-                                                                                                        <strong>Recommendation:</strong>
-                                                                                                        <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px' }}>
-                                                                                                            {suggestion.recommendation.next_steps.map((step: string, stepIdx: number) => (
-                                                                                                                <li key={stepIdx}>{step}</li>
-                                                                                                            ))}
-                                                                                                        </ul>
-                                                                                                    </div>
-                                                                                                ) : (
-                                                                                                    <p style={{ margin: '8px 0 0 0', fontSize: '12px' }}>
-                                                                                                        Recommendation: Request farmer to reduce quantity or reject request
-                                                                                                    </p>
-                                                                                                )}
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                ))
-                                                                            )}                                                                            {hasAlternatives.suggestions?.suggestions?.some((s: any) => s.alternatives && s.alternatives.length > 0) && (
-                                                                                <button
-                                                                                    onClick={() => applyAlternative(request.id)}
-                                                                                    disabled={!selectedAlternative[request.id] || applyingAlternative[request.id]}
-                                                                                    style={{
-                                                                                        padding: '12px 24px',
-                                                                                        background: selectedAlternative[request.id] && !applyingAlternative[request.id] ? '#7c3aed' : '#cbd5e1',
-                                                                                        color: 'white',
-                                                                                        border: 'none',
-                                                                                        borderRadius: '8px',
-                                                                                        cursor: selectedAlternative[request.id] && !applyingAlternative[request.id] ? 'pointer' : 'not-allowed',
-                                                                                        fontSize: '14px',
-                                                                                        fontWeight: '700',
-                                                                                        marginTop: '12px'
-                                                                                    }}
-                                                                                >
-                                                                                    {applyingAlternative[request.id] ? '⏳ Applying...' : '✅ Apply Selected Alternative'}
-                                                                                </button>
-                                                                            )}
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            )}
                                                         </React.Fragment>
                                                     );
                                                 })}
@@ -1334,185 +1185,312 @@ const TechManageRequests: React.FC = () => {
 
             {/* Edit Request Modal */}
             {editingRequest && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 1000
-                }}>
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '12px',
-                        padding: '24px',
-                        maxWidth: '600px',
-                        width: '90%',
-                        maxHeight: '80vh',
-                        overflowY: 'auto'
-                    }}>
-                        <h3 style={{ marginBottom: '20px', fontSize: '20px', fontWeight: '700' }}>Edit Farmer Request</h3>
+                <div className="tech-manage-requests-modal-overlay">
+                    <div className="tech-manage-requests-modal-content">
+                        <h3 className="tech-manage-requests-modal-title">Edit Farmer Request</h3>
 
                         {/* Fertilizers */}
-                        <div style={{ marginBottom: '20px' }}>
-                            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Fertilizers (bags)</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div className="tech-manage-requests-modal-section">
+                            <h4 className="tech-manage-requests-modal-section-title">Fertilizers (bags)</h4>
+                            <div className="tech-manage-requests-modal-grid">
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Urea (46-0-0)</label>
+                                    <label className="tech-manage-requests-modal-label">Urea (46-0-0)</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_urea_bags || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_urea_bags: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Complete (14-14-14)</label>
+                                    <label className="tech-manage-requests-modal-label">Complete (14-14-14)</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_complete_14_bags || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_complete_14_bags: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Ammonium Sulfate</label>
+                                    <label className="tech-manage-requests-modal-label">Ammonium Sulfate</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_ammonium_sulfate_bags || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_ammonium_sulfate_bags: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Muriate of Potash</label>
+                                    <label className="tech-manage-requests-modal-label">Muriate of Potash</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_muriate_potash_bags || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_muriate_potash_bags: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                             </div>
                         </div>
 
                         {/* Seeds */}
-                        <div style={{ marginBottom: '20px' }}>
-                            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Seeds (kg)</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div className="tech-manage-requests-modal-section">
+                            <h4 className="tech-manage-requests-modal-section-title">Seeds (kg)</h4>
+                            <div className="tech-manage-requests-modal-grid">
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Jackpot</label>
+                                    <label className="tech-manage-requests-modal-label">Jackpot</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_jackpot_kg || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_jackpot_kg: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>US88</label>
+                                    <label className="tech-manage-requests-modal-label">US88</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_us88_kg || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_us88_kg: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>TH82</label>
+                                    <label className="tech-manage-requests-modal-label">TH82</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_th82_kg || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_th82_kg: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>RH9000</label>
+                                    <label className="tech-manage-requests-modal-label">RH9000</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_rh9000_kg || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_rh9000_kg: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Lumping143</label>
+                                    <label className="tech-manage-requests-modal-label">Lumping143</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_lumping143_kg || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_lumping143_kg: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>LP296</label>
+                                    <label className="tech-manage-requests-modal-label">LP296</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={editFormData.requested_lp296_kg || 0}
                                         onChange={(e) => setEditFormData({ ...editFormData, requested_lp296_kg: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                                        className="tech-manage-requests-modal-input"
                                     />
                                 </div>
                             </div>
                         </div>
 
                         {/* Notes */}
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Notes</label>
+                        <div className="tech-manage-requests-modal-section">
+                            <label className="tech-manage-requests-modal-label">Notes</label>
                             <textarea
                                 value={editFormData.request_notes || ''}
                                 onChange={(e) => setEditFormData({ ...editFormData, request_notes: e.target.value })}
                                 rows={3}
-                                style={{ width: '100%', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', resize: 'vertical' }}
+                                className="tech-manage-requests-modal-textarea"
                             />
                         </div>
 
                         {/* Action Buttons */}
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                        <div className="tech-manage-requests-modal-actions">
                             <button
                                 onClick={handleCancelEdit}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: '#e5e7eb',
-                                    color: '#374151',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '600'
-                                }}
+                                className="tech-manage-requests-modal-btn-cancel"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSaveEdit}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: '#3b82f6',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '600'
-                                }}
+                                className="tech-manage-requests-modal-btn-save"
                             >
                                 💾 Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Suggestions Modal */}
+            {showSuggestionsModal && (
+                <div className="tech-manage-requests-modal-overlay">
+                    <div className="tech-manage-requests-modal-content" style={{ maxWidth: '700px', maxHeight: '80vh' }}>
+                        <h3 className="tech-manage-requests-modal-title">💡 DSS Suggestions Overview</h3>
+
+                        <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 140px),', padding: '15px 9px' }}>
+                            {Object.keys(alternatives).length === 0 ? (
+                                <div className="tech-manage-requests-suggestions-empty">
+                                    <div className="tech-manage-requests-suggestions-empty-icon">📋</div>
+                                    <h4>No Suggestions Available</h4>
+                                    <p>There are no shortage-based suggestions at this time.</p>
+                                </div>
+                            ) : (
+                                <div className="tech-manage-requests-suggestions-list">
+                                    {Object.keys(alternatives).map(key => {
+                                        const requestId = parseInt(key);
+                                        const altData = alternatives[requestId];
+                                        const request = requests.find(r => r.id === requestId);
+
+                                        if (!altData?.suggestions?.suggestions?.length || !request || request.status !== 'pending') {
+                                            return null;
+                                        }
+
+                                        const isExpanded = expandedFarmerInModal === requestId;
+
+                                        return (
+                                            <div key={requestId} className="tech-manage-requests-suggestion-card">
+                                                {/* Clickable Header */}
+                                                <div
+                                                    className="tech-manage-requests-suggestion-card-header"
+                                                    onClick={() => setExpandedFarmerInModal(isExpanded ? null : requestId)}
+                                                    style={{ cursor: 'pointer' }}
+                                                >
+                                                    <div className="tech-manage-requests-suggestion-farmer-info">
+                                                        <span className="tech-manage-requests-suggestion-farmer-name">
+                                                            👤 {altData.farmer_name || request.farmer_name}
+                                                        </span>
+                                                        <span className="tech-manage-requests-suggestion-farmer-barangay">
+                                                            📍 {request.barangay}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <span className="tech-manage-requests-suggestion-status">
+                                                            ⚠️ {altData.suggestions.suggestions.length} shortage(s)
+                                                        </span>
+                                                        <span style={{ fontSize: '16px', color: '#7c3aed' }}>
+                                                            {isExpanded ? '▲' : '▼'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Expandable Details */}
+                                                {isExpanded && (
+                                                    <div className="tech-manage-requests-suggestion-details">
+                                                        {altData.suggestions.suggestions.map((suggestion: any, idx: number) => (
+                                                            <div key={idx} className="tech-manage-requests-shortage-item">
+                                                                <div className="tech-manage-requests-shortage-header">
+                                                                    <span className="tech-manage-requests-shortage-label">
+                                                                        ❌ Shortage: <strong>{suggestion.original_fertilizer_name}</strong>
+                                                                    </span>
+                                                                    <span className="tech-manage-requests-shortage-amount">
+                                                                        {suggestion.shortage_bags} bags
+                                                                    </span>
+                                                                </div>
+
+                                                                {suggestion.alternatives && suggestion.alternatives.length > 0 ? (
+                                                                    <div className="tech-manage-requests-alternatives-section">
+                                                                        <label className="tech-manage-requests-alternatives-label">
+                                                                            ✅ Available Alternatives:
+                                                                        </label>
+                                                                        <select
+                                                                            value={
+                                                                                selectedAlternative[requestId]?.suggestionIdx === idx
+                                                                                    ? selectedAlternative[requestId].alternativeIdx
+                                                                                    : ''
+                                                                            }
+                                                                            onChange={(e) => {
+                                                                                const altIdx = parseInt(e.target.value);
+                                                                                if (!isNaN(altIdx)) {
+                                                                                    setSelectedAlternative(prev => ({
+                                                                                        ...prev,
+                                                                                        [requestId]: { suggestionIdx: idx, alternativeIdx: altIdx }
+                                                                                    }));
+                                                                                }
+                                                                            }}
+                                                                            className="tech-manage-requests-alternatives-select"
+                                                                        >
+                                                                            <option value="">-- Choose a substitute --</option>
+                                                                            {suggestion.alternatives.map((alt: any, altIdx: number) => (
+                                                                                <option key={altIdx} value={altIdx}>
+                                                                                    {alt.substitute_name} - {alt.needed_bags} bags
+                                                                                    ({(alt.confidence_score * 100).toFixed(0)}% confidence)
+                                                                                    {alt.can_fulfill ? ' ✅ Full' : ` ⚠️ Partial (${alt.remaining_shortage} short)`}
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+
+                                                                        {selectedAlternative[requestId]?.suggestionIdx === idx && suggestion.alternatives[selectedAlternative[requestId].alternativeIdx] && (
+                                                                            <div className="tech-manage-requests-selected-alternative-preview">
+                                                                                <strong>Selected:</strong>
+                                                                                <div className="tech-manage-requests-selected-alternative-details">
+                                                                                    <span>• {suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].substitute_name}</span>
+                                                                                    <span>• {suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].needed_bags} bags needed</span>
+                                                                                    <span>• {suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].available_bags} bags available</span>
+                                                                                    <span>• {(suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].confidence_score * 100).toFixed(0)}% confidence</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="tech-manage-requests-no-alternatives">
+                                                                        ❌ No suitable alternatives available
+                                                                        {suggestion.recommendation?.next_steps && (
+                                                                            <div className="tech-manage-requests-recommendation">
+                                                                                <strong>Recommendation:</strong>
+                                                                                <ul>
+                                                                                    {suggestion.recommendation.next_steps.map((step: string, stepIdx: number) => (
+                                                                                        <li key={stepIdx}>{step}</li>
+                                                                                    ))}
+                                                                                </ul>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+
+                                                        {altData.suggestions.suggestions.some((s: any) => s.alternatives?.length > 0) && (
+                                                            <div className="tech-manage-requests-suggestion-card-actions">
+                                                                <button
+                                                                    onClick={() => applyAlternative(requestId)}
+                                                                    disabled={!selectedAlternative[requestId] || applyingAlternative[requestId]}
+                                                                    className="tech-manage-requests-btn-apply-alternative"
+                                                                >
+                                                                    {applyingAlternative[requestId] ? '⏳ Applying...' : '✅ Apply Selected Alternative'}
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="tech-manage-requests-modal-actions">
+                            <button
+                                onClick={() => {
+                                    setShowSuggestionsModal(false);
+                                    setExpandedFarmerInModal(null);
+                                }}
+                                className="tech-manage-requests-modal-btn-cancel"
+                            >
+                                Close
                             </button>
                         </div>
                     </div>

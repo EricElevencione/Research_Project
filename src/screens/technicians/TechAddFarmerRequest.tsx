@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import '../../assets/css/technician css/TechAddFarmerRequestStyle.css';
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -261,8 +262,8 @@ const TechAddFarmerRequest: React.FC = () => {
     });
 
     return (
-        <div className="page-container">
-            <div className="page">
+        <div className="tech-add-farmer-page-container">
+            <div className="tech-add-farmer-page">
                 {/* Sidebar */}
                 <div className="sidebar">
                     <nav className="sidebar-nav">
@@ -333,54 +334,37 @@ const TechAddFarmerRequest: React.FC = () => {
                 </div>
 
                 {/* Main Content */}
-                <div className="main-content">
-                    <div className="dashboard-header-incent">
-                        <h2 className="page-header">➕ Add Farmer Request</h2>
-                        <p className="page-subtitle">
+                <div className="tech-add-farmer-main-content">
+                    <div className="tech-add-farmer-header">
+                        <h2 className="tech-add-farmer-title">➕ Add Farmer Request</h2>
+                        <p className="tech-add-farmer-subtitle">
                             {allocation ? `Season: ${allocation.season.replace('_', ' ').toUpperCase()}` : 'Loading...'}
                         </p>
                         <button
-                            className="btn-create-allocation"
+                            className="tech-add-farmer-back-btn"
                             onClick={() => navigate(`/technician-manage-requests/${allocationId}`)}
                         >
                             ← Back to Manage Requests
                         </button>
                     </div>
 
-                    <div className="content-card-incent">
+                    <div className="tech-add-farmer-content-card">
                         <form onSubmit={handleSubmit}>
                             {/* Farmer Selection */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1f2937' }}>
+                            <div className="tech-add-farmer-section">
+                                <h3 className="tech-add-farmer-section-title">
                                     Select Farmer
                                 </h3>
-                                <div style={{ marginBottom: '12px' }}>
+                                <div className="tech-add-farmer-search-container">
                                     <input
                                         type="text"
                                         placeholder="🔍 Search by name or RSBSA number..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '10px',
-                                            border: '1px solid #d1d5db',
-                                            borderRadius: '6px',
-                                            fontSize: '14px',
-                                            marginBottom: '8px'
-                                        }}
+                                        className="tech-add-farmer-search-input"
                                     />
                                     {existingRequests.length > 0 && (
-                                        <div style={{
-                                            padding: '8px 12px',
-                                            background: '#fef3c7',
-                                            border: '1px solid #f59e0b',
-                                            borderRadius: '6px',
-                                            fontSize: '13px',
-                                            color: '#92400e',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '6px'
-                                        }}>
+                                        <div className="tech-add-farmer-info-box">
                                             <span>ℹ️</span>
                                             <span>
                                                 {existingRequests.length} farmer{existingRequests.length !== 1 ? 's' : ''} hidden (already have request{existingRequests.length !== 1 ? 's' : ''} for this season)
@@ -388,34 +372,16 @@ const TechAddFarmerRequest: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div style={{
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '6px',
-                                    maxHeight: '300px',
-                                    overflowY: 'auto',
-                                    backgroundColor: '#f9fafb'
-                                }}>
+                                <div className="tech-add-farmer-list-container">
                                     {filteredFarmers.length === 0 ? (
-                                        <div style={{
-                                            padding: '24px',
-                                            textAlign: 'center',
-                                            color: '#6b7280'
-                                        }}>
+                                        <div className="tech-add-farmer-empty-state">
                                             No farmers found
                                         </div>
                                     ) : (
                                         filteredFarmers.map(farmer => (
                                             <label
                                                 key={farmer.id}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    padding: '12px 16px',
-                                                    borderBottom: '1px solid #e5e7eb',
-                                                    cursor: 'pointer',
-                                                    transition: 'background-color 0.2s',
-                                                    backgroundColor: Number(formData.farmer_id) === Number(farmer.id) ? '#d1fae5' : 'white'
-                                                }}
+                                                className={`tech-add-farmer-item ${Number(formData.farmer_id) === Number(farmer.id) ? 'selected' : ''}`}
                                                 onMouseEnter={(e) => {
                                                     if (Number(formData.farmer_id) !== Number(farmer.id)) {
                                                         e.currentTarget.style.backgroundColor = '#f3f4f6';
@@ -439,27 +405,14 @@ const TechAddFarmerRequest: React.FC = () => {
                                                     value={farmer.id}
                                                     checked={Number(formData.farmer_id) === Number(farmer.id)}
                                                     onChange={() => { }}
-                                                    style={{
-                                                        width: '18px',
-                                                        height: '18px',
-                                                        marginRight: '12px',
-                                                        cursor: 'pointer',
-                                                        accentColor: '#10b981'
-                                                    }}
+                                                    className="tech-add-farmer-radio"
                                                 />
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{
-                                                        fontWeight: '500',
-                                                        color: '#1f2937',
-                                                        marginBottom: '2px'
-                                                    }}>
+                                                <div className="tech-add-farmer-item-content">
+                                                    <div className="tech-add-farmer-name">
                                                         {farmer.last_name}, {farmer.first_name} {farmer.middle_name ? farmer.middle_name + ' ' : ''}
                                                         {farmer.extension_name ? farmer.extension_name + ' ' : ''}
                                                     </div>
-                                                    <div style={{
-                                                        fontSize: '13px',
-                                                        color: '#6b7280'
-                                                    }}>
+                                                    <div className="tech-add-farmer-details">
                                                         📍 {farmer.barangay} • RSBSA: {farmer.rsbsa_no}
                                                     </div>
                                                 </div>
@@ -470,13 +423,13 @@ const TechAddFarmerRequest: React.FC = () => {
                             </div>
 
                             {/* Fertilizer Requests */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1f2937' }}>
+                            <div className="tech-add-farmer-section">
+                                <h3 className="tech-add-farmer-section-title">
                                     🌱 Requested Fertilizers (bags)
                                 </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                <div className="tech-add-farmer-form-grid">
+                                    <div className="tech-add-farmer-form-group">
+                                        <label className="tech-add-farmer-label">
                                             Urea (46-0-0)
                                         </label>
                                         <input
@@ -486,17 +439,11 @@ const TechAddFarmerRequest: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-add-farmer-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-add-farmer-form-group">
+                                        <label className="tech-add-farmer-label">
                                             Complete (14-14-14)
                                         </label>
                                         <input
@@ -506,17 +453,11 @@ const TechAddFarmerRequest: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-add-farmer-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-add-farmer-form-group">
+                                        <label className="tech-add-farmer-label">
                                             Ammonium Sulfate (21-0-0)
                                         </label>
                                         <input
@@ -526,17 +467,11 @@ const TechAddFarmerRequest: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-add-farmer-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-add-farmer-form-group">
+                                        <label className="tech-add-farmer-label">
                                             Muriate of Potash (0-0-60)
                                         </label>
                                         <input
@@ -546,27 +481,21 @@ const TechAddFarmerRequest: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-add-farmer-input"
                                         />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Seed Requests */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1f2937' }}>
+                            <div className="tech-add-farmer-section">
+                                <h3 className="tech-add-farmer-section-title">
                                     🌾 Requested Seeds (kg)
                                 </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                                <div className="tech-add-farmer-form-grid">
                                     {['Jackpot', 'US88', 'TH82', 'RH9000', 'Lumping143', 'LP296'].map((seedType) => (
-                                        <div key={seedType}>
-                                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                        <div key={seedType} className="tech-add-farmer-form-group">
+                                            <label className="tech-add-farmer-label">
                                                 {seedType}
                                             </label>
                                             <input
@@ -576,13 +505,7 @@ const TechAddFarmerRequest: React.FC = () => {
                                                 onChange={handleInputChange}
                                                 min="0"
                                                 step="0.01"
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '10px',
-                                                    border: '1px solid #d1d5db',
-                                                    borderRadius: '6px',
-                                                    fontSize: '14px'
-                                                }}
+                                                className="tech-add-farmer-input"
                                             />
                                         </div>
                                     ))}
@@ -590,8 +513,8 @@ const TechAddFarmerRequest: React.FC = () => {
                             </div>
 
                             {/* Notes */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            <div className="tech-add-farmer-section">
+                                <label className="tech-add-farmer-label">
                                     Notes / Remarks
                                 </label>
                                 <textarea
@@ -600,63 +523,30 @@ const TechAddFarmerRequest: React.FC = () => {
                                     onChange={handleInputChange}
                                     rows={3}
                                     placeholder="Add any additional notes..."
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '6px',
-                                        fontSize: '14px',
-                                        fontFamily: 'inherit'
-                                    }}
+                                    className="tech-add-farmer-textarea"
                                 />
                             </div>
 
                             {/* Error Message */}
                             {error && (
-                                <div style={{
-                                    padding: '12px',
-                                    marginBottom: '16px',
-                                    backgroundColor: '#fee2e2',
-                                    border: '1px solid #ef4444',
-                                    borderRadius: '6px',
-                                    color: '#991b1b'
-                                }}>
+                                <div className="tech-add-farmer-error-box">
                                     {error}
                                 </div>
                             )}
 
                             {/* Action Buttons */}
-                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <div className="tech-add-farmer-actions">
                                 <button
                                     type="button"
                                     onClick={() => navigate(`/technician-manage-requests/${allocationId}`)}
-                                    style={{
-                                        padding: '12px 24px',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '8px',
-                                        fontSize: '15px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                        backgroundColor: 'white',
-                                        color: '#374151'
-                                    }}
+                                    className="tech-add-farmer-cancel-btn"
                                     disabled={loading}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    style={{
-                                        background: loading ? '#9ca3af' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                        color: 'white',
-                                        padding: '12px 24px',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontSize: '15px',
-                                        fontWeight: '600',
-                                        cursor: loading ? 'not-allowed' : 'pointer',
-                                        boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)'
-                                    }}
+                                    className="tech-add-farmer-submit-btn"
                                     disabled={loading}
                                 >
                                     {loading ? '💾 Saving...' : '✅ Add Farmer Request'}

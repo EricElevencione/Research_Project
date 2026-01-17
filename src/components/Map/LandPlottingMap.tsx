@@ -213,21 +213,47 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
         // Add shapes from props to the map when shapes prop changes
         useEffect(() => {
+            console.log('🗺️ LandPlottingMap - shapes prop changed:', shapes);
+            console.log('🗺️ LandPlottingMap - shapes length:', shapes?.length);
+            console.log('🗺️ LandPlottingMap - featureGroupRef.current:', featureGroupRef.current);
+
             if (featureGroupRef.current && Array.isArray(shapes)) {
+                console.log('✅ Processing shapes, removing non-boundary layers...');
                 featureGroupRef.current.eachLayer((layer: any) => {
                     if (!layer.options?.isBoundary) {
                         featureGroupRef.current?.removeLayer(layer);
+                        console.log('🗑️ Removed layer:', layer);
                     }
                 });
-                shapes.forEach((shape: any) => {
+
+                console.log(`➕ Adding ${shapes.length} shapes to map...`);
+                shapes.forEach((shape: any, index: number) => {
+                    console.log(`   Shape ${index}:`, {
+                        id: shape.id,
+                        hasLayer: !!shape.layer,
+                        properties: shape.properties
+                    });
+
                     if (shape.layer && !featureGroupRef.current?.hasLayer(shape.layer)) {
                         featureGroupRef.current?.addLayer(shape.layer);
+                        console.log(`   ✅ Added shape ${shape.id} to map`);
                         if (shape.properties) {
                             shape.layer.bindPopup(getPopupContent(shape.properties));
                         }
+                    } else if (shape.layer) {
+                        console.log(`   ⚠️ Shape ${shape.id} already on map`);
+                    } else {
+                        console.log(`   ❌ Shape ${shape.id} has no layer!`);
                     }
                 });
                 setDrawnShapes(shapes);
+                console.log('✅ Finished processing shapes, drawnShapes updated');
+            } else {
+                console.log('❌ Cannot process shapes:', {
+                    hasFeatureGroup: !!featureGroupRef.current,
+                    isArray: Array.isArray(shapes),
+                    shapesValue: shapes
+                });
             }
         }, [shapes ?? [], (shapes ?? []).length]);
 

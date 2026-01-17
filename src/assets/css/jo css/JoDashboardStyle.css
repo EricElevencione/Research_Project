@@ -12,23 +12,27 @@
 /* Main Layout */
 .jo-dashboard-page-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f0f0f0;
+    overflow: hidden;
 }
 
 .jo-dashboard-page {
     display: flex;
     width: 100%;
+    height: 100%;
 }
 
 /* Main Content Area */
 .jo-dashboard-main-content {
     width: 100%;
     flex-grow: 1;
-    padding: 20px;
+    position: relative;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+    overflow: hidden;
+    height: 100%;
     display: flex;
-    flex-direction: row;
-    gap: 20px;
+    flex-direction: column;
 }
 
 .jo-dashboard-page-title {
@@ -36,6 +40,8 @@
     font-size: 28px;
     color: #111827;
     margin: 0 0 20px 0;
+    flex-shrink: 0;
+    z-index: 5;
 }
 
 /* Quick Access Section */
@@ -95,24 +101,29 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    padding: 20px 10px 20px 20px;
+    min-height: 0;
 }
 
 /* Map Area */
 .jo-dashboard-map-area {
-    position: relative;
-    height: calc(100vh - 370px);
+    height: 85.5vh;
+    width: 102vh;
     background: #FAF6E9;
-    border-radius: 5px;
+    border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    min-height: 0;
 }
 
-.jo-dashboard-map-layout .jo-dashboard-map-area>div {
+.jo-dashboard-map-area>div {
     height: 100% !important;
+    width: 100% !important;
 }
 
 /* Hide Leaflet layers toggle button on JO Dashboard only */
-.jo-dashboard-map-layout .jo-dashboard-map-area .leaflet-control-layers-toggle {
+.jo-dashboard-map-area .leaflet-control-layers-toggle {
     display: none !important;
 }
 
@@ -195,7 +206,11 @@
 
 /* Reports sidebar on the right */
 .jo-dashboard-reports {
-    background-color: #2A9D8F;
+    position: absolute;
+    top: 90px;
+    right: 18px;
+    background-color: rgba(42, 157, 143, 0.95);
+    backdrop-filter: blur(10px);
     color: white;
     padding: 10px;
     width: 350px;
@@ -203,14 +218,14 @@
     max-width: 350px;
     display: flex;
     flex-direction: column;
-    /* Normal column direction */
     justify-content: flex-end;
-    /* Push sections to the bottom */
     gap: 10px;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow-y: auto;
-    margin-top: 83px;
-    height: calc(100vh - 103px);
+    height: calc(100vh - 130px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* ============================================
@@ -280,7 +295,6 @@
 .accordion-content {
     max-height: 0;
     overflow: hidden;
-    overflow-y: auto;
     transition: max-height 0.4s ease-out;
     background-color: rgba(0, 0, 0, 0.1);
     flex-grow: 1;
@@ -314,8 +328,7 @@
    ============================================ */
 #section-1:checked~.jo-dashboard-reports-section:nth-of-type(1) .accordion-content {
     max-height: 2000px;
-    /* Increased to fill remaining space */
-    padding: 0px;
+    padding: 10px 0;
 }
 
 #section-1:checked~.jo-dashboard-reports-section:nth-of-type(1) .accordion-header {
@@ -332,8 +345,7 @@
    ============================================ */
 #section-2:checked~.jo-dashboard-reports-section:nth-of-type(2) .accordion-content {
     max-height: 2000px;
-    /* Increased to fill remaining space */
-    padding: 10px;
+    padding: 10px 0;
 }
 
 #section-2:checked~.jo-dashboard-reports-section:nth-of-type(2) .accordion-header {
@@ -349,8 +361,7 @@
    ============================================ */
 #section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) .accordion-content {
     max-height: 2000px;
-    /* Increased to fill remaining space */
-    padding: 10px;
+    padding: 10px 0;
 }
 
 #section-3:checked~.jo-dashboard-reports-section:nth-of-type(3) .accordion-header {
@@ -419,6 +430,188 @@
 
 .jo-dashboard-floating-stats-panel::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.3);
+}
+
+/* Panel Sections (if needed) */
+.jo-dashboard-panel-section {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+    margin: 10px;
+}
+
+/* ============================================
+   Modern DataGrid Table Styles
+   ============================================ */
+
+/* Table Container with modern card styling */
+.jo-dashboard-table-container {
+    background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(42, 157, 143, 0.08), 0 2px 8px rgba(42, 157, 143, 0.04);
+    border: 1px solid rgba(42, 157, 143, 0.15);
+}
+
+/* Header section with stats */
+.jo-dashboard-table-header {
+    padding: 18px 24px;
+    background: linear-gradient(135deg, #2A9D8F 0%, #21867a 100%);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.jo-dashboard-table-header-text {
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.3px;
+}
+
+.jo-dashboard-table-count-badge {
+    background: rgba(255, 255, 255, 0.95);
+    color: #2A9D8F;
+    padding: 5px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* DataGrid wrapper */
+.jo-dashboard-modern-datagrid {
+    height: 400px;
+    width: 100%;
+}
+
+/* Modern DataGrid styling overrides */
+.jo-dashboard-modern-datagrid .MuiDataGrid-root {
+    border: none;
+    font-family: var(--font-family);
+    background: #fefefe;
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-main {
+    overflow: hidden;
+}
+
+/* Column Headers - Modern gradient design */
+.jo-dashboard-modern-datagrid .MuiDataGrid-columnHeaders {
+    background: linear-gradient(180deg, #f0faf9 0%, #e6f5f3 100%);
+    border-bottom: 3px solid #2A9D8F;
+    min-height: 52px !important;
+    max-height: 52px !important;
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-columnHeader {
+    outline: none;
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-columnHeaderTitle {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a5248;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-columnSeparator {
+    color: rgba(42, 157, 143, 0.2);
+}
+
+/* Rows - Modern alternating pattern with hover */
+.jo-dashboard-modern-datagrid .MuiDataGrid-row {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid rgba(42, 157, 143, 0.08);
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-row:nth-of-type(even) {
+    background-color: rgba(240, 250, 249, 0.4);
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-row:hover {
+    background: linear-gradient(90deg, rgba(160, 200, 120, 0.12) 0%, rgba(42, 157, 143, 0.08) 100%);
+    transform: translateX(3px);
+    box-shadow: -4px 0 0 0 #A0C878;
+    cursor: pointer;
+}
+
+/* Cells - Clean and spacious */
+.jo-dashboard-modern-datagrid .MuiDataGrid-cell {
+    font-size: 13.5px;
+    color: #2d3748;
+    padding: 14px 20px;
+    border: none;
+    line-height: 1.6;
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-cell:focus,
+.jo-dashboard-modern-datagrid .MuiDataGrid-cell:focus-within {
+    outline: none;
+}
+
+/* First column (name) - Make it bold with accent color */
+.jo-dashboard-modern-datagrid .MuiDataGrid-cell:first-of-type {
+    font-weight: 600;
+    color: #1a5248;
+}
+
+/* Virtual Scroller - Clean scrolling */
+.jo-dashboard-modern-datagrid .MuiDataGrid-virtualScroller {
+    overflow-y: auto !important;
+    overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+.jo-dashboard-modern-datagrid .MuiDataGrid-virtualScroller::-webkit-scrollbar {
+    width: 10px;
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-virtualScroller::-webkit-scrollbar-track {
+    background: rgba(240, 250, 249, 0.6);
+    border-radius: 6px;
+    margin: 4px;
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-virtualScroller::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #A0C878 0%, #8bb966 100%);
+    border-radius: 6px;
+    border: 2px solid rgba(240, 250, 249, 0.6);
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-virtualScroller::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #8bb966 0%, #7aa555 100%);
+}
+
+/* Remove default scrollbar */
+.jo-dashboard-modern-datagrid .MuiDataGrid-scrollbar {
+    display: none;
+}
+
+/* Footer - if visible */
+.jo-dashboard-modern-datagrid .MuiDataGrid-footerContainer {
+    border-top: 2px solid rgba(42, 157, 143, 0.15);
+    background: linear-gradient(180deg, #f0faf9 0%, #fefefe 100%);
+}
+
+/* Empty state */
+.jo-dashboard-modern-datagrid .MuiDataGrid-overlay {
+    background: rgba(254, 254, 254, 0.95);
+    backdrop-filter: blur(4px);
+}
+
+/* Selection - Modern accent color */
+.jo-dashboard-modern-datagrid .MuiDataGrid-row.Mui-selected {
+    background: linear-gradient(90deg, rgba(160, 200, 120, 0.25) 0%, rgba(160, 200, 120, 0.15) 100%);
+    box-shadow: -4px 0 0 0 #A0C878;
+}
+
+.jo-dashboard-modern-datagrid .MuiDataGrid-row.Mui-selected:hover {
+    background: linear-gradient(90deg, rgba(160, 200, 120, 0.35) 0%, rgba(160, 200, 120, 0.25) 100%);
 }
 
 /* Panel Sections (if needed) */

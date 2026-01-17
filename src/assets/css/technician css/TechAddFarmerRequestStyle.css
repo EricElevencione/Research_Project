@@ -1,0 +1,378 @@
+/* Tech Add Farmer Request - Unique Styling */
+/* Color scheme: Green/Teal gradient theme for Technician role */
+
+.tech-add-farmer-page-container {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.tech-add-farmer-page {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+.tech-add-farmer-main-content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+}
+
+.tech-add-farmer-header {
+    margin-bottom: 30px;
+    padding: 25px 30px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+}
+
+.tech-add-farmer-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 8px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tech-add-farmer-subtitle {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 20px 0;
+    font-weight: 500;
+}
+
+.tech-add-farmer-back-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.tech-add-farmer-back-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateX(-5px);
+}
+
+.tech-add-farmer-content-card {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+}
+
+/* Section Styling */
+.tech-add-farmer-section {
+    margin-bottom: 40px;
+}
+
+.tech-add-farmer-section-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #065f46;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #d1fae5;
+}
+
+/* Search Container */
+.tech-add-farmer-search-container {
+    margin-bottom: 16px;
+}
+
+.tech-add-farmer-search-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #a7f3d0;
+    border-radius: 10px;
+    font-size: 15px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    background: #f0fdf4;
+}
+
+.tech-add-farmer-search-input:focus {
+    outline: none;
+    border-color: #10b981;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.tech-add-farmer-info-box {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #92400e;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+/* Farmer List Container */
+.tech-add-farmer-list-container {
+    border: 2px solid #a7f3d0;
+    border-radius: 12px;
+    max-height: 350px;
+    overflow-y: auto;
+    background: #f0fdf4;
+}
+
+.tech-add-farmer-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tech-add-farmer-list-container::-webkit-scrollbar-track {
+    background: #f0fdf4;
+    border-radius: 4px;
+}
+
+.tech-add-farmer-list-container::-webkit-scrollbar-thumb {
+    background: #a7f3d0;
+    border-radius: 4px;
+}
+
+.tech-add-farmer-list-container::-webkit-scrollbar-thumb:hover {
+    background: #6ee7b7;
+}
+
+.tech-add-farmer-empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* Farmer Item */
+.tech-add-farmer-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #d1fae5;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.tech-add-farmer-item:last-child {
+    border-bottom: none;
+}
+
+.tech-add-farmer-item:hover {
+    background: #ecfdf5;
+}
+
+.tech-add-farmer-item.selected {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-left: 4px solid #10b981;
+}
+
+.tech-add-farmer-radio {
+    width: 20px;
+    height: 20px;
+    margin-right: 16px;
+    cursor: pointer;
+    accent-color: #10b981;
+}
+
+.tech-add-farmer-item-content {
+    flex: 1;
+}
+
+.tech-add-farmer-name {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 4px;
+    font-size: 15px;
+}
+
+.tech-add-farmer-details {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Form Grid */
+.tech-add-farmer-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.tech-add-farmer-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.tech-add-farmer-label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #475569;
+    font-size: 14px;
+}
+
+.tech-add-farmer-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #a7f3d0;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    background: #f0fdf4;
+}
+
+.tech-add-farmer-input:focus {
+    outline: none;
+    border-color: #10b981;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.tech-add-farmer-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #a7f3d0;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: vertical;
+    transition: all 0.3s ease;
+    background: #f0fdf4;
+}
+
+.tech-add-farmer-textarea:focus {
+    outline: none;
+    border-color: #10b981;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+/* Error Box */
+.tech-add-farmer-error-box {
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border: 2px solid #ef4444;
+    border-radius: 10px;
+    color: #991b1b;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+/* Action Buttons */
+.tech-add-farmer-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: flex-end;
+    margin-top: 32px;
+}
+
+.tech-add-farmer-cancel-btn {
+    padding: 14px 32px;
+    border: 2px solid #a7f3d0;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    background: white;
+    color: #059669;
+    transition: all 0.3s ease;
+}
+
+.tech-add-farmer-cancel-btn:hover:not(:disabled) {
+    background: #ecfdf5;
+    border-color: #6ee7b7;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.tech-add-farmer-cancel-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tech-add-farmer-submit-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    transition: all 0.3s ease;
+}
+
+.tech-add-farmer-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.5);
+}
+
+.tech-add-farmer-submit-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .tech-add-farmer-main-content {
+        padding: 20px;
+    }
+
+    .tech-add-farmer-content-card {
+        padding: 24px;
+    }
+
+    .tech-add-farmer-form-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .tech-add-farmer-title {
+        font-size: 24px;
+    }
+
+    .tech-add-farmer-actions {
+        flex-direction: column;
+    }
+
+    .tech-add-farmer-cancel-btn,
+    .tech-add-farmer-submit-btn {
+        width: 100%;
+    }
+}
+
+/* Animation */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tech-add-farmer-content-card {
+    animation: slideInUp 0.4s ease-out;
+}

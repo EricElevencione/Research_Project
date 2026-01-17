@@ -1,8 +1,9 @@
 // unchanged imports
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import LandPlottingMap, { LandPlottingMapRef } from '../../components/Map/LandPlottingMap';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid'; // Add at the top for unique id generation
+import '../../assets/css/technician css/TechLandPlottingPageStyle.css';
 
 // interfaces unchanged...
 interface LandAttributes {
@@ -36,6 +37,7 @@ interface Shape {
 
 const LandPlottingPage: React.FC = () => {
     const { barangayName: barangayNameParam, recordId } = useParams();
+    const [searchParams] = useSearchParams();
     const urlParams = new URLSearchParams(window.location.search);
     const barangayNameQuery = urlParams.get('barangayName');
     // Use URL barangay as fallback only - parcel location will be primary
@@ -79,9 +81,8 @@ const LandPlottingPage: React.FC = () => {
 
     const [isSaving, setIsSaving] = useState(false);
 
+    // Only validate location/parcel fields - personal info is already validated in RSBSA registration
     const requiredFields: (keyof LandAttributes)[] = [
-        //'ffrs_id', // No longer required
-        'surname', 'firstName', 'gender',
         'barangay', 'municipality', 'province', 'parcel_address', 'area'
     ];
 
@@ -390,7 +391,9 @@ const LandPlottingPage: React.FC = () => {
     };
 
     useEffect(() => {
+        console.log('🔄 selectedShape changed:', selectedShape);
         if (selectedShape) {
+            console.log('📝 Setting landAttributes from selectedShape.properties:', selectedShape.properties);
             setLandAttributes({
                 ...selectedShape.properties,
                 barangay: selectedShape.properties.barangay || parcelBarangay || fallbackBarangayName,
@@ -399,6 +402,7 @@ const LandPlottingPage: React.FC = () => {
             });
             setIsEditingAttributes(true);
         } else {
+            console.log('📝 Resetting landAttributes (no shape selected)');
             setLandAttributes({
                 name: '',
                 ffrs_id: '',
@@ -425,16 +429,28 @@ const LandPlottingPage: React.FC = () => {
 
     // Parse URL parameters for parcel context
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const recordId = urlParams.get('recordId');
-        const parcelIndex = urlParams.get('parcelIndex');
+        console.log('🔍 URL Parsing useEffect triggered');
+        console.log('🔍 window.location.search:', window.location.search);
+        console.log('🔍 window.location.hash:', window.location.hash);
+        console.log('🔍 window.location.href:', window.location.href);
+        console.log('🔍 searchParams object:', searchParams);
+        console.log('🔍 searchParams.toString():', searchParams.toString());
+
+        // Use React Router's searchParams for hash routing compatibility
+        const recordId = searchParams.get('recordId');
+        const parcelIndex = searchParams.get('parcelIndex');
+        console.log('🔍 Parsed from searchParams - recordId:', recordId, 'parcelIndex:', parcelIndex);
+
         const parsedIndex = parcelIndex ? parseInt(parcelIndex, 10) : undefined;
 
         if (recordId) {
+            console.log('✅ recordId found, setting context and fetching RSBSA record...');
             setParcelContext({ recordId, parcelIndex: parsedIndex });
             fetchRSBSARecord(recordId, parsedIndex);
+        } else {
+            console.log('❌ No recordId found in URL');
         }
-    }, []);
+    }, [searchParams.toString()]); // Use toString() to detect any param changes
 
     // Helper function to fetch farm parcel data from the database
     const fetchFarmParcelData = async (recordId: string, parcelIndex: number) => {
@@ -453,10 +469,14 @@ const LandPlottingPage: React.FC = () => {
 
     // Fetch RSBSA record data
     const fetchRSBSARecord = async (recordId: string, parcelIndex?: number) => {
+        console.log('🚀 fetchRSBSARecord called with:', { recordId, parcelIndex });
         try {
+            console.log('📡 Fetching from:', `http://localhost:5000/api/rsbsa_submission/${recordId}`);
             const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${recordId}`);
+            console.log('📡 Response status:', response.status, response.ok);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
+            console.log('✅ Fetched RSBSA data:', data);
             setRsbsaRecord(data);
             console.log('Fetched RSBSA data:', data);
             console.log('parcelIndex:', parcelIndex);
@@ -541,30 +561,45 @@ const LandPlottingPage: React.FC = () => {
                     if (landPlotsRes.ok) {
                         const allPlots = await landPlotsRes.json();
                         // Diagnostic logging
-                        console.log('All plots from backend:', allPlots);
+                        console.log('📦 All plots from backend:', allPlots);
                         // Robust matching: ignore case, trim, allow missing middle names
                         const normalize = (str: string) => (str || '').trim().toLowerCase();
                         const parcelAddr = normalize(`${parcelBarangayLocation}, ${parcelMunicipalityLocation}`);
                         const surname = normalize(data.lastName || data.surname || '');
                         const firstName = normalize(data.firstName);
                         // Log filter values and all plots for debugging
-                        console.log('Filtering for:', { parcelAddr, surname, firstName });
+                        console.log('🔍 Filtering for:', { parcelAddr, surname, firstName });
                         allPlots.forEach((plot: any) => {
-                            console.log('plot:', plot.parcel_address, plot.surname, plot.firstName, plot.middleName);
+                            console.log('📍 plot details:', {
+                                parcel_address: plot.parcel_address,
+                                surname: plot.surname,
+                                firstName: plot.firstName,
+                                first_name: plot.first_name,
+                                middleName: plot.middleName,
+                                middle_name: plot.middle_name,
+                                gender: plot.gender,
+                                FULL_PLOT: plot  // Log the entire plot object
+                            });
                         });
                         // Relaxed filter: only require parcel_address, surname, and firstName to match
                         const matches = allPlots.filter((plot: any) => {
+                            // Check both camelCase and snake_case field names
+                            const plotFirstName = normalize(plot.firstName || plot.first_name || '');
+                            const plotSurname = normalize(plot.surname || plot.last_name || '');
+                            const plotParcelAddr = normalize(plot.parcel_address || '');
+
                             return (
-                                normalize(plot.parcel_address) === parcelAddr &&
-                                normalize(plot.surname) === surname &&
-                                normalize(plot.firstName) === firstName
+                                plotParcelAddr === parcelAddr &&
+                                plotSurname === surname &&
+                                plotFirstName === firstName
                             );
                         });
                         // Diagnostic logging
-                        console.log('Filtered plots for this parcel:', matches);
+                        console.log('✅ Filtered plots for this parcel:', matches);
                         matches.forEach((match: any) => {
                             const layer = L.geoJSON(match.geometry).getLayers()[0];
                             layer.options.id = match.id;
+                            console.log('➕ Adding shape with properties:', match);
                             shapes.push({
                                 id: match.id,
                                 layer,
@@ -575,11 +610,18 @@ const LandPlottingPage: React.FC = () => {
                             });
                         });
                     }
+                    console.log('🔢 Total shapes loaded:', shapes.length);
+                    console.log('📋 All shapes:', shapes);
                     setShapesAndVersion(shapes);
                     const selected = shapes.find(s => s.properties.parcelNumber === parcel.parcel_number) || shapes[0];
+                    console.log('🎯 Selected shape:', selected);
+                    console.log('🎯 Selected shape properties:', selected?.properties);
                     setSelectedShape(selected || null);
                     setIsEditingAttributes(!!selected);
-                    if (selected) setLandAttributes((prev) => ({ ...prev, ...selected.properties }));
+                    if (selected) {
+                        console.log('📝 Setting landAttributes from selected shape:', selected.properties);
+                        setLandAttributes((prev) => ({ ...prev, ...selected.properties }));
+                    }
                     if (!selected) setIsEditingAttributes(false);
                 }
             }
@@ -606,10 +648,19 @@ const LandPlottingPage: React.FC = () => {
     const [shapes, setShapes] = useState<Shape[]>([]);
     const [deletedShapeIds, setDeletedShapeIds] = useState<string[]>([]);
 
+    // Debug: Log when shapes state changes
+    useEffect(() => {
+        console.log('📊 SHAPES STATE CHANGED:', shapes);
+        console.log('📊 SHAPES LENGTH:', shapes.length);
+    }, [shapes]);
+
     // Helper function to set shapes
     const setShapesAndVersion = (newShapes: Shape[] | ((prevShapes: Shape[]) => Shape[])) => {
+        console.log('🔧 setShapesAndVersion called with:', newShapes);
         setShapes(prev => {
             const updated = typeof newShapes === 'function' ? (newShapes as (prevShapes: Shape[]) => Shape[])(prev) : newShapes;
+            console.log('🔧 Previous shapes:', prev);
+            console.log('🔧 Updated shapes:', updated);
             return updated;
         });
     };
@@ -627,33 +678,7 @@ const LandPlottingPage: React.FC = () => {
         }
     );
 
-    // Add at the top with other useState imports
-    const [parcelHistory, setParcelHistory] = useState<any[]>([]);
 
-    // Fetch land history for current farmer
-    useEffect(() => {
-        console.log('Effect: Fetching land history for farmer');
-        if (rsbsaRecord && rsbsaRecord.id) {
-            console.log('Fetching land history for farmer ID:', rsbsaRecord.id);
-            // Fetch from land_history table filtered by farmer
-            fetch(`http://localhost:5000/api/land-history/farmer/${rsbsaRecord.id}`)
-                .then(res => res.json())
-                .then(data => {
-                    console.log('Fetched land history:', data);
-                    setParcelHistory(Array.isArray(data) ? data : []);
-                })
-                .catch(error => {
-                    console.error('Error fetching land history:', error);
-                    setParcelHistory([]);
-                });
-        } else {
-            console.log('No rsbsaRecord, not fetching history');
-            setParcelHistory([]);
-        }
-    }, [rsbsaRecord]);
-
-    // Use all history records without filtering
-    const currentFarmerHistory = parcelHistory;
 
     // Comprehensive debugging for barangay resolution
     console.log("=== BARANGAY DEBUG START ===");
@@ -663,7 +688,6 @@ const LandPlottingPage: React.FC = () => {
     console.log("📦 currentParcel:", currentParcel);
     console.log("📦 currentParcel?.farm_location_barangay:", currentParcel?.farm_location_barangay);
     console.log("👤 rsbsaRecord:", rsbsaRecord);
-    console.log("📋 Filtered History Count:", currentFarmerHistory.length, "of", parcelHistory.length, "total records");
     console.log("=== BARANGAY DEBUG END ===");
 
     // Helpers to robustly derive display values from various possible field names
@@ -689,7 +713,6 @@ const LandPlottingPage: React.FC = () => {
         const candidates = [
             currentParcel?.farm_location_barangay,
             currentParcel?.farmLocation?.barangay,
-            (currentParcel as any)?.farmLocationBarangay,
             (currentParcel as any)?.barangay,
             landAttributes.barangay,
             parcelBarangay,
@@ -743,23 +766,64 @@ const LandPlottingPage: React.FC = () => {
         return `${formatted} hectares`;
     }
 
+    function getDisplayName() {
+        // Debug logging
+        console.log('🔍 getDisplayName - selectedShape:', selectedShape);
+        console.log('🔍 getDisplayName - selectedShape?.properties:', selectedShape?.properties);
+        console.log('🔍 getDisplayName - landAttributes:', landAttributes);
+        console.log('🔍 getDisplayName - rsbsaRecord:', rsbsaRecord);
+
+        // Check selectedShape first, then landAttributes, then rsbsaRecord
+        const sources = [
+            selectedShape?.properties,
+            landAttributes,
+            rsbsaRecord
+        ];
+
+        for (const source of sources) {
+            if (!source) continue;
+            const firstName = (source as any).firstName || (source as any).first_name || '';
+            const middleName = (source as any).middleName || (source as any).middle_name || '';
+            const surname = (source as any).surname || (source as any).lastName || (source as any).last_name || '';
+
+            console.log('🔍 Checking source:', { firstName, middleName, surname, source });
+
+            const fullName = `${firstName} ${middleName} ${surname}`.trim();
+            if (fullName.length > 0) {
+                console.log('✅ Found name:', fullName);
+                return fullName;
+            }
+        }
+        console.log('❌ No name found, returning N/A');
+        return 'N/A';
+    }
+
+    function getDisplayGender() {
+        const candidates = [
+            selectedShape?.properties?.gender,
+            (selectedShape?.properties as any)?.gender,
+            landAttributes.gender,
+            rsbsaRecord?.gender
+        ];
+        return candidates.find(v => v && typeof v === 'string' && v.trim().length > 0) || 'N/A';
+    }
+
     return (
-        <div className="landplotting-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '90vh', border: '1px solid #222', borderRadius: '10px', margin: '2rem', background: '#fff' }}>
+        <div className="tech-landplotting-container">
             {/* Back Button at top left */}
             <button
-                className="back-button"
+                className="tech-landplotting-back-button"
                 onClick={handleBackClick}
-                style={{ position: 'absolute', top: '1rem', left: '1rem', zIndex: 10, fontSize: '1.5rem', background: '#black', border: '1px solid #222', width: '2.5rem', height: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
                 aria-label="Back"
             >
                 ←
             </button>
-            <div style={{ display: 'flex', flex: 1, height: '100%' }}>
+            <div className="tech-landplotting-main-wrapper">
                 {/* Left: Map */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #ccc', padding: '2rem 1rem' }}>
-                    <div style={{ width: '90%', height: '80%', background: '#666', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="tech-landplotting-map-section">
+                    <div className="tech-landplotting-map-container">
                         {/* Map component */}
-                        <div style={{ width: '100%', height: '100%' }}>
+                        <div className="tech-landplotting-map-wrapper">
                             <LandPlottingMap
                                 ref={mapRef}
                                 selectedShape={selectedShape}
@@ -776,98 +840,48 @@ const LandPlottingPage: React.FC = () => {
                             />
                         </div>
                     </div>
-                    {/* Optionally, remove the red warning message since modal will handle feedback */}
                 </div>
                 {/* Right: Details Panel */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #ccc', padding: '2rem 2rem 2rem 2rem', justifyContent: 'flex-start', overflowY: 'auto', maxHeight: '100%' }}>
-                    <div style={{ borderBottom: '2px solid #222', marginBottom: '1.5rem', paddingBottom: '0.5rem', fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '1px' }}>
+                <div className="tech-landplotting-details-panel">
+                    <div className="tech-landplotting-parcel-title">
                         {currentParcel && (currentParcel.parcel_number !== undefined && currentParcel.parcel_number !== null && currentParcel.parcel_number !== '')
                             ? `Farm Parcel #${currentParcel.parcel_number}`
                             : (selectedShape && (selectedShape.properties as any).parcelNumber !== undefined)
                                 ? `Farm Parcel #${(selectedShape.properties as any).parcelNumber}`
                                 : 'Farm Parcel #1'}
                     </div>
-                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Details:</div>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>Name:</span>
-                            {` ${rsbsaRecord?.firstName || landAttributes.firstName || ''} ${rsbsaRecord?.middleName || landAttributes.middleName || ''} ${rsbsaRecord?.surname || landAttributes.surname || ''}`.trim() || 'N/A'}
+                    <div className="tech-landplotting-section-label">Details:</div>
+                    <div className="tech-landplotting-details-container">
+                        <div className="tech-landplotting-detail-row">
+                            <span className="tech-landplotting-detail-label">Name:</span>
+                            {` ${getDisplayName()}`}
                         </div>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>Municipality:</span>
+                        <div className="tech-landplotting-detail-row">
+                            <span className="tech-landplotting-detail-label">Municipality:</span>
                             {` ${getDisplayMunicipality()}`}
                         </div>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>Barangay:</span>
+                        <div className="tech-landplotting-detail-row">
+                            <span className="tech-landplotting-detail-label">Barangay:</span>
                             {` ${getDisplayBarangay()}`}
                         </div>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>Gender:</span>
-                            {` ${rsbsaRecord?.gender || landAttributes.gender || 'N/A'}`}
+                        <div className="tech-landplotting-detail-row">
+                            <span className="tech-landplotting-detail-label">Gender:</span>
+                            {` ${getDisplayGender()}`}
                         </div>
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>Parcel Area:</span>
+                        <div className="tech-landplotting-detail-row">
+                            <span className="tech-landplotting-detail-label">Parcel Area:</span>
                             {` ${getDisplayAreaHectares()}`}
                         </div>
                     </div>
-                    {/* Editable plot-specific fields */}
-                    {/* Removed Area (sqm) and Plot Source fields as requested */}
 
-
-
-                    <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-                        <button onClick={handleSaveAttributes} disabled={!isEditingAttributes || isSaving} style={{ padding: '0.5rem 2rem', borderRadius: '8px', border: '1px solid #222', background: '#fff', fontWeight: 'bold', cursor: isEditingAttributes && !isSaving ? 'pointer' : 'not-allowed' }}>
+                    <div className="tech-landplotting-actions-container">
+                        <button
+                            onClick={handleSaveAttributes}
+                            disabled={!isEditingAttributes || isSaving}
+                            className="tech-landplotting-save-button"
+                        >
                             {isSaving ? 'Saving...' : 'SAVE'}
                         </button>
-                    </div>
-
-
-
-                    {/* Tenancy/Ownership History Section */}
-                    <div className="history-section" style={{ marginTop: '2rem' }}>
-                        <h3 style={{ marginBottom: '1rem', fontWeight: 'bold', fontSize: '1.2rem' }}>Ownership & Tenancy History</h3>
-                        <table className="history-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '2px solid #222' }}>
-                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Date Started</th>
-                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Land Owner</th>
-                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Parcel Location</th>
-                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Status</th>
-                                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Date Ended</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {currentFarmerHistory.length === 0 ? (
-                                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#999' }}>No ownership or tenancy history available.</td></tr>
-                                ) : currentFarmerHistory.map((entry: any, idx: number) => (
-                                    <tr key={entry.id || idx} style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            {entry.period_start_date ? new Date(entry.period_start_date).toLocaleDateString() : 'N/A'}
-                                        </td>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            {entry.land_owner_name || 'N/A'}
-                                        </td>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            {entry.farm_location_barangay ? `${entry.farm_location_barangay}, ${entry.farm_location_municipality || 'Dumangas'}` : 'N/A'}
-                                        </td>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            <span style={{
-                                                padding: '0.25rem 0.5rem',
-                                                borderRadius: '4px',
-                                                fontSize: '0.85rem',
-                                                backgroundColor: entry.is_registered_owner ? '#4caf50' : entry.is_tenant ? '#ff9800' : entry.is_lessee ? '#2196f3' : '#999',
-                                                color: 'white'
-                                            }}>
-                                                {entry.is_registered_owner ? 'Owner' : entry.is_tenant ? 'Tenant' : entry.is_lessee ? 'Lessee' : 'Other'}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '0.5rem' }}>
-                                            {entry.period_end_date ? new Date(entry.period_end_date).toLocaleDateString() : entry.is_current ? 'Current' : 'N/A'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>

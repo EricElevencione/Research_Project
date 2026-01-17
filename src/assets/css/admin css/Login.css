@@ -1,6 +1,9 @@
 .login-page {
   font-family: var(--font-family);
-  background: linear-gradient(to right, #e6f4ea, #d0e8c8);
+  background: url("../../images/bgimage.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -24,14 +27,15 @@
 
 .login-left {
   width: 50%;
-  background-image: url(../../images/Login.jpg);
-  background-size: cover;
+  background: url(../../images/Logo.png), linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+  background-size: 60%, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 30px;
-  color: white;
   text-align: center;
 }
 
@@ -55,7 +59,14 @@
   justify-content: center;
 }
 
-.login-right h2 {
+.login-right h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.login-right h3 {
+  font-size: 18px;
   font-weight: 600;
 }
 

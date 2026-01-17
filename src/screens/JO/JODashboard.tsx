@@ -5,7 +5,6 @@ import '../../assets/css/jo css/JoDashboardStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Typography, Box, Chip, Divider } from '@mui/material';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -203,61 +202,7 @@ const JoDashboard: React.FC = () => {
 							<FarmlandMap />
 						</div>
 
-						<div className="jo-dashboard-stats">
-							<div className="jo-dashboard-active-farmers">
-								<h3>Active Farmers by Barangay</h3>
-								{loading ? (
-									<div className="jo-dashboard-chart-loading">
-										Loading...
-									</div>
-								) : barangayData.length > 0 ? (
-									<div className="jo-dashboard-bar-chart-container">
-										<BarChart
-											yAxis={[{
-												scaleType: 'band',
-												data: barangayData.map(d => d.barangay),
-												tickLabelStyle: {
-													fontSize: 11,
-													fill: 'white'
-												}
-											}]}
-											xAxis={[{
-												tickLabelStyle: {
-													fill: 'white'
-												}
-											}]}
-											series={[{
-												data: barangayData.map(d => d.count),
-												label: 'Active Farmers',
-												color: '#ffffff'
-											}]}
-											layout="horizontal"
-											height={Math.max(300, barangayData.length * 15)}
-											margin={{ left: 100, right: 20, top: 50, bottom: 40 }}
-											sx={{
-												'& .MuiChartsAxis-line': {
-													stroke: 'white'
-												},
-												'& .MuiChartsAxis-tick': {
-													stroke: 'white'
-												},
-												'& .MuiChartsAxis-tickLabel': {
-													fill: 'white'
-												},
-												'& .MuiChartsLegend-series text': {
-													fill: 'white !important'
-												}
-											}}
-										/>
-									</div>
-								) : (
-									<div className="jo-dashboard-chart-empty">
-										No active farmers found
-									</div>
-								)}
-							</div>
-							<div className="jo-dashboard-barangay-distribution"></div>
-						</div>
+
 					</div>
 
 					<div className="jo-dashboard-reports">
@@ -273,44 +218,23 @@ const JoDashboard: React.FC = () => {
 							</label>
 							<div className="accordion-content">
 								<div className="accordion-content-inner">
-									<Box sx={{ p: 2 }}>
-										<Typography variant="body1" sx={{ color: 'white', mb: 1, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.95rem', fontWeight: 500 }}>
-											Total Registered Owners:
-											<Chip label={registeredOwners.totalCount} color="primary" size="small" sx={{ p: 0 }} />
-										</Typography>
-
-										<Box sx={{ height: 400, width: '100%', bgcolor: 'white', borderRadius: 1, p: 0, overflow: 'hidden' }}>
+									<div className="jo-dashboard-table-container">
+										<div className="jo-dashboard-table-header">
+											<span className="jo-dashboard-table-header-text">Total Registered Owners:</span>
+											<span className="jo-dashboard-table-count-badge">{registeredOwners.totalCount}</span>
+										</div>
+										<div className="jo-dashboard-modern-datagrid">
 											<DataGrid
 												rows={registeredOwners.farmers}
 												columns={columns}
 												hideFooterPagination
 												hideFooter
 												disableRowSelectionOnClick
-												sx={{
-													'& .MuiDataGrid-columnHeaders': {
-														fontSize: '0.75rem',
-														fontWeight: 600
-													},
-													'& .MuiDataGrid-cell': {
-														fontSize: '0.75rem',
-														padding: '2px 5px'
-													},
-													'& .MuiDataGrid-main': {
-														overflow: 'hidden'
-													},
-													'& .MuiDataGrid-root': {
-														overflow: 'hidden'
-													},
-													'& .MuiDataGrid-virtualScroller': {
-														overflow: 'auto !important'
-													},
-													'& .MuiDataGrid-scrollbar': {
-														display: 'none'
-													}
-												}}
+												disableColumnMenu
+												rowHeight={44}
 											/>
-										</Box>
-									</Box>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -322,32 +246,23 @@ const JoDashboard: React.FC = () => {
 							</label>
 							<div className="accordion-content">
 								<div className="accordion-content-inner">
-									<Box sx={{ p: 2 }}>
-										<Typography variant="body1" sx={{ color: 'white', mb: 3, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.95rem', fontWeight: 500 }}>
-											Total Tenants:
-											<Chip label={tenants.totalCount} color="secondary" size="small" />
-										</Typography>
-
-										<Box sx={{ height: 400, width: '100%', bgcolor: 'white', borderRadius: 1, }}>
+									<div className="jo-dashboard-table-container">
+										<div className="jo-dashboard-table-header">
+											<span className="jo-dashboard-table-header-text">Total Tenants:</span>
+											<span className="jo-dashboard-table-count-badge">{tenants.totalCount}</span>
+										</div>
+										<div className="jo-dashboard-modern-datagrid">
 											<DataGrid
 												rows={tenants.farmers}
 												columns={columns}
 												hideFooterPagination
 												hideFooter
 												disableRowSelectionOnClick
-												sx={{
-													'& .MuiDataGrid-columnHeaders': {
-														fontSize: '0.85rem',
-														fontWeight: 600
-													},
-													'& .MuiDataGrid-cell': {
-														fontSize: '0.875rem',
-														overflow: 'hidden'
-													}
-												}}
+												disableColumnMenu
+												rowHeight={44}
 											/>
-										</Box>
-									</Box>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -359,43 +274,23 @@ const JoDashboard: React.FC = () => {
 							</label>
 							<div className="accordion-content">
 								<div className="accordion-content-inner">
-									<Box sx={{ p: 2 }}>
-										<Typography variant="body1" sx={{ color: 'white', mb: 3, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.95rem', fontWeight: 500 }}>
-											Total Lessees:
-											<Chip label={lessees.totalCount} color="success" size="small" />
-										</Typography>
-
-										<Box sx={{ height: 400, width: '100%', bgcolor: 'white', borderRadius: 1, overflow: 'hidden' }}>
+									<div className="jo-dashboard-table-container">
+										<div className="jo-dashboard-table-header">
+											<span className="jo-dashboard-table-header-text">Total Lessees:</span>
+											<span className="jo-dashboard-table-count-badge">{lessees.totalCount}</span>
+										</div>
+										<div className="jo-dashboard-modern-datagrid">
 											<DataGrid
 												rows={lessees.farmers}
 												columns={columns}
 												hideFooterPagination
 												hideFooter
 												disableRowSelectionOnClick
-												sx={{
-													'& .MuiDataGrid-columnHeaders': {
-														fontSize: '0.85rem',
-														fontWeight: 600
-													},
-													'& .MuiDataGrid-cell': {
-														fontSize: '0.875rem'
-													},
-													'& .MuiDataGrid-main': {
-														overflow: 'hidden'
-													},
-													'& .MuiDataGrid-root': {
-														overflow: 'hidden'
-													},
-													'& .MuiDataGrid-virtualScroller': {
-														overflow: 'auto !important'
-													},
-													'& .MuiDataGrid-scrollbar': {
-														display: 'none'
-													}
-												}}
+												disableColumnMenu
+												rowHeight={44}
 											/>
-										</Box>
-									</Box>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>

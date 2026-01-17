@@ -303,27 +303,13 @@ const TechIncentives: React.FC = () => {
                             <h2 className="tech-incent-page-header">Farmer Incentive Requests</h2>
                             <p className="tech-incent-page-subtitle">Add farmer requests to available regional allocations</p>
                         </div>
-                        <button
-                            className="tech-incent-btn-create"
-                            onClick={() => navigate('/technician-create-allocation')}
-                            style={{
-                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                color: 'white',
-                                padding: '12px 24px',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '15px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
-                        >
-                            ➕ Create New Allocation
-                        </button>
                     </div>
+                    <button
+                        className="tech-incent-btn-create"
+                        onClick={() => navigate('/technician-create-allocation')}
+                    >
+                        ➕ Create New Allocation
+                    </button>
 
                     <div className="tech-incent-content-card">
                         {loading ? (
@@ -434,282 +420,171 @@ const TechIncentives: React.FC = () => {
 
                     {/* Edit Allocation Modal */}
                     {editAllocationModal && editFormData && (
-                        <div className="tech-incent-modal-overlay" onClick={() => setEditAllocationModal(null)} style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 1000
-                        }}>
-                            <div className="tech-incent-modal-content" onClick={(e) => e.stopPropagation()} style={{
-                                backgroundColor: 'white',
-                                borderRadius: '12px',
-                                padding: '24px',
-                                maxWidth: '800px',
-                                width: '90%',
-                                maxHeight: '90vh',
-                                overflowY: 'auto',
-                                boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
-                            }}>
-                                <h2 style={{ marginBottom: '20px', color: '#1f2937' }}>Edit Regional Allocation</h2>
-                                {requestCount > 0 && (
-                                    <div style={{
-                                        backgroundColor: '#fef3c7',
-                                        border: '1px solid #fbbf24',
-                                        borderRadius: '8px',
-                                        padding: '12px',
-                                        marginBottom: '20px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}>
-                                        <span>⚠️</span>
-                                        <span style={{ fontSize: '14px', color: '#92400e' }}>
-                                            This allocation has <strong>{requestCount} existing farmer request(s)</strong>. Editing may affect these requests.
-                                        </span>
-                                    </div>
-                                )}
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Season</label>
-                                        <input
-                                            type="text"
-                                            value={formatSeasonName(editFormData.season)}
-                                            disabled
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db',
-                                                backgroundColor: '#f3f4f6',
-                                                cursor: 'not-allowed'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div style={{ gridColumn: '1 / -1', marginTop: '16px' }}>
-                                        <h3 style={{ color: '#059669', marginBottom: '12px' }}>Fertilizers (Bags)</h3>
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Urea (46-0-0)</label>
-                                        <input
-                                            type="number"
-                                            name="urea_46_0_0_bags"
-                                            value={editFormData.urea_46_0_0_bags}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Complete (14-14-14)</label>
-                                        <input
-                                            type="number"
-                                            name="complete_14_14_14_bags"
-                                            value={editFormData.complete_14_14_14_bags}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Ammonium Sulfate (21-0-0)</label>
-                                        <input
-                                            type="number"
-                                            name="ammonium_sulfate_21_0_0_bags"
-                                            value={editFormData.ammonium_sulfate_21_0_0_bags}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Muriate of Potash (0-0-60)</label>
-                                        <input
-                                            type="number"
-                                            name="muriate_potash_0_0_60_bags"
-                                            value={editFormData.muriate_potash_0_0_60_bags}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div style={{ gridColumn: '1 / -1', marginTop: '16px' }}>
-                                        <h3 style={{ color: '#059669', marginBottom: '12px' }}>Seeds (kg)</h3>
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rice Seeds NSIC RC160</label>
-                                        <input
-                                            type="number"
-                                            name="rice_seeds_nsic_rc160_kg"
-                                            value={editFormData.rice_seeds_nsic_rc160_kg}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rice Seeds NSIC RC222</label>
-                                        <input
-                                            type="number"
-                                            name="rice_seeds_nsic_rc222_kg"
-                                            value={editFormData.rice_seeds_nsic_rc222_kg}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rice Seeds NSIC RC440</label>
-                                        <input
-                                            type="number"
-                                            name="rice_seeds_nsic_rc440_kg"
-                                            value={editFormData.rice_seeds_nsic_rc440_kg}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Corn Seeds (Hybrid)</label>
-                                        <input
-                                            type="number"
-                                            name="corn_seeds_hybrid_kg"
-                                            value={editFormData.corn_seeds_hybrid_kg}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Corn Seeds (OPM)</label>
-                                        <input
-                                            type="number"
-                                            name="corn_seeds_opm_kg"
-                                            value={editFormData.corn_seeds_opm_kg}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Vegetable Seeds</label>
-                                        <input
-                                            type="number"
-                                            name="vegetable_seeds_kg"
-                                            value={editFormData.vegetable_seeds_kg}
-                                            onChange={handleEditInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid #d1d5db'
-                                            }}
-                                        />
-                                    </div>
+                        <div className="tech-incent-modal-overlay" onClick={() => setEditAllocationModal(null)}>
+                            <div className="tech-incent-modal-content" onClick={(e) => e.stopPropagation()}>
+                                <div className="tech-incent-modal-header">
+                                    <h2>Edit Regional Allocation</h2>
+                                    <button className="tech-incent-modal-close" onClick={() => setEditAllocationModal(null)}>
+                                        ×
+                                    </button>
                                 </div>
+                                <div className="tech-incent-modal-body">
+                                    {requestCount > 0 && (
+                                        <div className="tech-incent-modal-warning">
+                                            <span>⚠️</span>
+                                            <span>
+                                                This allocation has <strong>{requestCount} existing farmer request(s)</strong>. Editing may affect these requests.
+                                            </span>
+                                        </div>
+                                    )}
 
-                                <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
-                                    <button
-                                        onClick={() => setEditAllocationModal(null)}
-                                        disabled={savingEdit}
-                                        style={{
-                                            padding: '10px 24px',
-                                            borderRadius: '6px',
-                                            border: '1px solid #d1d5db',
-                                            backgroundColor: 'white',
-                                            color: '#374151',
-                                            cursor: savingEdit ? 'not-allowed' : 'pointer',
-                                            fontWeight: '500'
-                                        }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSaveEdit}
-                                        disabled={savingEdit}
-                                        style={{
-                                            padding: '10px 24px',
-                                            borderRadius: '6px',
-                                            border: 'none',
-                                            backgroundColor: '#10b981',
-                                            color: 'white',
-                                            cursor: savingEdit ? 'not-allowed' : 'pointer',
-                                            fontWeight: '500',
-                                            opacity: savingEdit ? 0.6 : 1
-                                        }}
-                                    >
-                                        {savingEdit ? 'Saving...' : 'Save Changes'}
-                                    </button>
+                                    <div className="tech-incent-modal-form-grid">
+                                        <div className="tech-incent-modal-form-group full-width">
+                                            <label>Season</label>
+                                            <input
+                                                type="text"
+                                                value={formatSeasonName(editFormData.season)}
+                                                disabled
+                                            />
+                                        </div>
+
+                                        <h3 className="tech-incent-modal-section-title" style={{ gridColumn: '1 / -1' }}>Fertilizers (Bags)</h3>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Urea (46-0-0)</label>
+                                            <input
+                                                type="number"
+                                                name="urea_46_0_0_bags"
+                                                value={editFormData.urea_46_0_0_bags}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                            />
+                                        </div>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Complete (14-14-14)</label>
+                                            <input
+                                                type="number"
+                                                name="complete_14_14_14_bags"
+                                                value={editFormData.complete_14_14_14_bags}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                            />
+                                        </div>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Ammonium Sulfate (21-0-0)</label>
+                                            <input
+                                                type="number"
+                                                name="ammonium_sulfate_21_0_0_bags"
+                                                value={editFormData.ammonium_sulfate_21_0_0_bags}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                            />
+                                        </div>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Muriate of Potash (0-0-60)</label>
+                                            <input
+                                                type="number"
+                                                name="muriate_potash_0_0_60_bags"
+                                                value={editFormData.muriate_potash_0_0_60_bags}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                            />
+                                        </div>
+
+                                        <h3 className="tech-incent-modal-section-title" style={{ gridColumn: '1 / -1' }}>Seeds (kg)</h3>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Rice Seeds NSIC RC160</label>
+                                            <input
+                                                type="number"
+                                                name="rice_seeds_nsic_rc160_kg"
+                                                value={editFormData.rice_seeds_nsic_rc160_kg}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                        </div>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Rice Seeds NSIC RC222</label>
+                                            <input
+                                                type="number"
+                                                name="rice_seeds_nsic_rc222_kg"
+                                                value={editFormData.rice_seeds_nsic_rc222_kg}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                        </div>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Rice Seeds NSIC RC440</label>
+                                            <input
+                                                type="number"
+                                                name="rice_seeds_nsic_rc440_kg"
+                                                value={editFormData.rice_seeds_nsic_rc440_kg}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                        </div>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Corn Seeds (Hybrid)</label>
+                                            <input
+                                                type="number"
+                                                name="corn_seeds_hybrid_kg"
+                                                value={editFormData.corn_seeds_hybrid_kg}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                        </div>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Corn Seeds (OPM)</label>
+                                            <input
+                                                type="number"
+                                                name="corn_seeds_opm_kg"
+                                                value={editFormData.corn_seeds_opm_kg}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                        </div>
+
+                                        <div className="tech-incent-modal-form-group">
+                                            <label>Vegetable Seeds</label>
+                                            <input
+                                                type="number"
+                                                name="vegetable_seeds_kg"
+                                                value={editFormData.vegetable_seeds_kg}
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="tech-incent-modal-actions">
+                                        <button
+                                            className="tech-incent-modal-btn-cancel"
+                                            onClick={() => setEditAllocationModal(null)}
+                                            disabled={savingEdit}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="tech-incent-modal-btn-save"
+                                            onClick={handleSaveEdit}
+                                            disabled={savingEdit}
+                                        >
+                                            {savingEdit ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

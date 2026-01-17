@@ -5,7 +5,7 @@
 .main-content {
     flex: 1;
     padding: 2rem;
-    background-color: #f5f7fa;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
     overflow-y: auto;
 }
 

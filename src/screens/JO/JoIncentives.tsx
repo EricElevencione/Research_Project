@@ -202,6 +202,25 @@ const JoIncentives: React.FC = () => {
         });
     };
 
+    const handleDateChange = (part: 'year' | 'month' | 'day', value: string) => {
+        if (!editFormData) return;
+
+        const currentDate = editFormData.allocation_date ? new Date(editFormData.allocation_date) : new Date();
+        let year = currentDate.getFullYear();
+        let month = currentDate.getMonth();
+        let day = currentDate.getDate();
+
+        if (part === 'year') year = parseInt(value);
+        if (part === 'month') month = parseInt(value);
+        if (part === 'day') day = parseInt(value);
+
+        const newDate = new Date(year, month, day);
+        setEditFormData({
+            ...editFormData,
+            allocation_date: newDate.toISOString().split('T')[0]
+        });
+    };
+
     const handleSaveEdit = async () => {
         if (!editFormData) return;
 
@@ -329,21 +348,23 @@ const JoIncentives: React.FC = () => {
                 <div className="jo-incent-main-content">
 
                     <div className="jo-incent-dashboard-header">
-                        <h2 className="jo-incent-page-header">Distribution Management</h2>
+                        <h2 className="jo-incent-page-header">Farmer Incentive Requests</h2>
+                        <p className="jo-incent-page-subtitle">Add farmer requests to available regional allocations</p>
+                    </div>
+
+                    <div className="jo-incent-action-header">
+                        <button
+                            className="jo-incent-btn-create"
+                            onClick={() => {
+                                console.log('Button clicked! Navigating to /jo-create-allocation');
+                                navigate('/jo-create-allocation');
+                            }}
+                        >
+                            ➕ New Regional Allocation
+                        </button>
                     </div>
 
                     <div className="jo-incent-content-card">
-                        <div className="jo-incent-action-header">
-                            <button
-                                className="jo-incent-btn-create"
-                                onClick={() => {
-                                    console.log('Button clicked! Navigating to /jo-create-allocation');
-                                    navigate('/jo-create-allocation');
-                                }}
-                            >
-                                ➕ New Regional Allocation
-                            </button>
-                        </div>
 
                         {loading ? (
                             <div className="jo-incent-loading">Loading allocations...</div>
@@ -451,66 +472,23 @@ const JoIncentives: React.FC = () => {
 
                         {/* Edit Allocation Modal */}
                         {editAllocationModal && editFormData && (
-                            <div className="jo-incent-modal-overlay" onClick={() => setEditAllocationModal(null)} style={{
-                                position: 'fixed',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 1000
-                            }}>
-                                <div
-                                    className="jo-incent-modal-content"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                        backgroundColor: 'white',
-                                        borderRadius: '8px',
-                                        maxWidth: '800px',
-                                        width: '90%',
-                                        maxHeight: '90vh',
-                                        overflowY: 'auto',
-                                        padding: '0'
-                                    }}
-                                >
-                                    <div style={{
-                                        padding: '20px 24px',
-                                        borderBottom: '1px solid #e5e7eb',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}>
-                                        <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>✏️ Edit Regional Allocation</h3>
+                            <div className="jo-incent-modal-overlay" onClick={() => setEditAllocationModal(null)}>
+                                <div className="jo-incent-modal-content" onClick={(e) => e.stopPropagation()}>
+                                    {/* Modal Header */}
+                                    <div className="jo-incent-modal-header">
+                                        <h2>✏️ Edit Regional Allocation</h2>
                                         <button
                                             onClick={() => setEditAllocationModal(null)}
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                fontSize: '24px',
-                                                cursor: 'pointer',
-                                                color: '#6b7280',
-                                                padding: '0',
-                                                width: '32px',
-                                                height: '32px'
-                                            }}
+                                            className="jo-incent-modal-close"
                                         >
-                                            ✕
+                                            ×
                                         </button>
                                     </div>
 
-                                    <div style={{ padding: '24px' }}>
+                                    {/* Modal Body */}
+                                    <div className="jo-incent-modal-body">
                                         {requestCount > 0 && (
-                                            <div style={{
-                                                padding: '12px 16px',
-                                                backgroundColor: '#fef3c7',
-                                                border: '1px solid #f59e0b',
-                                                borderRadius: '6px',
-                                                marginBottom: '20px',
-                                                color: '#92400e'
-                                            }}>
+                                            <div className="jo-incent-modal-warning">
                                                 ⚠️ <strong>Warning:</strong> This allocation has {requestCount} existing farmer request(s).
                                                 Changes may affect these requests.
                                             </div>
@@ -518,7 +496,7 @@ const JoIncentives: React.FC = () => {
 
                                         {/* Season Information */}
                                         <div style={{ marginBottom: '24px' }}>
-                                            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Season Information</h4>
+                                            <h4 className="jo-incent-modal-section-title">Season Information</h4>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                                 <div>
                                                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
@@ -545,26 +523,80 @@ const JoIncentives: React.FC = () => {
                                                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>
                                                         Allocation Date
                                                     </label>
-                                                    <input
-                                                        type="date"
-                                                        name="allocation_date"
-                                                        value={editFormData.allocation_date?.split('T')[0] || ''}
-                                                        onChange={handleEditInputChange}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '8px 12px',
-                                                            border: '1px solid #d1d5db',
-                                                            borderRadius: '6px',
-                                                            fontSize: '14px'
-                                                        }}
-                                                    />
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '8px' }}>
+                                                        {/* Month Dropdown */}
+                                                        <select
+                                                            value={editFormData.allocation_date ? new Date(editFormData.allocation_date).getMonth() : new Date().getMonth()}
+                                                            onChange={(e) => handleDateChange('month', e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '8px 12px',
+                                                                border: '1px solid #d1d5db',
+                                                                borderRadius: '6px',
+                                                                fontSize: '14px',
+                                                                backgroundColor: 'white',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <option value="0">January</option>
+                                                            <option value="1">February</option>
+                                                            <option value="2">March</option>
+                                                            <option value="3">April</option>
+                                                            <option value="4">May</option>
+                                                            <option value="5">June</option>
+                                                            <option value="6">July</option>
+                                                            <option value="7">August</option>
+                                                            <option value="8">September</option>
+                                                            <option value="9">October</option>
+                                                            <option value="10">November</option>
+                                                            <option value="11">December</option>
+                                                        </select>
+
+                                                        {/* Day Dropdown */}
+                                                        <select
+                                                            value={editFormData.allocation_date ? new Date(editFormData.allocation_date).getDate() : new Date().getDate()}
+                                                            onChange={(e) => handleDateChange('day', e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '8px 12px',
+                                                                border: '1px solid #d1d5db',
+                                                                borderRadius: '6px',
+                                                                fontSize: '14px',
+                                                                backgroundColor: 'white',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                                                <option key={day} value={day}>{day}</option>
+                                                            ))}
+                                                        </select>
+
+                                                        {/* Year Dropdown */}
+                                                        <select
+                                                            value={editFormData.allocation_date ? new Date(editFormData.allocation_date).getFullYear() : new Date().getFullYear()}
+                                                            onChange={(e) => handleDateChange('year', e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '8px 12px',
+                                                                border: '1px solid #d1d5db',
+                                                                borderRadius: '6px',
+                                                                fontSize: '14px',
+                                                                backgroundColor: 'white',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {Array.from({ length: 76 }, (_, i) => 2025 + i).map(year => (
+                                                                <option key={year} value={year}>{year}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Fertilizers */}
                                         <div style={{ marginBottom: '24px' }}>
-                                            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>🌱 Fertilizer Allocation (bags)</h4>
+                                            <h4 className="jo-incent-modal-section-title">🌱 Fertilizer Allocation (bags)</h4>
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                                                 <div>
                                                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px' }}>Urea (46-0-0)</label>
@@ -643,7 +675,7 @@ const JoIncentives: React.FC = () => {
 
                                         {/* Seeds */}
                                         <div style={{ marginBottom: '24px' }}>
-                                            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>🌾 Seed Allocation (kg)</h4>
+                                            <h4 className="jo-incent-modal-section-title">🌾 Seed Allocation (kg)</h4>
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                                                 <div>
                                                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px' }}>Jackpot</label>
@@ -722,7 +754,7 @@ const JoIncentives: React.FC = () => {
 
                                         {/* Notes */}
                                         <div style={{ marginBottom: '20px' }}>
-                                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>Notes</label>
+                                            <h4 className="jo-incent-modal-section-title">📝 Notes</h4>
                                             <textarea
                                                 name="notes"
                                                 value={editFormData.notes || ''}
@@ -741,35 +773,17 @@ const JoIncentives: React.FC = () => {
                                         </div>
 
                                         {/* Action Buttons */}
-                                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+                                        <div className="jo-incent-modal-actions">
                                             <button
                                                 onClick={() => setEditAllocationModal(null)}
-                                                style={{
-                                                    padding: '10px 20px',
-                                                    backgroundColor: '#f3f4f6',
-                                                    color: '#374151',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '14px',
-                                                    fontWeight: '500'
-                                                }}
+                                                className="jo-incent-modal-btn-cancel"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 onClick={handleSaveEdit}
                                                 disabled={savingEdit}
-                                                style={{
-                                                    padding: '10px 20px',
-                                                    backgroundColor: savingEdit ? '#9ca3af' : '#10b981',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    cursor: savingEdit ? 'not-allowed' : 'pointer',
-                                                    fontSize: '14px',
-                                                    fontWeight: '500'
-                                                }}
+                                                className="jo-incent-modal-btn-save"
                                             >
                                                 {savingEdit ? '💾 Saving...' : '✅ Save Changes'}
                                             </button>

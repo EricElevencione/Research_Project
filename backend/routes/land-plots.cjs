@@ -39,7 +39,11 @@ router.get('/', async (req, res) => {
                 farm_type,
                 plot_source,
                 parcel_number,
-                geometry,
+                CASE 
+                    WHEN geometry_postgis IS NOT NULL THEN ST_AsGeoJSON(geometry_postgis)::jsonb
+                    ELSE geometry
+                END as geometry,
+                ST_Area(geometry_postgis::geography) / 10000 as calculated_area_ha,
                 created_at,
                 updated_at
             FROM land_plots
@@ -87,20 +91,29 @@ router.post('/', async (req, res) => {
             return res.status(409).json({ message: 'Plot with id already exists' });
         }
 
-        // Insert new land plot
+        // Insert new land plot with PostGIS geometry
         const insertQuery = `
             INSERT INTO land_plots (
                 id, name, ffrs_id, area, coordinate_accuracy,
                 barangay, first_name, middle_name, surname, ext_name,
                 gender, municipality, province, parcel_address, status,
-                street, farm_type, plot_source, parcel_number, geometry,
+                street, farm_type, plot_source, parcel_number, 
+                geometry, geometry_postgis,
                 created_at, updated_at
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                $21, $22
+                $11, $12, $13, $14, $15, $16, $17, $18, $19, 
+                $20, ST_SetSRID(ST_GeomFromGeoJSON($21), 4326),
+                $22, $23
             )
-            RETURNING *
+            RETURNING 
+                id, name, ffrs_id, area, coordinate_accuracy,
+                barangay, first_name, middle_name, surname, ext_name,
+                gender, municipality, province, parcel_address, status,
+                street, farm_type, plot_source, parcel_number,
+                ST_AsGeoJSON(geometry_postgis)::jsonb as geometry,
+                ST_Area(geometry_postgis::geography) / 10000 as calculated_area_ha,
+                created_at, updated_at
         `;
 
         const now = new Date();
@@ -124,7 +137,8 @@ router.post('/', async (req, res) => {
             body.farmType || '',
             body.plotSource || 'manual',
             body.parcelNumber || '',
-            JSON.stringify(body.geometry),
+            JSON.stringify(body.geometry), // Keep JSONB for backward compatibility
+            JSON.stringify(body.geometry), // Convert to PostGIS
             body.createdAt || now,
             body.updatedAt || now
         ];
@@ -192,15 +206,20 @@ router.put('/:id', async (req, res) => {
 
         for (const [bodyKey, dbColumn] of Object.entries(allowedFields)) {
             if (body[bodyKey] !== undefined) {
-                // Special handling for geometry (JSONB)
+                // Special handling for geometry (update both JSONB and PostGIS)
                 if (bodyKey === 'geometry') {
                     updateFields.push(`${dbColumn} = $${paramCounter}`);
                     values.push(JSON.stringify(body[bodyKey]));
+                    paramCounter++;
+                    // Also update PostGIS geometry
+                    updateFields.push(`geometry_postgis = ST_SetSRID(ST_GeomFromGeoJSON($${paramCounter}), 4326)`);
+                    values.push(JSON.stringify(body[bodyKey]));
+                    paramCounter++;
                 } else {
                     updateFields.push(`${dbColumn} = $${paramCounter}`);
                     values.push(body[bodyKey]);
+                    paramCounter++;
                 }
-                paramCounter++;
             }
         }
 
@@ -220,7 +239,14 @@ router.put('/:id', async (req, res) => {
             UPDATE land_plots
             SET ${updateFields.join(', ')}
             WHERE id = $${paramCounter}
-            RETURNING *
+            RETURNING 
+                id, name, ffrs_id, area, coordinate_accuracy,
+                barangay, first_name, middle_name, surname, ext_name,
+                gender, municipality, province, parcel_address, status,
+                street, farm_type, plot_source, parcel_number,
+                ST_AsGeoJSON(geometry_postgis)::jsonb as geometry,
+                ST_Area(geometry_postgis::geography) / 10000 as calculated_area_ha,
+                created_at, updated_at
         `;
 
         const result = await pool.query(updateQuery, values);
