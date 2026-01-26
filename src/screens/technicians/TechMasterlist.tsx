@@ -52,6 +52,18 @@ interface ParcelDetail {
   lesseeLandOwnerName: string;
 }
 
+// Type declaration for Electron API exposed via preload
+declare global {
+  interface Window {
+    electron?: {
+      platform: string;
+      print: (options?: any) => Promise<{ success: boolean; error?: string }>;
+      printToPDF: (options?: any) => Promise<{ success: boolean; data?: string; error?: string }>;
+      printContent: (htmlContent: string, options?: any) => Promise<{ success: boolean; error?: string }>;
+    };
+  }
+}
+
 const TechMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -373,7 +385,7 @@ const TechMasterlist: React.FC = () => {
     return Array.from(dates).sort();
   };
 
-  const printActiveFarmers = () => {
+  const printActiveFarmers = async () => {
     const activeFarmers = getFilteredPrintRecords();
 
     if (activeFarmers.length === 0) {
@@ -390,12 +402,6 @@ const TechMasterlist: React.FC = () => {
       filterDescription = `Date Submitted: ${formatDate(printFilter.value)}`;
     }
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Please allow popups to print the active farmers list.');
-      return;
-    }
-
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -406,6 +412,50 @@ const TechMasterlist: React.FC = () => {
               font-family: Arial, sans-serif;
               margin: 20px;
               color: #333;
+            }
+            .print-toolbar {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              background: #2563eb;
+              color: white;
+              padding: 15px 20px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+              z-index: 1000;
+            }
+            .print-toolbar h3 {
+              margin: 0;
+              font-size: 16px;
+            }
+            .print-toolbar button {
+              padding: 10px 25px;
+              font-size: 14px;
+              font-weight: bold;
+              border: none;
+              border-radius: 5px;
+              cursor: pointer;
+              margin-left: 10px;
+            }
+            .print-btn {
+              background: #22c55e;
+              color: white;
+            }
+            .print-btn:hover {
+              background: #16a34a;
+            }
+            .close-btn {
+              background: #ef4444;
+              color: white;
+            }
+            .close-btn:hover {
+              background: #dc2626;
+            }
+            .content-wrapper {
+              margin-top: 80px;
             }
             .header {
               text-align: center;
@@ -450,63 +500,98 @@ const TechMasterlist: React.FC = () => {
               font-size: 14px;
             }
             @media print {
+              .print-toolbar { display: none !important; }
+              .content-wrapper { margin-top: 0; }
               body { margin: 0; }
-              .no-print { display: none; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>ACTIVE FARMERS LIST</h1>
-            <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+          <div class="print-toolbar">
+            <h3>📄 Print Preview - Review your document below</h3>
+            <div>
+              <button class="print-btn" onclick="window.print()">🖨️ Print Now</button>
+              <button class="close-btn" onclick="window.close()">✕ Close</button>
+            </div>
           </div>
           
-          <div class="filter-info">
-            <strong>Filter Applied:</strong> ${filterDescription}
-          </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>No.</th>
-                <th>Reference Number</th>
-                <th>Farmer Name</th>
-                <th>Farmer Address</th>
-                <th>Parcel Address</th>
-                <th>Parcel Area</th>
-                <th>Date Submitted</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${activeFarmers.map((farmer, index) => `
+          <div class="content-wrapper">
+            <div class="header">
+              <h1>ACTIVE FARMERS LIST</h1>
+              <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            </div>
+            
+            <div class="filter-info">
+              <strong>Filter Applied:</strong> ${filterDescription}
+            </div>
+            
+            <table>
+              <thead>
                 <tr>
-                  <td>${index + 1}</td>
-                  <td>${farmer.referenceNumber}</td>
-                  <td>${farmer.farmerName}</td>
-                  <td>${farmer.farmerAddress}</td>
-                  <td>${farmer.farmLocation}</td>
-                  <td>${farmer.parcelArea}</td>
-                  <td>${formatDate(farmer.dateSubmitted)}</td>
+                  <th>No.</th>
+                  <th>Reference Number</th>
+                  <th>Farmer Name</th>
+                  <th>Farmer Address</th>
+                  <th>Parcel Address</th>
+                  <th>Parcel Area</th>
+                  <th>Date Submitted</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div class="summary">
-            <p>Total Active Farmers (Filtered): ${activeFarmers.length}</p>
-            <p>Report generated by FFRS System</p>
+              </thead>
+              <tbody>
+                ${activeFarmers.map((farmer, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${farmer.referenceNumber}</td>
+                    <td>${farmer.farmerName}</td>
+                    <td>${farmer.farmerAddress}</td>
+                    <td>${farmer.farmLocation}</td>
+                    <td>${farmer.parcelArea}</td>
+                    <td>${formatDate(farmer.dateSubmitted)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            
+            <div class="summary">
+              <p>Total Active Farmers (Filtered): ${activeFarmers.length}</p>
+              <p>Report generated by FFRS System</p>
+            </div>
           </div>
         </body>
       </html>
     `;
 
-    printWindow.document.write(printContent);
-    printWindow.document.close();
+    // Check if running in Electron with print API available
+    if (window.electron?.printContent) {
+      try {
+        const result = await window.electron.printContent(printContent);
+        if (!result.success && result.error) {
+          console.error('Print failed:', result.error);
+          // User cancelled the print dialog - this is normal, don't show error
+          if (result.error !== 'cancelled') {
+            alert('Print failed: ' + result.error);
+          }
+        }
+      } catch (err: any) {
+        console.error('Print error:', err);
+        alert('Failed to print: ' + err.message);
+      }
+    } else {
+      // Fallback for browser environment
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('Please allow popups to print the active farmers list.');
+        return;
+      }
 
-    printWindow.onload = () => {
-      printWindow.print();
-      printWindow.close();
-    };
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+      };
+    }
 
     // Close the modal and reset filter
     setShowPrintModal(false);
@@ -622,9 +707,9 @@ const TechMasterlist: React.FC = () => {
                   className="tech-masterlist-status-select"
                 >
                   <option value="all">All Ownership Types</option>
-                  <option value="registeredOwner">🏠 Registered Owner</option>
-                  <option value="tenant">👤 Tenant</option>
-                  <option value="lessee">📋 Lessee</option>
+                  <option value="registeredOwner">Registered Owner</option>
+                  <option value="tenant">Tenant</option>
+                  <option value="lessee">Lessee</option>
                 </select>
               </div>
             </div>

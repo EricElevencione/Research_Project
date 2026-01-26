@@ -1,13 +1,13 @@
 /* Regional Allocation Page Styles */
 
-.regional-allocation-container {
+.jo-regional-allocation-container {
     display: flex;
     height: 100vh;
     background-color: #f5f5f5;
 }
 
 /* Main Content Area */
-.regional-main-content {
+.jo-regional-main-content {
     flex: 1;
     padding: 2rem;
     overflow-y: auto;
@@ -15,19 +15,19 @@
 }
 
 /* Content Header */
-.regional-content-header h2 {
+.jo-regional-content-header h2 {
     font-size: 1.75rem;
     color: #333;
     margin: 0;
 }
 
-.regional-content-header p {
+.jo-regional-content-header p {
     color: #666;
     margin-top: 0.5rem;
 }
 
 /* Success Message */
-.regional-success-message {
+.jo-regional-success-message {
     padding: 1rem;
     background-color: #d4edda;
     color: #155724;
@@ -37,12 +37,12 @@
 }
 
 /* Form Container */
-.regional-form {
+.jo-regional-form {
     max-width: 1200px;
 }
 
 /* Card Sections */
-.regional-card {
+.jo-regional-card {
     background-color: white;
     padding: 1.5rem;
     border-radius: 8px;
@@ -50,35 +50,35 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.regional-card h3 {
+.jo-regional-card h3 {
     margin-bottom: 1rem;
     color: #2c5f2d;
     font-size: 1.25rem;
 }
 
 /* Form Grid */
-.regional-form-grid {
+.jo-regional-form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
 }
 
 /* Form Fields */
-.regional-form-field {
+.jo-regional-form-field {
     display: flex;
     flex-direction: column;
 }
 
-.regional-form-field label {
+.jo-regional-form-field label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
     color: #333;
 }
 
-.regional-form-field input,
-.regional-form-field select,
-.regional-form-field textarea {
+.jo-regional-form-field input,
+.jo-regional-form-field select,
+.jo-regional-form-field textarea {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid #ddd;
@@ -87,21 +87,21 @@
     font-family: inherit;
 }
 
-.regional-form-field textarea {
+.jo-regional-form-field textarea {
     resize: vertical;
     min-height: 100px;
 }
 
-.regional-form-field input:focus,
-.regional-form-field select:focus,
-.regional-form-field textarea:focus {
+.jo-regional-form-field input:focus,
+.jo-regional-form-field select:focus,
+.jo-regional-form-field textarea:focus {
     outline: none;
     border-color: #2c5f2d;
     box-shadow: 0 0 0 2px rgba(44, 95, 45, 0.1);
 }
 
 /* Total Summary */
-.regional-total-summary {
+.jo-regional-total-summary {
     margin-top: 1rem;
     padding: 1rem;
     background-color: #f8f9fa;
@@ -111,7 +111,7 @@
 }
 
 /* Button Container */
-.regional-button-container {
+.jo-regional-button-container {
     display: flex;
     gap: 1rem;
     justify-content: flex-end;
@@ -119,7 +119,7 @@
 }
 
 /* Buttons */
-.regional-btn {
+.jo-regional-btn {
     padding: 0.75rem 2rem;
     border: none;
     border-radius: 4px;
@@ -128,45 +128,45 @@
     transition: background-color 0.2s;
 }
 
-.regional-btn-cancel {
+.jo-regional-btn-cancel {
     background-color: #6c757d;
     color: white;
 }
 
-.regional-btn-cancel:hover {
+.jo-regional-btn-cancel:hover {
     background-color: #5a6268;
 }
 
-.regional-btn-submit {
+.jo-regional-btn-submit {
     background-color: #2c5f2d;
     color: white;
     font-weight: 600;
 }
 
-.regional-btn-submit:hover {
+.jo-regional-btn-submit:hover {
     background-color: #1e4320;
 }
 
-.regional-btn-submit:disabled {
+.jo-regional-btn-submit:disabled {
     background-color: #ccc;
     cursor: not-allowed;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .regional-main-content {
+    .jo-regional-main-content {
         padding: 1rem;
     }
 
-    .regional-form-grid {
+    .jo-regional-form-grid {
         grid-template-columns: 1fr;
     }
 
-    .regional-button-container {
+    .jo-regional-button-container {
         flex-direction: column;
     }
 
-    .regional-btn {
+    .jo-regional-btn {
         width: 100%;
     }
 }

@@ -492,3 +492,443 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================
+   DISTRIBUTION COMPLETION REPORT STYLES
+   Styled with jo-dist- prefix for uniqueness
+   ============================================ */
+
+/* Report Toggle Button */
+.jo-dist-report-toggle-btn {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.jo-dist-report-toggle-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.jo-dist-report-toggle-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Completion Report Container */
+.jo-dist-completion-report {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    border: 3px solid #1e3a5f;
+}
+
+/* Report Header */
+.jo-dist-report-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 50%, #1e3a5f 100%);
+    color: white;
+    padding: 20px 24px;
+    border-bottom: 4px solid #f59e0b;
+    text-align: center;
+}
+
+.jo-dist-report-header h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.jo-dist-report-season {
+    margin: 8px 0 0 0;
+    font-size: 14px;
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+/* Section Title */
+.jo-dist-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-radius: 6px;
+    border-left: 4px solid #1e3a5f;
+}
+
+/* Donut Charts Section */
+.jo-dist-donut-section {
+    padding: 24px;
+    border-bottom: 2px dashed #e2e8f0;
+}
+
+.jo-dist-donut-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.jo-dist-donut-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.jo-dist-donut-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    border-color: #1e3a5f;
+}
+
+.jo-dist-donut-title {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.jo-dist-donut-chart {
+    position: relative;
+    height: 160px;
+}
+
+.jo-dist-donut-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.jo-dist-donut-percentage {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1e3a5f;
+    font-family: 'Consolas', monospace;
+}
+
+.jo-dist-donut-stats {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.jo-dist-donut-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #374151;
+    font-family: 'Consolas', monospace;
+}
+
+.jo-dist-donut-unit {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Timeline Section */
+.jo-dist-timeline-section {
+    padding: 24px;
+    border-bottom: 2px dashed #e2e8f0;
+    background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.jo-dist-timeline-chart {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    border: 2px solid #1e3a5f;
+    margin-bottom: 16px;
+}
+
+.jo-dist-timeline-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+.jo-dist-timeline-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 16px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    min-width: 100px;
+}
+
+.jo-dist-timeline-week {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.jo-dist-timeline-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #16a34a;
+    font-family: 'Consolas', monospace;
+}
+
+/* Barangay Performance Section */
+.jo-dist-barangay-section {
+    padding: 24px;
+}
+
+.jo-dist-barangay-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.jo-dist-performance-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    border: 2px solid #e2e8f0;
+}
+
+.jo-dist-performance-card.jo-dist-top-performing {
+    border-color: #22c55e;
+    background: linear-gradient(180deg, #f0fdf4 0%, white 30%);
+}
+
+.jo-dist-performance-card.jo-dist-needs-attention {
+    border-color: #f59e0b;
+    background: linear-gradient(180deg, #fffbeb 0%, white 30%);
+}
+
+.jo-dist-performance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.jo-dist-performance-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.jo-dist-performance-item:hover {
+    background: #f8fafc;
+    transform: translateX(4px);
+}
+
+.jo-dist-performance-rank {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.jo-dist-performance-rank.jo-dist-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.jo-dist-performance-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.jo-dist-barangay-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.jo-dist-progress-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.jo-dist-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.jo-dist-progress-fill.jo-dist-success {
+    background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+
+.jo-dist-progress-fill.jo-dist-pending {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.jo-dist-progress-fill.jo-dist-shortage {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.jo-dist-progress-fill.jo-dist-logistics {
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.jo-dist-status-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.jo-dist-status-badge.jo-dist-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.jo-dist-status-badge.jo-dist-shortage {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.jo-dist-status-badge.jo-dist-logistics {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.jo-dist-percentage {
+    font-size: 16px;
+    font-weight: 800;
+    font-family: 'Consolas', monospace;
+    flex-shrink: 0;
+}
+
+.jo-dist-percentage.jo-dist-success {
+    color: #16a34a;
+}
+
+.jo-dist-percentage.jo-dist-warning {
+    color: #d97706;
+}
+
+/* Report Footer */
+.jo-dist-report-footer {
+    background: linear-gradient(180deg, #1e3a5f 0%, #172d47 100%);
+    padding: 16px 24px;
+    text-align: center;
+    border-top: 3px solid #f59e0b;
+}
+
+.jo-dist-report-footer p {
+    margin: 4px 0;
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.jo-dist-report-footer p:first-of-type {
+    color: white;
+    font-weight: 600;
+}
+
+/* Responsive Design for Completion Report */
+@media (max-width: 992px) {
+    .jo-dist-donut-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .jo-dist-barangay-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .jo-dist-donut-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .jo-dist-donut-section,
+    .jo-dist-timeline-section,
+    .jo-dist-barangay-section {
+        padding: 16px;
+    }
+
+    .jo-dist-report-header h3 {
+        font-size: 18px;
+    }
+
+    .jo-dist-timeline-summary {
+        flex-direction: column;
+    }
+
+    .jo-dist-timeline-item {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .jo-dist-performance-item {
+        flex-wrap: wrap;
+    }
+}
+
+/* Print Styles for Completion Report */
+@media print {
+    .jo-dist-completion-report {
+        box-shadow: none;
+        border: 2px solid #000;
+    }
+
+    .jo-dist-report-toggle-btn {
+        display: none !important;
+    }
+
+    .jo-dist-report-header {
+        background: #1e3a5f !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .jo-dist-donut-card,
+    .jo-dist-performance-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .jo-dist-report-footer {
+        background: #333 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

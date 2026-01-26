@@ -3,14 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import '../../assets/css/jo css/JoRegionAll.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
-import DistributionIcon from '../../assets/images/distribution.png'
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import LandRecsIcon from '../../assets/images/landrecord.png';
-import FarmerRequestIcon from '../../assets/images/request.png';
 
 interface RegionalAllocation {
     season: string;
@@ -195,7 +192,7 @@ const JoRegionalAllocation: React.FC = () => {
                     </div>
 
                     <button
-                        className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+                        className="sidebar-nav-item logout"
                         onClick={() => navigate('/')}
                     >
                         <span className="nav-icon">
@@ -209,25 +206,25 @@ const JoRegionalAllocation: React.FC = () => {
             {/* Sidebar ends here */}
 
             {/* Main Content */}
-            <div className="main-content regional-main-content">
+            <div className="main-content jo-regional-main-content">
 
-                <div className="content-header regional-content-header">
+                <div className="content-header jo-regional-content-header">
                     <h2>Regional Allocation Input</h2>
                     <p>Enter the fertilizer and seed allocation received from Regional Office</p>
                 </div>
 
                 {saveSuccess && (
-                    <div className="regional-success-message">
+                    <div className="jo-regional-success-message">
                         ✅ Regional allocation saved successfully!
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="regional-form">
+                <form onSubmit={handleSubmit} className="jo-regional-form">
                     {/* Season Information */}
-                    <div className="regional-card">
+                    <div className="jo-regional-card">
                         <h3>Season Information</h3>
-                        <div className="regional-form-grid">
-                            <div className="regional-form-field">
+                        <div className="jo-regional-form-grid">
+                            <div className="jo-regional-form-field">
                                 <label>Season *</label>
                                 <select
                                     name="season"
@@ -243,7 +240,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     <option value="wet_2026">Wet Season 2026</option>
                                 </select>
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>Allocation Date *</label>
                                 <input
                                     type="date"
@@ -253,7 +250,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     required
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>Season Start Date</label>
                                 <input
                                     type="date"
@@ -262,7 +259,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     onChange={handleInputChange}
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>Season End Date</label>
                                 <input
                                     type="date"
@@ -275,10 +272,10 @@ const JoRegionalAllocation: React.FC = () => {
                     </div>
 
                     {/* Fertilizer Allocations */}
-                    <div className="regional-card">
+                    <div className="jo-regional-card">
                         <h3>Fertilizer Allocations (50kg bags)</h3>
-                        <div className="regional-form-grid">
-                            <div className="regional-form-field">
+                        <div className="jo-regional-form-grid">
+                            <div className="jo-regional-form-field">
                                 <label>Euria</label>
                                 <input
                                     type="number"
@@ -288,7 +285,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     min="0"
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>4600</label>
                                 <input
                                     type="number"
@@ -298,7 +295,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     min="0"
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>141414</label>
                                 <input
                                     type="number"
@@ -308,7 +305,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     min="0"
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>0060</label>
                                 <input
                                     type="number"
@@ -319,16 +316,16 @@ const JoRegionalAllocation: React.FC = () => {
                                 />
                             </div>
                         </div>
-                        <div className="regional-total-summary">
+                        <div className="jo-regional-total-summary">
                             Total Fertilizer Bags: {totalFertilizerBags.toLocaleString()} bags ({(totalFertilizerBags * 50).toLocaleString()} kg)
                         </div>
                     </div>
 
                     {/* Seed Allocations */}
-                    <div className="regional-card">
+                    <div className="jo-regional-card">
                         <h3>Seed Allocations (kilograms)</h3>
-                        <div className="regional-form-grid">
-                            <div className="regional-form-field">
+                        <div className="jo-regional-form-grid">
+                            <div className="jo-regional-form-field">
                                 <label>Jackpot</label>
                                 <input
                                     type="number"
@@ -339,7 +336,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     step="0.01"
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>US88</label>
                                 <input
                                     type="number"
@@ -350,7 +347,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     step="0.01"
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>TH82</label>
                                 <input
                                     type="number"
@@ -361,7 +358,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     step="0.01"
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>RH9000</label>
                                 <input
                                     type="number"
@@ -372,7 +369,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     step="0.01"
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>Lumping143</label>
                                 <input
                                     type="number"
@@ -383,7 +380,7 @@ const JoRegionalAllocation: React.FC = () => {
                                     step="0.01"
                                 />
                             </div>
-                            <div className="regional-form-field">
+                            <div className="jo-regional-form-field">
                                 <label>LP296</label>
                                 <input
                                     type="number"
@@ -395,15 +392,15 @@ const JoRegionalAllocation: React.FC = () => {
                                 />
                             </div>
                         </div>
-                        <div className="regional-total-summary">
+                        <div className="jo-regional-total-summary">
                             Total Seeds: {totalSeedsKg.toLocaleString()} kg
                         </div>
                     </div>
 
                     {/* Notes */}
-                    <div className="regional-card">
+                    <div className="jo-regional-card">
                         <h3>Notes</h3>
-                        <div className="regional-form-field">
+                        <div className="jo-regional-form-field">
                             <textarea
                                 name="notes"
                                 value={formData.notes}
@@ -415,18 +412,18 @@ const JoRegionalAllocation: React.FC = () => {
                     </div>
 
                     {/* Submit Button */}
-                    <div className="regional-button-container">
+                    <div className="jo-regional-button-container">
                         <button
                             type="button"
                             onClick={() => navigate('/jo-dashboard')}
-                            className="regional-btn regional-btn-cancel"
+                            className="jo-regional-btn regional-btn-cancel"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="regional-btn regional-btn-submit"
+                            className="jo-regional-btn regional-btn-submit"
                         >
                             {loading ? 'Saving...' : 'Save Allocation'}
                         </button>

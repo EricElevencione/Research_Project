@@ -222,7 +222,7 @@ const JoMasterlist: React.FC = () => {
       const backendName = farmerData.farmerName || '';
       const reformattedFarmerName = (() => {
         if (!backendName || backendName === 'N/A') return 'N/A';
-        const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+        const parts = backendName.split(',').map((p: string) => p.trim()).filter(Boolean);
         if (parts.length === 0) return 'N/A';
         if (parts.length === 1) return parts[0]; // Just last name
         // Join all parts after the first with spaces (First Middle Ext)
@@ -288,7 +288,7 @@ const JoMasterlist: React.FC = () => {
         const backendName = item.farmerName || '';
         const reformattedName = (() => {
           if (!backendName || backendName === '—') return '—';
-          const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+          const parts = backendName.split(',').map((p: string) => p.trim()).filter(Boolean);
           if (parts.length === 0) return '—';
           if (parts.length === 1) return parts[0]; // Just last name
           // Join all parts after the first with spaces (First Middle Ext)
@@ -813,7 +813,7 @@ const JoMasterlist: React.FC = () => {
             </div>
 
             <button
-              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+              className="sidebar-nav-item logout"
               onClick={() => navigate('/')}
             >
               <span className="nav-icon">

@@ -29,6 +29,7 @@ import JoViewAllocation from './screens/JO/JoViewAllocation';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
 import JoGapAnalysis from './screens/JO/JoGapAnalysis';
 import JoDistribution from './screens/JO/JoDistribution';
+import AuditTrail from './screens/admin/AuditTrail';
 import "../src/assets/css/admin css/index.css";
 
 
@@ -198,6 +199,11 @@ function App() {
                 <Route path="/jo-distribution" element={
                     <ProtectedRoute>
                         <JoDistribution />
+                    </ProtectedRoute>
+                } />
+                <Route path="/audit-trail" element={
+                    <ProtectedRoute>
+                        <AuditTrail />
                     </ProtectedRoute>
                 } />
                 <Route path="*" element={<Navigate to="/" />} />

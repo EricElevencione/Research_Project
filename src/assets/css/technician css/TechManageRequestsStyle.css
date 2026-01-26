@@ -250,6 +250,11 @@
 }
 
 /* Table Container */
+.tech-manage-requests-table tbody tr {
+    background-color: #f9fafb;
+    border-top: 2px solid #e5e7eb;
+}
+
 .tech-manage-requests-table-container {
     overflow-x: auto;
 }
@@ -262,8 +267,8 @@
 }
 
 .tech-manage-requests-table-header {
-    background: #ecfdf5;
-    border-bottom: 2px solid #a7f3d0;
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
 }
 
 .tech-manage-requests-table-header th {
@@ -271,7 +276,7 @@
     text-align: left;
     font-weight: 600;
     font-size: 14px;
-    color: #065f46;
+    color: #111211;
 }
 
 .tech-manage-requests-table-header th:nth-child(3),
@@ -291,7 +296,8 @@
 }
 
 .tech-manage-requests-table-row.shortage-warning {
-    background: #fef3c7;
+    border-bottom: 1px solid rgb(229, 231, 235);
+    background: transparent;
 }
 
 .tech-manage-requests-table-row td {
@@ -1011,10 +1017,6 @@
    APPROVED COMPARISON CARD
    ============================================ */
 
-.tech-manage-requests-comparison-card-approved {
-    border-left: 4px solid #10b981;
-}
-
 .tech-manage-requests-comparison-card-approved .tech-manage-requests-comparison-title {
     color: #059669;
 }
@@ -1022,10 +1024,6 @@
 /* ============================================
    REJECTED COMPARISON CARD
    ============================================ */
-
-.tech-manage-requests-comparison-card-rejected {
-    border-left: 4px solid #ef4444;
-}
 
 .tech-manage-requests-comparison-card-rejected .tech-manage-requests-comparison-title {
     color: #dc2626;

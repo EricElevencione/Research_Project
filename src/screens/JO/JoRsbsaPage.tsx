@@ -361,7 +361,7 @@ const JoRsbsaPage: React.FC = () => {
             </div>
 
             <button
-              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
+              className="sidebar-nav-item logout"
               onClick={() => navigate('/')}
             >
               <span className="nav-icon">

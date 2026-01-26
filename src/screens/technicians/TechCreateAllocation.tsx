@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import '../../assets/css/jo css/JoIncentStyle.css';
+import '../../assets/css/technician css/TechCreateAllocationStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -124,8 +124,8 @@ const TechCreateAllocation: React.FC = () => {
     };
 
     return (
-        <div className="page-container">
-            <div className="page">
+        <div className="tech-allocation-page-container">
+            <div className="tech-allocation-page">
                 {/* Sidebar */}
                 <div className="sidebar">
                     <nav className="sidebar-nav">
@@ -196,23 +196,23 @@ const TechCreateAllocation: React.FC = () => {
                 </div>
 
                 {/* Main Content */}
-                <div className="main-content">
-                    <div className="dashboard-header-incent">
-                        <h2 className="page-header">📦 Create Regional Allocation</h2>
-                        <p className="page-subtitle">Input fertilizer and seed allocation from Regional Office</p>
+                <div className="tech-allocation-main-content">
+                    <div className="tech-allocation-header">
+                        <h2 className="tech-allocation-title">Create Regional Allocation</h2>
+                        <p className="tech-allocation-subtitle">Input fertilizer and seed allocation from Regional Office</p>
                     </div>
 
-                    <div className="content-card-incent">
+                    <div className="tech-allocation-content-card">
                         <form onSubmit={handleSubmit}>
                             {/* Season Selection */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1f2937' }}>
+                            <div className="tech-allocation-section">
+                                <h3 className="tech-allocation-section-title">
                                     Season Information
                                 </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                                            Allocation Date <span style={{ color: '#ef4444' }}>*</span>
+                                <div className="tech-allocation-grid-2">
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
+                                            Allocation Date <span className="tech-allocation-required">*</span>
                                         </label>
                                         <input
                                             type="date"
@@ -220,54 +220,37 @@ const TechCreateAllocation: React.FC = () => {
                                             value={formData.allocation_date}
                                             onChange={handleInputChange}
                                             required
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             Auto-Detected Season
                                         </label>
-                                        <div style={{
-                                            width: '100%',
-                                            padding: '10px',
-                                            border: '1px solid #d1d5db',
-                                            borderRadius: '6px',
-                                            fontSize: '14px',
-                                            backgroundColor: '#f9fafb',
-                                            color: '#374151',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            minHeight: '40px'
-                                        }}>
+                                        <div className="tech-allocation-season-display">
                                             {formData.season ? (
                                                 <span>
                                                     {formData.season.includes('wet') ? '🌧️ Wet Season' : '☀️ Dry Season'} {formData.season.split('_')[1]}
                                                 </span>
                                             ) : (
-                                                <span style={{ color: '#9ca3af' }}>Select a date first</span>
+                                                <span className="tech-allocation-season-placeholder">Select a date first</span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                <p style={{ marginTop: '8px', fontSize: '13px', color: '#6b7280' }}>
+                                <p className="tech-allocation-season-info">
                                     💡 <strong>Wet Season:</strong> May - October | <strong>Dry Season:</strong> November - April
                                 </p>
                             </div>
 
                             {/* Fertilizers Section */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1f2937' }}>
+                            <div className="tech-allocation-section">
+                                <h3 className="tech-allocation-section-title">
                                     🌱 Fertilizer Allocation (bags)
                                 </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                <div className="tech-allocation-grid-2">
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             Urea (46-0-0)
                                         </label>
                                         <input
@@ -277,17 +260,11 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             Complete (14-14-14)
                                         </label>
                                         <input
@@ -297,17 +274,11 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             Ammonium Sulfate (21-0-0)
                                         </label>
                                         <input
@@ -317,17 +288,11 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             Muriate of Potash (0-0-60)
                                         </label>
                                         <input
@@ -337,26 +302,20 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Seeds Section */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1f2937' }}>
+                            <div className="tech-allocation-section">
+                                <h3 className="tech-allocation-section-title">
                                     🌾 Seed Allocation (kg)
                                 </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                <div className="tech-allocation-grid-2">
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             Jackpot
                                         </label>
                                         <input
@@ -366,17 +325,11 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             US88
                                         </label>
                                         <input
@@ -386,17 +339,11 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             TH82
                                         </label>
                                         <input
@@ -406,17 +353,11 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             RH9000
                                         </label>
                                         <input
@@ -426,17 +367,11 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             Lumping143
                                         </label>
                                         <input
@@ -446,17 +381,11 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                                    <div className="tech-allocation-field">
+                                        <label className="tech-allocation-label">
                                             LP296
                                         </label>
                                         <input
@@ -466,21 +395,15 @@ const TechCreateAllocation: React.FC = () => {
                                             onChange={handleInputChange}
                                             min="0"
                                             step="0.01"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
+                                            className="tech-allocation-input"
                                         />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Notes Section */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                            <div className="tech-allocation-section">
+                                <label className="tech-allocation-label">
                                     Notes / Remarks
                                 </label>
                                 <textarea
@@ -489,63 +412,30 @@ const TechCreateAllocation: React.FC = () => {
                                     onChange={handleInputChange}
                                     rows={4}
                                     placeholder="Add any additional notes or remarks..."
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '6px',
-                                        fontSize: '14px',
-                                        fontFamily: 'inherit'
-                                    }}
+                                    className="tech-allocation-textarea"
                                 />
                             </div>
 
                             {/* Error Message */}
                             {error && (
-                                <div style={{
-                                    padding: '12px',
-                                    marginBottom: '16px',
-                                    backgroundColor: '#fee2e2',
-                                    border: '1px solid #ef4444',
-                                    borderRadius: '6px',
-                                    color: '#991b1b'
-                                }}>
+                                <div className="tech-allocation-error">
                                     {error}
                                 </div>
                             )}
 
                             {/* Action Buttons */}
-                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <div className="tech-allocation-actions">
                                 <button
                                     type="button"
                                     onClick={() => navigate('/technician-incentives')}
-                                    style={{
-                                        padding: '12px 24px',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '8px',
-                                        fontSize: '15px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                        backgroundColor: 'white',
-                                        color: '#374151'
-                                    }}
+                                    className="tech-allocation-btn-cancel"
                                     disabled={loading}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    style={{
-                                        background: loading ? '#9ca3af' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                        color: 'white',
-                                        padding: '12px 24px',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontSize: '15px',
-                                        fontWeight: '600',
-                                        cursor: loading ? 'not-allowed' : 'pointer',
-                                        boxShadow: '0 4px 6px rgba(16, 185, 129, 0.2)'
-                                    }}
+                                    className="tech-allocation-btn-submit"
                                     disabled={loading}
                                 >
                                     {loading ? '💾 Saving...' : '✅ Create Allocation'}

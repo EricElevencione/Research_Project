@@ -296,9 +296,365 @@ router.get('/farm_parcels', async (req, res) => {
     }
 });
 
-// Note: GET /, GET /:id, and PUT /:id endpoints are in server.cjs
-// They handle both JSONB and structured table formats for backwards compatibility
-// This route file only handles: POST (create), GET parcels, DELETE
+// ============================================================================
+// GET / - Fetch all RSBSA submissions for masterlist
+// ============================================================================
+router.get('/', async (req, res) => {
+    try {
+        // Check for optional columns that may not exist in all database versions
+        const columnCheckQuery = `
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'rsbsa_submission' 
+            ORDER BY ordinal_position
+        `;
+        const columnResult = await pool.query(columnCheckQuery);
+        const hasOwnershipColumns = columnResult.rows.some(row => row.column_name === 'OWNERSHIP_TYPE_REGISTERED_OWNER');
+        const hasFFRSCode = columnResult.rows.some(row => row.column_name === 'FFRS_CODE');
+
+        const ownershipFields = hasOwnershipColumns
+            ? `,
+            rs."OWNERSHIP_TYPE_REGISTERED_OWNER",
+            rs."OWNERSHIP_TYPE_TENANT",
+            rs."OWNERSHIP_TYPE_LESSEE"`
+            : '';
+
+        const ffrsField = hasFFRSCode ? ', rs."FFRS_CODE"' : '';
+
+        const query = `
+            SELECT 
+                rs.id,
+                rs."LAST NAME",
+                rs."FIRST NAME",
+                rs."MIDDLE NAME",
+                rs."EXT NAME",
+                rs."GENDER",
+                rs."BIRTHDATE",
+                rs.age,
+                rs."BARANGAY",
+                rs."MUNICIPALITY",
+                rs."FARM LOCATION",
+                COALESCE(fp_sum.total_area, rs."TOTAL FARM AREA", 0)::TEXT AS "PARCEL AREA",
+                COALESCE(fp_sum.total_area, rs."TOTAL FARM AREA", 0) AS "TOTAL FARM AREA",
+                rs."MAIN LIVELIHOOD",
+                rs.status,
+                rs.submitted_at,
+                rs.created_at,
+                rs.updated_at,
+                COALESCE(fp_count.parcel_count, 0) AS parcel_count
+                ${ownershipFields}
+                ${ffrsField}
+            FROM rsbsa_submission rs
+            LEFT JOIN (
+                SELECT submission_id, SUM(total_farm_area_ha) AS total_area
+                FROM rsbsa_farm_parcels
+                GROUP BY submission_id
+            ) fp_sum ON fp_sum.submission_id = rs.id
+            LEFT JOIN (
+                SELECT submission_id, COUNT(*) AS parcel_count
+                FROM rsbsa_farm_parcels
+                GROUP BY submission_id
+            ) fp_count ON fp_count.submission_id = rs.id
+            WHERE rs."LAST NAME" IS NOT NULL
+            ORDER BY rs.submitted_at DESC
+        `;
+        const result = await pool.query(query);
+
+        // Transform the data to match the frontend's expected format
+        const submissions = result.rows.map(row => {
+            const fullName = [row["LAST NAME"], row["FIRST NAME"], row["MIDDLE NAME"], row["EXT NAME"]]
+                .filter(Boolean)
+                .join(', ');
+
+            const parcelInfo = row["FARM LOCATION"]
+                ? `${row["FARM LOCATION"]}${row["PARCEL AREA"] ? ` (${row["PARCEL AREA"]} ha)` : ''}`
+                : 'N/A';
+
+            const ownershipType = {
+                registeredOwner: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_REGISTERED_OWNER"] : false,
+                tenant: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_TENANT"] : false,
+                lessee: hasOwnershipColumns ? !!row["OWNERSHIP_TYPE_LESSEE"] : false
+            };
+
+            let parcelAreaDisplay = '—';
+            if (row["PARCEL AREA"]) {
+                const areaStr = String(row["PARCEL AREA"]);
+                const areaNum = parseFloat(areaStr);
+                if (!isNaN(areaNum) && areaNum > 0) {
+                    parcelAreaDisplay = `${areaNum.toFixed(2)} ha`;
+                } else {
+                    parcelAreaDisplay = areaStr;
+                }
+            }
+
+            return {
+                id: row.id,
+                referenceNumber: row["FFRS_CODE"] || `RSBSA-${row.id}`,
+                farmerName: fullName || '—',
+                farmerAddress: `${row["BARANGAY"] || ''}, ${row["MUNICIPALITY"] || ''}`.replace(/^,\s*|,\s*$/g, '') || '—',
+                farmLocation: row["FARM LOCATION"] || '—',
+                gender: row["GENDER"] || '—',
+                birthdate: row["BIRTHDATE"] || null,
+                age: row.age || null,
+                dateSubmitted: row.submitted_at || row.created_at,
+                status: row.status || 'Not Active',
+                parcelArea: parcelAreaDisplay,
+                totalFarmArea: parseFloat(row["TOTAL FARM AREA"]) || 0,
+                landParcel: parcelInfo,
+                parcelCount: parseInt(row.parcel_count) || 0,
+                ownershipType: ownershipType
+            };
+        });
+
+        res.json(submissions);
+    } catch (error) {
+        console.error('Error fetching RSBSA submissions:', error);
+        res.status(500).json({
+            message: 'Error fetching RSBSA submissions',
+            error: error.message
+        });
+    }
+});
+
+// ============================================================================
+// GET /:id - Fetch a specific RSBSA submission by ID
+// ============================================================================
+router.get('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    // Skip if this looks like a special route (handled by other endpoints)
+    if (id === 'farm_parcels') {
+        return; // Let the farm_parcels route handle it
+    }
+
+    try {
+        console.log(`Fetching RSBSA submission ${id}...`);
+
+        const query = `SELECT * FROM rsbsa_submission WHERE id = $1`;
+        const result = await pool.query(query, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: 'RSBSA submission not found',
+                message: `No RSBSA submission found with ID ${id}`
+            });
+        }
+
+        const row = result.rows[0];
+
+        const fullName = [
+            row["LAST NAME"] || '',
+            row["FIRST NAME"] || '',
+            row["MIDDLE NAME"] || '',
+            row["EXT NAME"] || ''
+        ].filter(part => part).join(', ');
+
+        const barangay = row["BARANGAY"] || '';
+        const municipality = row["MUNICIPALITY"] || '';
+        const province = row["PROVINCE"] || '';
+
+        const submissionData = {
+            id: row.id,
+            referenceNumber: row["FFRS_CODE"] || `RSBSA-${row.id}`,
+            farmerName: fullName,
+            firstName: row["FIRST NAME"] || '',
+            middleName: row["MIDDLE NAME"] || '',
+            lastName: row["LAST NAME"] || '',
+            extName: row["EXT NAME"] || '',
+            gender: row["GENDER"] || '',
+            birthdate: row["BIRTHDATE"] || '',
+            age: row.age || null,
+            mainLivelihood: row["MAIN LIVELIHOOD"] || '',
+            farmerRice: row["FARMER_RICE"] || false,
+            farmerCorn: row["FARMER_CORN"] || false,
+            farmerOtherCrops: row["FARMER_OTHER_CROPS"] || false,
+            farmerOtherCropsText: row["FARMER_OTHER_CROPS_TEXT"] || '',
+            farmerLivestock: row["FARMER_LIVESTOCK"] || false,
+            farmerLivestockText: row["FARMER_LIVESTOCK_TEXT"] || '',
+            farmerPoultry: row["FARMER_POULTRY"] || false,
+            farmerPoultryText: row["FARMER_POULTRY_TEXT"] || '',
+            farmerAddress: [barangay, municipality, province].filter(Boolean).join(', ') || '',
+            farmLocation: row["FARM LOCATION"] || barangay || '',
+            parcelArea: row["PARCEL AREA"] || row["TOTAL FARM AREA"] || '',
+            status: row.status || 'Not Active',
+            dateSubmitted: row.submitted_at || row.created_at,
+            ownershipType: {
+                registeredOwner: row["OWNERSHIP_TYPE_REGISTERED_OWNER"] || false,
+                tenant: row["OWNERSHIP_TYPE_TENANT"] || false,
+                lessee: row["OWNERSHIP_TYPE_LESSEE"] || false
+            },
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        };
+
+        // Also fetch farm parcels for this submission
+        const parcelsQuery = `
+            SELECT * FROM rsbsa_farm_parcels 
+            WHERE submission_id = $1
+            ORDER BY parcel_number
+        `;
+        const parcelsResult = await pool.query(parcelsQuery, [id]);
+        submissionData.farmParcels = parcelsResult.rows;
+
+        res.json(submissionData);
+    } catch (error) {
+        console.error('Error fetching RSBSA submission:', error);
+        res.status(500).json({
+            message: 'Error fetching RSBSA submission',
+            error: error.message
+        });
+    }
+});
+
+// ============================================================================
+// PUT /:id - Update a specific RSBSA submission
+// ============================================================================
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        console.log('Updating RSBSA submission:', { id, updateData });
+
+        let queryValues = [];
+        const updateFields = [];
+        let paramCounter = 1;
+
+        // Check if only status is provided (e.g., from Masterlist toggle)
+        if (Object.keys(updateData).length === 1 && updateData.status) {
+            if (!['Active Farmer', 'Not Active'].includes(updateData.status)) {
+                return res.status(400).json({
+                    message: 'Invalid status value',
+                    error: 'Status must be either "Active Farmer" or "Not Active"'
+                });
+            }
+
+            const updateQuery = `
+                UPDATE rsbsa_submission 
+                SET status = $1, updated_at = CURRENT_TIMESTAMP
+                WHERE id = $2
+                RETURNING *;
+            `;
+            queryValues = [updateData.status, id];
+
+            const result = await pool.query(updateQuery, queryValues);
+
+            if (result.rowCount === 0) {
+                return res.status(404).json({
+                    message: 'Record not found',
+                    error: 'No record found with the provided ID'
+                });
+            }
+
+            return res.json({
+                message: 'Status updated successfully',
+                updatedRecord: result.rows[0]
+            });
+        }
+
+        // Handle status if provided
+        if (updateData.status) {
+            if (!['Active Farmer', 'Not Active'].includes(updateData.status)) {
+                return res.status(400).json({
+                    message: 'Invalid status value',
+                    error: 'Status must be either "Active Farmer" or "Not Active"'
+                });
+            }
+            updateFields.push(`status = $${paramCounter}`);
+            queryValues.push(updateData.status);
+            paramCounter++;
+        }
+
+        // Handle farmer name components if provided
+        if (updateData.farmerName) {
+            const nameParts = updateData.farmerName.split(', ');
+            const [lName, fName, mName, eName] = nameParts;
+
+            updateFields.push('"LAST NAME" = $' + paramCounter);
+            queryValues.push(lName || '');
+            paramCounter++;
+
+            updateFields.push('"FIRST NAME" = $' + paramCounter);
+            queryValues.push(fName || '');
+            paramCounter++;
+
+            updateFields.push('"MIDDLE NAME" = $' + paramCounter);
+            queryValues.push(mName || '');
+            paramCounter++;
+
+            updateFields.push('"EXT NAME" = $' + paramCounter);
+            queryValues.push(eName || '');
+            paramCounter++;
+        }
+
+        // Handle other fields
+        if (updateData.gender) {
+            updateFields.push('"GENDER" = $' + paramCounter);
+            queryValues.push(updateData.gender);
+            paramCounter++;
+        }
+
+        if (updateData.birthdate) {
+            updateFields.push('"BIRTHDATE" = $' + paramCounter);
+            queryValues.push(updateData.birthdate);
+            paramCounter++;
+        }
+
+        if (updateData.farmLocation) {
+            updateFields.push('"FARM LOCATION" = $' + paramCounter);
+            queryValues.push(updateData.farmLocation);
+            paramCounter++;
+        }
+
+        if (updateData.parcelArea) {
+            const areaValue = updateData.parcelArea.replace(/\s*hectares\s*$/i, '').trim();
+            if (!isNaN(parseFloat(areaValue))) {
+                updateFields.push('"PARCEL AREA" = $' + paramCounter);
+                queryValues.push(parseFloat(areaValue));
+                paramCounter++;
+            }
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({
+                message: 'No valid fields to update',
+                error: 'Please provide at least one field to update'
+            });
+        }
+
+        updateFields.push('updated_at = CURRENT_TIMESTAMP');
+
+        const finalQuery = `
+            UPDATE rsbsa_submission 
+            SET ${updateFields.join(', ')}
+            WHERE id = $${paramCounter}
+            RETURNING *;
+        `;
+        queryValues.push(id);
+
+        const result = await pool.query(finalQuery, queryValues);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                message: 'Record not found',
+                error: 'No record found with the provided ID'
+            });
+        }
+
+        res.json({
+            message: 'Record updated successfully',
+            updatedRecord: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Error updating RSBSA submission:', error);
+        res.status(500).json({
+            message: 'Error updating RSBSA submission',
+            error: error.message || 'Unknown error occurred',
+            details: error.detail || 'No additional details available'
+        });
+    }
+});
 
 // ============================================================================
 // DELETE /:id - Delete RSBSA submission and associated parcels

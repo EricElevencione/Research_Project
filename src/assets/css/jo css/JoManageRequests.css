@@ -170,16 +170,6 @@
     color: #dc2626;
 }
 
-/* Approved card styling */
-.jo-manage-requests-farmer-requests-card.approved {
-    border-left: 4px solid #10b981;
-}
-
-/* Rejected card styling */
-.jo-manage-requests-farmer-requests-card.rejected {
-    border-left: 4px solid #ef4444;
-}
-
 .jo-manage-requests-card-content {
     display: flex;
     flex-direction: column;
@@ -394,91 +384,45 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
-    animation: fadeIn 0.2s ease;
+    z-index: 1000;
 }
 
 .jo-manage-requests-modal-content {
     background: white;
-    border-radius: 16px;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 600px;
     width: 90%;
-    max-width: 900px;
     max-height: 90vh;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.3s ease;
+    overflow-y: auto;
 }
 
-/* Modal Header */
+/* Modal Header - matches Tech style */
 .jo-manage-requests-modal-header {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-    padding: 24px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 3px solid #047857;
+    margin-bottom: 20px;
 }
 
 .jo-manage-requests-modal-header h2 {
     margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-}
-
-.jo-manage-requests-modal-close {
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    font-size: 32px;
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    padding: 0;
-    line-height: 1;
-}
-
-.jo-manage-requests-modal-close:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(90deg);
+    font-size: 20px;
+    font-weight: 600;
+    color: #065f46;
 }
 
 /* Modal Body */
 .jo-manage-requests-modal-body {
-    padding: 32px;
-    max-height: calc(90vh - 100px);
-    overflow-y: auto;
-}
-
-.jo-manage-requests-modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.jo-manage-requests-modal-body::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 4px;
-}
-
-.jo-manage-requests-modal-body::-webkit-scrollbar-thumb {
-    background: #10b981;
-    border-radius: 4px;
-}
-
-.jo-manage-requests-modal-body::-webkit-scrollbar-thumb:hover {
-    background: #059669;
+    /* No special styling needed - content flows naturally */
 }
 
 .jo-manage-requests-modal-section {
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 }
 
 .jo-manage-requests-modal-section:last-child {
@@ -486,12 +430,10 @@
 }
 
 .jo-manage-requests-modal-section-title {
-    font-size: 20px;
-    font-weight: 700;
+    margin-bottom: 12px;
+    font-size: 16px;
+    font-weight: 600;
     color: #047857;
-    margin: 0 0 20px 0;
-    padding-bottom: 12px;
-    border-bottom: 3px solid #d1fae5;
 }
 
 .jo-manage-requests-modal-grid {
@@ -500,7 +442,9 @@
     gap: 12px;
 }
 
-.jo-manage-requests-modal-field label {
+/* Modal Label and Input */
+.jo-manage-requests-modal-field label,
+.jo-manage-requests-modal-label {
     display: block;
     margin-bottom: 4px;
     font-size: 13px;
@@ -510,24 +454,39 @@
 .jo-manage-requests-modal-input {
     width: 100%;
     padding: 8px;
-    border: 1px solid #d1d5db;
+    border: 1px solid #a7f3d0;
     border-radius: 4px;
     font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.jo-manage-requests-modal-input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 .jo-manage-requests-modal-textarea {
     width: 100%;
     padding: 8px;
-    border: 1px solid #d1d5db;
+    border: 1px solid #a7f3d0;
     border-radius: 4px;
     font-size: 14px;
     resize: vertical;
+    transition: all 0.3s ease;
+}
+
+.jo-manage-requests-modal-textarea:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 .jo-manage-requests-modal-actions {
     display: flex;
     gap: 12px;
     justify-content: flex-end;
+    margin-top: 24px;
 }
 
 .jo-manage-requests-modal-btn {
@@ -537,6 +496,7 @@
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
+    transition: all 0.3s ease;
 }
 
 .jo-manage-requests-modal-btn.cancel {
@@ -544,13 +504,19 @@
     color: white;
 }
 
-.jo-manage-requests-modal-btn.save {
-    background: #10b981;
-    color: white;
+.jo-manage-requests-modal-btn.cancel:hover {
+    background: #4b5563;
 }
 
-.jo-manage-requests-modal-btn:hover {
-    opacity: 0.9;
+.jo-manage-requests-modal-btn.save {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.jo-manage-requests-modal-btn.save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 /* Header Section */
@@ -618,5 +584,362 @@
 
     100% {
         box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* ============================================
+   REQUEST PROCESSING ANALYTICS
+   ============================================ */
+
+/* Analytics Toggle Card */
+.jo-manage-requests-summary-card.analytics {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    position: relative;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.jo-manage-requests-summary-card.analytics:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+    border-color: #60a5fa;
+}
+
+.jo-manage-requests-summary-card.analytics .jo-manage-requests-summary-label {
+    color: #bfdbfe;
+}
+
+.jo-manage-requests-summary-card.analytics .jo-manage-requests-summary-value {
+    color: white;
+}
+
+/* Analytics Section Container */
+.jo-req-analytics-section {
+    margin: 20px 0;
+    padding: 24px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.jo-req-analytics-header {
+    margin-bottom: 20px;
+}
+
+.jo-req-analytics-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.jo-req-analytics-subtitle {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Analytics Grid */
+.jo-req-analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 1024px) {
+    .jo-req-analytics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Analytics Card */
+.jo-req-analytics-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+}
+
+.jo-req-analytics-card h4 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+/* Processing Funnel */
+.jo-req-funnel-container {
+    padding: 12px 0;
+}
+
+.jo-req-funnel-step {
+    margin: 0;
+}
+
+.jo-req-funnel-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: 8px;
+    min-width: 180px;
+    transition: all 0.3s ease;
+}
+
+.jo-req-funnel-step.submitted .jo-req-funnel-bar {
+    background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+    color: white;
+}
+
+.jo-req-funnel-step.under-review .jo-req-funnel-bar {
+    background: linear-gradient(90deg, #8b5cf6 0%, #a78bfa 100%);
+    color: white;
+}
+
+.jo-req-funnel-step.approved .jo-req-funnel-bar {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    color: white;
+}
+
+.jo-req-funnel-step.distributed .jo-req-funnel-bar {
+    background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+    color: white;
+}
+
+.jo-req-funnel-label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.jo-req-funnel-value {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.jo-req-funnel-connector {
+    text-align: left;
+    padding-left: 24px;
+    color: #94a3b8;
+    font-size: 12px;
+    line-height: 1;
+}
+
+/* Processing Metrics */
+.jo-req-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .jo-req-metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.jo-req-metric-box {
+    text-align: center;
+    padding: 16px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.jo-req-metric-box.avg {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #93c5fd;
+}
+
+.jo-req-metric-box.fastest {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-color: #6ee7b7;
+}
+
+.jo-req-metric-box.slowest {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-color: #fca5a5;
+}
+
+.jo-req-metric-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.jo-req-metric-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.jo-req-metric-trend {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.jo-req-metric-barangay {
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+}
+
+/* Rejection Analysis Table */
+.jo-req-rejection-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.jo-req-rejection-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #64748b;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.jo-req-rejection-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #374151;
+}
+
+.jo-req-rejection-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.jo-req-rejection-table .jo-req-count {
+    text-align: center;
+    font-weight: 700;
+    color: #ef4444;
+}
+
+.jo-req-rejection-table .jo-req-percent {
+    text-align: center;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.jo-req-no-rejections {
+    text-align: center;
+    padding: 30px;
+    color: #10b981;
+}
+
+.jo-req-no-rejections span {
+    font-size: 36px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.jo-req-no-rejections p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* Barangay Performance */
+.jo-req-performance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.jo-req-performance-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.jo-req-performance-row:hover {
+    background: #f1f5f9;
+    transform: translateX(4px);
+}
+
+.jo-req-performance-rank {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%);
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.jo-req-performance-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.jo-req-performance-name {
+    display: block;
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.jo-req-performance-bar-container {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.jo-req-performance-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.jo-req-performance-stats {
+    text-align: right;
+    min-width: 80px;
+}
+
+.jo-req-perf-total {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.jo-req-perf-rate {
+    display: block;
+    font-size: 11px;
+    color: #64748b;
+}
+
+/* Animation for Analytics Section */
+.jo-req-analytics-section {
+    animation: jo-req-slideDown 0.3s ease-out;
+}
+
+@keyframes jo-req-slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
