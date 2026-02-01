@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getAllocations, getFarmerRequests } from '../../api';
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -71,11 +72,11 @@ const ViewAllocation: React.FC = () => {
             console.log('🔍 Fetching allocation with ID:', allocationId);
 
             // Fetch allocation details
-            const allocationResponse = await fetch(`http://localhost:5000/api/distribution/allocations`);
-            if (!allocationResponse.ok) {
+            const allocationResponse = await getAllocations();
+            if (allocationResponse.error) {
                 throw new Error('Failed to fetch allocation');
             }
-            const allocations = await allocationResponse.json();
+            const allocations = allocationResponse.data || [];
             console.log('📦 All allocations:', allocations);
 
             const currentAllocation = allocations.find((a: any) => a.id === parseInt(allocationId || '0'));
@@ -87,9 +88,9 @@ const ViewAllocation: React.FC = () => {
             setAllocation(currentAllocation);
 
             // Fetch farmer requests for this season
-            const requestsResponse = await fetch(`http://localhost:5000/api/distribution/requests/${currentAllocation.season}`);
-            if (requestsResponse.ok) {
-                const requestsData = await requestsResponse.json();
+            const requestsResponse = await getFarmerRequests(currentAllocation.season);
+            if (!requestsResponse.error) {
+                const requestsData = requestsResponse.data || [];
                 setRequests(requestsData);
             }
         } catch (err: any) {

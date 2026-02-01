@@ -131,15 +131,18 @@ const JoDashboard: React.FC = () => {
 	useEffect(() => {
 		const fetchSeasons = async () => {
 			try {
-				const res = await fetch('http://localhost:5000/api/distribution/available-seasons');
-				if (res.ok) {
-					const data = await res.json();
-					setAvailableSeasons(data.availableSeasons || []);
-					setCurrentSeason(data.currentSeason);
-					// Default to current season or first available
-					if (!selectedSeason) {
-						setSelectedSeason(data.currentSeason);
-					}
+				// Note: available-seasons endpoint is not available in Supabase
+				// Using default season based on current date
+				console.log('Available seasons: endpoint not available in Supabase, using defaults');
+				const currentDate = new Date();
+				const month = currentDate.getMonth();
+				const year = currentDate.getFullYear();
+				// Wet season: May-October, Dry season: November-April
+				const defaultSeason = month >= 4 && month <= 9 ? `wet_${year}` : `dry_${year}`;
+				setAvailableSeasons([{ season: defaultSeason, count: 0 }]);
+				setCurrentSeason(defaultSeason);
+				if (!selectedSeason) {
+					setSelectedSeason(defaultSeason);
 				}
 			} catch (error) {
 				console.error('Error fetching seasons:', error);
@@ -155,26 +158,23 @@ const JoDashboard: React.FC = () => {
 		const fetchDashboardData = async () => {
 			setLoading(true);
 			try {
-				const [statsRes, trendsRes, activityRes] = await Promise.all([
-					fetch(`http://localhost:5000/api/distribution/dashboard-stats?season=${selectedSeason}`),
-					fetch('http://localhost:5000/api/distribution/monthly-trends'),
-					fetch('http://localhost:5000/api/distribution/recent-activity?limit=5')
-				]);
+				// Note: dashboard-stats, monthly-trends, and recent-activity endpoints are not available in Supabase
+				// Using empty/default data
+				console.log('Dashboard data: endpoints not available in Supabase, using defaults');
 
-				if (statsRes.ok) {
-					const statsData = await statsRes.json();
-					setDashboardStats(statsData);
-				}
+				// Set default empty stats
+				setDashboardStats({
+					totalFarmers: 0,
+					totalDistributed: 0,
+					pendingRequests: 0,
+					completionRate: 0
+				});
 
-				if (trendsRes.ok) {
-					const trendsData = await trendsRes.json();
-					setMonthlyTrends(trendsData.distribution || []);
-				}
+				// Set empty trends
+				setMonthlyTrends([]);
 
-				if (activityRes.ok) {
-					const activityData = await activityRes.json();
-					setRecentActivity(activityData || []);
-				}
+				// Set empty activity
+				setRecentActivity([]);
 
 				setLastUpdated(new Date());
 			} catch (error) {

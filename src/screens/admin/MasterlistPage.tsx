@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getRsbsaSubmissions } from '../../api';
 import '../../assets/css/admin css/MasterlistStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
@@ -48,9 +49,9 @@ const Masterlist: React.FC = () => {
 
   const fetchRSBSARecords = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const response = await getRsbsaSubmissions();
+      if (response.error) throw new Error(response.error);
+      const data = response.data || [];
 
       const formattedRecords: RSBSARecord[] = (Array.isArray(data) ? data : []).map((item: any, idx: number) => {
         // Prefer backend-transformed fields; fallback to raw

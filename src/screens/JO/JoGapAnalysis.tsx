@@ -154,15 +154,13 @@ const JoGapAnalysis: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/gap-analysis/${selectedSeason}`);
-            if (response.ok) {
-                const data = await response.json();
-                setGapData(data);
-            } else if (response.status === 404) {
-                setError('No allocation data found for this season');
-                setGapData(null);
+            // Note: gap-analysis endpoint is not available in Supabase, returning empty data
+            const response = { data: null, error: null };
+            console.log('Gap analysis: endpoint not available in Supabase, using empty data');
+            if (!response.error && response.data) {
+                setGapData(response.data);
             } else {
-                setError('Failed to fetch gap analysis data');
+                setError('Gap analysis endpoint not available in Supabase');
                 setGapData(null);
             }
         } catch (error) {
@@ -177,11 +175,12 @@ const JoGapAnalysis: React.FC = () => {
     // DSS Feature: Fetch recommendations
     const fetchRecommendations = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/recommendations/${selectedSeason}`);
-            if (response.ok) {
-                const data = await response.json();
-                console.log('✅ Recommendations loaded:', data);
-                setRecommendations(data);
+            // Note: recommendations endpoint is not available in Supabase, returning empty data
+            const response = { data: null, error: null };
+            console.log('Recommendations: endpoint not available in Supabase, using empty data');
+            if (!response.error && response.data) {
+                console.log('✅ Recommendations loaded:', response.data);
+                setRecommendations(response.data);
             } else {
                 console.log('No recommendations available');
                 setRecommendations(null);
@@ -195,17 +194,9 @@ const JoGapAnalysis: React.FC = () => {
     // Fetch Barangay-level shortage data
     const fetchBarangayShortages = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/barangay-shortages/${selectedSeason}`);
-            if (response.ok) {
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    const data = await response.json();
-                    setBarangayShortages(data);
-                    return;
-                }
-            }
-            // Generate sample data if API not available or returns non-JSON
-            console.log('Using sample barangay data');
+            // Note: barangay-shortages endpoint is not available in Supabase
+            // Using sample data for demonstration
+            console.log('Barangay shortages: endpoint not available in Supabase, using sample data');
             generateSampleBarangayData();
         } catch (error) {
             console.error('Error fetching barangay shortages:', error);
@@ -259,17 +250,9 @@ const JoGapAnalysis: React.FC = () => {
     // Fetch Historical Comparison Data
     const fetchHistoricalData = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/historical-comparison`);
-            if (response.ok) {
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    const data = await response.json();
-                    setHistoricalData(data);
-                    return;
-                }
-            }
-            // Generate sample historical data if API not available
-            console.log('Using sample historical data');
+            // Note: historical-comparison endpoint is not available in Supabase
+            // Using sample data for demonstration
+            console.log('Historical comparison: endpoint not available in Supabase, using sample data');
             generateSampleHistoricalData();
         } catch (error) {
             console.error('Error fetching historical data:', error);

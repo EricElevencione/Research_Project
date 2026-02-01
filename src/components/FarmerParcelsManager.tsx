@@ -43,13 +43,9 @@ const FarmerParcelsManager: React.FC = () => {
   const fetchFarmersSummary = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/farmers/summary');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      // Return empty data since this endpoint is not available in Supabase
+      const data: any[] = [];
+      console.log('Note: farmers/summary endpoint is not available in Supabase');
       setFarmers(data);
       setError(null);
     } catch (err: any) {
@@ -63,15 +59,9 @@ const FarmerParcelsManager: React.FC = () => {
   const fetchFarmerParcels = async (farmer: FarmerSummary) => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `http://localhost:5000/api/farm_parcels/by-farmer?lastName=${encodeURIComponent(farmer["LAST NAME"])}&firstName=${encodeURIComponent(farmer["FIRST NAME"])}`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      // Return empty data since this endpoint is not available in Supabase
+      const data: any[] = [];
+      console.log('Note: farm_parcels/by-farmer endpoint is not available in Supabase');
       setFarmerParcels(data);
       setSelectedFarmer(farmer);
       setError(null);

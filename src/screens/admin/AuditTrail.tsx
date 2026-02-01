@@ -118,28 +118,14 @@ const AuditTrail: React.FC = () => {
     const fetchLogs = useCallback(async () => {
         setLoading(true);
         try {
-            const params = new URLSearchParams();
-            params.append('page', pagination.page.toString());
-            params.append('limit', pagination.limit.toString());
-
-            if (filters.startDate) params.append('startDate', filters.startDate);
-            if (filters.endDate) params.append('endDate', filters.endDate);
-            if (filters.userName) params.append('userName', filters.userName);
-            if (filters.userRole) params.append('userRole', filters.userRole);
-            if (filters.action) params.append('action', filters.action);
-            if (filters.module) params.append('module', filters.module);
-            if (filters.search) params.append('search', filters.search);
-
-            const response = await fetch(`http://localhost:5000/api/audit/logs?${params}`);
-            if (response.ok) {
-                const data = await response.json();
-                setLogs(data.logs);
-                setPagination(prev => ({
-                    ...prev,
-                    totalCount: data.pagination.totalCount,
-                    totalPages: data.pagination.totalPages
-                }));
-            }
+            // Audit logs endpoint not available in Supabase - return empty data
+            console.log('Audit logs not available in Supabase cloud mode');
+            setLogs([]);
+            setPagination(prev => ({
+                ...prev,
+                totalCount: 0,
+                totalPages: 0
+            }));
         } catch (error) {
             console.error('Error fetching audit logs:', error);
         } finally {
@@ -150,11 +136,9 @@ const AuditTrail: React.FC = () => {
     // Fetch stats
     const fetchStats = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/audit/stats?days=30');
-            if (response.ok) {
-                const data = await response.json();
-                setStats(data);
-            }
+            // Audit stats endpoint not available in Supabase - return empty data
+            console.log('Audit stats not available in Supabase cloud mode');
+            setStats(null);
         } catch (error) {
             console.error('Error fetching audit stats:', error);
         }
@@ -163,19 +147,10 @@ const AuditTrail: React.FC = () => {
     // Fetch filter options
     const fetchFilterOptions = async () => {
         try {
-            const [actionsRes, modulesRes] = await Promise.all([
-                fetch('http://localhost:5000/api/audit/actions'),
-                fetch('http://localhost:5000/api/audit/modules')
-            ]);
-
-            if (actionsRes.ok) {
-                const data = await actionsRes.json();
-                setActions(data);
-            }
-            if (modulesRes.ok) {
-                const data = await modulesRes.json();
-                setModules(data);
-            }
+            // Audit filter options not available in Supabase - return empty data
+            console.log('Audit filter options not available in Supabase cloud mode');
+            setActions([]);
+            setModules([]);
         } catch (error) {
             console.error('Error fetching filter options:', error);
         }
@@ -216,12 +191,9 @@ const AuditTrail: React.FC = () => {
     // Export logs
     const handleExport = async (format: 'json' | 'csv') => {
         try {
-            const params = new URLSearchParams();
-            params.append('format', format);
-            if (filters.startDate) params.append('startDate', filters.startDate);
-            if (filters.endDate) params.append('endDate', filters.endDate);
-
-            window.open(`http://localhost:5000/api/audit/export?${params}`, '_blank');
+            // Audit export not available in Supabase - show message
+            console.log('Audit export not available in Supabase cloud mode');
+            alert('Export feature not available in cloud mode');
         } catch (error) {
             console.error('Error exporting logs:', error);
         }

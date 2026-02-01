@@ -10,6 +10,7 @@ import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import FarmerIcon from '../../assets/images/farmer (1).png';
 import IncentivesIcon from '../../assets/images/incentives.png';
+import { getRsbsaSubmissions, getFarmParcels } from '../../api';
 
 interface LandOwner {
     id: string;
@@ -77,10 +78,10 @@ const TechPickLandParcel: React.FC = () => {
     // Fetch land owner information
     const fetchLandOwner = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const response = await getRsbsaSubmissions();
+            if (response.error) throw new Error(response.error);
 
-            const data = await response.json();
+            const data = response.data;
             console.log('RSBSA submission API response:', data); // Log the full response
             const owner = data.find((record: any) => record.id === ownerId);
 
@@ -110,15 +111,14 @@ const TechPickLandParcel: React.FC = () => {
     const fetchLandParcels = async (submissionId: string) => {
         try {
             console.log('Fetching parcels for submissionId:', submissionId);
-            const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${submissionId}/parcels`);
+            const response = await getFarmParcels(submissionId);
             console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers));
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            if (response.error) {
+                throw new Error(response.error);
             }
 
-            const data = await response.json();
+            const data = response.data;
             console.log('Raw parcels data:', data);
 
             const mappedParcels: FarmParcel[] = data.map((parcel: any) => ({

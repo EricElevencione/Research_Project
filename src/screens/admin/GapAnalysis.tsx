@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getAllocations } from '../../api';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -80,9 +81,9 @@ const GapAnalysis: React.FC = () => {
     const fetchAllocations = async () => {
         setLoadingAllocations(true);
         try {
-            const response = await fetch('http://localhost:5000/api/distribution/allocations');
-            if (response.ok) {
-                const data = await response.json();
+            const response = await getAllocations();
+            if (!response.error) {
+                const data = response.data || [];
                 setAllocations(data);
                 // Auto-select the most recent allocation
                 if (data.length > 0) {
@@ -103,17 +104,10 @@ const GapAnalysis: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/gap-analysis/${selectedSeason}`);
-            if (response.ok) {
-                const data = await response.json();
-                setGapData(data);
-            } else if (response.status === 404) {
-                setError('No allocation data found for this season');
-                setGapData(null);
-            } else {
-                setError('Failed to fetch gap analysis data');
-                setGapData(null);
-            }
+            // Gap analysis endpoint not available in Supabase - return empty data
+            console.log('Gap analysis not available in Supabase, using empty data');
+            setGapData(null);
+            setError('Gap analysis feature not available in cloud mode');
         } catch (error) {
             console.error('Error fetching gap analysis:', error);
             setError('Error connecting to server');
@@ -127,15 +121,9 @@ const GapAnalysis: React.FC = () => {
     const fetchRecommendations = async () => {
         setLoadingRecs(true);
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/recommendations/${selectedSeason}`);
-            if (response.ok) {
-                const data = await response.json();
-                console.log('✅ Recommendations loaded:', data);
-                setRecommendations(data);
-            } else {
-                console.log('No recommendations available');
-                setRecommendations(null);
-            }
+            // Recommendations endpoint not available in Supabase - return empty data
+            console.log('Recommendations not available in Supabase, using empty data');
+            setRecommendations(null);
         } catch (error) {
             console.error('Error fetching recommendations:', error);
             setRecommendations(null);

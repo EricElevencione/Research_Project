@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
+import { getRsbsaSubmissions } from '../../api';
 import '../../assets/css/admin css/RSBSAStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
@@ -47,11 +48,11 @@ const JoRsbsa: React.FC = () => {
   const fetchRSBSARecords = async () => {
     try {
       setLoading(true); // Set loading to true to show loading state
-      const response = await fetch('http://localhost:5000/api/rsbsa_submission'); // Get data from API
-      if (!response.ok) { // Check for HTTP errors
-        throw new Error(`HTTP error! status: ${response.status}`); // Throw an error if response is not ok
+      const response = await getRsbsaSubmissions(); // Get data from API
+      if (response.error) { // Check for errors
+        throw new Error(response.error); // Throw an error if response has error
       }
-      const data = await response.json(); // Parse JSON response
+      const data = response.data || []; // Get data from response
 
       // Debug fetched data
       console.log('Received data from API:', JSON.stringify(data, null, 2));

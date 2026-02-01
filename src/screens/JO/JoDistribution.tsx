@@ -164,11 +164,13 @@ const JoDistribution: React.FC = () => {
     const fetchDistributions = async () => { // Fetch distribution records based on selected season
         if (!selectedSeason) return;
         try {
-            // Note: getDistributionRecords doesn't support season filter yet, using it as base
-            const response = await fetch(`http://localhost:5000/api/distribution/records/${selectedSeason}`);
-            if (response.ok) {
-                const data = await response.json();
-                setDistributions(data);
+            // Use API wrapper and filter by season client-side
+            const response = await getDistributionRecords();
+            if (!response.error) {
+                const allRecords = response.data || [];
+                // Filter by selected season client-side
+                const filteredData = allRecords.filter((record: DistributionRecord) => record.season === selectedSeason);
+                setDistributions(filteredData);
             }
         } catch (error) {
             console.error('Error fetching distributions:', error);
@@ -187,10 +189,11 @@ const JoDistribution: React.FC = () => {
                 return;
             }
 
-            // Get distribution records
-            const response = await fetch(`http://localhost:5000/api/distribution/records/${selectedSeason}`);
-            if (response.ok) {
-                const records = await response.json();
+            // Get distribution records using API wrapper and filter by season
+            const response = await getDistributionRecords();
+            if (!response.error) {
+                const allRecords = response.data || [];
+                const records = allRecords.filter((record: DistributionRecord) => record.season === selectedSeason);
                 calculateCompletionStats(currentAllocation, records);
                 generateTimelineData(records, currentAllocation);
                 generateBarangayPerformance(records);

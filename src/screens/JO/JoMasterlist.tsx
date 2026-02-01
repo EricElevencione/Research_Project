@@ -148,13 +148,13 @@ const JoMasterlist: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       // First, check if this farmer is referenced as a land owner by any tenants/lessees
-      // Note: This endpoint is specialized and not in the API wrapper
-      const referencesResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${id}/tenant-lessee-references`);
+      // Note: This endpoint is not available in Supabase, returning empty data
+      const referencesResponse = { data: { hasReferences: false, tenants: [], lessees: [] }, error: null };
 
       let confirmMessage = 'Are you sure you want to delete this record? This action cannot be undone.';
 
-      if (referencesResponse.ok) {
-        const referencesData = await referencesResponse.json();
+      if (!referencesResponse.error) {
+        const referencesData = referencesResponse.data;
 
         if (referencesData.hasReferences) {
           // Build a detailed warning message

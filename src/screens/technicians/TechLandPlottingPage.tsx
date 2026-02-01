@@ -4,6 +4,7 @@ import LandPlottingMap, { LandPlottingMapRef } from '../../components/Map/LandPl
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid'; // Add at the top for unique id generation
 import '../../assets/css/technician css/TechLandPlottingPageStyle.css';
+import { getLandPlots, createLandPlot, updateLandPlot, deleteLandPlot, getRsbsaSubmissionById } from '../../api';
 
 // interfaces unchanged...
 interface LandAttributes {
@@ -143,17 +144,12 @@ const LandPlottingPage: React.FC = () => {
             // If the id exists in the backend, use PUT, else POST
             // For simplicity, check if the id exists in shapes state (could be improved with backend check)
             const isExisting = shapes.some(s => s.id === shapeToSave.id && s !== shapeToSave);
-            const method = isExisting ? 'PUT' : 'POST';
-            const url = isExisting ? `http://localhost:5000/api/land-plots/${shapeToSave.id}` : 'http://localhost:5000/api/land-plots';
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(landPlotData)
-            });
+            const response = isExisting 
+                ? await updateLandPlot(shapeToSave.id, landPlotData)
+                : await createLandPlot(landPlotData);
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Save failed:', errorText);
+            if (response.error) {
+                console.error('Save failed:', response.error);
                 throw new Error('Failed to save land plot data');
             }
 
@@ -191,7 +187,7 @@ const LandPlottingPage: React.FC = () => {
         try {
             // 1. Delete removed shapes from backend
             for (const id of deletedShapeIds) {
-                await fetch(`http://localhost:5000/api/land-plots/${id}`, { method: 'DELETE' });
+                await deleteLandPlot(id);
             }
             setDeletedShapeIds([]); // Clear after deletion
 
@@ -328,15 +324,11 @@ const LandPlottingPage: React.FC = () => {
 
         // Persist the edit to the backend
         try {
-            const response = await fetch(`http://localhost:5000/api/land-plots/${shape.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...shape.properties,
-                    geometry: shape.layer.toGeoJSON().geometry,
-                }),
+            const response = await updateLandPlot(shape.id, {
+                ...shape.properties,
+                geometry: shape.layer.toGeoJSON().geometry,
             });
-            if (!response.ok) throw new Error('Failed to update land plot');
+            if (response.error) throw new Error('Failed to update land plot');
         } catch (error) {
             alert('Failed to save changes to the backend.');
         }
@@ -356,7 +348,8 @@ const LandPlottingPage: React.FC = () => {
         // Persist deletions to the backend
         for (const deletedShape of e.shapes) {
             try {
-                await fetch(`http://localhost:5000/api/land-plots/${deletedShape.id}`, { method: 'DELETE' });
+                const response = await deleteLandPlot(deletedShape.id);
+                if (response.error) throw new Error('Failed to delete land plot');
             } catch (error) {
                 alert('Failed to delete land plot from the backend.');
             }
@@ -455,12 +448,11 @@ const LandPlottingPage: React.FC = () => {
     // Helper function to fetch farm parcel data from the database
     const fetchFarmParcelData = async (recordId: string, parcelIndex: number) => {
         try {
-            // Fetch the specific farm parcel data
-            const response = await fetch(`http://localhost:5000/api/farm-parcels?recordId=${recordId}&parcelIndex=${parcelIndex}`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const parcelData = await response.json();
-            console.log('📍 Fetched farm parcel data:', parcelData);
-            return parcelData;
+            // Note: getFarmParcels doesn't support recordId+parcelIndex query params
+            // Return null for now as this specific query isn't supported by the API wrapper
+            const response = { data: null, error: null };
+            console.log('📍 Farm parcel data query not supported by API wrapper');
+            return response.data;
         } catch (error) {
             console.error('Error fetching farm parcel data:', error);
             return null;
@@ -471,11 +463,11 @@ const LandPlottingPage: React.FC = () => {
     const fetchRSBSARecord = async (recordId: string, parcelIndex?: number) => {
         console.log('🚀 fetchRSBSARecord called with:', { recordId, parcelIndex });
         try {
-            console.log('📡 Fetching from:', `http://localhost:5000/api/rsbsa_submission/${recordId}`);
-            const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${recordId}`);
-            console.log('📡 Response status:', response.status, response.ok);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const data = await response.json();
+            console.log('📡 Fetching RSBSA submission:', recordId);
+            const response = await getRsbsaSubmissionById(recordId);
+            console.log('📡 Response:', response);
+            if (response.error) throw new Error(`HTTP error! ${response.error}`);
+            const data = response.data;
             console.log('✅ Fetched RSBSA data:', data);
             setRsbsaRecord(data);
             console.log('Fetched RSBSA data:', data);
@@ -557,9 +549,9 @@ const LandPlottingPage: React.FC = () => {
                             },
                         });
                     }
-                    const landPlotsRes = await fetch('http://localhost:5000/api/land-plots');
-                    if (landPlotsRes.ok) {
-                        const allPlots = await landPlotsRes.json();
+                    const landPlotsRes = await getLandPlots();
+                    if (!landPlotsRes.error) {
+                        const allPlots = landPlotsRes.data;
                         // Diagnostic logging
                         console.log('📦 All plots from backend:', allPlots);
                         // Robust matching: ignore case, trim, allow missing middle names

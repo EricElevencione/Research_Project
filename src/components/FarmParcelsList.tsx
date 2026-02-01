@@ -36,13 +36,9 @@ const FarmParcelsList: React.FC = () => {
   const fetchFarmParcels = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/farm_parcels');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      // Return empty data since this endpoint is not available in Supabase
+      const data: any[] = [];
+      console.log('Note: farm_parcels endpoint is not available in Supabase');
       setParcels(data);
       setError(null);
     } catch (err: any) {

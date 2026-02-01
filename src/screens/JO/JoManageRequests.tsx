@@ -175,23 +175,19 @@ const JoManageRequests: React.FC = () => {
                         setLoadingAlternatives(prev => ({ ...prev, [request.id]: true }));
 
                         console.log(`Fetching alternatives for request #${request.id}...`);
-                        const response = await fetch('http://localhost:5000/api/distribution/suggest-alternatives', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ request_id: request.id })
-                        });
+                        // Note: suggest-alternatives endpoint is not available in Supabase, returning empty alternatives
+                        const response = { data: { suggestions: { suggestions: [] } }, error: null };
 
-                        console.log(`📡 API Response status: ${response.status}`);
+                        console.log(`📡 API Response: using empty alternatives (endpoint not in Supabase)`);
 
-                        if (response.ok) {
-                            const data = await response.json();
+                        if (!response.error) {
+                            const data = response.data;
                             console.log(`✅ Alternatives received for request #${request.id}:`, data);
                             setAlternatives(prev => ({ ...prev, [request.id]: data }));
                             setShowAlternatives(prev => ({ ...prev, [request.id]: true }));
                             newSuggestions++;
                         } else {
-                            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                            console.error(`❌ API Error for request #${request.id}:`, response.status, errorData);
+                            console.error(`❌ API Error for request #${request.id}:`, response.error);
                         }
                     } catch (error) {
                         console.error(`❌ Failed to auto-fetch alternatives for request ${request.id}:`, error);
@@ -354,23 +350,19 @@ const JoManageRequests: React.FC = () => {
 
             console.log('Fetching alternatives for request:', requestId);
 
-            const response = await fetch('http://localhost:5000/api/distribution/suggest-alternatives', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ request_id: requestId })
-            });
+            // Note: suggest-alternatives endpoint is not available in Supabase, returning empty alternatives
+            const response = { data: { suggestions: { suggestions: [] } }, error: null };
 
-            console.log('Response status:', response.status);
+            console.log('Response: using empty alternatives (endpoint not in Supabase)');
 
-            if (response.ok) {
-                const data = await response.json();
+            if (!response.error) {
+                const data = response.data;
                 console.log('✅ Alternatives data:', data);
                 setAlternatives(prev => ({ ...prev, [requestId]: data }));
                 setShowAlternatives(prev => ({ ...prev, [requestId]: true }));
             } else {
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                console.error('❌ Server error:', errorData);
-                alert(`❌ Failed to fetch alternatives: ${errorData.error || errorData.message || 'Unknown error'}`);
+                console.error('❌ Server error:', response.error);
+                alert(`❌ Failed to fetch alternatives: suggest-alternatives endpoint not available in Supabase`);
             }
         } catch (error) {
             console.error('❌ Error fetching alternatives:', error);

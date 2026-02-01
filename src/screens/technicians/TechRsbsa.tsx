@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { useNavigate, useLocation } from "react-router-dom";
+import { getRsbsaSubmissionById, getFarmParcels, updateRsbsaSubmission } from '../../api';
 import '../../assets/css/technician css/TechRsbsaStyle.css';
 import '../../assets/css/jo css/FarmerDetailModal.css';
 import '../../components/layout/sidebarStyle.css';
@@ -150,14 +151,14 @@ const TechRsbsa: React.FC = () => {
       setLoadingFarmerDetail(true);
 
       // Fetch basic farmer info
-      const farmerResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}`);
-      if (!farmerResponse.ok) throw new Error('Failed to fetch farmer details');
-      const farmerData = await farmerResponse.json();
+      const farmerResponse = await getRsbsaSubmissionById(farmerId);
+      if (farmerResponse.error) throw new Error('Failed to fetch farmer details');
+      const farmerData = farmerResponse.data;
 
       // Fetch parcels
-      const parcelsResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}/parcels`);
-      if (!parcelsResponse.ok) throw new Error('Failed to fetch parcels');
-      const parcelsData = await parcelsResponse.json();
+      const parcelsResponse = await getFarmParcels(farmerId);
+      if (parcelsResponse.error) throw new Error('Failed to fetch parcels');
+      const parcelsData = parcelsResponse.data;
 
       // Handle both JSONB (data property) and structured column formats
       const data = farmerData.data || farmerData;
@@ -328,20 +329,13 @@ const TechRsbsa: React.FC = () => {
           }, {} as Record<string, any>);
 
         // Update the record in the database
-        const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${editingRecord.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(cleanedData),
-        });
+        const response = await updateRsbsaSubmission(editingRecord.id, cleanedData);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        if (response.error) {
+          throw new Error(response.error || `HTTP error! status: ${response.status}`);
         }
 
-        const updatedRecord = await response.json();
+        const updatedRecord = response.data;
 
         // Update the local state with the response from the server
         const updatedRecordData = {

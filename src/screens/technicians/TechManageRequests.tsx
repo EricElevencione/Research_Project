@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { getAllocations, getFarmerRequests, updateFarmerRequest, deleteFarmerRequest, createDistributionRecord } from '../../api';
 import '../../assets/css/technician css/TechManageRequestsStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -101,9 +102,9 @@ const TechManageRequests: React.FC = () => {
 
     const fetchAllocation = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/allocations`);
-            if (response.ok) {
-                const allocations = await response.json();
+            const response = await getAllocations();
+            if (!response.error) {
+                const allocations = response.data;
                 const found = allocations.find((a: any) => a.id === parseInt(allocationId || '0'));
                 setAllocation(found || null);
             }
@@ -118,11 +119,11 @@ const TechManageRequests: React.FC = () => {
             setError(null);
 
             // First get the allocation to get the season
-            const allocationResponse = await fetch(`http://localhost:5000/api/distribution/allocations`);
-            if (!allocationResponse.ok) {
+            const allocationResponse = await getAllocations();
+            if (allocationResponse.error) {
                 throw new Error('Failed to fetch allocation');
             }
-            const allocations = await allocationResponse.json();
+            const allocations = allocationResponse.data;
             const currentAllocation = allocations.find((a: any) => a.id === parseInt(allocationId || '0'));
 
             if (!currentAllocation) {
@@ -130,12 +131,12 @@ const TechManageRequests: React.FC = () => {
             }
 
             // Fetch requests by season
-            const response = await fetch(`http://localhost:5000/api/distribution/requests/${currentAllocation.season}`);
-            if (!response.ok) {
+            const response = await getFarmerRequests(currentAllocation.season);
+            if (response.error) {
                 throw new Error('Failed to fetch requests');
             }
 
-            const data = await response.json();
+            const data = response.data;
             setRequests(data);
 
             // Auto-fetch alternatives for requests with potential shortages
@@ -173,23 +174,19 @@ const TechManageRequests: React.FC = () => {
                         setLoadingAlternatives(prev => ({ ...prev, [request.id]: true }));
 
                         console.log(`Fetching alternatives for request #${request.id}...`);
-                        const response = await fetch('http://localhost:5000/api/distribution/suggest-alternatives', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ request_id: request.id })
-                        });
+                        // Return empty alternatives since this endpoint is not available in Supabase
+                        const response = { data: { alternatives: [] }, error: null };
 
-                        console.log(`📡 API Response status: ${response.status}`);
+                        console.log(`📡 API Response: alternatives endpoint not available`);
 
-                        if (response.ok) {
-                            const data = await response.json();
+                        if (!response.error) {
+                            const data = response.data;
                             console.log(`✅ Alternatives received for request #${request.id}:`, data);
                             setAlternatives(prev => ({ ...prev, [request.id]: data }));
                             setShowAlternatives(prev => ({ ...prev, [request.id]: true }));
                             newSuggestions++;
                         } else {
-                            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                            console.error(`❌ API Error for request #${request.id}:`, response.status, errorData);
+                            console.error(`❌ API Error for request #${request.id}:`, response.error);
                         }
                     } catch (error) {
                         console.error(`❌ Failed to auto-fetch alternatives for request ${request.id}:`, error);
@@ -240,11 +237,9 @@ const TechManageRequests: React.FC = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/requests/${id}`, {
-                method: 'DELETE'
-            });
+            const response = await deleteFarmerRequest(id);
 
-            if (response.ok) {
+            if (!response.error) {
                 alert('✅ Request deleted successfully');
                 fetchRequests();
             } else {
@@ -258,13 +253,9 @@ const TechManageRequests: React.FC = () => {
 
     const handleStatusChange = async (id: number, newStatus: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/requests/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
-            });
+            const response = await updateFarmerRequest(id, { status: newStatus });
 
-            if (response.ok) {
+            if (!response.error) {
                 // If status is rejected, clear alternatives for this request
                 if (newStatus === 'rejected') {
                     setAlternatives(prev => {
@@ -338,13 +329,9 @@ const TechManageRequests: React.FC = () => {
                 verified_by: null
             };
 
-            const distResponse = await fetch('http://localhost:5000/api/distribution/records', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const distResponse = await createDistributionRecord(payload);
 
-            if (distResponse.ok) {
+            if (!distResponse.error) {
                 console.log('✅ Distribution log created automatically');
             } else {
                 console.error('❌ Failed to create distribution log');
@@ -392,13 +379,9 @@ const TechManageRequests: React.FC = () => {
                 ...editFormData
             };
 
-            const response = await fetch(`http://localhost:5000/api/distribution/requests/${editingRequest}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedRequest)
-            });
+            const response = await updateFarmerRequest(editingRequest, updatedRequest);
 
-            if (!response.ok) {
+            if (response.error) {
                 throw new Error('Failed to update request');
             }
 
@@ -454,22 +437,18 @@ const TechManageRequests: React.FC = () => {
 
             console.log('Fetching alternatives for request:', requestId);
 
-            const response = await fetch('http://localhost:5000/api/distribution/suggest-alternatives', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ request_id: requestId })
-            });
+            // Return empty alternatives since this endpoint is not available in Supabase
+            const response = { data: { alternatives: [] }, error: null };
 
-            console.log('Response status:', response.status);
+            console.log('Response: alternatives endpoint not available');
 
-            if (response.ok) {
-                const data = await response.json();
+            if (!response.error) {
+                const data = response.data;
                 console.log('✅ Alternatives data:', data);
                 setAlternatives(prev => ({ ...prev, [requestId]: data }));
             } else {
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                console.error('❌ Server error:', errorData);
-                alert(`❌ Failed to fetch alternatives: ${errorData.error || errorData.message || 'Unknown error'}`);
+                console.error('❌ Server error:', response.error);
+                alert(`❌ Failed to fetch alternatives: ${response.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('❌ Error fetching alternatives:', error);
@@ -604,14 +583,10 @@ const TechManageRequests: React.FC = () => {
                 : substitutionNote;
 
             // Send update to backend
-            const response = await fetch(`http://localhost:5000/api/distribution/requests/${requestId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedRequest)
-            });
+            const response = await updateFarmerRequest(requestId, updatedRequest);
 
-            if (response.ok) {
-                const updatedData = await response.json();
+            if (!response.error) {
+                const updatedData = response.data;
 
                 // Update local state immediately with the new data
                 setRequests(prev => prev.map(r =>
