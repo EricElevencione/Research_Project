@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import '../../assets/css/jo css/JoIncentStyle.css';
+import { getAllocations, getFarmerRequests } from '../../api';
+import '../../assets/css/jo css/JoViewAllocationStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -8,7 +9,6 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import LandRecsIcon from '../../assets/images/landrecord.png';
 
 interface FarmerRequest {
     id: number;
@@ -71,11 +71,11 @@ const JoViewAllocation: React.FC = () => {
             console.log('🔍 Fetching allocation with ID:', allocationId);
 
             // Fetch allocation details
-            const allocationResponse = await fetch(`http://localhost:5000/api/distribution/allocations`);
-            if (!allocationResponse.ok) {
+            const allocationResponse = await getAllocations();
+            if (allocationResponse.error) {
                 throw new Error('Failed to fetch allocation');
             }
-            const allocations = await allocationResponse.json();
+            const allocations = allocationResponse.data || [];
             console.log('📦 All allocations:', allocations);
 
             const currentAllocation = allocations.find((a: any) => a.id === parseInt(allocationId || '0'));
@@ -87,9 +87,9 @@ const JoViewAllocation: React.FC = () => {
             setAllocation(currentAllocation);
 
             // Fetch farmer requests for this season
-            const requestsResponse = await fetch(`http://localhost:5000/api/distribution/requests/${currentAllocation.season}`);
-            if (requestsResponse.ok) {
-                const requestsData = await requestsResponse.json();
+            const requestsResponse = await getFarmerRequests(currentAllocation.season);
+            if (!requestsResponse.error) {
+                const requestsData = requestsResponse.data || [];
                 setRequests(requestsData);
             }
         } catch (err: any) {
@@ -119,17 +119,19 @@ const JoViewAllocation: React.FC = () => {
 
     const getStatusColor = (allocated: number, requested: number) => {
         const percentage = (requested / allocated) * 100;
-        if (percentage > 100) return '#ef4444'; // Red - over allocated
-        if (percentage > 80) return '#f59e0b'; // Orange - nearing limit
-        return '#10b981'; // Green - good
+        if (percentage > 100) return 'danger';
+        if (percentage > 80) return 'warning';
+        return 'good';
     };
 
     if (loading) {
         return (
-            <div className="page-container">
-                <div className="page">
-                    <div className="main-content">
-                        <div className="loading-message">Loading allocation details...</div>
+            <div className="jo-view-alloc-page-container">
+                <div className="jo-view-alloc-page">
+                    <div className="jo-view-alloc-main-content">
+                        <div className="jo-view-alloc-loading">
+                            <p>Loading allocation details...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -138,14 +140,14 @@ const JoViewAllocation: React.FC = () => {
 
     if (error || !allocation) {
         return (
-            <div className="page-container">
-                <div className="page">
-                    <div className="main-content">
-                        <div className="error-state">
-                            <div className="error-icon">⚠️</div>
+            <div className="jo-view-alloc-page-container">
+                <div className="jo-view-alloc-page">
+                    <div className="jo-view-alloc-main-content">
+                        <div className="jo-view-alloc-error">
+                            <div className="jo-view-alloc-error-icon">⚠️</div>
                             <h3>Error Loading Allocation</h3>
                             <p>{error || 'Allocation not found'}</p>
-                            <button className="btn-retry" onClick={() => navigate('/jo-incentives')}>
+                            <button className="jo-view-alloc-btn jo-view-alloc-btn-secondary" onClick={() => navigate('/jo-incentives')}>
                                 ← Back to Allocations
                             </button>
                         </div>
@@ -180,8 +182,8 @@ const JoViewAllocation: React.FC = () => {
         getTotalRequested('requested_lp296_kg');
 
     return (
-        <div className="page-container">
-            <div className="page">
+        <div className="jo-view-alloc-page-container">
+            <div className="jo-view-alloc-page">
                 {/* Sidebar */}
                 <div className="sidebar">
                     <nav className="sidebar-nav">
@@ -229,21 +231,21 @@ const JoViewAllocation: React.FC = () => {
                             <span className="nav-text">Masterlist</span>
                         </button>
 
-                        <div
+                        <button
                             className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-gap-analysis')}
                         >
-                            <div className="nav-icon">📊</div>
+                            <span className="nav-icon">📊</span>
                             <span className="nav-text">Gap Analysis</span>
-                        </div>
+                        </button>
 
-                        <div
+                        <button
                             className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-distribution')}
                         >
-                            <div className="nav-icon">🚚</div>
+                            <span className="nav-icon">🚚</span>
                             <span className="nav-text">Distribution Log</span>
-                        </div>
+                        </button>
 
                         <button
                             className="sidebar-nav-item logout"
@@ -254,68 +256,76 @@ const JoViewAllocation: React.FC = () => {
                             </span>
                             <span className="nav-text">Logout</span>
                         </button>
-
                     </nav>
                 </div>
 
                 {/* Main Content */}
-                <div className="main-content">
-                    <div className="dashboard-header-incent">
+                <div className="jo-view-alloc-main-content">
+                    {/* Header */}
+                    <div className="jo-view-alloc-header">
                         <div>
-                            <h2 className="page-header">View Allocation</h2>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button
-                                className="btn-create-allocation"
-                                onClick={() => navigate(`/jo-manage-requests/${allocationId}`)}
-                            >
-                                📋 Manage Requests
-                            </button>
-                            <button
-                                className="btn-create-allocation"
-                                onClick={() => navigate('/jo-incentives')}
-                            >
-                                ← Back
-                            </button>
+                            <h2 className="jo-view-alloc-title">{formatSeasonName(allocation.season)}</h2>
+                            <p className="jo-view-alloc-subtitle">Regional Allocation Details</p>
                         </div>
                     </div>
+                    <div className="jo-view-alloc-header-actions">
+                        <button
+                            className="jo-view-alloc-btn jo-view-alloc-btn-secondary"
+                            onClick={() => navigate('/jo-incentives')}
+                        >
+                            ← Back
+                        </button>
+                        <button
+                            className="jo-view-alloc-btn jo-view-alloc-btn-primary"
+                            onClick={() => navigate(`/jo-manage-requests/${allocationId}`)}
+                        >
+                            📋 Manage Requests
+                        </button>
+                    </div>
 
-                    <div className="content-card-incent">
+                    <div className="jo-view-alloc-content-card">
                         {/* Overview Cards */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-                            <div style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', color: 'white' }}>
-                                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Allocation Date</div>
-                                <div style={{ fontSize: '24px', fontWeight: '700' }}>
+                        <div className="jo-view-alloc-overview-grid">
+                            <div className="jo-view-alloc-overview-card date">
+                                <div className="jo-view-alloc-overview-label">📅 Allocation Date</div>
+                                <div className="jo-view-alloc-overview-value">
                                     {new Date(allocation.allocation_date).toLocaleDateString('en-US', {
                                         year: 'numeric',
-                                        month: 'long',
+                                        month: 'short',
                                         day: 'numeric'
                                     })}
                                 </div>
                             </div>
-                            <div style={{ padding: '20px', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', borderRadius: '12px', color: 'white' }}>
-                                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Total Requests</div>
-                                <div style={{ fontSize: '36px', fontWeight: '700' }}>{requests.length}</div>
-                                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
+                            <div className="jo-view-alloc-overview-card requests">
+                                <div className="jo-view-alloc-overview-label">📝 Total Requests</div>
+                                <div className="jo-view-alloc-overview-value large">{requests.length}</div>
+                                <div className="jo-view-alloc-overview-sub">
                                     {requests.filter(r => r.status === 'pending').length} pending
+                                </div>
+                            </div>
+                            <div className="jo-view-alloc-overview-card approved">
+                                <div className="jo-view-alloc-overview-label">✅ Approved</div>
+                                <div className="jo-view-alloc-overview-value large">
+                                    {requests.filter(r => r.status === 'approved').length}
+                                </div>
+                                <div className="jo-view-alloc-overview-sub">
+                                    {requests.filter(r => r.status === 'rejected').length} rejected
                                 </div>
                             </div>
                         </div>
 
                         {/* Fertilizers Section */}
-                        <div style={{ marginBottom: '32px' }}>
-                            <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                🌱 Fertilizers Allocation
-                            </h3>
-                            <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="jo-view-alloc-section">
+                            <h3 className="jo-view-alloc-section-title">🌱 Fertilizers Allocation</h3>
+                            <div className="jo-view-alloc-table-container">
+                                <table className="jo-view-alloc-table">
                                     <thead>
-                                        <tr style={{ borderBottom: '2px solid #d1d5db' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Type</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Allocated</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Requested</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Remaining</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Usage</th>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Allocated</th>
+                                            <th>Requested</th>
+                                            <th>Remaining</th>
+                                            <th>Usage</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -329,47 +339,33 @@ const JoViewAllocation: React.FC = () => {
                                             const requested = getTotalRequested(fertilizer.requested as keyof FarmerRequest);
                                             const remaining = allocated - requested;
                                             const percentage = getPercentageUsed(allocated, requested);
-                                            const statusColor = getStatusColor(allocated, requested);
+                                            const statusClass = getStatusColor(allocated, requested);
 
                                             return (
-                                                <tr key={fertilizer.name} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                                    <td style={{ padding: '12px', color: '#1f2937' }}>{fertilizer.name}</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>{allocated.toFixed(2)} bags</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>{requested.toFixed(2)} bags</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', color: remaining < 0 ? '#ef4444' : '#059669' }}>
+                                                <tr key={fertilizer.name}>
+                                                    <td>{fertilizer.name}</td>
+                                                    <td className="allocated">{allocated.toFixed(2)} bags</td>
+                                                    <td>{requested.toFixed(2)} bags</td>
+                                                    <td className={remaining < 0 ? 'negative' : 'positive'}>
                                                         {remaining.toFixed(2)} bags
                                                     </td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                        <span style={{
-                                                            padding: '4px 12px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            color: 'white',
-                                                            background: statusColor
-                                                        }}>
+                                                    <td>
+                                                        <span className={`jo-view-alloc-usage-badge ${statusClass}`}>
                                                             {percentage}%
                                                         </span>
                                                     </td>
                                                 </tr>
                                             );
                                         })}
-                                        <tr style={{ borderTop: '2px solid #d1d5db', background: '#f3f4f6', fontWeight: '700' }}>
-                                            <td style={{ padding: '12px' }}>TOTAL</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalAllocatedFertilizer.toFixed(2)} bags</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalRequestedFertilizer.toFixed(2)} bags</td>
-                                            <td style={{ padding: '12px', textAlign: 'right', color: (totalAllocatedFertilizer - totalRequestedFertilizer) < 0 ? '#ef4444' : '#059669' }}>
+                                        <tr className="total-row">
+                                            <td>TOTAL</td>
+                                            <td>{totalAllocatedFertilizer.toFixed(2)} bags</td>
+                                            <td>{totalRequestedFertilizer.toFixed(2)} bags</td>
+                                            <td className={(totalAllocatedFertilizer - totalRequestedFertilizer) < 0 ? 'negative' : 'positive'}>
                                                 {(totalAllocatedFertilizer - totalRequestedFertilizer).toFixed(2)} bags
                                             </td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    background: getStatusColor(totalAllocatedFertilizer, totalRequestedFertilizer)
-                                                }}>
+                                            <td>
+                                                <span className={`jo-view-alloc-usage-badge ${getStatusColor(totalAllocatedFertilizer, totalRequestedFertilizer)}`}>
                                                     {getPercentageUsed(totalAllocatedFertilizer, totalRequestedFertilizer)}%
                                                 </span>
                                             </td>
@@ -380,19 +376,17 @@ const JoViewAllocation: React.FC = () => {
                         </div>
 
                         {/* Seeds Section */}
-                        <div style={{ marginBottom: '32px' }}>
-                            <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                🌾 Seeds Allocation
-                            </h3>
-                            <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="jo-view-alloc-section">
+                            <h3 className="jo-view-alloc-section-title">🌾 Seeds Allocation</h3>
+                            <div className="jo-view-alloc-table-container">
+                                <table className="jo-view-alloc-table">
                                     <thead>
-                                        <tr style={{ borderBottom: '2px solid #d1d5db' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Variety</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Allocated</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Requested</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Remaining</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Usage</th>
+                                        <tr>
+                                            <th>Variety</th>
+                                            <th>Allocated</th>
+                                            <th>Requested</th>
+                                            <th>Remaining</th>
+                                            <th>Usage</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -408,47 +402,33 @@ const JoViewAllocation: React.FC = () => {
                                             const requested = getTotalRequested(seed.requested as keyof FarmerRequest);
                                             const remaining = allocated - requested;
                                             const percentage = getPercentageUsed(allocated, requested);
-                                            const statusColor = getStatusColor(allocated, requested);
+                                            const statusClass = getStatusColor(allocated, requested);
 
                                             return (
-                                                <tr key={seed.name} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                                    <td style={{ padding: '12px', color: '#1f2937' }}>{seed.name}</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>{allocated.toFixed(2)} kg</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>{requested.toFixed(2)} kg</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', color: remaining < 0 ? '#ef4444' : '#059669' }}>
+                                                <tr key={seed.name}>
+                                                    <td>{seed.name}</td>
+                                                    <td className="allocated">{allocated.toFixed(2)} kg</td>
+                                                    <td>{requested.toFixed(2)} kg</td>
+                                                    <td className={remaining < 0 ? 'negative' : 'positive'}>
                                                         {remaining.toFixed(2)} kg
                                                     </td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                        <span style={{
-                                                            padding: '4px 12px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            color: 'white',
-                                                            background: statusColor
-                                                        }}>
+                                                    <td>
+                                                        <span className={`jo-view-alloc-usage-badge ${statusClass}`}>
                                                             {percentage}%
                                                         </span>
                                                     </td>
                                                 </tr>
                                             );
                                         })}
-                                        <tr style={{ borderTop: '2px solid #d1d5db', background: '#f3f4f6', fontWeight: '700' }}>
-                                            <td style={{ padding: '12px' }}>TOTAL</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalAllocatedSeeds.toFixed(2)} kg</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalRequestedSeeds.toFixed(2)} kg</td>
-                                            <td style={{ padding: '12px', textAlign: 'right', color: (totalAllocatedSeeds - totalRequestedSeeds) < 0 ? '#ef4444' : '#059669' }}>
+                                        <tr className="total-row">
+                                            <td>TOTAL</td>
+                                            <td>{totalAllocatedSeeds.toFixed(2)} kg</td>
+                                            <td>{totalRequestedSeeds.toFixed(2)} kg</td>
+                                            <td className={(totalAllocatedSeeds - totalRequestedSeeds) < 0 ? 'negative' : 'positive'}>
                                                 {(totalAllocatedSeeds - totalRequestedSeeds).toFixed(2)} kg
                                             </td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    background: getStatusColor(totalAllocatedSeeds, totalRequestedSeeds)
-                                                }}>
+                                            <td>
+                                                <span className={`jo-view-alloc-usage-badge ${getStatusColor(totalAllocatedSeeds, totalRequestedSeeds)}`}>
                                                     {getPercentageUsed(totalAllocatedSeeds, totalRequestedSeeds)}%
                                                 </span>
                                             </td>
@@ -460,15 +440,15 @@ const JoViewAllocation: React.FC = () => {
 
                         {/* Notes */}
                         {allocation.notes && (
-                            <div style={{ marginTop: '24px', padding: '16px', background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: '8px' }}>
-                                <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>📝 Notes</h4>
-                                <p style={{ fontSize: '14px', color: '#78350f', margin: 0 }}>{allocation.notes}</p>
+                            <div className="jo-view-alloc-notes">
+                                <h4 className="jo-view-alloc-notes-title">📝 Notes</h4>
+                                <p className="jo-view-alloc-notes-text">{allocation.notes}</p>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 

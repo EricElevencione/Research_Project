@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createAllocation } from '../../api';
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../assets/css/jo css/JoCreateAllocationStyle.css';
 import '../../components/layout/sidebarStyle.css';
@@ -97,20 +98,15 @@ const JoCreateAllocation: React.FC = () => {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:5000/api/distribution/allocations', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
+            const response = await createAllocation(formData);
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to save allocation');
+            if (response.error) {
+                throw new Error(response.error || 'Failed to save allocation');
             }
 
-            const result = await response.json();
+            const result = response.data;
             console.log('✅ Allocation created:', result);
-            const allocationId = result.allocation?.id;
+            const allocationId = result?.id;
 
             if (!allocationId) {
                 throw new Error('No allocation ID returned from server');

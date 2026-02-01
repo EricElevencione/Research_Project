@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabase';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../components/layout/sidebarStyle.css';
@@ -71,11 +72,15 @@ const TechViewAllocation: React.FC = () => {
             console.log('🔍 Fetching allocation with ID:', allocationId);
 
             // Fetch allocation details
-            const allocationResponse = await fetch(`http://localhost:5000/api/distribution/allocations`);
-            if (!allocationResponse.ok) {
-                throw new Error('Failed to fetch allocation');
+            const { data: allocations, error: allocationError } = await supabase
+                .from('regional_allocations')
+                .select('*');
+
+            if (allocationError) {
+                console.error('Error fetching allocations:', allocationError);
+                throw new Error('Failed to fetch allocations');
             }
-            const allocations = await allocationResponse.json();
+
             console.log('📦 All allocations:', allocations);
 
             const currentAllocation = allocations.find((a: any) => a.id === parseInt(allocationId || '0'));
@@ -87,10 +92,15 @@ const TechViewAllocation: React.FC = () => {
             setAllocation(currentAllocation);
 
             // Fetch farmer requests for this season
-            const requestsResponse = await fetch(`http://localhost:5000/api/distribution/requests/${currentAllocation.season}`);
-            if (requestsResponse.ok) {
-                const requestsData = await requestsResponse.json();
-                setRequests(requestsData);
+            const { data: requestsData, error: requestsError } = await supabase
+                .from('farmer_requests')
+                .select('*')
+                .eq('season', currentAllocation.season);
+
+            if (requestsError) {
+                console.error('Error fetching requests:', requestsError);
+            } else {
+                setRequests(requestsData || []);
             }
         } catch (err: any) {
             setError(err.message);

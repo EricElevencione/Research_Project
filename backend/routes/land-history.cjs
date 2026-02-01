@@ -752,25 +752,72 @@ router.get('/rights', async (req, res) => {
  */
 router.get('/crop-planting-info', async (req, res) => {
     try {
-        const { surname, firstName, barangay } = req.query;
+        const { surname, firstName, middleName, barangay } = req.query;
 
-        console.log('Crop/Planting info query:', { surname, firstName, barangay });
+        console.log('Crop/Planting info query:', { surname, firstName, middleName, barangay });
 
-        if (!surname || !firstName || !barangay) {
-            return res.status(400).json({ error: 'surname, firstName, and barangay are required' });
+        // Require at least some name info and barangay
+        if ((!surname && !firstName) || !barangay) {
+            return res.status(400).json({ error: 'At least firstName or surname, and barangay are required' });
+        }
+
+        // Build dynamic WHERE conditions based on what's provided
+        let whereConditions = [];
+        let queryParams = [];
+        let paramIndex = 1;
+
+        // Always require barangay match
+        whereConditions.push(`LOWER(TRIM(rs."BARANGAY")) = LOWER(TRIM($${paramIndex}))`);
+        queryParams.push(barangay);
+        paramIndex++;
+
+        if (surname) {
+            // If surname provided, match it
+            whereConditions.push(`LOWER(TRIM(rs."LAST NAME")) = LOWER(TRIM($${paramIndex}))`);
+            queryParams.push(surname);
+            paramIndex++;
+        }
+
+        if (firstName || middleName) {
+            // Build flexible first name matching
+            let nameConditions = [];
+
+            if (firstName && middleName) {
+                // Match: FIRST NAME = firstName AND MIDDLE NAME = middleName
+                nameConditions.push(`(LOWER(TRIM(rs."FIRST NAME")) = LOWER(TRIM($${paramIndex})) AND LOWER(TRIM(COALESCE(rs."MIDDLE NAME", ''))) = LOWER(TRIM($${paramIndex + 1})))`);
+                queryParams.push(firstName, middleName);
+                paramIndex += 2;
+            } else if (firstName) {
+                // Match firstName flexibly
+                const fnIndex = paramIndex;
+                nameConditions.push(`LOWER(TRIM(rs."FIRST NAME")) = LOWER(TRIM($${fnIndex}))`);
+                nameConditions.push(`LOWER(TRIM(CONCAT_WS(' ', rs."FIRST NAME", rs."MIDDLE NAME"))) = LOWER(TRIM($${fnIndex}))`);
+                nameConditions.push(`LOWER(TRIM(rs."FIRST NAME")) LIKE LOWER(TRIM($${fnIndex})) || '%'`);
+                nameConditions.push(`LOWER(TRIM($${fnIndex})) LIKE LOWER(TRIM(rs."FIRST NAME")) || '%'`);
+                queryParams.push(firstName);
+                paramIndex++;
+            }
+
+            if (nameConditions.length > 0) {
+                whereConditions.push(`(${nameConditions.join(' OR ')})`);
+            }
         }
 
         // Query to get the land owner and their crops
         const ownerQuery = `
             SELECT 
                 rs.id,
-                rs."LAST NAME" || ', ' || rs."FIRST NAME" || 
-                    CASE WHEN rs."MIDDLE NAME" IS NOT NULL AND rs."MIDDLE NAME" != '' 
-                    THEN ' ' || rs."MIDDLE NAME" 
-                    ELSE '' END as farmer_name,
+                TRIM(
+                    CONCAT_WS(', ',
+                        NULLIF(TRIM(CONCAT_WS(' ', rs."FIRST NAME", rs."MIDDLE NAME")), ''),
+                        NULLIF(TRIM(rs."LAST NAME"), '')
+                    )
+                ) as farmer_name,
                 rs."FIRST NAME" as first_name,
+                rs."MIDDLE NAME" as middle_name,
                 rs."LAST NAME" as last_name,
                 rs."BARANGAY" as barangay,
+                rs."MAIN LIVELIHOOD" as main_livelihood,
                 rs."FARMER_RICE" as farmer_rice,
                 rs."FARMER_CORN" as farmer_corn,
                 rs."FARMER_OTHER_CROPS" as farmer_other_crops,
@@ -779,6 +826,7 @@ router.get('/crop-planting-info', async (req, res) => {
                 rs."FARMER_LIVESTOCK_TEXT" as farmer_livestock_text,
                 rs."FARMER_POULTRY" as farmer_poultry,
                 rs."FARMER_POULTRY_TEXT" as farmer_poultry_text,
+                rs.created_at as registration_date,
                 CASE 
                     WHEN rs."OWNERSHIP_TYPE_REGISTERED_OWNER" = true THEN 'Owner'
                     WHEN rs."OWNERSHIP_TYPE_TENANT" = true THEN 'Tenant'
@@ -790,24 +838,41 @@ router.get('/crop-planting-info', async (req, res) => {
                 rs."OWNERSHIP_TYPE_LESSEE" as is_lessee,
                 rs.status as farmer_status
             FROM rsbsa_submission rs
-            WHERE rs."LAST NAME" ILIKE $1
-                AND rs."FIRST NAME" ILIKE $2
-                AND rs."BARANGAY" ILIKE $3
+            WHERE ${whereConditions.join(' AND ')}
         `;
 
-        const ownerResult = await pool.query(ownerQuery, [surname, firstName, barangay]);
+        console.log('Owner query:', ownerQuery);
+        console.log('Query params:', queryParams);
 
-        // Also check if there are tenants working on this land (through land_history)
+        const ownerResult = await pool.query(ownerQuery, queryParams);
+
+        console.log('Owner query result count:', ownerResult.rows.length);
+        if (ownerResult.rows.length > 0) {
+            console.log('Found farmer:', ownerResult.rows[0].farmer_name, 'First:', ownerResult.rows[0].first_name, 'Middle:', ownerResult.rows[0].middle_name);
+        }
+
+        // Build owner name pattern for matching tenants/lessees
+        // Matches formats like "Villanueva, Rosa Torres" or "Rosa Torres Villanueva"
+        const ownerNamePattern1 = `${surname}, ${firstName}%`; // "Villanueva, Rosa Torres"
+        const ownerNamePattern2 = `${surname},%${firstName}%`; // "Villanueva, Rosa" (partial)
+        const ownerNamePattern3 = `${firstName}%${surname}%`;  // "Rosa Torres Villanueva"
+
+        // Query to find tenants/lessees whose land owner matches this farmer
+        // Uses rsbsa_farm_parcels.tenant_land_owner_name and lessee_land_owner_name
         const tenantsQuery = `
             SELECT DISTINCT
                 rs.id,
-                rs."LAST NAME" || ', ' || rs."FIRST NAME" || 
-                    CASE WHEN rs."MIDDLE NAME" IS NOT NULL AND rs."MIDDLE NAME" != '' 
-                    THEN ' ' || rs."MIDDLE NAME" 
-                    ELSE '' END as farmer_name,
+                TRIM(
+                    CONCAT_WS(', ',
+                        NULLIF(TRIM(CONCAT_WS(' ', rs."FIRST NAME", rs."MIDDLE NAME")), ''),
+                        NULLIF(TRIM(rs."LAST NAME"), '')
+                    )
+                ) as farmer_name,
                 rs."FIRST NAME" as first_name,
+                rs."MIDDLE NAME" as middle_name,
                 rs."LAST NAME" as last_name,
                 rs."BARANGAY" as barangay,
+                rs."MAIN LIVELIHOOD" as main_livelihood,
                 rs."FARMER_RICE" as farmer_rice,
                 rs."FARMER_CORN" as farmer_corn,
                 rs."FARMER_OTHER_CROPS" as farmer_other_crops,
@@ -816,23 +881,38 @@ router.get('/crop-planting-info', async (req, res) => {
                 rs."FARMER_LIVESTOCK_TEXT" as farmer_livestock_text,
                 rs."FARMER_POULTRY" as farmer_poultry,
                 rs."FARMER_POULTRY_TEXT" as farmer_poultry_text,
-                'Tenant' as ownership_status,
+                rs.created_at as registration_date,
+                CASE 
+                    WHEN fp.ownership_type_tenant = true THEN 'Tenant'
+                    WHEN fp.ownership_type_lessee = true THEN 'Lessee'
+                    ELSE 'Tenant'
+                END as ownership_status,
                 false as is_owner,
-                true as is_tenant,
-                false as is_lessee,
+                fp.ownership_type_tenant as is_tenant,
+                fp.ownership_type_lessee as is_lessee,
                 rs.status as farmer_status,
-                lh.land_owner_name
-            FROM land_history lh
-            JOIN rsbsa_submission rs ON (
-                lh.farmer_name ILIKE rs."LAST NAME" || '%' || rs."FIRST NAME" || '%'
-            )
-            WHERE lh.land_owner_name ILIKE $1 || '%' || $2 || '%'
-                AND lh.farm_location_barangay ILIKE $3
-                AND lh.is_tenant = true
-                AND lh.is_current = true
+                COALESCE(fp.tenant_land_owner_name, fp.lessee_land_owner_name) as land_owner_name
+            FROM rsbsa_farm_parcels fp
+            JOIN rsbsa_submission rs ON fp.submission_id::bigint = rs.id
+            WHERE LOWER(fp.farm_location_barangay) = LOWER($1)
+                AND (
+                    (fp.ownership_type_tenant = true AND (
+                        LOWER(fp.tenant_land_owner_name) ILIKE LOWER($2) 
+                        OR LOWER(fp.tenant_land_owner_name) ILIKE LOWER($3)
+                        OR LOWER(fp.tenant_land_owner_name) ILIKE LOWER($4)
+                    ))
+                    OR 
+                    (fp.ownership_type_lessee = true AND (
+                        LOWER(fp.lessee_land_owner_name) ILIKE LOWER($2) 
+                        OR LOWER(fp.lessee_land_owner_name) ILIKE LOWER($3)
+                        OR LOWER(fp.lessee_land_owner_name) ILIKE LOWER($4)
+                    ))
+                )
         `;
 
-        const tenantsResult = await pool.query(tenantsQuery, [surname, firstName, barangay]);
+        console.log('Tenants query params:', [barangay, ownerNamePattern1, ownerNamePattern2, ownerNamePattern3]);
+        const tenantsResult = await pool.query(tenantsQuery, [barangay, ownerNamePattern1, ownerNamePattern2, ownerNamePattern3]);
+        console.log('Tenants found:', tenantsResult.rows.length);
 
         // Combine results
         const plantingInfo = {
@@ -841,20 +921,37 @@ router.get('/crop-planting-info', async (req, res) => {
         };
 
         // Build crops list for each person
+        // Uses individual crop fields first, then falls back to main_livelihood
         const buildCropsList = (row) => {
             if (!row) return [];
             const crops = [];
+
+            // Check individual crop boolean fields first
             if (row.farmer_rice) crops.push('Rice');
             if (row.farmer_corn) crops.push('Corn');
             if (row.farmer_other_crops && row.farmer_other_crops_text) {
                 crops.push(row.farmer_other_crops_text);
+            } else if (row.farmer_other_crops) {
+                crops.push('Other Crops');
             }
             if (row.farmer_livestock && row.farmer_livestock_text) {
                 crops.push(`Livestock: ${row.farmer_livestock_text}`);
+            } else if (row.farmer_livestock) {
+                crops.push('Livestock');
             }
             if (row.farmer_poultry && row.farmer_poultry_text) {
                 crops.push(`Poultry: ${row.farmer_poultry_text}`);
+            } else if (row.farmer_poultry) {
+                crops.push('Poultry');
             }
+
+            // If no individual crops found, use MAIN LIVELIHOOD as fallback
+            if (crops.length === 0 && row.main_livelihood) {
+                // Parse the main_livelihood string (e.g., "Rice, Other Crops: Vegetables")
+                const livelihoodParts = row.main_livelihood.split(',').map(s => s.trim()).filter(Boolean);
+                crops.push(...livelihoodParts);
+            }
+
             return crops.length > 0 ? crops : ['Not specified'];
         };
 

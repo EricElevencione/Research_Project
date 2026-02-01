@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getAllocations, getFarmerRequests, getRsbsaSubmissions, createFarmerRequest } from '../../api';
 import '../../assets/css/technician css/TechAddFarmerRequestStyle.css';
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../components/layout/sidebarStyle.css';
@@ -87,9 +88,9 @@ const TechAddFarmerRequest: React.FC = () => {
 
     const fetchAllocation = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/allocations`);
-            if (response.ok) {
-                const allocations = await response.json();
+            const response = await getAllocations();
+            if (!response.error) {
+                const allocations = response.data || [];
                 const targetId = parseInt(allocationId || '0');
                 const found = allocations.find((a: any) => a.id === targetId);
                 setAllocation(found || null);
@@ -109,9 +110,9 @@ const TechAddFarmerRequest: React.FC = () => {
         if (!allocation?.season) return;
 
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/requests/${allocation.season}`);
-            if (response.ok) {
-                const requests = await response.json();
+            const response = await getFarmerRequests(allocation.season);
+            if (!response.error) {
+                const requests = response.data || [];
                 const farmerIds = requests.map((req: any) => Number(req.farmer_id));
                 setExistingRequests(farmerIds);
             }
@@ -122,9 +123,9 @@ const TechAddFarmerRequest: React.FC = () => {
 
     const fetchFarmers = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-            if (response.ok) {
-                const data = await response.json();
+            const response = await getRsbsaSubmissions();
+            if (!response.error) {
+                const data = response.data || [];
                 const transformedFarmers = data
                     .filter((item: any) => {
                         const status = String(item.status ?? '').toLowerCase().trim();
@@ -207,38 +208,33 @@ const TechAddFarmerRequest: React.FC = () => {
                 formData.requested_lp296_kg
             );
 
-            const response = await fetch('http://localhost:5000/api/distribution/requests', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    season: allocation?.season,
-                    farmer_id: formData.farmer_id,
-                    farmer_name: farmerFullName,
-                    barangay: selectedFarmer.barangay,
-                    farm_area_ha: 0,
-                    crop_type: 'Rice',
-                    ownership_type: 'Owner',
-                    num_parcels: 1,
-                    fertilizer_requested: totalFertilizerRequested > 0,
-                    seeds_requested: totalSeedsRequested > 0,
-                    request_notes: formData.notes || null,
-                    created_by: null,
-                    requested_urea_bags: formData.requested_urea_bags,
-                    requested_complete_14_bags: formData.requested_complete_14_bags,
-                    requested_ammonium_sulfate_bags: formData.requested_ammonium_sulfate_bags,
-                    requested_muriate_potash_bags: formData.requested_muriate_potash_bags,
-                    requested_jackpot_kg: formData.requested_jackpot_kg,
-                    requested_us88_kg: formData.requested_us88_kg,
-                    requested_th82_kg: formData.requested_th82_kg,
-                    requested_rh9000_kg: formData.requested_rh9000_kg,
-                    requested_lumping143_kg: formData.requested_lumping143_kg,
-                    requested_lp296_kg: formData.requested_lp296_kg
-                })
+            const response = await createFarmerRequest({
+                season: allocation?.season,
+                farmer_id: formData.farmer_id,
+                farmer_name: farmerFullName,
+                barangay: selectedFarmer.barangay,
+                farm_area_ha: 0,
+                crop_type: 'Rice',
+                ownership_type: 'Owner',
+                num_parcels: 1,
+                fertilizer_requested: totalFertilizerRequested > 0,
+                seeds_requested: totalSeedsRequested > 0,
+                request_notes: formData.notes || null,
+                created_by: null,
+                requested_urea_bags: formData.requested_urea_bags,
+                requested_complete_14_bags: formData.requested_complete_14_bags,
+                requested_ammonium_sulfate_bags: formData.requested_ammonium_sulfate_bags,
+                requested_muriate_potash_bags: formData.requested_muriate_potash_bags,
+                requested_jackpot_kg: formData.requested_jackpot_kg,
+                requested_us88_kg: formData.requested_us88_kg,
+                requested_th82_kg: formData.requested_th82_kg,
+                requested_rh9000_kg: formData.requested_rh9000_kg,
+                requested_lumping143_kg: formData.requested_lumping143_kg,
+                requested_lp296_kg: formData.requested_lp296_kg
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to save farmer request');
+            if (response.error) {
+                throw new Error(response.error || 'Failed to save farmer request');
             }
 
             alert('✅ Farmer request added successfully!');

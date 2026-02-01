@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { getRsbsaSubmissionById, getFarmParcels } from '../../api';
 import '../../components/layout/sidebarStyle.css';
 import '../../assets/css/technician css/FarmerProf.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -77,9 +78,9 @@ const TechFarmerProf: React.FC = () => {
 
     const fetchFarmerData = async (farmerId: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}`);
-            if (!response.ok) throw new Error('Failed to fetch farmer data');
-            const data = await response.json();
+            const response = await getRsbsaSubmissionById(farmerId);
+            if (response.error) throw new Error('Failed to fetch farmer data');
+            const data = response.data;
             console.log('Fetched farmer data:', data); // Debug log
             setFarmer(data);
             setLoading(false);
@@ -91,9 +92,9 @@ const TechFarmerProf: React.FC = () => {
 
     const fetchParcels = async (farmerId: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}/parcels`);
-            if (!response.ok) throw new Error('Failed to fetch parcels');
-            const data = await response.json();
+            const response = await getFarmParcels(farmerId);
+            if (response.error) throw new Error('Failed to fetch parcels');
+            const data = response.data || [];
             setParcels(data);
         } catch (err: any) {
             console.error('Error fetching parcels:', err);

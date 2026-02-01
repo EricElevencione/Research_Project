@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
+import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels, updateRsbsaSubmission } from '../../api';
 import '../../assets/css/technician css/TechMasterlistStyle.css';
 import '../../assets/css/jo css/FarmerDetailModal.css';
 import '../../components/layout/sidebarStyle.css';
@@ -96,14 +97,14 @@ const TechMasterlist: React.FC = () => {
       setLoadingFarmerDetail(true);
 
       // Fetch basic farmer info
-      const farmerResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}`);
-      if (!farmerResponse.ok) throw new Error('Failed to fetch farmer details');
-      const farmerData = await farmerResponse.json();
+      const farmerResponse = await getRsbsaSubmissionById(farmerId);
+      if (farmerResponse.error) throw new Error('Failed to fetch farmer details');
+      const farmerData = farmerResponse.data;
 
       // Fetch parcels
-      const parcelsResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}/parcels`);
-      if (!parcelsResponse.ok) throw new Error('Failed to fetch parcels');
-      const parcelsData = await parcelsResponse.json();
+      const parcelsResponse = await getFarmParcels(farmerId);
+      if (parcelsResponse.error) throw new Error('Failed to fetch parcels');
+      const parcelsData = parcelsResponse.data;
 
       // Handle both JSONB (data property) and structured column formats
       const data = farmerData.data || farmerData;
@@ -187,9 +188,9 @@ const TechMasterlist: React.FC = () => {
 
   const fetchRSBSARecords = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const response = await getRsbsaSubmissions();
+      if (response.error) throw new Error(response.error);
+      const data = response.data;
 
       // Filter out farmers with 'No Parcels' status
       const filteredData = (Array.isArray(data) ? data : []).filter((item: any) => {
@@ -300,17 +301,10 @@ const TechMasterlist: React.FC = () => {
       };
 
       // Make the API call
-      const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
+      const response = await updateRsbsaSubmission(id, updateData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update status');
+      if (response.error) {
+        throw new Error(response.error || 'Failed to update status');
       }
 
       // Success! Update the local state

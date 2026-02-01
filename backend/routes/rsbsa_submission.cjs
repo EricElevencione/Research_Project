@@ -129,9 +129,10 @@ router.post('/', async (req, res) => {
                     submission_id, parcel_number, farm_location_barangay, farm_location_municipality,
                     total_farm_area_ha, within_ancestral_domain, ownership_document_no,
                     agrarian_reform_beneficiary, ownership_type_registered_owner, ownership_type_tenant,
-                    ownership_type_lessee, tenant_land_owner_name, lessee_land_owner_name, ownership_others_specify
+                    ownership_type_lessee, tenant_land_owner_name, lessee_land_owner_name, ownership_others_specify,
+                    tenant_land_owner_id, lessee_land_owner_id
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
                 )
             `;
             for (let parcel of data.farmlandParcels) {
@@ -142,6 +143,37 @@ router.post('/', async (req, res) => {
                     }
                     const area = parseFloat(parcel.totalFarmAreaHa);
                     if (isNaN(area)) throw new Error('Invalid totalFarmAreaHa');
+
+                    // Try to resolve land owner IDs from names if provided
+                    let tenantLandOwnerId = parcel.tenantLandOwnerId || null;
+                    let lesseeLandOwnerId = parcel.lesseeLandOwnerId || null;
+
+                    // If tenant land owner name is provided but no ID, try to find the farmer
+                    if (parcel.tenantLandOwnerName && !tenantLandOwnerId) {
+                        const findOwnerQuery = `
+                            SELECT id FROM rsbsa_submission 
+                            WHERE LOWER(TRIM(CONCAT_WS(' ', "FIRST NAME", "MIDDLE NAME", "LAST NAME"))) = LOWER(TRIM($1))
+                            LIMIT 1
+                        `;
+                        const ownerResult = await client.query(findOwnerQuery, [parcel.tenantLandOwnerName]);
+                        if (ownerResult.rows.length > 0) {
+                            tenantLandOwnerId = ownerResult.rows[0].id;
+                        }
+                    }
+
+                    // If lessee land owner name is provided but no ID, try to find the farmer
+                    if (parcel.lesseeLandOwnerName && !lesseeLandOwnerId) {
+                        const findOwnerQuery = `
+                            SELECT id FROM rsbsa_submission 
+                            WHERE LOWER(TRIM(CONCAT_WS(' ', "FIRST NAME", "MIDDLE NAME", "LAST NAME"))) = LOWER(TRIM($1))
+                            LIMIT 1
+                        `;
+                        const ownerResult = await client.query(findOwnerQuery, [parcel.lesseeLandOwnerName]);
+                        if (ownerResult.rows.length > 0) {
+                            lesseeLandOwnerId = ownerResult.rows[0].id;
+                        }
+                    }
+
                     await client.query(parcelInsertQuery, [
                         submissionId,
                         parcel.parcelNo || `Parcel-${submissionId}-${data.farmlandParcels.indexOf(parcel) + 1}`,
@@ -157,6 +189,8 @@ router.post('/', async (req, res) => {
                         parcel.tenantLandOwnerName || '',
                         parcel.lesseeLandOwnerName || '',
                         parcel.ownershipOthersSpecify || '',
+                        tenantLandOwnerId,
+                        lesseeLandOwnerId
                     ]);
                 } catch (err) {
                     console.error('Error inserting parcel:', err, 'Parcel data:', parcel);
@@ -214,26 +248,33 @@ router.get('/:id/parcels', async (req, res) => {
 
         const query = `
             SELECT 
-                id,
-                submission_id,
-                parcel_number,
-                farm_location_barangay,
-                farm_location_municipality,
-                total_farm_area_ha,
-                within_ancestral_domain,
-                ownership_document_no,
-                agrarian_reform_beneficiary,
-                ownership_type_registered_owner,
-                ownership_type_tenant,
-                ownership_type_lessee,
-                tenant_land_owner_name,
-                lessee_land_owner_name,
-                ownership_others_specify,
-                created_at,
-                updated_at
-            FROM rsbsa_farm_parcels 
-            WHERE submission_id = $1
-            ORDER BY parcel_number
+                fp.id,
+                fp.submission_id,
+                fp.parcel_number,
+                fp.farm_location_barangay,
+                fp.farm_location_municipality,
+                fp.total_farm_area_ha,
+                fp.within_ancestral_domain,
+                fp.ownership_document_no,
+                fp.agrarian_reform_beneficiary,
+                fp.ownership_type_registered_owner,
+                fp.ownership_type_tenant,
+                fp.ownership_type_lessee,
+                fp.tenant_land_owner_name,
+                fp.lessee_land_owner_name,
+                fp.ownership_others_specify,
+                fp.tenant_land_owner_id,
+                fp.lessee_land_owner_id,
+                -- Get linked land owner names from foreign key relationship
+                CONCAT_WS(' ', tlo."FIRST NAME", tlo."MIDDLE NAME", tlo."LAST NAME") AS tenant_land_owner_linked_name,
+                CONCAT_WS(' ', llo."FIRST NAME", llo."MIDDLE NAME", llo."LAST NAME") AS lessee_land_owner_linked_name,
+                fp.created_at,
+                fp.updated_at
+            FROM rsbsa_farm_parcels fp
+            LEFT JOIN rsbsa_submission tlo ON fp.tenant_land_owner_id = tlo.id
+            LEFT JOIN rsbsa_submission llo ON fp.lessee_land_owner_id = llo.id
+            WHERE fp.submission_id = $1
+            ORDER BY fp.parcel_number
         `;
 
         const result = await pool.query(query, [submissionId]);
@@ -275,6 +316,11 @@ router.get('/farm_parcels', async (req, res) => {
                 fp.ownership_type_others,
                 fp.tenant_land_owner_name,
                 fp.lessee_land_owner_name,
+                fp.tenant_land_owner_id,
+                fp.lessee_land_owner_id,
+                -- Get linked land owner names from foreign key relationship
+                CONCAT_WS(' ', tlo."FIRST NAME", tlo."MIDDLE NAME", tlo."LAST NAME") AS tenant_land_owner_linked_name,
+                CONCAT_WS(' ', llo."FIRST NAME", llo."MIDDLE NAME", llo."LAST NAME") AS lessee_land_owner_linked_name,
                 fp.ownership_others_specify,
                 fp.created_at,
                 fp.updated_at,
@@ -283,6 +329,8 @@ router.get('/farm_parcels', async (req, res) => {
                 rs."MIDDLE NAME"
             FROM rsbsa_farm_parcels fp
             JOIN rsbsa_submission rs ON fp.submission_id = rs.id
+            LEFT JOIN rsbsa_submission tlo ON fp.tenant_land_owner_id = tlo.id
+            LEFT JOIN rsbsa_submission llo ON fp.lessee_land_owner_id = llo.id
             ORDER BY fp.submission_id, fp.parcel_number
         `;
 
@@ -663,6 +711,7 @@ router.put('/:id', async (req, res) => {
 Purpose: Deletes an RSBSA submission and all associated farm parcels
 Where: DELETE /api/rsbsa_submission/:id
 Description: Cascading delete - removes submission and all linked parcels in a transaction
+             Also handles tenant/lessee references - clears land owner references when a land owner is deleted
 */
 router.delete('/:id', async (req, res) => {
     const submissionId = req.params.id;
@@ -672,12 +721,167 @@ router.delete('/:id', async (req, res) => {
         await client.query('BEGIN');
         console.log(`Deleting RSBSA submission ID: ${submissionId}`);
 
-        // First delete all associated parcels
+        // First, get the farmer's full name and reference number (FFRS_CODE)
+        const getFarmerQuery = `
+            SELECT 
+                "FFRS_CODE", 
+                "LAST NAME" as surname, 
+                "FIRST NAME" as first_name, 
+                "MIDDLE NAME" as middle_name,
+                "BARANGAY" as barangay
+            FROM rsbsa_submission WHERE id = $1
+        `;
+        const farmerResult = await client.query(getFarmerQuery, [submissionId]);
+
+        let landPlotsDeleted = 0;
+        let tenantsAffected = 0;
+        let lesseesAffected = 0;
+        let affectedTenantDetails = [];
+        let affectedLesseeDetails = [];
+
+        if (farmerResult.rows.length > 0) {
+            const farmer = farmerResult.rows[0];
+            console.log('Farmer data for deletion:', farmer);
+
+            // Build the full name of the farmer being deleted (to match against land owner references)
+            const farmerFullName = [farmer.first_name, farmer.middle_name, farmer.surname]
+                .filter(Boolean)
+                .join(' ')
+                .trim();
+
+            console.log(`Checking for tenants/lessees referencing land owner: ${farmerFullName}`);
+
+            // ============================================================================
+            // STEP 1: Find and clear tenant references to this land owner
+            // ============================================================================
+            if (farmerFullName) {
+                // Find tenants who have this farmer as their land owner
+                const findTenantsQuery = `
+                    SELECT 
+                        fp.id as parcel_id,
+                        fp.submission_id,
+                        fp.tenant_land_owner_name,
+                        rs."FIRST NAME" as tenant_first_name,
+                        rs."LAST NAME" as tenant_last_name,
+                        rs."BARANGAY" as tenant_barangay
+                    FROM rsbsa_farm_parcels fp
+                    JOIN rsbsa_submission rs ON fp.submission_id = rs.id
+                    WHERE fp.ownership_type_tenant = true
+                    AND LOWER(TRIM(COALESCE(fp.tenant_land_owner_name, ''))) = LOWER(TRIM($1))
+                    AND fp.submission_id != $2
+                `;
+                const tenantsResult = await client.query(findTenantsQuery, [farmerFullName, submissionId]);
+
+                if (tenantsResult.rows.length > 0) {
+                    affectedTenantDetails = tenantsResult.rows.map(row => ({
+                        parcelId: row.parcel_id,
+                        submissionId: row.submission_id,
+                        tenantName: `${row.tenant_first_name || ''} ${row.tenant_last_name || ''}`.trim(),
+                        barangay: row.tenant_barangay,
+                        previousLandOwner: row.tenant_land_owner_name
+                    }));
+
+                    console.log(`Found ${tenantsResult.rows.length} tenant parcels referencing this land owner`);
+
+                    // Clear the land owner reference for affected tenants
+                    const clearTenantRefsQuery = `
+                        UPDATE rsbsa_farm_parcels 
+                        SET tenant_land_owner_name = NULL,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE ownership_type_tenant = true
+                        AND LOWER(TRIM(COALESCE(tenant_land_owner_name, ''))) = LOWER(TRIM($1))
+                        AND submission_id != $2
+                    `;
+                    const clearTenantsResult = await client.query(clearTenantRefsQuery, [farmerFullName, submissionId]);
+                    tenantsAffected = clearTenantsResult.rowCount;
+                    console.log(`Cleared land owner reference for ${tenantsAffected} tenant parcels`);
+                }
+
+                // ============================================================================
+                // STEP 2: Find and clear lessee references to this land owner
+                // ============================================================================
+                const findLesseesQuery = `
+                    SELECT 
+                        fp.id as parcel_id,
+                        fp.submission_id,
+                        fp.lessee_land_owner_name,
+                        rs."FIRST NAME" as lessee_first_name,
+                        rs."LAST NAME" as lessee_last_name,
+                        rs."BARANGAY" as lessee_barangay
+                    FROM rsbsa_farm_parcels fp
+                    JOIN rsbsa_submission rs ON fp.submission_id = rs.id
+                    WHERE fp.ownership_type_lessee = true
+                    AND LOWER(TRIM(COALESCE(fp.lessee_land_owner_name, ''))) = LOWER(TRIM($1))
+                    AND fp.submission_id != $2
+                `;
+                const lesseesResult = await client.query(findLesseesQuery, [farmerFullName, submissionId]);
+
+                if (lesseesResult.rows.length > 0) {
+                    affectedLesseeDetails = lesseesResult.rows.map(row => ({
+                        parcelId: row.parcel_id,
+                        submissionId: row.submission_id,
+                        lesseeName: `${row.lessee_first_name || ''} ${row.lessee_last_name || ''}`.trim(),
+                        barangay: row.lessee_barangay,
+                        previousLandOwner: row.lessee_land_owner_name
+                    }));
+
+                    console.log(`Found ${lesseesResult.rows.length} lessee parcels referencing this land owner`);
+
+                    // Clear the land owner reference for affected lessees
+                    const clearLesseeRefsQuery = `
+                        UPDATE rsbsa_farm_parcels 
+                        SET lessee_land_owner_name = NULL,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE ownership_type_lessee = true
+                        AND LOWER(TRIM(COALESCE(lessee_land_owner_name, ''))) = LOWER(TRIM($1))
+                        AND submission_id != $2
+                    `;
+                    const clearLesseesResult = await client.query(clearLesseeRefsQuery, [farmerFullName, submissionId]);
+                    lesseesAffected = clearLesseesResult.rowCount;
+                    console.log(`Cleared land owner reference for ${lesseesAffected} lessee parcels`);
+                }
+            }
+
+            // ============================================================================
+            // STEP 3: Delete from land_plots by ffrs_id if available
+            // ============================================================================
+            if (farmer.FFRS_CODE) {
+                const deleteLandPlotsByFfrsQuery = 'DELETE FROM land_plots WHERE ffrs_id = $1';
+                const landPlotsResult = await client.query(deleteLandPlotsByFfrsQuery, [farmer.FFRS_CODE]);
+                landPlotsDeleted += landPlotsResult.rowCount;
+                console.log(`Deleted ${landPlotsResult.rowCount} land plots by ffrs_id for submission ${submissionId}`);
+            }
+
+            // ============================================================================
+            // STEP 4: Also delete by matching name and barangay (using TRIM and LOWER for robust matching)
+            // ============================================================================
+            if (farmer.surname && farmer.first_name && farmer.barangay) {
+                const deleteLandPlotsByNameQuery = `
+                    DELETE FROM land_plots 
+                    WHERE LOWER(TRIM(COALESCE(surname, ''))) = LOWER(TRIM($1))
+                    AND LOWER(TRIM(COALESCE(first_name, ''))) = LOWER(TRIM($2))
+                    AND LOWER(TRIM(COALESCE(barangay, ''))) = LOWER(TRIM($3))
+                `;
+                const landPlotsByNameResult = await client.query(deleteLandPlotsByNameQuery, [
+                    farmer.surname,
+                    farmer.first_name,
+                    farmer.barangay
+                ]);
+                landPlotsDeleted += landPlotsByNameResult.rowCount;
+                console.log(`Deleted ${landPlotsByNameResult.rowCount} land plots by name for submission ${submissionId}`);
+            }
+        }
+
+        // ============================================================================
+        // STEP 5: Delete all associated parcels from rsbsa_farm_parcels
+        // ============================================================================
         const deleteParcelsQuery = 'DELETE FROM rsbsa_farm_parcels WHERE submission_id = $1';
         const parcelsResult = await client.query(deleteParcelsQuery, [submissionId]);
         console.log(`Deleted ${parcelsResult.rowCount} parcels for submission ${submissionId}`);
 
-        // Then delete the submission
+        // ============================================================================
+        // STEP 6: Delete the submission itself
+        // ============================================================================
         const deleteSubmissionQuery = 'DELETE FROM rsbsa_submission WHERE id = $1 RETURNING id';
         const submissionResult = await client.query(deleteSubmissionQuery, [submissionId]);
 
@@ -687,17 +891,156 @@ router.delete('/:id', async (req, res) => {
         }
 
         await client.query('COMMIT');
-        res.json({
-            message: 'RSBSA submission and associated parcels deleted successfully',
+
+        // Build response with detailed information about affected records
+        const response = {
+            message: 'RSBSA submission deleted successfully',
             submissionId: submissionResult.rows[0].id,
-            parcelsDeleted: parcelsResult.rowCount
-        });
+            parcelsDeleted: parcelsResult.rowCount,
+            landPlotsDeleted: landPlotsDeleted
+        };
+
+        // Add tenant/lessee impact information if any were affected
+        if (tenantsAffected > 0 || lesseesAffected > 0) {
+            response.landOwnerImpact = {
+                message: 'This farmer was referenced as a land owner by tenants/lessees. Their references have been cleared.',
+                tenantsAffected: tenantsAffected,
+                lesseesAffected: lesseesAffected,
+                affectedTenants: affectedTenantDetails,
+                affectedLessees: affectedLesseeDetails
+            };
+        }
+
+        res.json(response);
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error deleting submission:', error);
         res.status(500).json({ message: 'Error deleting submission', error: error.message });
     } finally {
         client.release();
+    }
+});
+
+// ============================================================================
+// GET /:id/tenant-lessee-references - Check if farmer is referenced as land owner
+// ============================================================================
+/*
+Purpose: Check if a farmer is referenced as a land owner by any tenants or lessees
+Where: GET /api/rsbsa_submission/:id/tenant-lessee-references
+Description: Returns a list of tenants/lessees who have this farmer as their land owner
+             Useful for warning users before deleting a land owner
+*/
+router.get('/:id/tenant-lessee-references', async (req, res) => {
+    const submissionId = req.params.id;
+
+    try {
+        // Get the farmer's full name
+        const getFarmerQuery = `
+            SELECT 
+                "FIRST NAME" as first_name, 
+                "MIDDLE NAME" as middle_name,
+                "LAST NAME" as surname
+            FROM rsbsa_submission WHERE id = $1
+        `;
+        const farmerResult = await pool.query(getFarmerQuery, [submissionId]);
+
+        if (farmerResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Farmer not found' });
+        }
+
+        const farmer = farmerResult.rows[0];
+        const farmerFullName = [farmer.first_name, farmer.middle_name, farmer.surname]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+
+        if (!farmerFullName) {
+            return res.json({
+                farmerName: '',
+                hasReferences: false,
+                tenants: [],
+                lessees: []
+            });
+        }
+
+        // Find tenants who have this farmer as their land owner
+        const findTenantsQuery = `
+            SELECT 
+                fp.id as parcel_id,
+                fp.submission_id,
+                fp.tenant_land_owner_name,
+                fp.farm_location_barangay,
+                fp.total_farm_area_ha,
+                rs."FIRST NAME" as tenant_first_name,
+                rs."MIDDLE NAME" as tenant_middle_name,
+                rs."LAST NAME" as tenant_last_name,
+                rs."BARANGAY" as tenant_barangay
+            FROM rsbsa_farm_parcels fp
+            JOIN rsbsa_submission rs ON fp.submission_id = rs.id
+            WHERE fp.ownership_type_tenant = true
+            AND LOWER(TRIM(COALESCE(fp.tenant_land_owner_name, ''))) = LOWER(TRIM($1))
+            AND fp.submission_id != $2
+        `;
+        const tenantsResult = await pool.query(findTenantsQuery, [farmerFullName, submissionId]);
+
+        // Find lessees who have this farmer as their land owner
+        const findLesseesQuery = `
+            SELECT 
+                fp.id as parcel_id,
+                fp.submission_id,
+                fp.lessee_land_owner_name,
+                fp.farm_location_barangay,
+                fp.total_farm_area_ha,
+                rs."FIRST NAME" as lessee_first_name,
+                rs."MIDDLE NAME" as lessee_middle_name,
+                rs."LAST NAME" as lessee_last_name,
+                rs."BARANGAY" as lessee_barangay
+            FROM rsbsa_farm_parcels fp
+            JOIN rsbsa_submission rs ON fp.submission_id = rs.id
+            WHERE fp.ownership_type_lessee = true
+            AND LOWER(TRIM(COALESCE(fp.lessee_land_owner_name, ''))) = LOWER(TRIM($1))
+            AND fp.submission_id != $2
+        `;
+        const lesseesResult = await pool.query(findLesseesQuery, [farmerFullName, submissionId]);
+
+        const tenants = tenantsResult.rows.map(row => ({
+            parcelId: row.parcel_id,
+            submissionId: row.submission_id,
+            tenantName: [row.tenant_first_name, row.tenant_middle_name, row.tenant_last_name]
+                .filter(Boolean)
+                .join(' ')
+                .trim(),
+            tenantBarangay: row.tenant_barangay,
+            farmBarangay: row.farm_location_barangay,
+            farmArea: row.total_farm_area_ha
+        }));
+
+        const lessees = lesseesResult.rows.map(row => ({
+            parcelId: row.parcel_id,
+            submissionId: row.submission_id,
+            lesseeName: [row.lessee_first_name, row.lessee_middle_name, row.lessee_last_name]
+                .filter(Boolean)
+                .join(' ')
+                .trim(),
+            lesseeBarangay: row.lessee_barangay,
+            farmBarangay: row.farm_location_barangay,
+            farmArea: row.total_farm_area_ha
+        }));
+
+        res.json({
+            farmerName: farmerFullName,
+            hasReferences: tenants.length > 0 || lessees.length > 0,
+            totalReferences: tenants.length + lessees.length,
+            tenants: tenants,
+            lessees: lessees,
+            warning: tenants.length > 0 || lessees.length > 0
+                ? `This farmer is referenced as a land owner by ${tenants.length} tenant(s) and ${lessees.length} lessee(s). Deleting this farmer will clear these references.`
+                : null
+        });
+
+    } catch (error) {
+        console.error('Error checking tenant/lessee references:', error);
+        res.status(500).json({ message: 'Error checking references', error: error.message });
     }
 });
 

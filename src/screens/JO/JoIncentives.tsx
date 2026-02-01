@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
+import { getAllocations, getFarmerRequests, deleteAllocation, createAllocation } from '../../api';
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -60,28 +61,21 @@ const JoIncentives: React.FC = () => {
             setLoading(true);
             setError(null);
 
-            const response = await fetch('http://localhost:5000/api/distribution/allocations');
+            const response = await getAllocations();
 
-            if (!response.ok) {
-                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            if (response.error) {
+                throw new Error(response.error);
             }
 
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Server did not return JSON. Backend server may not be running.');
-            }
-
-            const data = await response.json();
+            const data = response.data || [];
 
             // Fetch farmer count for each allocation
             const allocationsWithCounts = await Promise.all(
                 data.map(async (allocation: RegionalAllocation) => {
                     try {
-                        const requestsResponse = await fetch(
-                            `http://localhost:5000/api/distribution/requests/${allocation.season}`
-                        );
-                        if (requestsResponse.ok) {
-                            const requests = await requestsResponse.json();
+                        const requestsResponse = await getFarmerRequests(allocation.season);
+                        if (!requestsResponse.error) {
+                            const requests = requestsResponse.data || [];
                             return { ...allocation, farmer_count: requests.length };
                         }
                         return { ...allocation, farmer_count: 0 };
@@ -106,11 +100,9 @@ const JoIncentives: React.FC = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/allocations/${id}`, {
-                method: 'DELETE'
-            });
+            const response = await deleteAllocation(id);
 
-            if (response.ok) {
+            if (!response.error) {
                 alert('✅ Allocation deleted successfully');
                 fetchAllocations();
             } else {
@@ -167,9 +159,9 @@ const JoIncentives: React.FC = () => {
     const handleEditAllocation = async (allocation: RegionalAllocation) => {
         try {
             // Fetch request count for this season
-            const response = await fetch(`http://localhost:5000/api/distribution/requests/${allocation.season}`);
-            if (response.ok) {
-                const requests = await response.json();
+            const response = await getFarmerRequests(allocation.season);
+            if (!response.error) {
+                const requests = response.data || [];
                 setRequestCount(requests.length);
             } else {
                 setRequestCount(0);
@@ -236,15 +228,10 @@ const JoIncentives: React.FC = () => {
 
         setSavingEdit(true);
         try {
-            const response = await fetch('http://localhost:5000/api/distribution/allocations', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editFormData)
-            });
+            const response = await createAllocation(editFormData);
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update allocation');
+            if (response.error) {
+                throw new Error(response.error || 'Failed to update allocation');
             }
 
             alert('✅ Allocation updated successfully!');

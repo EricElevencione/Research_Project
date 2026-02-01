@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
+import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels, deleteRsbsaSubmission, updateRsbsaSubmission, updateFarmParcel } from '../../api';
 import '../../assets/css/jo css/JoMasterlistStyle.css';
 import '../../assets/css/jo css/FarmerDetailModal.css';
 import '../../components/layout/sidebarStyle.css';
@@ -145,25 +146,69 @@ const JoMasterlist: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
-      return;
-    }
-
     try {
-      const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${id}`, {
-        method: 'DELETE'
-      });
+      // First, check if this farmer is referenced as a land owner by any tenants/lessees
+      // Note: This endpoint is specialized and not in the API wrapper
+      const referencesResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${id}/tenant-lessee-references`);
 
-      if (!response.ok) {
-        throw new Error(`Failed to delete record: ${response.statusText}`);
+      let confirmMessage = 'Are you sure you want to delete this record? This action cannot be undone.';
+
+      if (referencesResponse.ok) {
+        const referencesData = await referencesResponse.json();
+
+        if (referencesData.hasReferences) {
+          // Build a detailed warning message
+          const tenantCount = referencesData.tenants?.length || 0;
+          const lesseeCount = referencesData.lessees?.length || 0;
+
+          let affectedList = '';
+
+          if (tenantCount > 0) {
+            const tenantNames = referencesData.tenants
+              .slice(0, 5) // Show max 5 names
+              .map((t: any) => t.tenantName)
+              .join(', ');
+            affectedList += `\n\n👤 Tenants (${tenantCount}): ${tenantNames}${tenantCount > 5 ? '...' : ''}`;
+          }
+
+          if (lesseeCount > 0) {
+            const lesseeNames = referencesData.lessees
+              .slice(0, 5) // Show max 5 names
+              .map((l: any) => l.lesseeName)
+              .join(', ');
+            affectedList += `\n\n👤 Lessees (${lesseeCount}): ${lesseeNames}${lesseeCount > 5 ? '...' : ''}`;
+          }
+
+          confirmMessage = `⚠️ WARNING: This farmer "${referencesData.farmerName}" is listed as the LAND OWNER for ${referencesData.totalReferences} tenant/lessee record(s).${affectedList}\n\nIf you delete this farmer, their land owner references will be cleared (set to empty).\n\nAre you sure you want to proceed?`;
+        }
       }
+
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
+      const response = await deleteRsbsaSubmission(id);
+
+      if (response.error) {
+        throw new Error(`Failed to delete record: ${response.error}`);
+      }
+
+      const deleteResult = response.data;
+
+      // Show success message with details about affected records
+      let successMessage = 'Record deleted successfully.';
+      if (deleteResult.landOwnerImpact) {
+        const { tenantsAffected, lesseesAffected } = deleteResult.landOwnerImpact;
+        successMessage += `\n\nLand owner references cleared:\n- ${tenantsAffected} tenant(s)\n- ${lesseesAffected} lessee(s)`;
+      }
+
+      alert(successMessage);
 
       // Remove the deleted record from the local state
       setRsbsaRecords(prev => prev.filter(record => record.id !== id));
     } catch (err: any) {
       console.error('Error deleting record:', err);
       alert(`Failed to delete record: ${err.message}`);
-    } finally {
     }
   };
 
@@ -173,14 +218,14 @@ const JoMasterlist: React.FC = () => {
       setLoadingFarmerDetail(true);
 
       // Fetch basic farmer info
-      const farmerResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}`);
-      if (!farmerResponse.ok) throw new Error('Failed to fetch farmer details');
-      const farmerData = await farmerResponse.json();
+      const farmerResponse = await getRsbsaSubmissionById(farmerId);
+      if (farmerResponse.error) throw new Error('Failed to fetch farmer details');
+      const farmerData = farmerResponse.data;
 
       // Fetch parcels
-      const parcelsResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}/parcels`);
-      if (!parcelsResponse.ok) throw new Error('Failed to fetch parcels');
-      const parcelsData = await parcelsResponse.json();
+      const parcelsResponse = await getFarmParcels(farmerId);
+      if (parcelsResponse.error) throw new Error('Failed to fetch parcels');
+      const parcelsData = parcelsResponse.data || [];
 
       // Handle both JSONB (data property) and structured column formats
       const data = farmerData.data || farmerData;
@@ -269,9 +314,9 @@ const JoMasterlist: React.FC = () => {
 
   const fetchRSBSARecords = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const response = await getRsbsaSubmissions();
+      if (response.error) throw new Error(response.error);
+      const data = response.data || [];
 
       // Filter out farmers with 'No Parcels' status
       const filteredData = (Array.isArray(data) ? data : []).filter((item: any) => {
@@ -446,9 +491,9 @@ const JoMasterlist: React.FC = () => {
       setLoadingParcels(true);
       setParcelErrors({}); // Clear any previous errors
       try {
-        const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${recordId}/parcels`);
-        if (response.ok) {
-          const parcels = await response.json();
+        const response = await getFarmParcels(recordId);
+        if (!response.error) {
+          const parcels = response.data || [];
           setEditingParcels(parcels);
         } else {
           console.error('Failed to fetch parcels');
@@ -664,47 +709,34 @@ const JoMasterlist: React.FC = () => {
           }, {} as Record<string, any>);
 
         // Update the record in the database
-        const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${editingRecord.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(cleanedData),
-        });
+        const response = await updateRsbsaSubmission(editingRecord.id, cleanedData);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        if (response.error) {
+          throw new Error(response.error || `HTTP error!`);
         }
 
-        const updatedRecord = await response.json();
+        const updatedRecord = response.data;
 
         // Update individual parcels if they were edited
         if (editingParcels.length > 0) {
           for (const parcel of editingParcels) {
             try {
-              const parcelResponse = await fetch(`http://localhost:5000/api/rsbsa_farm_parcels/${parcel.id}`, {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  total_farm_area_ha: parcel.total_farm_area_ha,
-                  farm_location_barangay: parcel.farm_location_barangay,
-                  farm_location_municipality: parcel.farm_location_municipality,
-                  within_ancestral_domain: parcel.within_ancestral_domain,
-                  ownership_document_no: parcel.ownership_document_no,
-                  agrarian_reform_beneficiary: parcel.agrarian_reform_beneficiary,
-                  ownership_type_registered_owner: parcel.ownership_type_registered_owner,
-                  ownership_type_tenant: parcel.ownership_type_tenant,
-                  ownership_type_lessee: parcel.ownership_type_lessee,
-                  tenant_land_owner_name: parcel.tenant_land_owner_name,
-                  lessee_land_owner_name: parcel.lessee_land_owner_name,
-                  ownership_others_specify: parcel.ownership_others_specify,
-                }),
+              const parcelResponse = await updateFarmParcel(parcel.id, {
+                total_farm_area_ha: parcel.total_farm_area_ha,
+                farm_location_barangay: parcel.farm_location_barangay,
+                farm_location_municipality: parcel.farm_location_municipality,
+                within_ancestral_domain: parcel.within_ancestral_domain,
+                ownership_document_no: parcel.ownership_document_no,
+                agrarian_reform_beneficiary: parcel.agrarian_reform_beneficiary,
+                ownership_type_registered_owner: parcel.ownership_type_registered_owner,
+                ownership_type_tenant: parcel.ownership_type_tenant,
+                ownership_type_lessee: parcel.ownership_type_lessee,
+                tenant_land_owner_name: parcel.tenant_land_owner_name,
+                lessee_land_owner_name: parcel.lessee_land_owner_name,
+                ownership_others_specify: parcel.ownership_others_specify,
               });
 
-              if (!parcelResponse.ok) {
+              if (parcelResponse.error) {
                 console.error(`Failed to update parcel ${parcel.id}`);
               }
             } catch (error) {

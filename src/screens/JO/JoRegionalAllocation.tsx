@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getAllocationBySeason, createAllocation } from '../../api';
 import '../../assets/css/jo css/JoRegionAll.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -64,10 +65,9 @@ const JoRegionalAllocation: React.FC = () => {
 
     const fetchAllocation = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/distribution/allocations/${formData.season}`);
-            if (response.ok) {
-                const data = await response.json();
-                setFormData(data);
+            const response = await getAllocationBySeason(formData.season);
+            if (!response.error && response.data) {
+                setFormData(response.data);
             }
         } catch (error) {
             console.log('No existing allocation found, starting fresh');
@@ -88,16 +88,12 @@ const JoRegionalAllocation: React.FC = () => {
         setSaveSuccess(false);
 
         try {
-            const response = await fetch('http://localhost:5000/api/distribution/allocations', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...formData,
-                    created_by: 1 // TODO: Get from auth context
-                })
+            const response = await createAllocation({
+                ...formData,
+                created_by: 1 // TODO: Get from auth context
             });
 
-            if (response.ok) {
+            if (!response.error) {
                 setSaveSuccess(true);
                 setTimeout(() => setSaveSuccess(false), 3000);
             } else {

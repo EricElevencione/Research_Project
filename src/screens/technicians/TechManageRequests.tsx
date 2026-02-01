@@ -1034,34 +1034,30 @@ const TechManageRequests: React.FC = () => {
                                             {filteredRequests.filter(r => r.status === 'rejected').length}
                                         </div>
                                     </div>
-                                    {/* Shortage Warning Card */}
-                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-shortage">
+                                    {/* Combined Shortage & Suggestions Card */}
+                                    <div
+                                        className="tech-manage-requests-summary-card tech-manage-requests-summary-shortage"
+                                        onClick={() => setShowSuggestionsModal(true)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
                                         {newSuggestionsCount > 0 && (
                                             <div className="tech-manage-requests-shortage-pulse-badge">
                                                 {newSuggestionsCount}
                                             </div>
                                         )}
-                                        <div className="tech-manage-requests-summary-label">⚠️ Needs Alternatives</div>
+                                        <div className="tech-manage-requests-summary-label">⚠️ Shortages & Suggestions</div>
                                         <div className="tech-manage-requests-summary-value">
-                                            {autoSuggestionsCount}
-                                        </div>
-                                        <div className="tech-manage-requests-summary-hint">
-                                            {newSuggestionsCount > 0 ? '🔴 New suggestions loaded!' : 'Auto-loaded alternatives'}
-                                        </div>
-                                    </div>
-                                    <div
-                                        className="tech-manage-requests-summary-card tech-manage-requests-summary-suggestions"
-                                        onClick={() => setShowSuggestionsModal(true)}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        <div className="tech-manage-requests-summary-label">💡 Suggestions</div>
-                                        <div className="tech-manage-requests-summary-value">
-                                            {Object.keys(alternatives).filter(key => {
+                                            {autoSuggestionsCount} / {Object.keys(alternatives).filter(key => {
                                                 const alt = alternatives[parseInt(key)];
                                                 return alt?.suggestions?.suggestions?.length > 0;
                                             }).length}
                                         </div>
-                                        <div className="tech-manage-requests-summary-hint">Click to view</div>
+                                        <div className="tech-manage-requests-summary-hint">
+                                            {autoSuggestionsCount} shortages, {Object.keys(alternatives).filter(key => {
+                                                const alt = alternatives[parseInt(key)];
+                                                return alt?.suggestions?.suggestions?.length > 0;
+                                            }).length} with solutions • Click to view
+                                        </div>
                                     </div>
                                 </div>
 

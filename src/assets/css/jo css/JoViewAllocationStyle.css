@@ -1,0 +1,354 @@
+/* ============================================
+   JO VIEW ALLOCATION - CLEAN STYLING
+   ============================================ */
+
+/* Page Layout */
+.jo-view-alloc-page-container {
+    display: flex;
+    height: 100vh;
+    background-color: #f0f0f0;
+    overflow: hidden;
+}
+
+.jo-view-alloc-page {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+/* Main Content */
+.jo-view-alloc-main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Header */
+.jo-view-alloc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+}
+
+.jo-view-alloc-title {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0;
+}
+
+.jo-view-alloc-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 4px 0 0 0;
+}
+
+.jo-view-alloc-header-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.jo-view-alloc-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.jo-view-alloc-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.jo-view-alloc-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.jo-view-alloc-btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.jo-view-alloc-btn-secondary:hover {
+    background: #d1d5db;
+}
+
+/* Content Card */
+.jo-view-alloc-content-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* Overview Cards Grid */
+.jo-view-alloc-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.jo-view-alloc-overview-card {
+    padding: 20px;
+    border-radius: 12px;
+    color: white;
+}
+
+.jo-view-alloc-overview-card.season {
+    background: linear-gradient(135deg, #A0C878 0%, #2c5f2d 100%);
+}
+
+.jo-view-alloc-overview-card.date {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.jo-view-alloc-overview-card.requests {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.jo-view-alloc-overview-card.approved {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.jo-view-alloc-overview-label {
+    font-size: 13px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.jo-view-alloc-overview-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.jo-view-alloc-overview-value.large {
+    font-size: 32px;
+}
+
+.jo-view-alloc-overview-sub {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+/* Section */
+.jo-view-alloc-section {
+    margin-bottom: 28px;
+}
+
+.jo-view-alloc-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Table Container */
+.jo-view-alloc-table-container {
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    overflow-x: auto;
+}
+
+/* Table */
+.jo-view-alloc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.jo-view-alloc-table thead tr {
+    border-bottom: 2px solid #d1d5db;
+}
+
+.jo-view-alloc-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    background: #A0C878;
+    white-space: nowrap;
+}
+
+.jo-view-alloc-table th:not(:first-child) {
+    text-align: right;
+}
+
+.jo-view-alloc-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background-color 0.2s ease;
+}
+
+.jo-view-alloc-table tbody tr:hover {
+    background-color: #f3f4f6;
+}
+
+.jo-view-alloc-table td {
+    padding: 12px;
+    color: #1f2937;
+}
+
+.jo-view-alloc-table td:not(:first-child) {
+    text-align: right;
+}
+
+.jo-view-alloc-table td.allocated {
+    font-weight: 600;
+}
+
+.jo-view-alloc-table td.positive {
+    color: #059669;
+}
+
+.jo-view-alloc-table td.negative {
+    color: #ef4444;
+}
+
+/* Total Row */
+.jo-view-alloc-table tr.total-row {
+    border-top: 2px solid #d1d5db;
+    background: #f3f4f6;
+    font-weight: 700;
+}
+
+/* Usage Badge */
+.jo-view-alloc-usage-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    display: inline-block;
+}
+
+.jo-view-alloc-usage-badge.good {
+    background: #10b981;
+}
+
+.jo-view-alloc-usage-badge.warning {
+    background: #f59e0b;
+}
+
+.jo-view-alloc-usage-badge.danger {
+    background: #ef4444;
+}
+
+/* Notes Section */
+.jo-view-alloc-notes {
+    padding: 16px;
+    background: #fffbeb;
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+}
+
+.jo-view-alloc-notes-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #92400e;
+    margin: 0 0 8px 0;
+}
+
+.jo-view-alloc-notes-text {
+    font-size: 14px;
+    color: #78350f;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Loading State */
+.jo-view-alloc-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.jo-view-alloc-loading p {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Error State */
+.jo-view-alloc-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.jo-view-alloc-error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.jo-view-alloc-error h3 {
+    font-size: 20px;
+    color: #1f2937;
+    margin: 0 0 8px 0;
+}
+
+.jo-view-alloc-error p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0 0 20px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .jo-view-alloc-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .jo-view-alloc-header-actions {
+        width: 100%;
+    }
+
+    .jo-view-alloc-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .jo-view-alloc-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .jo-view-alloc-table {
+        font-size: 13px;
+    }
+
+    .jo-view-alloc-table th,
+    .jo-view-alloc-table td {
+        padding: 10px 8px;
+    }
+}

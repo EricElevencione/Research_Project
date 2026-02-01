@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getLandOwners, getFarmParcels, createRsbsaSubmission } from '../../api';
 import '../../assets/css/jo css/JoRsbsaRegistrationStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -164,11 +165,11 @@ const JoRsbsa: React.FC = () => {
   useEffect(() => {
     const fetchLandowners = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/landowners');
-        if (!response.ok) {
+        const response = await getLandOwners();
+        if (response.error) {
           throw new Error('Failed to fetch landowners');
         }
-        const data = await response.json();
+        const data = response.data || [];
         setLandowners(data);
       } catch (error) {
         console.error('Error fetching landowners:', error);
@@ -321,11 +322,11 @@ const JoRsbsa: React.FC = () => {
 
     // Fetch the land owner's parcels to show for selection
     try {
-      const response = await fetch(`http://localhost:5000/api/rsbsa_submission/${owner.id}/parcels`);
-      if (response.ok) {
-        const parcels = await response.json();
+      const response = await getFarmParcels(owner.id);
+      if (!response.error) {
+        const parcels = response.data || [];
         console.log('Fetched land owner parcels:', parcels);
-        setOwnerParcels(parcels || []);
+        setOwnerParcels(parcels);
 
         if (!parcels || parcels.length === 0) {
           console.warn('No parcels found for land owner');
@@ -537,17 +538,12 @@ const JoRsbsa: React.FC = () => {
         })),
       };
 
-      const response = await fetch("http://localhost:5000/api/rsbsa_submission", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ draftId, data: transformedData }),
-      });
+      const response = await createRsbsaSubmission({ draftId, data: transformedData });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => null);
-        throw new Error(err?.message || `HTTP ${response.status}`);
+      if (response.error) {
+        throw new Error(response.error || `HTTP error`);
       }
-      const result = await response.json();
+      const result = response.data;
       console.log("Submission response:", result);
       return result; // Should include message, submissionId, submittedAt
     } catch (error) {

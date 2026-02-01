@@ -66,7 +66,7 @@
 /* Print Section */
 .tech-masterlist-print-section {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
 }
 
 .tech-masterlist-print-button {

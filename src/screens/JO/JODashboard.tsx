@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
+// Note: Dashboard uses specialized endpoints (dashboard-stats, monthly-trends, recent-activity, available-seasons)
+// These are not yet in the API wrapper and would need to be added for full conversion
 import '../../components/layout/sidebarStyle.css';
 import '../../assets/css/jo css/JoDashboardStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -202,16 +204,6 @@ const JoDashboard: React.FC = () => {
 		setSelectedSeason(e.target.value);
 	};
 
-	// Export dashboard as PDF (placeholder)
-	const handleExportPDF = () => {
-		alert('📄 Export to PDF feature - Coming soon!\n\nThis will generate a government-compliant report with all dashboard metrics.');
-	};
-
-	// Export data as Excel
-	const handleExportExcel = () => {
-		alert('📊 Export to Excel feature - Coming soon!\n\nThis will export all distribution data to a spreadsheet format.');
-	};
-
 	// Pie chart data for Request Status Breakdown
 	// Uses percentages from API, with actual counts for tooltips
 	const pieChartData = [
@@ -375,12 +367,6 @@ const JoDashboard: React.FC = () => {
 										))}
 								</select>
 							</div>
-							<button className="export-btn" onClick={handleExportPDF}>
-								📄 Export PDF
-							</button>
-							<button className="export-btn" onClick={handleExportExcel}>
-								📊 Export Excel
-							</button>
 						</div>
 					</div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabase';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/technician css/TechRsbsaStyle.css';
 import '../../assets/css/jo css/FarmerDetailModal.css';
@@ -387,24 +388,27 @@ const TechRsbsa: React.FC = () => {
     setEditFormData({});
   };
 
-  // Fetch RSBSA records from API
+  // Fetch RSBSA records from Supabase
   const fetchRSBSARecords = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/rsbsa_submission');
+      const { data, error } = await supabase
+        .from('rsbsa_submission')
+        .select('*');
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (error) {
+        console.error('Error fetching RSBSA records:', error);
+        setError('Failed to load registered land owners data');
+        return;
       }
 
-      const data = await response.json();
-      console.log('Received RSBSA data from API:', data.length, 'records');
-      console.log('Sample record:', data[0]);
+      console.log('Received RSBSA data from Supabase:', data?.length || 0, 'records');
+      console.log('Sample record:', data?.[0]);
 
-      setRsbsaRecords(data);
+      setRsbsaRecords(data || []);
 
       // Automatically filter for registered owners only
-      const registeredOwnersData = filterRegisteredOwners(data);
+      const registeredOwnersData = filterRegisteredOwners(data || []);
       setRegisteredOwners(registeredOwnersData);
       setError(null);
     } catch (err: any) {

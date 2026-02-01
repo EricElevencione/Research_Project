@@ -143,21 +143,21 @@
 }
 
 .jo-rsbsa-register-button {
-    background: #dee2e6;
-    color: #000000;
+    background: linear-gradient(135deg, #667eea 0%, #4ba260 100%);
+    color: white;
+    font-size: 14px;
+    padding: 8px 16px;
     border: none;
-    padding: 10px 16px;
     border-radius: 8px;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease;
-    border: 1px solid black;
+    transition: all 0.3s ease;
     white-space: nowrap;
 }
 
 .jo-rsbsa-register-button:hover {
-    background: #A0C878;
-    box-shadow: 0 8px 18px rgba(29, 78, 216, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
 }
 
 .jo-rsbsa-register-button:active {

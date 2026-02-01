@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getAllocations, getDistributionRecords, getFarmerRequests, createAllocation } from '../../api';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -142,9 +143,9 @@ const JoDistribution: React.FC = () => {
     const fetchAllocations = async () => {
         setLoadingAllocations(true);
         try {
-            const response = await fetch('http://localhost:5000/api/distribution/allocations');
-            if (response.ok) {
-                const data = await response.json();
+            const response = await getAllocations();
+            if (!response.error) {
+                const data = response.data || [];
                 setAllocations(data);
                 if (data.length > 0) {
                     const mostRecent = data.sort((a: RegionalAllocation, b: RegionalAllocation) =>
@@ -163,6 +164,7 @@ const JoDistribution: React.FC = () => {
     const fetchDistributions = async () => { // Fetch distribution records based on selected season
         if (!selectedSeason) return;
         try {
+            // Note: getDistributionRecords doesn't support season filter yet, using it as base
             const response = await fetch(`http://localhost:5000/api/distribution/records/${selectedSeason}`);
             if (response.ok) {
                 const data = await response.json();
@@ -471,9 +473,9 @@ const JoDistribution: React.FC = () => {
 
         try {
             // Fetch request count for this season
-            const response = await fetch(`http://localhost:5000/api/distribution/requests/${selectedSeason}`);
-            if (response.ok) {
-                const requests = await response.json();
+            const response = await getFarmerRequests(selectedSeason);
+            if (!response.error) {
+                const requests = response.data || [];
                 setRequestCount(requests.length);
             } else {
                 setRequestCount(0);
@@ -512,15 +514,10 @@ const JoDistribution: React.FC = () => {
 
         setSavingEdit(true);
         try {
-            const response = await fetch('http://localhost:5000/api/distribution/allocations', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editFormData)
-            });
+            const response = await createAllocation(editFormData);
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update allocation');
+            if (response.error) {
+                throw new Error(response.error || 'Failed to update allocation');
             }
 
             alert('✅ Allocation updated successfully!');

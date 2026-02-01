@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getAllocations } from '../../api';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -130,9 +131,9 @@ const JoGapAnalysis: React.FC = () => {
     const fetchAllocations = async () => {
         setLoadingAllocations(true);
         try {
-            const response = await fetch('http://localhost:5000/api/distribution/allocations');
-            if (response.ok) {
-                const data = await response.json();
+            const response = await getAllocations();
+            if (!response.error) {
+                const data = response.data || [];
                 setAllocations(data);
                 // Auto-select the most recent allocation
                 if (data.length > 0) {

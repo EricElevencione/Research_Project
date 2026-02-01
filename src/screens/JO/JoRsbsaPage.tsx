@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
+import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels } from '../../api';
 import '../../assets/css/jo css/JoRsbsaPageStyle.css';
 import '../../assets/css/jo css/FarmerDetailModal.css';
 import '../../components/layout/sidebarStyle.css';
@@ -78,11 +79,11 @@ const JoRsbsaPage: React.FC = () => {
   const fetchRSBSARecords = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const response = await getRsbsaSubmissions();
+      if (response.error) {
+        throw new Error(response.error);
       }
-      const data = await response.json();
+      const data = response.data || [];
       console.log('Received data from API:', JSON.stringify(data, null, 2));
 
       // Debug ownership types
@@ -94,7 +95,7 @@ const JoRsbsaPage: React.FC = () => {
         const backendName = record.farmerName || '';
         const reformattedName = (() => {
           if (!backendName || backendName === '—' || backendName === 'N/A') return backendName;
-          const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+          const parts = backendName.split(',').map((p: string) => p.trim()).filter(Boolean);
           if (parts.length === 0) return backendName;
           if (parts.length === 1) return parts[0]; // Just last name
           // Join all parts after the first with spaces (First Middle Ext)
@@ -145,14 +146,14 @@ const JoRsbsaPage: React.FC = () => {
       setLoadingFarmerDetail(true);
 
       // Fetch basic farmer info
-      const farmerResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}`);
-      if (!farmerResponse.ok) throw new Error('Failed to fetch farmer details');
-      const farmerData = await farmerResponse.json();
+      const farmerResponse = await getRsbsaSubmissionById(farmerId);
+      if (farmerResponse.error) throw new Error('Failed to fetch farmer details');
+      const farmerData = farmerResponse.data;
 
       // Fetch parcels
-      const parcelsResponse = await fetch(`http://localhost:5000/api/rsbsa_submission/${farmerId}/parcels`);
-      if (!parcelsResponse.ok) throw new Error('Failed to fetch parcels');
-      const parcelsData = await parcelsResponse.json();
+      const parcelsResponse = await getFarmParcels(farmerId);
+      if (parcelsResponse.error) throw new Error('Failed to fetch parcels');
+      const parcelsData = parcelsResponse.data || [];
 
       // Handle both JSONB (data property) and structured column formats
       const data = farmerData.data || farmerData;
@@ -197,7 +198,7 @@ const JoRsbsaPage: React.FC = () => {
       const backendName = farmerData.farmerName || '';
       const reformattedFarmerName = (() => {
         if (!backendName || backendName === 'N/A') return 'N/A';
-        const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+        const parts = backendName.split(',').map((p: string) => p.trim()).filter(Boolean);
         if (parts.length === 0) return 'N/A';
         if (parts.length === 1) return parts[0]; // Just last name
         // Join all parts after the first with spaces (First Middle Ext)
@@ -411,11 +412,9 @@ const JoRsbsaPage: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="jo-rsbsa-register-button">
-                <button onClick={() => navigate('/jo-rsbsa')}>
-                  Register Farmer
-                </button>
-              </div>
+              <button className="jo-rsbsa-register-button" onClick={() => navigate('/jo-rsbsa')}>
+                Register Farmer
+              </button>
             </div>
             {loading ? (
               <div className="jo-rsbsa-loading-container">
