@@ -162,14 +162,16 @@ const JoDashboard: React.FC = () => {
 				// Using empty/default data
 				console.log('Dashboard data: endpoints not available in Supabase, using defaults');
 
-				// Set default empty stats with full structure
+				// Set default empty stats with full structure matching DashboardStats interface
 				setDashboardStats({
-					totalFarmers: 0,
-					totalDistributed: 0,
-					pendingRequests: 0,
-					completionRate: 0,
+					currentSeason: selectedSeason || '',
+					seasonEndDate: '',
+					farmers: {
+						total: 0,
+						active: 0
+					},
 					requests: {
-						current: { total: 0, pending: 0, approved: 0, rejected: 0, distributed: 0 },
+						currentSeason: { total: 0, pending: 0, approved: 0, rejected: 0, distributed: 0 },
 						allTime: { total: 0, pending: 0, approved: 0, distributed: 0 },
 						statusBreakdown: { approved: 0, pending: 0, rejected: 0, distributed: 0 }
 					},
