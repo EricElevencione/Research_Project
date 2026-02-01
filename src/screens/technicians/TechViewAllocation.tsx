@@ -73,7 +73,7 @@ const TechViewAllocation: React.FC = () => {
 
             // Fetch allocation details using API wrapper
             const allocationsResponse = await getAllocations();
-            
+
             if (allocationsResponse.error) {
                 console.error('Error fetching allocations:', allocationsResponse.error);
                 throw new Error('Failed to fetch allocations');

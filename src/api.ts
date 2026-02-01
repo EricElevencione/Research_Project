@@ -3,7 +3,8 @@ import { supabase } from './supabase';
 /**
  * API Wrapper - Routes all API calls to Supabase
  * This replaces localhost:5000 backend calls with Supabase queries
- * Version: 2.0 - Fixed data transformation for Supabase column names
+ * Version: 2.1 - Force redeploy - All screens now use API wrapper
+ * Build: 20260201
  */
 
 // Types
