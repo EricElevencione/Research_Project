@@ -79,7 +79,7 @@ const FarmParcelsList: React.FC = () => {
               parcels.map((parcel) => {
                 const farmerName = `${parcel["FIRST NAME"]} ${parcel["MIDDLE NAME"]} ${parcel["LAST NAME"]}`.trim();
                 const location = `${parcel.farm_location_barangay}, ${parcel.farm_location_municipality}`;
-                
+
                 const ownershipTypes = [];
                 if (parcel.ownership_type_registered_owner) ownershipTypes.push('Registered Owner');
                 if (parcel.ownership_type_tenant) ownershipTypes.push('Tenant');

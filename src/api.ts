@@ -19,6 +19,75 @@ const createResponse = <T>(data: T | null, error: string | null, status: number)
     status
 });
 
+// Helper to transform Supabase rsbsa_submission record to frontend format
+const transformRsbsaRecord = (item: any) => {
+    // Get name parts from columns with spaces (Supabase format)
+    const lastName = item['LAST NAME'] || '';
+    const firstName = item['FIRST NAME'] || '';
+    const middleName = item['MIDDLE NAME'] || '';
+    const extName = item['EXT NAME'] || '';
+
+    // Build farmer name in "LastName, FirstName MiddleName ExtName" format
+    let farmerName = lastName;
+    if (firstName) farmerName += `, ${firstName}`;
+    if (middleName) farmerName += ` ${middleName}`;
+    if (extName) farmerName += ` ${extName}`;
+
+    // Get address/location fields
+    const barangay = item['BARANGAY'] || '';
+    const municipality = item['MUNICIPALITY'] || 'Dumangas';
+    const farmLocation = item['FARM LOCATION'] || barangay || '';
+
+    // Build farmer address
+    const farmerAddress = [barangay, municipality, 'Iloilo'].filter(Boolean).join(', ');
+
+    // Get other fields
+    const parcelArea = item['PARCEL AREA'] || item['TOTAL FARM AREA'] || '';
+    const status = item.status || 'Submitted';
+    const referenceNumber = item['FFRS_CODE'] || `RSBSA-${item.id}`;
+    const dateSubmitted = item.submitted_at || item.created_at || '';
+
+    // Get ownership type
+    const ownershipType = {
+        registeredOwner: item['OWNERSHIP_TYPE_REGISTERED_OWNER'] || false,
+        tenant: item['OWNERSHIP_TYPE_TENANT'] || false,
+        lessee: item['OWNERSHIP_TYPE_LESSEE'] || false
+    };
+
+    return {
+        id: item.id,
+        referenceNumber,
+        farmerName: farmerName || 'N/A',
+        firstName,
+        middleName,
+        lastName,
+        extName,
+        farmerAddress,
+        farmLocation,
+        parcelArea: String(parcelArea),
+        dateSubmitted,
+        status,
+        landParcel: farmLocation,
+        ownershipType,
+        gender: item['GENDER'] || '',
+        birthdate: item['BIRTHDATE'] || '',
+        age: item.age || null,
+        mainLivelihood: item['MAIN LIVELIHOOD'] || '',
+        totalFarmArea: item['TOTAL FARM AREA'] || 0,
+        // Farming activities
+        farmerRice: item['FARMER_RICE'] || false,
+        farmerCorn: item['FARMER_CORN'] || false,
+        farmerOtherCrops: item['FARMER_OTHER_CROPS'] || false,
+        farmerOtherCropsText: item['FARMER_OTHER_CROPS_TEXT'] || '',
+        farmerLivestock: item['FARMER_LIVESTOCK'] || false,
+        farmerLivestockText: item['FARMER_LIVESTOCK_TEXT'] || '',
+        farmerPoultry: item['FARMER_POULTRY'] || false,
+        farmerPoultryText: item['FARMER_POULTRY_TEXT'] || '',
+        // Keep raw data for debugging
+        _raw: item
+    };
+};
+
 // ==================== RSBSA SUBMISSION ====================
 
 export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
@@ -27,7 +96,16 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
         .select('*');
 
     if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+    
+    // Transform all records
+    const transformedData = (data || []).map(transformRsbsaRecord);
+    
+    console.log('📊 Transformed RSBSA data:', transformedData.length, 'records');
+    if (transformedData.length > 0) {
+        console.log('📝 Sample transformed record:', transformedData[0]);
+    }
+    
+    return createResponse(transformedData, null, 200);
 };
 
 export const getRsbsaSubmissionById = async (id: string | number): Promise<ApiResponse> => {
@@ -38,7 +116,11 @@ export const getRsbsaSubmissionById = async (id: string | number): Promise<ApiRe
         .single();
 
     if (error) return createResponse(null, error.message, 404);
-    return createResponse(data, null, 200);
+    
+    // Transform the single record
+    const transformedData = transformRsbsaRecord(data);
+    
+    return createResponse(transformedData, null, 200);
 };
 
 export const createRsbsaSubmission = async (submissionData: any): Promise<ApiResponse> => {

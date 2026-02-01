@@ -79,7 +79,7 @@ const FarmerParcelsManager: React.FC = () => {
   return (
     <div className="farmer-parcels-manager">
       <h2>Farmer Parcels Management</h2>
-      
+
       {/* Farmers Summary Table */}
       <div className="farmers-summary">
         <h3>All Farmers Summary</h3>
@@ -109,7 +109,7 @@ const FarmerParcelsManager: React.FC = () => {
                     <td>{farmer.total_farm_area.toFixed(2)}</td>
                     <td>{submittedDate}</td>
                     <td>
-                      <button 
+                      <button
                         onClick={() => fetchFarmerParcels(farmer)}
                         className="btn-view-parcels"
                       >
@@ -128,10 +128,10 @@ const FarmerParcelsManager: React.FC = () => {
       {selectedFarmer && (
         <div className="farmer-parcels-detail">
           <h3>
-            Parcels for {selectedFarmer["FIRST NAME"]} {selectedFarmer["LAST NAME"]} 
+            Parcels for {selectedFarmer["FIRST NAME"]} {selectedFarmer["LAST NAME"]}
             ({farmerParcels.length} parcels)
           </h3>
-          
+
           {loading ? (
             <div>Loading parcels...</div>
           ) : (
@@ -156,7 +156,7 @@ const FarmerParcelsManager: React.FC = () => {
                   ) : (
                     farmerParcels.map((parcel) => {
                       const location = `${parcel.farm_location_barangay}, ${parcel.farm_location_municipality}`;
-                      
+
                       const ownershipTypes = [];
                       if (parcel.ownership_type_registered_owner) ownershipTypes.push('Registered Owner');
                       if (parcel.ownership_type_tenant) ownershipTypes.push('Tenant');

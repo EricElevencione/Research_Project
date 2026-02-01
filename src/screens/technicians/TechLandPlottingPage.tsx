@@ -144,7 +144,7 @@ const LandPlottingPage: React.FC = () => {
             // If the id exists in the backend, use PUT, else POST
             // For simplicity, check if the id exists in shapes state (could be improved with backend check)
             const isExisting = shapes.some(s => s.id === shapeToSave.id && s !== shapeToSave);
-            const response = isExisting 
+            const response = isExisting
                 ? await updateLandPlot(shapeToSave.id, landPlotData)
                 : await createLandPlot(landPlotData);
 
