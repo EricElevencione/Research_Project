@@ -9,7 +9,6 @@ import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
-import FarmerIcon from '../../assets/images/farmer (1).png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 
 interface RSBSARecord {
@@ -146,7 +145,7 @@ const TechMasterlist: React.FC = () => {
       const backendName = farmerData.farmerName || '';
       const reformattedFarmerName = (() => {
         if (!backendName || backendName === 'N/A') return 'N/A';
-        const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+        const parts = backendName.split(',').map((p: string) => p.trim()).filter(Boolean);
         if (parts.length === 0) return 'N/A';
         if (parts.length === 1) return parts[0];
         const lastName = parts[0];

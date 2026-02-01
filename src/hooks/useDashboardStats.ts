@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getRsbsaSubmissions } from '../api';
 
 interface BarangayStats {
     name: string;
@@ -26,10 +27,10 @@ export const useDashboardStats = (): DashboardStats => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/rsbsa_submission');
-                if (!response.ok) throw new Error('Failed to fetch data');
+                const response = await getRsbsaSubmissions();
+                if (response.error) throw new Error('Failed to fetch data');
 
-                const data = await response.json();
+                const data = response.data || [];
 
                 // Count active farmers and landowners by barangay
                 const barangayMap = new Map<string, { farmers: number; landowners: number }>();

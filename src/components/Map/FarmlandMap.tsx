@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FeatureCollection } from 'geojson'; // Import FeatureCollection and Feature types
+import { getLandPlots } from '../../api';
 
 // Fix for default marker icons in Leaflet with React
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -68,14 +69,12 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
         const fetchFarmlandRecords = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('/api/land-plots');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const contentType = response.headers.get('content-type') || '';
-                if (contentType.includes('application/json')) {
-                    const data = await response.json();
+                const response = await getLandPlots();
+                if (!response.error) {
+                    const data = response.data || [];
                     setFarmlandRecords(Array.isArray(data) ? data : []);
                 } else {
-                    console.warn('Non-JSON response for /api/land-plots; proceeding with empty records');
+                    console.warn('Error fetching land plots:', response.error);
                     setFarmlandRecords([]);
                 }
             } catch (err: any) {
