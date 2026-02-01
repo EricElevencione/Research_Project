@@ -162,12 +162,24 @@ const JoDashboard: React.FC = () => {
 				// Using empty/default data
 				console.log('Dashboard data: endpoints not available in Supabase, using defaults');
 
-				// Set default empty stats
+				// Set default empty stats with full structure
 				setDashboardStats({
 					totalFarmers: 0,
 					totalDistributed: 0,
 					pendingRequests: 0,
-					completionRate: 0
+					completionRate: 0,
+					requests: {
+						current: { total: 0, pending: 0, approved: 0, rejected: 0, distributed: 0 },
+						allTime: { total: 0, pending: 0, approved: 0, distributed: 0 },
+						statusBreakdown: { approved: 0, pending: 0, rejected: 0, distributed: 0 }
+					},
+					distribution: {
+						fertilizer: { allocated: 0, distributed: 0, remaining: 0, progress: 0 },
+						seeds: { allocated: 0, distributed: 0, remaining: 0, progress: 0 },
+						overall: { progress: 0, totalAllocated: 0, totalDistributed: 0 }
+					},
+					coverage: { totalBarangays: 0, barangaysWithRequests: 0 },
+					processingTime: { averageDays: '0' }
 				});
 
 				// Set empty trends
