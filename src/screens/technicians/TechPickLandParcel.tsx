@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabase';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import '../../components/layout/sidebarStyle.css';
 import '../../assets/css/technician css/PickLandStyle.css';

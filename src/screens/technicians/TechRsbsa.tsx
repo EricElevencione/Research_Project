@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabase';
 import { useNavigate, useLocation } from "react-router-dom";
-import { getRsbsaSubmissionById, getFarmParcels, updateRsbsaSubmission } from '../../api';
+import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels, updateRsbsaSubmission } from '../../api';
 import '../../assets/css/technician css/TechRsbsaStyle.css';
 import '../../assets/css/jo css/FarmerDetailModal.css';
 import '../../components/layout/sidebarStyle.css';
@@ -386,15 +385,15 @@ const TechRsbsa: React.FC = () => {
   const fetchRSBSARecords = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('rsbsa_submission')
-        .select('*');
+      const response = await getRsbsaSubmissions();
 
-      if (error) {
-        console.error('Error fetching RSBSA records:', error);
+      if (response.error) {
+        console.error('Error fetching RSBSA records:', response.error);
         setError('Failed to load registered land owners data');
         return;
       }
+
+      const data = response.data || [];
 
       console.log('Received RSBSA data from Supabase:', data?.length || 0, 'records');
       console.log('Sample record:', data?.[0]);

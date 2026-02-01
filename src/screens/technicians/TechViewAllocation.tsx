@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabase';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getAllocations, getFarmerRequests } from '../../api';
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -71,16 +71,15 @@ const TechViewAllocation: React.FC = () => {
 
             console.log('🔍 Fetching allocation with ID:', allocationId);
 
-            // Fetch allocation details
-            const { data: allocations, error: allocationError } = await supabase
-                .from('regional_allocations')
-                .select('*');
-
-            if (allocationError) {
-                console.error('Error fetching allocations:', allocationError);
+            // Fetch allocation details using API wrapper
+            const allocationsResponse = await getAllocations();
+            
+            if (allocationsResponse.error) {
+                console.error('Error fetching allocations:', allocationsResponse.error);
                 throw new Error('Failed to fetch allocations');
             }
 
+            const allocations = allocationsResponse.data;
             console.log('📦 All allocations:', allocations);
 
             const currentAllocation = allocations.find((a: any) => a.id === parseInt(allocationId || '0'));
@@ -91,16 +90,13 @@ const TechViewAllocation: React.FC = () => {
             }
             setAllocation(currentAllocation);
 
-            // Fetch farmer requests for this season
-            const { data: requestsData, error: requestsError } = await supabase
-                .from('farmer_requests')
-                .select('*')
-                .eq('season', currentAllocation.season);
+            // Fetch farmer requests for this season using API wrapper
+            const requestsResponse = await getFarmerRequests(currentAllocation.season);
 
-            if (requestsError) {
-                console.error('Error fetching requests:', requestsError);
+            if (requestsResponse.error) {
+                console.error('Error fetching requests:', requestsResponse.error);
             } else {
-                setRequests(requestsData || []);
+                setRequests(requestsResponse.data || []);
             }
         } catch (err: any) {
             setError(err.message);
