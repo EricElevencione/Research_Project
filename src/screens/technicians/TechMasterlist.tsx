@@ -815,7 +815,7 @@ const TechMasterlist: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                )}
+                )
 
                 {printFilter.type === 'barangay' && (
                   <div className="tech-masterlist-print-filter-group">
