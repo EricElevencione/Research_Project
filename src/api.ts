@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 /**
  * API Wrapper - Routes all API calls to Supabase
  * This replaces localhost:5000 backend calls with Supabase queries
+ * Version: 2.0 - Fixed data transformation for Supabase column names
  */
 
 // Types
@@ -96,15 +97,15 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
         .select('*');
 
     if (error) return createResponse(null, error.message, 500);
-    
+
     // Transform all records
     const transformedData = (data || []).map(transformRsbsaRecord);
-    
+
     console.log('📊 Transformed RSBSA data:', transformedData.length, 'records');
     if (transformedData.length > 0) {
         console.log('📝 Sample transformed record:', transformedData[0]);
     }
-    
+
     return createResponse(transformedData, null, 200);
 };
 
@@ -116,10 +117,10 @@ export const getRsbsaSubmissionById = async (id: string | number): Promise<ApiRe
         .single();
 
     if (error) return createResponse(null, error.message, 404);
-    
+
     // Transform the single record
     const transformedData = transformRsbsaRecord(data);
-    
+
     return createResponse(transformedData, null, 200);
 };
 
