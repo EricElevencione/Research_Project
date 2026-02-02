@@ -126,14 +126,63 @@ export const getRsbsaSubmissionById = async (id: string | number): Promise<ApiRe
 };
 
 export const createRsbsaSubmission = async (submissionData: any): Promise<ApiResponse> => {
+    // Transform camelCase form data to Supabase column names (UPPERCASE with spaces)
+    const formData = submissionData.data || submissionData;
+    
+    const transformedData: Record<string, any> = {
+        "LAST NAME": formData.lastName || formData.surname || '',
+        "FIRST NAME": formData.firstName || '',
+        "MIDDLE NAME": formData.middleName || '',
+        "EXT NAME": formData.extName || formData.extensionName || '',
+        "BARANGAY": formData.barangay || formData.address?.barangay || '',
+        "MUNICIPALITY": formData.municipality || formData.address?.municipality || 'Dumangas',
+        "GENDER": formData.gender || formData.sex || '',
+        "BIRTHDATE": formData.dateOfBirth || formData.birthdate || null,
+        "MAIN LIVELIHOOD": formData.mainLivelihood || '',
+        "TOTAL FARM AREA": formData.totalFarmArea || 0,
+        "FARM LOCATION": formData.farmLocation || formData.barangay || '',
+        "PARCEL AREA": formData.parcelArea || formData.totalFarmArea || 0,
+        "OWNERSHIP_TYPE_REGISTERED_OWNER": formData.ownershipTypeRegisteredOwner || false,
+        "OWNERSHIP_TYPE_TENANT": formData.ownershipTypeTenant || false,
+        "OWNERSHIP_TYPE_LESSEE": formData.ownershipTypeLessee || false,
+        "FARMER_RICE": formData.farmerRice || false,
+        "FARMER_CORN": formData.farmerCorn || false,
+        "FARMER_OTHER_CROPS": formData.farmerOtherCrops || false,
+        "FARMER_OTHER_CROPS_TEXT": formData.farmerOtherCropsText || '',
+        "FARMER_LIVESTOCK": formData.farmerLivestock || false,
+        "FARMER_LIVESTOCK_TEXT": formData.farmerLivestockText || '',
+        "FARMER_POULTRY": formData.farmerPoultry || false,
+        "FARMER_POULTRY_TEXT": formData.farmerPoultryText || '',
+        "status": 'Submitted'
+    };
+    
+    // Remove null/undefined values
+    Object.keys(transformedData).forEach(key => {
+        if (transformedData[key] === undefined || transformedData[key] === null) {
+            delete transformedData[key];
+        }
+    });
+
+    console.log('Creating RSBSA submission with data:', transformedData);
+    
     const { data, error } = await supabase
         .from('rsbsa_submission')
-        .insert(submissionData)
+        .insert(transformedData)
         .select()
         .single();
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 201);
+    if (error) {
+        console.error('Supabase insert error:', error);
+        return createResponse(null, error.message, 500);
+    }
+    
+    // Return in the format the frontend expects
+    return createResponse({
+        message: 'Submission successful',
+        submissionId: data.id,
+        submittedAt: data.created_at || new Date().toISOString(),
+        ...data
+    }, null, 201);
 };
 
 export const updateRsbsaSubmission = async (id: string | number, updateData: any): Promise<ApiResponse> => {
