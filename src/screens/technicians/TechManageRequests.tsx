@@ -84,6 +84,22 @@ const TechManageRequests: React.FC = () => {
     const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
     const [expandedFarmerInModal, setExpandedFarmerInModal] = useState<number | null>(null);
 
+    // Toast notification state
+    const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' }>({
+        show: false,
+        message: '',
+        type: 'success'
+    });
+
+    // Show toast notification
+    const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+        setToast({ show: true, message, type });
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            setToast(prev => ({ ...prev, show: false }));
+        }, 3000);
+    };
+
     const isActive = (path: string) => location.pathname === path;
 
     const handleLogout = () => {
@@ -268,14 +284,14 @@ const TechManageRequests: React.FC = () => {
                 if (newStatus === 'approved') {
                     await createDistributionLog(id);
                 }
-                alert(`✅ Status updated to ${newStatus}`);
+                showToast(`Status updated to ${newStatus}`, newStatus === 'approved' ? 'success' : newStatus === 'rejected' ? 'warning' : 'success');
                 fetchRequests();
             } else {
-                alert('❌ Failed to update status');
+                showToast('Failed to update status', 'error');
             }
         } catch (error) {
             console.error('Error updating status:', error);
-            alert('❌ Error updating status');
+            showToast('Error updating status', 'error');
         }
     };
 
@@ -1465,6 +1481,26 @@ const TechManageRequests: React.FC = () => {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className={`tech-toast-notification tech-toast-${toast.type}`}>
+                    <div className="tech-toast-icon">
+                        {toast.type === 'success' && '✅'}
+                        {toast.type === 'error' && '❌'}
+                        {toast.type === 'warning' && '⚠️'}
+                    </div>
+                    <div className="tech-toast-content">
+                        <span className="tech-toast-message">{toast.message}</span>
+                    </div>
+                    <button
+                        className="tech-toast-close"
+                        onClick={() => setToast(prev => ({ ...prev, show: false }))}
+                    >
+                        ×
+                    </button>
                 </div>
             )}
         </div>

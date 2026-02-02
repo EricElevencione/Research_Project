@@ -33,6 +33,23 @@ const TechCreateAllocation: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Toast notification state
+    const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' }>({
+        show: false,
+        message: '',
+        type: 'success'
+    });
+
+    // Show toast notification
+    const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success', duration: number = 3000) => {
+        setToast({ show: true, message, type });
+        if (duration > 0) {
+            setTimeout(() => {
+                setToast(prev => ({ ...prev, show: false }));
+            }, duration);
+        }
+    };
+
     // Function to determine season based on date
     const determineSeasonFromDate = (dateString: string): string => {
         const date = new Date(dateString);
@@ -108,12 +125,15 @@ const TechCreateAllocation: React.FC = () => {
                 throw new Error('No allocation ID returned from server');
             }
 
-            // Success - navigate to add farmer request page
-            alert('✅ Regional allocation created successfully! Now add farmers to this allocation.');
+            // Success - show toast and navigate to add farmer request page
+            showToast('Regional allocation created successfully!', 'success', 2500);
             console.log('🔗 Navigating to:', `/technician-add-farmer-request/${allocationId}`);
-            navigate(`/technician-add-farmer-request/${allocationId}`);
+            setTimeout(() => {
+                navigate(`/technician-add-farmer-request/${allocationId}`);
+            }, 1500);
         } catch (err: any) {
             setError(err.message || 'Failed to save allocation');
+            showToast(err.message || 'Failed to save allocation', 'error');
         } finally {
             setLoading(false);
         }
@@ -441,6 +461,26 @@ const TechCreateAllocation: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className={`tech-toast-notification tech-toast-${toast.type}`}>
+                    <div className="tech-toast-icon">
+                        {toast.type === 'success' && '✅'}
+                        {toast.type === 'error' && '❌'}
+                        {toast.type === 'warning' && '⚠️'}
+                    </div>
+                    <div className="tech-toast-content">
+                        <span className="tech-toast-message">{toast.message}</span>
+                    </div>
+                    <button
+                        className="tech-toast-close"
+                        onClick={() => setToast(prev => ({ ...prev, show: false }))}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

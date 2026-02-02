@@ -90,6 +90,326 @@ const transformRsbsaRecord = (item: any) => {
     };
 };
 
+// ==================== DASHBOARD STATS ====================
+
+// Get comprehensive dashboard statistics using Supabase
+export const getDashboardStats = async (season?: string): Promise<ApiResponse> => {
+    try {
+        // Calculate current season if not provided
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
+        const defaultSeason = month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
+        const currentSeason = season || defaultSeason;
+
+        // Get total farmers count from rsbsa_submission
+        const { data: farmersData, error: farmersError } = await supabase
+            .from('rsbsa_submission')
+            .select('id, status, OWNERSHIP_TYPE_TENANT, OWNERSHIP_TYPE_LESSEE', { count: 'exact' });
+
+        if (farmersError) {
+            console.error('Error fetching farmers:', farmersError);
+        }
+
+        const totalFarmers = farmersData?.length || 0;
+        const activeFarmers = farmersData?.filter(f =>
+            f.status?.toLowerCase() === 'active farmer' ||
+            f.status?.toLowerCase() === 'active'
+        ).length || 0;
+
+        // Count lessee and tenant farmers
+        const lesseeTenantCount = farmersData?.filter(f =>
+            f.OWNERSHIP_TYPE_LESSEE === true || f.OWNERSHIP_TYPE_TENANT === true
+        ).length || 0;
+
+        // Get farmer requests for current season
+        const { data: requestsData, error: requestsError } = await supabase
+            .from('farmer_requests')
+            .select('id, status, season');
+
+        if (requestsError) {
+            console.error('Error fetching requests:', requestsError);
+        }
+
+        const seasonRequests = requestsData?.filter(r => r.season === currentSeason) || [];
+        const allRequests = requestsData || [];
+
+        const currentSeasonStats = {
+            total: seasonRequests.length,
+            pending: seasonRequests.filter(r => r.status === 'pending').length,
+            approved: seasonRequests.filter(r => r.status === 'approved').length,
+            rejected: seasonRequests.filter(r => r.status === 'rejected').length,
+            distributed: seasonRequests.filter(r => r.status === 'distributed').length
+        };
+
+        const allTimeStats = {
+            total: allRequests.length,
+            pending: allRequests.filter(r => r.status === 'pending').length,
+            approved: allRequests.filter(r => r.status === 'approved').length,
+            distributed: allRequests.filter(r => r.status === 'distributed').length
+        };
+
+        // Calculate percentages for status breakdown
+        const totalRequests = currentSeasonStats.total || 1; // Avoid division by zero
+        const statusBreakdown = {
+            approved: Math.round((currentSeasonStats.approved / totalRequests) * 100),
+            pending: Math.round((currentSeasonStats.pending / totalRequests) * 100),
+            rejected: Math.round((currentSeasonStats.rejected / totalRequests) * 100),
+            distributed: Math.round((currentSeasonStats.distributed / totalRequests) * 100)
+        };
+
+        // Get regional allocations for current season
+        const { data: allocationData } = await supabase
+            .from('regional_allocations')
+            .select('*')
+            .eq('season', currentSeason)
+            .single();
+
+        const fertilizerAllocated = allocationData ?
+            (allocationData.urea_46_0_0_bags || 0) +
+            (allocationData.complete_14_14_14_bags || 0) +
+            (allocationData.ammonium_sulfate_21_0_0_bags || 0) +
+            (allocationData.muriate_potash_0_0_60_bags || 0) : 0;
+
+        const seedsAllocated = allocationData ?
+            (allocationData.jackpot_kg || 0) +
+            (allocationData.us88_kg || 0) +
+            (allocationData.th82_kg || 0) +
+            (allocationData.rh9000_kg || 0) +
+            (allocationData.lumping143_kg || 0) +
+            (allocationData.lp296_kg || 0) : 0;
+
+        // Get distribution records filtered by season through farmer_requests
+        // First get the request IDs for the current season
+        const seasonRequestIds = seasonRequests.map(r => r.id);
+
+        // Then get distribution records only for those requests
+        let totalFertilizerDistributed = 0;
+        let totalSeedsDistributed = 0;
+
+        if (seasonRequestIds.length > 0) {
+            const { data: distributionData } = await supabase
+                .from('distribution_records')
+                .select('fertilizer_bags_given, seed_kg_given, request_id')
+                .in('request_id', seasonRequestIds);
+
+            totalFertilizerDistributed = distributionData?.reduce((sum, d) => sum + (d.fertilizer_bags_given || 0), 0) || 0;
+            totalSeedsDistributed = distributionData?.reduce((sum, d) => sum + (d.seed_kg_given || 0), 0) || 0;
+        }
+
+        // Calculate progress
+        const fertilizerProgress = fertilizerAllocated > 0 ? Math.round((totalFertilizerDistributed / fertilizerAllocated) * 100) : 0;
+        const seedsProgress = seedsAllocated > 0 ? Math.round((totalSeedsDistributed / seedsAllocated) * 100) : 0;
+        const totalAllocated = fertilizerAllocated + seedsAllocated;
+        const totalDistributed = totalFertilizerDistributed + totalSeedsDistributed;
+        const overallProgress = totalAllocated > 0 ? Math.round((totalDistributed / totalAllocated) * 100) : 0;
+
+        // Get unique barangays
+        const { data: barangayData } = await supabase
+            .from('rsbsa_submission')
+            .select('BARANGAY');
+
+        const uniqueBarangays = new Set(barangayData?.map(b => b.BARANGAY).filter(Boolean));
+
+        const dashboardStats = {
+            currentSeason,
+            seasonEndDate: month >= 5 && month <= 10 ? `October 31, ${year}` : `April 30, ${year + (month <= 4 ? 0 : 1)}`,
+            farmers: {
+                total: totalFarmers,
+                active: activeFarmers,
+                lessee: lesseeTenantCount
+            },
+            requests: {
+                currentSeason: currentSeasonStats,
+                allTime: allTimeStats,
+                statusBreakdown
+            },
+            distribution: {
+                fertilizer: {
+                    allocated: fertilizerAllocated,
+                    distributed: totalFertilizerDistributed,
+                    remaining: Math.max(0, fertilizerAllocated - totalFertilizerDistributed),
+                    progress: fertilizerProgress
+                },
+                seeds: {
+                    allocated: seedsAllocated,
+                    distributed: totalSeedsDistributed,
+                    remaining: Math.max(0, seedsAllocated - totalSeedsDistributed),
+                    progress: seedsProgress
+                },
+                overall: {
+                    progress: overallProgress,
+                    totalAllocated,
+                    totalDistributed
+                }
+            },
+            coverage: {
+                totalBarangays: uniqueBarangays.size,
+                barangaysWithRequests: uniqueBarangays.size
+            },
+            processingTime: {
+                averageDays: 'N/A'
+            }
+        };
+
+        console.log('📊 Dashboard stats from Supabase:', dashboardStats);
+        return createResponse(dashboardStats, null, 200);
+    } catch (error: any) {
+        console.error('Error fetching dashboard stats:', error);
+        return createResponse(null, error.message, 500);
+    }
+};
+
+// Get monthly distribution trends using Supabase
+export const getMonthlyTrends = async (_season?: string): Promise<ApiResponse> => {
+    try {
+        const { data: distributionData, error } = await supabase
+            .from('distribution_records')
+            .select('distribution_date, fertilizer_bags_given, seed_kg_given')
+            .order('distribution_date', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching distribution records:', error);
+            return createResponse([], null, 200);
+        }
+
+        // Group by month
+        const monthlyData: { [key: string]: { fertilizer: number; seeds: number; count: number } } = {};
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        (distributionData || []).forEach(record => {
+            if (record.distribution_date) {
+                const date = new Date(record.distribution_date);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { fertilizer: 0, seeds: 0, count: 0 };
+                }
+
+                monthlyData[monthKey].fertilizer += record.fertilizer_bags_given || 0;
+                monthlyData[monthKey].seeds += record.seed_kg_given || 0;
+                monthlyData[monthKey].count += 1;
+            }
+        });
+
+        // Convert to array and format
+        const trends = Object.entries(monthlyData)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .slice(-12) // Last 12 months
+            .map(([month, data]) => {
+                const [_year, monthNum] = month.split('-');
+                return {
+                    month,
+                    monthName: monthNames[parseInt(monthNum) - 1],
+                    fertilizer: data.fertilizer,
+                    seeds: data.seeds,
+                    count: data.count
+                };
+            });
+
+        return createResponse(trends, null, 200);
+    } catch (error: any) {
+        console.error('Error fetching monthly trends:', error);
+        return createResponse([], null, 200);
+    }
+};
+
+// Get recent activity using Supabase
+export const getRecentActivity = async (limit: number = 5): Promise<ApiResponse> => {
+    try {
+        const { data, error } = await supabase
+            .from('distribution_records')
+            .select(`
+                id,
+                fertilizer_type,
+                fertilizer_bags_given,
+                seed_type,
+                seed_kg_given,
+                distribution_date,
+                verified_by,
+                created_at,
+                farmer_requests (
+                    farmer_name,
+                    barangay
+                )
+            `)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('Error fetching recent activity:', error);
+            return createResponse([], null, 200);
+        }
+
+        // Flatten the data to include farmer_name and barangay at the top level
+        // farmer_requests is returned as an object (single record) since request_id is a foreign key
+        const flattenedData = (data || []).map((record: any) => {
+            const farmerRequest = record.farmer_requests;
+            return {
+                id: record.id,
+                farmer_name: farmerRequest?.farmer_name || 'Unknown',
+                barangay: farmerRequest?.barangay || 'Unknown',
+                fertilizer_type: record.fertilizer_type,
+                fertilizer_bags_given: record.fertilizer_bags_given,
+                seed_type: record.seed_type,
+                seed_kg_given: record.seed_kg_given,
+                distribution_date: record.distribution_date,
+                verified_by: record.verified_by,
+                created_at: record.created_at
+            };
+        });
+
+        return createResponse(flattenedData, null, 200);
+    } catch (error: any) {
+        console.error('Error fetching recent activity:', error);
+        return createResponse([], null, 200);
+    }
+};
+
+// Get available seasons using Supabase
+export const getAvailableSeasons = async (): Promise<ApiResponse> => {
+    try {
+        const { data, error } = await supabase
+            .from('regional_allocations')
+            .select('season, season_start_date, season_end_date, status')
+            .order('season_start_date', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching seasons:', error);
+            // Return default season on error
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const year = now.getFullYear();
+            const defaultSeason = month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
+            return createResponse([{
+                season: defaultSeason,
+                season_start_date: '',
+                season_end_date: '',
+                status: 'active'
+            }], null, 200);
+        }
+
+        // If no allocations exist, return current season
+        if (!data || data.length === 0) {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const year = now.getFullYear();
+            const defaultSeason = month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
+            return createResponse([{
+                season: defaultSeason,
+                season_start_date: '',
+                season_end_date: '',
+                status: 'active'
+            }], null, 200);
+        }
+
+        return createResponse(data, null, 200);
+    } catch (error: any) {
+        console.error('Error fetching available seasons:', error);
+        return createResponse(null, error.message, 500);
+    }
+};
+
 // ==================== RSBSA SUBMISSION ====================
 
 export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
@@ -128,7 +448,7 @@ export const getRsbsaSubmissionById = async (id: string | number): Promise<ApiRe
 export const createRsbsaSubmission = async (submissionData: any): Promise<ApiResponse> => {
     // Transform camelCase form data to Supabase column names (UPPERCASE with spaces)
     const formData = submissionData.data || submissionData;
-    
+
     const transformedData: Record<string, any> = {
         "LAST NAME": formData.lastName || formData.surname || '',
         "FIRST NAME": formData.firstName || '',
@@ -155,7 +475,7 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
         "FARMER_POULTRY_TEXT": formData.farmerPoultryText || '',
         "status": 'Submitted'
     };
-    
+
     // Remove null/undefined values
     Object.keys(transformedData).forEach(key => {
         if (transformedData[key] === undefined || transformedData[key] === null) {
@@ -164,7 +484,7 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
     });
 
     console.log('Creating RSBSA submission with data:', transformedData);
-    
+
     const { data, error } = await supabase
         .from('rsbsa_submission')
         .insert(transformedData)
@@ -175,7 +495,7 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
         console.error('Supabase insert error:', error);
         return createResponse(null, error.message, 500);
     }
-    
+
     // Return in the format the frontend expects
     return createResponse({
         message: 'Submission successful',
@@ -663,6 +983,12 @@ export default {
     // Users
     getUsers,
     getUserById,
+
+    // Dashboard
+    getDashboardStats,
+    getMonthlyTrends,
+    getRecentActivity,
+    getAvailableSeasons,
 
     // Universal fetch
     apiFetch

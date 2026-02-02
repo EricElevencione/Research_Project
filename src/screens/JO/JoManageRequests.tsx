@@ -1173,20 +1173,6 @@ const JoManageRequests: React.FC = () => {
                                                                     {request.status === 'pending' && (
                                                                         <>
                                                                             <button
-                                                                                onClick={() => handleStatusChange(request.id, 'approved')}
-                                                                                style={{
-                                                                                    padding: '6px 12px',
-                                                                                    background: '#10b981',
-                                                                                    color: 'white',
-                                                                                    border: 'none',
-                                                                                    borderRadius: '4px',
-                                                                                    cursor: 'pointer',
-                                                                                    fontSize: '12px'
-                                                                                }}
-                                                                            >
-                                                                                ✓ Approve
-                                                                            </button>
-                                                                            <button
                                                                                 onClick={() => handleEdit(request)}
                                                                                 style={{
                                                                                     padding: '6px 12px',
@@ -1199,20 +1185,6 @@ const JoManageRequests: React.FC = () => {
                                                                                 }}
                                                                             >
                                                                                 ✏️ Edit
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => handleStatusChange(request.id, 'rejected')}
-                                                                                style={{
-                                                                                    padding: '6px 12px',
-                                                                                    background: '#ef4444',
-                                                                                    color: 'white',
-                                                                                    border: 'none',
-                                                                                    borderRadius: '4px',
-                                                                                    cursor: 'pointer',
-                                                                                    fontSize: '12px'
-                                                                                }}
-                                                                            >
-                                                                                ✕ Reject
                                                                             </button>
                                                                         </>
                                                                     )}
@@ -1228,7 +1200,7 @@ const JoManageRequests: React.FC = () => {
                                                                             fontSize: '12px'
                                                                         }}
                                                                     >
-                                                                        🗑️
+                                                                        🗑️ Delete
                                                                     </button>
                                                                 </div>
                                                             </td>

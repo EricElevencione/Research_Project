@@ -53,6 +53,23 @@ const TechAddFarmerRequest: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [existingRequests, setExistingRequests] = useState<number[]>([]);
 
+    // Toast notification state
+    const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' }>({
+        show: false,
+        message: '',
+        type: 'success'
+    });
+
+    // Show toast notification
+    const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success', duration: number = 3000) => {
+        setToast({ show: true, message, type });
+        if (duration > 0) {
+            setTimeout(() => {
+                setToast(prev => ({ ...prev, show: false }));
+            }, duration);
+        }
+    };
+
     const [formData, setFormData] = useState<FarmerRequestForm>({
         farmer_id: 0,
         requested_urea_bags: 0,
@@ -237,10 +254,14 @@ const TechAddFarmerRequest: React.FC = () => {
                 throw new Error(response.error || 'Failed to save farmer request');
             }
 
-            alert('✅ Farmer request added successfully!');
-            navigate(`/technician-manage-requests/${allocationId}`);
+            showToast('Farmer request added successfully!', 'success', 2000);
+            // Navigate after showing toast
+            setTimeout(() => {
+                navigate(`/technician-manage-requests/${allocationId}`);
+            }, 1500);
         } catch (err: any) {
             setError(err.message || 'Failed to save farmer request');
+            showToast(err.message || 'Failed to save farmer request', 'error');
         } finally {
             setLoading(false);
         }
@@ -552,6 +573,26 @@ const TechAddFarmerRequest: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className={`tech-toast-notification tech-toast-${toast.type}`}>
+                    <div className="tech-toast-icon">
+                        {toast.type === 'success' && '✅'}
+                        {toast.type === 'error' && '❌'}
+                        {toast.type === 'warning' && '⚠️'}
+                    </div>
+                    <div className="tech-toast-content">
+                        <span className="tech-toast-message">{toast.message}</span>
+                    </div>
+                    <button
+                        className="tech-toast-close"
+                        onClick={() => setToast(prev => ({ ...prev, show: false }))}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
