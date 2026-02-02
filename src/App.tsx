@@ -17,7 +17,7 @@ function App() {
             }
         } catch (err) {
             console.error('Error:', err);
-            alert('Error: ' + err.message);
+            alert('Error: ' + (err instanceof Error ? err.message : String(err)));
         }
     };
 
