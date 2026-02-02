@@ -449,6 +449,22 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
     // Transform camelCase form data to Supabase column names (UPPERCASE with spaces)
     const formData = submissionData.data || submissionData;
 
+    // Determine ownership type from category or parcels
+    const ownershipCategory = formData.ownershipCategory || 'registeredOwner';
+    const isRegisteredOwner = ownershipCategory === 'registeredOwner';
+    const isTenant = ownershipCategory === 'tenant';
+    const isLessee = ownershipCategory === 'lessee';
+
+    // Calculate total farm area from parcels
+    const parcels = formData.farmlandParcels || [];
+    const totalFarmArea = parcels.reduce((sum: number, p: any) => {
+        const area = parseFloat(p.totalFarmAreaHa) || 0;
+        return sum + area;
+    }, 0);
+
+    // Get first parcel location as default farm location
+    const firstParcel = parcels[0] || {};
+
     const transformedData: Record<string, any> = {
         "LAST NAME": formData.lastName || formData.surname || '',
         "FIRST NAME": formData.firstName || '',
@@ -459,12 +475,12 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
         "GENDER": formData.gender || formData.sex || '',
         "BIRTHDATE": formData.dateOfBirth || formData.birthdate || null,
         "MAIN LIVELIHOOD": formData.mainLivelihood || '',
-        "TOTAL FARM AREA": formData.totalFarmArea || 0,
-        "FARM LOCATION": formData.farmLocation || formData.barangay || '',
-        "PARCEL AREA": formData.parcelArea || formData.totalFarmArea || 0,
-        "OWNERSHIP_TYPE_REGISTERED_OWNER": formData.ownershipTypeRegisteredOwner || false,
-        "OWNERSHIP_TYPE_TENANT": formData.ownershipTypeTenant || false,
-        "OWNERSHIP_TYPE_LESSEE": formData.ownershipTypeLessee || false,
+        "TOTAL FARM AREA": totalFarmArea,
+        "FARM LOCATION": firstParcel.farmLocationBarangay || formData.barangay || '',
+        "PARCEL AREA": firstParcel.totalFarmAreaHa || totalFarmArea || 0,
+        "OWNERSHIP_TYPE_REGISTERED_OWNER": isRegisteredOwner,
+        "OWNERSHIP_TYPE_TENANT": isTenant,
+        "OWNERSHIP_TYPE_LESSEE": isLessee,
         "FARMER_RICE": formData.farmerRice || false,
         "FARMER_CORN": formData.farmerCorn || false,
         "FARMER_OTHER_CROPS": formData.farmerOtherCrops || false,
@@ -494,6 +510,69 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
     if (error) {
         console.error('Supabase insert error:', error);
         return createResponse(null, error.message, 500);
+    }
+
+    // Create land_history records for each parcel
+    const submissionId = data.id;
+    const farmerFullName = `${formData.firstName || ''} ${formData.middleName || ''} ${formData.surname || ''}`.trim();
+    const selectedLandOwner = formData.selectedLandOwner;
+
+    try {
+        for (const parcel of parcels) {
+            const landHistoryRecord: Record<string, any> = {
+                rsbsa_submission_id: submissionId,
+                parcel_number: parcel.parcelNo || '',
+                farm_location_barangay: parcel.farmLocationBarangay || '',
+                farm_location_municipality: parcel.farmLocationMunicipality || 'Dumangas',
+                total_farm_area_ha: parseFloat(parcel.totalFarmAreaHa) || 0,
+                farmer_id: submissionId,
+                farmer_name: farmerFullName,
+                is_registered_owner: isRegisteredOwner,
+                is_tenant: isTenant,
+                is_lessee: isLessee,
+                is_current: true,
+                period_start_date: new Date().toISOString().split('T')[0],
+                change_type: 'NEW',
+                change_reason: isRegisteredOwner
+                    ? 'Initial RSBSA registration as owner'
+                    : isTenant
+                        ? 'Registered as tenant through RSBSA'
+                        : 'Registered as lessee through RSBSA',
+                within_ancestral_domain: parcel.withinAncestralDomain === 'Yes' || parcel.withinAncestralDomain === true,
+                agrarian_reform_beneficiary: parcel.agrarianReformBeneficiary === 'Yes' || parcel.agrarianReformBeneficiary === true,
+                ownership_document_no: parcel.ownershipDocumentNo || '',
+            };
+
+            // For tenant/lessee: add land owner info
+            if ((isTenant || isLessee) && selectedLandOwner) {
+                landHistoryRecord.land_owner_id = selectedLandOwner.id;
+                landHistoryRecord.land_owner_name = selectedLandOwner.name;
+
+                if (isTenant) {
+                    landHistoryRecord.tenant_name = farmerFullName;
+                } else if (isLessee) {
+                    landHistoryRecord.lessee_name = farmerFullName;
+                }
+            } else if (isRegisteredOwner) {
+                // Owner is also the land owner
+                landHistoryRecord.land_owner_id = submissionId;
+                landHistoryRecord.land_owner_name = farmerFullName;
+            }
+
+            // Insert land_history record
+            const { error: historyError } = await supabase
+                .from('land_history')
+                .insert(landHistoryRecord);
+
+            if (historyError) {
+                console.warn('Land history insert warning (non-blocking):', historyError.message);
+                // Don't fail the whole submission if land_history fails
+            } else {
+                console.log('✅ Created land_history record for parcel:', parcel.parcelNo);
+            }
+        }
+    } catch (historyErr) {
+        console.warn('Error creating land history (non-blocking):', historyErr);
     }
 
     // Return in the format the frontend expects

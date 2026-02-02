@@ -520,6 +520,15 @@ const JoRsbsa: React.FC = () => {
       const transformedData = {
         ...formData,
         dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth) : null,
+        // Include ownership category and land owner info for land_history creation
+        ownershipCategory: ownershipCategory,
+        selectedLandOwner: selectedLandOwner ? {
+          id: selectedLandOwner.id,
+          name: selectedLandOwner.name,
+          barangay: selectedLandOwner.barangay,
+          municipality: selectedLandOwner.municipality
+        } : null,
+        selectedParcelIds: Array.from(selectedParcelIds),
         farmlandParcels: formData.farmlandParcels.map(parcel => ({
           ...parcel,
           totalFarmAreaHa: parcel.totalFarmAreaHa ? parseFloat(parcel.totalFarmAreaHa) : 0,
@@ -642,6 +651,14 @@ const JoRsbsa: React.FC = () => {
               </span>
               <span className="nav-text">Masterlist</span>
             </button>
+
+            <div
+              className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}
+              onClick={() => navigate('/jo-land-registry')}
+            >
+              <div className="nav-icon">🗺️</div>
+              <span className="nav-text">Land Registry</span>
+            </div>
 
             <button
               className="sidebar-nav-item logout"
