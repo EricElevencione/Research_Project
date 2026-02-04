@@ -13,6 +13,7 @@ import IncentivesIcon from '../../assets/images/incentives.png';
 // Interfaces
 interface LandParcel {
     id: number;
+    land_parcel_id: number;
     parcel_number: string;
     farm_location_barangay: string;
     farm_location_municipality: string;
@@ -28,6 +29,7 @@ interface LandParcel {
 
 interface LandHistoryRecord {
     id: number;
+    land_parcel_id: number;
     parcel_number: string;
     farm_location_barangay: string;
     total_farm_area_ha: number;
@@ -42,6 +44,14 @@ interface LandHistoryRecord {
     is_current: boolean;
     change_type: string;
     change_reason: string;
+    previous_history_id: number | null;
+}
+
+// Interface for farmers (for transfer ownership dropdown)
+interface Farmer {
+    id: number;
+    name: string;
+    barangay: string;
 }
 
 const JoLandRegistry: React.FC = () => {
@@ -58,7 +68,122 @@ const JoLandRegistry: React.FC = () => {
     const [filterBarangay, setFilterBarangay] = useState('');
     const [showModal, setShowModal] = useState(false);
 
+    // Transfer Ownership State
+    const [showTransferModal, setShowTransferModal] = useState(false);
+    const [transferSearch, setTransferSearch] = useState('');
+    const [farmers, setFarmers] = useState<Farmer[]>([]);
+    const [filteredFarmers, setFilteredFarmers] = useState<Farmer[]>([]);
+    const [selectedNewOwner, setSelectedNewOwner] = useState<Farmer | null>(null);
+    const [transferType, setTransferType] = useState<'owner' | 'tenant' | 'lessee'>('owner');
+    const [transferReason, setTransferReason] = useState('');
+    const [isTransferring, setIsTransferring] = useState(false);
+
     const isActive = (path: string) => location.pathname === path;
+
+    // Fetch farmers for transfer dropdown
+    useEffect(() => {
+        const fetchFarmers = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('rsbsa_submission')
+                    .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY"')
+                    .order('"LAST NAME"', { ascending: true })
+                    .limit(500);
+
+                if (!error && data) {
+                    const farmerList = data.map((f: any) => ({
+                        id: f.id,
+                        name: `${f['FIRST NAME'] || ''} ${f['MIDDLE NAME'] || ''} ${f['LAST NAME'] || ''}`.trim(),
+                        barangay: f['BARANGAY'] || ''
+                    }));
+                    setFarmers(farmerList);
+                }
+            } catch (err) {
+                console.error('Error fetching farmers:', err);
+            }
+        };
+        fetchFarmers();
+    }, []);
+
+    // Filter farmers based on search
+    useEffect(() => {
+        if (transferSearch.length < 2) {
+            setFilteredFarmers([]);
+            return;
+        }
+        const search = transferSearch.toLowerCase();
+        const filtered = farmers.filter(f =>
+            f.name.toLowerCase().includes(search) ||
+            f.barangay.toLowerCase().includes(search)
+        ).slice(0, 10);
+        setFilteredFarmers(filtered);
+    }, [transferSearch, farmers]);
+
+    // Handle ownership transfer
+    const handleTransferOwnership = async () => {
+        if (!selectedParcel || !selectedNewOwner) {
+            alert('Please select a new owner');
+            return;
+        }
+
+        setIsTransferring(true);
+        try {
+            // Close current holder's record
+            const { error: updateError } = await supabase
+                .from('land_history')
+                .update({
+                    is_current: false,
+                    period_end_date: new Date().toISOString().split('T')[0]
+                })
+                .eq('id', selectedParcel.id);
+
+            if (updateError) {
+                throw new Error('Failed to close current holder record');
+            }
+
+            // Create new ownership record
+            const { error: insertError } = await supabase
+                .from('land_history')
+                .insert({
+                    land_parcel_id: selectedParcel.land_parcel_id,
+                    parcel_number: selectedParcel.parcel_number,
+                    farm_location_barangay: selectedParcel.farm_location_barangay,
+                    farm_location_municipality: selectedParcel.farm_location_municipality || 'Dumangas',
+                    total_farm_area_ha: selectedParcel.total_farm_area_ha,
+                    farmer_id: selectedNewOwner.id,
+                    farmer_name: selectedNewOwner.name,
+                    is_registered_owner: transferType === 'owner',
+                    is_tenant: transferType === 'tenant',
+                    is_lessee: transferType === 'lessee',
+                    land_owner_id: transferType === 'owner' ? selectedNewOwner.id : selectedParcel.id,
+                    land_owner_name: transferType === 'owner' ? selectedNewOwner.name : selectedParcel.farmer_name,
+                    is_current: true,
+                    period_start_date: new Date().toISOString().split('T')[0],
+                    change_type: 'TRANSFER',
+                    change_reason: transferReason || `Ownership transfer to ${selectedNewOwner.name}`,
+                    previous_history_id: selectedParcel.id
+                });
+
+            if (insertError) {
+                throw new Error('Failed to create new ownership record');
+            }
+
+            alert('✅ Ownership transferred successfully!');
+            setShowTransferModal(false);
+            setShowModal(false);
+            setSelectedNewOwner(null);
+            setTransferSearch('');
+            setTransferReason('');
+
+            // Refresh the parcel list
+            window.location.reload();
+        } catch (err: any) {
+            console.error('Transfer error:', err);
+            alert('Error: ' + (err.message || 'Failed to transfer ownership'));
+        } finally {
+            setIsTransferring(false);
+        }
+    };
 
     // Fetch all land parcels with current owners
     useEffect(() => {
@@ -69,6 +194,7 @@ const JoLandRegistry: React.FC = () => {
                     .from('land_history')
                     .select(`
                         id,
+                        land_parcel_id,
                         parcel_number,
                         farm_location_barangay,
                         farm_location_municipality,
@@ -100,21 +226,28 @@ const JoLandRegistry: React.FC = () => {
         fetchLandParcels();
     }, []);
 
-    // Fetch history when a parcel is selected
-    const fetchParcelHistory = async (parcelNumber: string) => {
+    // Fetch history when a parcel is selected (using land_parcel_id for reliable linking)
+    const fetchParcelHistory = async (landParcelId: number, parcelNumber: string) => {
         setHistoryLoading(true);
         try {
-            const { data, error } = await supabase
+            // Use land_parcel_id if available, fallback to parcel_number
+            let query = supabase
                 .from('land_history')
-                .select('*')
-                .eq('parcel_number', parcelNumber)
-                .order('period_start_date', { ascending: false });
+                .select('*');
+
+            if (landParcelId) {
+                query = query.eq('land_parcel_id', landParcelId);
+            } else {
+                query = query.eq('parcel_number', parcelNumber);
+            }
+
+            const { data, error } = await query.order('period_start_date', { ascending: false });
 
             if (error) {
                 console.error('Error fetching parcel history:', error);
             } else {
                 setParcelHistory(data || []);
-                console.log('✅ Loaded', data?.length, 'history records');
+                console.log('✅ Loaded', data?.length, 'history records for parcel ID:', landParcelId);
             }
         } catch (error) {
             console.error('Error:', error);
@@ -126,7 +259,7 @@ const JoLandRegistry: React.FC = () => {
     // Handle parcel selection
     const handleParcelSelect = (parcel: LandParcel) => {
         setSelectedParcel(parcel);
-        fetchParcelHistory(parcel.parcel_number);
+        fetchParcelHistory(parcel.land_parcel_id, parcel.parcel_number);
         setShowModal(true);
     };
 
@@ -396,7 +529,26 @@ const JoLandRegistry: React.FC = () => {
                             <div className="jo-land-registry-modal-body">
                                 {/* Current Owner Section */}
                                 <div className="jo-land-registry-detail-section">
-                                    <h4>👤 Current Holder</h4>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h4 style={{ margin: 0 }}>👤 Current Holder</h4>
+                                        <button
+                                            onClick={() => setShowTransferModal(true)}
+                                            style={{
+                                                padding: '0.5rem 1rem',
+                                                backgroundColor: '#2196F3',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.9rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem'
+                                            }}
+                                        >
+                                            🔄 Transfer Ownership
+                                        </button>
+                                    </div>
                                     <div className="jo-land-registry-owner-card">
                                         <div className="jo-land-registry-owner-avatar">
                                             {getOwnershipIcon(selectedParcel)}
@@ -497,6 +649,218 @@ const JoLandRegistry: React.FC = () => {
                                         Ownership changes are recorded through RSBSA registrations.
                                         For official land transfers, please contact the Municipal Agriculture Office.
                                     </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Transfer Ownership Modal */}
+                {showTransferModal && selectedParcel && (
+                    <div className="jo-land-registry-modal-overlay" onClick={() => setShowTransferModal(false)}>
+                        <div
+                            className="jo-land-registry-modal"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ maxWidth: '500px' }}
+                        >
+                            <div className="jo-land-registry-modal-header" style={{ backgroundColor: '#2196F3' }}>
+                                <h3>🔄 Transfer Ownership</h3>
+                                <button
+                                    className="jo-land-registry-close-button"
+                                    onClick={() => setShowTransferModal(false)}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div className="jo-land-registry-modal-body">
+                                {/* Current Parcel Info */}
+                                <div style={{
+                                    padding: '1rem',
+                                    backgroundColor: '#f8f9fa',
+                                    borderRadius: '8px',
+                                    marginBottom: '1.5rem'
+                                }}>
+                                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                                        📍 {selectedParcel.parcel_number}
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>
+                                        Current: {selectedParcel.farmer_name} ({getOwnershipType(selectedParcel)})
+                                    </div>
+                                </div>
+
+                                {/* Transfer Type Selection */}
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
+                                        Transfer Type
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        {(['owner', 'tenant', 'lessee'] as const).map((type) => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setTransferType(type)}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '0.75rem',
+                                                    border: transferType === type ? '2px solid #2196F3' : '1px solid #dee2e6',
+                                                    backgroundColor: transferType === type ? '#e3f2fd' : 'white',
+                                                    borderRadius: '6px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: transferType === type ? 'bold' : 'normal'
+                                                }}
+                                            >
+                                                {type === 'owner' ? '👤 Owner' : type === 'tenant' ? '🏠 Tenant' : '📋 Lessee'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* New Owner Search */}
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
+                                        Search New {transferType === 'owner' ? 'Owner' : transferType === 'tenant' ? 'Tenant' : 'Lessee'}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name..."
+                                        value={transferSearch}
+                                        onChange={(e) => {
+                                            setTransferSearch(e.target.value);
+                                            setSelectedNewOwner(null);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem',
+                                            border: '1px solid #dee2e6',
+                                            borderRadius: '6px',
+                                            fontSize: '1rem'
+                                        }}
+                                    />
+
+                                    {/* Search Results */}
+                                    {filteredFarmers.length > 0 && !selectedNewOwner && (
+                                        <div style={{
+                                            border: '1px solid #dee2e6',
+                                            borderRadius: '6px',
+                                            marginTop: '0.5rem',
+                                            maxHeight: '200px',
+                                            overflowY: 'auto'
+                                        }}>
+                                            {filteredFarmers.map((farmer) => (
+                                                <div
+                                                    key={farmer.id}
+                                                    onClick={() => {
+                                                        setSelectedNewOwner(farmer);
+                                                        setTransferSearch(farmer.name);
+                                                    }}
+                                                    style={{
+                                                        padding: '0.75rem 1rem',
+                                                        cursor: 'pointer',
+                                                        borderBottom: '1px solid #f0f0f0'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                                >
+                                                    <div style={{ fontWeight: 'bold' }}>{farmer.name}</div>
+                                                    <div style={{ fontSize: '0.85rem', color: '#6c757d' }}>
+                                                        {farmer.barangay}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Selected Farmer */}
+                                    {selectedNewOwner && (
+                                        <div style={{
+                                            marginTop: '0.5rem',
+                                            padding: '0.75rem',
+                                            backgroundColor: '#e8f5e9',
+                                            borderRadius: '6px',
+                                            border: '2px solid #4caf50'
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold', color: '#2e7d32' }}>
+                                                        ✓ {selectedNewOwner.name}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.85rem', color: '#6c757d' }}>
+                                                        {selectedNewOwner.barangay}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedNewOwner(null);
+                                                        setTransferSearch('');
+                                                    }}
+                                                    style={{
+                                                        padding: '0.25rem 0.5rem',
+                                                        backgroundColor: '#dc3545',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '4px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.8rem'
+                                                    }}
+                                                >
+                                                    Clear
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Transfer Reason */}
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
+                                        Reason for Transfer (Optional)
+                                    </label>
+                                    <textarea
+                                        placeholder="e.g., Sale of property, Inheritance, Lease agreement..."
+                                        value={transferReason}
+                                        onChange={(e) => setTransferReason(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem',
+                                            border: '1px solid #dee2e6',
+                                            borderRadius: '6px',
+                                            fontSize: '1rem',
+                                            minHeight: '80px',
+                                            resize: 'vertical'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                    <button
+                                        onClick={() => setShowTransferModal(false)}
+                                        style={{
+                                            padding: '0.75rem 1.5rem',
+                                            backgroundColor: '#6c757d',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '1rem'
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleTransferOwnership}
+                                        disabled={!selectedNewOwner || isTransferring}
+                                        style={{
+                                            padding: '0.75rem 1.5rem',
+                                            backgroundColor: selectedNewOwner ? '#4caf50' : '#ccc',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: selectedNewOwner ? 'pointer' : 'not-allowed',
+                                            fontSize: '1rem'
+                                        }}
+                                    >
+                                        {isTransferring ? 'Transferring...' : '✓ Confirm Transfer'}
+                                    </button>
                                 </div>
                             </div>
                         </div>

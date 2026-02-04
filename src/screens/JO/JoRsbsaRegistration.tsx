@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getLandOwners, getFarmParcels, createRsbsaSubmission } from '../../api';
+import { supabase } from '../../supabase';
 import '../../assets/css/jo css/JoRsbsaRegistrationStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -25,6 +26,9 @@ interface Parcel {
   tenantLandOwnerName: string;
   lesseeLandOwnerName: string;
   ownershipOthersSpecify: string;
+  // New field for linking to existing land_parcels
+  existingParcelId?: number;
+  existingParcelNumber?: string;
 }
 
 interface LandOwner {
@@ -32,6 +36,17 @@ interface LandOwner {
   name: string;
   barangay?: string;
   municipality?: string;
+}
+
+// Interface for existing parcels from land_parcels table
+interface ExistingParcel {
+  id: number;
+  parcel_number: string;
+  farm_location_barangay: string;
+  farm_location_municipality: string;
+  total_farm_area_ha: number;
+  current_holder?: string;
+  ownership_type?: string;
 }
 
 interface FormData {
@@ -160,6 +175,106 @@ const JoRsbsa: React.FC = () => {
   const [showLandOwnerDropdown, setShowLandOwnerDropdown] = useState(false);
   const [ownerParcels, setOwnerParcels] = useState<any[]>([]);
   const [selectedParcelIds, setSelectedParcelIds] = useState<Set<string>>(new Set());
+
+  // State for existing parcel search (for registered owners)
+  const [existingParcelSearch, setExistingParcelSearch] = useState('');
+  const [existingParcels, setExistingParcels] = useState<ExistingParcel[]>([]);
+  const [showExistingParcelDropdown, setShowExistingParcelDropdown] = useState(false);
+  const [isSearchingParcels, setIsSearchingParcels] = useState(false);
+  const [useExistingParcel, setUseExistingParcel] = useState<boolean>(false);
+
+  // Search for existing parcels by OWNER NAME (more intuitive)
+  const searchExistingParcels = async (searchTerm: string) => {
+    if (searchTerm.length < 2) {
+      setExistingParcels([]);
+      return;
+    }
+
+    setIsSearchingParcels(true);
+    try {
+      // Search land_history by farmer/owner name to find their parcels
+      const { data: historyData, error: historyError } = await supabase
+        .from('land_history')
+        .select(`
+          id,
+          land_parcel_id,
+          parcel_number,
+          farm_location_barangay,
+          farm_location_municipality,
+          total_farm_area_ha,
+          farmer_name,
+          is_registered_owner,
+          is_tenant,
+          is_lessee
+        `)
+        .eq('is_current', true)
+        .eq('is_registered_owner', true)
+        .ilike('farmer_name', `%${searchTerm}%`)
+        .limit(10);
+
+      if (historyError) {
+        console.error('Error searching by owner name:', historyError);
+        setExistingParcels([]);
+      } else {
+        // Map to ExistingParcel format
+        const parcelsWithHolders = (historyData || []).map((record) => ({
+          id: record.land_parcel_id,
+          parcel_number: record.parcel_number,
+          farm_location_barangay: record.farm_location_barangay,
+          farm_location_municipality: record.farm_location_municipality,
+          total_farm_area_ha: record.total_farm_area_ha,
+          current_holder: record.farmer_name || 'Unknown',
+          ownership_type: record.is_registered_owner ? 'Owner' : record.is_tenant ? 'Tenant' : 'Lessee'
+        }));
+
+        setExistingParcels(parcelsWithHolders);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      setExistingParcels([]);
+    } finally {
+      setIsSearchingParcels(false);
+    }
+  };
+
+  // Handle existing parcel selection
+  const handleExistingParcelSelect = (parcel: ExistingParcel) => {
+    // Pre-fill the first farmland parcel with existing parcel data
+    setFormData(prev => {
+      const parcels = [...prev.farmlandParcels];
+      parcels[0] = {
+        ...parcels[0],
+        existingParcelId: parcel.id,
+        existingParcelNumber: parcel.parcel_number,
+        farmLocationBarangay: parcel.farm_location_barangay || '',
+        farmLocationMunicipality: parcel.farm_location_municipality || 'Dumangas',
+        totalFarmAreaHa: String(parcel.total_farm_area_ha || ''),
+      };
+      return { ...prev, farmlandParcels: parcels };
+    });
+
+    setExistingParcelSearch(`${parcel.current_holder} - ${parcel.parcel_number}`);
+    setShowExistingParcelDropdown(false);
+    setUseExistingParcel(true);
+  };
+
+  // Clear existing parcel selection
+  const clearExistingParcelSelection = () => {
+    setFormData(prev => {
+      const parcels = [...prev.farmlandParcels];
+      parcels[0] = {
+        ...parcels[0],
+        existingParcelId: undefined,
+        existingParcelNumber: undefined,
+        farmLocationBarangay: '',
+        farmLocationMunicipality: 'Dumangas',
+        totalFarmAreaHa: '',
+      };
+      return { ...prev, farmlandParcels: parcels };
+    });
+    setExistingParcelSearch('');
+    setUseExistingParcel(false);
+  };
 
   // Fetch landowners from the database
   useEffect(() => {
@@ -534,6 +649,9 @@ const JoRsbsa: React.FC = () => {
           totalFarmAreaHa: parcel.totalFarmAreaHa ? parseFloat(parcel.totalFarmAreaHa) : 0,
           withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
           agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
+          // Include existing parcel info for ownership transfer
+          existingParcelId: parcel.existingParcelId || null,
+          existingParcelNumber: parcel.existingParcelNumber || null,
           ownershipType: {
             registeredOwner: parcel.ownershipTypeRegisteredOwner || false,
             tenant: parcel.ownershipTypeTenant || false,
@@ -1139,10 +1257,152 @@ const JoRsbsa: React.FC = () => {
                 {/* Farmland Parcels - Show only for Registered Owner */}
                 {ownershipCategory === 'registeredOwner' && (
                   <>
+                    {/* Existing Parcel Search Section */}
+                    <div className="jo-registration-section-card" style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '12px', border: '1px solid #dee2e6' }}>
+                      <div style={{ marginBottom: '1rem' }}>
+                        <h5 style={{ margin: 0, color: '#2c3e50', fontSize: '1.1rem' }}>🔍 Did you acquire this land from someone?</h5>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#6c757d' }}>
+                          Search by previous owner's name to transfer ownership, or skip to register new land
+                        </p>
+                      </div>
+
+                      <div style={{ position: 'relative' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            placeholder="Search previous owner's name (e.g., Juan Dela Cruz)..."
+                            value={existingParcelSearch}
+                            onChange={(e) => {
+                              setExistingParcelSearch(e.target.value);
+                              searchExistingParcels(e.target.value);
+                              setShowExistingParcelDropdown(true);
+                            }}
+                            onFocus={() => existingParcelSearch.length >= 2 && setShowExistingParcelDropdown(true)}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem 1rem',
+                              border: useExistingParcel ? '2px solid #4caf50' : '1px solid #ced4da',
+                              borderRadius: '8px',
+                              fontSize: '1rem',
+                              backgroundColor: useExistingParcel ? '#e8f5e9' : 'white'
+                            }}
+                          />
+                          {useExistingParcel && (
+                            <button
+                              onClick={clearExistingParcelSelection}
+                              style={{
+                                padding: '0.75rem 1rem',
+                                backgroundColor: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem'
+                              }}
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Dropdown for search results */}
+                        {showExistingParcelDropdown && existingParcelSearch.length >= 2 && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            backgroundColor: 'white',
+                            border: '1px solid #dee2e6',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            zIndex: 1000,
+                            maxHeight: '300px',
+                            overflowY: 'auto',
+                            marginTop: '4px'
+                          }}>
+                            {isSearchingParcels ? (
+                              <div style={{ padding: '1rem', textAlign: 'center', color: '#6c757d' }}>
+                                Searching...
+                              </div>
+                            ) : existingParcels.length === 0 ? (
+                              <div style={{ padding: '1rem', textAlign: 'center', color: '#6c757d' }}>
+                                <div style={{ marginBottom: '0.5rem' }}>No registered owner found with that name</div>
+                                <div style={{ fontSize: '0.85rem', color: '#28a745' }}>
+                                  ✓ This appears to be new land. Fill in the details below.
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div style={{ padding: '0.75rem 1rem', backgroundColor: '#f8f9fa', borderBottom: '1px solid #dee2e6', fontSize: '0.85rem', color: '#6c757d' }}>
+                                  Found {existingParcels.length} parcel{existingParcels.length !== 1 ? 's' : ''} owned by "{existingParcelSearch}"
+                                </div>
+                                {existingParcels.map((parcel) => (
+                                  <div
+                                    key={parcel.id}
+                                    onClick={() => handleExistingParcelSelect(parcel)}
+                                    style={{
+                                      padding: '1rem',
+                                      cursor: 'pointer',
+                                      borderBottom: '1px solid #f0f0f0',
+                                      transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                  >
+                                    <div style={{ fontWeight: 'bold', color: '#2c3e50', marginBottom: '0.25rem' }}>
+                                      👤 {parcel.current_holder}
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', color: '#495057' }}>
+                                      📍 {parcel.parcel_number} • {parcel.farm_location_barangay} • {parcel.total_farm_area_ha} ha
+                                    </div>
+                                  </div>
+                                ))}
+                              </>
+                            )}
+                            <div
+                              onClick={() => setShowExistingParcelDropdown(false)}
+                              style={{
+                                padding: '0.75rem 1rem',
+                                textAlign: 'center',
+                                borderTop: '1px solid #dee2e6',
+                                cursor: 'pointer',
+                                color: '#6c757d',
+                                fontSize: '0.9rem'
+                              }}
+                            >
+                              Close
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {useExistingParcel && (
+                        <div style={{
+                          marginTop: '1rem',
+                          padding: '1rem',
+                          backgroundColor: '#fff3cd',
+                          borderRadius: '8px',
+                          border: '1px solid #ffc107'
+                        }}>
+                          <div style={{ fontWeight: 'bold', color: '#856404', marginBottom: '0.5rem' }}>
+                            ⚠️ Ownership Transfer
+                          </div>
+                          <div style={{ fontSize: '0.9rem', color: '#856404' }}>
+                            You are registering as the new owner of an existing parcel. This will be recorded as an ownership transfer.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {(formData.farmlandParcels as any[]).map((p, idx) => (
                       <div key={idx} className="jo-registration-parcel-card">
                         <div className="jo-registration-parcel-card-header">
-                          <div className="jo-registration-parcel-no">Farm Parcel No. {p.parcelNo || idx + 1}</div>
+                          <div className="jo-registration-parcel-no">
+                            {p.existingParcelNumber
+                              ? `📍 ${p.existingParcelNumber} (Existing Parcel)`
+                              : `Farm Parcel No. ${p.parcelNo || idx + 1}`}
+                          </div>
                           <div className="jo-registration-parcel-card-actions">
                             {(formData.farmlandParcels as any[]).length > 1 && (
                               <button className="jo-registration-btn-small" onClick={() => removeParcel(idx)}>Remove</button>
@@ -1153,7 +1413,7 @@ const JoRsbsa: React.FC = () => {
                         <div className="jo-registration-form-row">
                           <div className="jo-registration-form-group">
                             <label>Farm Location (Barangay)</label>
-                            <select value={p.farmLocationBarangay} onChange={(e) => handleParcelChange(idx, 'farmLocationBarangay', e.target.value)} className={errors.farmland ? 'jo-registration-input-error' : ''}>
+                            <select value={p.farmLocationBarangay || ''} onChange={(e) => handleParcelChange(idx, 'farmLocationBarangay', e.target.value)} className={errors.farmland ? 'jo-registration-input-error' : ''}>
                               <option value="">Select Barangay</option>
                               <option value="Aurora-Del Pilar">Aurora-Del Pilar</option>
                               <option value="Bacay">Bacay</option>
@@ -1208,12 +1468,12 @@ const JoRsbsa: React.FC = () => {
                         <div className="jo-registration-form-row">
                           <div className="jo-registration-form-group">
                             <label>Total Farm Area (in hectares)</label>
-                            <input type="number" value={p.totalFarmAreaHa} onChange={(e) => handleParcelChange(idx, 'totalFarmAreaHa', e.target.value)} className={errors.farmland ? 'jo-registration-input-error' : ''} />
+                            <input type="number" value={p.totalFarmAreaHa || ''} onChange={(e) => handleParcelChange(idx, 'totalFarmAreaHa', e.target.value)} className={errors.farmland ? 'jo-registration-input-error' : ''} />
                             {errors.farmland && <div className="jo-registration-error">{errors.farmland}</div>}
                           </div>
                           <div className="jo-registration-form-group">
                             <label>Within Ancestral Domain</label>
-                            <select value={p.withinAncestralDomain} onChange={(e) => handleParcelChange(idx, 'withinAncestralDomain', e.target.value)}>
+                            <select value={p.withinAncestralDomain || ''} onChange={(e) => handleParcelChange(idx, 'withinAncestralDomain', e.target.value)}>
                               <option value="">Select</option>
                               <option value="Yes">Yes</option>
                               <option value="No">No</option>
@@ -1224,7 +1484,7 @@ const JoRsbsa: React.FC = () => {
                         <div className="jo-registration-form-row">
                           <div className="jo-registration-form-group">
                             <label>Agrarian Reform Beneficiary</label>
-                            <select value={p.agrarianReformBeneficiary} onChange={(e) => handleParcelChange(idx, 'agrarianReformBeneficiary', e.target.value)}>
+                            <select value={p.agrarianReformBeneficiary || ''} onChange={(e) => handleParcelChange(idx, 'agrarianReformBeneficiary', e.target.value)}>
                               <option value="">Select</option>
                               <option value="Yes">Yes</option>
                               <option value="No">No</option>

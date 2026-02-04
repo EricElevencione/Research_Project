@@ -512,19 +512,133 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
         return createResponse(null, error.message, 500);
     }
 
-    // Create land_history records for each parcel
+    // Create land_history records for each parcel (NEW SCHEMA)
     const submissionId = data.id;
     const farmerFullName = `${formData.firstName || ''} ${formData.middleName || ''} ${formData.surname || ''}`.trim();
     const selectedLandOwner = formData.selectedLandOwner;
 
     try {
         for (const parcel of parcels) {
+            const barangay = parcel.farmLocationBarangay || '';
+            const municipality = parcel.farmLocationMunicipality || 'Dumangas';
+            const areaHa = parseFloat(parcel.totalFarmAreaHa) || 0;
+
+            // Step 1: Check if parcel already exists or create new one
+            let landParcelId: number | null = null;
+            let parcelNumber = parcel.parcelNo || '';
+            let previousHistoryId: number | null = null;
+
+            // Check if an existing parcel was selected from the UI
+            if (parcel.existingParcelId) {
+                // Use the pre-selected existing parcel
+                landParcelId = parcel.existingParcelId;
+                parcelNumber = parcel.existingParcelNumber || parcelNumber;
+                console.log('📍 Using pre-selected existing parcel:', parcelNumber, 'ID:', landParcelId);
+
+                // Find current holder to close their record
+                const { data: currentHolder } = await supabase
+                    .from('land_history')
+                    .select('id')
+                    .eq('land_parcel_id', landParcelId)
+                    .eq('is_current', true)
+                    .single();
+
+                if (currentHolder) {
+                    previousHistoryId = currentHolder.id;
+                    // Close the previous holder's record
+                    await supabase
+                        .from('land_history')
+                        .update({
+                            is_current: false,
+                            period_end_date: new Date().toISOString().split('T')[0]
+                        })
+                        .eq('id', currentHolder.id);
+                    console.log('📝 Closed previous holder record:', currentHolder.id);
+                }
+            } else if (parcelNumber) {
+                // Try to find existing parcel by parcel_number
+                const { data: existingParcel } = await supabase
+                    .from('land_parcels')
+                    .select('id, parcel_number')
+                    .eq('parcel_number', parcelNumber)
+                    .single();
+
+                if (existingParcel) {
+                    landParcelId = existingParcel.id;
+                    console.log('📍 Found existing parcel by number:', parcelNumber);
+
+                    // Find current holder to close their record
+                    const { data: currentHolder } = await supabase
+                        .from('land_history')
+                        .select('id')
+                        .eq('land_parcel_id', landParcelId)
+                        .eq('is_current', true)
+                        .single();
+
+                    if (currentHolder) {
+                        previousHistoryId = currentHolder.id;
+                        // Close the previous holder's record
+                        await supabase
+                            .from('land_history')
+                            .update({
+                                is_current: false,
+                                period_end_date: new Date().toISOString().split('T')[0]
+                            })
+                            .eq('id', currentHolder.id);
+                        console.log('📝 Closed previous holder record:', currentHolder.id);
+                    }
+                }
+            }
+
+            // If no existing parcel found, create a new one
+            if (!landParcelId) {
+                // Generate parcel number if not provided
+                if (!parcelNumber) {
+                    // Use the generate_parcel_number function or create manually
+                    const brgyCode = barangay.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '') || 'UNK';
+                    const year = new Date().getFullYear();
+                    const timestamp = Date.now().toString().slice(-4);
+                    parcelNumber = `${brgyCode}-${year}-${timestamp}`;
+                }
+
+                const { data: newParcel, error: parcelError } = await supabase
+                    .from('land_parcels')
+                    .insert({
+                        parcel_number: parcelNumber,
+                        farm_location_barangay: barangay,
+                        farm_location_municipality: municipality,
+                        total_farm_area_ha: areaHa,
+                        within_ancestral_domain: parcel.withinAncestralDomain === 'Yes' || parcel.withinAncestralDomain === true,
+                        agrarian_reform_beneficiary: parcel.agrarianReformBeneficiary === 'Yes' || parcel.agrarianReformBeneficiary === true,
+                        ownership_document_no: parcel.ownershipDocumentNo || '',
+                        ownership_document_type: parcel.ownershipDocumentType || null,
+                        is_active: true
+                    })
+                    .select('id, parcel_number')
+                    .single();
+
+                if (parcelError) {
+                    console.warn('Land parcel insert warning:', parcelError.message);
+                    // Try to continue without parcel linking
+                } else if (newParcel) {
+                    landParcelId = newParcel.id;
+                    parcelNumber = newParcel.parcel_number;
+                    console.log('✅ Created new land parcel:', parcelNumber);
+                }
+            }
+
+            // Step 2: Create land_history record
+            const changeType = previousHistoryId ? 'TRANSFER' : 'NEW';
+            const changeReason = previousHistoryId
+                ? (isRegisteredOwner ? 'Ownership transfer via RSBSA' : isTenant ? 'New tenant registered via RSBSA' : 'New lessee registered via RSBSA')
+                : (isRegisteredOwner ? 'Initial RSBSA registration as owner' : isTenant ? 'Registered as tenant through RSBSA' : 'Registered as lessee through RSBSA');
+
             const landHistoryRecord: Record<string, any> = {
-                rsbsa_submission_id: submissionId,
-                parcel_number: parcel.parcelNo || '',
-                farm_location_barangay: parcel.farmLocationBarangay || '',
-                farm_location_municipality: parcel.farmLocationMunicipality || 'Dumangas',
-                total_farm_area_ha: parseFloat(parcel.totalFarmAreaHa) || 0,
+                land_parcel_id: landParcelId,
+                parcel_number: parcelNumber,
+                farm_location_barangay: barangay,
+                farm_location_municipality: municipality,
+                total_farm_area_ha: areaHa,
                 farmer_id: submissionId,
                 farmer_name: farmerFullName,
                 is_registered_owner: isRegisteredOwner,
@@ -532,12 +646,10 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
                 is_lessee: isLessee,
                 is_current: true,
                 period_start_date: new Date().toISOString().split('T')[0],
-                change_type: 'NEW',
-                change_reason: isRegisteredOwner
-                    ? 'Initial RSBSA registration as owner'
-                    : isTenant
-                        ? 'Registered as tenant through RSBSA'
-                        : 'Registered as lessee through RSBSA',
+                change_type: changeType,
+                change_reason: changeReason,
+                previous_history_id: previousHistoryId,
+                rsbsa_submission_id: submissionId,
                 within_ancestral_domain: parcel.withinAncestralDomain === 'Yes' || parcel.withinAncestralDomain === true,
                 agrarian_reform_beneficiary: parcel.agrarianReformBeneficiary === 'Yes' || parcel.agrarianReformBeneficiary === true,
                 ownership_document_no: parcel.ownershipDocumentNo || '',
@@ -547,12 +659,6 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
             if ((isTenant || isLessee) && selectedLandOwner) {
                 landHistoryRecord.land_owner_id = selectedLandOwner.id;
                 landHistoryRecord.land_owner_name = selectedLandOwner.name;
-
-                if (isTenant) {
-                    landHistoryRecord.tenant_name = farmerFullName;
-                } else if (isLessee) {
-                    landHistoryRecord.lessee_name = farmerFullName;
-                }
             } else if (isRegisteredOwner) {
                 // Owner is also the land owner
                 landHistoryRecord.land_owner_id = submissionId;
@@ -566,9 +672,8 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
 
             if (historyError) {
                 console.warn('Land history insert warning (non-blocking):', historyError.message);
-                // Don't fail the whole submission if land_history fails
             } else {
-                console.log('✅ Created land_history record for parcel:', parcel.parcelNo);
+                console.log('✅ Created land_history record for parcel:', parcelNumber, 'Type:', changeType);
             }
         }
     } catch (historyErr) {
@@ -853,13 +958,27 @@ export const createDistributionRecord = async (recordData: any): Promise<ApiResp
 // ==================== LAND OWNERS ====================
 
 export const getLandOwners = async (): Promise<ApiResponse> => {
+    // Get registered owners from rsbsa_submission
+    // The column name in rsbsa_submission is OWNERSHIP_TYPE_REGISTERED_OWNER
     const { data, error } = await supabase
         .from('rsbsa_submission')
-        .select('*')
-        .eq('is_registered_owner', true);
+        .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY", "MUNICIPALITY"')
+        .eq('OWNERSHIP_TYPE_REGISTERED_OWNER', true);
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+    if (error) {
+        console.error('getLandOwners error:', error);
+        return createResponse(null, error.message, 500);
+    }
+
+    // Transform to expected format with full name
+    const landOwners = (data || []).map((row: any) => ({
+        id: row.id,
+        name: `${row['FIRST NAME'] || ''} ${row['MIDDLE NAME'] || ''} ${row['LAST NAME'] || ''}`.replace(/\s+/g, ' ').trim(),
+        barangay: row['BARANGAY'] || '',
+        municipality: row['MUNICIPALITY'] || 'Dumangas'
+    }));
+
+    return createResponse(landOwners, null, 200);
 };
 
 // ==================== LAND HISTORY ====================
