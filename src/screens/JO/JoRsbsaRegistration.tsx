@@ -183,6 +183,22 @@ const JoRsbsa: React.FC = () => {
   const [isSearchingParcels, setIsSearchingParcels] = useState(false);
   const [useExistingParcel, setUseExistingParcel] = useState<boolean>(false);
 
+  // Toast notification state
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  // Show toast notification
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ show: true, message, type });
+    // Auto-hide after 4 seconds for success, longer for errors
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, type === 'success' ? 4000 : 5000);
+  };
+
   // Search for existing parcels by OWNER NAME (more intuitive)
   const searchExistingParcels = async (searchTerm: string) => {
     if (searchTerm.length < 2) {
@@ -474,6 +490,8 @@ const JoRsbsa: React.FC = () => {
   const applySelectedParcels = () => {
     const selectedParcels = ownerParcels.filter(p => selectedParcelIds.has(p.id));
 
+    console.log('📋 Applying selected parcels:', selectedParcels);
+
     setFormData(prev => {
       const parcels = selectedParcels.map((ownerParcel: any, index: number) => ({
         parcelNo: String(index + 1),
@@ -490,7 +508,11 @@ const JoRsbsa: React.FC = () => {
         tenantLandOwnerName: ownershipCategory === 'tenant' ? selectedLandOwner.name : '',
         lesseeLandOwnerName: ownershipCategory === 'lessee' ? selectedLandOwner.name : '',
         ownershipOthersSpecify: '',
+        // IMPORTANT: Include existing parcel info for ownership transfer tracking
+        existingParcelId: ownerParcel.land_parcel_id || ownerParcel.id,
+        existingParcelNumber: ownerParcel.parcel_number || '',
       }));
+      console.log('📋 Mapped parcels with existingParcelId:', parcels);
       return { ...prev, farmlandParcels: parcels };
     });
 
@@ -665,6 +687,8 @@ const JoRsbsa: React.FC = () => {
         })),
       };
 
+      console.log('📤 Submitting transformed data:', JSON.stringify(transformedData.farmlandParcels, null, 2));
+
       const response = await createRsbsaSubmission({ draftId, data: transformedData });
 
       if (response.error) {
@@ -681,7 +705,7 @@ const JoRsbsa: React.FC = () => {
         message = error;
       }
       console.error("Error submitting form:", error);
-      alert("Error submitting form: " + message + ". Please try again.");
+      showToast("Error submitting form: " + message + ". Please try again.", 'error');
       return null;
     }
   };
@@ -691,13 +715,15 @@ const JoRsbsa: React.FC = () => {
     try {
       const submitted = await submitFinalToServer();
       if (submitted && submitted.submissionId) {
-        alert('RSBSA form submitted successfully!');
-        // Navigate back to JO flow instead of technician route to avoid auth redirects
-        navigate('/jo-rsbsapage');
+        showToast('RSBSA form submitted successfully!', 'success');
+        // Navigate back to JO flow after a short delay to show the toast
+        setTimeout(() => {
+          navigate('/jo-rsbsapage');
+        }, 1500);
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Error submitting form. Please try again.');
+      showToast('Error submitting form. Please try again.', 'error');
     }
   };
 
@@ -1260,9 +1286,9 @@ const JoRsbsa: React.FC = () => {
                     {/* Existing Parcel Search Section */}
                     <div className="jo-registration-section-card" style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '12px', border: '1px solid #dee2e6' }}>
                       <div style={{ marginBottom: '1rem' }}>
-                        <h5 style={{ margin: 0, color: '#2c3e50', fontSize: '1.1rem' }}>🔍 Did you acquire this land from someone?</h5>
+                        <h5 style={{ margin: 0, color: '#2c3e50', fontSize: '1.1rem' }}>🔍 Is this land already registered to someone?</h5>
                         <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#6c757d' }}>
-                          Search by previous owner's name to transfer ownership, or skip to register new land
+                          Search by current owner's name to record ownership transfer, or skip to register new land
                         </p>
                       </div>
 
@@ -1270,7 +1296,7 @@ const JoRsbsa: React.FC = () => {
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                           <input
                             type="text"
-                            placeholder="Search previous owner's name (e.g., Juan Dela Cruz)..."
+                            placeholder="Search current owner's name (e.g., Juan Dela Cruz)..."
                             value={existingParcelSearch}
                             onChange={(e) => {
                               setExistingParcelSearch(e.target.value);
@@ -1328,8 +1354,8 @@ const JoRsbsa: React.FC = () => {
                             ) : existingParcels.length === 0 ? (
                               <div style={{ padding: '1rem', textAlign: 'center', color: '#6c757d' }}>
                                 <div style={{ marginBottom: '0.5rem' }}>No registered owner found with that name</div>
-                                <div style={{ fontSize: '0.85rem', color: '#28a745' }}>
-                                  ✓ This appears to be new land. Fill in the details below.
+                                <div style={{ fontSize: '0.85rem', color: '#856404', backgroundColor: '#fff3cd', padding: '0.5rem', borderRadius: '4px', marginTop: '0.5rem' }}>
+                                  💡 If this person is registered, try different spelling. Otherwise, skip and register as new land.
                                 </div>
                               </div>
                             ) : (
@@ -1674,6 +1700,26 @@ const JoRsbsa: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`jo-registration-toast jo-registration-toast-${toast.type}`}>
+          <div className="jo-registration-toast-icon">
+            {toast.type === 'success' && '✅'}
+            {toast.type === 'error' && '❌'}
+            {toast.type === 'warning' && '⚠️'}
+          </div>
+          <div className="jo-registration-toast-content">
+            <span className="jo-registration-toast-message">{toast.message}</span>
+          </div>
+          <button
+            className="jo-registration-toast-close"
+            onClick={() => setToast(prev => ({ ...prev, show: false }))}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 };

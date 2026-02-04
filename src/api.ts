@@ -413,16 +413,43 @@ export const getAvailableSeasons = async (): Promise<ApiResponse> => {
 // ==================== RSBSA SUBMISSION ====================
 
 export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
+    // Get all submissions
     const { data, error } = await supabase
         .from('rsbsa_submission')
         .select('*');
 
     if (error) return createResponse(null, error.message, 500);
 
-    // Transform all records
-    const transformedData = (data || []).map(transformRsbsaRecord);
+    // Get all farm parcels with current ownership status
+    const { data: parcelsData } = await supabase
+        .from('rsbsa_farm_parcels')
+        .select('submission_id, is_current_owner');
 
-    console.log('📊 Transformed RSBSA data:', transformedData.length, 'records');
+    // Create a map of submission_id -> has any current parcels
+    const currentOwnershipMap = new Map<number, boolean>();
+    (parcelsData || []).forEach((parcel: any) => {
+        const subId = parcel.submission_id;
+        // If any parcel has is_current_owner = true (or null/undefined which defaults to true), mark as current
+        const isCurrent = parcel.is_current_owner !== false;
+        if (isCurrent) {
+            currentOwnershipMap.set(subId, true);
+        } else if (!currentOwnershipMap.has(subId)) {
+            currentOwnershipMap.set(subId, false);
+        }
+    });
+
+    // Filter to only include submissions that have at least one current parcel
+    // OR submissions that have no parcels yet (still show them)
+    const filteredData = (data || []).filter((submission: any) => {
+        const hasCurrentParcel = currentOwnershipMap.get(submission.id);
+        // If not in map (no parcels), show them. If in map, only show if has current parcel
+        return hasCurrentParcel !== false;
+    });
+
+    // Transform all records
+    const transformedData = filteredData.map(transformRsbsaRecord);
+
+    console.log('📊 Transformed RSBSA data:', transformedData.length, 'records (filtered from', data?.length, ')');
     if (transformedData.length > 0) {
         console.log('📝 Sample transformed record:', transformedData[0]);
     }
@@ -517,11 +544,17 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
     const farmerFullName = `${formData.firstName || ''} ${formData.middleName || ''} ${formData.surname || ''}`.trim();
     const selectedLandOwner = formData.selectedLandOwner;
 
+    console.log('📋 Processing parcels:', parcels.length, 'parcels');
+    console.log('📋 Farmer:', farmerFullName, 'ID:', submissionId);
+
     try {
         for (const parcel of parcels) {
+            console.log('🔄 Processing parcel:', JSON.stringify(parcel));
             const barangay = parcel.farmLocationBarangay || '';
             const municipality = parcel.farmLocationMunicipality || 'Dumangas';
             const areaHa = parseFloat(parcel.totalFarmAreaHa) || 0;
+
+            console.log('📍 Parcel details:', { barangay, municipality, areaHa, existingParcelId: parcel.existingParcelId });
 
             // Step 1: Check if parcel already exists or create new one
             let landParcelId: number | null = null;
@@ -530,6 +563,7 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
 
             // Check if an existing parcel was selected from the UI
             if (parcel.existingParcelId) {
+                console.log('🔗 Found existingParcelId:', parcel.existingParcelId);
                 // Use the pre-selected existing parcel
                 landParcelId = parcel.existingParcelId;
                 parcelNumber = parcel.existingParcelNumber || parcelNumber;
@@ -545,7 +579,7 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
 
                 if (currentHolder) {
                     previousHistoryId = currentHolder.id;
-                    // Close the previous holder's record
+                    // Close the previous holder's record in land_history
                     await supabase
                         .from('land_history')
                         .update({
@@ -554,8 +588,104 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
                         })
                         .eq('id', currentHolder.id);
                     console.log('📝 Closed previous holder record:', currentHolder.id);
+
+                    // Also mark the old owner's parcel in rsbsa_farm_parcels as no longer current
+                    // First, find the old owner's farmer_id from land_history
+                    const { data: oldOwnerData } = await supabase
+                        .from('land_history')
+                        .select('farmer_id, parcel_number')
+                        .eq('id', currentHolder.id)
+                        .single();
+
+                    if (oldOwnerData && oldOwnerData.farmer_id) {
+                        // Mark old owner's parcel as not current in rsbsa_farm_parcels
+                        await supabase
+                            .from('rsbsa_farm_parcels')
+                            .update({ is_current_owner: false })
+                            .eq('submission_id', oldOwnerData.farmer_id)
+                            .eq('parcel_number', oldOwnerData.parcel_number);
+                        console.log('📝 Marked old owner parcel as not current in rsbsa_farm_parcels');
+
+                        // Also update the old owner's status to "Not Active" if they have no more current parcels
+                        const { data: remainingParcels } = await supabase
+                            .from('rsbsa_farm_parcels')
+                            .select('id')
+                            .eq('submission_id', oldOwnerData.farmer_id)
+                            .eq('is_current_owner', true);
+
+                        if (!remainingParcels || remainingParcels.length === 0) {
+                            await supabase
+                                .from('rsbsa_submission')
+                                .update({ status: 'Not Active' })
+                                .eq('id', oldOwnerData.farmer_id);
+                            console.log('📝 Updated old owner status to Not Active');
+                        }
+                    }
                 }
-            } else if (parcelNumber) {
+            } else if (parcel.existingParcelNumber) {
+                // Fallback: Try to find existing parcel by existingParcelNumber
+                const { data: existingParcel } = await supabase
+                    .from('land_parcels')
+                    .select('id, parcel_number')
+                    .eq('parcel_number', parcel.existingParcelNumber)
+                    .single();
+
+                if (existingParcel) {
+                    landParcelId = existingParcel.id;
+                    parcelNumber = existingParcel.parcel_number;
+                    console.log('📍 Found existing parcel by existingParcelNumber:', parcelNumber, 'ID:', landParcelId);
+
+                    // Find current holder to close their record (same logic as above)
+                    const { data: currentHolder } = await supabase
+                        .from('land_history')
+                        .select('id')
+                        .eq('land_parcel_id', landParcelId)
+                        .eq('is_current', true)
+                        .single();
+
+                    if (currentHolder) {
+                        previousHistoryId = currentHolder.id;
+                        await supabase
+                            .from('land_history')
+                            .update({
+                                is_current: false,
+                                period_end_date: new Date().toISOString().split('T')[0]
+                            })
+                            .eq('id', currentHolder.id);
+                        console.log('📝 Closed previous holder record:', currentHolder.id);
+
+                        const { data: oldOwnerData } = await supabase
+                            .from('land_history')
+                            .select('farmer_id, parcel_number')
+                            .eq('id', currentHolder.id)
+                            .single();
+
+                        if (oldOwnerData && oldOwnerData.farmer_id) {
+                            await supabase
+                                .from('rsbsa_farm_parcels')
+                                .update({ is_current_owner: false })
+                                .eq('submission_id', oldOwnerData.farmer_id)
+                                .eq('parcel_number', oldOwnerData.parcel_number);
+                            console.log('📝 Marked old owner parcel as not current in rsbsa_farm_parcels');
+
+                            // Check if old owner has any remaining current parcels
+                            const { data: remainingParcels } = await supabase
+                                .from('rsbsa_farm_parcels')
+                                .select('id')
+                                .eq('submission_id', oldOwnerData.farmer_id)
+                                .eq('is_current_owner', true);
+
+                            if (!remainingParcels || remainingParcels.length === 0) {
+                                await supabase
+                                    .from('rsbsa_submission')
+                                    .update({ status: 'Not Active' })
+                                    .eq('id', oldOwnerData.farmer_id);
+                                console.log('📝 Updated old owner status to Not Active');
+                            }
+                        }
+                    }
+                }
+            } else if (parcelNumber && parcelNumber !== String(parcels.indexOf(parcel) + 1)) {
                 // Try to find existing parcel by parcel_number
                 const { data: existingParcel } = await supabase
                     .from('land_parcels')
@@ -577,7 +707,7 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
 
                     if (currentHolder) {
                         previousHistoryId = currentHolder.id;
-                        // Close the previous holder's record
+                        // Close the previous holder's record in land_history
                         await supabase
                             .from('land_history')
                             .update({
@@ -586,6 +716,22 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
                             })
                             .eq('id', currentHolder.id);
                         console.log('📝 Closed previous holder record:', currentHolder.id);
+
+                        // Also mark the old owner's parcel in rsbsa_farm_parcels as no longer current
+                        const { data: oldOwnerData } = await supabase
+                            .from('land_history')
+                            .select('farmer_id, parcel_number')
+                            .eq('id', currentHolder.id)
+                            .single();
+
+                        if (oldOwnerData && oldOwnerData.farmer_id) {
+                            await supabase
+                                .from('rsbsa_farm_parcels')
+                                .update({ is_current_owner: false })
+                                .eq('submission_id', oldOwnerData.farmer_id)
+                                .eq('parcel_number', oldOwnerData.parcel_number);
+                            console.log('📝 Marked old owner parcel as not current in rsbsa_farm_parcels');
+                        }
                     }
                 }
             }
@@ -675,6 +821,36 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
             } else {
                 console.log('✅ Created land_history record for parcel:', parcelNumber, 'Type:', changeType);
             }
+
+            // Also insert into rsbsa_farm_parcels for the modal to display
+            const farmParcelRecord: Record<string, any> = {
+                submission_id: submissionId,
+                parcel_number: parcelNumber,
+                farm_location_barangay: barangay,
+                farm_location_municipality: municipality,
+                total_farm_area_ha: areaHa,
+                within_ancestral_domain: parcel.withinAncestralDomain === 'Yes' || parcel.withinAncestralDomain === true,
+                agrarian_reform_beneficiary: parcel.agrarianReformBeneficiary === 'Yes' || parcel.agrarianReformBeneficiary === true,
+                ownership_document_no: parcel.ownershipDocumentNo || '',
+                ownership_type_registered_owner: isRegisteredOwner,
+                ownership_type_tenant: isTenant,
+                ownership_type_lessee: isLessee,
+                tenant_land_owner_name: isTenant && selectedLandOwner ? selectedLandOwner.name : '',
+                lessee_land_owner_name: isLessee && selectedLandOwner ? selectedLandOwner.name : '',
+                tenant_land_owner_id: isTenant && selectedLandOwner ? selectedLandOwner.id : null,
+                lessee_land_owner_id: isLessee && selectedLandOwner ? selectedLandOwner.id : null,
+                is_current_owner: true
+            };
+
+            const { error: farmParcelError } = await supabase
+                .from('rsbsa_farm_parcels')
+                .insert(farmParcelRecord);
+
+            if (farmParcelError) {
+                console.warn('Farm parcel insert warning (non-blocking):', farmParcelError.message);
+            } else {
+                console.log('✅ Created rsbsa_farm_parcels record for parcel:', parcelNumber);
+            }
         }
     } catch (historyErr) {
         console.warn('Error creating land history (non-blocking):', historyErr);
@@ -714,20 +890,62 @@ export const deleteRsbsaSubmission = async (id: string | number): Promise<ApiRes
 // ==================== FARM PARCELS ====================
 
 export const getFarmParcels = async (submissionId: string | number): Promise<ApiResponse> => {
-    // Try different possible column names for the submission ID
-    // First try snake_case, then try with quotes for spaces
-    let { data, error } = await supabase
+    // First get the farm parcels
+    let { data: parcels, error: parcelsError } = await supabase
         .from('rsbsa_farm_parcels')
         .select('*')
         .eq('submission_id', submissionId);
 
-    // If that fails, the table might not exist or have different structure
-    // Return empty array instead of error for now (prototype)
-    if (error) {
-        console.log('Farm parcels query error (non-blocking):', error.message);
+    if (parcelsError) {
+        console.log('Farm parcels query error (non-blocking):', parcelsError.message);
         return createResponse([], null, 200);
     }
-    return createResponse(data || [], null, 200);
+
+    if (!parcels || parcels.length === 0) {
+        return createResponse([], null, 200);
+    }
+
+    // Now try to get the land_parcel_id from land_history for each parcel
+    // This is needed for ownership transfers to properly reference the land parcel
+    const enhancedParcels = await Promise.all(
+        parcels.map(async (parcel) => {
+            // Try to find the land_parcel_id from land_history using parcel_number
+            const { data: historyData } = await supabase
+                .from('land_history')
+                .select('land_parcel_id, parcel_number')
+                .eq('farmer_id', submissionId)
+                .eq('parcel_number', parcel.parcel_number)
+                .eq('is_current', true)
+                .single();
+
+            if (historyData && historyData.land_parcel_id) {
+                console.log(`📍 Found land_parcel_id ${historyData.land_parcel_id} for parcel ${parcel.parcel_number}`);
+                return {
+                    ...parcel,
+                    land_parcel_id: historyData.land_parcel_id
+                };
+            }
+
+            // Fallback: try to find by parcel_number in land_parcels directly
+            const { data: landParcelData } = await supabase
+                .from('land_parcels')
+                .select('id')
+                .eq('parcel_number', parcel.parcel_number)
+                .single();
+
+            if (landParcelData) {
+                console.log(`📍 Found land_parcel_id ${landParcelData.id} from land_parcels for ${parcel.parcel_number}`);
+                return {
+                    ...parcel,
+                    land_parcel_id: landParcelData.id
+                };
+            }
+
+            return parcel;
+        })
+    );
+
+    return createResponse(enhancedParcels, null, 200);
 };
 
 export const createFarmParcel = async (parcelData: any): Promise<ApiResponse> => {

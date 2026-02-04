@@ -722,3 +722,152 @@
         width: 100%;
     }
 }
+
+/* ============================================
+   TOAST NOTIFICATION
+   ============================================ */
+
+.jo-registration-toast {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    animation: jo-toast-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    min-width: 320px;
+    max-width: 480px;
+}
+
+@keyframes jo-toast-slide-in {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Success Toast */
+.jo-registration-toast-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: 1px solid #047857;
+}
+
+.jo-registration-toast-success .jo-registration-toast-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.jo-registration-toast-success .jo-registration-toast-message {
+    color: white;
+}
+
+.jo-registration-toast-success .jo-registration-toast-close {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.jo-registration-toast-success .jo-registration-toast-close:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Error Toast */
+.jo-registration-toast-error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border: 1px solid #b91c1c;
+}
+
+.jo-registration-toast-error .jo-registration-toast-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.jo-registration-toast-error .jo-registration-toast-message {
+    color: white;
+}
+
+.jo-registration-toast-error .jo-registration-toast-close {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.jo-registration-toast-error .jo-registration-toast-close:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Warning Toast */
+.jo-registration-toast-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: 1px solid #b45309;
+}
+
+.jo-registration-toast-warning .jo-registration-toast-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.jo-registration-toast-warning .jo-registration-toast-message {
+    color: white;
+}
+
+.jo-registration-toast-warning .jo-registration-toast-close {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.jo-registration-toast-warning .jo-registration-toast-close:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Toast Icon */
+.jo-registration-toast-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+/* Toast Content */
+.jo-registration-toast-content {
+    flex: 1;
+}
+
+.jo-registration-toast-message {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+/* Toast Close Button */
+.jo-registration-toast-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+/* Mobile responsiveness for toast */
+@media (max-width: 480px) {
+    .jo-registration-toast {
+        left: 16px;
+        right: 16px;
+        min-width: auto;
+        max-width: none;
+    }
+}
