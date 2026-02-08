@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FeatureCollection } from 'geojson'; // Import FeatureCollection and Feature types
-import { getLandPlots } from '../../api';
+import { getLandPlots, getCropPlantingInfo } from '../../api';
 
 // Fix for default marker icons in Leaflet with React
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -35,30 +35,17 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
     const [boundaryError, setBoundaryError] = useState<string | null>(null);
     const [cropInfoMap, setCropInfoMap] = useState<{ [featureKey: string]: any }>({});
 
-    // Helper to fetch crop/planting info by farmer name and location
+    // Helper to fetch crop/planting info by farmer name and location (uses Supabase directly)
     const fetchCropPlantingInfo = async (surname: string, firstName: string, middleName: string, barangay: string) => {
         try {
-            // Skip API call if no name info and no barangay
             if ((!surname && !firstName) || !barangay) {
                 console.log('Missing required fields for crop/planting info:', { surname, firstName, middleName, barangay });
                 return { owner: null, tenants: [] };
             }
-            // Build URL with all available parameters
-            const params = new URLSearchParams();
-            if (surname) params.append('surname', surname);
-            if (firstName) params.append('firstName', firstName);
-            if (middleName) params.append('middleName', middleName);
-            if (barangay) params.append('barangay', barangay);
-
-            const url = `/api/crop-planting-info?${params.toString()}`;
-            console.log('Fetching crop info from:', url);
-            const res = await fetch(url);
-            if (!res.ok) {
-                console.error('API error:', res.status, res.statusText);
-                return { owner: null, tenants: [] };
-            }
-            const data = await res.json();
-            return data;
+            console.log('Fetching crop info via Supabase for:', { surname, firstName, middleName, barangay });
+            const result = await getCropPlantingInfo(surname, firstName, middleName, barangay);
+            console.log('Crop info result:', result);
+            return result;
         } catch (err) {
             console.error('Error fetching crop/planting info:', err);
             return { owner: null, tenants: [] };

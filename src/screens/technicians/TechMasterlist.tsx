@@ -153,6 +153,47 @@ const TechMasterlist: React.FC = () => {
         return `${lastName}, ${restOfName}`;
       })();
 
+      // Build parcels array from rsbsa_farm_parcels; if empty, fall back to submission-level farm data
+      let mappedParcels = parcelsData.map((p: any) => ({
+        id: p.id,
+        parcelNumber: p.parcel_number || 'N/A',
+        farmLocationBarangay: p.farm_location_barangay || 'N/A',
+        farmLocationMunicipality: p.farm_location_municipality || 'N/A',
+        totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
+        ownershipTypeRegisteredOwner: p.ownership_type_registered_owner || false,
+        ownershipTypeTenant: p.ownership_type_tenant || false,
+        ownershipTypeLessee: p.ownership_type_lessee || false,
+        tenantLandOwnerName: p.tenant_land_owner_name || '',
+        lesseeLandOwnerName: p.lessee_land_owner_name || ''
+      }));
+
+      // Fallback: if no parcels in rsbsa_farm_parcels, build from submission-level data
+      if (mappedParcels.length === 0) {
+        const submissionFarmLocation = data.farmLocation || data['FARM LOCATION'] || '';
+        const submissionParcelArea = parseFloat(data.totalFarmArea || data['TOTAL FARM AREA'] || data.parcelArea || data['PARCEL AREA'] || '0');
+        const submissionOwnership = data.ownershipType || {};
+
+        if (submissionFarmLocation || submissionParcelArea > 0) {
+          // Extract barangay and municipality from farmLocation (format: "Barangay, Municipality")
+          const locationParts = submissionFarmLocation.split(',').map((s: string) => s.trim());
+          const fallbackBarangay = locationParts[0] || data.barangay || data['BARANGAY'] || 'N/A';
+          const fallbackMunicipality = locationParts[1] || data.municipality || data['MUNICIPALITY'] || 'Dumangas';
+
+          mappedParcels = [{
+            id: `submission-${farmerId}`,
+            parcelNumber: 'N/A',
+            farmLocationBarangay: fallbackBarangay,
+            farmLocationMunicipality: fallbackMunicipality,
+            totalFarmAreaHa: submissionParcelArea,
+            ownershipTypeRegisteredOwner: submissionOwnership.registeredOwner || data['OWNERSHIP_TYPE_REGISTERED_OWNER'] || false,
+            ownershipTypeTenant: submissionOwnership.tenant || data['OWNERSHIP_TYPE_TENANT'] || false,
+            ownershipTypeLessee: submissionOwnership.lessee || data['OWNERSHIP_TYPE_LESSEE'] || false,
+            tenantLandOwnerName: '',
+            lesseeLandOwnerName: ''
+          }];
+        }
+      }
+
       const farmerDetail: FarmerDetail = {
         id: farmerId,
         farmerName: reformattedFarmerName,
@@ -161,18 +202,7 @@ const TechMasterlist: React.FC = () => {
         gender: data.gender || 'N/A',
         mainLivelihood: data.mainLivelihood || 'N/A',
         farmingActivities: activities,
-        parcels: parcelsData.map((p: any) => ({
-          id: p.id,
-          parcelNumber: p.parcel_number || 'N/A',
-          farmLocationBarangay: p.farm_location_barangay || 'N/A',
-          farmLocationMunicipality: p.farm_location_municipality || 'N/A',
-          totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
-          ownershipTypeRegisteredOwner: p.ownership_type_registered_owner || false,
-          ownershipTypeTenant: p.ownership_type_tenant || false,
-          ownershipTypeLessee: p.ownership_type_lessee || false,
-          tenantLandOwnerName: p.tenant_land_owner_name || '',
-          lesseeLandOwnerName: p.lessee_land_owner_name || ''
-        }))
+        parcels: mappedParcels
       };
 
       setSelectedFarmer(farmerDetail);
@@ -934,7 +964,7 @@ const TechMasterlist: React.FC = () => {
                           {selectedFarmer.parcels.map((parcel, index) => (
                             <div key={parcel.id} className="farmer-modal-parcel-card">
                               <div className="farmer-modal-parcel-header">
-                                <h4>Parcel #{parcel.parcelNumber}</h4>
+                                <h4>Parcel #{parcel.parcelNumber !== 'N/A' ? parcel.parcelNumber : index + 1}</h4>
                               </div>
                               <div className="farmer-modal-parcel-details">
                                 <div className="farmer-modal-parcel-item">

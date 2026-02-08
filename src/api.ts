@@ -438,13 +438,10 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
         }
     });
 
-    // Filter to only include submissions that have at least one current parcel
-    // OR submissions that have no parcels yet (still show them)
-    const filteredData = (data || []).filter((submission: any) => {
-        const hasCurrentParcel = currentOwnershipMap.get(submission.id);
-        // If not in map (no parcels), show them. If in map, only show if has current parcel
-        return hasCurrentParcel !== false;
-    });
+    // Show ALL farmers in the Masterlist regardless of parcel ownership status.
+    // Previous owners who transferred their land should still appear (with "Not Active" status).
+    // The ownership map is used for display purposes only, not filtering.
+    const filteredData = data || [];
 
     // Transform all records
     const transformedData = filteredData.map(transformRsbsaRecord);
@@ -473,14 +470,7 @@ export const getRsbsaSubmissionById = async (id: string | number): Promise<ApiRe
 };
 
 export const createRsbsaSubmission = async (submissionData: any): Promise<ApiResponse> => {
-    // Transform camelCase form data to Supabase column names (UPPERCASE with spaces)
     const formData = submissionData.data || submissionData;
-
-    // Determine ownership type from category or parcels
-    const ownershipCategory = formData.ownershipCategory || 'registeredOwner';
-    const isRegisteredOwner = ownershipCategory === 'registeredOwner';
-    const isTenant = ownershipCategory === 'tenant';
-    const isLessee = ownershipCategory === 'lessee';
 
     // Calculate total farm area from parcels
     const parcels = formData.farmlandParcels || [];
@@ -489,379 +479,64 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
         return sum + area;
     }, 0);
 
-    // Get first parcel location as default farm location
-    const firstParcel = parcels[0] || {};
-
-    const transformedData: Record<string, any> = {
-        "LAST NAME": formData.lastName || formData.surname || '',
-        "FIRST NAME": formData.firstName || '',
-        "MIDDLE NAME": formData.middleName || '',
-        "EXT NAME": formData.extName || formData.extensionName || '',
-        "BARANGAY": formData.barangay || formData.address?.barangay || '',
-        "MUNICIPALITY": formData.municipality || formData.address?.municipality || 'Dumangas',
-        "GENDER": formData.gender || formData.sex || '',
-        "BIRTHDATE": formData.dateOfBirth || formData.birthdate || null,
-        "MAIN LIVELIHOOD": formData.mainLivelihood || '',
-        "TOTAL FARM AREA": totalFarmArea,
-        "FARM LOCATION": firstParcel.farmLocationBarangay || formData.barangay || '',
-        "PARCEL AREA": firstParcel.totalFarmAreaHa || totalFarmArea || 0,
-        "OWNERSHIP_TYPE_REGISTERED_OWNER": isRegisteredOwner,
-        "OWNERSHIP_TYPE_TENANT": isTenant,
-        "OWNERSHIP_TYPE_LESSEE": isLessee,
-        "FARMER_RICE": formData.farmerRice || false,
-        "FARMER_CORN": formData.farmerCorn || false,
-        "FARMER_OTHER_CROPS": formData.farmerOtherCrops || false,
-        "FARMER_OTHER_CROPS_TEXT": formData.farmerOtherCropsText || '',
-        "FARMER_LIVESTOCK": formData.farmerLivestock || false,
-        "FARMER_LIVESTOCK_TEXT": formData.farmerLivestockText || '',
-        "FARMER_POULTRY": formData.farmerPoultry || false,
-        "FARMER_POULTRY_TEXT": formData.farmerPoultryText || '',
-        "status": 'Submitted'
+    // Build the payload for the database function
+    const rpcPayload = {
+        // Farmer details
+        surname: formData.lastName || formData.surname || '',
+        firstName: formData.firstName || '',
+        middleName: formData.middleName || '',
+        extensionName: formData.extName || formData.extensionName || '',
+        gender: formData.gender || formData.sex || '',
+        dateOfBirth: formData.dateOfBirth || formData.birthdate || null,
+        barangay: formData.barangay || formData.address?.barangay || '',
+        municipality: formData.municipality || formData.address?.municipality || 'Dumangas',
+        mainLivelihood: formData.mainLivelihood || '',
+        totalFarmArea: totalFarmArea,
+        // Ownership category
+        ownershipCategory: formData.ownershipCategory || 'registeredOwner',
+        selectedLandOwner: formData.selectedLandOwner || null,
+        // Farming activities
+        farmerRice: formData.farmerRice || false,
+        farmerCorn: formData.farmerCorn || false,
+        farmerOtherCrops: formData.farmerOtherCrops || false,
+        farmerOtherCropsText: formData.farmerOtherCropsText || '',
+        farmerLivestock: formData.farmerLivestock || false,
+        farmerLivestockText: formData.farmerLivestockText || '',
+        farmerPoultry: formData.farmerPoultry || false,
+        farmerPoultryText: formData.farmerPoultryText || '',
+        // Parcels with transfer info
+        farmlandParcels: parcels.map((p: any) => ({
+            farmLocationBarangay: p.farmLocationBarangay || '',
+            farmLocationMunicipality: p.farmLocationMunicipality || 'Dumangas',
+            totalFarmAreaHa: parseFloat(p.totalFarmAreaHa) || 0,
+            parcelNo: p.parcelNo || '',
+            existingParcelId: p.existingParcelId || null,
+            existingParcelNumber: p.existingParcelNumber || null,
+            withinAncestralDomain: p.withinAncestralDomain === 'Yes' || p.withinAncestralDomain === true ? 'Yes' : 'No',
+            agrarianReformBeneficiary: p.agrarianReformBeneficiary === 'Yes' || p.agrarianReformBeneficiary === true ? 'Yes' : 'No',
+            ownershipDocumentNo: p.ownershipDocumentNo || '',
+        })),
     };
 
-    // Remove null/undefined values
-    Object.keys(transformedData).forEach(key => {
-        if (transformedData[key] === undefined || transformedData[key] === null) {
-            delete transformedData[key];
-        }
+    console.log('📤 Calling register_farmer_with_parcels RPC:', JSON.stringify(rpcPayload.farmlandParcels, null, 2));
+
+    // Call the database function — runs as a single atomic transaction
+    const { data, error } = await supabase.rpc('register_farmer_with_parcels', {
+        p_data: rpcPayload
     });
 
-    console.log('Creating RSBSA submission with data:', transformedData);
-
-    const { data, error } = await supabase
-        .from('rsbsa_submission')
-        .insert(transformedData)
-        .select()
-        .single();
-
     if (error) {
-        console.error('Supabase insert error:', error);
+        console.error('❌ Registration RPC error:', error);
         return createResponse(null, error.message, 500);
     }
 
-    // Create land_history records for each parcel (NEW SCHEMA)
-    const submissionId = data.id;
-    const farmerFullName = `${formData.firstName || ''} ${formData.middleName || ''} ${formData.surname || ''}`.trim();
-    const selectedLandOwner = formData.selectedLandOwner;
-
-    console.log('📋 Processing parcels:', parcels.length, 'parcels');
-    console.log('📋 Farmer:', farmerFullName, 'ID:', submissionId);
-
-    try {
-        for (const parcel of parcels) {
-            console.log('🔄 Processing parcel:', JSON.stringify(parcel));
-            const barangay = parcel.farmLocationBarangay || '';
-            const municipality = parcel.farmLocationMunicipality || 'Dumangas';
-            const areaHa = parseFloat(parcel.totalFarmAreaHa) || 0;
-
-            console.log('📍 Parcel details:', { barangay, municipality, areaHa, existingParcelId: parcel.existingParcelId });
-
-            // Step 1: Check if parcel already exists or create new one
-            let landParcelId: number | null = null;
-            let parcelNumber = parcel.parcelNo || '';
-            let previousHistoryId: number | null = null;
-
-            // Check if an existing parcel was selected from the UI
-            if (parcel.existingParcelId) {
-                console.log('🔗 Found existingParcelId:', parcel.existingParcelId);
-                // Use the pre-selected existing parcel
-                landParcelId = parcel.existingParcelId;
-                parcelNumber = parcel.existingParcelNumber || parcelNumber;
-                console.log('📍 Using pre-selected existing parcel:', parcelNumber, 'ID:', landParcelId);
-
-                // Find current holder to close their record
-                const { data: currentHolder } = await supabase
-                    .from('land_history')
-                    .select('id')
-                    .eq('land_parcel_id', landParcelId)
-                    .eq('is_current', true)
-                    .single();
-
-                if (currentHolder) {
-                    previousHistoryId = currentHolder.id;
-                    // Close the previous holder's record in land_history
-                    await supabase
-                        .from('land_history')
-                        .update({
-                            is_current: false,
-                            period_end_date: new Date().toISOString().split('T')[0]
-                        })
-                        .eq('id', currentHolder.id);
-                    console.log('📝 Closed previous holder record:', currentHolder.id);
-
-                    // Also mark the old owner's parcel in rsbsa_farm_parcels as no longer current
-                    // First, find the old owner's farmer_id from land_history
-                    const { data: oldOwnerData } = await supabase
-                        .from('land_history')
-                        .select('farmer_id, parcel_number')
-                        .eq('id', currentHolder.id)
-                        .single();
-
-                    if (oldOwnerData && oldOwnerData.farmer_id) {
-                        // Mark old owner's parcel as not current in rsbsa_farm_parcels
-                        await supabase
-                            .from('rsbsa_farm_parcels')
-                            .update({ is_current_owner: false })
-                            .eq('submission_id', oldOwnerData.farmer_id)
-                            .eq('parcel_number', oldOwnerData.parcel_number);
-                        console.log('📝 Marked old owner parcel as not current in rsbsa_farm_parcels');
-
-                        // Also update the old owner's status to "Not Active" if they have no more current parcels
-                        const { data: remainingParcels } = await supabase
-                            .from('rsbsa_farm_parcels')
-                            .select('id')
-                            .eq('submission_id', oldOwnerData.farmer_id)
-                            .eq('is_current_owner', true);
-
-                        if (!remainingParcels || remainingParcels.length === 0) {
-                            await supabase
-                                .from('rsbsa_submission')
-                                .update({ status: 'Not Active' })
-                                .eq('id', oldOwnerData.farmer_id);
-                            console.log('📝 Updated old owner status to Not Active');
-                        }
-                    }
-                }
-            } else if (parcel.existingParcelNumber) {
-                // Fallback: Try to find existing parcel by existingParcelNumber
-                const { data: existingParcel } = await supabase
-                    .from('land_parcels')
-                    .select('id, parcel_number')
-                    .eq('parcel_number', parcel.existingParcelNumber)
-                    .single();
-
-                if (existingParcel) {
-                    landParcelId = existingParcel.id;
-                    parcelNumber = existingParcel.parcel_number;
-                    console.log('📍 Found existing parcel by existingParcelNumber:', parcelNumber, 'ID:', landParcelId);
-
-                    // Find current holder to close their record (same logic as above)
-                    const { data: currentHolder } = await supabase
-                        .from('land_history')
-                        .select('id')
-                        .eq('land_parcel_id', landParcelId)
-                        .eq('is_current', true)
-                        .single();
-
-                    if (currentHolder) {
-                        previousHistoryId = currentHolder.id;
-                        await supabase
-                            .from('land_history')
-                            .update({
-                                is_current: false,
-                                period_end_date: new Date().toISOString().split('T')[0]
-                            })
-                            .eq('id', currentHolder.id);
-                        console.log('📝 Closed previous holder record:', currentHolder.id);
-
-                        const { data: oldOwnerData } = await supabase
-                            .from('land_history')
-                            .select('farmer_id, parcel_number')
-                            .eq('id', currentHolder.id)
-                            .single();
-
-                        if (oldOwnerData && oldOwnerData.farmer_id) {
-                            await supabase
-                                .from('rsbsa_farm_parcels')
-                                .update({ is_current_owner: false })
-                                .eq('submission_id', oldOwnerData.farmer_id)
-                                .eq('parcel_number', oldOwnerData.parcel_number);
-                            console.log('📝 Marked old owner parcel as not current in rsbsa_farm_parcels');
-
-                            // Check if old owner has any remaining current parcels
-                            const { data: remainingParcels } = await supabase
-                                .from('rsbsa_farm_parcels')
-                                .select('id')
-                                .eq('submission_id', oldOwnerData.farmer_id)
-                                .eq('is_current_owner', true);
-
-                            if (!remainingParcels || remainingParcels.length === 0) {
-                                await supabase
-                                    .from('rsbsa_submission')
-                                    .update({ status: 'Not Active' })
-                                    .eq('id', oldOwnerData.farmer_id);
-                                console.log('📝 Updated old owner status to Not Active');
-                            }
-                        }
-                    }
-                }
-            } else if (parcelNumber && parcelNumber !== String(parcels.indexOf(parcel) + 1)) {
-                // Try to find existing parcel by parcel_number
-                const { data: existingParcel } = await supabase
-                    .from('land_parcels')
-                    .select('id, parcel_number')
-                    .eq('parcel_number', parcelNumber)
-                    .single();
-
-                if (existingParcel) {
-                    landParcelId = existingParcel.id;
-                    console.log('📍 Found existing parcel by number:', parcelNumber);
-
-                    // Find current holder to close their record
-                    const { data: currentHolder } = await supabase
-                        .from('land_history')
-                        .select('id')
-                        .eq('land_parcel_id', landParcelId)
-                        .eq('is_current', true)
-                        .single();
-
-                    if (currentHolder) {
-                        previousHistoryId = currentHolder.id;
-                        // Close the previous holder's record in land_history
-                        await supabase
-                            .from('land_history')
-                            .update({
-                                is_current: false,
-                                period_end_date: new Date().toISOString().split('T')[0]
-                            })
-                            .eq('id', currentHolder.id);
-                        console.log('📝 Closed previous holder record:', currentHolder.id);
-
-                        // Also mark the old owner's parcel in rsbsa_farm_parcels as no longer current
-                        const { data: oldOwnerData } = await supabase
-                            .from('land_history')
-                            .select('farmer_id, parcel_number')
-                            .eq('id', currentHolder.id)
-                            .single();
-
-                        if (oldOwnerData && oldOwnerData.farmer_id) {
-                            await supabase
-                                .from('rsbsa_farm_parcels')
-                                .update({ is_current_owner: false })
-                                .eq('submission_id', oldOwnerData.farmer_id)
-                                .eq('parcel_number', oldOwnerData.parcel_number);
-                            console.log('📝 Marked old owner parcel as not current in rsbsa_farm_parcels');
-                        }
-                    }
-                }
-            }
-
-            // If no existing parcel found, create a new one
-            if (!landParcelId) {
-                // Generate parcel number if not provided
-                if (!parcelNumber) {
-                    // Use the generate_parcel_number function or create manually
-                    const brgyCode = barangay.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '') || 'UNK';
-                    const year = new Date().getFullYear();
-                    const timestamp = Date.now().toString().slice(-4);
-                    parcelNumber = `${brgyCode}-${year}-${timestamp}`;
-                }
-
-                const { data: newParcel, error: parcelError } = await supabase
-                    .from('land_parcels')
-                    .insert({
-                        parcel_number: parcelNumber,
-                        farm_location_barangay: barangay,
-                        farm_location_municipality: municipality,
-                        total_farm_area_ha: areaHa,
-                        within_ancestral_domain: parcel.withinAncestralDomain === 'Yes' || parcel.withinAncestralDomain === true,
-                        agrarian_reform_beneficiary: parcel.agrarianReformBeneficiary === 'Yes' || parcel.agrarianReformBeneficiary === true,
-                        ownership_document_no: parcel.ownershipDocumentNo || '',
-                        ownership_document_type: parcel.ownershipDocumentType || null,
-                        is_active: true
-                    })
-                    .select('id, parcel_number')
-                    .single();
-
-                if (parcelError) {
-                    console.warn('Land parcel insert warning:', parcelError.message);
-                    // Try to continue without parcel linking
-                } else if (newParcel) {
-                    landParcelId = newParcel.id;
-                    parcelNumber = newParcel.parcel_number;
-                    console.log('✅ Created new land parcel:', parcelNumber);
-                }
-            }
-
-            // Step 2: Create land_history record
-            const changeType = previousHistoryId ? 'TRANSFER' : 'NEW';
-            const changeReason = previousHistoryId
-                ? (isRegisteredOwner ? 'Ownership transfer via RSBSA' : isTenant ? 'New tenant registered via RSBSA' : 'New lessee registered via RSBSA')
-                : (isRegisteredOwner ? 'Initial RSBSA registration as owner' : isTenant ? 'Registered as tenant through RSBSA' : 'Registered as lessee through RSBSA');
-
-            const landHistoryRecord: Record<string, any> = {
-                land_parcel_id: landParcelId,
-                parcel_number: parcelNumber,
-                farm_location_barangay: barangay,
-                farm_location_municipality: municipality,
-                total_farm_area_ha: areaHa,
-                farmer_id: submissionId,
-                farmer_name: farmerFullName,
-                is_registered_owner: isRegisteredOwner,
-                is_tenant: isTenant,
-                is_lessee: isLessee,
-                is_current: true,
-                period_start_date: new Date().toISOString().split('T')[0],
-                change_type: changeType,
-                change_reason: changeReason,
-                previous_history_id: previousHistoryId,
-                rsbsa_submission_id: submissionId,
-                within_ancestral_domain: parcel.withinAncestralDomain === 'Yes' || parcel.withinAncestralDomain === true,
-                agrarian_reform_beneficiary: parcel.agrarianReformBeneficiary === 'Yes' || parcel.agrarianReformBeneficiary === true,
-                ownership_document_no: parcel.ownershipDocumentNo || '',
-            };
-
-            // For tenant/lessee: add land owner info
-            if ((isTenant || isLessee) && selectedLandOwner) {
-                landHistoryRecord.land_owner_id = selectedLandOwner.id;
-                landHistoryRecord.land_owner_name = selectedLandOwner.name;
-            } else if (isRegisteredOwner) {
-                // Owner is also the land owner
-                landHistoryRecord.land_owner_id = submissionId;
-                landHistoryRecord.land_owner_name = farmerFullName;
-            }
-
-            // Insert land_history record
-            const { error: historyError } = await supabase
-                .from('land_history')
-                .insert(landHistoryRecord);
-
-            if (historyError) {
-                console.warn('Land history insert warning (non-blocking):', historyError.message);
-            } else {
-                console.log('✅ Created land_history record for parcel:', parcelNumber, 'Type:', changeType);
-            }
-
-            // Also insert into rsbsa_farm_parcels for the modal to display
-            const farmParcelRecord: Record<string, any> = {
-                submission_id: submissionId,
-                parcel_number: parcelNumber,
-                farm_location_barangay: barangay,
-                farm_location_municipality: municipality,
-                total_farm_area_ha: areaHa,
-                within_ancestral_domain: parcel.withinAncestralDomain === 'Yes' || parcel.withinAncestralDomain === true,
-                agrarian_reform_beneficiary: parcel.agrarianReformBeneficiary === 'Yes' || parcel.agrarianReformBeneficiary === true,
-                ownership_document_no: parcel.ownershipDocumentNo || '',
-                ownership_type_registered_owner: isRegisteredOwner,
-                ownership_type_tenant: isTenant,
-                ownership_type_lessee: isLessee,
-                tenant_land_owner_name: isTenant && selectedLandOwner ? selectedLandOwner.name : '',
-                lessee_land_owner_name: isLessee && selectedLandOwner ? selectedLandOwner.name : '',
-                tenant_land_owner_id: isTenant && selectedLandOwner ? selectedLandOwner.id : null,
-                lessee_land_owner_id: isLessee && selectedLandOwner ? selectedLandOwner.id : null,
-                is_current_owner: true
-            };
-
-            const { error: farmParcelError } = await supabase
-                .from('rsbsa_farm_parcels')
-                .insert(farmParcelRecord);
-
-            if (farmParcelError) {
-                console.warn('Farm parcel insert warning (non-blocking):', farmParcelError.message);
-            } else {
-                console.log('✅ Created rsbsa_farm_parcels record for parcel:', parcelNumber);
-            }
-        }
-    } catch (historyErr) {
-        console.warn('Error creating land history (non-blocking):', historyErr);
-    }
+    console.log('✅ Registration RPC result:', data);
 
     // Return in the format the frontend expects
     return createResponse({
-        message: 'Submission successful',
-        submissionId: data.id,
-        submittedAt: data.created_at || new Date().toISOString(),
-        ...data
+        message: data?.message || 'Submission successful',
+        submissionId: data?.submissionId,
+        submittedAt: data?.submittedAt || new Date().toISOString(),
     }, null, 201);
 };
 
@@ -902,6 +577,36 @@ export const getFarmParcels = async (submissionId: string | number): Promise<Api
     }
 
     if (!parcels || parcels.length === 0) {
+        // Fallback: Try to build parcel data from land_history table
+        // land_history may exist even when rsbsa_farm_parcels insert failed (e.g. CHECK constraint mismatch)
+        const { data: historyParcels, error: historyError } = await supabase
+            .from('land_history')
+            .select('*')
+            .eq('farmer_id', submissionId)
+            .eq('is_current', true);
+
+        if (!historyError && historyParcels && historyParcels.length > 0) {
+            console.log(`📍 No rsbsa_farm_parcels found, but found ${historyParcels.length} land_history record(s) for farmer ${submissionId}`);
+            const fallbackParcels = historyParcels.map((h: any) => ({
+                id: h.id,
+                submission_id: submissionId,
+                parcel_number: h.parcel_number || 'N/A',
+                farm_location_barangay: h.farm_location_barangay || 'N/A',
+                farm_location_municipality: h.farm_location_municipality || 'N/A',
+                total_farm_area_ha: h.total_farm_area_ha || 0,
+                within_ancestral_domain: h.within_ancestral_domain ? 'Yes' : 'No',
+                agrarian_reform_beneficiary: h.agrarian_reform_beneficiary ? 'Yes' : 'No',
+                ownership_type_registered_owner: h.is_registered_owner || false,
+                ownership_type_tenant: h.is_tenant || false,
+                ownership_type_lessee: h.is_lessee || false,
+                tenant_land_owner_name: h.is_tenant ? (h.land_owner_name || '') : '',
+                lessee_land_owner_name: h.is_lessee ? (h.land_owner_name || '') : '',
+                land_parcel_id: h.land_parcel_id || null,
+                _source: 'land_history'
+            }));
+            return createResponse(fallbackParcels, null, 200);
+        }
+
         return createResponse([], null, 200);
     }
 
@@ -980,6 +685,187 @@ export const getLandPlots = async (): Promise<ApiResponse> => {
 
     if (error) return createResponse(null, error.message, 500);
     return createResponse(data, null, 200);
+};
+
+export const getCropPlantingInfo = async (surname: string, firstName: string, middleName: string, barangay: string): Promise<any> => {
+    try {
+        if ((!surname && !firstName) || !barangay) {
+            return { owner: null, tenants: [] };
+        }
+
+        // Build query for matching the owner in rsbsa_submission
+        let query = supabase
+            .from('rsbsa_submission')
+            .select(`
+                id,
+                "FIRST NAME",
+                "MIDDLE NAME",
+                "LAST NAME",
+                "BARANGAY",
+                "MAIN LIVELIHOOD",
+                "FARMER_RICE",
+                "FARMER_CORN",
+                "FARMER_OTHER_CROPS",
+                "FARMER_OTHER_CROPS_TEXT",
+                "FARMER_LIVESTOCK",
+                "FARMER_LIVESTOCK_TEXT",
+                "FARMER_POULTRY",
+                "FARMER_POULTRY_TEXT",
+                "OWNERSHIP_TYPE_REGISTERED_OWNER",
+                "OWNERSHIP_TYPE_TENANT",
+                "OWNERSHIP_TYPE_LESSEE",
+                status,
+                created_at
+            `)
+            .ilike('BARANGAY', barangay.trim());
+
+        if (surname) {
+            query = query.ilike('LAST NAME', surname.trim());
+        }
+        if (firstName) {
+            query = query.ilike('FIRST NAME', `${firstName.trim()}%`);
+        }
+
+        const { data: ownerData, error: ownerError } = await query;
+
+        if (ownerError) {
+            console.error('Error fetching crop planting info:', ownerError);
+            return { owner: null, tenants: [] };
+        }
+
+        // Build crops list helper
+        const buildCropsList = (row: any): string[] => {
+            if (!row) return [];
+            const crops: string[] = [];
+            if (row.FARMER_RICE) crops.push('Rice');
+            if (row.FARMER_CORN) crops.push('Corn');
+            if (row.FARMER_OTHER_CROPS && row.FARMER_OTHER_CROPS_TEXT) {
+                crops.push(row.FARMER_OTHER_CROPS_TEXT);
+            } else if (row.FARMER_OTHER_CROPS) {
+                crops.push('Other Crops');
+            }
+            if (row.FARMER_LIVESTOCK && row.FARMER_LIVESTOCK_TEXT) {
+                crops.push(`Livestock: ${row.FARMER_LIVESTOCK_TEXT}`);
+            } else if (row.FARMER_LIVESTOCK) {
+                crops.push('Livestock');
+            }
+            if (row.FARMER_POULTRY && row.FARMER_POULTRY_TEXT) {
+                crops.push(`Poultry: ${row.FARMER_POULTRY_TEXT}`);
+            } else if (row.FARMER_POULTRY) {
+                crops.push('Poultry');
+            }
+            // Fallback to MAIN LIVELIHOOD
+            if (crops.length === 0 && row['MAIN LIVELIHOOD']) {
+                const parts = row['MAIN LIVELIHOOD'].split(',').map((s: string) => s.trim()).filter(Boolean);
+                crops.push(...parts);
+            }
+            return crops.length > 0 ? crops : ['Not specified'];
+        };
+
+        // Format owner data
+        let owner = null;
+        if (ownerData && ownerData.length > 0) {
+            // Find best match - if middleName provided, prefer exact match
+            let bestMatch = ownerData[0];
+            if (middleName && ownerData.length > 1) {
+                const exactMiddle = ownerData.find((r: any) =>
+                    (r['MIDDLE NAME'] || '').toLowerCase().trim() === middleName.toLowerCase().trim()
+                );
+                if (exactMiddle) bestMatch = exactMiddle;
+            }
+
+            const row = bestMatch;
+            const farmerName = [row['FIRST NAME'], row['MIDDLE NAME'], row['LAST NAME']].filter(Boolean).join(' ');
+            owner = {
+                id: row.id,
+                farmer_name: farmerName,
+                first_name: row['FIRST NAME'],
+                middle_name: row['MIDDLE NAME'],
+                last_name: row['LAST NAME'],
+                barangay: row.BARANGAY,
+                main_livelihood: row['MAIN LIVELIHOOD'],
+                registration_date: row.created_at,
+                ownership_status: row.OWNERSHIP_TYPE_REGISTERED_OWNER ? 'Owner' :
+                    row.OWNERSHIP_TYPE_TENANT ? 'Tenant' :
+                    row.OWNERSHIP_TYPE_LESSEE ? 'Lessee' : 'Other',
+                is_owner: row.OWNERSHIP_TYPE_REGISTERED_OWNER,
+                is_tenant: row.OWNERSHIP_TYPE_TENANT,
+                is_lessee: row.OWNERSHIP_TYPE_LESSEE,
+                farmer_status: row.status,
+                crops: buildCropsList(row)
+            };
+        }
+
+        // Find tenants/lessees on this land
+        let tenants: any[] = [];
+        if (surname || firstName) {
+            const ownerNameVariants = [
+                `${surname}, ${firstName}%`,
+                `${firstName}%${surname}%`,
+                `%${surname}%${firstName}%`,
+            ];
+
+            // Query rsbsa_farm_parcels for tenants/lessees whose land owner name matches
+            const { data: tenantParcels } = await supabase
+                .from('rsbsa_farm_parcels')
+                .select(`
+                    submission_id,
+                    ownership_type_tenant,
+                    ownership_type_lessee,
+                    tenant_land_owner_name,
+                    lessee_land_owner_name,
+                    farm_location_barangay
+                `)
+                .ilike('farm_location_barangay', barangay.trim())
+                .or(ownerNameVariants.map(v => `tenant_land_owner_name.ilike.${v},lessee_land_owner_name.ilike.${v}`).join(','));
+
+            if (tenantParcels && tenantParcels.length > 0) {
+                const tenantIds = [...new Set(tenantParcels.map((p: any) => p.submission_id))];
+                const { data: tenantSubmissions } = await supabase
+                    .from('rsbsa_submission')
+                    .select(`
+                        id,
+                        "FIRST NAME",
+                        "MIDDLE NAME",
+                        "LAST NAME",
+                        "BARANGAY",
+                        "MAIN LIVELIHOOD",
+                        "FARMER_RICE",
+                        "FARMER_CORN",
+                        "FARMER_OTHER_CROPS",
+                        "FARMER_OTHER_CROPS_TEXT",
+                        "FARMER_LIVESTOCK",
+                        "FARMER_LIVESTOCK_TEXT",
+                        "FARMER_POULTRY",
+                        "FARMER_POULTRY_TEXT",
+                        status,
+                        created_at
+                    `)
+                    .in('id', tenantIds);
+
+                if (tenantSubmissions) {
+                    tenants = tenantSubmissions.map((row: any) => {
+                        const parcel = tenantParcels.find((p: any) => p.submission_id === row.id);
+                        const farmerName = [row['FIRST NAME'], row['MIDDLE NAME'], row['LAST NAME']].filter(Boolean).join(' ');
+                        return {
+                            id: row.id,
+                            farmer_name: farmerName,
+                            barangay: row.BARANGAY,
+                            registration_date: row.created_at,
+                            ownership_status: parcel?.ownership_type_tenant ? 'Tenant' : 'Lessee',
+                            farmer_status: row.status,
+                            crops: buildCropsList(row)
+                        };
+                    });
+                }
+            }
+        }
+
+        return { owner, tenants };
+    } catch (err) {
+        console.error('Error in getCropPlantingInfo:', err);
+        return { owner: null, tenants: [] };
+    }
 };
 
 export const getLandPlotById = async (id: string | number): Promise<ApiResponse> => {
@@ -1370,6 +1256,7 @@ export default {
     createLandPlot,
     updateLandPlot,
     deleteLandPlot,
+    getCropPlantingInfo,
 
     // Allocations
     getAllocations,

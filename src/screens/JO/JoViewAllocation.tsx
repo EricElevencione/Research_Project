@@ -232,14 +232,6 @@ const JoViewAllocation: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-gap-analysis')}
-                        >
-                            <span className="nav-icon">📊</span>
-                            <span className="nav-text">Gap Analysis</span>
-                        </button>
-
-                        <button
                             className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-distribution')}
                         >

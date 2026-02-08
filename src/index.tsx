@@ -27,7 +27,6 @@ import JoAddFarmerRequest from './screens/JO/JoAddFarmerRequest';
 import JoManageRequests from './screens/JO/JoManageRequests';
 import JoViewAllocation from './screens/JO/JoViewAllocation';
 import JoRsbsaPage from './screens/JO/JoRsbsaPage';
-import JoGapAnalysis from './screens/JO/JoGapAnalysis';
 import JoDistribution from './screens/JO/JoDistribution';
 import JoLandRegistry from './screens/JO/JoLandRegistry';
 import AuditTrail from './screens/admin/AuditTrail';
@@ -190,11 +189,6 @@ function App() {
                 <Route path="/jo-rsbsapage" element={
                     <ProtectedRoute>
                         <JoRsbsaPage />
-                    </ProtectedRoute>
-                } />
-                <Route path="/jo-gap-analysis" element={
-                    <ProtectedRoute>
-                        <JoGapAnalysis />
                     </ProtectedRoute>
                 } />
                 <Route path="/jo-distribution" element={

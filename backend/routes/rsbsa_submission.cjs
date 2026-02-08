@@ -134,9 +134,32 @@ router.post('/', async (req, res) => {
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
                 )
+                RETURNING id
             `;
             for (let parcel of data.farmlandParcels) {
                 try {
+                    // For ownership transfers, fetch missing data from the existing parcel
+                    // NOTE: existingParcelId is rsbsa_farm_parcels.id (NOT land_parcels.id)
+                    if (parcel.existingParcelId && (!parcel.farmLocationBarangay || !parcel.totalFarmAreaHa)) {
+                        console.log(`📋 Fetching existing parcel data for ownership transfer (farm_parcel_id: ${parcel.existingParcelId})`);
+                        const existingParcelQuery = `
+                            SELECT farm_location_barangay, farm_location_municipality, total_farm_area_ha, parcel_number
+                            FROM land_history 
+                            WHERE (farm_parcel_id = $1 OR (parcel_number = $2 AND farm_parcel_id IS NULL))
+                                  AND is_current = TRUE
+                            LIMIT 1
+                        `;
+                        const existingData = await client.query(existingParcelQuery, [parcel.existingParcelId, parcel.existingParcelNumber || '']);
+                        if (existingData.rows.length > 0) {
+                            const existing = existingData.rows[0];
+                            parcel.farmLocationBarangay = parcel.farmLocationBarangay || existing.farm_location_barangay || '';
+                            parcel.farmLocationMunicipality = parcel.farmLocationMunicipality || existing.farm_location_municipality || 'Dumangas';
+                            parcel.totalFarmAreaHa = parcel.totalFarmAreaHa || existing.total_farm_area_ha || 0;
+                            parcel.existingParcelNumber = parcel.existingParcelNumber || existing.parcel_number;
+                            console.log(`✅ Fetched existing data: ${parcel.farmLocationBarangay}, ${parcel.totalFarmAreaHa} ha`);
+                        }
+                    }
+
                     if (!parcel.farmLocationBarangay || !parcel.totalFarmAreaHa) {
                         console.warn('Skipping parcel due to missing required fields:', parcel);
                         continue;
@@ -174,9 +197,12 @@ router.post('/', async (req, res) => {
                         }
                     }
 
-                    await client.query(parcelInsertQuery, [
+                    // Use existingParcelNumber for ownership transfers, otherwise generate new parcel number
+                    const parcelNumber = parcel.existingParcelNumber || parcel.parcelNo || `Parcel-${submissionId}-${data.farmlandParcels.indexOf(parcel) + 1}`;
+
+                    const parcelResult = await client.query(parcelInsertQuery, [
                         submissionId,
-                        parcel.parcelNo || `Parcel-${submissionId}-${data.farmlandParcels.indexOf(parcel) + 1}`,
+                        parcelNumber,
                         parcel.farmLocationBarangay || '',
                         parcel.farmLocationMunicipality || '',
                         area,
@@ -192,6 +218,166 @@ router.post('/', async (req, res) => {
                         tenantLandOwnerId,
                         lesseeLandOwnerId
                     ]);
+
+                    const newFarmParcelId = parcelResult.rows[0].id;
+
+                    // Handle ownership transfer: create land_history record if existingParcelId is provided
+                    // NOTE: existingParcelId = rsbsa_farm_parcels.id, NOT land_parcels.id
+                    if (parcel.existingParcelId) {
+                        console.log(`📝 Processing ownership transfer for farm_parcel_id: ${parcel.existingParcelId}`);
+                        
+                        // Look up the land_history record using farm_parcel_id (rsbsa_farm_parcels.id)
+                        // Fallback: also try matching by parcel_number for older records where farm_parcel_id may be NULL
+                        const getLandParcelQuery = `
+                            SELECT lh.id as history_id, lh.land_parcel_id, lh.farmer_id, lh.farmer_name,
+                                   lh.land_owner_id, lh.land_owner_name
+                            FROM land_history lh
+                            WHERE (lh.farm_parcel_id = $1 OR (lh.parcel_number = $2 AND lh.farm_parcel_id IS NULL))
+                                  AND lh.is_current = TRUE
+                            ORDER BY lh.farm_parcel_id IS NOT NULL DESC
+                            LIMIT 1
+                        `;
+                        const landParcelResult = await client.query(getLandParcelQuery, [parcel.existingParcelId, parcelNumber]);
+                        
+                        if (landParcelResult.rows.length > 0) {
+                            const { history_id, land_parcel_id, farmer_id: prev_farmer_id, farmer_name: prev_farmer_name } = landParcelResult.rows[0];
+                            
+                            // Mark previous owner's record as not current
+                            await client.query(`
+                                UPDATE land_history 
+                                SET is_current = FALSE, period_end_date = NOW(), updated_at = NOW()
+                                WHERE land_parcel_id = $1 AND is_current = TRUE
+                            `, [land_parcel_id]);
+                            
+                            // Create new land_history record for the new owner
+                            const newOwnerName = `${data.firstName || ''} ${data.middleName || ''} ${data.surname || ''}`.trim();
+                            const isNewRegisteredOwner = parcel.ownershipTypeRegisteredOwner === true;
+                            const isNewTenant = parcel.ownershipTypeTenant === true;
+                            const isNewLessee = parcel.ownershipTypeLessee === true;
+                            await client.query(`
+                                INSERT INTO land_history (
+                                    land_parcel_id, farm_parcel_id, farmer_id, farmer_name,
+                                    parcel_number, farm_location_barangay, farm_location_municipality,
+                                    total_farm_area_ha, is_registered_owner, is_tenant, is_lessee,
+                                    land_owner_id, land_owner_name,
+                                    is_current, period_start_date, change_type, change_reason,
+                                    previous_history_id, created_at
+                                ) VALUES (
+                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                                    TRUE, NOW(), 'TRANSFER', $14, $15, NOW()
+                                )
+                            `, [
+                                land_parcel_id,
+                                newFarmParcelId,
+                                submissionId,
+                                newOwnerName,
+                                parcelNumber,
+                                parcel.farmLocationBarangay || '',
+                                parcel.farmLocationMunicipality || 'Dumangas',
+                                area,
+                                isNewRegisteredOwner || (!isNewTenant && !isNewLessee),
+                                isNewTenant,
+                                isNewLessee,
+                                isNewRegisteredOwner ? submissionId : prev_farmer_id,
+                                isNewRegisteredOwner ? newOwnerName : prev_farmer_name,
+                                `Ownership transfer from ${prev_farmer_name} to ${newOwnerName}`,
+                                history_id
+                            ]);
+                            
+                            console.log(`✅ Ownership transfer recorded: ${prev_farmer_name} -> ${newOwnerName}`);
+                        } else {
+                            // No existing land_history found — look up land_parcel_id by parcel_number,
+                            // or create a new land_parcels entry
+                            const newOwnerName = `${data.firstName || ''} ${data.middleName || ''} ${data.surname || ''}`.trim();
+                            
+                            // Try to find or create the land_parcels entry
+                            const findOrCreateLandParcel = `
+                                INSERT INTO land_parcels (
+                                    parcel_number, farm_location_barangay, farm_location_municipality,
+                                    total_farm_area_ha, is_active, created_at
+                                ) VALUES ($1, $2, $3, $4, TRUE, NOW())
+                                ON CONFLICT (parcel_number) DO UPDATE SET updated_at = NOW()
+                                RETURNING id
+                            `;
+                            const lpResult = await client.query(findOrCreateLandParcel, [
+                                parcelNumber,
+                                parcel.farmLocationBarangay || '',
+                                parcel.farmLocationMunicipality || 'Dumangas',
+                                area
+                            ]);
+                            const resolvedLandParcelId = lpResult.rows[0].id;
+
+                            await client.query(`
+                                INSERT INTO land_history (
+                                    land_parcel_id, farm_parcel_id, farmer_id, farmer_name,
+                                    parcel_number, farm_location_barangay, farm_location_municipality,
+                                    total_farm_area_ha, is_registered_owner, is_tenant, is_lessee,
+                                    is_current, period_start_date, change_type, created_at
+                                ) VALUES (
+                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, TRUE, NOW(), 'TRANSFER', NOW()
+                                )
+                            `, [
+                                resolvedLandParcelId,
+                                newFarmParcelId,
+                                submissionId,
+                                newOwnerName,
+                                parcelNumber,
+                                parcel.farmLocationBarangay || '',
+                                parcel.farmLocationMunicipality || 'Dumangas',
+                                area,
+                                parcel.ownershipTypeRegisteredOwner === true || (!parcel.ownershipTypeTenant && !parcel.ownershipTypeLessee),
+                                parcel.ownershipTypeTenant === true,
+                                parcel.ownershipTypeLessee === true
+                            ]);
+                            console.log(`✅ New land_history created for parcel ${parcelNumber}`);
+                        }
+                    } else {
+                        // NEW PARCEL (not a transfer) — create land_parcels + land_history records
+                        // so this farmer's parcel is searchable and visible in Land Registry
+                        const newOwnerName = `${data.firstName || ''} ${data.middleName || ''} ${data.surname || ''}`.trim();
+                        
+                        // Create the land_parcels entry (master registry of physical parcels)
+                        const createLandParcelQuery = `
+                            INSERT INTO land_parcels (
+                                parcel_number, farm_location_barangay, farm_location_municipality,
+                                total_farm_area_ha, is_active, created_at
+                            ) VALUES ($1, $2, $3, $4, TRUE, NOW())
+                            ON CONFLICT (parcel_number) DO UPDATE SET updated_at = NOW()
+                            RETURNING id
+                        `;
+                        const landParcelRes = await client.query(createLandParcelQuery, [
+                            parcelNumber,
+                            parcel.farmLocationBarangay || '',
+                            parcel.farmLocationMunicipality || 'Dumangas',
+                            area
+                        ]);
+                        const newLandParcelId = landParcelRes.rows[0].id;
+
+                        // Create the land_history entry (ownership timeline)
+                        await client.query(`
+                            INSERT INTO land_history (
+                                land_parcel_id, farm_parcel_id, farmer_id, farmer_name,
+                                parcel_number, farm_location_barangay, farm_location_municipality,
+                                total_farm_area_ha, is_registered_owner, is_tenant, is_lessee,
+                                is_current, change_type, period_start_date, created_at
+                            ) VALUES (
+                                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, TRUE, 'INITIAL_REGISTRATION', NOW(), NOW()
+                            )
+                        `, [
+                            newLandParcelId,
+                            newFarmParcelId,
+                            submissionId,
+                            newOwnerName,
+                            parcelNumber,
+                            parcel.farmLocationBarangay || '',
+                            parcel.farmLocationMunicipality || 'Dumangas',
+                            area,
+                            parcel.ownershipTypeRegisteredOwner || true,
+                            parcel.ownershipTypeTenant || false,
+                            parcel.ownershipTypeLessee || false
+                        ]);
+                        console.log(`✅ New land_parcels + land_history created for parcel ${parcelNumber} (owner: ${newOwnerName})`);
+                    }
                 } catch (err) {
                     console.error('Error inserting parcel:', err, 'Parcel data:', parcel);
                     throw err;

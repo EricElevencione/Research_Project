@@ -19,6 +19,7 @@ interface LandParcel {
     farm_location_municipality: string;
     total_farm_area_ha: number;
     land_owner_name: string;
+    farmer_id: number;
     farmer_name: string;
     is_registered_owner: boolean;
     is_tenant: boolean;
@@ -155,7 +156,7 @@ const JoLandRegistry: React.FC = () => {
                     is_registered_owner: transferType === 'owner',
                     is_tenant: transferType === 'tenant',
                     is_lessee: transferType === 'lessee',
-                    land_owner_id: transferType === 'owner' ? selectedNewOwner.id : selectedParcel.id,
+                    land_owner_id: transferType === 'owner' ? selectedNewOwner.id : selectedParcel.farmer_id,
                     land_owner_name: transferType === 'owner' ? selectedNewOwner.name : selectedParcel.farmer_name,
                     is_current: true,
                     period_start_date: new Date().toISOString().split('T')[0],
@@ -200,6 +201,7 @@ const JoLandRegistry: React.FC = () => {
                         farm_location_municipality,
                         total_farm_area_ha,
                         land_owner_name,
+                        farmer_id,
                         farmer_name,
                         is_registered_owner,
                         is_tenant,
@@ -363,14 +365,6 @@ const JoLandRegistry: React.FC = () => {
                             </span>
                             <span className="nav-text">Masterlist</span>
                         </button>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-gap-analysis') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-gap-analysis')}
-                        >
-                            <div className="nav-icon">📊</div>
-                            <span className="nav-text">Gap Analysis</span>
-                        </div>
 
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}

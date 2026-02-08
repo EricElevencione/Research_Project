@@ -126,17 +126,27 @@ const LandPlottingPage: React.FC = () => {
             const derivedBarangay = landAttributes.barangay || parcelBarangay || fallbackBarangayName;
 
             const landPlotData = {
-                ...landAttributes,
-                area: Number(landAttributes.area),
-                geometry: shapeToSave.layer.toGeoJSON().geometry,
                 id: shapeToSave.id,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                plotSource: landAttributes.plotSource || 'manual',
-                // Ensure barangay is always populated
+                name: landAttributes.name,
+                ffrs_id: landAttributes.ffrs_id,
+                area: Number(landAttributes.area),
+                coordinate_accuracy: landAttributes.coordinateAccuracy || 'approximate',
                 barangay: derivedBarangay,
-                // Ensure parcel_address is populated
+                first_name: landAttributes.firstName,
+                middle_name: landAttributes.middleName,
+                surname: landAttributes.surname,
+                ext_name: landAttributes.ext_name,
+                gender: landAttributes.gender,
+                municipality: landAttributes.municipality,
+                province: landAttributes.province,
                 parcel_address: landAttributes.parcel_address || `${derivedBarangay}, ${landAttributes.municipality || 'Dumangas'}`,
+                status: landAttributes.status,
+                street: landAttributes.street,
+                farm_type: landAttributes.farmType || 'Irrigated',
+                plot_source: landAttributes.plotSource || 'manual',
+                geometry: shapeToSave.layer.toGeoJSON().geometry,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
             };
 
             // Determine if this is a new or existing plot
