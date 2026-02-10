@@ -22,9 +22,10 @@ interface FarmlandMapProps {
     onLandPlotSelect?: (properties: any) => void;
     highlightGeometry?: any | null; // optional geometry to highlight
     highlightMatcher?: ((properties: any) => boolean) | null; // optional predicate to highlight existing parcels
+    farmerDensity?: Record<string, number>; // barangay name -> farmer count for heatmap
 }
 
-const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGeometry, highlightMatcher }) => {
+const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGeometry, highlightMatcher, farmerDensity }) => {
     const [farmlandRecords, setFarmlandRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     // Removed unused error state
@@ -142,7 +143,20 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
         setParcelCountsByBarangay(counts);
     }, [farmlandRecords]);
 
+    // Red-to-green density color scale for farmer density heatmap
+    const getDensityColor = (value: number) => {
+        if (value === 0) return '#ef4444'; // red — zero farmers
+        if (value === 1) return '#f97316'; // orange
+        if (value === 2) return '#eab308'; // yellow
+        if (value <= 4) return '#84cc16'; // lime
+        if (value <= 8) return '#22c55e'; // green
+        return '#14532d'; // dark green — well-covered
+    };
+
     const getChoroplethColor = (value: number) => {
+        // If farmerDensity is provided, use density color scale
+        if (farmerDensity) return getDensityColor(value);
+        // Default parcel-count color scale
         return value > 20 ? '#14532d'
             : value > 10 ? '#166534'
                 : value > 5 ? '#16a34a'
@@ -154,13 +168,15 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
     const choroplethStyle = (feature: any) => {
         const props = feature?.properties || {};
         const barangayName: string = (props.NAME_3 || props.barangay || '').toString();
-        const value = parcelCountsByBarangay[barangayName] || 0;
+        // Use farmerDensity if provided, otherwise use parcel counts
+        const densityData = farmerDensity || parcelCountsByBarangay;
+        const value = densityData[barangayName] || 0;
         return {
             color: '#134e4a',
             weight: 1,
             opacity: 1,
             fillColor: getChoroplethColor(value),
-            fillOpacity: 0.9,
+            fillOpacity: farmerDensity ? 0.7 : 0.9,
         } as L.PathOptions;
     };
 
@@ -547,6 +563,53 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                                                         html += `<span class="farmland-popup-crop-tag" style="background: ${cropColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500;">🌱 ${crop}</span>`;
                                                     });
                                                     html += `</div></div></div>`;
+                                                }
+
+                                                // Land History timeline section
+                                                if (cropInfo.landHistory && cropInfo.landHistory.length > 0) {
+                                                    if (cropInfo.owner) {
+                                                        html += `<hr style="border: none; border-top: 2px dashed #d1d5db; margin: 12px 0;">`;
+                                                    }
+                                                    html += `<div class="farmland-popup-history-section">`;
+                                                    html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: #6366f1; font-weight: 600; margin-bottom: 10px; padding-left: 4px;">📜 Land Ownership History</div>`;
+                                                    cropInfo.landHistory.forEach((entry: any, idx: number) => {
+                                                        const isCurrentEntry = entry.is_current;
+                                                        const changeType = entry.change_type || 'NEW';
+                                                        const cardBg = isCurrentEntry
+                                                            ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)'
+                                                            : 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)';
+                                                        const borderColor = isCurrentEntry ? '#86efac' : '#e5e7eb';
+                                                        const startDate = entry.period_start_date
+                                                            ? new Date(entry.period_start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                                                            : 'N/A';
+                                                        const endDate = entry.period_end_date
+                                                            ? new Date(entry.period_end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                                                            : 'Present';
+                                                        const typeIcon = changeType === 'TRANSFER' ? '🔄' : '🆕';
+                                                        const typeBadgeColor = changeType === 'TRANSFER' ? '#6366f1' : '#16a34a';
+
+                                                        html += `<div style="position: relative; margin-bottom: 12px;">`;
+
+                                                        // Card
+                                                        html += `<div style="background: ${cardBg}; border: 1px solid ${borderColor}; border-radius: 8px; padding: 10px 12px;">`;
+                                                        // Header row
+                                                        html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
+                                                        html += `<span style="font-weight: 600; font-size: 0.85em; color: #1f2937;">👤 ${entry.farmer_name || 'Unknown'}</span>`;
+                                                        html += `<span style="background: ${typeBadgeColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7em; font-weight: 600;">${typeIcon} ${changeType}</span>`;
+                                                        html += `</div>`;
+                                                        // Date range
+                                                        html += `<div style="font-size: 0.75em; color: #6b7280; margin-bottom: 4px;">📅 ${startDate} → ${endDate}</div>`;
+                                                        // Transfer reason
+                                                        if (entry.change_reason) {
+                                                            html += `<div style="font-size: 0.7em; color: #9ca3af; font-style: italic;">💬 ${entry.change_reason}</div>`;
+                                                        }
+                                                        // Area
+                                                        if (entry.total_farm_area_ha) {
+                                                            html += `<div style="font-size: 0.7em; color: #6b7280; margin-top: 2px;">📐 ${entry.total_farm_area_ha} hectares</div>`;
+                                                        }
+                                                        html += `</div></div>`;
+                                                    });
+                                                    html += `</div></div>`;
                                                 }
 
                                                 // Tenants section with separator

@@ -1,0 +1,23 @@
+* {
+    font-family: var(--font-family) !important;
+}
+
+.admin-page-container {
+    display: flex;
+    height: 100vh;
+    background-color: #f0f0f0;
+    overflow: hidden;
+}
+
+.admin-dashboard-page {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.admin-dashboard-main-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+}

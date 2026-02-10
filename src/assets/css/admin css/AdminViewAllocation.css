@@ -1,0 +1,388 @@
+/* ============================================
+   ADMIN VIEW ALLOCATION - UNIQUE STYLING
+   All class names prefixed with admin-viewalloc-
+   ============================================ */
+
+/* Page Layout */
+.admin-viewalloc-page-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.admin-viewalloc-page {
+    display: flex;
+    width: 100%;
+}
+
+/* Main Content */
+.admin-viewalloc-main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+}
+
+/* Dashboard Header */
+.admin-viewalloc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.admin-viewalloc-title {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0;
+}
+
+.admin-viewalloc-header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-viewalloc-btn-nav {
+    background: linear-gradient(135deg, #667eea 0%, #4ba260 100%);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.admin-viewalloc-btn-nav:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+/* Content Card */
+.admin-viewalloc-content-card {
+    background-color: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    min-height: 400px;
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+.admin-viewalloc-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+    font-size: 16px;
+    font-style: italic;
+}
+
+/* ============================================
+   Error State
+   ============================================ */
+.admin-viewalloc-error-state {
+    text-align: center;
+    padding: 60px 40px;
+    background: #fef2f2;
+    border: 2px dashed #ef4444;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.admin-viewalloc-error-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.admin-viewalloc-error-state h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #991b1b;
+    margin: 0 0 12px 0;
+}
+
+.admin-viewalloc-error-state > p {
+    color: #dc2626;
+    font-size: 15px;
+    margin: 0 0 20px 0;
+    font-weight: 500;
+}
+
+.admin-viewalloc-btn-back {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    padding: 12px 32px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+}
+
+.admin-viewalloc-btn-back:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* ============================================
+   Overview Cards
+   ============================================ */
+.admin-viewalloc-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.admin-viewalloc-overview-card {
+    padding: 20px;
+    border-radius: 12px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-viewalloc-overview-card::after {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.admin-viewalloc-card-date {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.admin-viewalloc-card-requests {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.admin-viewalloc-overview-label {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.admin-viewalloc-overview-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.admin-viewalloc-overview-value-lg {
+    font-size: 36px;
+    font-weight: 700;
+}
+
+.admin-viewalloc-overview-sub {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+/* ============================================
+   Allocation Sections (Fertilizers / Seeds)
+   ============================================ */
+.admin-viewalloc-section {
+    margin-bottom: 32px;
+}
+
+.admin-viewalloc-section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-viewalloc-table-wrap {
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    overflow-x: auto;
+}
+
+/* ============================================
+   Data Table
+   ============================================ */
+.admin-viewalloc-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-viewalloc-table thead tr {
+    border-bottom: 2px solid #d1d5db;
+}
+
+.admin-viewalloc-table th {
+    padding: 12px;
+    font-weight: 600;
+    color: #374151;
+    text-align: left;
+}
+
+.admin-viewalloc-table th.text-right {
+    text-align: right;
+}
+
+.admin-viewalloc-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background 0.15s ease;
+}
+
+.admin-viewalloc-table tbody tr:hover {
+    background: #f3f4f6;
+}
+
+.admin-viewalloc-table td {
+    padding: 12px;
+    color: #1f2937;
+}
+
+.admin-viewalloc-table td.text-right {
+    text-align: right;
+}
+
+.admin-viewalloc-table td.bold {
+    font-weight: 600;
+}
+
+.admin-viewalloc-table tr.admin-viewalloc-total-row {
+    border-top: 2px solid #d1d5db;
+    background: #f3f4f6;
+    font-weight: 700;
+}
+
+/* Remaining value colors */
+.admin-viewalloc-positive {
+    color: #059669;
+}
+
+.admin-viewalloc-negative {
+    color: #ef4444;
+}
+
+/* Usage badge */
+.admin-viewalloc-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    display: inline-block;
+}
+
+.admin-viewalloc-badge-green {
+    background: #10b981;
+}
+
+.admin-viewalloc-badge-orange {
+    background: #f59e0b;
+}
+
+.admin-viewalloc-badge-red {
+    background: #ef4444;
+}
+
+/* ============================================
+   Notes Section
+   ============================================ */
+.admin-viewalloc-notes {
+    margin-top: 24px;
+    padding: 16px;
+    background: #fffbeb;
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+}
+
+.admin-viewalloc-notes h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #92400e;
+    margin: 0 0 8px 0;
+}
+
+.admin-viewalloc-notes p {
+    font-size: 14px;
+    color: #78350f;
+    margin: 0;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+@media (max-width: 768px) {
+    .admin-viewalloc-main-content {
+        padding: 15px;
+    }
+
+    .admin-viewalloc-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .admin-viewalloc-title {
+        font-size: 24px;
+    }
+
+    .admin-viewalloc-header-actions {
+        width: 100%;
+    }
+
+    .admin-viewalloc-btn-nav {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .admin-viewalloc-content-card {
+        padding: 16px;
+    }
+
+    .admin-viewalloc-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-viewalloc-table th,
+    .admin-viewalloc-table td {
+        padding: 8px 6px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-viewalloc-title {
+        font-size: 22px;
+    }
+
+    .admin-viewalloc-header-actions {
+        flex-direction: column;
+    }
+
+    .admin-viewalloc-btn-nav {
+        width: 100%;
+    }
+}

@@ -320,7 +320,9 @@ const JoDashboard: React.FC = () => {
 
 	return (
 		<div className="jo-dashboard-page-container">
+			
 			<div className="jo-dashboard-page">
+
 				{/* Sidebar */}
 				<div className="sidebar">
 					<nav className="sidebar-nav">

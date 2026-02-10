@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getRsbsaSubmissions } from '../../api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import '../../assets/css/admin css/MasterlistStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
@@ -114,7 +118,86 @@ const Masterlist: React.FC = () => {
       record.farmLocation.toLowerCase().includes(q);
 
     return matchesFarmerStatus && matchesSearch;
-  }); const formatDate = (iso: string) => {
+  });
+
+  // ── Status Counts ──
+  const statusCounts = useMemo(() => {
+    const active = rsbsaRecords.filter(r => r.status === 'Active Farmer').length;
+    const inactive = rsbsaRecords.filter(r => r.status === 'Not Active').length;
+    const submitted = rsbsaRecords.filter(r => r.status === 'Submitted').length;
+    const notSubmitted = rsbsaRecords.filter(r => !['Active Farmer', 'Not Active', 'Submitted'].includes(r.status)).length;
+    return { active, inactive, submitted, notSubmitted, total: rsbsaRecords.length };
+  }, [rsbsaRecords]);
+
+  // ── Export helpers ──
+  const exportColumns = [
+    'FFRS System Generated',
+    'Farmer Name',
+    'Farmer Address',
+    'Parcel Address',
+    'Parcel Area',
+    'Date Submitted',
+    'Farmer Status',
+  ];
+
+  const recordToRow = (r: RSBSARecord) => [
+    r.referenceNumber,
+    r.farmerName,
+    r.farmerAddress,
+    r.farmLocation,
+    r.parcelArea,
+    formatDate(r.dateSubmitted),
+    r.status || 'Not Active',
+  ];
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const now = new Date().toLocaleDateString();
+
+    doc.setFontSize(16);
+    doc.text('Farmer Masterlist', 14, 18);
+    doc.setFontSize(10);
+
+    const filterInfo: string[] = [];
+    if (farmerStatus !== 'all') filterInfo.push(`Status: ${farmerStatus === 'active' ? 'Active' : 'Inactive'}`);
+    if (searchQuery) filterInfo.push(`Search: "${searchQuery}"`);
+    if (filterInfo.length > 0) {
+      doc.text(`Filters: ${filterInfo.join(' | ')}`, 14, 25);
+    }
+    doc.text(`Generated: ${now}  •  ${filteredRecords.length} record(s)`, 14, filterInfo.length > 0 ? 31 : 25);
+
+    autoTable(doc, {
+      head: [exportColumns],
+      body: filteredRecords.map(recordToRow),
+      startY: filterInfo.length > 0 ? 36 : 30,
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [160, 200, 120], textColor: [51, 51, 51], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    });
+
+    doc.save(`Masterlist_${now.replace(/\//g, '-')}.pdf`);
+  };
+
+  const handleExportExcel = () => {
+    const now = new Date().toLocaleDateString();
+    const wsData = [exportColumns, ...filteredRecords.map(recordToRow)];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Auto-fit column widths
+    ws['!cols'] = exportColumns.map((_, ci) => ({
+      wch: Math.max(
+        exportColumns[ci].length,
+        ...filteredRecords.map(r => String(recordToRow(r)[ci]).length)
+      ) + 2,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Masterlist');
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([buf], { type: 'application/octet-stream' }), `Masterlist_${now.replace(/\//g, '-')}.xlsx`);
+  };
+
+  const formatDate = (iso: string) => {
     if (!iso) return '—';
     try {
       return new Date(iso).toLocaleDateString();
@@ -204,6 +287,49 @@ const Masterlist: React.FC = () => {
             <h2 className="masterlist-admin-page-header">Masterlist</h2>
           </div>
 
+          {/* Status Count Cards */}
+          {!loading && !error && (
+            <div className="masterlist-status-cards">
+              <div className="masterlist-status-card masterlist-card-total">
+                <div className="masterlist-card-icon">👥</div>
+                <div className="masterlist-card-info">
+                  <span className="masterlist-card-count">{statusCounts.total}</span>
+                  <span className="masterlist-card-label">Total Farmers</span>
+                </div>
+              </div>
+              <div className="masterlist-status-card masterlist-card-active">
+                <div className="masterlist-card-icon">✅</div>
+                <div className="masterlist-card-info">
+                  <span className="masterlist-card-count">{statusCounts.active}</span>
+                  <span className="masterlist-card-label">Active</span>
+                </div>
+                <div className="masterlist-card-bar">
+                  <div className="masterlist-card-bar-fill masterlist-bar-active" style={{ width: `${statusCounts.total ? (statusCounts.active / statusCounts.total * 100) : 0}%` }} />
+                </div>
+              </div>
+              <div className="masterlist-status-card masterlist-card-inactive">
+                <div className="masterlist-card-icon">❌</div>
+                <div className="masterlist-card-info">
+                  <span className="masterlist-card-count">{statusCounts.inactive}</span>
+                  <span className="masterlist-card-label">Inactive</span>
+                </div>
+                <div className="masterlist-card-bar">
+                  <div className="masterlist-card-bar-fill masterlist-bar-inactive" style={{ width: `${statusCounts.total ? (statusCounts.inactive / statusCounts.total * 100) : 0}%` }} />
+                </div>
+              </div>
+              <div className="masterlist-status-card masterlist-card-submitted">
+                <div className="masterlist-card-icon">📋</div>
+                <div className="masterlist-card-info">
+                  <span className="masterlist-card-count">{statusCounts.submitted}</span>
+                  <span className="masterlist-card-label">Submitted</span>
+                </div>
+                <div className="masterlist-card-bar">
+                  <div className="masterlist-card-bar-fill masterlist-bar-submitted" style={{ width: `${statusCounts.total ? (statusCounts.submitted / statusCounts.total * 100) : 0}%` }} />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="masterlist-admin-content-card">
             {/* Filters and Search */}
             <div className="masterlist-admin-filters-section">
@@ -227,6 +353,16 @@ const Masterlist: React.FC = () => {
                   <option value="active">Active Farmers</option>
                   <option value="inactive">Inactive Farmers</option>
                 </select>
+              </div>
+
+              {/* Export Buttons */}
+              <div className="masterlist-export-buttons">
+                <button className="masterlist-export-btn masterlist-export-pdf" onClick={handleExportPDF} disabled={filteredRecords.length === 0}>
+                  📄 Export PDF
+                </button>
+                <button className="masterlist-export-btn masterlist-export-excel" onClick={handleExportExcel} disabled={filteredRecords.length === 0}>
+                  📊 Export Excel
+                </button>
               </div>
             </div>
 

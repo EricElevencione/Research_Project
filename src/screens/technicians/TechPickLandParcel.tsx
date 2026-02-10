@@ -82,7 +82,7 @@ const TechPickLandParcel: React.FC = () => {
 
             const data = response.data;
             console.log('RSBSA submission API response:', data); // Log the full response
-            const owner = data.find((record: any) => record.id === ownerId);
+            const owner = data.find((record: any) => String(record.id) === String(ownerId));
 
             if (owner) {
                 const ownerData = {

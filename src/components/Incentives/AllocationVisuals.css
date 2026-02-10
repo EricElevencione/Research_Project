@@ -1,0 +1,361 @@
+/* ============================================
+   Allocation Depletion Visuals
+   ============================================ */
+
+/* ── Gauges Section ───────────────────────── */
+
+.alloc-gauges-section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+
+.alloc-gauges-group {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    transition: box-shadow 0.2s;
+}
+
+.alloc-gauges-group:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.alloc-gauges-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.alloc-gauges-group-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.alloc-gauges-icon {
+    font-size: 20px;
+}
+
+.alloc-gauges-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.alloc-gauge-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 130px;
+    padding: 12px 8px;
+    border-radius: 10px;
+    background: #fafafa;
+    border: 1px solid #f3f4f6;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.alloc-gauge-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.alloc-gauge-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    text-align: center;
+    margin-top: 2px;
+}
+
+.alloc-gauge-detail {
+    font-size: 11px;
+    color: #6b7280;
+    text-align: center;
+}
+
+.alloc-gauge-slash {
+    color: #9ca3af;
+}
+
+.alloc-gauge-remaining {
+    font-size: 10px;
+    color: #059669;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.alloc-gauge-remaining.over {
+    color: #ef4444;
+}
+
+/* ── Barangay Breakdown Table ─────────────── */
+
+.alloc-brgy-section {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    margin-bottom: 28px;
+    transition: box-shadow 0.2s;
+}
+
+.alloc-brgy-section:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.alloc-brgy-header {
+    margin-bottom: 16px;
+}
+
+.alloc-brgy-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.alloc-brgy-subtitle {
+    display: block;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+.alloc-brgy-table-wrap {
+    overflow-x: auto;
+}
+
+.alloc-brgy-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.alloc-brgy-table thead tr {
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.alloc-brgy-table th {
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+}
+
+.alloc-brgy-table tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s;
+}
+
+.alloc-brgy-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.alloc-brgy-rank {
+    color: #9ca3af;
+    font-weight: 600;
+    text-align: center !important;
+}
+
+.alloc-brgy-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.alloc-brgy-count {
+    text-align: center !important;
+    color: #6b7280;
+}
+
+.alloc-brgy-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alloc-brgy-bar {
+    height: 20px;
+    border-radius: 4px;
+    min-width: 4px;
+    transition: width 0.6s ease;
+}
+
+.alloc-brgy-bar.fert {
+    background: linear-gradient(90deg, #86efac 0%, #16a34a 100%);
+}
+
+.alloc-brgy-bar.seed {
+    background: linear-gradient(90deg, #7dd3fc 0%, #0284c7 100%);
+}
+
+.alloc-brgy-bar-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.alloc-brgy-empty {
+    text-align: center;
+    color: #9ca3af;
+    font-style: italic;
+    padding: 32px 12px !important;
+}
+
+/* ── Season Comparison Table ──────────────── */
+
+.alloc-season-section {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    margin-bottom: 28px;
+    transition: box-shadow 0.2s;
+}
+
+.alloc-season-section:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.alloc-season-header {
+    margin-bottom: 16px;
+}
+
+.alloc-season-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.alloc-season-subtitle {
+    display: block;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+.alloc-season-table-wrap {
+    overflow-x: auto;
+}
+
+.alloc-season-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.alloc-season-table thead tr {
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.alloc-season-table th {
+    padding: 10px 14px;
+    text-align: center;
+    font-weight: 700;
+    color: #374151;
+    font-size: 13px;
+}
+
+.alloc-season-table th:first-child {
+    text-align: left;
+}
+
+.alloc-season-table tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s;
+}
+
+.alloc-season-table tbody tr:hover {
+    background: #fafafa;
+}
+
+.alloc-season-group-row {
+    background: #f3f4f6 !important;
+}
+
+.alloc-season-group-row td {
+    padding: 8px 14px !important;
+    font-weight: 700;
+    font-size: 13px;
+    color: #374151;
+    letter-spacing: 0.2px;
+}
+
+.alloc-season-item-name {
+    padding: 10px 14px;
+    font-weight: 500;
+    color: #1f2937;
+    white-space: nowrap;
+}
+
+.alloc-season-unit {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 10px;
+    color: #9ca3af;
+    font-weight: 400;
+}
+
+.alloc-season-val-cell {
+    padding: 10px 14px;
+    text-align: center;
+}
+
+.alloc-season-val-bar-wrap {
+    height: 6px;
+    background: #f3f4f6;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.alloc-season-val-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease;
+}
+
+.alloc-season-val {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* ── Responsive ───────────────────────────── */
+
+@media (max-width: 768px) {
+    .alloc-gauges-grid {
+        gap: 12px;
+    }
+
+    .alloc-gauge-item {
+        min-width: 110px;
+    }
+
+    .alloc-brgy-table,
+    .alloc-season-table {
+        font-size: 12px;
+    }
+
+    .alloc-season-table th,
+    .alloc-season-val-cell,
+    .alloc-season-item-name {
+        padding: 8px 8px;
+    }
+}

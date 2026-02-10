@@ -4,6 +4,13 @@ import { getRsbsaSubmissions } from '../../api';
 import '../../assets/css/admin css/RSBSAStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
+import { useRSBSADemographics } from '../../hooks/useRSBSADemographics';
+import {
+  AgeDistributionChart,
+  CropDistributionChart,
+  FarmSizeCards,
+  OwnershipBreakdownChart,
+} from '../../components/RSBSA/RSBSADemographics';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -43,6 +50,9 @@ const JoRsbsa: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
+
+  // Demographics analysis hook
+  const demographics = useRSBSADemographics(rsbsaRecords);
 
   // Fetch RSBSA records from API and shii
   const fetchRSBSARecords = async () => {
@@ -224,6 +234,26 @@ const JoRsbsa: React.FC = () => {
         {/* Main content starts here */}
         <div className="rsbsa-admin-main-content">
           <h2 className="rsbsa-admin-page-title">Registered Land Owners</h2>
+
+          {/* Demographics Analysis Section */}
+          {!loading && !error && rsbsaRecords.length > 0 && (
+            <div className="rsbsa-demographics-section">
+              <div className="rsbsa-demographics-header">
+                <h2>Demographics Analysis</h2>
+                <span className="rsbsa-demographics-badge">ANALYTICS</span>
+              </div>
+
+              {/* Farm Size Cards - full width */}
+              <FarmSizeCards data={demographics.farmSizeCategories} total={demographics.totalFarmers} />
+
+              {/* Charts Grid: 2x2 */}
+              <div className="rsbsa-demographics-grid" style={{ marginTop: 20 }}>
+                <AgeDistributionChart data={demographics.ageBrackets} />
+                <CropDistributionChart data={demographics.cropDistribution} />
+                <OwnershipBreakdownChart data={demographics.ownershipBreakdown} total={demographics.totalFarmers} />
+              </div>
+            </div>
+          )}
 
           <div className="rsbsa-admin-content-card">
             {loading ? (

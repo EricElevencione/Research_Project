@@ -525,23 +525,6 @@ const JoLandRegistry: React.FC = () => {
                                 <div className="jo-land-registry-detail-section">
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                         <h4 style={{ margin: 0 }}>👤 Current Holder</h4>
-                                        <button
-                                            onClick={() => setShowTransferModal(true)}
-                                            style={{
-                                                padding: '0.5rem 1rem',
-                                                backgroundColor: '#2196F3',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontSize: '0.9rem',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.5rem'
-                                            }}
-                                        >
-                                            🔄 Transfer Ownership
-                                        </button>
                                     </div>
                                     <div className="jo-land-registry-owner-card">
                                         <div className="jo-land-registry-owner-avatar">

@@ -4,7 +4,7 @@ import LandPlottingMap, { LandPlottingMapRef } from '../../components/Map/LandPl
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid'; // Add at the top for unique id generation
 import '../../assets/css/technician css/TechLandPlottingPageStyle.css';
-import { getLandPlots, createLandPlot, updateLandPlot, deleteLandPlot, getRsbsaSubmissionById } from '../../api';
+import { getLandPlots, createLandPlot, updateLandPlot, deleteLandPlot, getRsbsaSubmissionById, getFarmParcels } from '../../api';
 
 // interfaces unchanged...
 interface LandAttributes {
@@ -81,6 +81,7 @@ const LandPlottingPage: React.FC = () => {
     });
 
     const [isSaving, setIsSaving] = useState(false);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     // Only validate location/parcel fields - personal info is already validated in RSBSA registration
     const requiredFields: (keyof LandAttributes)[] = [
@@ -110,7 +111,11 @@ const LandPlottingPage: React.FC = () => {
                 // Convert camelCase to readable text
                 return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
             });
-            alert('Please fill in all required fields:\n\n' + missingFields.join('\n'));
+            setToast({ 
+                message: 'Please fill in all required fields: ' + missingFields.join(', '), 
+                type: 'error' 
+            });
+            setTimeout(() => setToast(null), 4000);
             return false;
         }
         return true;
@@ -176,11 +181,13 @@ const LandPlottingPage: React.FC = () => {
                 };
             }
 
-            alert('Land plot attributes saved successfully!');
+            setToast({ message: 'Land plot attributes saved successfully!', type: 'success' });
+            setTimeout(() => setToast(null), 3000);
             return true;
         } catch (error) {
             console.error('Error saving land plot:', error);
-            alert('Failed to save land plot data. Please try again.');
+            setToast({ message: 'Failed to save land plot data. Please try again.', type: 'error' });
+            setTimeout(() => setToast(null), 4000);
             return false;
         }
     };
@@ -251,7 +258,8 @@ const LandPlottingPage: React.FC = () => {
             setIsEditingAttributes(false);
             window.dispatchEvent(new Event('land-plot-saved'));
         } catch (error) {
-            alert('Failed to save changes. Please try again.');
+            setToast({ message: 'Failed to save changes. Please try again.', type: 'error' });
+            setTimeout(() => setToast(null), 4000);
         } finally {
             setIsSaving(false);
         }
@@ -340,7 +348,8 @@ const LandPlottingPage: React.FC = () => {
             });
             if (response.error) throw new Error('Failed to update land plot');
         } catch (error) {
-            alert('Failed to save changes to the backend.');
+            setToast({ message: 'Failed to save changes to the backend.', type: 'error' });
+            setTimeout(() => setToast(null), 4000);
         }
         // Refresh shapes from backend after edit
         await refreshShapesFromBackend();
@@ -361,7 +370,8 @@ const LandPlottingPage: React.FC = () => {
                 const response = await deleteLandPlot(deletedShape.id);
                 if (response.error) throw new Error('Failed to delete land plot');
             } catch (error) {
-                alert('Failed to delete land plot from the backend.');
+                setToast({ message: 'Failed to delete land plot from the backend.', type: 'error' });
+                setTimeout(() => setToast(null), 4000);
             }
         }
         // Refresh shapes from backend after delete
@@ -456,13 +466,15 @@ const LandPlottingPage: React.FC = () => {
     }, [searchParams.toString()]); // Use toString() to detect any param changes
 
     // Helper function to fetch farm parcel data from the database
-    const fetchFarmParcelData = async (recordId: string, parcelIndex: number) => {
+    const fetchFarmParcelData = async (recordId: string) => {
         try {
-            // Note: getFarmParcels doesn't support recordId+parcelIndex query params
-            // Return null for now as this specific query isn't supported by the API wrapper
-            const response = { data: null, error: null };
-            console.log('📍 Farm parcel data query not supported by API wrapper');
-            return response.data;
+            const response = await getFarmParcels(recordId);
+            if (response.error || !response.data || response.data.length === 0) {
+                console.log('📍 No farm parcels found for submission:', recordId);
+                return null;
+            }
+            console.log('📍 Fetched', response.data.length, 'farm parcel(s) for submission:', recordId);
+            return response.data; // Return the full array of parcels
         } catch (error) {
             console.error('Error fetching farm parcel data:', error);
             return null;
@@ -486,10 +498,10 @@ const LandPlottingPage: React.FC = () => {
             // Fetch farm parcel data from the database
             let farmParcels = data.farmParcels;
             if (!farmParcels || !Array.isArray(farmParcels) || farmParcels.length === 0) {
-                // If no farmParcels in the RSBSA data, fetch from farm_parcels table
-                const parcelData = await fetchFarmParcelData(recordId, parcelIndex || 0);
-                if (parcelData) {
-                    farmParcels = [parcelData];
+                // If no farmParcels in the RSBSA data, fetch from rsbsa_farm_parcels table
+                const parcelData = await fetchFarmParcelData(recordId);
+                if (parcelData && parcelData.length > 0) {
+                    farmParcels = parcelData;
                 } else {
                     // Fallback: create basic parcel structure
                     farmParcels = [{
@@ -812,6 +824,13 @@ const LandPlottingPage: React.FC = () => {
 
     return (
         <div className="tech-landplotting-container">
+            {/* Toast Notification */}
+            {toast && (
+                <div className={`toast-notification toast-${toast.type}`}>
+                    <span>{toast.message}</span>
+                    <button onClick={() => setToast(null)} className="toast-close">×</button>
+                </div>
+            )}
             {/* Back Button at top left */}
             <button
                 className="tech-landplotting-back-button"

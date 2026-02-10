@@ -416,27 +416,19 @@ const TechRsbsa: React.FC = () => {
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
     console.log('Filtering records:', records.length);
 
-    const filtered = records.filter(record => {
-      // Exclude farmers who have transferred ownership or have no parcels
-      if (record.status === 'Transferred Ownership' || record.status === 'No Parcels') {
+    const filtered = records.filter((record: any) => {
+      // Exclude farmers who have transferred ALL their parcels (no current ownership)
+      // hasCurrentParcels: true = has current parcels, false = all transferred, undefined = no parcels yet
+      if (record.hasCurrentParcels === false) {
         return false;
       }
 
       // Check if the record represents a registered owner
-      // A registered owner is someone where OWNERSHIP_TYPE_REGISTERED_OWNER is true
-      // and they are NOT a tenant or lessee
       if (record.ownershipType) {
-        return record.ownershipType.registeredOwner === true &&
-          record.ownershipType.tenant === false &&
-          record.ownershipType.lessee === false;
+        return record.ownershipType.registeredOwner === true;
       }
 
-      // Fallback: if ownershipType is not available, check for land parcel data
-      // This is a safety net for records that might not have ownership type data
-      const hasLandParcel = record.landParcel && record.landParcel !== 'N/A' && record.landParcel.trim() !== '';
-      const hasFarmLocation = record.farmLocation && record.farmLocation !== 'N/A' && record.farmLocation.trim() !== '';
-
-      return hasLandParcel && hasFarmLocation;
+      return false;
     });
 
     console.log('Filtered results:', filtered.length, 'out of', records.length);

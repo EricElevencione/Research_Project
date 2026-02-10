@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAllocations, getFarmerRequests } from '../../api';
-import '../../assets/css/jo css/JoIncentStyle.css';
+import { UsageGauges, BarangayBreakdownTable, SeasonComparisonTable } from '../../components/Incentives/AllocationVisuals';
+import '../../assets/css/admin css/AdminViewAllocation.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -49,6 +50,7 @@ const ViewAllocation: React.FC = () => {
     const navigate = useNavigate();
     const { allocationId } = useParams<{ allocationId: string }>();
     const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
+    const [allAllocations, setAllAllocations] = useState<any[]>([]);
     const [requests, setRequests] = useState<FarmerRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -78,6 +80,7 @@ const ViewAllocation: React.FC = () => {
             }
             const allocations = allocationResponse.data || [];
             console.log('📦 All allocations:', allocations);
+            setAllAllocations(allocations);
 
             const currentAllocation = allocations.find((a: any) => a.id === parseInt(allocationId || '0'));
             console.log('🎯 Current allocation:', currentAllocation);
@@ -118,19 +121,12 @@ const ViewAllocation: React.FC = () => {
         return ((requested / allocated) * 100).toFixed(1);
     };
 
-    const getStatusColor = (allocated: number, requested: number) => {
-        const percentage = (requested / allocated) * 100;
-        if (percentage > 100) return '#ef4444'; // Red - over allocated
-        if (percentage > 80) return '#f59e0b'; // Orange - nearing limit
-        return '#10b981'; // Green - good
-    };
-
     if (loading) {
         return (
-            <div className="page-container">
-                <div className="page">
-                    <div className="main-content">
-                        <div className="loading-message">Loading allocation details...</div>
+            <div className="admin-viewalloc-page-container">
+                <div className="admin-viewalloc-page">
+                    <div className="admin-viewalloc-main-content">
+                        <div className="admin-viewalloc-loading">Loading allocation details...</div>
                     </div>
                 </div>
             </div>
@@ -139,14 +135,14 @@ const ViewAllocation: React.FC = () => {
 
     if (error || !allocation) {
         return (
-            <div className="page-container">
-                <div className="page">
-                    <div className="main-content">
-                        <div className="error-state">
-                            <div className="error-icon">⚠️</div>
+            <div className="admin-viewalloc-page-container">
+                <div className="admin-viewalloc-page">
+                    <div className="admin-viewalloc-main-content">
+                        <div className="admin-viewalloc-error-state">
+                            <div className="admin-viewalloc-error-icon">⚠️</div>
                             <h3>Error Loading Allocation</h3>
                             <p>{error || 'Allocation not found'}</p>
-                            <button className="btn-retry" onClick={() => navigate('/incentives')}>
+                            <button className="admin-viewalloc-btn-back" onClick={() => navigate('/incentives')}>
                                 ← Back to Allocations
                             </button>
                         </div>
@@ -181,8 +177,8 @@ const ViewAllocation: React.FC = () => {
         getTotalRequested('requested_lp296_kg');
 
     return (
-        <div className="page-container">
-            <div className="page">
+        <div className="admin-viewalloc-page-container">
+            <div className="admin-viewalloc-page">
                 {/* Sidebar */}
                 <div className="sidebar">
                     <nav className="sidebar-nav">
@@ -259,20 +255,18 @@ const ViewAllocation: React.FC = () => {
                 </div>
 
                 {/* Main Content */}
-                <div className="main-content">
-                    <div className="dashboard-header-incent">
-                        <div>
-                            <h2 className="page-header">View Allocation</h2>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="admin-viewalloc-main-content">
+                    <div className="admin-viewalloc-header">
+                        <h2 className="admin-viewalloc-title">View Allocation</h2>
+                        <div className="admin-viewalloc-header-actions">
                             <button
-                                className="btn-create-allocation"
+                                className="admin-viewalloc-btn-nav"
                                 onClick={() => navigate(`/manage-requests/${allocationId}`)}
                             >
                                 📋 View Requests
                             </button>
                             <button
-                                className="btn-create-allocation"
+                                className="admin-viewalloc-btn-nav"
                                 onClick={() => navigate('/incentives')}
                             >
                                 ← Back to Allocations
@@ -280,12 +274,36 @@ const ViewAllocation: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="content-card-incent">
+                    <div className="admin-viewalloc-content-card">
+                        {/* ── Depletion Gauges ── */}
+                        <UsageGauges
+                            fertilizers={[
+                                { name: 'Urea (46-0-0)', allocated: getTotalAllocated('urea_46_0_0_bags'), requested: getTotalRequested('requested_urea_bags'), unit: 'bags' },
+                                { name: 'Complete (14-14-14)', allocated: getTotalAllocated('complete_14_14_14_bags'), requested: getTotalRequested('requested_complete_14_bags'), unit: 'bags' },
+                                { name: 'Amm. Sulfate', allocated: getTotalAllocated('ammonium_sulfate_21_0_0_bags'), requested: getTotalRequested('requested_ammonium_sulfate_bags'), unit: 'bags' },
+                                { name: 'Muriate Potash', allocated: getTotalAllocated('muriate_potash_0_0_60_bags'), requested: getTotalRequested('requested_muriate_potash_bags'), unit: 'bags' },
+                            ]}
+                            seeds={[
+                                { name: 'Jackpot', allocated: getTotalAllocated('jackpot_kg'), requested: getTotalRequested('requested_jackpot_kg'), unit: 'kg' },
+                                { name: 'US88', allocated: getTotalAllocated('us88_kg'), requested: getTotalRequested('requested_us88_kg'), unit: 'kg' },
+                                { name: 'TH82', allocated: getTotalAllocated('th82_kg'), requested: getTotalRequested('requested_th82_kg'), unit: 'kg' },
+                                { name: 'RH9000', allocated: getTotalAllocated('rh9000_kg'), requested: getTotalRequested('requested_rh9000_kg'), unit: 'kg' },
+                                { name: 'Lumping143', allocated: getTotalAllocated('lumping143_kg'), requested: getTotalRequested('requested_lumping143_kg'), unit: 'kg' },
+                                { name: 'LP296', allocated: getTotalAllocated('lp296_kg'), requested: getTotalRequested('requested_lp296_kg'), unit: 'kg' },
+                            ]}
+                        />
+
+                        {/* ── Barangay Breakdown ── */}
+                        <BarangayBreakdownTable requests={requests} />
+
+                        {/* ── Season Comparison ── */}
+                        <SeasonComparisonTable allocations={allAllocations} />
+
                         {/* Overview Cards */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-                            <div style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', color: 'white' }}>
-                                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Allocation Date</div>
-                                <div style={{ fontSize: '24px', fontWeight: '700' }}>
+                        <div className="admin-viewalloc-overview-grid">
+                            <div className="admin-viewalloc-overview-card admin-viewalloc-card-date">
+                                <div className="admin-viewalloc-overview-label">Allocation Date</div>
+                                <div className="admin-viewalloc-overview-value">
                                     {new Date(allocation.allocation_date).toLocaleDateString('en-US', {
                                         year: 'numeric',
                                         month: 'long',
@@ -293,29 +311,29 @@ const ViewAllocation: React.FC = () => {
                                     })}
                                 </div>
                             </div>
-                            <div style={{ padding: '20px', background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', borderRadius: '12px', color: 'white' }}>
-                                <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>Total Requests</div>
-                                <div style={{ fontSize: '36px', fontWeight: '700' }}>{requests.length}</div>
-                                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
+                            <div className="admin-viewalloc-overview-card admin-viewalloc-card-requests">
+                                <div className="admin-viewalloc-overview-label">Total Requests</div>
+                                <div className="admin-viewalloc-overview-value-lg">{requests.length}</div>
+                                <div className="admin-viewalloc-overview-sub">
                                     {requests.filter(r => r.status === 'pending').length} pending
                                 </div>
                             </div>
                         </div>
 
                         {/* Fertilizers Section */}
-                        <div style={{ marginBottom: '32px' }}>
-                            <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="admin-viewalloc-section">
+                            <h3 className="admin-viewalloc-section-title">
                                 🌱 Fertilizers Allocation
                             </h3>
-                            <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="admin-viewalloc-table-wrap">
+                                <table className="admin-viewalloc-table">
                                     <thead>
-                                        <tr style={{ borderBottom: '2px solid #d1d5db' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Type</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Allocated</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Requested</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Remaining</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Usage</th>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th className="text-right">Allocated</th>
+                                            <th className="text-right">Requested</th>
+                                            <th className="text-right">Remaining</th>
+                                            <th className="text-right">Usage</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -329,70 +347,59 @@ const ViewAllocation: React.FC = () => {
                                             const requested = getTotalRequested(fertilizer.requested as keyof FarmerRequest);
                                             const remaining = allocated - requested;
                                             const percentage = getPercentageUsed(allocated, requested);
-                                            const statusColor = getStatusColor(allocated, requested);
+                                            const badgeClass = `admin-viewalloc-badge ${remaining < 0 ? 'admin-viewalloc-badge-red' : Number(percentage) > 80 ? 'admin-viewalloc-badge-orange' : 'admin-viewalloc-badge-green'}`;
 
                                             return (
-                                                <tr key={fertilizer.name} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                                    <td style={{ padding: '12px', color: '#1f2937' }}>{fertilizer.name}</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>{allocated.toFixed(2)} bags</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>{requested.toFixed(2)} bags</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', color: remaining < 0 ? '#ef4444' : '#059669' }}>
+                                                <tr key={fertilizer.name}>
+                                                    <td>{fertilizer.name}</td>
+                                                    <td className="text-right bold">{allocated.toFixed(2)} bags</td>
+                                                    <td className="text-right">{requested.toFixed(2)} bags</td>
+                                                    <td className={`text-right ${remaining < 0 ? 'admin-viewalloc-negative' : 'admin-viewalloc-positive'}`}>
                                                         {remaining.toFixed(2)} bags
                                                     </td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                        <span style={{
-                                                            padding: '4px 12px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            color: 'white',
-                                                            background: statusColor
-                                                        }}>
-                                                            {percentage}%
-                                                        </span>
+                                                    <td className="text-right">
+                                                        <span className={badgeClass}>{percentage}%</span>
                                                     </td>
                                                 </tr>
                                             );
                                         })}
-                                        <tr style={{ borderTop: '2px solid #d1d5db', background: '#f3f4f6', fontWeight: '700' }}>
-                                            <td style={{ padding: '12px' }}>TOTAL</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalAllocatedFertilizer.toFixed(2)} bags</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalRequestedFertilizer.toFixed(2)} bags</td>
-                                            <td style={{ padding: '12px', textAlign: 'right', color: (totalAllocatedFertilizer - totalRequestedFertilizer) < 0 ? '#ef4444' : '#059669' }}>
-                                                {(totalAllocatedFertilizer - totalRequestedFertilizer).toFixed(2)} bags
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    background: getStatusColor(totalAllocatedFertilizer, totalRequestedFertilizer)
-                                                }}>
-                                                    {getPercentageUsed(totalAllocatedFertilizer, totalRequestedFertilizer)}%
-                                                </span>
-                                            </td>
-                                        </tr>
+                                        {(() => {
+                                            const fertRemaining = totalAllocatedFertilizer - totalRequestedFertilizer;
+                                            const fertPct = getPercentageUsed(totalAllocatedFertilizer, totalRequestedFertilizer);
+                                            const fertBadge = `admin-viewalloc-badge ${fertRemaining < 0 ? 'admin-viewalloc-badge-red' : Number(fertPct) > 80 ? 'admin-viewalloc-badge-orange' : 'admin-viewalloc-badge-green'}`;
+                                            return (
+                                                <tr className="admin-viewalloc-total-row">
+                                                    <td>TOTAL</td>
+                                                    <td className="text-right">{totalAllocatedFertilizer.toFixed(2)} bags</td>
+                                                    <td className="text-right">{totalRequestedFertilizer.toFixed(2)} bags</td>
+                                                    <td className={`text-right ${fertRemaining < 0 ? 'admin-viewalloc-negative' : 'admin-viewalloc-positive'}`}>
+                                                        {fertRemaining.toFixed(2)} bags
+                                                    </td>
+                                                    <td className="text-right">
+                                                        <span className={fertBadge}>{fertPct}%</span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
                         {/* Seeds Section */}
-                        <div style={{ marginBottom: '32px' }}>
-                            <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="admin-viewalloc-section">
+                            <h3 className="admin-viewalloc-section-title">
                                 🌾 Seeds Allocation
                             </h3>
-                            <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="admin-viewalloc-table-wrap">
+                                <table className="admin-viewalloc-table">
                                     <thead>
-                                        <tr style={{ borderBottom: '2px solid #d1d5db' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Variety</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Allocated</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Requested</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Remaining</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Usage</th>
+                                        <tr>
+                                            <th>Variety</th>
+                                            <th className="text-right">Allocated</th>
+                                            <th className="text-right">Requested</th>
+                                            <th className="text-right">Remaining</th>
+                                            <th className="text-right">Usage</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -408,51 +415,40 @@ const ViewAllocation: React.FC = () => {
                                             const requested = getTotalRequested(seed.requested as keyof FarmerRequest);
                                             const remaining = allocated - requested;
                                             const percentage = getPercentageUsed(allocated, requested);
-                                            const statusColor = getStatusColor(allocated, requested);
+                                            const badgeClass = `admin-viewalloc-badge ${remaining < 0 ? 'admin-viewalloc-badge-red' : Number(percentage) > 80 ? 'admin-viewalloc-badge-orange' : 'admin-viewalloc-badge-green'}`;
 
                                             return (
-                                                <tr key={seed.name} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                                    <td style={{ padding: '12px', color: '#1f2937' }}>{seed.name}</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>{allocated.toFixed(2)} kg</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>{requested.toFixed(2)} kg</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', color: remaining < 0 ? '#ef4444' : '#059669' }}>
+                                                <tr key={seed.name}>
+                                                    <td>{seed.name}</td>
+                                                    <td className="text-right bold">{allocated.toFixed(2)} kg</td>
+                                                    <td className="text-right">{requested.toFixed(2)} kg</td>
+                                                    <td className={`text-right ${remaining < 0 ? 'admin-viewalloc-negative' : 'admin-viewalloc-positive'}`}>
                                                         {remaining.toFixed(2)} kg
                                                     </td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                        <span style={{
-                                                            padding: '4px 12px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            color: 'white',
-                                                            background: statusColor
-                                                        }}>
-                                                            {percentage}%
-                                                        </span>
+                                                    <td className="text-right">
+                                                        <span className={badgeClass}>{percentage}%</span>
                                                     </td>
                                                 </tr>
                                             );
                                         })}
-                                        <tr style={{ borderTop: '2px solid #d1d5db', background: '#f3f4f6', fontWeight: '700' }}>
-                                            <td style={{ padding: '12px' }}>TOTAL</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalAllocatedSeeds.toFixed(2)} kg</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalRequestedSeeds.toFixed(2)} kg</td>
-                                            <td style={{ padding: '12px', textAlign: 'right', color: (totalAllocatedSeeds - totalRequestedSeeds) < 0 ? '#ef4444' : '#059669' }}>
-                                                {(totalAllocatedSeeds - totalRequestedSeeds).toFixed(2)} kg
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    background: getStatusColor(totalAllocatedSeeds, totalRequestedSeeds)
-                                                }}>
-                                                    {getPercentageUsed(totalAllocatedSeeds, totalRequestedSeeds)}%
-                                                </span>
-                                            </td>
-                                        </tr>
+                                        {(() => {
+                                            const seedRemaining = totalAllocatedSeeds - totalRequestedSeeds;
+                                            const seedPct = getPercentageUsed(totalAllocatedSeeds, totalRequestedSeeds);
+                                            const seedBadge = `admin-viewalloc-badge ${seedRemaining < 0 ? 'admin-viewalloc-badge-red' : Number(seedPct) > 80 ? 'admin-viewalloc-badge-orange' : 'admin-viewalloc-badge-green'}`;
+                                            return (
+                                                <tr className="admin-viewalloc-total-row">
+                                                    <td>TOTAL</td>
+                                                    <td className="text-right">{totalAllocatedSeeds.toFixed(2)} kg</td>
+                                                    <td className="text-right">{totalRequestedSeeds.toFixed(2)} kg</td>
+                                                    <td className={`text-right ${seedRemaining < 0 ? 'admin-viewalloc-negative' : 'admin-viewalloc-positive'}`}>
+                                                        {seedRemaining.toFixed(2)} kg
+                                                    </td>
+                                                    <td className="text-right">
+                                                        <span className={seedBadge}>{seedPct}%</span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
@@ -460,9 +456,9 @@ const ViewAllocation: React.FC = () => {
 
                         {/* Notes */}
                         {allocation.notes && (
-                            <div style={{ marginTop: '24px', padding: '16px', background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: '8px' }}>
-                                <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#92400e', marginBottom: '8px' }}>📝 Notes</h4>
-                                <p style={{ fontSize: '14px', color: '#78350f', margin: 0 }}>{allocation.notes}</p>
+                            <div className="admin-viewalloc-notes">
+                                <h4>📝 Notes</h4>
+                                <p>{allocation.notes}</p>
                             </div>
                         )}
                     </div>

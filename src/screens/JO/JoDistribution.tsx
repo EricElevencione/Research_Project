@@ -30,6 +30,7 @@ interface DistributionRecord {
     request_id: number;
     farmer_name: string;
     rsbsa_number: string;
+    season: string;
     distribution_date: string;
     fertilizer_bags_given?: number;
     seed_kg_given?: number;

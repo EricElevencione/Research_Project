@@ -438,13 +438,31 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
         }
     });
 
-    // Show ALL farmers in the Masterlist regardless of parcel ownership status.
-    // Previous owners who transferred their land should still appear (with "Not Active" status).
-    // The ownership map is used for display purposes only, not filtering.
+    // Show ALL farmers (Masterlist needs everyone). Attach parcel ownership info
+    // so individual pages can filter as needed (e.g. RSBSA pages hide transferred owners).
     const filteredData = data || [];
 
-    // Transform all records
-    const transformedData = filteredData.map(transformRsbsaRecord);
+    // Count current parcels per submission
+    const parcelCountMap = new Map<number, number>();
+    (parcelsData || []).forEach((parcel: any) => {
+        const subId = parcel.submission_id;
+        const isCurrent = parcel.is_current_owner !== false;
+        if (isCurrent) {
+            parcelCountMap.set(subId, (parcelCountMap.get(subId) || 0) + 1);
+        }
+    });
+
+    // Transform all records and attach ownership info
+    const transformedData = filteredData.map((item: any) => {
+        const record = transformRsbsaRecord(item);
+        const hasCurrentParcels = currentOwnershipMap.get(item.id);
+        return {
+            ...record,
+            // true = has current parcels, false = all transferred, undefined = no parcels at all
+            hasCurrentParcels: hasCurrentParcels,
+            parcelCount: parcelCountMap.get(item.id) || 0,
+        };
+    });
 
     console.log('📊 Transformed RSBSA data:', transformedData.length, 'records (filtered from', data?.length, ')');
     if (transformedData.length > 0) {
@@ -694,6 +712,9 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
         }
 
         // Build query for matching the owner in rsbsa_submission
+        // Don't filter by barangay in the query since BARANGAY column stores
+        // the farmer's HOME address, but we're searching by FARM location.
+        // We'll filter results client-side to match either column.
         let query = supabase
             .from('rsbsa_submission')
             .select(`
@@ -702,6 +723,7 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
                 "MIDDLE NAME",
                 "LAST NAME",
                 "BARANGAY",
+                "FARM LOCATION",
                 "MAIN LIVELIHOOD",
                 "FARMER_RICE",
                 "FARMER_CORN",
@@ -716,8 +738,7 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
                 "OWNERSHIP_TYPE_LESSEE",
                 status,
                 created_at
-            `)
-            .ilike('BARANGAY', barangay.trim());
+            `);
 
         if (surname) {
             query = query.ilike('LAST NAME', surname.trim());
@@ -732,6 +753,15 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
             console.error('Error fetching crop planting info:', ownerError);
             return { owner: null, tenants: [] };
         }
+
+        // Filter client-side: match if BARANGAY or FARM LOCATION contains the search barangay
+        const barangayLower = barangay.trim().toLowerCase();
+        const filteredOwnerData = (ownerData || []).filter((row: any) => {
+            const homeBarangay = (row['BARANGAY'] || '').toLowerCase();
+            const farmLocation = (row['FARM LOCATION'] || '').toLowerCase();
+            return homeBarangay.includes(barangayLower) || farmLocation.includes(barangayLower);
+        });
+        console.log('getCropPlantingInfo: filtered from', ownerData?.length, 'to', filteredOwnerData.length, 'results for barangay:', barangay);
 
         // Build crops list helper
         const buildCropsList = (row: any): string[] => {
@@ -764,11 +794,11 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
 
         // Format owner data
         let owner = null;
-        if (ownerData && ownerData.length > 0) {
+        if (filteredOwnerData && filteredOwnerData.length > 0) {
             // Find best match - if middleName provided, prefer exact match
-            let bestMatch = ownerData[0];
-            if (middleName && ownerData.length > 1) {
-                const exactMiddle = ownerData.find((r: any) =>
+            let bestMatch = filteredOwnerData[0];
+            if (middleName && filteredOwnerData.length > 1) {
+                const exactMiddle = filteredOwnerData.find((r: any) =>
                     (r['MIDDLE NAME'] || '').toLowerCase().trim() === middleName.toLowerCase().trim()
                 );
                 if (exactMiddle) bestMatch = exactMiddle;
@@ -799,11 +829,9 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
         // Find tenants/lessees on this land
         let tenants: any[] = [];
         if (surname || firstName) {
-            const ownerNameVariants = [
-                `${surname}, ${firstName}%`,
-                `${firstName}%${surname}%`,
-                `%${surname}%${firstName}%`,
-            ];
+            // Build OR conditions for tenant/lessee land owner name matching
+            const nameParts = [surname, firstName].filter(Boolean);
+            const namePattern = `%${nameParts.join('%')}%`;
 
             // Query rsbsa_farm_parcels for tenants/lessees whose land owner name matches
             const { data: tenantParcels } = await supabase
@@ -817,7 +845,7 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
                     farm_location_barangay
                 `)
                 .ilike('farm_location_barangay', barangay.trim())
-                .or(ownerNameVariants.map(v => `tenant_land_owner_name.ilike.${v},lessee_land_owner_name.ilike.${v}`).join(','));
+                .or(`tenant_land_owner_name.ilike.${namePattern},lessee_land_owner_name.ilike.${namePattern}`);
 
             if (tenantParcels && tenantParcels.length > 0) {
                 const tenantIds = [...new Set(tenantParcels.map((p: any) => p.submission_id))];
@@ -861,10 +889,32 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
             }
         }
 
-        return { owner, tenants };
+        // Fetch land history for this barangay
+        let landHistory: any[] = [];
+        const { data: historyData } = await supabase
+            .from('land_history')
+            .select('*')
+            .ilike('farm_location_barangay', barangay.trim())
+            .order('created_at', { ascending: true });
+
+        if (historyData && historyData.length > 0) {
+            // If we have the owner, filter to parcels matching this owner
+            if (owner) {
+                const ownerParcelHistory = historyData.filter((h: any) => {
+                    const nameMatch = (h.farmer_name || '').toLowerCase().includes(surname.toLowerCase()) ||
+                        (h.land_owner_name || '').toLowerCase().includes(surname.toLowerCase());
+                    return nameMatch;
+                });
+                landHistory = ownerParcelHistory.length > 0 ? ownerParcelHistory : historyData;
+            } else {
+                landHistory = historyData;
+            }
+        }
+
+        return { owner, tenants, landHistory };
     } catch (err) {
         console.error('Error in getCropPlantingInfo:', err);
-        return { owner: null, tenants: [] };
+        return { owner: null, tenants: [], landHistory: [] };
     }
 };
 

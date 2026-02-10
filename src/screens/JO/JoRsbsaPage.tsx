@@ -126,13 +126,19 @@ const JoRsbsaPage: React.FC = () => {
   // Function to filter registered owners only
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
     console.log('Total records to filter:', records.length);
-    const filtered = records.filter(record => {
+    const filtered = records.filter((record: any) => {
+      // Exclude farmers who have transferred ALL their parcels
+      // hasCurrentParcels: true = has current parcels, false = all transferred, undefined = no parcels yet
+      if (record.hasCurrentParcels === false) {
+        console.log(`Excluding ${record.farmerName}: all parcels transferred`);
+        return false;
+      }
+
       if (!record.ownershipType) {
         console.warn(`Missing ownershipType for ${record.farmerName}`, record);
         return false;
       }
       const isRegisteredOwner = record.ownershipType.registeredOwner === true;
-      console.log(`${record.farmerName}: registeredOwner=${record.ownershipType.registeredOwner}, tenant=${record.ownershipType.tenant}, lessee=${record.ownershipType.lessee}, isRegisteredOwner=${isRegisteredOwner}`);
       return isRegisteredOwner;
     });
     console.log('Filtered registered owners count:', filtered.length);

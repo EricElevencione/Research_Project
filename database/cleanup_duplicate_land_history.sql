@@ -19,3 +19,4 @@ WHERE land_parcel_id IS NULL
 SELECT id, land_parcel_id, farm_parcel_id, farmer_name, is_current, change_type, previous_history_id
 FROM land_history
 ORDER BY id;
+

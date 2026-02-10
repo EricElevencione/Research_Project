@@ -1,0 +1,375 @@
+/* ============================================
+   ADMIN INCENTIVES - UNIQUE STYLING
+   All class names prefixed with admin-incent-
+   ============================================ */
+
+/* Page Layout */
+.admin-incent-page-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.admin-incent-page {
+    display: flex;
+    width: 100%;
+}
+
+/* Main Content */
+.admin-incent-main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+}
+
+/* Dashboard Header */
+.admin-incent-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-direction: column;
+}
+
+.admin-incent-page-header {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0 0 10px 0;
+}
+
+/* Content Card */
+.admin-incent-content-card {
+    background-color: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    min-height: 400px;
+}
+
+.admin-incent-action-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+.admin-incent-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+    font-size: 16px;
+    font-style: italic;
+}
+
+/* ============================================
+   Error State
+   ============================================ */
+.admin-incent-error-state {
+    text-align: center;
+    padding: 60px 40px;
+    background: #fef2f2;
+    border: 2px dashed #ef4444;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.admin-incent-error-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.admin-incent-error-state h3 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #991b1b;
+    margin: 0 0 12px 0;
+}
+
+.admin-incent-error-state > p {
+    color: #dc2626;
+    font-size: 15px;
+    margin: 0 0 20px 0;
+    font-weight: 500;
+}
+
+.admin-incent-error-help {
+    background: white;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 500px;
+    text-align: left;
+}
+
+.admin-incent-error-help p {
+    margin: 0 0 12px 0;
+    color: #111827;
+    font-weight: 600;
+}
+
+.admin-incent-error-help ul {
+    margin: 0;
+    padding-left: 24px;
+    color: #374151;
+    line-height: 1.8;
+}
+
+.admin-incent-error-help li {
+    margin: 8px 0;
+}
+
+.admin-incent-error-help code {
+    background: #f3f4f6;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #dc2626;
+    border: 1px solid #e5e7eb;
+}
+
+.admin-incent-btn-retry {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    padding: 12px 32px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+}
+
+.admin-incent-btn-retry:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* ============================================
+   Empty State
+   ============================================ */
+.admin-incent-empty-state {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.admin-incent-empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.admin-incent-empty-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.admin-incent-empty-state p {
+    color: #6b7280;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ============================================
+   Allocations Grid
+   ============================================ */
+.admin-incent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+/* ============================================
+   Allocation Card
+   ============================================ */
+.admin-incent-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.admin-incent-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: #10b981;
+}
+
+/* Card Header */
+.admin-incent-card-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    padding: 20px;
+    color: white;
+}
+
+.admin-incent-season-info h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    color: #f0f0f0;
+}
+
+.admin-incent-date {
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+/* Card Body */
+.admin-incent-card-body {
+    padding: 20px;
+    background: #f9fafb;
+}
+
+.admin-incent-stat-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.admin-incent-stat-row:last-child {
+    margin-bottom: 0;
+}
+
+.admin-incent-stat-item {
+    flex: 1;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-incent-stat-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.admin-incent-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* Card Actions */
+.admin-incent-card-actions {
+    display: flex;
+    gap: 8px;
+    padding: 16px;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+
+.admin-incent-btn-action {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.admin-incent-btn-view {
+    background: #eff6ff;
+    color: #1e40af;
+}
+
+.admin-incent-btn-view:hover {
+    background: #dbeafe;
+    box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
+}
+
+.admin-incent-btn-manage {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.admin-incent-btn-manage:hover {
+    background: #fde68a;
+    box-shadow: 0 2px 8px rgba(146, 64, 14, 0.15);
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+@media (max-width: 1200px) {
+    .admin-incent-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-incent-main-content {
+        padding: 15px;
+    }
+
+    .admin-incent-dashboard-header {
+        width: 100%;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .admin-incent-page-header {
+        font-size: 24px;
+    }
+
+    .admin-incent-content-card {
+        padding: 20px;
+    }
+
+    .admin-incent-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-incent-card-actions {
+        flex-wrap: wrap;
+    }
+
+    .admin-incent-btn-action {
+        flex: 1 1 calc(50% - 4px);
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-incent-page-header {
+        font-size: 22px;
+    }
+
+    .admin-incent-card-actions {
+        gap: 8px;
+    }
+
+    .admin-incent-btn-action {
+        flex: 1 1 100%;
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+}

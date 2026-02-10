@@ -23,18 +23,6 @@
     height: 100%;
 }
 
-/* Main Content Area */
-.jo-dashboard-main-content {
-    width: 100%;
-    flex-grow: 1;
-    position: relative;
-    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
-    overflow: hidden;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
 .jo-dashboard-page-title {
     font-weight: 600;
     font-size: 28px;

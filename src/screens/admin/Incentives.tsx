@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAllocations, getFarmerRequests } from '../../api';
-import '../../assets/css/jo css/JoIncentStyle.css';
+import '../../assets/css/admin css/AdminIncentives.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -125,9 +125,9 @@ const Incentives: React.FC = () => {
 
 
     return (
-        <div className="page-container">
+        <div className="admin-incent-page-container">
 
-            <div className="page">
+            <div className="admin-incent-page">
 
                 {/* Sidebar starts here */}
                 <div className="sidebar">
@@ -201,24 +201,24 @@ const Incentives: React.FC = () => {
                 {/* Sidebar ends here */}
 
                 {/* Main content starts here */}
-                <div className="main-content">
+                <div className="admin-incent-main-content">
 
-                    <div className="dashboard-header-incent">
-                        <h2 className="page-header">Distribution Management</h2>
+                    <div className="admin-incent-dashboard-header">
+                        <h2 className="admin-incent-page-header">Distribution Management</h2>
                     </div>
 
-                    <div className="content-card-incent">
-                        <div className="action-header">
+                    <div className="admin-incent-content-card">
+                        <div className="admin-incent-action-header">
                         </div>
 
                         {loading ? (
-                            <div className="loading-message">Loading allocations...</div>
+                            <div className="admin-incent-loading">Loading allocations...</div>
                         ) : error ? (
-                            <div className="error-state">
-                                <div className="error-icon">⚠️</div>
+                            <div className="admin-incent-error-state">
+                                <div className="admin-incent-error-icon">⚠️</div>
                                 <h3>Unable to Connect to Server</h3>
                                 <p>{error}</p>
-                                <div className="error-help">
+                                <div className="admin-incent-error-help">
                                     <p><strong>Please ensure:</strong></p>
                                     <ul>
                                         <li>Backend server is running on port 5000</li>
@@ -226,24 +226,24 @@ const Incentives: React.FC = () => {
                                         <li>Run: <code>cd backend && node server.cjs</code></li>
                                     </ul>
                                 </div>
-                                <button className="btn-retry" onClick={fetchAllocations}>
+                                <button className="admin-incent-btn-retry" onClick={fetchAllocations}>
                                     🔄 Retry Connection
                                 </button>
                             </div>
                         ) : allocations.length === 0 ? (
-                            <div className="empty-state">
-                                <div className="empty-icon">📦</div>
+                            <div className="admin-incent-empty-state">
+                                <div className="admin-incent-empty-icon">📦</div>
                                 <h3>No Allocations Yet</h3>
                                 <p>Create your first regional allocation to get started</p>
                             </div>
                         ) : (
-                            <div className="allocations-grid">
+                            <div className="admin-incent-grid">
                                 {allocations.map((allocation) => (
-                                    <div key={allocation.id} className="allocation-card">
-                                        <div className="card-header">
-                                            <div className="season-info">
+                                    <div key={allocation.id} className="admin-incent-card">
+                                        <div className="admin-incent-card-header">
+                                            <div className="admin-incent-season-info">
                                                 <h3>{formatSeasonName(allocation.season)}</h3>
-                                                <span className="allocation-date">
+                                                <span className="admin-incent-date">
                                                     {new Date(allocation.allocation_date).toLocaleDateString('en-US', {
                                                         year: 'numeric',
                                                         month: 'long',
@@ -253,35 +253,35 @@ const Incentives: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="card-body">
-                                            <div className="stat-row">
-                                                <div className="stat-item">
-                                                    <span className="stat-label">Total Fertilizer</span>
-                                                    <span className="stat-value">{getTotalFertilizer(allocation).toLocaleString()} bags</span>
+                                        <div className="admin-incent-card-body">
+                                            <div className="admin-incent-stat-row">
+                                                <div className="admin-incent-stat-item">
+                                                    <span className="admin-incent-stat-label">Total Fertilizer</span>
+                                                    <span className="admin-incent-stat-value">{getTotalFertilizer(allocation).toLocaleString()} bags</span>
                                                 </div>
-                                                <div className="stat-item">
-                                                    <span className="stat-label">Total Seeds</span>
-                                                    <span className="stat-value">{getTotalSeeds(allocation).toFixed(2)} kg</span>
+                                                <div className="admin-incent-stat-item">
+                                                    <span className="admin-incent-stat-label">Total Seeds</span>
+                                                    <span className="admin-incent-stat-value">{getTotalSeeds(allocation).toFixed(2)} kg</span>
                                                 </div>
                                             </div>
-                                            <div className="stat-row">
-                                                <div className="stat-item">
-                                                    <span className="stat-label">Farmer Requests</span>
-                                                    <span className="stat-value">{allocation.farmer_count || 0} farmers</span>
+                                            <div className="admin-incent-stat-row">
+                                                <div className="admin-incent-stat-item">
+                                                    <span className="admin-incent-stat-label">Farmer Requests</span>
+                                                    <span className="admin-incent-stat-value">{allocation.farmer_count || 0} farmers</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="card-actions">
+                                        <div className="admin-incent-card-actions">
                                             <button
-                                                className="btn-action btn-view"
+                                                className="admin-incent-btn-action admin-incent-btn-view"
                                                 onClick={() => navigate(`/view-allocation/${allocation.id}`)}
                                                 title="View Allocation Details"
                                             >
                                                 👁️ View Allocation
                                             </button>
                                             <button
-                                                className="btn-action btn-manage"
+                                                className="admin-incent-btn-action admin-incent-btn-manage"
                                                 onClick={() => navigate(`/manage-requests/${allocation.id}`)}
                                                 title="View Requests"
                                             >
