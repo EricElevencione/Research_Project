@@ -12,22 +12,27 @@
 /* Main Layout */
 .rsbsa-admin-page-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f0f0f0;
+    overflow: hidden;
 }
 
 .rsbsa-admin-page {
     display: flex;
     width: 100%;
+    height: 100%;
+    min-height: 0;
 }
 
 /* Main Content Area */
 .rsbsa-admin-main-content {
+    flex: 1;
     width: 100%;
-    flex-grow: 1;
     padding: 20px;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .rsbsa-admin-page-title {
@@ -47,7 +52,6 @@
     padding: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-top: 20px;
-    overflow-y: auto;
 }
 
 /* Table Container */

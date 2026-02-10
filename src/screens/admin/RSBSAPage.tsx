@@ -234,6 +234,7 @@ const JoRsbsa: React.FC = () => {
         {/* Main content starts here */}
         <div className="rsbsa-admin-main-content">
           <h2 className="rsbsa-admin-page-title">Registered Land Owners</h2>
+          <div className="rsbsa-admin-page-subtitle">View and manage registered land owners from RSBSA submissions</div>
 
           {/* Demographics Analysis Section */}
           {!loading && !error && rsbsaRecords.length > 0 && (
