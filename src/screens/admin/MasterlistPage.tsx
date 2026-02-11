@@ -237,13 +237,11 @@ const Masterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/gap-analysis') ? 'active' : ''}`}
-              onClick={() => navigate('/gap-analysis')}
+              className={`sidebar-nav-item ${isActive('/audit-trail') ? 'active' : ''}`}
+              onClick={() => navigate('/audit-trail')}
             >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Gap-analysis" />
-              </span>
-              <span className="nav-text">Gap Analysis</span>
+              <span className="nav-icon">📋</span>
+              <span className="nav-text">Audit Trail</span>
             </button>
 
 

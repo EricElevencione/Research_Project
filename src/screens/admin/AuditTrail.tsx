@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../../components/layout/sidebarStyle.css';
-import '../../assets/css/admin css/AuditTrail.css';
+import '../../assets/css/admin css/AdminAuditTrail.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -208,17 +208,17 @@ const AuditTrail: React.FC = () => {
     // Get action badge class
     const getActionBadgeClass = (action: string) => {
         switch (action) {
-            case 'CREATE': return 'audit-badge-create';
-            case 'UPDATE': return 'audit-badge-update';
-            case 'DELETE': return 'audit-badge-delete';
-            case 'LOGIN': return 'audit-badge-login';
-            case 'LOGOUT': return 'audit-badge-logout';
-            case 'LOGIN_FAILED': return 'audit-badge-failed';
-            case 'APPROVE': return 'audit-badge-approve';
-            case 'REJECT': return 'audit-badge-reject';
-            case 'EXPORT': return 'audit-badge-export';
-            case 'DISTRIBUTE': return 'audit-badge-distribute';
-            default: return 'audit-badge-default';
+            case 'CREATE': return 'admin-audit-badge-create';
+            case 'UPDATE': return 'admin-audit-badge-update';
+            case 'DELETE': return 'admin-audit-badge-delete';
+            case 'LOGIN': return 'admin-audit-badge-login';
+            case 'LOGOUT': return 'admin-audit-badge-logout';
+            case 'LOGIN_FAILED': return 'admin-audit-badge-failed';
+            case 'APPROVE': return 'admin-audit-badge-approve';
+            case 'REJECT': return 'admin-audit-badge-reject';
+            case 'EXPORT': return 'admin-audit-badge-export';
+            case 'DISTRIBUTE': return 'admin-audit-badge-distribute';
+            default: return 'admin-audit-badge-default';
         }
     };
 
@@ -257,7 +257,7 @@ const AuditTrail: React.FC = () => {
 
     return (
         <div className="page-container">
-            <div className="page gap-10">
+            <div className="page">
                 {/* Sidebar */}
                 <div className="sidebar">
                     <nav className="sidebar-nav">
@@ -282,11 +282,11 @@ const AuditTrail: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/gap-analysis') ? 'active' : ''}`}
-                            onClick={() => navigate('/gap-analysis')}
+                            className={`sidebar-nav-item ${isActive('/audit-trail') ? 'active' : ''}`}
+                            onClick={() => navigate('/audit-trail')}
                         >
-                            <span className="nav-icon"><img src={IncentivesIcon} alt="Gap Analysis" /></span>
-                            <span className="nav-text">Gap Analysis</span>
+                            <span className="nav-icon">📋</span>
+                            <span className="nav-text">Audit Trail</span>
                         </button>
 
                         <button
@@ -306,14 +306,6 @@ const AuditTrail: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/audit-trail') ? 'active' : ''}`}
-                            onClick={() => navigate('/audit-trail')}
-                        >
-                            <span className="nav-icon">📋</span>
-                            <span className="nav-text">Audit Trail</span>
-                        </button>
-
-                        <button
                             className="sidebar-nav-item logout"
                             onClick={() => navigate('/')}
                         >
@@ -324,37 +316,37 @@ const AuditTrail: React.FC = () => {
                 </div>
 
                 {/* Main Content */}
-                <div className="audit-main-content">
+                <div className="admin-audit-main-content">
                     {/* Header */}
-                    <div className="audit-header">
-                        <div className="audit-header-left">
+                    <div className="admin-audit-header">
+                        <div className="admin-audit-header-left">
                             <h2>📋 System Audit Trail</h2>
                             <p>Track all system activities, changes, and user actions</p>
                         </div>
-                        <div className="audit-header-right">
-                            <div className="audit-view-toggle">
+                    </div>
+                    <div className="audit-header-right">
+                            <div className="admin-audit-view-toggle">
                                 <button
-                                    className={`audit-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                                    className={`admin-audit-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
                                     onClick={() => setViewMode('list')}
                                 >
                                     📃 Log List
                                 </button>
                                 <button
-                                    className={`audit-toggle-btn ${viewMode === 'stats' ? 'active' : ''}`}
+                                    className={`admin-audit-toggle-btn ${viewMode === 'stats' ? 'active' : ''}`}
                                     onClick={() => setViewMode('stats')}
                                 >
                                     📊 Statistics
                                 </button>
                             </div>
                         </div>
-                    </div>
 
                     {viewMode === 'list' ? (
                         <>
                             {/* Filters */}
-                            <div className="audit-filters">
-                                <div className="audit-filters-row">
-                                    <div className="audit-filter-group">
+                            <div className="admin-audit-filters">
+                                <div className="admin-audit-filters-row">
+                                    <div className="admin-audit-filter-group">
                                         <label>Start Date</label>
                                         <input
                                             type="date"
@@ -363,7 +355,7 @@ const AuditTrail: React.FC = () => {
                                             onChange={handleFilterChange}
                                         />
                                     </div>
-                                    <div className="audit-filter-group">
+                                    <div className="admin-audit-filter-group">
                                         <label>End Date</label>
                                         <input
                                             type="date"
@@ -372,7 +364,7 @@ const AuditTrail: React.FC = () => {
                                             onChange={handleFilterChange}
                                         />
                                     </div>
-                                    <div className="audit-filter-group">
+                                    <div className="admin-audit-filter-group">
                                         <label>User</label>
                                         <input
                                             type="text"
@@ -382,7 +374,7 @@ const AuditTrail: React.FC = () => {
                                             placeholder="Search user..."
                                         />
                                     </div>
-                                    <div className="audit-filter-group">
+                                    <div className="admin-audit-filter-group">
                                         <label>Role</label>
                                         <select name="userRole" value={filters.userRole} onChange={handleFilterChange}>
                                             <option value="">All Roles</option>
@@ -391,7 +383,7 @@ const AuditTrail: React.FC = () => {
                                             <option value="jo">Job Order</option>
                                         </select>
                                     </div>
-                                    <div className="audit-filter-group">
+                                    <div className="admin-audit-filter-group">
                                         <label>Action</label>
                                         <select name="action" value={filters.action} onChange={handleFilterChange}>
                                             <option value="">All Actions</option>
@@ -400,7 +392,7 @@ const AuditTrail: React.FC = () => {
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="audit-filter-group">
+                                    <div className="admin-audit-filter-group">
                                         <label>Module</label>
                                         <select name="module" value={filters.module} onChange={handleFilterChange}>
                                             <option value="">All Modules</option>
@@ -410,8 +402,8 @@ const AuditTrail: React.FC = () => {
                                         </select>
                                     </div>
                                 </div>
-                                <div className="audit-filters-actions">
-                                    <div className="audit-search-box">
+                                <div className="admin-audit-filters-actions">
+                                    <div className="admin-audit-search-box">
                                         <input
                                             type="text"
                                             name="search"
@@ -420,17 +412,17 @@ const AuditTrail: React.FC = () => {
                                             placeholder="🔍 Search description, user, or record ID..."
                                         />
                                     </div>
-                                    <button className="audit-btn audit-btn-secondary" onClick={clearFilters}>
+                                    <button className="admin-audit-btn admin-audit-btn-secondary" onClick={clearFilters}>
                                         Clear Filters
                                     </button>
-                                    <button className="audit-btn audit-btn-primary" onClick={() => fetchLogs()}>
+                                    <button className="admin-audit-btn admin-audit-btn-primary" onClick={() => fetchLogs()}>
                                         🔄 Refresh
                                     </button>
-                                    <div className="audit-export-dropdown">
-                                        <button className="audit-btn audit-btn-export">
+                                    <div className="admin-audit-export-dropdown">
+                                        <button className="admin-audit-btn admin-audit-btn-export">
                                             📤 Export
                                         </button>
-                                        <div className="audit-export-menu">
+                                        <div className="admin-audit-export-menu">
                                             <button onClick={() => handleExport('json')}>Export JSON</button>
                                             <button onClick={() => handleExport('csv')}>Export CSV</button>
                                         </div>
@@ -439,28 +431,28 @@ const AuditTrail: React.FC = () => {
                             </div>
 
                             {/* Stats Summary */}
-                            <div className="audit-stats-summary">
-                                <div className="audit-stat-card">
-                                    <span className="audit-stat-value">{pagination.totalCount}</span>
-                                    <span className="audit-stat-label">Total Records</span>
+                            <div className="admin-audit-stats-summary">
+                                <div className="admin-audit-stat-card">
+                                    <span className="admin-audit-stat-value">{pagination.totalCount}</span>
+                                    <span className="admin-audit-stat-label">Total Records</span>
                                 </div>
-                                <div className="audit-stat-card">
-                                    <span className="audit-stat-value">{pagination.page}/{pagination.totalPages || 1}</span>
-                                    <span className="audit-stat-label">Current Page</span>
+                                <div className="admin-audit-stat-card">
+                                    <span className="admin-audit-stat-value">{pagination.page}/{pagination.totalPages || 1}</span>
+                                    <span className="admin-audit-stat-label">Current Page</span>
                                 </div>
                             </div>
 
                             {/* Logs Table */}
-                            <div className="audit-table-container">
+                            <div className="admin-audit-table-container">
                                 {loading ? (
-                                    <div className="audit-loading">Loading audit logs...</div>
+                                    <div className="admin-audit-loading">Loading audit logs...</div>
                                 ) : logs.length === 0 ? (
-                                    <div className="audit-empty">
+                                    <div className="admin-audit-empty">
                                         <p>📭 No audit logs found</p>
                                         <p>Adjust your filters or check back later</p>
                                     </div>
                                 ) : (
-                                    <table className="audit-table">
+                                    <table className="admin-audit-table">
                                         <thead>
                                             <tr>
                                                 <th>Timestamp</th>
@@ -474,37 +466,37 @@ const AuditTrail: React.FC = () => {
                                         <tbody>
                                             {logs.map(log => (
                                                 <tr key={log.id}>
-                                                    <td className="audit-td-timestamp">
-                                                        <div className="audit-timestamp">
-                                                            <span className="audit-time-ago">{formatTimeAgo(log.timestamp)}</span>
-                                                            <span className="audit-time-full">{log.formatted_timestamp}</span>
+                                                    <td className="admin-audit-td-timestamp">
+                                                        <div className="admin-audit-timestamp">
+                                                            <span className="admin-audit-time-ago">{formatTimeAgo(log.timestamp)}</span>
+                                                            <span className="admin-audit-time-full">{log.formatted_timestamp}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="audit-td-user">
-                                                        <div className="audit-user">
-                                                            <span className="audit-username">{log.user_name}</span>
-                                                            <span className={`audit-role-badge audit-role-${log.user_role}`}>
+                                                    <td className="admin-audit-td-user">
+                                                        <div className="admin-audit-user">
+                                                            <span className="admin-audit-username">{log.user_name}</span>
+                                                            <span className={`admin-audit-role-badge admin-audit-role-${log.user_role}`}>
                                                                 {log.user_role}
                                                             </span>
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <span className={`audit-action-badge ${getActionBadgeClass(log.action)}`}>
+                                                        <span className={`admin-audit-action-badge ${getActionBadgeClass(log.action)}`}>
                                                             {getActionIcon(log.action)} {log.action}
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <span className="audit-module-badge">{log.module}</span>
+                                                        <span className="admin-audit-module-badge">{log.module}</span>
                                                     </td>
-                                                    <td className="audit-td-description">
-                                                        <span className="audit-description">{log.description}</span>
+                                                    <td className="admin-audit-td-description">
+                                                        <span className="admin-audit-description">{log.description}</span>
                                                         {log.record_id && (
-                                                            <span className="audit-record-id">ID: {log.record_id}</span>
+                                                            <span className="admin-audit-record-id">ID: {log.record_id}</span>
                                                         )}
                                                     </td>
                                                     <td>
                                                         <button
-                                                            className="audit-btn-details"
+                                                            className="admin-audit-btn-details"
                                                             onClick={() => viewLogDetails(log)}
                                                         >
                                                             👁️ View
@@ -519,14 +511,14 @@ const AuditTrail: React.FC = () => {
 
                             {/* Pagination */}
                             {pagination.totalPages > 1 && (
-                                <div className="audit-pagination">
+                                <div className="admin-audit-pagination">
                                     <button
                                         disabled={pagination.page === 1}
                                         onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                                     >
                                         ← Previous
                                     </button>
-                                    <span className="audit-page-info">
+                                    <span className="admin-audit-page-info">
                                         Page {pagination.page} of {pagination.totalPages}
                                     </span>
                                     <button
@@ -540,22 +532,22 @@ const AuditTrail: React.FC = () => {
                         </>
                     ) : (
                         /* Statistics View */
-                        <div className="audit-stats-view">
+                        <div className="admin-audit-stats-view">
                             {stats ? (
                                 <>
                                     {/* Stats Cards */}
-                                    <div className="audit-stats-cards">
-                                        <div className="audit-stats-card audit-stats-total">
+                                    <div className="admin-audit-stats-cards">
+                                        <div className="admin-audit-stats-card admin-audit-stats-total">
                                             <h3>Total Activity</h3>
-                                            <p className="audit-stats-number">{stats.total}</p>
+                                            <p className="admin-audit-stats-number">{stats.total}</p>
                                             <span>Last {stats.period}</span>
                                         </div>
                                     </div>
 
                                     {/* Charts Row */}
-                                    <div className="audit-charts-row">
+                                    <div className="admin-audit-charts-row">
                                         {/* Activity Timeline */}
-                                        <div className="audit-chart-card audit-chart-wide">
+                                        <div className="admin-audit-chart-card admin-audit-chart-wide">
                                             <h4>📈 Activity Timeline</h4>
                                             <ResponsiveContainer width="100%" height={250}>
                                                 <AreaChart data={stats.timeline}>
@@ -575,9 +567,9 @@ const AuditTrail: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className="audit-charts-row">
+                                    <div className="admin-audit-charts-row">
                                         {/* Actions Distribution */}
-                                        <div className="audit-chart-card">
+                                        <div className="admin-audit-chart-card">
                                             <h4>🎯 Actions Distribution</h4>
                                             <ResponsiveContainer width="100%" height={250}>
                                                 <PieChart>
@@ -600,7 +592,7 @@ const AuditTrail: React.FC = () => {
                                         </div>
 
                                         {/* Module Distribution */}
-                                        <div className="audit-chart-card">
+                                        <div className="admin-audit-chart-card">
                                             <h4>📦 By Module</h4>
                                             <ResponsiveContainer width="100%" height={250}>
                                                 <BarChart data={stats.byModule} layout="vertical">
@@ -619,24 +611,24 @@ const AuditTrail: React.FC = () => {
                                     </div>
 
                                     {/* Top Users */}
-                                    <div className="audit-chart-card">
+                                    <div className="admin-audit-chart-card">
                                         <h4>👥 Most Active Users</h4>
-                                        <div className="audit-top-users">
+                                        <div className="admin-audit-top-users">
                                             {stats.byUser.map((user, idx) => (
-                                                <div key={idx} className="audit-user-row">
-                                                    <span className="audit-user-rank">{idx + 1}</span>
-                                                    <span className="audit-user-name">{user.user_name}</span>
-                                                    <span className={`audit-role-badge audit-role-${user.user_role}`}>
+                                                <div key={idx} className="admin-audit-user-row">
+                                                    <span className="admin-audit-user-rank">{idx + 1}</span>
+                                                    <span className="admin-audit-user-name">{user.user_name}</span>
+                                                    <span className={`admin-audit-role-badge admin-audit-role-${user.user_role}`}>
                                                         {user.user_role}
                                                     </span>
-                                                    <span className="audit-user-count">{user.count} actions</span>
+                                                    <span className="admin-audit-user-count">{user.count} actions</span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 </>
                             ) : (
-                                <div className="audit-loading">Loading statistics...</div>
+                                <div className="admin-audit-loading">Loading statistics...</div>
                             )}
                         </div>
                     )}
@@ -645,86 +637,86 @@ const AuditTrail: React.FC = () => {
 
             {/* Details Modal */}
             {showDetailsModal && selectedLog && (
-                <div className="audit-modal-overlay" onClick={() => setShowDetailsModal(false)}>
-                    <div className="audit-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="audit-modal-header">
+                <div className="admin-audit-modal-overlay" onClick={() => setShowDetailsModal(false)}>
+                    <div className="admin-audit-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="admin-audit-modal-header">
                             <h3>📋 Audit Log Details</h3>
-                            <button className="audit-modal-close" onClick={() => setShowDetailsModal(false)}>✕</button>
+                            <button className="admin-audit-modal-close" onClick={() => setShowDetailsModal(false)}>✕</button>
                         </div>
-                        <div className="audit-modal-body">
-                            <div className="audit-detail-section">
+                        <div className="admin-audit-modal-body">
+                            <div className="admin-audit-detail-section">
                                 <h4>General Information</h4>
-                                <div className="audit-detail-grid">
-                                    <div className="audit-detail-item">
-                                        <span className="audit-detail-label">ID</span>
-                                        <span className="audit-detail-value">{selectedLog.id}</span>
+                                <div className="admin-audit-detail-grid">
+                                    <div className="admin-audit-detail-item">
+                                        <span className="admin-audit-detail-label">ID</span>
+                                        <span className="admin-audit-detail-value">{selectedLog.id}</span>
                                     </div>
-                                    <div className="audit-detail-item">
-                                        <span className="audit-detail-label">Timestamp</span>
-                                        <span className="audit-detail-value">{selectedLog.formatted_timestamp}</span>
+                                    <div className="admin-audit-detail-item">
+                                        <span className="admin-audit-detail-label">Timestamp</span>
+                                        <span className="admin-audit-detail-value">{selectedLog.formatted_timestamp}</span>
                                     </div>
-                                    <div className="audit-detail-item">
-                                        <span className="audit-detail-label">User</span>
-                                        <span className="audit-detail-value">{selectedLog.user_name} ({selectedLog.user_role})</span>
+                                    <div className="admin-audit-detail-item">
+                                        <span className="admin-audit-detail-label">User</span>
+                                        <span className="admin-audit-detail-value">{selectedLog.user_name} ({selectedLog.user_role})</span>
                                     </div>
-                                    <div className="audit-detail-item">
-                                        <span className="audit-detail-label">IP Address</span>
-                                        <span className="audit-detail-value">{selectedLog.ip_address || 'N/A'}</span>
+                                    <div className="admin-audit-detail-item">
+                                        <span className="admin-audit-detail-label">IP Address</span>
+                                        <span className="admin-audit-detail-value">{selectedLog.ip_address || 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="audit-detail-section">
+                            <div className="admin-audit-detail-section">
                                 <h4>Action Details</h4>
-                                <div className="audit-detail-grid">
-                                    <div className="audit-detail-item">
-                                        <span className="audit-detail-label">Action</span>
-                                        <span className={`audit-action-badge ${getActionBadgeClass(selectedLog.action)}`}>
+                                <div className="admin-audit-detail-grid">
+                                    <div className="admin-audit-detail-item">
+                                        <span className="admin-audit-detail-label">Action</span>
+                                        <span className={`admin-audit-action-badge ${getActionBadgeClass(selectedLog.action)}`}>
                                             {getActionIcon(selectedLog.action)} {selectedLog.action}
                                         </span>
                                     </div>
-                                    <div className="audit-detail-item">
-                                        <span className="audit-detail-label">Module</span>
-                                        <span className="audit-module-badge">{selectedLog.module}</span>
+                                    <div className="admin-audit-detail-item">
+                                        <span className="admin-audit-detail-label">Module</span>
+                                        <span className="admin-audit-module-badge">{selectedLog.module}</span>
                                     </div>
-                                    <div className="audit-detail-item">
-                                        <span className="audit-detail-label">Record Type</span>
-                                        <span className="audit-detail-value">{selectedLog.record_type || 'N/A'}</span>
+                                    <div className="admin-audit-detail-item">
+                                        <span className="admin-audit-detail-label">Record Type</span>
+                                        <span className="admin-audit-detail-value">{selectedLog.record_type || 'N/A'}</span>
                                     </div>
-                                    <div className="audit-detail-item">
-                                        <span className="audit-detail-label">Record ID</span>
-                                        <span className="audit-detail-value">{selectedLog.record_id || 'N/A'}</span>
+                                    <div className="admin-audit-detail-item">
+                                        <span className="admin-audit-detail-label">Record ID</span>
+                                        <span className="admin-audit-detail-value">{selectedLog.record_id || 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="audit-detail-section">
+                            <div className="admin-audit-detail-section">
                                 <h4>Description</h4>
-                                <p className="audit-detail-description">{selectedLog.description}</p>
+                                <p className="admin-audit-detail-description">{selectedLog.description}</p>
                             </div>
 
                             {selectedLog.old_values && (
-                                <div className="audit-detail-section">
+                                <div className="admin-audit-detail-section">
                                     <h4>Previous Values</h4>
-                                    <pre className="audit-json-block">
+                                    <pre className="admin-audit-json-block">
                                         {JSON.stringify(selectedLog.old_values, null, 2)}
                                     </pre>
                                 </div>
                             )}
 
                             {selectedLog.new_values && (
-                                <div className="audit-detail-section">
+                                <div className="admin-audit-detail-section">
                                     <h4>New Values</h4>
-                                    <pre className="audit-json-block">
+                                    <pre className="admin-audit-json-block">
                                         {JSON.stringify(selectedLog.new_values, null, 2)}
                                     </pre>
                                 </div>
                             )}
 
                             {selectedLog.metadata && (
-                                <div className="audit-detail-section">
+                                <div className="admin-audit-detail-section">
                                     <h4>Metadata</h4>
-                                    <pre className="audit-json-block">
+                                    <pre className="admin-audit-json-block">
                                         {JSON.stringify(selectedLog.metadata, null, 2)}
                                     </pre>
                                 </div>
