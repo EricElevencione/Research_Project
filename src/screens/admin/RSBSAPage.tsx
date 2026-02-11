@@ -3,21 +3,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getRsbsaSubmissions } from '../../api';
 import '../../assets/css/admin css/RSBSAStyle.css';
 import '../../components/layout/sidebarStyle.css';
-import FarmlandMap from '../../components/Map/FarmlandMap';
-import { useRSBSADemographics } from '../../hooks/useRSBSADemographics';
-import {
-  AgeDistributionChart,
-  CropDistributionChart,
-  FarmSizeCards,
-  OwnershipBreakdownChart,
-} from '../../components/RSBSA/RSBSADemographics';
+import Analytics from './Analytics';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import LandRecsIcon from '../../assets/images/landrecord.png';
 
 interface RSBSARecord {
   id: string;
@@ -44,15 +36,12 @@ const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab] = useState('overview');
+  const [activePage, setActivePage] = useState<'farmers' | 'demo-analytics'>('farmers');
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
-
-  // Demographics analysis hook
-  const demographics = useRSBSADemographics(rsbsaRecords);
 
   // Fetch RSBSA records from API and shii
   const fetchRSBSARecords = async () => {
@@ -101,12 +90,10 @@ const JoRsbsa: React.FC = () => {
     const farmerRecords = records.filter(record => record.farmerName === farmerName);
 
     // Sum up all parcel areas for this farmer
-    const totalArea = farmerRecords.reduce((sum, record) => { // Ensure parcelArea is a number
-      const area = parseFloat(String(record.parcelArea || 0)) || 0; // Default to 0 if null or invalid
-      return sum + area; // Sum the areas
-    }, 0); // Initial sum is 0
-
-    return totalArea;
+    return farmerRecords.reduce((sum, record) => { // Ensure parcelArea is a number
+          const area = parseFloat(String(record.parcelArea || 0)) || 0; // Default to 0 if null or invalid
+          return sum + area; // Sum the areas
+        }, 0);
   };
 
   // Function to count the number of parcels for a farmer based on existing data
@@ -231,102 +218,105 @@ const JoRsbsa: React.FC = () => {
         </div>
         {/* Sidebar ends here */}
 
-        {/* Main content starts here */}
+        {/* Main content area */}
         <div className="rsbsa-admin-main-content">
-          <h2 className="rsbsa-admin-page-title">Registered Land Owners</h2>
+          <h2 className="rsbsa-admin-page-title">RSBSA Management</h2>
           <div className="rsbsa-admin-page-subtitle">View and manage registered land owners from RSBSA submissions</div>
 
-          {/* Demographics Analysis Section */}
-          {!loading && !error && rsbsaRecords.length > 0 && (
-            <div className="rsbsa-demographics-section">
-              <div className="rsbsa-demographics-header">
-                <h2>Demographics Analysis</h2>
-                <span className="rsbsa-demographics-badge">ANALYTICS</span>
-              </div>
+          {/* Tab toggle buttons */}
+          <div className="rsbsa-tab-toggle">
+            <button
+              className={`rsbsa-tab-btn ${activePage === 'farmers' ? 'active' : ''}`}
+              onClick={() => setActivePage('farmers')}
+            >
+              Farmers
+            </button>
+            <button
+              className={`rsbsa-tab-btn ${activePage === 'demo-analytics' ? 'active' : ''}`}
+              onClick={() => setActivePage('demo-analytics')}
+            >
+              Demo Analytics
+            </button>
+          </div>
 
-              {/* Farm Size Cards - full width */}
-              <FarmSizeCards data={demographics.farmSizeCategories} total={demographics.totalFarmers} />
+          {/* Conditional content based on active tab */}
+          {activePage === 'farmers' && (
 
-              {/* Charts Grid: 2x2 */}
-              <div className="rsbsa-demographics-grid" style={{ marginTop: 20 }}>
-                <AgeDistributionChart data={demographics.ageBrackets} />
-                <CropDistributionChart data={demographics.cropDistribution} />
-                <OwnershipBreakdownChart data={demographics.ownershipBreakdown} total={demographics.totalFarmers} />
-              </div>
+            <div className="rsbsa-admin-content-card">
+              {loading ? (
+                <div className="rsbsa-admin-loading-container">
+                  <p>Loading registered land owners...</p>
+                </div>
+              ) : error ? (
+                <div className="rsbsa-admin-error-container">
+                  <p>Error: {error}</p>
+                  <button onClick={fetchRSBSARecords} className="rsbsa-admin-retry-button">
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <div className="rsbsa-admin-table-container">
+                  <table className="rsbsa-admin-owners-table">
+                    <thead>
+                      <tr>
+                        <th>Last Name</th>
+                        <th>First Name</th>
+                        <th>Middle Name</th>
+                        <th>EXT Name</th>
+                        <th>Gender</th>
+                        <th>Birthdate</th>
+                        <th>Farmer Address</th>
+                        <th>Number of Parcels</th>
+                        <th>Total Farm Area</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {registeredOwners.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="rsbsa-admin-no-data">
+                            No registered owners found
+                          </td>
+                        </tr>
+                      ) : (
+                        registeredOwners.map((record) => {
+                          // Parse the farmer name to extract individual components
+                          const nameParts = record.farmerName.split(', ');
+                          const lastName = nameParts[0] || '';
+                          const firstName = nameParts[1] || '';
+                          const middleName = nameParts[2] || '';
+                          const extName = nameParts[3] || '';
+
+                          // Parcel count is now calculated and stored in record.parcelCount
+
+                          return (
+                            <tr key={record.id}>
+                              <td>{lastName}</td>
+                              <td>{firstName}</td>
+                              <td>{middleName}</td>
+                              <td>{extName}</td>
+                              <td>{record.gender || 'N/A'}</td>
+                              <td>{record.birthdate ? formatDate(record.birthdate) : 'N/A'}</td>
+                              <td>{record.farmerAddress || 'N/A'}</td>
+                              <td>{record.parcelCount || 0}</td>
+                              <td>{(() => {
+                                const area = typeof record.totalFarmArea === 'number' ? record.totalFarmArea : parseFloat(String(record.totalFarmArea || 0));
+                                return !isNaN(area) && area > 0 ? `${area.toFixed(2)} ha` : 'N/A';
+                              })()}</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
-          <div className="rsbsa-admin-content-card">
-            {loading ? (
-              <div className="rsbsa-admin-loading-container">
-                <p>Loading registered land owners...</p>
-              </div>
-            ) : error ? (
-              <div className="rsbsa-admin-error-container">
-                <p>Error: {error}</p>
-                <button onClick={fetchRSBSARecords} className="rsbsa-admin-retry-button">
-                  Retry
-                </button>
-              </div>
-            ) : (
-              <div className="rsbsa-admin-table-container">
-                <table className="rsbsa-admin-owners-table">
-                  <thead>
-                    <tr>
-                      <th>Last Name</th>
-                      <th>First Name</th>
-                      <th>Middle Name</th>
-                      <th>EXT Name</th>
-                      <th>Gender</th>
-                      <th>Birthdate</th>
-                      <th>Farmer Address</th>
-                      <th>Number of Parcels</th>
-                      <th>Total Farm Area</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registeredOwners.length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="rsbsa-admin-no-data">
-                          No registered owners found
-                        </td>
-                      </tr>
-                    ) : (
-                      registeredOwners.map((record) => {
-                        // Parse the farmer name to extract individual components
-                        const nameParts = record.farmerName.split(', ');
-                        const lastName = nameParts[0] || '';
-                        const firstName = nameParts[1] || '';
-                        const middleName = nameParts[2] || '';
-                        const extName = nameParts[3] || '';
-
-                        // Parcel count is now calculated and stored in record.parcelCount
-
-                        return (
-                          <tr key={record.id}>
-                            <td>{lastName}</td>
-                            <td>{firstName}</td>
-                            <td>{middleName}</td>
-                            <td>{extName}</td>
-                            <td>{record.gender || 'N/A'}</td>
-                            <td>{record.birthdate ? formatDate(record.birthdate) : 'N/A'}</td>
-                            <td>{record.farmerAddress || 'N/A'}</td>
-                            <td>{record.parcelCount || 0}</td>
-                            <td>{(() => {
-                              const area = typeof record.totalFarmArea === 'number' ? record.totalFarmArea : parseFloat(String(record.totalFarmArea || 0));
-                              return !isNaN(area) && area > 0 ? `${area.toFixed(2)} ha` : 'N/A';
-                            })()}</td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          {activePage === 'demo-analytics' && (
+            <Analytics rsbsaRecords={rsbsaRecords} loading={loading} error={error} />
+          )}
+        </div>      </div>
     </div>
   );
 };

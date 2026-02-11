@@ -33,14 +33,22 @@
     flex-direction: column;
     overflow-y: auto;
     min-height: 0;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%)
 }
 
 .rsbsa-admin-page-title {
     display: flex;
-    margin-bottom: 10px;
-    font-size: 24px;
     color: #2e3d27;
     text-align: center;
+    font-weight: 600;
+    font-size: 28px;
+}
+
+.rsbsa-admin-page-subtitle{
+    color: #6b7280;
+    font-size: 14px;
+    margin-top: 0;
+    margin-bottom: 20px;
 }
 
 /* Content Card Container */
@@ -172,5 +180,39 @@
     .rsbsa-admin-content-card {
         padding: 12px;
     }
+}
+
+/* Tab Toggle Buttons */
+.rsbsa-tab-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    background: #e5e7eb;
+    border-radius: 8px;
+    padding: 4px;
+    width: fit-content;
+}
+
+.rsbsa-tab-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rsbsa-tab-btn:hover {
+    color: #2e3d27;
+}
+
+.rsbsa-tab-btn.active {
+    background: #ffffff;
+    color: #2e3d27;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 

@@ -6,13 +6,15 @@
 /* Page Layout */
 .admin-viewalloc-page-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background-color: #f0f0f0;
 }
 
 .admin-viewalloc-page {
     display: flex;
     width: 100%;
+    height: 100%;
 }
 
 /* Main Content */
@@ -21,30 +23,34 @@
     padding: 20px;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
     background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
 }
 
 /* Dashboard Header */
 .admin-viewalloc-header {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 12px;
 }
 
 .admin-viewalloc-title {
-    font-weight: 600;
+   font-weight: 600;
     font-size: 28px;
     color: #111827;
     margin: 0;
+}
+
+.admin-viewalloc-subtitle {
+   font-size: 14px;
+    color: #6b7280;
+    margin: 4px 0 0 0;
 }
 
 .admin-viewalloc-header-actions {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    margin-bottom: 12px;
 }
 
 .admin-viewalloc-btn-nav {
@@ -157,7 +163,7 @@
     border-radius: 12px;
     color: white;
     position: relative;
-    overflow: hidden;
+    overflow: auto;
 }
 
 .admin-viewalloc-overview-card::after {

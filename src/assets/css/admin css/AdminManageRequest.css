@@ -1,0 +1,152 @@
+/* ============================================
+   ADMIN MANAGE REQUESTS - UNIQUE STYLING
+   All class names prefixed with admin-req-
+   ============================================ */
+
+/* Page Layout */
+.admin-req-page-container {
+    display: flex;
+    height: 100vh;
+    background-color: #f0f0f0;
+    overflow: hidden;
+}
+
+.admin-req-page {
+    display: flex;
+    width: 100%;
+}
+
+/* Main Content */
+.admin-req-main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+    overflow: auto;
+}
+
+/* Dashboard Header */
+.admin-req-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-direction: column;
+}
+
+.admin-req-page-header {
+    font-weight: 600;
+    font-size: 28px;
+    color: #111827;
+    margin: 0 0 10px 0;
+}
+
+.admin-req-btn-back {
+   background: linear-gradient(135deg, #667eea 0%, #4ba260 100%);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.admin-req-btn-back:hover {
+     transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+/* Content Card */
+.admin-req-content-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+/* Loading State */
+.admin-req-loading-message {
+    text-align: center;
+    padding: 40px;
+    font-size: 16px;
+    color: #6b7280;
+}
+
+/* Error State */
+.admin-req-error-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.admin-req-error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.admin-req-error-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 8px 0;
+}
+
+.admin-req-error-state p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Empty State */
+.admin-req-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.admin-req-empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.admin-req-empty-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 8px 0;
+}
+
+.admin-req-empty-state p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+@media (max-width: 768px) {
+    .admin-req-main-content {
+        padding: 15px;
+    }
+
+    .admin-req-dashboard-header {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .admin-req-page-header {
+        font-size: 24px;
+    }
+
+    .admin-req-content-card {
+        padding: 16px;
+    }
+}
