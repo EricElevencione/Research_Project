@@ -10,9 +10,6 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import MasterlistIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
-import LandRecsIcon from '../../assets/images/landrecord.png';
-import DistributionIcon from '../../assets/images/distribution.png'
-import FarmerRequestIcon from '../../assets/images/request.png';
 
 interface RSBSARecord {
   id: string;
@@ -138,8 +135,7 @@ const JoRsbsaPage: React.FC = () => {
         console.warn(`Missing ownershipType for ${record.farmerName}`, record);
         return false;
       }
-      const isRegisteredOwner = record.ownershipType.registeredOwner === true;
-      return isRegisteredOwner;
+      return record.ownershipType.registeredOwner === true;
     });
     console.log('Filtered registered owners count:', filtered.length);
     console.log('Filtered registered owners:', JSON.stringify(filtered, null, 2));

@@ -18,6 +18,7 @@ Where: Used in backend API route '/api/rsbsa_submission' in server.cjs.
 Description: This endpoint handles the submission of the final RSBSA form along with multiple farmland parcels. 
 Validates data, calculates totals, and stores everything in the database.
 */
+
 router.post('/', async (req, res) => {
     const { draftId, data } = req.body;
     const client = await pool.connect();
@@ -197,8 +198,20 @@ router.post('/', async (req, res) => {
                         }
                     }
 
-                    // Use existingParcelNumber for ownership transfers, otherwise generate new parcel number
-                    const parcelNumber = parcel.existingParcelNumber || parcel.parcelNo || `Parcel-${submissionId}-${data.farmlandParcels.indexOf(parcel) + 1}`;
+                    // Use existingParcelNumber for ownership transfers, otherwise generate proper parcel number
+                    // NOTE: parcel.parcelNo is just a form index ("1", "2", "3") — NOT a real parcel identifier
+                    let parcelNumber = parcel.existingParcelNumber || null;
+                    
+                    // If no parcel number exists, generate one using the database function
+                    if (!parcelNumber) {
+                        const barangayName = parcel.farmLocationBarangay || data.barangay || 'UNKNOWN';
+                        const genResult = await client.query(
+                            'SELECT generate_parcel_number($1) AS parcel_number',
+                            [barangayName]
+                        );
+                        parcelNumber = genResult.rows[0].parcel_number;
+                        console.log(`🔢 Generated parcel number: ${parcelNumber} for barangay: ${barangayName}`);
+                    }
 
                     const parcelResult = await client.query(parcelInsertQuery, [
                         submissionId,

@@ -15,6 +15,7 @@ interface LandParcel {
     id: number;
     land_parcel_id: number;
     parcel_number: string;
+    ffrs_code: string;
     farm_location_barangay: string;
     farm_location_municipality: string;
     total_farm_area_ha: number;
@@ -77,7 +78,6 @@ const JoLandRegistry: React.FC = () => {
     const [selectedNewOwner, setSelectedNewOwner] = useState<Farmer | null>(null);
     const [transferType, setTransferType] = useState<'owner' | 'tenant' | 'lessee'>('owner');
     const [transferReason, setTransferReason] = useState('');
-    const [isTransferring, setIsTransferring] = useState(false);
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -120,113 +120,76 @@ const JoLandRegistry: React.FC = () => {
         setFilteredFarmers(filtered);
     }, [transferSearch, farmers]);
 
-    // Handle ownership transfer
-    const handleTransferOwnership = async () => {
-        if (!selectedParcel || !selectedNewOwner) {
-            alert('Please select a new owner');
-            return;
-        }
 
-        setIsTransferring(true);
+    // Fetch all land parcels with current owners
+   useEffect(() => {
+    const fetchLandParcels = async () => {
+        setLoading(true);
         try {
-            // Close current holder's record
-            const { error: updateError } = await supabase
+            // Step 1: Fetch current land history records
+            const { data, error } = await supabase
                 .from('land_history')
-                .update({
-                    is_current: false,
-                    period_end_date: new Date().toISOString().split('T')[0]
-                })
-                .eq('id', selectedParcel.id);
+                .select(`
+                    id,
+                    land_parcel_id,
+                    parcel_number,
+                    farm_location_barangay,
+                    farm_location_municipality,
+                    total_farm_area_ha,
+                    land_owner_name,
+                    farmer_id,                    // ← Key: farmer ID for FFRS lookup
+                    farmer_name,
+                    is_registered_owner,
+                    is_tenant,
+                    is_lessee,
+                    is_current,
+                    period_start_date
+                `)
+                .eq('is_current', true)           // Only current ownership records
+                .order('parcel_number', { ascending: true });
 
-            if (updateError) {
-                throw new Error('Failed to close current holder record');
+            if (error) {
+                console.error('Error fetching land parcels:', error);
+            } else {
+                const parcels = data || [];
+
+                // Step 2: Extract unique farmer IDs from parcels
+                const farmerIds = [...new Set(parcels.map((p: any) => p.farmer_id).filter(Boolean))];
+                let ffrsMap: Record<number, string> = {};
+
+                // Step 3: Fetch FFRS codes from rsbsa_submission for all farmer IDs
+                if (farmerIds.length > 0) {
+                    const { data: ffrsData } = await supabase
+                        .from('rsbsa_submission')
+                        .select('id, "FFRS_CODE"')      // ← Fetch farmer ID and FFRS code
+                        .in('id', farmerIds);            // Only for farmers in our parcels
+
+                    if (ffrsData) {
+                        // Step 4: Create a map of farmer_id → FFRS_CODE
+                        ffrsMap = Object.fromEntries(
+                            ffrsData.map((r: any) => [r.id, r.FFRS_CODE || ''])
+                        );
+                    }
+                }
+
+                // Step 5: Merge FFRS codes into parcel data
+                const parcelsWithFfrs = parcels.map((p: any) => ({
+                    ...p,
+                    ffrs_code: ffrsMap[p.farmer_id] || ''  // ← Add FFRS code to each parcel
+                }));
+
+                setLandParcels(parcelsWithFfrs);
+                console.log('✅ Loaded', parcelsWithFfrs.length, 'land parcels with FFRS codes');
             }
-
-            // Create new ownership record
-            const { error: insertError } = await supabase
-                .from('land_history')
-                .insert({
-                    land_parcel_id: selectedParcel.land_parcel_id,
-                    parcel_number: selectedParcel.parcel_number,
-                    farm_location_barangay: selectedParcel.farm_location_barangay,
-                    farm_location_municipality: selectedParcel.farm_location_municipality || 'Dumangas',
-                    total_farm_area_ha: selectedParcel.total_farm_area_ha,
-                    farmer_id: selectedNewOwner.id,
-                    farmer_name: selectedNewOwner.name,
-                    is_registered_owner: transferType === 'owner',
-                    is_tenant: transferType === 'tenant',
-                    is_lessee: transferType === 'lessee',
-                    land_owner_id: transferType === 'owner' ? selectedNewOwner.id : selectedParcel.farmer_id,
-                    land_owner_name: transferType === 'owner' ? selectedNewOwner.name : selectedParcel.farmer_name,
-                    is_current: true,
-                    period_start_date: new Date().toISOString().split('T')[0],
-                    change_type: 'TRANSFER',
-                    change_reason: transferReason || `Ownership transfer to ${selectedNewOwner.name}`,
-                    previous_history_id: selectedParcel.id
-                });
-
-            if (insertError) {
-                throw new Error('Failed to create new ownership record');
-            }
-
-            alert('✅ Ownership transferred successfully!');
-            setShowTransferModal(false);
-            setShowModal(false);
-            setSelectedNewOwner(null);
-            setTransferSearch('');
-            setTransferReason('');
-
-            // Refresh the parcel list
-            window.location.reload();
-        } catch (err: any) {
-            console.error('Transfer error:', err);
-            alert('Error: ' + (err.message || 'Failed to transfer ownership'));
+        } catch (error) {
+            console.error('Error:', error);
         } finally {
-            setIsTransferring(false);
+            setLoading(false);
         }
     };
 
-    // Fetch all land parcels with current owners
-    useEffect(() => {
-        const fetchLandParcels = async () => {
-            setLoading(true);
-            try {
-                const { data, error } = await supabase
-                    .from('land_history')
-                    .select(`
-                        id,
-                        land_parcel_id,
-                        parcel_number,
-                        farm_location_barangay,
-                        farm_location_municipality,
-                        total_farm_area_ha,
-                        land_owner_name,
-                        farmer_id,
-                        farmer_name,
-                        is_registered_owner,
-                        is_tenant,
-                        is_lessee,
-                        is_current,
-                        period_start_date
-                    `)
-                    .eq('is_current', true)
-                    .order('parcel_number', { ascending: true });
-
-                if (error) {
-                    console.error('Error fetching land parcels:', error);
-                } else {
-                    setLandParcels(data || []);
-                    console.log('✅ Loaded', data?.length, 'land parcels');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchLandParcels();
-    }, []);
+    fetchLandParcels();
+}, []);
 
     // Fetch history when a parcel is selected (using land_parcel_id for reliable linking)
     const fetchParcelHistory = async (landParcelId: number, parcelNumber: string) => {
@@ -307,6 +270,7 @@ const JoLandRegistry: React.FC = () => {
     const filteredParcels = landParcels.filter(parcel => {
         const matchesSearch = searchTerm === '' ||
             parcel.parcel_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            parcel.ffrs_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             parcel.land_owner_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             parcel.farmer_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -458,7 +422,7 @@ const JoLandRegistry: React.FC = () => {
                             <table className="jo-land-registry-table">
                                 <thead>
                                     <tr>
-                                        <th>Parcel #</th>
+                                        <th>FFRS Code</th>
                                         <th>Current Holder</th>
                                         <th>Ownership Type</th>
                                         <th>Barangay</th>
@@ -469,13 +433,13 @@ const JoLandRegistry: React.FC = () => {
                                 <tbody>
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={6} className="jo-land-registry-loading-cell">
+                                            <td colSpan={7} className="jo-land-registry-loading-cell">
                                                 Loading land parcels...
                                             </td>
                                         </tr>
                                     ) : filteredParcels.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="jo-land-registry-empty-cell">
+                                            <td colSpan={7} className="jo-land-registry-empty-cell">
                                                 {searchTerm || filterBarangay
                                                     ? 'No parcels match your search criteria'
                                                     : 'No land parcels registered yet'}
@@ -488,7 +452,7 @@ const JoLandRegistry: React.FC = () => {
                                                 onClick={() => handleParcelSelect(parcel)}
                                                 className={selectedParcel?.id === parcel.id ? 'selected' : ''}
                                             >
-                                                <td><strong>{parcel.parcel_number || `#${parcel.id}`}</strong></td>
+                                                <td><strong>{parcel.ffrs_code || '—'}</strong></td>
                                                 <td>{parcel.farmer_name || parcel.land_owner_name || '—'}</td>
                                                 <td>
                                                     <span className={`jo-land-registry-ownership-pill jo-land-registry-ownership-${getOwnershipClass(parcel)}`}>
@@ -538,6 +502,12 @@ const JoLandRegistry: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="jo-land-registry-info-grid">
+                                        <div className="jo-land-registry-info-item">
+                                            <span className="jo-land-registry-info-label">FFRS Code</span>
+                                            <span className="jo-land-registry-info-value">
+                                                {selectedParcel.ffrs_code || '—'}
+                                            </span>
+                                        </div>
                                         <div className="jo-land-registry-info-item">
                                             <span className="jo-land-registry-info-label">Parcel Number</span>
                                             <span className="jo-land-registry-info-value">
@@ -822,21 +792,6 @@ const JoLandRegistry: React.FC = () => {
                                         }}
                                     >
                                         Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleTransferOwnership}
-                                        disabled={!selectedNewOwner || isTransferring}
-                                        style={{
-                                            padding: '0.75rem 1.5rem',
-                                            backgroundColor: selectedNewOwner ? '#4caf50' : '#ccc',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            cursor: selectedNewOwner ? 'pointer' : 'not-allowed',
-                                            fontSize: '1rem'
-                                        }}
-                                    >
-                                        {isTransferring ? 'Transferring...' : '✓ Confirm Transfer'}
                                     </button>
                                 </div>
                             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAllocations, getFarmerRequests, deleteFarmerRequest, updateFarmerRequest, createDistributionRecord } from '../../api';
+import { suggestAlternatives, calculateRemainingStock } from '../../services/alternativeEngine';
 import '../../assets/css/jo css/JoManageRequests.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -174,29 +175,39 @@ const JoManageRequests: React.FC = () => {
                     try {
                         setLoadingAlternatives(prev => ({ ...prev, [request.id]: true }));
 
-                        console.log(`Fetching alternatives for request #${request.id}...`);
-                        // Note: suggest-alternatives endpoint is not available in Supabase, returning empty alternatives
-                        const response = { data: { suggestions: { suggestions: [] } }, error: null };
+                        console.log(`🤖 Computing alternatives for request #${request.id}...`);
 
-                        console.log(`📡 API Response: using empty alternatives (endpoint not in Supabase)`);
+                        // Calculate remaining stock for this request
+                        const remainingStock = calculateRemainingStock(allocationData, requestsList, request.id);
 
-                        if (!response.error) {
-                            const data = response.data;
-                            console.log(`✅ Alternatives received for request #${request.id}:`, data);
-                            setAlternatives(prev => ({ ...prev, [request.id]: data }));
-                            setShowAlternatives(prev => ({ ...prev, [request.id]: true }));
-                            newSuggestions++;
-                        } else {
-                            console.error(`❌ API Error for request #${request.id}:`, response.error);
-                        }
+                        // Run client-side alternative engine
+                        const result = suggestAlternatives({
+                            farmer_name: request.farmer_name,
+                            crop_type: 'rice',
+                            requested_urea_bags: request.requested_urea_bags || 0,
+                            requested_complete_14_bags: request.requested_complete_14_bags || 0,
+                            requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
+                            requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0,
+                            requested_jackpot_kg: request.requested_jackpot_kg || 0,
+                            requested_us88_kg: request.requested_us88_kg || 0,
+                            requested_th82_kg: request.requested_th82_kg || 0,
+                            requested_rh9000_kg: request.requested_rh9000_kg || 0,
+                            requested_lumping143_kg: request.requested_lumping143_kg || 0,
+                            requested_lp296_kg: request.requested_lp296_kg || 0
+                        }, remainingStock);
+
+                        console.log(`✅ Alternatives computed for request #${request.id}:`, result);
+                        setAlternatives(prev => ({ ...prev, [request.id]: result }));
+                        setShowAlternatives(prev => ({ ...prev, [request.id]: true }));
+                        newSuggestions++;
                     } catch (error) {
-                        console.error(`❌ Failed to auto-fetch alternatives for request ${request.id}:`, error);
+                        console.error(`❌ Failed to compute alternatives for request ${request.id}:`, error);
                     } finally {
                         setLoadingAlternatives(prev => ({ ...prev, [request.id]: false }));
                     }
 
-                    // Small delay between requests to avoid overloading
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                    // Small delay between requests
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 } else {
                     console.log(`ℹ️ Alternatives already loaded for request #${request.id}`);
                 }
@@ -348,25 +359,37 @@ const JoManageRequests: React.FC = () => {
         try {
             setLoadingAlternatives(prev => ({ ...prev, [requestId]: true }));
 
-            console.log('Fetching alternatives for request:', requestId);
+            console.log('🤖 Computing alternatives for request:', requestId);
 
-            // Note: suggest-alternatives endpoint is not available in Supabase, returning empty alternatives
-            const response = { data: { suggestions: { suggestions: [] } }, error: null };
-
-            console.log('Response: using empty alternatives (endpoint not in Supabase)');
-
-            if (!response.error) {
-                const data = response.data;
-                console.log('✅ Alternatives data:', data);
-                setAlternatives(prev => ({ ...prev, [requestId]: data }));
-                setShowAlternatives(prev => ({ ...prev, [requestId]: true }));
-            } else {
-                console.error('❌ Server error:', response.error);
-                alert(`❌ Failed to fetch alternatives: suggest-alternatives endpoint not available in Supabase`);
+            const request = requests.find(r => r.id === requestId);
+            if (!request || !allocation) {
+                alert('❌ Request or allocation data not found');
+                return;
             }
+
+            // Calculate remaining stock and run client-side engine
+            const remainingStock = calculateRemainingStock(allocation, requests, requestId);
+            const result = suggestAlternatives({
+                farmer_name: request.farmer_name,
+                crop_type: 'rice',
+                requested_urea_bags: request.requested_urea_bags || 0,
+                requested_complete_14_bags: request.requested_complete_14_bags || 0,
+                requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
+                requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0,
+                requested_jackpot_kg: request.requested_jackpot_kg || 0,
+                requested_us88_kg: request.requested_us88_kg || 0,
+                requested_th82_kg: request.requested_th82_kg || 0,
+                requested_rh9000_kg: request.requested_rh9000_kg || 0,
+                requested_lumping143_kg: request.requested_lumping143_kg || 0,
+                requested_lp296_kg: request.requested_lp296_kg || 0
+            }, remainingStock);
+
+            console.log('✅ Alternatives computed:', result);
+            setAlternatives(prev => ({ ...prev, [requestId]: result }));
+            setShowAlternatives(prev => ({ ...prev, [requestId]: true }));
         } catch (error) {
-            console.error('❌ Error fetching alternatives:', error);
-            alert(`❌ Error fetching alternatives: ${error instanceof Error ? error.message : 'Network error'}`);
+            console.error('❌ Error computing alternatives:', error);
+            alert(`❌ Error computing alternatives: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setLoadingAlternatives(prev => ({ ...prev, [requestId]: false }));
         }
@@ -1446,20 +1469,20 @@ const JoManageRequests: React.FC = () => {
             {/* Suggestions Modal */}
             {showSuggestionsModal && (
                 <div className="jo-manage-requests-modal-overlay">
-                    <div className="jo-manage-requests-modal-content" style={{ maxWidth: '700px', maxHeight: '80vh' }}>
+                    <div className="jo-manage-requests-modal-content" style={{ maxWidth: '900px', maxHeight: '85vh', width: '90%' }}>
                         <div className="jo-manage-requests-modal-header">
                             <h2>💡 DSS Suggestions Overview</h2>
                         </div>
 
-                        <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 140px)', padding: '15px 9px' }}>
+                        <div style={{ overflowY: 'auto', maxHeight: 'calc(80vh - 140px)', padding: '20px' }}>
                             {Object.keys(alternatives).length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
-                                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-                                    <h4 style={{ margin: '0 0 8px 0', color: '#374151', fontSize: '18px' }}>No Suggestions Available</h4>
-                                    <p style={{ margin: 0, color: '#9ca3af' }}>There are no shortage-based suggestions at this time.</p>
+                                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6b7280' }}>
+                                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>📋</div>
+                                    <h4 style={{ margin: '0 0 12px 0', color: '#374151', fontSize: '20px', fontWeight: 600 }}>No Suggestions Available</h4>
+                                    <p style={{ margin: 0, color: '#9ca3af', fontSize: '15px' }}>There are no shortage-based suggestions at this time.</p>
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     {Object.keys(alternatives).map(key => {
                                         const requestId = parseInt(key);
                                         const altData = alternatives[requestId];
@@ -1473,205 +1496,271 @@ const JoManageRequests: React.FC = () => {
 
                                         return (
                                             <div key={requestId} style={{
-                                                background: '#faf5ff',
-                                                border: '1px solid #e9d5ff',
-                                                borderRadius: '8px',
+                                                background: 'white',
+                                                border: '2px solid #e5e7eb',
+                                                borderRadius: '12px',
                                                 overflow: 'hidden',
-                                                transition: 'all 0.2s ease'
+                                                transition: 'all 0.3s ease',
+                                                boxShadow: isExpanded ? '0 10px 30px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.08)'
                                             }}>
-                                                {/* Clickable Header */}
+                                                {/* Farmer Header */}
                                                 <div
                                                     onClick={() => setExpandedFarmerInModal(isExpanded ? null : requestId)}
                                                     style={{
                                                         display: 'flex',
-                                                        justifyContent: 'space-between',
                                                         alignItems: 'center',
-                                                        padding: '16px',
-                                                        background: 'linear-gradient(to right, #f3e8ff, #ede9fe)',
+                                                        gap: '16px',
+                                                        padding: '20px',
+                                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                                         cursor: 'pointer',
-                                                        transition: 'background 0.2s ease'
+                                                        transition: 'all 0.2s ease'
                                                     }}
                                                 >
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <span style={{ fontSize: '15px', fontWeight: 600, color: '#6b21a8' }}>
-                                                            👤 {altData.farmer_name || request.farmer_name}
+                                                    
+                                                    {/* Farmer Info */}
+                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                        <span style={{ fontSize: '18px', fontWeight: 700, color: 'white', letterSpacing: '0.3px' }}>
+                                                            Farmer: {altData.farmer_name || request.farmer_name}
                                                         </span>
-                                                        <span style={{ fontSize: '13px', color: '#7c3aed' }}>
-                                                            📍 {request.barangay}
+                                                        <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            📍 Farm: Barangay {request.barangay}
                                                         </span>
                                                     </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                        <span style={{
-                                                            background: '#fef3c7',
-                                                            color: '#b45309',
-                                                            padding: '4px 10px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px',
-                                                            fontWeight: 600
-                                                        }}>
-                                                            ⚠️ {altData.suggestions.suggestions.length} shortage(s)
-                                                        </span>
-                                                        <span style={{ fontSize: '16px', color: '#7c3aed' }}>
-                                                            {isExpanded ? '▲' : '▼'}
-                                                        </span>
+
+                                                    {/* Toggle Icon */}
+                                                    <div style={{
+                                                        fontSize: '24px',
+                                                        color: 'white',
+                                                        transition: 'transform 0.3s ease',
+                                                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                    }}>
+                                                        ▼
                                                     </div>
                                                 </div>
 
                                                 {/* Expandable Details */}
                                                 {isExpanded && (
-                                                    <div style={{
-                                                        padding: '16px',
-                                                        background: 'white',
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        gap: '12px',
-                                                        borderTop: '1px solid #e9d5ff'
-                                                    }}>
-                                                        {altData.suggestions.suggestions.map((suggestion: any, idx: number) => (
-                                                            <div key={idx} style={{
-                                                                background: '#f9fafb',
-                                                                borderRadius: '8px',
-                                                                padding: '14px',
-                                                                border: '1px solid #e5e7eb'
-                                                            }}>
-                                                                <div style={{
-                                                                    display: 'flex',
-                                                                    justifyContent: 'space-between',
-                                                                    alignItems: 'center',
-                                                                    marginBottom: '12px'
-                                                                }}>
-                                                                    <span style={{ color: '#dc2626', fontSize: '14px' }}>
-                                                                        ❌ Shortage: <strong>{suggestion.original_fertilizer_name || suggestion.original_seed_name}</strong>
-                                                                    </span>
-                                                                    <span style={{
-                                                                        background: '#fee2e2',
-                                                                        color: '#dc2626',
-                                                                        padding: '4px 10px',
-                                                                        borderRadius: '6px',
-                                                                        fontSize: '13px',
-                                                                        fontWeight: 700
-                                                                    }}>
-                                                                        {suggestion.shortage_bags || suggestion.shortage_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'}
-                                                                    </span>
-                                                                </div>
+                                                    <div style={{ padding: '24px' }}>
+                                                        {altData.suggestions.suggestions.map((suggestion: any, idx: number) => {
+                                                            const selectedAlt = selectedAlternative[requestId]?.suggestionIdx === idx 
+                                                                ? suggestion.alternatives[selectedAlternative[requestId].alternativeIdx]
+                                                                : null;
 
-                                                                {suggestion.alternatives && suggestion.alternatives.length > 0 ? (
-                                                                    <div style={{ marginTop: '8px' }}>
-                                                                        <label style={{
-                                                                            display: 'block',
-                                                                            fontSize: '13px',
+                                                            return (
+                                                                <div key={idx} style={{ marginBottom: idx < altData.suggestions.suggestions.length - 1 ? '24px' : '0' }}>
+                                                                    {/* Farm Input Summary */}
+                                                                    <div style={{ marginBottom: '20px' }}>
+                                                                        <h4 style={{ 
+                                                                            margin: '0 0 16px 0',
+                                                                            fontSize: '15px',
                                                                             fontWeight: 600,
-                                                                            color: '#059669',
-                                                                            marginBottom: '8px'
+                                                                            color: '#374151',
+                                                                            textTransform: 'uppercase',
+                                                                            letterSpacing: '0.5px'
                                                                         }}>
-                                                                            ✅ Available Alternatives:
-                                                                        </label>
-                                                                        <select
-                                                                            value={
-                                                                                selectedAlternative[requestId]?.suggestionIdx === idx
-                                                                                    ? selectedAlternative[requestId].alternativeIdx
-                                                                                    : ''
-                                                                            }
-                                                                            onChange={(e) => {
-                                                                                const altIdx = parseInt(e.target.value);
-                                                                                if (!isNaN(altIdx)) {
-                                                                                    setSelectedAlternative(prev => ({
-                                                                                        ...prev,
-                                                                                        [requestId]: { suggestionIdx: idx, alternativeIdx: altIdx }
-                                                                                    }));
-                                                                                }
-                                                                            }}
-                                                                            style={{
-                                                                                width: '100%',
-                                                                                padding: '10px 12px',
-                                                                                border: '1px solid #d1d5db',
-                                                                                borderRadius: '6px',
-                                                                                fontSize: '14px',
-                                                                                background: 'white',
-                                                                                cursor: 'pointer'
-                                                                            }}
-                                                                        >
-                                                                            <option value="">-- Choose a substitute --</option>
-                                                                            {suggestion.alternatives.map((alt: any, altIdx: number) => (
-                                                                                <option key={altIdx} value={altIdx}>
-                                                                                    {alt.substitute_name} - {alt.needed_bags || alt.needed_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'}
-                                                                                    ({(alt.confidence_score * 100).toFixed(0)}% confidence)
-                                                                                    {alt.can_fulfill ? ' ✅ Full' : ` ⚠️ Partial (${alt.remaining_shortage} short)`}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-
-                                                                        {selectedAlternative[requestId]?.suggestionIdx === idx && suggestion.alternatives[selectedAlternative[requestId].alternativeIdx] && (
+                                                                            Farm Input Summary:
+                                                                        </h4>
+                                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                                                            {/* Shortage Box */}
                                                                             <div style={{
-                                                                                marginTop: '12px',
-                                                                                padding: '12px',
-                                                                                background: '#f0fdf4',
-                                                                                border: '1px solid #86efac',
-                                                                                borderRadius: '6px'
+                                                                                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                                                                                border: '2px solid #fca5a5',
+                                                                                borderRadius: '10px',
+                                                                                padding: '18px',
+                                                                                display: 'flex',
+                                                                                flexDirection: 'column',
+                                                                                gap: '8px'
                                                                             }}>
-                                                                                <strong style={{ color: '#15803d', display: 'block', marginBottom: '8px' }}>Selected:</strong>
-                                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#166534' }}>
-                                                                                    <span>• {suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].substitute_name}</span>
-                                                                                    <span>• {suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].needed_bags || suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].needed_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'} needed</span>
-                                                                                    <span>• {suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].available_bags || suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].available_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'} available</span>
-                                                                                    <span>• {(suggestion.alternatives[selectedAlternative[requestId].alternativeIdx].confidence_score * 100).toFixed(0)}% confidence</span>
+                                                                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                                                    ❌ Shortage:
+                                                                                </div>
+                                                                                <div style={{ fontSize: '18px', fontWeight: 700, color: '#dc2626' }}>
+                                                                                    {suggestion.original_fertilizer_name || suggestion.original_seed_name}
+                                                                                </div>
+                                                                                <div style={{ fontSize: '14px', color: '#7f1d1d', marginTop: '4px' }}>
+                                                                                    Missing: <strong>{suggestion.shortage_bags || suggestion.shortage_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'}</strong>
                                                                                 </div>
                                                                             </div>
-                                                                        )}
-                                                                    </div>
-                                                                ) : (
-                                                                    <div style={{
-                                                                        padding: '12px',
-                                                                        background: '#fef2f2',
-                                                                        borderRadius: '6px',
-                                                                        color: '#991b1b',
-                                                                        fontSize: '14px'
-                                                                    }}>
-                                                                        ❌ No suitable alternatives available
-                                                                        {suggestion.recommendation?.next_steps && (
-                                                                            <div style={{ marginTop: '8px', fontSize: '12px' }}>
-                                                                                <strong>Recommendation:</strong>
-                                                                                <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px' }}>
-                                                                                    {suggestion.recommendation.next_steps.map((step: string, stepIdx: number) => (
-                                                                                        <li key={stepIdx}>{step}</li>
-                                                                                    ))}
-                                                                                </ul>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
 
-                                                        {altData.suggestions.suggestions.some((s: any) => s.alternatives?.length > 0) && (
-                                                            <div style={{
-                                                                marginTop: '12px',
-                                                                paddingTop: '12px',
-                                                                borderTop: '1px solid #e5e7eb',
-                                                                display: 'flex',
-                                                                justifyContent: 'flex-end'
-                                                            }}>
-                                                                <button
-                                                                    onClick={() => applyAlternative(requestId)}
-                                                                    disabled={!selectedAlternative[requestId] || applyingAlternative[requestId]}
-                                                                    style={{
-                                                                        padding: '10px 20px',
-                                                                        background: selectedAlternative[requestId] && !applyingAlternative[requestId]
-                                                                            ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
-                                                                            : '#cbd5e1',
-                                                                        color: 'white',
-                                                                        border: 'none',
-                                                                        borderRadius: '6px',
-                                                                        cursor: selectedAlternative[requestId] && !applyingAlternative[requestId] ? 'pointer' : 'not-allowed',
-                                                                        fontSize: '14px',
-                                                                        fontWeight: 600,
-                                                                        transition: 'all 0.2s ease'
-                                                                    }}
-                                                                >
-                                                                    {applyingAlternative[requestId] ? '⏳ Applying...' : '✅ Apply Selected Alternative'}
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                                            {/* Requested Box */}
+                                                                            <div style={{
+                                                                                background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                                                                                border: '2px solid #93c5fd',
+                                                                                borderRadius: '10px',
+                                                                                padding: '18px',
+                                                                                display: 'flex',
+                                                                                flexDirection: 'column',
+                                                                                gap: '8px'
+                                                                            }}>
+                                                                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                                                    📝 Requested:
+                                                                                </div>
+                                                                                <div style={{ fontSize: '18px', fontWeight: 700, color: '#2563eb' }}>
+                                                                                    {suggestion.original_fertilizer_name || suggestion.original_seed_name}
+                                                                                </div>
+                                                                                <div style={{ fontSize: '14px', color: '#1e40af', marginTop: '4px' }}>
+                                                                                    Total: <strong>{suggestion.requested_bags || suggestion.requested_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'}</strong>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Suggested Substitutes */}
+                                                                    {suggestion.alternatives && suggestion.alternatives.length > 0 ? (
+                                                                        <div>
+                                                                            <h4 style={{ 
+                                                                                margin: '0 0 12px 0',
+                                                                                fontSize: '15px',
+                                                                                fontWeight: 600,
+                                                                                color: '#374151',
+                                                                                textTransform: 'uppercase',
+                                                                                letterSpacing: '0.5px'
+                                                                            }}>
+                                                                                Suggested Substitutes:
+                                                                            </h4>
+
+                                                                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                                                                {/* Dropdown */}
+                                                                                <select
+                                                                                    value={
+                                                                                        selectedAlternative[requestId]?.suggestionIdx === idx
+                                                                                            ? selectedAlternative[requestId].alternativeIdx
+                                                                                            : ''
+                                                                                    }
+                                                                                    onChange={(e) => {
+                                                                                        const altIdx = parseInt(e.target.value);
+                                                                                        if (!isNaN(altIdx)) {
+                                                                                            setSelectedAlternative(prev => ({
+                                                                                                ...prev,
+                                                                                                [requestId]: { suggestionIdx: idx, alternativeIdx: altIdx }
+                                                                                            }));
+                                                                                        }
+                                                                                    }}
+                                                                                    style={{
+                                                                                        flex: 1,
+                                                                                        padding: '10px 12px',
+                                                                                        border: '2px solid #d1d5db',
+                                                                                        borderRadius: '6px',
+                                                                                        fontSize: '13px',
+                                                                                        background: 'white',
+                                                                                        cursor: 'pointer',
+                                                                                        color: '#374151',
+                                                                                        fontWeight: 500,
+                                                                                        transition: 'all 0.2s ease',
+                                                                                        outline: 'none'
+                                                                                    }}
+                                                                                >
+                                                                                    <option value="" style={{ color: '#9ca3af' }}>▼ Select a substitute...</option>
+                                                                                    {suggestion.alternatives.map((alt: any, altIdx: number) => (
+                                                                                        <option key={altIdx} value={altIdx} style={{ padding: '8px 0' }}>
+                                                                                            {alt.substitute_name} - {alt.needed_bags || alt.needed_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'} 
+                                                                                            (Avail: {alt.available_bags || alt.available_kg}, 
+                                                                                            {(alt.confidence_score * 100).toFixed(0)}%)
+                                                                                            {alt.can_fulfill ? ' ✅' : ' ⚠️'}
+                                                                                        </option>
+                                                                                    ))}
+                                                                                </select>
+
+                                                                                {/* Submit Button */}
+                                                                                <button
+                                                                                    onClick={() => applyAlternative(requestId)}
+                                                                                    disabled={!selectedAlternative[requestId] || selectedAlternative[requestId]?.suggestionIdx !== idx || applyingAlternative[requestId]}
+                                                                                    style={{
+                                                                                        padding: '10px 16px',
+                                                                                        background: selectedAlternative[requestId]?.suggestionIdx === idx && !applyingAlternative[requestId]
+                                                                                            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                                                                                            : '#d1d5db',
+                                                                                        color: 'white',
+                                                                                        border: 'none',
+                                                                                        borderRadius: '6px',
+                                                                                        cursor: selectedAlternative[requestId]?.suggestionIdx === idx && !applyingAlternative[requestId] ? 'pointer' : 'not-allowed',
+                                                                                        fontSize: '13px',
+                                                                                        fontWeight: 600,
+                                                                                        transition: 'all 0.2s ease',
+                                                                                        whiteSpace: 'nowrap',
+                                                                                        boxShadow: selectedAlternative[requestId]?.suggestionIdx === idx ? '0 4px 12px rgba(16, 185, 129, 0.3)' : 'none'
+                                                                                    }}
+                                                                                >
+                                                                                    {applyingAlternative[requestId] ? '⏳ Applying...' : '✅ Submit'}
+                                                                                </button>
+                                                                            </div>
+
+                                                                            {/* Selected Alternative Details */}
+                                                                            {selectedAlt && (
+                                                                                <div style={{
+                                                                                    marginTop: '16px',
+                                                                                    padding: '16px',
+                                                                                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                                                                                    border: '2px solid #86efac',
+                                                                                    borderRadius: '8px'
+                                                                                }}>
+                                                                                    <div style={{ 
+                                                                                        fontSize: '13px', 
+                                                                                        fontWeight: 600, 
+                                                                                        color: '#166534',
+                                                                                        marginBottom: '12px',
+                                                                                        textTransform: 'uppercase',
+                                                                                        letterSpacing: '0.5px'
+                                                                                    }}>
+                                                                                        ✨ Selected Substitute Details:
+                                                                                    </div>
+                                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '14px', color: '#15803d' }}>
+                                                                                        <div>
+                                                                                            <strong>Name:</strong> {selectedAlt.substitute_name}
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <strong>Needed:</strong> {selectedAlt.needed_bags || selectedAlt.needed_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'}
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <strong>Available:</strong> {selectedAlt.available_bags || selectedAlt.available_kg} {suggestion.category === 'seed' ? 'kg' : 'bags'}
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <strong>Confidence:</strong> {(selectedAlt.confidence_score * 100).toFixed(0)}%
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    {selectedAlt.explanation && (
+                                                                                        <div style={{
+                                                                                            marginTop: '12px',
+                                                                                            padding: '12px',
+                                                                                            background: 'white',
+                                                                                            borderRadius: '6px',
+                                                                                            fontSize: '13px',
+                                                                                            color: '#166534',
+                                                                                            fontStyle: 'italic',
+                                                                                            lineHeight: '1.6'
+                                                                                        }}>
+                                                                                            💡 <strong>Why this suggestion?</strong> {selectedAlt.explanation}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{
+                                                                            padding: '20px',
+                                                                            background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                                                                            border: '2px solid #fca5a5',
+                                                                            borderRadius: '10px',
+                                                                            color: '#991b1b'
+                                                                        }}>
+                                                                            <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px' }}>
+                                                                                ❌ No Suitable Alternatives Available
+                                                                            </div>
+                                                                            {suggestion.recommendation?.next_steps && (
+                                                                                <div style={{ fontSize: '14px' }}>
+                                                                                    <strong>Recommended Actions:</strong>
+                                                                                    <ul style={{ margin: '8px 0 0 0', paddingLeft: '24px', lineHeight: '1.8' }}>
+                                                                                        {suggestion.recommendation.next_steps.map((step: string, stepIdx: number) => (
+                                                                                            <li key={stepIdx}>{step}</li>
+                                                                                        ))}
+                                                                                    </ul>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>

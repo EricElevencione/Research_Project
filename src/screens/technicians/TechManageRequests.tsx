@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getAllocations, getFarmerRequests, updateFarmerRequest, deleteFarmerRequest, createDistributionRecord } from '../../api';
+import { suggestAlternatives, calculateRemainingStock } from '../../services/alternativeEngine';
 import '../../assets/css/technician css/TechManageRequestsStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -189,29 +190,39 @@ const TechManageRequests: React.FC = () => {
                     try {
                         setLoadingAlternatives(prev => ({ ...prev, [request.id]: true }));
 
-                        console.log(`Fetching alternatives for request #${request.id}...`);
-                        // Return empty alternatives since this endpoint is not available in Supabase
-                        const response = { data: { alternatives: [] }, error: null };
+                        console.log(`🤖 Computing alternatives for request #${request.id}...`);
 
-                        console.log(`📡 API Response: alternatives endpoint not available`);
+                        // Calculate remaining stock for this request
+                        const remainingStock = calculateRemainingStock(allocationData, requestsList, request.id);
 
-                        if (!response.error) {
-                            const data = response.data;
-                            console.log(`✅ Alternatives received for request #${request.id}:`, data);
-                            setAlternatives(prev => ({ ...prev, [request.id]: data }));
-                            setShowAlternatives(prev => ({ ...prev, [request.id]: true }));
-                            newSuggestions++;
-                        } else {
-                            console.error(`❌ API Error for request #${request.id}:`, response.error);
-                        }
+                        // Run client-side alternative engine
+                        const result = suggestAlternatives({
+                            farmer_name: request.farmer_name,
+                            crop_type: 'rice',
+                            requested_urea_bags: request.requested_urea_bags || 0,
+                            requested_complete_14_bags: request.requested_complete_14_bags || 0,
+                            requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
+                            requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0,
+                            requested_jackpot_kg: request.requested_jackpot_kg || 0,
+                            requested_us88_kg: request.requested_us88_kg || 0,
+                            requested_th82_kg: request.requested_th82_kg || 0,
+                            requested_rh9000_kg: request.requested_rh9000_kg || 0,
+                            requested_lumping143_kg: request.requested_lumping143_kg || 0,
+                            requested_lp296_kg: request.requested_lp296_kg || 0
+                        }, remainingStock);
+
+                        console.log(`✅ Alternatives computed for request #${request.id}:`, result);
+                        setAlternatives(prev => ({ ...prev, [request.id]: result }));
+                        setShowAlternatives(prev => ({ ...prev, [request.id]: true }));
+                        newSuggestions++;
                     } catch (error) {
-                        console.error(`❌ Failed to auto-fetch alternatives for request ${request.id}:`, error);
+                        console.error(`❌ Failed to compute alternatives for request ${request.id}:`, error);
                     } finally {
                         setLoadingAlternatives(prev => ({ ...prev, [request.id]: false }));
                     }
 
-                    // Small delay between requests to avoid overloading
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                    // Small delay between requests
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 } else {
                     console.log(`ℹ️ Alternatives already loaded for request #${request.id}`);
                 }
@@ -451,24 +462,37 @@ const TechManageRequests: React.FC = () => {
         try {
             setLoadingAlternatives(prev => ({ ...prev, [requestId]: true }));
 
-            console.log('Fetching alternatives for request:', requestId);
+            console.log('🤖 Computing alternatives for request:', requestId);
 
-            // Return empty alternatives since this endpoint is not available in Supabase
-            const response = { data: { alternatives: [] }, error: null };
-
-            console.log('Response: alternatives endpoint not available');
-
-            if (!response.error) {
-                const data = response.data;
-                console.log('✅ Alternatives data:', data);
-                setAlternatives(prev => ({ ...prev, [requestId]: data }));
-            } else {
-                console.error('❌ Server error:', response.error);
-                alert(`❌ Failed to fetch alternatives: ${response.error || 'Unknown error'}`);
+            const request = requests.find(r => r.id === requestId);
+            if (!request || !allocation) {
+                alert('❌ Request or allocation data not found');
+                return;
             }
+
+            // Calculate remaining stock and run client-side engine
+            const remainingStock = calculateRemainingStock(allocation, requests, requestId);
+            const result = suggestAlternatives({
+                farmer_name: request.farmer_name,
+                crop_type: 'rice',
+                requested_urea_bags: request.requested_urea_bags || 0,
+                requested_complete_14_bags: request.requested_complete_14_bags || 0,
+                requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
+                requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0,
+                requested_jackpot_kg: request.requested_jackpot_kg || 0,
+                requested_us88_kg: request.requested_us88_kg || 0,
+                requested_th82_kg: request.requested_th82_kg || 0,
+                requested_rh9000_kg: request.requested_rh9000_kg || 0,
+                requested_lumping143_kg: request.requested_lumping143_kg || 0,
+                requested_lp296_kg: request.requested_lp296_kg || 0
+            }, remainingStock);
+
+            console.log('✅ Alternatives computed:', result);
+            setAlternatives(prev => ({ ...prev, [requestId]: result }));
+            setShowAlternatives(prev => ({ ...prev, [requestId]: true }));
         } catch (error) {
-            console.error('❌ Error fetching alternatives:', error);
-            alert(`❌ Error fetching alternatives: ${error instanceof Error ? error.message : 'Network error'}`);
+            console.error('❌ Error computing alternatives:', error);
+            alert(`❌ Error computing alternatives: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setLoadingAlternatives(prev => ({ ...prev, [requestId]: false }));
         }
