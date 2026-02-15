@@ -137,7 +137,7 @@ const JoLandRegistry: React.FC = () => {
                     farm_location_municipality,
                     total_farm_area_ha,
                     land_owner_name,
-                    farmer_id,                    // ← Key: farmer ID for FFRS lookup
+                    farmer_id,
                     farmer_name,
                     is_registered_owner,
                     is_tenant,
@@ -145,7 +145,7 @@ const JoLandRegistry: React.FC = () => {
                     is_current,
                     period_start_date
                 `)
-                .eq('is_current', true)           // Only current ownership records
+                .eq('is_current', true)
                 .order('parcel_number', { ascending: true });
 
             if (error) {
@@ -329,14 +329,6 @@ const JoLandRegistry: React.FC = () => {
                             </span>
                             <span className="nav-text">Masterlist</span>
                         </button>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-distribution')}
-                        >
-                            <div className="nav-icon">🚚</div>
-                            <span className="nav-text">Distribution Log</span>
-                        </div>
 
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}

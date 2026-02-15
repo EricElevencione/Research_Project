@@ -51,6 +51,9 @@ const JoAddFarmerRequest: React.FC = () => {
     const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [existingRequests, setExistingRequests] = useState<number[]>([]);
+    const [showNotification, setShowNotification] = useState(false);
+    const [notificationMessage, setNotificationMessage] = useState('');
+    const [notificationType, setNotificationType] = useState<'success' | 'error'>('success');
 
     const [formData, setFormData] = useState<FarmerRequestForm>({
         farmer_id: 0,
@@ -128,8 +131,9 @@ const JoAddFarmerRequest: React.FC = () => {
                 const transformedFarmers = data
                     .filter((item: any) => {
                         const status = String(item.status ?? '').toLowerCase().trim();
-                        // Only show active farmers - exclude 'no parcels' and non-active statuses
-                        return status !== 'no parcels' && status === 'active farmer';
+                        // Show active and submitted farmers - exclude 'no parcels' and inactive statuses
+                        const allowedStatuses = ['active farmer', 'submitted', 'approved', 'active'];
+                        return status !== 'no parcels' && allowedStatuses.includes(status);
                     })
                     .map((item: any) => {
                         const nameParts = (item.farmerName || '').split(', ');
@@ -236,9 +240,23 @@ const JoAddFarmerRequest: React.FC = () => {
                 throw new Error(response.error || 'Failed to save farmer request');
             }
 
-            alert('✅ Farmer request added successfully!');
-            navigate(`/jo-manage-requests/${allocationId}`);
+            // Show success notification
+            setNotificationType('success');
+            setNotificationMessage('Farmer request added successfully!');
+            setShowNotification(true);
+            
+            // Hide notification and navigate after delay
+            setTimeout(() => {
+                setShowNotification(false);
+                setTimeout(() => {
+                    navigate(`/jo-manage-requests/${allocationId}`);
+                }, 300);
+            }, 2000);
         } catch (err: any) {
+            setNotificationType('error');
+            setNotificationMessage(err.message || 'Failed to save farmer request');
+            setShowNotification(true);
+            setTimeout(() => setShowNotification(false), 4000);
             setError(err.message || 'Failed to save farmer request');
         } finally {
             setLoading(false);
@@ -258,6 +276,24 @@ const JoAddFarmerRequest: React.FC = () => {
 
     return (
         <div className="jo-add-farmer-page-container">
+            {/* Notification Toast */}
+            {showNotification && (
+                <div className={`notification-toast notification-${notificationType}`}>
+                    <div className="notification-content">
+                        <span className="notification-icon">
+                            {notificationType === 'success' ? '✅' : '❌'}
+                        </span>
+                        <span className="notification-message">{notificationMessage}</span>
+                    </div>
+                    <button 
+                        className="notification-close"
+                        onClick={() => setShowNotification(false)}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+            
             <div className="jo-add-farmer-page">
                 {/* Sidebar */}
                 <div className="sidebar">
@@ -305,14 +341,6 @@ const JoAddFarmerRequest: React.FC = () => {
                             </span>
                             <span className="nav-text">Masterlist</span>
                         </button>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-distribution')}
-                        >
-                            <div className="nav-icon">🚚</div>
-                            <span className="nav-text">Distribution Log</span>
-                        </div>
 
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}

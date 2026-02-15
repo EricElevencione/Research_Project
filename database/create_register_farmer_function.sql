@@ -99,7 +99,7 @@ BEGIN
         v_barangay := COALESCE(v_parcel->>'farmLocationBarangay', '');
         v_municipality := COALESCE(v_parcel->>'farmLocationMunicipality', 'Dumangas');
         v_area := COALESCE((v_parcel->>'totalFarmAreaHa')::DECIMAL, 0);
-        v_parcel_number := COALESCE(v_parcel->>'existingParcelNumber', v_parcel->>'parcelNo', '');
+        v_parcel_number := COALESCE(v_parcel->>'existingParcelNumber', '');
         v_previous_history_id := NULL;
         v_land_parcel_id := NULL;
 
@@ -175,10 +175,10 @@ BEGIN
 
         -- If no land_parcel found yet, create or find one
         IF v_land_parcel_id IS NULL THEN
-            -- Generate parcel number if empty
+            -- Generate unique parcel number if empty (using submission_id + parcel index)
             IF v_parcel_number = '' OR v_parcel_number IS NULL THEN
                 v_parcel_number := 'Parcel-' || v_submission_id || '-' || 
-                    (SELECT COUNT(*) + 1 FROM jsonb_array_elements(p_data->'farmlandParcels'));
+                    COALESCE(v_parcel->>'parcelNo', '1');
             END IF;
 
             -- Upsert into land_parcels

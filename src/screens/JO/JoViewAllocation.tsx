@@ -231,14 +231,6 @@ const JoViewAllocation: React.FC = () => {
                             <span className="nav-text">Masterlist</span>
                         </button>
 
-                        <button
-                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-distribution')}
-                        >
-                            <span className="nav-icon">🚚</span>
-                            <span className="nav-text">Distribution Log</span>
-                        </button>
-
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}
                             onClick={() => navigate('/jo-land-registry')}

@@ -858,14 +858,6 @@ const JoMasterlist: React.FC = () => {
             </button>
 
             <div
-              className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-distribution')}
-            >
-              <div className="nav-icon">🚚</div>
-              <span className="nav-text">Distribution Log</span>
-            </div>
-
-            <div
               className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}
               onClick={() => navigate('/jo-land-registry')}
             >
@@ -1233,7 +1225,14 @@ const JoMasterlist: React.FC = () => {
                           {selectedFarmer.parcels.map((parcel, index) => (
                             <div key={parcel.id} className="farmer-modal-parcel-card">
                               <div className="farmer-modal-parcel-header">
-                                <h4>Parcel #{parcel.parcelNumber !== 'N/A' ? parcel.parcelNumber : index + 1}</h4>
+                                <h4>Parcel #{(() => {
+                                  const pNum = parcel.parcelNumber;
+                                  if (!pNum || pNum === 'N/A') return index + 1;
+                                  // If it's a simple number, use it directly
+                                  if (/^\d+$/.test(pNum)) return pNum;
+                                  // If it's an auto-generated ID like "Parcel-208-1", show just the index
+                                  return index + 1;
+                                })()}</h4>
                               </div>
                               <div className="farmer-modal-parcel-details">
                                 <div className="farmer-modal-parcel-item">

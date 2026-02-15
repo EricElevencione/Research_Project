@@ -769,14 +769,6 @@ const JoRsbsa: React.FC = () => {
               <span className="nav-text">Incentives</span>
             </button>
 
-            <div
-              className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-distribution')}
-            >
-              <div className="nav-icon">🚚</div>
-              <span className="nav-text">Distribution Log</span>
-            </div>
-
             <button
               className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
               onClick={() => navigate('/jo-masterlist')}

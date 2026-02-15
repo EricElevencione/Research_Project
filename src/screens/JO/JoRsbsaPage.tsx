@@ -377,14 +377,6 @@ const JoRsbsaPage: React.FC = () => {
             </button>
 
             <div
-              className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-distribution')}
-            >
-              <div className="nav-icon">🚚</div>
-              <span className="nav-text">Distribution Log</span>
-            </div>
-
-            <div
               className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}
               onClick={() => navigate('/jo-land-registry')}
             >
@@ -590,12 +582,24 @@ const JoRsbsaPage: React.FC = () => {
                         <p className="farmer-modal-no-data">No parcels found</p>
                       ) : (
                         <div className="farmer-modal-parcels-container">
-                          {selectedFarmer.parcels.map((parcel, index) => (
-                            <div key={parcel.id} className="farmer-modal-parcel-card">
-                              <div className="farmer-modal-parcel-header">
-                                <h4>Parcel #{parcel.parcelNumber !== 'N/A' ? parcel.parcelNumber : index + 1}</h4>
-                              </div>
-                              <div className="farmer-modal-parcel-details">
+                          {selectedFarmer.parcels.map((parcel, index) => {
+                            // Check if parcelNumber is a valid simple number (not FFRS code or N/A)
+                            const isValidParcelNumber = 
+                              parcel.parcelNumber && 
+                              parcel.parcelNumber !== 'N/A' &&
+                              !parcel.parcelNumber.includes('-') && // Exclude FFRS codes
+                              /^\d+$/.test(parcel.parcelNumber); // Only accept pure numbers
+                            
+                            const displayParcelNumber = isValidParcelNumber 
+                              ? parcel.parcelNumber 
+                              : (index + 1);
+
+                            return (
+                              <div key={parcel.id} className="farmer-modal-parcel-card">
+                                <div className="farmer-modal-parcel-header">
+                                  <h4>Parcel #{displayParcelNumber}</h4>
+                                </div>
+                                <div className="farmer-modal-parcel-details">
                                 <div className="farmer-modal-parcel-item">
                                   <span className="farmer-modal-label">Land Ownership:</span>
                                   <span className="farmer-modal-value">
@@ -638,7 +642,8 @@ const JoRsbsaPage: React.FC = () => {
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>

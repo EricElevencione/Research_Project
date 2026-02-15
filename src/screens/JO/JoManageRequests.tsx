@@ -85,6 +85,15 @@ const JoManageRequests: React.FC = () => {
     const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
     const [expandedFarmerInModal, setExpandedFarmerInModal] = useState<number | null>(null);
 
+    // Notification State
+    const [showNotification, setShowNotification] = useState(false);
+    const [notificationMessage, setNotificationMessage] = useState('');
+    const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning'>('success');
+
+    // Delete Confirmation Modal State
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<{ id: number, name: string } | null>(null);
+
     const isActive = (path: string) => location.pathname === path;
 
     const handleLogout = () => {
@@ -243,156 +252,45 @@ const JoManageRequests: React.FC = () => {
         setFilteredRequests(filtered);
     };
 
-    const handleDelete = async (id: number, farmerName: string) => {
-        if (!confirm(`Are you sure you want to delete the request from ${farmerName}?`)) {
-            return;
-        }
+    const handleDelete = (id: number, farmerName: string) => {
+        setDeleteTarget({ id, name: farmerName });
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+
+        setShowDeleteConfirm(false);
 
         try {
-            const response = await deleteFarmerRequest(id);
+            const response = await deleteFarmerRequest(deleteTarget.id);
 
             if (!response.error) {
-                alert('✅ Request deleted successfully');
+                setNotificationType('success');
+                setNotificationMessage(`Request from ${deleteTarget.name} deleted successfully!`);
+                setShowNotification(true);
+                setTimeout(() => setShowNotification(false), 3000);
                 fetchRequests();
             } else {
-                alert('❌ Failed to delete request');
+                setNotificationType('error');
+                setNotificationMessage('Failed to delete request. Please try again.');
+                setShowNotification(true);
+                setTimeout(() => setShowNotification(false), 4000);
             }
         } catch (error) {
             console.error('Error deleting request:', error);
-            alert('❌ Error deleting request');
-        }
-    };
-
-    const handleStatusChange = async (id: number, newStatus: string) => {
-        try {
-            const response = await updateFarmerRequest(id, { status: newStatus });
-
-            if (!response.error) {
-                // If status is rejected, hide alternatives panel
-                if (newStatus === 'rejected') {
-                    setShowAlternatives(prev => ({ ...prev, [id]: false }));
-                    setAlternatives(prev => {
-                        const updated = { ...prev };
-                        delete updated[id];
-                        return updated;
-                    });
-                }
-                // If status is approved, automatically create distribution log
-                if (newStatus === 'approved') {
-                    await createDistributionLog(id);
-                }
-                alert(`✅ Status updated to ${newStatus}`);
-                fetchRequests();
-            } else {
-                alert('❌ Failed to update status');
-            }
-        } catch (error) {
-            console.error('Error updating status:', error);
-            alert('❌ Error updating status');
-        }
-    };
-
-    // Automatically create distribution log when request is approved
-    const createDistributionLog = async (requestId: number) => {
-        try {
-            // Find the request details
-            const request = requests.find(r => r.id === requestId);
-            if (!request) return;
-
-            // Build fertilizer and seed type strings
-            const fertilizerTypes: string[] = [];
-            if (request.requested_urea_bags) fertilizerTypes.push(`Urea:${request.requested_urea_bags}`);
-            if (request.requested_complete_14_bags) fertilizerTypes.push(`Complete:${request.requested_complete_14_bags}`);
-            if (request.requested_ammonium_sulfate_bags) fertilizerTypes.push(`Ammonium Sulfate:${request.requested_ammonium_sulfate_bags}`);
-            if (request.requested_muriate_potash_bags) fertilizerTypes.push(`Muriate Potash:${request.requested_muriate_potash_bags}`);
-
-            const seedTypes: string[] = [];
-            if (request.requested_jackpot_kg) seedTypes.push(`Jackpot:${request.requested_jackpot_kg}`);
-            if (request.requested_us88_kg) seedTypes.push(`US88:${request.requested_us88_kg}`);
-            if (request.requested_th82_kg) seedTypes.push(`TH82:${request.requested_th82_kg}`);
-            if (request.requested_rh9000_kg) seedTypes.push(`RH9000:${request.requested_rh9000_kg}`);
-            if (request.requested_lumping143_kg) seedTypes.push(`Lumping143:${request.requested_lumping143_kg}`);
-            if (request.requested_lp296_kg) seedTypes.push(`LP296:${request.requested_lp296_kg}`);
-
-            // Calculate totals
-            const totalFertilizer = Math.round(
-                (Number(request.requested_urea_bags) || 0) +
-                (Number(request.requested_complete_14_bags) || 0) +
-                (Number(request.requested_ammonium_sulfate_bags) || 0) +
-                (Number(request.requested_muriate_potash_bags) || 0)
-            );
-
-            const totalSeeds = Number(
-                ((Number(request.requested_jackpot_kg) || 0) +
-                    (Number(request.requested_us88_kg) || 0) +
-                    (Number(request.requested_th82_kg) || 0) +
-                    (Number(request.requested_rh9000_kg) || 0) +
-                    (Number(request.requested_lumping143_kg) || 0) +
-                    (Number(request.requested_lp296_kg) || 0)).toFixed(2)
-            );
-
-            const payload = {
-                request_id: requestId,
-                fertilizer_type: fertilizerTypes.join(', ') || null,
-                fertilizer_bags_given: totalFertilizer,
-                seed_type: seedTypes.join(', ') || null,
-                seed_kg_given: totalSeeds,
-                voucher_code: null,
-                farmer_signature: false,
-                verified_by: null
-            };
-
-            const distResponse = await createDistributionRecord(payload);
-
-            if (!distResponse.error) {
-                console.log('✅ Distribution log created automatically');
-            } else {
-                console.error('❌ Failed to create distribution log');
-            }
-        } catch (error) {
-            console.error('Error creating distribution log:', error);
-        }
-    };
-
-    // DSS Feature: Fetch smart alternatives for a farmer request
-    const fetchAlternatives = async (requestId: number) => {
-        try {
-            setLoadingAlternatives(prev => ({ ...prev, [requestId]: true }));
-
-            console.log('🤖 Computing alternatives for request:', requestId);
-
-            const request = requests.find(r => r.id === requestId);
-            if (!request || !allocation) {
-                alert('❌ Request or allocation data not found');
-                return;
-            }
-
-            // Calculate remaining stock and run client-side engine
-            const remainingStock = calculateRemainingStock(allocation, requests, requestId);
-            const result = suggestAlternatives({
-                farmer_name: request.farmer_name,
-                crop_type: 'rice',
-                requested_urea_bags: request.requested_urea_bags || 0,
-                requested_complete_14_bags: request.requested_complete_14_bags || 0,
-                requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
-                requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0,
-                requested_jackpot_kg: request.requested_jackpot_kg || 0,
-                requested_us88_kg: request.requested_us88_kg || 0,
-                requested_th82_kg: request.requested_th82_kg || 0,
-                requested_rh9000_kg: request.requested_rh9000_kg || 0,
-                requested_lumping143_kg: request.requested_lumping143_kg || 0,
-                requested_lp296_kg: request.requested_lp296_kg || 0
-            }, remainingStock);
-
-            console.log('✅ Alternatives computed:', result);
-            setAlternatives(prev => ({ ...prev, [requestId]: result }));
-            setShowAlternatives(prev => ({ ...prev, [requestId]: true }));
-        } catch (error) {
-            console.error('❌ Error computing alternatives:', error);
-            alert(`❌ Error computing alternatives: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setNotificationType('error');
+            setNotificationMessage('Error deleting request. Please try again.');
+            setShowNotification(true);
+            setTimeout(() => setShowNotification(false), 4000);
         } finally {
-            setLoadingAlternatives(prev => ({ ...prev, [requestId]: false }));
+            setDeleteTarget(null);
         }
+    };
+
+    const cancelDelete = () => {
+        setShowDeleteConfirm(false);
+        setDeleteTarget(null);
     };
 
     // Apply selected alternative to farmer request
@@ -724,6 +622,24 @@ const JoManageRequests: React.FC = () => {
 
     return (
         <div className="page-container">
+            {/* Notification Toast */}
+            {showNotification && (
+                <div className={`jo-manage-notification-toast jo-manage-notification-${notificationType}`}>
+                    <div className="jo-manage-notification-content">
+                        <span className="jo-manage-notification-icon">
+                            {notificationType === 'success' ? '✅' : notificationType === 'warning' ? '⚠️' : '❌'}
+                        </span>
+                        <span className="jo-manage-notification-message">{notificationMessage}</span>
+                    </div>
+                    <button 
+                        className="jo-manage-notification-close"
+                        onClick={() => setShowNotification(false)}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+            
             <div className="page">
                 {/* Sidebar */}
                 <div className="sidebar">
@@ -771,14 +687,6 @@ const JoManageRequests: React.FC = () => {
                             </span>
                             <span className="nav-text">Masterlist</span>
                         </button>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-distribution')}
-                        >
-                            <div className="nav-icon">🚚</div>
-                            <span className="nav-text">Distribution Log</span>
-                        </div>
 
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}
@@ -1267,7 +1175,7 @@ const JoManageRequests: React.FC = () => {
                         {/* Modal Header */}
                         <div className="jo-manage-requests-modal-header">
                             <h2>Edit Farmer Request</h2>
-                            <button
+                            <button style={{cursor: 'pointer'}}
                                 onClick={handleCancelEdit}
                                 className="jo-manage-requests-modal-close"
                             >
@@ -1789,6 +1697,36 @@ const JoManageRequests: React.FC = () => {
                                 }}
                             >
                                 Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && deleteTarget && (
+                <div className="jo-manage-delete-modal-overlay">
+                    <div className="jo-manage-delete-modal">
+                        <div className="jo-manage-delete-modal-icon">⚠️</div>
+                        <h3 className="jo-manage-delete-modal-title">Confirm Delete</h3>
+                        <p className="jo-manage-delete-modal-message">
+                            Are you sure you want to delete the request from <strong>{deleteTarget.name}</strong>?
+                        </p>
+                        <p className="jo-manage-delete-modal-warning">
+                            This action cannot be undone.
+                        </p>
+                        <div className="jo-manage-delete-modal-actions">
+                            <button 
+                                className="jo-manage-delete-modal-btn cancel"
+                                onClick={cancelDelete}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                className="jo-manage-delete-modal-btn delete"
+                                onClick={confirmDelete}
+                            >
+                                Delete Request
                             </button>
                         </div>
                     </div>
