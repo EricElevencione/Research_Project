@@ -524,18 +524,13 @@ const JoRsbsa: React.FC = () => {
           totalFarmAreaHa: parcel.totalFarmAreaHa ? parseFloat(parcel.totalFarmAreaHa) : 0,
           withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
           agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
-          ownershipType: {
-            registeredOwner: parcel.ownershipTypeRegisteredOwner || false,
-            tenant: parcel.ownershipTypeTenant || false,
-            lessee: parcel.ownershipTypeLessee || false,
-          },
-          // Optional: Remove the old flat fields so only ownershipType remains
-          // You can comment out or filter these as needed
-          // ownershipTypeRegisteredOwner: undefined,
-          // ownershipTypeTenant: undefined,
-          // ownershipTypeLessee: undefined,
+          ownershipTypeRegisteredOwner: parcel.ownershipTypeRegisteredOwner || false,
+          ownershipTypeTenant: parcel.ownershipTypeTenant || false,
+          ownershipTypeLessee: parcel.ownershipTypeLessee || false,
         })),
       };
+
+      console.log('Submitting data to server:', JSON.stringify({ draftId, data: transformedData }, null, 2));
 
       const response = await fetch("http://localhost:5000/api/rsbsa_submission", {
         method: "POST",
@@ -545,7 +540,8 @@ const JoRsbsa: React.FC = () => {
 
       if (!response.ok) {
         const err = await response.json().catch(() => null);
-        throw new Error(err?.message || `HTTP ${response.status}`);
+        console.error('Server error response:', err);
+        throw new Error(err?.error || err?.message || `HTTP ${response.status}`);
       }
       const result = await response.json();
       console.log("Submission response:", result);
