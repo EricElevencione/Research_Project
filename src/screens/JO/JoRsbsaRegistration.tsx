@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getLandOwners, getFarmParcels, createRsbsaSubmission } from '../../api';
 import { supabase } from '../../supabase';
+import { getAuditLogger, AuditAction, AuditModule } from '../../components/Audit/auditLogger';
 import '../../assets/css/jo css/JoRsbsaRegistrationStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -714,6 +715,24 @@ const JoRsbsa: React.FC = () => {
     try {
       const submitted = await submitFinalToServer();
       if (submitted && submitted.submissionId) {
+        // Log audit trail for farmer registration
+        try {
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+          const farmerName = `${formData.surname}, ${formData.firstName} ${formData.middleName || ''}`.trim();
+          const auditLogger = getAuditLogger();
+          await auditLogger.logFarmerRegistration(
+            {
+              id: currentUser.id,
+              name: currentUser.name || currentUser.username || 'Unknown',
+              role: currentUser.role || 'JO'
+            },
+            submitted.submissionId,
+            farmerName
+          );
+        } catch (auditErr) {
+          console.error('Audit log failed (non-blocking):', auditErr);
+        }
+
         showToast('RSBSA form submitted successfully!', 'success');
         // Navigate back to JO flow after a short delay to show the toast
         setTimeout(() => {

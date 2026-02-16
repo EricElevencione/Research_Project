@@ -297,6 +297,94 @@ const ViewAllocation: React.FC = () => {
 
     const isActive = (path: string) => location.pathname === path;
 
+    // Transform allocation and requests data into gauge format
+    const gaugeData = useMemo(() => {
+        if (!allocation || !requests) {
+            return { fertilizers: [], seeds: [] };
+        }
+
+        // Calculate totals from requests
+        const totalRequested = {
+            urea: requests.reduce((sum, r) => sum + (Number(r.requested_urea_bags) || 0), 0),
+            complete14: requests.reduce((sum, r) => sum + (Number(r.requested_complete_14_bags) || 0), 0),
+            ammoniumSulfate: requests.reduce((sum, r) => sum + (Number(r.requested_ammonium_sulfate_bags) || 0), 0),
+            muriatePotash: requests.reduce((sum, r) => sum + (Number(r.requested_muriate_potash_bags) || 0), 0),
+            jackpot: requests.reduce((sum, r) => sum + (Number(r.requested_jackpot_kg) || 0), 0),
+            us88: requests.reduce((sum, r) => sum + (Number(r.requested_us88_kg) || 0), 0),
+            th82: requests.reduce((sum, r) => sum + (Number(r.requested_th82_kg) || 0), 0),
+            rh9000: requests.reduce((sum, r) => sum + (Number(r.requested_rh9000_kg) || 0), 0),
+            lumping143: requests.reduce((sum, r) => sum + (Number(r.requested_lumping143_kg) || 0), 0),
+            lp296: requests.reduce((sum, r) => sum + (Number(r.requested_lp296_kg) || 0), 0),
+        };
+
+        const fertilizers = [
+            {
+                name: 'Urea (46-0-0)',
+                allocated: allocation.urea_46_0_0_bags,
+                requested: totalRequested.urea,
+                unit: 'bags'
+            },
+            {
+                name: 'Complete (14-14-14)',
+                allocated: allocation.complete_14_14_14_bags,
+                requested: totalRequested.complete14,
+                unit: 'bags'
+            },
+            {
+                name: 'Ammonium Sulfate (21-0-0)',
+                allocated: allocation.ammonium_sulfate_21_0_0_bags,
+                requested: totalRequested.ammoniumSulfate,
+                unit: 'bags'
+            },
+            {
+                name: 'Muriate of Potash (0-0-60)',
+                allocated: allocation.muriate_potash_0_0_60_bags,
+                requested: totalRequested.muriatePotash,
+                unit: 'bags'
+            }
+        ];
+
+        const seeds = [
+            {
+                name: 'Jackpot',
+                allocated: allocation.jackpot_kg,
+                requested: totalRequested.jackpot,
+                unit: 'kg'
+            },
+            {
+                name: 'US88',
+                allocated: allocation.us88_kg,
+                requested: totalRequested.us88,
+                unit: 'kg'
+            },
+            {
+                name: 'TH82',
+                allocated: allocation.th82_kg,
+                requested: totalRequested.th82,
+                unit: 'kg'
+            },
+            {
+                name: 'RH9000',
+                allocated: allocation.rh9000_kg,
+                requested: totalRequested.rh9000,
+                unit: 'kg'
+            },
+            {
+                name: 'Lumping143',
+                allocated: allocation.lumping143_kg,
+                requested: totalRequested.lumping143,
+                unit: 'kg'
+            },
+            {
+                name: 'LP296',
+                allocated: allocation.lp296_kg,
+                requested: totalRequested.lp296,
+                unit: 'kg'
+            }
+        ];
+
+        return { fertilizers, seeds };
+    }, [allocation, requests]);
 
     useEffect(() => {
         fetchAllocationData();

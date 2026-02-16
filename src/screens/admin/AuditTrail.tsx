@@ -8,6 +8,8 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
+import { AuditAPI } from '../../components/Audit/auditAPI';
+import { supabase } from '../../supabase';
 
 // Recharts for statistics
 import {
@@ -60,6 +62,10 @@ interface Pagination {
     totalCount: number;
     totalPages: number;
 }
+
+// Use the shared Supabase client
+const auditAPI = new AuditAPI(supabase);
+
 
 const AuditTrail: React.FC = () => {
     const navigate = useNavigate();
@@ -114,47 +120,51 @@ const AuditTrail: React.FC = () => {
 
     const MODULE_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'];
 
-    // Fetch logs
-    const fetchLogs = useCallback(async () => {
-        setLoading(true);
-        try {
-            // Audit logs endpoint not available in Supabase - return empty data
-            console.log('Audit logs not available in Supabase cloud mode');
-            setLogs([]);
-            setPagination(prev => ({
-                ...prev,
-                totalCount: 0,
-                totalPages: 0
-            }));
-        } catch (error) {
-            console.error('Error fetching audit logs:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, [pagination.page, pagination.limit, filters]);
+    // Replace fetchLogs
+const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+        const result = await auditAPI.getLogs({
+            ...filters,
+            page: pagination.page,
+            limit: pagination.limit
+        });
+
+        setLogs(result.data || []);
+        setPagination(prev => ({
+            ...prev,
+            totalCount: result.pagination.totalCount,
+            totalPages: result.pagination.totalPages
+        }));
+    } catch (error) {
+        console.error('Error fetching audit logs:', error);
+        alert('Failed to fetch audit logs');
+    } finally {
+        setLoading(false);
+    }
+}, [pagination.page, pagination.limit, filters]);
 
     // Fetch stats
-    const fetchStats = async () => {
-        try {
-            // Audit stats endpoint not available in Supabase - return empty data
-            console.log('Audit stats not available in Supabase cloud mode');
-            setStats(null);
-        } catch (error) {
-            console.error('Error fetching audit stats:', error);
-        }
-    };
+    // Replace fetchStats
+const fetchStats = async () => {
+    try {
+        const data = await auditAPI.getStats({ period: '30d' });
+        setStats(data as AuditStats);
+    } catch (error) {
+        console.error('Error fetching audit stats:', error);
+    }
+};
 
     // Fetch filter options
     const fetchFilterOptions = async () => {
-        try {
-            // Audit filter options not available in Supabase - return empty data
-            console.log('Audit filter options not available in Supabase cloud mode');
-            setActions([]);
-            setModules([]);
-        } catch (error) {
-            console.error('Error fetching filter options:', error);
-        }
-    };
+    try {
+        const options = await auditAPI.getFilterOptions();
+        setActions(options.actions);
+        setModules(options.modules);
+    } catch (error) {
+        console.error('Error fetching filter options:', error);
+    }
+};
 
     useEffect(() => {
         fetchLogs();
@@ -189,15 +199,28 @@ const AuditTrail: React.FC = () => {
     };
 
     // Export logs
-    const handleExport = async (format: 'json' | 'csv') => {
-        try {
-            // Audit export not available in Supabase - show message
-            console.log('Audit export not available in Supabase cloud mode');
-            alert('Export feature not available in cloud mode');
-        } catch (error) {
-            console.error('Error exporting logs:', error);
-        }
-    };
+    // Replace handleExport
+const handleExport = async (format: 'json' | 'csv') => {
+    try {
+        const content = await auditAPI.exportLogs(filters, format);
+        
+        // Create download link
+        const blob = new Blob([content], {
+            type: format === 'json' ? 'application/json' : 'text/csv'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `audit-logs-${new Date().toISOString().split('T')[0]}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error exporting logs:', error);
+        alert('Failed to export logs');
+    }
+};
 
     // View log details
     const viewLogDetails = (log: AuditLog) => {
