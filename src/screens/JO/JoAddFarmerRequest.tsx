@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAllocations, getFarmerRequests, getRsbsaSubmissions, createFarmerRequest } from '../../api';
+import { getAuditLogger, AuditModule } from '../../components/Audit/auditLogger';
 import '../../assets/css/jo css/JoAddFarmerRequestStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -109,10 +110,11 @@ const JoAddFarmerRequest: React.FC = () => {
     };
 
     const fetchExistingRequests = async () => {
-        if (!allocation?.season) return;
+        if (!allocationId) return;
 
         try {
-            const response = await getFarmerRequests(allocation.season);
+            // Fetch requests by allocation_id, not season
+            const response = await getFarmerRequests(allocationId, true);
             if (!response.error) {
                 const requests = response.data || [];
                 const farmerIds = requests.map((req: any) => Number(req.farmer_id));
@@ -212,6 +214,7 @@ const JoAddFarmerRequest: React.FC = () => {
             );
 
             const response = await createFarmerRequest({
+                allocation_id: Number(allocationId),
                 season: allocation?.season,
                 farmer_id: formData.farmer_id,
                 farmer_name: farmerFullName,
@@ -238,6 +241,53 @@ const JoAddFarmerRequest: React.FC = () => {
 
             if (response.error) {
                 throw new Error(response.error || 'Failed to save farmer request');
+            }
+
+            // Log audit trail
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                const auditLogger = getAuditLogger();
+                const allocationLabel = allocation?.season
+                    ? allocation.season.replace('_', ' ').toUpperCase()
+                    : 'UNKNOWN SEASON';
+
+                await auditLogger.logCRUD(
+                    {
+                        id: currentUser.id,
+                        name: currentUser.name || currentUser.username || 'Unknown',
+                        role: currentUser.role || 'JO'
+                    },
+                    'CREATE',
+                    AuditModule.REQUESTS,
+                    'farmer_request',
+                    response.data?.id || 0,
+                    `Added farmer request for ${farmerFullName} (${allocationLabel})`,
+                    undefined,
+                    {
+                        farmer_name: farmerFullName,
+                        allocation_season: allocation?.season || null,
+                        allocation_date: allocation?.allocation_date || null,
+                        requested_fertilizer_total_bags: totalFertilizerRequested,
+                        requested_seed_total_kg: totalSeedsRequested,
+                        requested_urea_bags: formData.requested_urea_bags,
+                        requested_complete_14_bags: formData.requested_complete_14_bags,
+                        requested_ammonium_sulfate_bags: formData.requested_ammonium_sulfate_bags,
+                        requested_muriate_potash_bags: formData.requested_muriate_potash_bags,
+                        requested_jackpot_kg: formData.requested_jackpot_kg,
+                        requested_us88_kg: formData.requested_us88_kg,
+                        requested_th82_kg: formData.requested_th82_kg,
+                        requested_rh9000_kg: formData.requested_rh9000_kg,
+                        requested_lumping143_kg: formData.requested_lumping143_kg,
+                        requested_lp296_kg: formData.requested_lp296_kg,
+                        request_notes: formData.notes || null
+                    },
+                    {
+                        includeRouteContext: false,
+                        metadata: null
+                    }
+                );
+            } catch (auditErr) {
+                console.error('Audit log failed (non-blocking):', auditErr);
             }
 
             // Show success notification

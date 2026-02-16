@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createAllocation } from '../../api';
+import { getAuditLogger, AuditModule } from '../../components/Audit/auditLogger';
 import '../../assets/css/jo css/JoIncentStyle.css';
 import '../../assets/css/jo css/JoCreateAllocationStyle.css';
 import '../../components/layout/sidebarStyle.css';
@@ -114,6 +115,29 @@ const JoCreateAllocation: React.FC = () => {
 
             // Success - navigate to add farmer request page
             alert('✅ Regional allocation created successfully! Now add farmers to this allocation.');
+            
+            // Log audit trail
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                const auditLogger = getAuditLogger();
+                await auditLogger.logCRUD(
+                    {
+                        id: currentUser.id,
+                        name: currentUser.name || currentUser.username || 'Unknown',
+                        role: currentUser.role || 'JO'
+                    },
+                    'CREATE',
+                    AuditModule.ALLOCATIONS,
+                    'regional_allocation',
+                    allocationId,
+                    `Created allocation for ${formData.season}`,
+                    undefined,
+                    formData
+                );
+            } catch (auditErr) {
+                console.error('Audit log failed (non-blocking):', auditErr);
+            }
+
             console.log('🔗 Navigating to:', `/jo-add-farmer-request/${allocationId}`);
             navigate(`/jo-add-farmer-request/${allocationId}`);
         } catch (err: any) {
@@ -410,9 +434,12 @@ const JoCreateAllocation: React.FC = () => {
                                     value={formData.notes}
                                     onChange={handleInputChange}
                                     rows={4}
-                                    placeholder="Add any additional notes or remarks..."
+                                    placeholder="Add any additional notes (e.g., 'First batch', 'Mid-season tranche', 'Emergency allocation')..."
                                     className="jo-allocation-textarea"
                                 />
+                                <p className="jo-allocation-season-info" style={{ marginTop: '8px' }}>
+                                    💡 <strong>Tip:</strong> You can create multiple allocations for the same season. Use notes to differentiate between batches.
+                                </p>
                             </div>
 
                             {/* Error Message */}

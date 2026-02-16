@@ -189,6 +189,7 @@ const JoRsbsa: React.FC = () => {
     message: '',
     type: 'success'
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -711,7 +712,78 @@ const JoRsbsa: React.FC = () => {
   };
 
 
+  const buildFarmerAuditFarmDetails = () => {
+    const farmlandParcels = formData.farmlandParcels.map((parcel, index) => {
+      const parsedArea = Number(parcel.totalFarmAreaHa);
+      const totalFarmAreaHa = Number.isFinite(parsedArea) ? parsedArea : 0;
+
+      return {
+        parcelNo: parcel.parcelNo || String(index + 1),
+        farmLocationBarangay: parcel.farmLocationBarangay || null,
+        farmLocationMunicipality: parcel.farmLocationMunicipality || null,
+        totalFarmAreaHa,
+        withinAncestralDomain: parcel.withinAncestralDomain || null,
+        ownershipDocumentNo: parcel.ownershipDocumentNo || null,
+        agrarianReformBeneficiary: parcel.agrarianReformBeneficiary || null,
+        ownershipType: {
+          registeredOwner: !!parcel.ownershipTypeRegisteredOwner,
+          tenant: !!parcel.ownershipTypeTenant,
+          lessee: !!parcel.ownershipTypeLessee,
+          others: !!parcel.ownershipTypeOthers
+        },
+        tenantLandOwnerName: parcel.tenantLandOwnerName || null,
+        lesseeLandOwnerName: parcel.lesseeLandOwnerName || null,
+        ownershipOthersSpecify: parcel.ownershipOthersSpecify || null,
+        existingParcelId: parcel.existingParcelId ?? null,
+        existingParcelNumber: parcel.existingParcelNumber ?? null
+      };
+    });
+
+    const totalFarmAreaHa = farmlandParcels.reduce(
+      (sum, parcel) => sum + (parcel.totalFarmAreaHa || 0),
+      0
+    );
+
+    return {
+      ownershipCategory,
+      totalParcels: farmlandParcels.length,
+      totalFarmAreaHa: Number(totalFarmAreaHa.toFixed(4)),
+      farmLocation: {
+        barangay: formData.barangay || null,
+        municipality: formData.municipality || null,
+        province: formData.province || null
+      },
+      selectedLandOwner: selectedLandOwner
+        ? {
+          id: selectedLandOwner.id,
+          name: selectedLandOwner.name,
+          barangay: selectedLandOwner.barangay,
+          municipality: selectedLandOwner.municipality
+        }
+        : null,
+      selectedParcelIds: Array.from(selectedParcelIds),
+      farmActivities: {
+        mainLivelihood: formData.mainLivelihood || null,
+        farmerRice: !!formData.farmerRice,
+        farmerCorn: !!formData.farmerCorn,
+        farmerOtherCrops: !!formData.farmerOtherCrops,
+        farmerOtherCropsText: formData.farmerOtherCropsText || null,
+        farmerLivestock: !!formData.farmerLivestock,
+        farmerLivestockText: formData.farmerLivestockText || null,
+        farmerPoultry: !!formData.farmerPoultry,
+        farmerPoultryText: formData.farmerPoultryText || null
+      },
+      farmlandParcels
+    };
+  };
+
+
   const handleFinalSubmit = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    let shouldUnlockSubmit = true;
+
     try {
       const submitted = await submitFinalToServer();
       if (submitted && submitted.submissionId) {
@@ -719,6 +791,7 @@ const JoRsbsa: React.FC = () => {
         try {
           const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
           const farmerName = `${formData.surname}, ${formData.firstName} ${formData.middleName || ''}`.trim();
+          const farmDetails = buildFarmerAuditFarmDetails();
           const auditLogger = getAuditLogger();
           await auditLogger.logFarmerRegistration(
             {
@@ -727,7 +800,8 @@ const JoRsbsa: React.FC = () => {
               role: currentUser.role || 'JO'
             },
             submitted.submissionId,
-            farmerName
+            farmerName,
+            farmDetails
           );
         } catch (auditErr) {
           console.error('Audit log failed (non-blocking):', auditErr);
@@ -735,6 +809,7 @@ const JoRsbsa: React.FC = () => {
 
         showToast('RSBSA form submitted successfully!', 'success');
         // Navigate back to JO flow after a short delay to show the toast
+        shouldUnlockSubmit = false;
         setTimeout(() => {
           navigate('/jo-rsbsapage');
         }, 1500);
@@ -742,6 +817,10 @@ const JoRsbsa: React.FC = () => {
     } catch (error) {
       console.error('Error submitting form:', error);
       showToast('Error submitting form. Please try again.', 'error');
+    } finally {
+      if (shouldUnlockSubmit) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -1681,12 +1760,18 @@ const JoRsbsa: React.FC = () => {
 
             <div className="jo-registration-form-actions">
               {currentStep > 1 && (
-                <button className="jo-registration-btn-save" onClick={handlePrevStep}>Previous</button>
+                <button className="jo-registration-btn-save" onClick={handlePrevStep} disabled={isSubmitting}>
+                  Previous
+                </button>
               )}
               {currentStep < 4 ? (
-                <button className="jo-registration-btn-submit" onClick={handleSubmitForm}>Next Step</button>
+                <button className="jo-registration-btn-submit" onClick={handleSubmitForm} disabled={isSubmitting}>
+                  Next Step
+                </button>
               ) : (
-                <button className="jo-registration-btn-submit" onClick={handleSubmitForm}>Submit Form</button>
+                <button className="jo-registration-btn-submit" onClick={handleSubmitForm} disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Submit Form'}
+                </button>
               )}
             </div>
           </div>
@@ -1717,4 +1802,3 @@ const JoRsbsa: React.FC = () => {
 };
 
 export default JoRsbsa;
-

@@ -147,8 +147,8 @@ const TechManageRequests: React.FC = () => {
                 throw new Error('Allocation not found');
             }
 
-            // Fetch requests by season
-            const response = await getFarmerRequests(currentAllocation.season);
+            // Fetch requests by allocation ID
+            const response = await getFarmerRequests(allocationId, true);
             if (response.error) {
                 throw new Error('Failed to fetch requests');
             }

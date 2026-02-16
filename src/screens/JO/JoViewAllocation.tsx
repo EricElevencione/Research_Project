@@ -86,8 +86,8 @@ const JoViewAllocation: React.FC = () => {
             }
             setAllocation(currentAllocation);
 
-            // Fetch farmer requests for this season
-            const requestsResponse = await getFarmerRequests(currentAllocation.season);
+            // Fetch farmer requests for this specific allocation
+            const requestsResponse = await getFarmerRequests(allocationId, true);
             if (!requestsResponse.error) {
                 const requestsData = requestsResponse.data || [];
                 setRequests(requestsData);

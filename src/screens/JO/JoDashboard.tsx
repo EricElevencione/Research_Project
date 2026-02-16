@@ -105,10 +105,13 @@ interface RecentActivity {
 }
 
 interface AvailableSeason {
+	id: number;
 	season: string;
+	allocation_date: string;
 	season_start_date: string;
 	season_end_date: string;
 	status: string;
+	notes?: string;
 }
 
 const JoDashboard: React.FC = () => {
@@ -122,8 +125,12 @@ const JoDashboard: React.FC = () => {
 
 	// Season selector state
 	const [availableSeasons, setAvailableSeasons] = useState<AvailableSeason[]>([]);
-	const [selectedSeason, setSelectedSeason] = useState<string>('');
+	const [selectedAllocationId, setSelectedAllocationId] = useState<string>('');
+	const [currentAllocationId, setCurrentAllocationId] = useState<string>('');
 	const [currentSeason, setCurrentSeason] = useState<string>('');
+
+	const selectedAllocation = availableSeasons.find((allocation) => String(allocation.id) === selectedAllocationId);
+	const selectedSeasonLabel = selectedAllocation?.season || currentSeason;
 
 	const isActive = (path: string) => location.pathname === path;
 
@@ -140,16 +147,14 @@ const JoDashboard: React.FC = () => {
 					const current = response.data.find((s: AvailableSeason) => s.status === 'active');
 					if (current) {
 						setCurrentSeason(current.season);
-						if (!selectedSeason) {
-							setSelectedSeason(current.season);
-						}
+						setCurrentAllocationId(String(current.id));
+						setSelectedAllocationId(String(current.id));
 					} else if (response.data.length > 0) {
 						// Fallback to first season if no active season
-						const fallbackSeason = response.data[0].season;
-						setCurrentSeason(fallbackSeason);
-						if (!selectedSeason) {
-							setSelectedSeason(fallbackSeason);
-						}
+						const fallbackAllocation = response.data[0];
+						setCurrentSeason(fallbackAllocation.season);
+						setCurrentAllocationId(String(fallbackAllocation.id));
+						setSelectedAllocationId(String(fallbackAllocation.id));
 					}
 				} else {
 					// Fallback to calculated season
@@ -158,11 +163,10 @@ const JoDashboard: React.FC = () => {
 					const month = currentDate.getMonth();
 					const year = currentDate.getFullYear();
 					const defaultSeason = month >= 4 && month <= 9 ? `wet_${year}` : `dry_${year}`;
-					setAvailableSeasons([{ season: defaultSeason, season_start_date: '', season_end_date: '', status: 'active' }]);
+					setAvailableSeasons([{ id: 0, season: defaultSeason, allocation_date: new Date().toISOString().split('T')[0], season_start_date: '', season_end_date: '', status: 'active' }]);
 					setCurrentSeason(defaultSeason);
-					if (!selectedSeason) {
-						setSelectedSeason(defaultSeason);
-					}
+					setCurrentAllocationId('0');
+					setSelectedAllocationId('0');
 				}
 			} catch (error) {
 				console.error('Error fetching seasons:', error);
@@ -171,30 +175,31 @@ const JoDashboard: React.FC = () => {
 				const month = currentDate.getMonth();
 				const year = currentDate.getFullYear();
 				const defaultSeason = month >= 4 && month <= 9 ? `wet_${year}` : `dry_${year}`;
-				setAvailableSeasons([{ season: defaultSeason, season_start_date: '', season_end_date: '', status: 'active' }]);
+				setAvailableSeasons([{ id: 0, season: defaultSeason, allocation_date: new Date().toISOString().split('T')[0], season_start_date: '', season_end_date: '', status: 'active' }]);
 				setCurrentSeason(defaultSeason);
-				if (!selectedSeason) {
-					setSelectedSeason(defaultSeason);
-				}
+				setCurrentAllocationId('0');
+				setSelectedAllocationId('0');
 			}
 		};
 		fetchSeasons();
 	}, []);
 
-	// Fetch dashboard data when season changes
+	// Fetch dashboard data when allocation changes
 	useEffect(() => {
-		if (!selectedSeason) return;
+		if (!selectedAllocationId && !selectedSeasonLabel) return;
 
 		const fetchDashboardData = async () => {
 			setLoading(true);
 			try {
-				console.log('Fetching dashboard data for season:', selectedSeason);
+				const parsedAllocationId = Number(selectedAllocationId);
+				const hasValidAllocationId = Number.isFinite(parsedAllocationId) && parsedAllocationId > 0;
+				console.log('Fetching dashboard data for allocation:', selectedAllocationId, 'season:', selectedSeasonLabel);
 
 				// Fetch all dashboard data in parallel
 				const [statsResponse, trendsResponse, activityResponse] = await Promise.all([
-					getDashboardStats(selectedSeason),
-					getMonthlyTrends(selectedSeason),
-					getRecentActivity(5)
+					hasValidAllocationId ? getDashboardStats(parsedAllocationId, true) : getDashboardStats(selectedSeasonLabel),
+					hasValidAllocationId ? getMonthlyTrends(parsedAllocationId, true) : getMonthlyTrends(selectedSeasonLabel),
+					hasValidAllocationId ? getRecentActivity(5, parsedAllocationId, true) : getRecentActivity(5, selectedSeasonLabel)
 				]);
 
 				// Handle dashboard stats
@@ -205,7 +210,7 @@ const JoDashboard: React.FC = () => {
 					console.error('Error fetching dashboard stats:', statsResponse.error);
 					// Set default empty stats on error
 					setDashboardStats({
-						currentSeason: selectedSeason || '',
+						currentSeason: selectedSeasonLabel || '',
 						seasonEndDate: '',
 						farmers: { total: 0, active: 0, lessee: 0 },
 						requests: {
@@ -254,7 +259,7 @@ const JoDashboard: React.FC = () => {
 		// Auto-refresh every 5 minutes
 		const interval = setInterval(fetchDashboardData, 300000);
 		return () => clearInterval(interval);
-	}, [selectedSeason]);
+	}, [selectedAllocationId, selectedSeasonLabel]);
 
 	// Format season display
 	const formatSeason = (season: string) => {
@@ -266,7 +271,7 @@ const JoDashboard: React.FC = () => {
 
 	// Handle season change
 	const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-		setSelectedSeason(e.target.value);
+		setSelectedAllocationId(e.target.value);
 	};
 
 	// Pie chart data for Request Status Breakdown
@@ -397,7 +402,7 @@ const JoDashboard: React.FC = () => {
 						<div className="header-left">
 							<h1 className="executive-title">JO Executive Dashboard</h1>
 							<p className="executive-subtitle">
-								{formatSeason(selectedSeason)} •
+								{formatSeason(selectedSeasonLabel)} •
 								Last updated: {lastUpdated.toLocaleTimeString()}
 							</p>
 						</div>
@@ -462,23 +467,27 @@ const JoDashboard: React.FC = () => {
 									<label htmlFor="season-select">📅 View Season:</label>
 									<select
 										id="season-select"
-										value={selectedSeason}
+										value={selectedAllocationId}
 										onChange={handleSeasonChange}
 										className="season-dropdown"
 									>
-										{/* Current season option (always available) */}
-										<option value={currentSeason}>
-											{formatSeason(currentSeason)} (Current)
-										</option>
-										{/* Available seasons from allocations */}
-										{availableSeasons
-											.filter(s => s.season !== currentSeason)
-											.map((season) => (
-												<option key={season.season} value={season.season}>
-													{formatSeason(season.season)}
-													{season.status === 'completed' ? ' ✓' : ''}
+										{/* All allocations */}
+										{availableSeasons.map((allocation) => {
+											const dateStr = new Date(allocation.allocation_date).toLocaleDateString('en-US', {
+												year: 'numeric',
+											month: 'short',
+											day: 'numeric'
+										});
+										const notesPreview = allocation.notes ? ` - ${allocation.notes.substring(0, 30)}${allocation.notes.length > 30 ? '...' : ''}` : '';
+										const isCurrent = String(allocation.id) === currentAllocationId && allocation.status === 'active';
+										return (
+											<option key={allocation.id} value={String(allocation.id)}>
+												{formatSeason(allocation.season)} ({dateStr}){notesPreview}
+												{isCurrent ? ' (Current)' : ''}
+												{allocation.status === 'completed' ? ' ✓' : ''}
 												</option>
-											))}
+											);
+										})}
 									</select>
 								</div>
 							</div>

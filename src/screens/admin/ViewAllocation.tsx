@@ -414,8 +414,8 @@ const ViewAllocation: React.FC = () => {
             }
             setAllocation(currentAllocation);
 
-            // Fetch farmer requests for this season
-            const requestsResponse = await getFarmerRequests(currentAllocation.season);
+            // Fetch farmer requests for this specific allocation
+            const requestsResponse = await getFarmerRequests(allocationId, true);
             if (!requestsResponse.error) {
                 const requestsData = requestsResponse.data || [];
                 setRequests(requestsData);
@@ -424,8 +424,8 @@ const ViewAllocation: React.FC = () => {
                 const seasonMap = new Map<string, any[]>();
                 seasonMap.set(currentAllocation.season, requestsData);
                 for (const alloc of allocations) {
-                    if (alloc.season !== currentAllocation.season) {
-                        const sRes = await getFarmerRequests(alloc.season);
+                    if (alloc.id !== currentAllocation.id) {
+                        const sRes = await getFarmerRequests(alloc.id, true);
                         seasonMap.set(alloc.season, sRes.data || []);
                     }
                 }

@@ -54,11 +54,11 @@ const Incentives: React.FC = () => {
 
             const data = response.data || [];
 
-            // Fetch farmer count for each allocation
+            // Fetch farmer count for each allocation (by allocation ID, not season)
             const allocationsWithCounts = await Promise.all(
                 data.map(async (allocation: RegionalAllocation) => {
                     try {
-                        const requestsResponse = await getFarmerRequests(allocation.season);
+                        const requestsResponse = await getFarmerRequests(allocation.id, true);
                         if (!requestsResponse.error) {
                             const requests = requestsResponse.data || [];
                             return { ...allocation, farmer_count: requests.length };
@@ -274,16 +274,16 @@ const Incentives: React.FC = () => {
                                             <button
                                                 className="admin-incent-btn-action admin-incent-btn-view"
                                                 onClick={() => navigate(`/view-allocation/${allocation.id}`)}
-                                                title="View Allocation Details"
+                                                title="View Details"
                                             >
-                                                👁️ View Allocation
+                                                👁️ View
                                             </button>
                                             <button
                                                 className="admin-incent-btn-action admin-incent-btn-manage"
                                                 onClick={() => navigate(`/manage-requests/${allocation.id}`)}
-                                                title="View Requests"
+                                                title="Manage Requests"
                                             >
-                                                📋 View Requests
+                                                📋 Manage
                                             </button>
                                         </div>
                                     </div>

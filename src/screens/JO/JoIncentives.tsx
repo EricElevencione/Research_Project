@@ -73,7 +73,7 @@ const JoIncentives: React.FC = () => {
             const allocationsWithCounts = await Promise.all(
                 data.map(async (allocation: RegionalAllocation) => {
                     try {
-                        const requestsResponse = await getFarmerRequests(allocation.season);
+                        const requestsResponse = await getFarmerRequests(allocation.id, true);
                         if (!requestsResponse.error) {
                             const requests = requestsResponse.data || [];
                             return { ...allocation, farmer_count: requests.length };
@@ -158,8 +158,8 @@ const JoIncentives: React.FC = () => {
 
     const handleEditAllocation = async (allocation: RegionalAllocation) => {
         try {
-            // Fetch request count for this season
-            const response = await getFarmerRequests(allocation.season);
+            // Fetch request count for this allocation
+            const response = await getFarmerRequests(allocation.id, true);
             if (!response.error) {
                 const requests = response.data || [];
                 setRequestCount(requests.length);

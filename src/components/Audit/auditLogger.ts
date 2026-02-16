@@ -15,6 +15,32 @@ export interface AuditLogData {
     ipAddress?: string | null;
     sessionId?: string | null;
     metadata?: any;
+    includeRouteContext?: boolean;
+}
+
+export interface AuditLogOptions {
+    metadata?: any;
+    includeRouteContext?: boolean;
+}
+
+export interface FarmerRegistrationAuditDetails {
+    ownershipCategory?: string;
+    totalParcels?: number;
+    totalFarmAreaHa?: number;
+    farmLocation?: {
+        barangay?: string | null;
+        municipality?: string | null;
+        province?: string | null;
+    };
+    selectedLandOwner?: {
+        id?: string | number;
+        name?: string;
+        barangay?: string;
+        municipality?: string;
+    } | null;
+    selectedParcelIds?: string[];
+    farmActivities?: Record<string, any>;
+    farmlandParcels?: Array<Record<string, any>>;
 }
 
 export enum AuditAction {
@@ -51,9 +77,60 @@ export enum AuditModule {
 
 export class AuditLogger {
     private supabase: SupabaseClient;
+    private recentEventCache: Map<string, number>;
 
     constructor(supabase: SupabaseClient) {
         this.supabase = supabase;
+        this.recentEventCache = new Map();
+    }
+
+    private isRecentDuplicate(eventKey: string, windowMs = 5000): boolean {
+        const now = Date.now();
+        const lastSeenAt = this.recentEventCache.get(eventKey);
+
+        for (const [key, timestamp] of this.recentEventCache.entries()) {
+            if (now - timestamp > windowMs) {
+                this.recentEventCache.delete(key);
+            }
+        }
+
+        if (lastSeenAt && now - lastSeenAt < windowMs) {
+            return true;
+        }
+
+        this.recentEventCache.set(eventKey, now);
+        return false;
+    }
+
+    private normalizeUserName(userName?: string | null): string {
+        const normalized = (userName || '').trim();
+        if (!normalized || normalized.toLowerCase() === 'unknown') {
+            return 'Anonymous';
+        }
+        return normalized;
+    }
+
+    private normalizeUserRole(userRole?: string | null): string {
+        const normalized = (userRole || '').trim();
+        if (!normalized || normalized.toLowerCase() === 'unknown') {
+            return 'anonymous';
+        }
+        return normalized;
+    }
+
+    private getRouteContext(): Record<string, string> | null {
+        if (typeof window === 'undefined' || !window.location) {
+            return null;
+        }
+
+        const { pathname, search, hash, href } = window.location;
+        const fullPath = `${pathname || ''}${search || ''}${hash || ''}`;
+
+        return {
+            route_path: pathname || '',
+            route_full_path: fullPath,
+            route_url: href || ''
+        };
     }
 
     /**
@@ -61,12 +138,26 @@ export class AuditLogger {
      */
     async log(data: AuditLogData): Promise<void> {
         try {
+            const routeContext = this.getRouteContext();
+            let metadataToSave: any = data.metadata ?? null;
+            const includeRouteContext = data.includeRouteContext !== false;
+
+            if (includeRouteContext && routeContext) {
+                if (metadataToSave && typeof metadataToSave === 'object' && !Array.isArray(metadataToSave)) {
+                    metadataToSave = { ...metadataToSave, ...routeContext };
+                } else if (metadataToSave !== null && metadataToSave !== undefined) {
+                    metadataToSave = { ...routeContext, raw_metadata: metadataToSave };
+                } else {
+                    metadataToSave = routeContext;
+                }
+            }
+
             const { error } = await this.supabase
                 .from('audit_logs')
                 .insert({
                     user_id: data.userId,
-                    user_name: data.userName,
-                    user_role: data.userRole,
+                    user_name: this.normalizeUserName(data.userName),
+                    user_role: this.normalizeUserRole(data.userRole),
                     action: data.action,
                     module: data.module,
                     record_id: data.recordId?.toString(),
@@ -76,11 +167,14 @@ export class AuditLogger {
                     new_values: data.newValues,
                     ip_address: data.ipAddress,
                     session_id: data.sessionId,
-                    metadata: data.metadata
+                    metadata: metadataToSave
                 });
 
             if (error) {
-                console.error('Failed to log audit event:', error);
+                console.error('Failed to log audit event:', error.message, error.details, error.hint);
+                console.error('Full error:', JSON.stringify(error));
+            } else {
+                console.log('Audit event logged successfully:', data.action, data.module, data.description);
             }
         } catch (err) {
             console.error('Error logging audit event:', err);
@@ -119,7 +213,8 @@ export class AuditLogger {
         recordId: string | number,
         description: string,
         oldValues?: any,
-        newValues?: any
+        newValues?: any,
+        options?: AuditLogOptions
     ): Promise<void> {
         await this.log({
             userId: user.id,
@@ -131,7 +226,9 @@ export class AuditLogger {
             recordId,
             description,
             oldValues,
-            newValues
+            newValues,
+            metadata: options?.metadata,
+            includeRouteContext: options?.includeRouteContext
         });
     }
 
@@ -141,8 +238,16 @@ export class AuditLogger {
     async logFarmerRegistration(
         user: { id?: number; name: string; role: string },
         farmerId: number,
-        farmerName: string
+        farmerName: string,
+        details?: FarmerRegistrationAuditDetails
     ): Promise<void> {
+        const dedupeKey = `farmer_registration:${user.id ?? 'anonymous'}:${farmerId}`;
+        if (this.isRecentDuplicate(dedupeKey, 10000)) {
+            console.warn('Skipped duplicate farmer registration audit event:', dedupeKey);
+            return;
+        }
+
+        const farmDetails = details && Object.keys(details).length > 0 ? details : undefined;
         await this.log({
             userId: user.id,
             userName: user.name,
@@ -151,7 +256,9 @@ export class AuditLogger {
             module: AuditModule.FARMERS,
             recordId: farmerId,
             recordType: 'farmer',
-            description: `Registered new farmer: ${farmerName}`
+            description: `Registered new farmer: ${farmerName}`,
+            newValues: farmDetails ? { farmerName, farmDetails } : undefined,
+            metadata: farmDetails ? { farmDetails } : undefined
         });
     }
 

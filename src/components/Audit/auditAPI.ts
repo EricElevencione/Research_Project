@@ -63,7 +63,7 @@ export class AuditAPI {
             query = query.eq('module', module);
         }
         if (search) {
-            query = query.or(`description.ilike.%${search}%,user_name.ilike.%${search}%,record_id.ilike.%${search}%`);
+            query = query.or(`description.ilike.%${search}%,module.ilike.%${search}%,record_type.ilike.%${search}%,record_id.ilike.%${search}%`);
         }
 
         // Pagination
