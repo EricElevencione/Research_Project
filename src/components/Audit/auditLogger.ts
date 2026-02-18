@@ -326,7 +326,29 @@ export class AuditLogger {
             metadata: { exportType, recordCount }
         });
     }
+
+    // Log request edit
+    async logRequest(
+        user: { id?: number; name: string; role: string },
+        module: AuditModule,
+        recordType: string,
+        recordId: string | number
+    ): Promise<void> {
+        await this.log({
+            userId: user.id,
+            userName: user.name,
+            userRole: user.role,
+            action: AuditAction.VIEW,
+            module,
+            recordType,
+            recordId,
+            description: `Viewed ${recordType} with ID ${recordId}`
+        });
+    }
+    
 }
+
+
 
 // Singleton instance - auto-initialized with shared Supabase client
 let auditLogger: AuditLogger | null = null;

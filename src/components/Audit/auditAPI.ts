@@ -252,12 +252,10 @@ export class AuditAPI {
                 log.ip_address || ''
             ]);
 
-            const csvContent = [
-                headers.join(','),
-                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-            ].join('\n');
-
-            return csvContent;
+            return [
+                            headers.join(','),
+                            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+                        ].join('\n');
         }
     }
 

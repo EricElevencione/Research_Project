@@ -5,7 +5,7 @@
 /* Page Layout */
 .jo-incent-page-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f0f0f0;
 }
 
@@ -21,6 +21,7 @@
     display: flex;
     flex-direction: column;
     background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+    overflow: auto;
 }
 
 .jo-incent-page-header {
@@ -561,9 +562,11 @@
 
 /* Allocations Grid */
 .jo-incent-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    display: flex !important;           /* ← change from grid to flex */
+    flex-wrap: wrap;
     gap: 24px;
+    width: 100%;
+    margin-top: 0;                      /* already handled by content-card */
 }
 
 /* Allocation Card */
@@ -574,6 +577,9 @@
     overflow: hidden;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    flex: 1 1 calc(33.333% - 16px);     /* default: try 3-up */
+    min-width: 0;                       /* 🔥 THIS STOPS THE OVERFLOW */
+    box-sizing: border-box;
 }
 
 .jo-incent-card:hover {
@@ -717,9 +723,51 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
+
+@media (max-width: 768px) {
+    .jo-incent-card {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+    
+    /* Optional: make the single card look nicer on very small screens */
+    .jo-incent-card-actions {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 1024px) {
     .jo-incent-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+/* Mobile: Ensure full-width stacking, no horizontal overflow */
+@media (max-width: 768px) {
+    .jo-incent-grid {
+        grid-template-columns: 1fr; /* Single column, full width */
+        gap: 20px; /* Slightly reduce gap for mobile, but enough to prevent vertical "overlap" illusion */
+    }
+
+    .jo-incent-card {
+        width: 100%; /* Explicit full width */
+        min-width: 0; /* Allow shrinking if needed */
+        max-width: 100%; /* Prevent exceeding container */
+    }
+
+    .jo-incent-main-content {
+        padding: 15px; /* Existing, but ensure no side overflow */
+    }
+}
+
+/* Extra small mobile (e.g., <480px): Tighter adjustments */
+@media (max-width: 480px) {
+    .jo-incent-grid {
+        gap: 16px;
+    }
+
+    .jo-incent-card {
+        border-radius: 8px; /* Soften corners if overlaps were hiding edges */
     }
 }
 
@@ -792,6 +840,13 @@
         flex: 1 1 100%;
         padding: 10px 14px;
         font-size: 13px;
+    }
+}
+
+/* Fix: make content card follow page background at ~1000px widths */
+@media (max-width: 1200px) {
+    .jo-incent-content-card {
+        flex: 1 1 calc(50% - 12px);   /* forces 2 + 1 layout below 1200 px */
     }
 }
 
