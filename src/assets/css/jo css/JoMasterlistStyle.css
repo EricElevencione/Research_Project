@@ -316,6 +316,17 @@
     padding: 24px;
 }
 
+.jo-masterlist-edit-error-banner {
+    background: #fdecea;
+    color: #b71c1c;
+    border: 1px solid #f5c2c7;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
 .jo-masterlist-form-group {
     margin-bottom: 16px;
 }

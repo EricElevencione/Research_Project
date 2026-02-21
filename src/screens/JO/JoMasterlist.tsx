@@ -19,6 +19,7 @@ interface RSBSARecord {
   farmerAddress: string;
   farmLocation: string;
   parcelArea: string;
+  age: number | null;
   dateSubmitted: string;
   status: string;
   landParcel: string;
@@ -68,6 +69,21 @@ interface ParcelDetail {
   ownershipTypeLessee: boolean;
   tenantLandOwnerName: string;
   lesseeLandOwnerName: string;
+}
+
+interface EditFormData {
+  farmerName?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  farmerAddress?: string;
+  barangay?: string;
+  municipality?: string;
+  farmLocation?: string;
+  landParcel?: string;
+  dateSubmitted?: string;
+  parcelArea?: string;
+  age?: string;
 }
 
 const JoMasterlist: React.FC = () => {
@@ -135,8 +151,8 @@ const JoMasterlist: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
 
   const [editingRecord, setEditingRecord] = useState<RSBSARecord | null>(null);
-  type EditForm = Partial<RSBSARecord> & { firstName?: string; middleName?: string; lastName?: string; barangay?: string; municipality?: string };
-  const [editFormData, setEditFormData] = useState<EditForm>({});
+  const [editFormData, setEditFormData] = useState<EditFormData>({});
+  const [editError, setEditError] = useState<string | null>(null);
   const [editingParcels, setEditingParcels] = useState<Parcel[]>([]);
   const [loadingParcels, setLoadingParcels] = useState(false);
   const [parcelErrors, setParcelErrors] = useState<Record<string, string>>({});
@@ -144,73 +160,6 @@ const JoMasterlist: React.FC = () => {
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
-
-  const handleDelete = async (id: string) => {
-    try {
-      // First, check if this farmer is referenced as a land owner by any tenants/lessees
-      // Note: This endpoint is not available in Supabase, returning empty data
-      const referencesResponse = { data: { hasReferences: false, tenants: [], lessees: [] }, error: null };
-
-      let confirmMessage = 'Are you sure you want to delete this record? This action cannot be undone.';
-
-      if (!referencesResponse.error) {
-        const referencesData = referencesResponse.data;
-
-        if (referencesData.hasReferences) {
-          // Build a detailed warning message
-          const tenantCount = referencesData.tenants?.length || 0;
-          const lesseeCount = referencesData.lessees?.length || 0;
-
-          let affectedList = '';
-
-          if (tenantCount > 0) {
-            const tenantNames = referencesData.tenants
-              .slice(0, 5) // Show max 5 names
-              .map((t: any) => t.tenantName)
-              .join(', ');
-            affectedList += `\n\n👤 Tenants (${tenantCount}): ${tenantNames}${tenantCount > 5 ? '...' : ''}`;
-          }
-
-          if (lesseeCount > 0) {
-            const lesseeNames = referencesData.lessees
-              .slice(0, 5) // Show max 5 names
-              .map((l: any) => l.lesseeName)
-              .join(', ');
-            affectedList += `\n\n👤 Lessees (${lesseeCount}): ${lesseeNames}${lesseeCount > 5 ? '...' : ''}`;
-          }
-
-          confirmMessage = `⚠️ WARNING: This farmer "${referencesData.farmerName}" is listed as the LAND OWNER for ${referencesData.totalReferences} tenant/lessee record(s).${affectedList}\n\nIf you delete this farmer, their land owner references will be cleared (set to empty).\n\nAre you sure you want to proceed?`;
-        }
-      }
-
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
-
-      const response = await deleteRsbsaSubmission(id);
-
-      if (response.error) {
-        throw new Error(`Failed to delete record: ${response.error}`);
-      }
-
-      const deleteResult = response.data;
-
-      // Show success message with details about affected records
-      let successMessage = 'Record deleted successfully.';
-      if (deleteResult.landOwnerImpact) {
-        const { tenantsAffected, lesseesAffected } = deleteResult.landOwnerImpact;
-        successMessage += `\n\nLand owner references cleared:\n- ${tenantsAffected} tenant(s)\n- ${lesseesAffected} lessee(s)`;
-      }
-
-      alert(successMessage);
-
-      // Remove the deleted record from the local state
-      setRsbsaRecords(prev => prev.filter(record => record.id !== id));
-    } catch (err: any) {
-      console.error('Error deleting record:', err);
-      alert(`Failed to delete record: ${err.message}`);
-    }
-  };
 
   // Fetch farmer details when row is clicked
   const fetchFarmerDetails = async (farmerId: string) => {
@@ -247,21 +196,12 @@ const JoMasterlist: React.FC = () => {
       }
 
       // If no activities found, check if mainLivelihood indicates farming type
-      if (activities.length === 0) {
-        if (data.mainLivelihood || data['MAIN LIVELIHOOD'] || data.main_livelihood) {
-          activities.push(data.mainLivelihood || data['MAIN LIVELIHOOD'] || data.main_livelihood);
-        }
-      } const calculateAge = (birthdate: string): number | string => {
-        if (!birthdate || birthdate === 'N/A') return 'N/A';
-        const today = new Date();
-        const birthDate = new Date(birthdate);
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-        return age;
-      };
+      if (
+        activities.length === 0 &&
+        (data.mainLivelihood || data['MAIN LIVELIHOOD'] || data.main_livelihood)
+      ) {
+        activities.push(data.mainLivelihood || data['MAIN LIVELIHOOD'] || data.main_livelihood);
+      }
 
       // Reformat the farmer name from "Last, First, Middle, Ext" to "Last, First Middle Ext"
       const backendName = farmerData.farmerName || '';
@@ -316,11 +256,16 @@ const JoMasterlist: React.FC = () => {
         }
       }
 
+      const normalizedDetailAge = normalizeAgeValue(
+        farmerData.age ?? data.age ?? data.AGE,
+        data.dateOfBirth || data.birthdate || data['DATE OF BIRTH'] || data.BIRTHDATE || null
+      );
+
       const farmerDetail: FarmerDetail = {
         id: farmerId,
         farmerName: reformattedFarmerName,
         farmerAddress: farmerData.farmerAddress || 'N/A',
-        age: calculateAge(data.dateOfBirth || data.birthdate || 'N/A'),
+        age: normalizedDetailAge ?? 'N/A',
         gender: data.gender || 'N/A',
         mainLivelihood: data.mainLivelihood || 'N/A',
         farmingActivities: activities,
@@ -335,6 +280,44 @@ const JoMasterlist: React.FC = () => {
     } finally {
       setLoadingFarmerDetail(false);
     }
+  };
+
+  const calculateAgeFromBirthdate = (birthdate?: string | null): number | null => {
+    if (!birthdate) return null;
+    const birthDate = new Date(birthdate);
+    if (Number.isNaN(birthDate.getTime())) return null;
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    return age >= 0 ? age : null;
+  };
+
+  const normalizeAgeValue = (ageValue: unknown, birthdate?: string | null): number | null => {
+    if (ageValue !== null && ageValue !== undefined && String(ageValue).trim() !== '') {
+      const parsedAge = Number(ageValue);
+      if (Number.isFinite(parsedAge) && parsedAge >= 0) {
+        return Math.floor(parsedAge);
+      }
+    }
+
+    return calculateAgeFromBirthdate(birthdate);
+  };
+
+  const ageToInputValue = (ageValue: unknown): string => {
+    if (ageValue === null || ageValue === undefined) return '';
+    return String(ageValue);
+  };
+
+  const parseAgeInputToNumber = (ageValue?: string): number | null => {
+    if (!ageValue || ageValue.trim() === '') return null;
+    const parsed = Number(ageValue);
+    if (!Number.isFinite(parsed) || parsed < 0) return null;
+    return Math.floor(parsed);
   };
 
   useEffect(() => {
@@ -386,6 +369,10 @@ const JoMasterlist: React.FC = () => {
         const dateSubmitted = item.dateSubmitted
           ? new Date(item.dateSubmitted).toISOString()
           : (item.createdAt ? new Date(item.createdAt).toISOString() : '');
+        const age = normalizeAgeValue(
+          item.age,
+          item.birthdate ?? item.dateOfBirth ?? item.BIRTHDATE ?? item['DATE OF BIRTH'] ?? null
+        );
 
         // Reflect database status semantics: Submitted / Not Submitted
         const status = String(item.status ?? 'Not Submitted');
@@ -397,6 +384,7 @@ const JoMasterlist: React.FC = () => {
           farmerAddress,
           farmLocation,
           parcelArea,
+          age,
           dateSubmitted,
           status,
           landParcel,
@@ -410,6 +398,11 @@ const JoMasterlist: React.FC = () => {
       setError(err.message ?? 'Failed to load RSBSA records');
       setLoading(false);
     }
+  };
+
+  const getSubmissionTimestamp = (isoDate: string) => {
+    const timestamp = Date.parse(isoDate);
+    return Number.isNaN(timestamp) ? -Infinity : timestamp;
   };
 
   const filteredRecords = rsbsaRecords.filter(record => {
@@ -435,7 +428,7 @@ const JoMasterlist: React.FC = () => {
       record.farmerAddress.toLowerCase().includes(q) ||
       record.farmLocation.toLowerCase().includes(q);
     return matchesStatus && matchesSearch;
-  });
+  }).sort((a, b) => getSubmissionTimestamp(b.dateSubmitted) - getSubmissionTimestamp(a.dateSubmitted));
 
   const formatDate = (iso: string) => {
     if (!iso) return '—';
@@ -462,6 +455,7 @@ const JoMasterlist: React.FC = () => {
   const handleCancel = () => {
     setEditingRecord(null);
     setEditFormData({});
+    setEditError(null);
     setEditingParcels([]);
     setParcelErrors({});
   };
@@ -488,6 +482,7 @@ const JoMasterlist: React.FC = () => {
     };
   };
 
+  // Parses the address into barangay and municipality based on the assumption that they are separated by a comma
   const parseAddress = (address: string): { barangay: string; municipality: string } => {
     if (!address) return { barangay: '', municipality: '' };
     const parts = address.split(',').map(p => p.trim()).filter(Boolean);
@@ -496,20 +491,53 @@ const JoMasterlist: React.FC = () => {
     return { barangay: parts[0] || '', municipality: parts[1] || '' };
   };
 
+  const normalizeText = (value: string): string => value.trim().toLowerCase();
+
+  const resolveBarangayForEdit = (addressBarangay: string, farmLocation: string): string => {
+    const matchBarangay = (candidate: string): string => {
+      if (!candidate) return '';
+      const normalizedCandidate = normalizeText(candidate);
+      const exact = barangays.find((b) => normalizeText(b) === normalizedCandidate);
+      return exact || '';
+    };
+
+    // 1) Prefer address barangay if it matches known barangays
+    const fromAddress = matchBarangay(addressBarangay);
+    if (fromAddress) return fromAddress;
+
+    // 2) Fall back to farm location first token (e.g., "Cali, Dumangas")
+    const parsedFarmLocation = parseAddress(farmLocation || '');
+    const fromFarmLocation = matchBarangay(parsedFarmLocation.barangay || farmLocation);
+    if (fromFarmLocation) return fromFarmLocation;
+
+    return '';
+  };
+
   const handleEdit = async (recordId: string) => {
     const recordToEdit = rsbsaRecords.find(record => record.id === recordId);
     if (recordToEdit) {
       const { lastName, firstName, middleName } = parseName(recordToEdit.farmerName || '');
-      const { barangay, municipality } = parseAddress(recordToEdit.farmerAddress || '');
+      const parsedAddress = parseAddress(recordToEdit.farmerAddress || '');
+      const parsedFarmLocation = parseAddress(recordToEdit.farmLocation || '');
+      const resolvedBarangay = resolveBarangayForEdit(parsedAddress.barangay, recordToEdit.farmLocation || '');
+      const resolvedMunicipality = (() => {
+        const fromAddress = (parsedAddress.municipality || '').trim();
+        if (fromAddress && normalizeText(fromAddress) !== 'iloilo') return fromAddress;
+        const fromFarmLocation = (parsedFarmLocation.municipality || '').trim();
+        if (fromFarmLocation) return fromFarmLocation;
+        return 'Dumangas';
+      })();
       setEditingRecord(recordToEdit);
+      setEditError(null);
       setEditFormData({
         farmerName: recordToEdit.farmerName,
         firstName,
         middleName,
         lastName,
+        age: ageToInputValue(recordToEdit.age),
         farmerAddress: recordToEdit.farmerAddress,
-        barangay,
-        municipality,
+        barangay: resolvedBarangay,
+        municipality: resolvedMunicipality,
         farmLocation: recordToEdit.farmLocation,
         landParcel: recordToEdit.landParcel,
         dateSubmitted: recordToEdit.dateSubmitted,
@@ -568,7 +596,9 @@ const JoMasterlist: React.FC = () => {
     }
   };
 
-  const handleInputChange = (field: keyof RSBSARecord | 'firstName' | 'middleName' | 'lastName' | 'barangay' | 'municipality', value: string) => {
+  // Updates the edit form data state for a specific field
+  const handleInputChange = (field: keyof EditFormData, value: string) => {
+    setEditError(null);
     setEditFormData(prev => ({
       ...prev,
       [field]: value
@@ -576,6 +606,7 @@ const JoMasterlist: React.FC = () => {
   };
 
   const handleIndividualParcelChange = (parcelId: string, field: keyof Parcel, value: any) => {
+    setEditError(null);
     // Validate if the field is total_farm_area_ha
     if (field === 'total_farm_area_ha') {
       const valueStr = String(value).trim();
@@ -622,13 +653,6 @@ const JoMasterlist: React.FC = () => {
         return;
       }
 
-      // Valid input - clear error
-      setParcelErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[parcelId];
-        return newErrors;
-      });
-
       setEditingParcels(prev =>
         prev.map(parcel =>
           parcel.id === parcelId
@@ -646,14 +670,19 @@ const JoMasterlist: React.FC = () => {
         )
       );
     }
-  }; const handleSave = async () => {
+  }; 
+
+  const handleSave = async () => {
     if (editingRecord && editFormData) {
       try {
+        setEditError(null);
+
         // Validate all parcels before saving
         if (editingParcels.length > 0) {
           let hasErrors = false;
           const newErrors: Record<string, string> = {};
 
+          // Validate each parcel's total_farm_area_ha field
           editingParcels.forEach(parcel => {
             if (!parcel.total_farm_area_ha || parcel.total_farm_area_ha <= 0) {
               hasErrors = true;
@@ -661,11 +690,20 @@ const JoMasterlist: React.FC = () => {
             }
           });
 
+          // If there are errors, set the parcelErrors state and prevent saving
           if (hasErrors) {
             setParcelErrors(newErrors);
-            setError('Please fix all parcel area errors before saving');
+            setEditError('Please fix all parcel area errors before saving');
             return;
           }
+        }
+
+        // Validate age input: if provided, it must be a valid number and at least 18
+        const rawAgeInput = (editFormData.age ?? '').trim();
+        const normalizedAge = parseAgeInputToNumber(rawAgeInput);
+        if (rawAgeInput !== '' && (normalizedAge === null || normalizedAge < 18)) {
+          setEditError('Age must be a valid number and at least 18 years old');
+          return;
         }
 
         // Start with the existing record data
@@ -673,7 +711,8 @@ const JoMasterlist: React.FC = () => {
           farmerName: editingRecord.farmerName,
           farmerAddress: editingRecord.farmerAddress,
           farmLocation: editingRecord.farmLocation,
-          parcelArea: editingRecord.parcelArea
+          parcelArea: editingRecord.parcelArea,
+          age: editingRecord.age
         };
 
         // Compose farmerName from discrete name fields (Last, First Middle)
@@ -706,7 +745,7 @@ const JoMasterlist: React.FC = () => {
         // Calculate new parcel area string from individual parcels
         const newParcelAreaString = editingParcels.length > 0
           ? editingParcels.map(p => p.total_farm_area_ha).join(', ')
-          : editFormData.parcelArea;
+          : (editFormData.parcelArea ?? editingRecord.parcelArea);
 
         // Format the data for submission
         const formattedData = {
@@ -716,6 +755,8 @@ const JoMasterlist: React.FC = () => {
           farmerAddress: composedAddress,
           // Use the calculated parcel area string from individual parcels
           parcelArea: newParcelAreaString,
+          // Persist age as number in the database/local table record
+          age: normalizedAge,
         };
 
         // Remove any undefined or empty values
@@ -725,6 +766,7 @@ const JoMasterlist: React.FC = () => {
           firstName: editFormData.firstName,
           middleName: editFormData.middleName,
           surname: editFormData.lastName,
+
           addressBarangay: editFormData.barangay,
           addressMunicipality: editFormData.municipality,
         };
@@ -775,11 +817,16 @@ const JoMasterlist: React.FC = () => {
         }
 
         // Update the local state with the response from the server
-        const updatedRecordData = {
+        const serverRecord = updatedRecord?.updatedRecord ?? updatedRecord ?? {};
+        const updatedRecordData: RSBSARecord = {
           ...editingRecord,
           ...formattedData,
           // Use any additional fields returned from the server
-          ...updatedRecord.updatedRecord
+          ...serverRecord,
+          age: normalizeAgeValue(
+            serverRecord.age ?? formattedData.age,
+            serverRecord.birthdate ?? serverRecord.dateOfBirth ?? null
+          )
         };
 
         // Update the main rsbsaRecords state
@@ -794,15 +841,15 @@ const JoMasterlist: React.FC = () => {
         // Close edit mode
         setEditingRecord(null);
         setEditFormData({});
+        setEditError(null);
         setEditingParcels([]);
         setParcelErrors({});
-        setError(null); // Clear any error messages
 
         // Show success message (optional)
         console.log('Record updated successfully');
       } catch (error) {
         console.error('Error updating record:', error);
-        setError('Failed to update record. Please try again.');
+        setEditError(error instanceof Error ? error.message : 'Failed to update record. Please try again.');
       }
     }
   };
@@ -1034,21 +1081,6 @@ const JoMasterlist: React.FC = () => {
               >
                 Edit
               </button>
-              <button
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  background: 'transparent',
-                  border: 'none',
-                  padding: '8px 10px',
-                  cursor: 'pointer',
-                  color: '#d32f2f'
-                }}
-                onClick={() => { handleDelete(openMenuId); closeMenu(); }}
-                role="menuitem"
-              >
-                Delete
-              </button>
             </div>
           )}
         </div>
@@ -1062,6 +1094,11 @@ const JoMasterlist: React.FC = () => {
                 <button className="jo-masterlist-close-button" onClick={handleCancel}>×</button>
               </div>
               <div className="jo-masterlist-edit-modal-body">
+                {editError && (
+                  <div className="jo-masterlist-edit-error-banner" role="alert">
+                    {editError}
+                  </div>
+                )}
                 <div className="form-group">
                   <label>Last Name:</label>
                   <input
@@ -1089,6 +1126,15 @@ const JoMasterlist: React.FC = () => {
                     value={editFormData.middleName || ''}
                     onChange={(e) => handleInputChange('middleName', e.target.value)}
                     placeholder="Middle Name"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Age:</label>
+                  <input
+                    type="text"
+                    value={editFormData.age || ''}
+                    onChange={(e) => handleInputChange('age', e.target.value)}
+                    placeholder="Age"
                   />
                 </div>
                 {/*Barangay function kung may jan*/}

@@ -18,8 +18,7 @@
 .jo-incent-main-content {
     flex: 1;
     padding: 20px;
-    display: flex;
-    flex-direction: column;
+    display: block;
     background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
     overflow: auto;
 }
@@ -44,6 +43,11 @@
     margin-top: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     min-height: 400px;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    display: flow-root;
+    flex: 0 0 auto;
 }
 
 /* Form Title Styling */
@@ -562,11 +566,12 @@
 
 /* Allocations Grid */
 .jo-incent-grid {
-    display: flex !important;           /* ← change from grid to flex */
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 24px;
     width: 100%;
-    margin-top: 0;                      /* already handled by content-card */
+    margin-top: 0;
+    align-items: start;
 }
 
 /* Allocation Card */
@@ -577,8 +582,8 @@
     overflow: hidden;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    flex: 1 1 calc(33.333% - 16px);     /* default: try 3-up */
-    min-width: 0;                       /* 🔥 THIS STOPS THE OVERFLOW */
+    min-width: 0;
+    width: 100%;
     box-sizing: border-box;
 }
 
@@ -724,21 +729,9 @@
 
 /* Responsive Design */
 
-@media (max-width: 768px) {
-    .jo-incent-card {
-        flex: 1 1 100%;
-        min-width: 0;
-    }
-    
-    /* Optional: make the single card look nicer on very small screens */
-    .jo-incent-card-actions {
-        flex-direction: column;
-    }
-}
-
-@media (max-width: 1024px) {
+@media (max-width: 1200px) and (min-width: 769px) {
     .jo-incent-grid {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -840,13 +833,6 @@
         flex: 1 1 100%;
         padding: 10px 14px;
         font-size: 13px;
-    }
-}
-
-/* Fix: make content card follow page background at ~1000px widths */
-@media (max-width: 1200px) {
-    .jo-incent-content-card {
-        flex: 1 1 calc(50% - 12px);   /* forces 2 + 1 layout below 1200 px */
     }
 }
 

@@ -670,10 +670,209 @@ export const createRsbsaSubmission = async (submissionData: any): Promise<ApiRes
     }, null, 201);
 };
 
+const hasMeaningfulValue = (value: any): boolean => {
+    if (value === undefined) return false;
+    if (typeof value === 'string') return value.trim() !== '';
+    return true;
+};
+
+const parseFarmerNameParts = (farmerName: string): { lastName?: string; firstName?: string; middleName?: string } => {
+    const normalized = (farmerName || '').trim();
+    if (!normalized) return {};
+
+    const commaParts = normalized.split(',').map((p) => p.trim()).filter(Boolean);
+    if (commaParts.length === 0) return {};
+    if (commaParts.length === 1) {
+        return { lastName: commaParts[0] };
+    }
+
+    const lastName = commaParts[0];
+    const firstMiddle = commaParts.slice(1).join(' ');
+    const firstMiddleParts = firstMiddle.split(' ').map((p) => p.trim()).filter(Boolean);
+
+    return {
+        lastName,
+        firstName: firstMiddleParts[0],
+        middleName: firstMiddleParts.slice(1).join(' ') || undefined
+    };
+};
+
+const parseAddressParts = (address: string): { barangay?: string; municipality?: string } => {
+    const normalized = (address || '').trim();
+    if (!normalized) return {};
+
+    const parts = normalized.split(',').map((p) => p.trim()).filter(Boolean);
+    if (parts.length === 0) return {};
+    if (parts.length === 1) return { barangay: parts[0] };
+    return { barangay: parts[0], municipality: parts[1] };
+};
+
+const parseAreaToNumber = (value: any): number | undefined => {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : undefined;
+    }
+
+    if (typeof value !== 'string') return undefined;
+    const cleaned = value.replace(/\s*hectares\s*$/i, '').trim();
+    if (!cleaned) return undefined;
+
+    // Support inputs like "1.2, 0.8" (sum of parcel areas).
+    const parts = cleaned.split(',').map((p) => p.trim()).filter(Boolean);
+    const parsed = parts
+        .map((p) => Number(p))
+        .filter((n) => Number.isFinite(n));
+
+    if (parsed.length === 0) return undefined;
+    if (parsed.length === 1) return parsed[0];
+    return parsed.reduce((sum, n) => sum + n, 0);
+};
+
+const normalizeRsbsaSubmissionUpdateData = (raw: any): Record<string, any> => {
+    if (!raw || typeof raw !== 'object') return {};
+
+    const normalized: Record<string, any> = {};
+
+    // Allow direct DB column names when callers already provide them.
+    const directColumnKeys = [
+        'status',
+        'age',
+        'LAST NAME',
+        'FIRST NAME',
+        'MIDDLE NAME',
+        'EXT NAME',
+        'GENDER',
+        'BIRTHDATE',
+        'BARANGAY',
+        'MUNICIPALITY',
+        'FARM LOCATION',
+        'PARCEL AREA',
+        'TOTAL FARM AREA',
+        'MAIN LIVELIHOOD',
+        'OWNERSHIP_TYPE_REGISTERED_OWNER',
+        'OWNERSHIP_TYPE_TENANT',
+        'OWNERSHIP_TYPE_LESSEE',
+        'FARMER_RICE',
+        'FARMER_CORN',
+        'FARMER_OTHER_CROPS',
+        'FARMER_OTHER_CROPS_TEXT',
+        'FARMER_LIVESTOCK',
+        'FARMER_LIVESTOCK_TEXT',
+        'FARMER_POULTRY',
+        'FARMER_POULTRY_TEXT'
+    ];
+
+    directColumnKeys.forEach((key) => {
+        if (!Object.prototype.hasOwnProperty.call(raw, key)) return;
+        const value = raw[key];
+        if (value === null || hasMeaningfulValue(value)) {
+            normalized[key] = value;
+        }
+    });
+
+    // age may arrive as a string from edit forms.
+    if (Object.prototype.hasOwnProperty.call(raw, 'age')) {
+        if (raw.age === null) {
+            normalized.age = null;
+        } else if (hasMeaningfulValue(raw.age)) {
+            const parsedAge = Number(raw.age);
+            if (Number.isFinite(parsedAge) && parsedAge >= 18) {
+                normalized.age = parsedAge;
+            }
+        }
+    }
+
+    const lastName = hasMeaningfulValue(raw.surname)
+        ? String(raw.surname).trim()
+        : hasMeaningfulValue(raw.lastName)
+            ? String(raw.lastName).trim()
+            : undefined;
+    const firstName = hasMeaningfulValue(raw.firstName) ? String(raw.firstName).trim() : undefined;
+    const middleName = hasMeaningfulValue(raw.middleName) ? String(raw.middleName).trim() : undefined;
+    const extName = hasMeaningfulValue(raw.extName)
+        ? String(raw.extName).trim()
+        : hasMeaningfulValue(raw.extensionName)
+            ? String(raw.extensionName).trim()
+            : undefined;
+
+    if (lastName) normalized['LAST NAME'] = lastName;
+    if (firstName) normalized['FIRST NAME'] = firstName;
+    if (middleName) normalized['MIDDLE NAME'] = middleName;
+    if (extName) normalized['EXT NAME'] = extName;
+
+    if (hasMeaningfulValue(raw.farmerName)) {
+        const parsed = parseFarmerNameParts(String(raw.farmerName));
+        if (!normalized['LAST NAME'] && parsed.lastName) normalized['LAST NAME'] = parsed.lastName;
+        if (!normalized['FIRST NAME'] && parsed.firstName) normalized['FIRST NAME'] = parsed.firstName;
+        if (!normalized['MIDDLE NAME'] && parsed.middleName) normalized['MIDDLE NAME'] = parsed.middleName;
+    }
+
+    const barangay = hasMeaningfulValue(raw.addressBarangay)
+        ? String(raw.addressBarangay).trim()
+        : hasMeaningfulValue(raw.barangay)
+            ? String(raw.barangay).trim()
+            : undefined;
+    const municipality = hasMeaningfulValue(raw.addressMunicipality)
+        ? String(raw.addressMunicipality).trim()
+        : hasMeaningfulValue(raw.municipality)
+            ? String(raw.municipality).trim()
+            : undefined;
+
+    if (barangay) normalized['BARANGAY'] = barangay;
+    if (municipality) normalized['MUNICIPALITY'] = municipality;
+
+    if (hasMeaningfulValue(raw.farmerAddress)) {
+        const parsed = parseAddressParts(String(raw.farmerAddress));
+        if (!normalized['BARANGAY'] && parsed.barangay) normalized['BARANGAY'] = parsed.barangay;
+        if (!normalized['MUNICIPALITY'] && parsed.municipality) normalized['MUNICIPALITY'] = parsed.municipality;
+    }
+
+    if (hasMeaningfulValue(raw.gender)) normalized['GENDER'] = String(raw.gender).trim();
+    if (hasMeaningfulValue(raw.birthdate)) normalized['BIRTHDATE'] = raw.birthdate;
+    if (hasMeaningfulValue(raw.dateOfBirth)) normalized['BIRTHDATE'] = raw.dateOfBirth;
+    if (hasMeaningfulValue(raw.farmLocation)) normalized['FARM LOCATION'] = String(raw.farmLocation).trim();
+    if (hasMeaningfulValue(raw.mainLivelihood)) normalized['MAIN LIVELIHOOD'] = String(raw.mainLivelihood).trim();
+
+    const totalArea = parseAreaToNumber(raw.parcelArea ?? raw.totalFarmArea);
+    if (totalArea !== undefined) {
+        normalized['TOTAL FARM AREA'] = totalArea;
+    }
+
+    if (raw.ownershipType && typeof raw.ownershipType === 'object') {
+        if (typeof raw.ownershipType.registeredOwner === 'boolean') {
+            normalized['OWNERSHIP_TYPE_REGISTERED_OWNER'] = raw.ownershipType.registeredOwner;
+        }
+        if (typeof raw.ownershipType.tenant === 'boolean') {
+            normalized['OWNERSHIP_TYPE_TENANT'] = raw.ownershipType.tenant;
+        }
+        if (typeof raw.ownershipType.lessee === 'boolean') {
+            normalized['OWNERSHIP_TYPE_LESSEE'] = raw.ownershipType.lessee;
+        }
+    }
+
+    return normalized;
+};
+
 export const updateRsbsaSubmission = async (id: string | number, updateData: any): Promise<ApiResponse> => {
+    // Defensive validation: if age is provided during update, it must be numeric and >= 18.
+    if (Object.prototype.hasOwnProperty.call(updateData ?? {}, 'age')) {
+        const rawAge = updateData?.age;
+        if (rawAge !== null && hasMeaningfulValue(rawAge)) {
+            const parsedAge = Number(rawAge);
+            if (!Number.isFinite(parsedAge) || parsedAge < 18) {
+                return createResponse(null, 'Age must be a valid number and at least 18 years old', 400);
+            }
+        }
+    }
+
+    const normalizedUpdateData = normalizeRsbsaSubmissionUpdateData(updateData);
+
+    if (Object.keys(normalizedUpdateData).length === 0) {
+        return createResponse(null, 'No valid fields to update', 400);
+    }
+
     const { data, error } = await supabase
         .from('rsbsa_submission')
-        .update(updateData)
+        .update(normalizedUpdateData)
         .eq('id', id)
         .select()
         .single();

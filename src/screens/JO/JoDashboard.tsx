@@ -118,8 +118,6 @@ const JoDashboard: React.FC = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-	const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
-	const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
@@ -196,7 +194,7 @@ const JoDashboard: React.FC = () => {
 				console.log('Fetching dashboard data for allocation:', selectedAllocationId, 'season:', selectedSeasonLabel);
 
 				// Fetch all dashboard data in parallel
-				const [statsResponse, trendsResponse, activityResponse] = await Promise.all([
+				const [statsResponse] = await Promise.all([
 					hasValidAllocationId ? getDashboardStats(parsedAllocationId, true) : getDashboardStats(selectedSeasonLabel),
 					hasValidAllocationId ? getMonthlyTrends(parsedAllocationId, true) : getMonthlyTrends(selectedSeasonLabel),
 					hasValidAllocationId ? getRecentActivity(5, parsedAllocationId, true) : getRecentActivity(5, selectedSeasonLabel)
@@ -227,25 +225,6 @@ const JoDashboard: React.FC = () => {
 						processingTime: { averageDays: '0' }
 					});
 				}
-
-				// Handle monthly trends
-				if (!trendsResponse.error && trendsResponse.data) {
-					setMonthlyTrends(trendsResponse.data);
-					console.log('✅ Monthly trends loaded:', trendsResponse.data.length, 'months');
-				} else {
-					console.error('Error fetching monthly trends:', trendsResponse.error);
-					setMonthlyTrends([]);
-				}
-
-				// Handle recent activity
-				if (!activityResponse.error && activityResponse.data) {
-					setRecentActivity(activityResponse.data);
-					console.log('✅ Recent activity loaded:', activityResponse.data.length, 'records');
-				} else {
-					console.error('Error fetching recent activity:', activityResponse.error);
-					setRecentActivity([]);
-				}
-
 				setLastUpdated(new Date());
 			} catch (error) {
 				console.error('Error fetching dashboard data:', error);
@@ -307,10 +286,6 @@ const JoDashboard: React.FC = () => {
 	const hasChartData = pieChartData.some(item => item.value > 0);
 
 	// Bar chart colors
-	const COLORS = {
-		fertilizer: '#6366f1',
-		seeds: '#22c55e'
-	};
 
 	if (loading) {
 		return (
@@ -736,83 +711,7 @@ const JoDashboard: React.FC = () => {
 								</div>
 							</div>
 						</div>
-
-						{/* Monthly Trends Chart */}
-						<div className="dashboard-card trends-card">
-							<div className="card-header">
-								<h3>Monthly Distribution Trend</h3>
-								<span className="card-subtitle">Last 12 Months</span>
-							</div>
-							<div className="card-content">
-								{monthlyTrends.some(m => m.fertilizer > 0 || m.seeds > 0) ? (
-									<div className="trends-chart-container">
-										<ResponsiveContainer width="100%" height={300}>
-											<BarChart data={monthlyTrends} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-												<CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-												<XAxis
-													dataKey="monthName"
-													tick={{ fontSize: 12, fill: '#6b7280' }}
-													axisLine={{ stroke: '#e5e7eb' }}
-												/>
-												<YAxis
-													tick={{ fontSize: 12, fill: '#6b7280' }}
-													axisLine={{ stroke: '#e5e7eb' }}
-												/>
-												<Tooltip
-													contentStyle={{
-														backgroundColor: '#fff',
-														border: '1px solid #e5e7eb',
-														borderRadius: '8px',
-														boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-													}}
-												/>
-												<Legend
-													wrapperStyle={{ paddingTop: '10px' }}
-													iconType="rect"
-												/>
-												<Bar
-													dataKey="fertilizer"
-													name="Fertilizer (bags)"
-													fill={COLORS.fertilizer}
-													radius={[4, 4, 0, 0]}
-												/>
-												<Bar
-													dataKey="seeds"
-													name="Seeds (kg)"
-													fill={COLORS.seeds}
-													radius={[4, 4, 0, 0]}
-												/>
-											</BarChart>
-										</ResponsiveContainer>
-									</div>
-								) : (
-									<div className="no-trends-data">
-										<div className="no-trends-visual">
-											<div className="empty-bar-chart">
-												{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((m, i) => (
-													<div key={m} className="empty-bar-group">
-														<div className="empty-bar fertilizer" style={{ height: `${20 + i * 5}%`, opacity: 0.3 }}></div>
-														<div className="empty-bar seeds" style={{ height: `${15 + i * 3}%`, opacity: 0.3 }}></div>
-														<span className="empty-bar-label">{m}</span>
-													</div>
-												))}
-											</div>
-										</div>
-										<div className="no-trends-message">
-											<span className="no-trends-icon">📊</span>
-											<p>No distribution data yet</p>
-											<span className="no-trends-hint">
-												Distribution records will appear here once farmers receive their allocations.<br />
-												Complete the distribution process to see monthly trends.
-											</span>
-										</div>
-									</div>
-								)}
-							</div>
-						</div>
-						{/* End of Seasonal Content Wrapper */}
 					</div>
-
 					{/* Footer */}
 					<div className="dashboard-footer">
 						<p>© 2026 Agricultural Distribution Management System • Municipal Agriculture Office</p>
