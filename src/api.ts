@@ -1005,7 +1005,18 @@ export const updateFarmParcel = async (id: string | number, updateData: any): Pr
     return createResponse(data, null, 200);
 };
 
-// ==================== LAND PLOTS ====================
+// // ==================== LAND TRANSFER ====================
+// export const transferLandOwnership = async (transferData: any): Promise<ApiResponse> => {
+//     const { data, error } = await supabase.rpc('transfer_land_ownership', {
+//         p_data: transferData
+//     });
+
+
+
+
+
+
+// // ==================== LAND PLOTS ====================
 
 export const getLandPlots = async (): Promise<ApiResponse> => {
     const { data, error } = await supabase
