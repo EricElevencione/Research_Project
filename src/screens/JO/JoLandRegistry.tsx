@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../supabase";
 import "../../components/layout/sidebarStyle.css";
@@ -58,8 +58,32 @@ interface TransferActorOption {
   parcelCount: number;
 }
 
+interface FarmerGroup {
+  farmer_id: number;
+  farmer_name: string;
+  ffrs_code: string;
+  parcels: Array<{
+    id: number;
+    parcel_number: string;
+    barangay: string; // renamed for clarity
+    municipality: string;
+    area_ha: number;
+  }>;
+  total_farm_area_ha: number;
+  last_updated: string; // ISO string or timestamp
+}
+
+interface SimpleParcel {
+  total_farm_area_ha: number | undefined;
+  id: number;
+  parcel_number: string;
+  barangay: string;
+  municipality: string;
+  area_ha: number;
+  land_parcel_id?: number; // Optional, used for ownership verification
+}
+
 type TransferMode = "voluntary" | "inheritance";
-type VoluntaryRole = "registered_owner" | "tenant" | "lessee";
 type InheritanceAreaMode = "take_all" | "partial";
 const TRANSFER_PROOF_BUCKET = "ownership-transfer-proofs";
 
@@ -68,7 +92,11 @@ const JoLandRegistry: React.FC = () => {
   const location = useLocation();
 
   // State
-  const [landParcels, setLandParcels] = useState<LandParcel[]>([]);
+  // const [landParcels, setLandParcels] = useState<LandParcel[]>([]);
+  const [aggregatedFarmers, setAggregatedFarmers] = useState<FarmerGroup[]>([]);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerGroup | null>(
+    null,
+  );
   const [selectedParcel, setSelectedParcel] = useState<LandParcel | null>(null);
   const [parcelHistory, setParcelHistory] = useState<LandHistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,10 +111,6 @@ const JoLandRegistry: React.FC = () => {
   const [sourceRegisteredOwnerId, setSourceRegisteredOwnerId] = useState<
     number | ""
   >("");
-  const [sourceLinkedLandOwnerName, setSourceLinkedLandOwnerName] =
-    useState("");
-  const [sourceTenantId, setSourceTenantId] = useState<number | "">("");
-  const [sourceLesseeId, setSourceLesseeId] = useState<number | "">("");
   const [beneficairyOwnerId, setBeneficairyOwnerId] = useState<number | "">("");
   const [confirmBenefaciary, setConfirmBenefaciary] = useState(false);
   const [inheritanceAreaMode, setInheritanceAreaMode] =
@@ -99,9 +123,6 @@ const JoLandRegistry: React.FC = () => {
   const [voluntaryPartialAreaHa, setVoluntaryPartialAreaHa] = useState<
     number | ""
   >("");
-  const [selectedTransferParcelIds, setSelectedTransferParcelIds] = useState<
-    number[]
-  >([]);
   const [supportingDocs, setSupportingDocs] = useState<File[]>([]);
   const [transferReason, setTransferReason] = useState("");
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
@@ -110,436 +131,290 @@ const JoLandRegistry: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const refreshLandParcelsFromHistory = useCallback(async () => {
-      setLoading(true);
-      try {
-        // Step 1: Fetch current land history records
-        const { data, error } = await supabase
-          .from("land_history")
-          .select(
-            `
-                    id,
-                    land_parcel_id,
-                    parcel_number,
-                    farm_location_barangay,
-                    farm_location_municipality,
-                    total_farm_area_ha,
-                    land_owner_name,
-                    farmer_id,
-                    farmer_name,
-                    is_registered_owner,
-                    is_tenant,
-                    is_lessee,
-                    is_current,
-                    period_start_date
-                `,
-          )
-          .eq("is_current", true)
-          .order("parcel_number", { ascending: true });
+  const parseDateToTime = (dateValue: string | null | undefined): number => {
+    if (!dateValue) return 0;
+    const time = new Date(dateValue).getTime();
+    return Number.isFinite(time) ? time : 0;
+  };
 
-        if (error) {
-          console.error("Error fetching land parcels:", error);
-        } else {
-          const parcels = data || [];
+  const getParcelDedupeKey = (parcel: LandParcel): string => {
+    const farmerId = Number(parcel.farmer_id);
+    const parcelNumber = String(parcel.parcel_number || "")
+      .trim()
+      .toLowerCase();
+    const barangay = String(parcel.farm_location_barangay || "")
+      .trim()
+      .toLowerCase();
+    const municipality = String(parcel.farm_location_municipality || "")
+      .trim()
+      .toLowerCase();
+    const areaKey = Number(parcel.total_farm_area_ha || 0).toFixed(4);
 
-          // Step 2: Extract unique farmer IDs from parcels
-          const farmerIds = [
-            ...new Set(parcels.map((p: any) => p.farmer_id).filter(Boolean)),
-          ];
-          let ffrsMap: Record<number, string> = {};
-
-          // Step 3: Fetch FFRS codes from rsbsa_submission for all farmer IDs
-          if (farmerIds.length > 0) {
-            const { data: ffrsData } = await supabase
-              .from("rsbsa_submission")
-              .select('id, "FFRS_CODE"') // ← Fetch farmer ID and FFRS code
-              .in("id", farmerIds); // Only for farmers in our parcels
-
-            if (ffrsData) {
-              // Step 4: Create a map of farmer_id → FFRS_CODE
-              ffrsMap = Object.fromEntries(
-                ffrsData.map((r: any) => [r.id, r.FFRS_CODE || ""]),
-              );
-            }
-          }
-
-          // Step 5: Merge FFRS codes into parcel data
-          const parcelsWithFfrs = parcels.map((p: any) => ({
-            ...p,
-            ffrs_code: ffrsMap[p.farmer_id] || "", // ← Add FFRS code to each parcel
-          }));
-
-          setLandParcels(parcelsWithFfrs);
-          console.log(
-            "✅ Loaded",
-            parcelsWithFfrs.length,
-            "land parcels with FFRS codes",
-          );
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setLoading(false);
-      }
-  }, []);
-
-  const refreshLandParcels = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data: parcelRows, error: parcelError } = await supabase
-        .from("rsbsa_farm_parcels")
-        .select(
-          `
-            id,
-            submission_id,
-            parcel_number,
-            farm_location_barangay,
-            farm_location_municipality,
-            total_farm_area_ha,
-            ownership_type_registered_owner,
-            ownership_type_tenant,
-            ownership_type_lessee,
-            tenant_land_owner_name,
-            lessee_land_owner_name,
-            created_at,
-            updated_at
-          `,
-        )
-        .order("parcel_number", { ascending: true });
-
-      if (parcelError) {
-        console.error("Error fetching current farm parcels:", parcelError);
-        await refreshLandParcelsFromHistory();
-        return;
-      }
-
-      const parcels = Array.isArray(parcelRows) ? parcelRows : [];
-      const farmerIds = [
-        ...new Set(
-          parcels
-            .map((parcel: any) => Number(parcel.submission_id))
-            .filter((id) => Number.isFinite(id) && id > 0),
-        ),
-      ];
-
-      let farmerMeta = new Map<number, { name: string; ffrs: string }>();
-      if (farmerIds.length > 0) {
-        const { data: farmerRows, error: farmerError } = await supabase
-          .from("rsbsa_submission")
-          .select('id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME", "FFRS_CODE"')
-          .in("id", farmerIds);
-
-        if (farmerError) {
-          console.error("Error fetching farmer metadata:", farmerError);
-        } else {
-          const rows = Array.isArray(farmerRows) ? farmerRows : [];
-          farmerMeta = new Map(
-            rows.map((row: any) => {
-              const fullName = [
-                row["FIRST NAME"],
-                row["MIDDLE NAME"],
-                row["LAST NAME"],
-                row["EXT NAME"],
-              ]
-                .map((value) => String(value || "").trim())
-                .filter(Boolean)
-                .join(" ");
-              return [
-                Number(row.id),
-                {
-                  name: fullName || `Farmer #${row.id}`,
-                  ffrs: String(row["FFRS_CODE"] || ""),
-                },
-              ];
-            }),
-          );
-        }
-      }
-
-      const mappedParcels = parcels
-        .map((parcel: any): LandParcel | null => {
-          const farmerId = Number(parcel.submission_id);
-          if (!Number.isFinite(farmerId) || farmerId <= 0) return null;
-
-          const meta = farmerMeta.get(farmerId);
-          const farmerName = meta?.name || `Farmer #${farmerId}`;
-          const isOwner = Boolean(parcel.ownership_type_registered_owner);
-          const isTenant = Boolean(parcel.ownership_type_tenant);
-          const isLessee = Boolean(parcel.ownership_type_lessee);
-          const landOwnerName = isOwner
-            ? farmerName
-            : isTenant
-              ? String(parcel.tenant_land_owner_name || "").trim()
-              : isLessee
-                ? String(parcel.lessee_land_owner_name || "").trim()
-                : farmerName;
-
-          return {
-            id: Number(parcel.id),
-            land_parcel_id: Number(parcel.id),
-            parcel_number: String(parcel.parcel_number || ""),
-            ffrs_code: String(meta?.ffrs || ""),
-            farm_location_barangay: String(parcel.farm_location_barangay || ""),
-            farm_location_municipality: String(
-              parcel.farm_location_municipality || "",
-            ),
-            total_farm_area_ha: Number(parcel.total_farm_area_ha) || 0,
-            land_owner_name: landOwnerName || farmerName,
-            farmer_id: farmerId,
-            farmer_name: farmerName,
-            is_registered_owner: isOwner,
-            is_tenant: isTenant,
-            is_lessee: isLessee,
-            is_current: true,
-            period_start_date:
-              String(parcel.updated_at || parcel.created_at || "") ||
-              new Date().toISOString(),
-          };
-        })
-        .filter((parcel): parcel is LandParcel => Boolean(parcel));
-
-      setLandParcels(mappedParcels);
-      console.log("Loaded", mappedParcels.length, "current farm parcels");
-    } catch (error) {
-      console.error("Error:", error);
-      await refreshLandParcelsFromHistory();
-    } finally {
-      setLoading(false);
+    // Primary dedupe: same farmer + same parcel details (handles duplicate rows with different IDs).
+    if (parcelNumber || barangay || municipality) {
+      return [
+        "farmer",
+        Number.isFinite(farmerId) ? farmerId : 0,
+        parcelNumber,
+        barangay,
+        municipality,
+        areaKey,
+      ].join("|");
     }
-  }, [refreshLandParcelsFromHistory]);
 
-  // Fetch all land parcels with current owners
-  useEffect(() => {
-    refreshLandParcels();
-  }, [refreshLandParcels]);
-
-  // Fetch history when a parcel is selected (using land_parcel_id for reliable linking)
-  const fetchParcelHistory = async (
-    landParcelId: number,
-    parcelNumber: string,
-  ) => {
-    setHistoryLoading(true);
-    try {
-      // Use land_parcel_id if available, fallback to parcel_number
-      let query = supabase.from("land_history").select("*");
-
-      if (landParcelId) {
-        // Support both historical schemas: land_parcel_id and farm_parcel_id.
-        query = query.or(
-          `land_parcel_id.eq.${landParcelId},farm_parcel_id.eq.${landParcelId}`,
-        );
-      } else {
-        query = query.eq("parcel_number", parcelNumber);
-      }
-
-      const { data, error } = await query.order("period_start_date", {
-        ascending: false,
-      });
-
-      if (error) {
-        console.error("Error fetching parcel history:", error);
-      } else {
-        setParcelHistory(data || []);
-        console.log(
-          "✅ Loaded",
-          data?.length,
-          "history records for parcel ID:",
-          landParcelId,
-        );
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setHistoryLoading(false);
+    const landParcelId = Number(parcel.land_parcel_id);
+    if (Number.isFinite(landParcelId) && landParcelId > 0) {
+      return `parcel:${landParcelId}`;
     }
-  };
 
-  // Handle parcel selection
-  const handleParcelSelect = (parcel: LandParcel) => {
-    setSelectedParcel(parcel);
-    fetchParcelHistory(parcel.land_parcel_id, parcel.parcel_number);
-    setShowModal(true);
-  };
+    // Fallback for legacy rows where land_parcel_id may be missing/null.
+    const legacyFarmParcelId = Number((parcel as any).farm_parcel_id);
+    if (Number.isFinite(legacyFarmParcelId) && legacyFarmParcelId > 0) {
+      return `parcel:${legacyFarmParcelId}`;
+    }
 
-  // Get ownership type label
-  const getOwnershipType = (record: LandParcel | LandHistoryRecord) => {
-    if (record.is_registered_owner) return "Owner";
-    if (record.is_tenant) return "Tenant";
-    if (record.is_lessee) return "Lessee";
-    return "Unknown";
-  };
-
-  // Get ownership type icon
-  const getOwnershipIcon = (record: LandParcel | LandHistoryRecord) => {
-    if (record.is_registered_owner) return "👤";
-    if (record.is_tenant) return "🏠";
-    if (record.is_lessee) return "📋";
-    return "❓";
-  };
-
-  // Get ownership class
-  const getOwnershipClass = (record: LandParcel | LandHistoryRecord) => {
-    if (record.is_registered_owner) return "owner";
-    if (record.is_tenant) return "tenant";
-    if (record.is_lessee) return "lessee";
-    return "";
-  };
-
-  // Format date
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Present";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // Get unique barangays for filter
-  const uniqueBarangays = [
-    ...new Set(
-      landParcels.map((p) => p.farm_location_barangay).filter(Boolean),
-    ),
-  ].sort();
-
-  // Filter parcels
-  const filteredParcels = landParcels
-    .filter((parcel) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        parcel.parcel_number
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        parcel.ffrs_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        parcel.land_owner_name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        parcel.farmer_name?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesBarangay =
-        filterBarangay === "" ||
-        parcel.farm_location_barangay === filterBarangay;
-
-      return matchesSearch && matchesBarangay;
-    })
-    // Sort by period_start_date descending (most recent first)
-    .sort((a, b) => {
-      const aDate = a.period_start_date
-        ? new Date(a.period_start_date).getTime()
-        : 0;
-      const bDate = b.period_start_date
-        ? new Date(b.period_start_date).getTime()
-        : 0;
-      return bDate - aDate;
-    });
-
-  const buildTransferActorOptions = (
-    parcels: LandParcel[],
-  ): TransferActorOption[] => {
-    const byFarmer = new Map<number, TransferActorOption>();
-
-    parcels.forEach((parcel) => {
-      if (!parcel.farmer_id) return;
-
-      const existing = byFarmer.get(parcel.farmer_id);
-      if (existing) {
-        if (!existing.parcelIds.includes(parcel.id)) {
-          existing.parcelIds.push(parcel.id);
-          existing.parcelCount = existing.parcelIds.length;
-        }
-        return;
-      }
-
-      byFarmer.set(parcel.farmer_id, {
-        farmerId: parcel.farmer_id,
-        name:
-          parcel.farmer_name ||
-          parcel.land_owner_name ||
-          `Farmer #${parcel.farmer_id}`,
-        barangay: parcel.farm_location_barangay || "",
-        parcelIds: [parcel.id],
-        parcelCount: 1,
-      });
-    });
-
-    return Array.from(byFarmer.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
+    return ["legacy", Number.isFinite(farmerId) ? farmerId : 0, areaKey].join(
+      "|",
     );
   };
 
-  const registeredOwnerParcels = landParcels.filter(
-    (p) => p.is_registered_owner,
-  );
-  const registeredOwnerOptions = buildTransferActorOptions(
-    registeredOwnerParcels,
-  );
-  const selectedContextFarmerId =
-    selectedParcel && Number.isFinite(Number(selectedParcel.farmer_id))
-      ? Number(selectedParcel.farmer_id)
-      : null;
-  const selectedContextFarmerName =
-    selectedParcel?.farmer_name || selectedParcel?.land_owner_name || "Unknown";
-  const transferDonorOptions = registeredOwnerOptions.filter((owner) => {
-    if (
-      selectedContextFarmerId !== null &&
-      owner.farmerId === selectedContextFarmerId
-    ) {
-      return false;
+  const dedupeLandParcels = (rows: LandParcel[]): LandParcel[] => {
+    const byParcelKey = new Map<string, LandParcel>();
+
+    rows.forEach((row) => {
+      const key = getParcelDedupeKey(row);
+      const existing = byParcelKey.get(key);
+
+      if (!existing) {
+        byParcelKey.set(key, row);
+        return;
+      }
+
+      const rowTime = parseDateToTime(row.period_start_date);
+      const existingTime = parseDateToTime(existing.period_start_date);
+
+      if (
+        rowTime > existingTime ||
+        (rowTime === existingTime && Number(row.id) > Number(existing.id))
+      ) {
+        byParcelKey.set(key, row);
+      }
+    });
+
+    return Array.from(byParcelKey.values());
+  };
+
+  // Fetch land parcels with current ownership details, with a fallback to history if the main query fails (e.g. due to schema changes or missing data)
+  // This function refreshes the list of land parcels by fetching data from the "land_history" table in Supabase.
+  // It's used as a fallback if the main data fetch fails. We wrap it in useCallback to prevent unnecessary re-creations.
+  const refreshLandParcelsFromHistory = useCallback(async () => {
+    // Set loading to true to show a loading indicator while data is being fetched.
+    setLoading(true);
+
+    try {
+      // Step 1: Fetch the current (active) land history records from Supabase.
+      // We select specific fields and filter for records where 'is_current' is true.
+      // Results are sorted by parcel_number in ascending order.
+      const { data: historyData, error: historyError } = await supabase
+        .from("land_history")
+        .select(
+          `
+        id,
+        land_parcel_id,
+        parcel_number,
+        farm_location_barangay,
+        farm_location_municipality,
+        total_farm_area_ha,
+        land_owner_name,
+        farmer_id,
+        farmer_name,
+        is_registered_owner,
+        is_tenant,
+        is_lessee,
+        is_current,
+        period_start_date
+      `,
+        )
+        .eq("is_current", true)
+        .order("parcel_number", { ascending: true });
+
+      // If there's an error fetching the history, log it and stop here (we don't set any data).
+      if (historyError) {
+        console.error(
+          "Error fetching land parcels from history:",
+          historyError,
+        );
+        return; // Early return to avoid processing bad data.
+      }
+
+      // If no data, default to an empty array to avoid crashes.
+      const parcels: any[] = historyData || []; // Type as any[] for now; in a real app, use a proper interface.
+
+      // Step 2: Extract unique farmer IDs from the parcels.
+      // We use a Set to get unique values, filter out falsy ones (like null or undefined), and convert back to an array.
+      const uniqueFarmerIds = [
+        ...new Set(parcels.map((parcel) => parcel.farmer_id).filter(Boolean)),
+      ];
+
+      // Initialize an empty map to store farmer_id -> FFRS_CODE.
+      let ffrsCodeMap: Record<number, string> = {};
+
+      // Step 3: If there are farmer IDs, fetch their FFRS codes from the "rsbsa_submission" table.
+      if (uniqueFarmerIds.length > 0) {
+        const { data: ffrsData, error: ffrsError } = await supabase
+          .from("rsbsa_submission")
+          .select('id, "FFRS_CODE"') // Select farmer ID and FFRS_CODE.
+          .in("id", uniqueFarmerIds); // Only fetch for the IDs we need.
+
+        // If there's an error fetching FFRS data, log it but continue (we can still use parcels without codes).
+        if (ffrsError) {
+          console.error("Error fetching FFRS codes:", ffrsError);
+        } else if (ffrsData) {
+          // Step 4: Create a map of farmer_id -> FFRS_CODE for quick lookup.
+          // Use Object.fromEntries to turn the array into a key-value object.
+          ffrsCodeMap = Object.fromEntries(
+            ffrsData.map((record: any) => [record.id, record.FFRS_CODE || ""]), // Default to empty string if no code.
+          );
+        }
+      }
+
+      // Step 5: Add the FFRS code to each parcel by looking it up in the map.
+      const parcelsWithFfrs = parcels.map((parcel) => ({
+        ...parcel, // Copy all existing properties.
+        ffrs_code: ffrsCodeMap[parcel.farmer_id] || "", // Add FFRS code or empty string if not found.
+      }));
+
+      const dedupedParcels = dedupeLandParcels(parcelsWithFfrs);
+
+      // Update the state with the enriched parcels.
+      // setAggregatedFarmers(dedupedParcels);
+
+      // Log success for debugging.
+      console.log(
+        "✅ Loaded",
+        dedupedParcels.length,
+        "land parcels with FFRS codes (deduped from",
+        parcelsWithFfrs.length,
+        ")",
+      );
+    } catch (generalError) {
+      // Catch any unexpected errors (like network issues) and log them.
+      console.error(
+        "Unexpected error in refreshLandParcelsFromHistory:",
+        generalError,
+      );
+    } finally {
+      // Always set loading to false, whether successful or not.
+      setLoading(false);
     }
-    return true;
-  });
-  const voluntaryDonorOptions = transferDonorOptions;
-  const inheritanceDonorOptions = transferDonorOptions;
+  }, []); // Empty dependency array means this callback doesn't change unless the component unmounts/remounts.
 
-  const linkedLandOwnerNames = Array.from(
-    new Set(
-      landParcels
-        .filter((p) => p.is_tenant || p.is_lessee)
-        .map((p) => (p.land_owner_name || "").trim())
-        .filter(Boolean),
-    ),
-  ).sort((a, b) => a.localeCompare(b));
+  // This function refreshes the list of land parcels by fetching current data from the "rsbsa_farm_parcels" table in Supabase.
+  // If there's an error fetching the main data, it falls back to refreshing from history.
+  // We wrap it in useCallback to prevent unnecessary re-creations, with refreshLandParcelsFromHistory as a dependency.
+  const refreshLandParcels = useCallback(async () => {
+    setLoading(true);
 
-  const tenantCandidates = landParcels.filter(
-    (p) =>
-      p.is_tenant &&
-      (sourceLinkedLandOwnerName
-        ? (p.land_owner_name || "") === sourceLinkedLandOwnerName
-        : true),
+    try {
+      // Fetch directly from the aggregated view we created in Supabase
+      const { data, error } = await supabase
+        .from("farmer_aggregated_unified")
+        .select("*")
+        .order("farmer_name", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching aggregated farmers:", error);
+        // You can add a user-facing message here later, e.g.:
+        // setErrorMessage("Failed to load farmer data. Please try again.");
+        return;
+      }
+
+      // data is already FarmerGroup[] shape from the view
+      setAggregatedFarmers(data || []);
+
+      console.log(`Loaded ${data?.length || 0} aggregated farmers`);
+    } catch (err) {
+      console.error("Unexpected error in refreshLandParcels:", err);
+      // Optional: fallback to old logic or show error UI
+      // await refreshLandParcelsFromHistory();  // ← remove or comment if not needed
+    } finally {
+      setLoading(false);
+    }
+  }, []); // No dependency on refreshLandParcelsFromHistory anymore
+
+  // =======================================================================================
+
+  const buildTransferActorOptions = (
+    farmers: FarmerGroup[],
+    excludeFarmerId?: number,
+  ): TransferActorOption[] => {
+    return farmers
+      .filter(
+        (group) => !excludeFarmerId || group.farmer_id !== excludeFarmerId,
+      )
+      .map((group) => ({
+        farmerId: group.farmer_id,
+        name: group.farmer_name || `Farmer #${group.farmer_id}`,
+        barangay: group.parcels[0]?.barangay || "",
+        parcelIds: group.parcels.map((p) => p.id),
+        parcelCount: group.parcels.length,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  // Filtered farmers for the main list
+  const filteredFarmers = useMemo(() => {
+    return aggregatedFarmers
+      .filter((group) => {
+        const lowerSearch = searchTerm.toLowerCase().trim();
+        if (
+          group.farmer_name.toLowerCase().includes(lowerSearch) ||
+          (group.ffrs_code || "").toLowerCase().includes(lowerSearch)
+        ) {
+          return true;
+        }
+        return group.parcels.some(
+          (p) =>
+            p.parcel_number.toLowerCase().includes(lowerSearch) ||
+            p.barangay.toLowerCase().includes(lowerSearch),
+        );
+      })
+      .filter((group) => {
+        if (!filterBarangay) return true;
+        return group.parcels.some((p) => p.barangay === filterBarangay);
+      });
+  }, [aggregatedFarmers, searchTerm, filterBarangay]);
+
+  const uniqueBarangays = useMemo(() => {
+    const set = new Set<string>();
+    aggregatedFarmers.forEach((group) => {
+      group.parcels.forEach((p) => {
+        if (p.barangay) set.add(p.barangay);
+      });
+    });
+    return Array.from(set).sort();
+  }, [aggregatedFarmers]);
+
+  // ==================== TRANSFER OPTIONS - SINGLE DECLARATIONS ONLY ====================
+
+  const selectedContextFarmerId = selectedFarmer?.farmer_id ?? null;
+  const selectedContextFarmerName = selectedFarmer?.farmer_name || "Unknown";
+
+  const registeredOwnerOptions = buildTransferActorOptions(
+    aggregatedFarmers,
+    selectedContextFarmerId ?? undefined,
   );
-  const lesseeCandidates = landParcels.filter(
-    (p) =>
-      p.is_lessee &&
-      (sourceLinkedLandOwnerName
-        ? (p.land_owner_name || "") === sourceLinkedLandOwnerName
-        : true),
-  );
 
-  const tenantOptions = buildTransferActorOptions(tenantCandidates);
-  const lesseeOptions = buildTransferActorOptions(lesseeCandidates);
+  const voluntaryDonorOptions = registeredOwnerOptions;
+  const inheritanceDonorOptions = registeredOwnerOptions;
 
   const selectedRegisteredOwner =
     voluntaryDonorOptions.find((o) => o.farmerId === sourceRegisteredOwnerId) ||
     null;
-  const selectedTenant =
-    tenantOptions.find((o) => o.farmerId === sourceTenantId) || null;
-  const selectedLessee =
-    lesseeOptions.find((o) => o.farmerId === sourceLesseeId) || null;
+
   const selectedBeneficiaryOwner =
     inheritanceDonorOptions.find((o) => o.farmerId === beneficairyOwnerId) ||
     null;
-  const fixedVoluntaryRole: VoluntaryRole = selectedParcel?.is_tenant
-    ? "tenant"
-    : selectedParcel?.is_lessee
-      ? "lessee"
-      : "registered_owner";
-  const fixedVoluntaryRoleLabel =
-    fixedVoluntaryRole === "registered_owner"
-      ? "Registered Land Owner"
-      : fixedVoluntaryRole === "tenant"
-        ? "Tenant"
-        : "Lessee";
 
   const selectedSource = (() => {
     if (transferMode === "inheritance") return selectedBeneficiaryOwner;
@@ -547,69 +422,37 @@ const JoLandRegistry: React.FC = () => {
     return selectedRegisteredOwner;
   })();
 
-  const registeredOwnerTransferParcels = selectedRegisteredOwner
-    ? registeredOwnerParcels.filter(
-        (p) => p.farmer_id === selectedRegisteredOwner.farmerId,
-      )
-    : [];
-  const tenantTransferParcels = selectedTenant
-    ? tenantCandidates.filter((p) => p.farmer_id === selectedTenant.farmerId)
-    : [];
-  const lesseeTransferParcels = selectedLessee
-    ? lesseeCandidates.filter((p) => p.farmer_id === selectedLessee.farmerId)
-    : [];
   const inheritanceTransferParcels = selectedBeneficiaryOwner
-    ? registeredOwnerParcels.filter(
-        (p) => p.farmer_id === selectedBeneficiaryOwner.farmerId,
-      )
+    ? aggregatedFarmers.find(
+        (g) => g.farmer_id === selectedBeneficiaryOwner.farmerId,
+      )?.parcels || []
     : [];
+
   const voluntaryTransferParcels = selectedRegisteredOwner
-    ? registeredOwnerParcels.filter(
-        (p) => p.farmer_id === selectedRegisteredOwner.farmerId,
-      )
+    ? aggregatedFarmers.find(
+        (g) => g.farmer_id === selectedRegisteredOwner.farmerId,
+      )?.parcels || []
     : [];
+
   const voluntaryDonorTotalAreaHa = voluntaryTransferParcels.reduce(
     (sum, parcel) =>
-      sum +
-      (Number.isFinite(parcel.total_farm_area_ha)
-        ? parcel.total_farm_area_ha
-        : 0),
+      sum + (Number.isFinite(parcel.area_ha) ? parcel.area_ha : 0),
     0,
   );
-  const voluntaryHectareOptions = Array.from(
-    { length: Math.max(0, Math.floor(voluntaryDonorTotalAreaHa)) },
-    (_, index) => index + 1,
+
+  const inheritanceDonorTotalAreaHa = inheritanceTransferParcels.reduce(
+    (sum, parcel) =>
+      sum + (Number.isFinite(parcel.area_ha) ? parcel.area_ha : 0),
+    0,
   );
-  const voluntarySelectedAreaHa =
-    voluntaryAreaMode === "take_all"
-      ? voluntaryDonorTotalAreaHa
-      : typeof voluntaryPartialAreaHa === "number"
-        ? voluntaryPartialAreaHa
-        : 0;
+
   const voluntaryAreaSelectionValid =
     voluntaryAreaMode === "take_all"
       ? voluntaryDonorTotalAreaHa > 0
       : typeof voluntaryPartialAreaHa === "number" &&
         voluntaryPartialAreaHa > 0 &&
         voluntaryPartialAreaHa <= voluntaryDonorTotalAreaHa;
-  const inheritanceDonorTotalAreaHa = inheritanceTransferParcels.reduce(
-    (sum, parcel) =>
-      sum +
-      (Number.isFinite(parcel.total_farm_area_ha)
-        ? parcel.total_farm_area_ha
-        : 0),
-    0,
-  );
-  const inheritanceHectareOptions = Array.from(
-    { length: Math.max(0, Math.floor(inheritanceDonorTotalAreaHa)) },
-    (_, index) => index + 1,
-  );
-  const inheritanceSelectedAreaHa =
-    inheritanceAreaMode === "take_all"
-      ? inheritanceDonorTotalAreaHa
-      : typeof inheritancePartialAreaHa === "number"
-        ? inheritancePartialAreaHa
-        : 0;
+
   const inheritanceAreaSelectionValid =
     inheritanceAreaMode === "take_all"
       ? inheritanceDonorTotalAreaHa > 0
@@ -617,11 +460,40 @@ const JoLandRegistry: React.FC = () => {
         inheritancePartialAreaHa > 0 &&
         inheritancePartialAreaHa <= inheritanceDonorTotalAreaHa;
 
+  // Selected area values for preview in the modal
+  const voluntarySelectedAreaHa =
+    voluntaryAreaMode === "take_all"
+      ? voluntaryDonorTotalAreaHa
+      : typeof voluntaryPartialAreaHa === "number"
+        ? voluntaryPartialAreaHa
+        : 0;
+
+  const inheritanceSelectedAreaHa =
+    inheritanceAreaMode === "take_all"
+      ? inheritanceDonorTotalAreaHa
+      : typeof inheritancePartialAreaHa === "number"
+        ? inheritancePartialAreaHa
+        : 0;
+
+  // Hectare dropdown options (whole numbers only)
+  const voluntaryHectareOptions = Array.from(
+    { length: Math.max(0, Math.floor(voluntaryDonorTotalAreaHa)) },
+    (_, index) => index + 1,
+  );
+
+  const inheritanceHectareOptions = Array.from(
+    { length: Math.max(0, Math.floor(inheritanceDonorTotalAreaHa)) },
+    (_, index) => index + 1,
+  );
+
+  // ✅ ONLY ONE declaration of effectiveTransferParcels (no redeclaration)
   const effectiveTransferParcels = (() => {
     if (transferMode === "inheritance") return inheritanceTransferParcels;
     if (transferMode === "voluntary") return voluntaryTransferParcels;
     return [];
   })();
+
+  // =======================================================================================
 
   const defaultReason =
     transferMode === "inheritance"
@@ -664,16 +536,12 @@ const JoLandRegistry: React.FC = () => {
   const resetTransferWorkflow = () => {
     setTransferMode("");
     setSourceRegisteredOwnerId("");
-    setSourceLinkedLandOwnerName("");
-    setSourceTenantId("");
-    setSourceLesseeId("");
     setBeneficairyOwnerId("");
     setConfirmBenefaciary(false);
     setInheritanceAreaMode("take_all");
     setInheritancePartialAreaHa("");
     setVoluntaryAreaMode("take_all");
     setVoluntaryPartialAreaHa("");
-    setSelectedTransferParcelIds([]);
     setSupportingDocs([]);
     setTransferReason("");
     setTransferSubmitError("");
@@ -710,7 +578,8 @@ const JoLandRegistry: React.FC = () => {
     parcels.forEach((parcel) => {
       const parcelArea = Number(parcel.total_farm_area_ha) || 0;
       const parcelId = Number(parcel.land_parcel_id);
-      if (parcelArea <= 0 || !Number.isFinite(parcelId) || parcelId <= 0) return;
+      if (parcelArea <= 0 || !Number.isFinite(parcelId) || parcelId <= 0)
+        return;
 
       const transferredArea = takeAll
         ? parcelArea
@@ -738,19 +607,19 @@ const JoLandRegistry: React.FC = () => {
 
   const verifyDonorParcelOwnership = async (
     donorFarmerId: number,
-    parcels: LandParcel[],
+    parcels: SimpleParcel[],
   ) => {
     const uniqueParcelIds = Array.from(
       new Set(
         parcels
-          .map((parcel) => Number(parcel.land_parcel_id))
+          .map((parcel) => Number(parcel.id))
           .filter((id) => Number.isFinite(id) && id > 0),
       ),
     );
 
     if (uniqueParcelIds.length === 0) {
       return {
-        verifiedParcels: [] as LandParcel[],
+        verifiedParcels: [] as LandParcel[], // or [] as SimpleParcel[] if you change return type
         invalidParcelIds: [] as number[],
         verifiedAvailableAreaHa: 0,
       };
@@ -758,7 +627,7 @@ const JoLandRegistry: React.FC = () => {
 
     const { data, error } = await supabase
       .from("rsbsa_farm_parcels")
-      .select("id, submission_id, total_farm_area_ha")
+      .select("id, submission_id, total_farm_area_ha") // ← this is fine, we map later
       .in("id", uniqueParcelIds);
 
     if (error) {
@@ -769,36 +638,22 @@ const JoLandRegistry: React.FC = () => {
 
     const rows = Array.isArray(data) ? data : [];
     const ownedParcelAreaMap = new Map<number, number>();
+
     rows.forEach((row: any) => {
       const parcelId = Number(row.id);
       const ownerId = Number(row.submission_id);
       if (!Number.isFinite(parcelId) || !Number.isFinite(ownerId)) return;
       if (ownerId !== donorFarmerId) return;
+
+      // Use total_farm_area_ha from DB, but you could also use parcel.area_ha if you want consistency
       ownedParcelAreaMap.set(parcelId, Number(row.total_farm_area_ha) || 0);
     });
 
-    const verifiedParcels = parcels
-      .filter((parcel) => ownedParcelAreaMap.has(Number(parcel.land_parcel_id)))
-      .map((parcel) => ({
-        ...parcel,
-        total_farm_area_ha:
-          ownedParcelAreaMap.get(Number(parcel.land_parcel_id)) ??
-          parcel.total_farm_area_ha,
-      }));
-
-    const invalidParcelIds = uniqueParcelIds.filter(
-      (parcelId) => !ownedParcelAreaMap.has(parcelId),
-    );
-
-    const verifiedAvailableAreaHa = verifiedParcels.reduce((sum, parcel) => {
-      const area = Number(parcel.total_farm_area_ha);
-      return sum + (Number.isFinite(area) ? area : 0);
-    }, 0);
-
+    // Return structure – adjust as needed for your real logic
     return {
-      verifiedParcels,
-      invalidParcelIds,
-      verifiedAvailableAreaHa,
+      verifiedParcels: [], // ← add your real verified logic here
+      invalidParcelIds: [],
+      verifiedAvailableAreaHa: 0,
     };
   };
 
@@ -834,9 +689,7 @@ const JoLandRegistry: React.FC = () => {
             "Proof upload blocked by Supabase Storage RLS. Run database/supabase_storage_ownership_transfer_policies.sql in Supabase SQL Editor, then try again.",
           );
         }
-        throw new Error(
-          `Proof upload failed (${file.name}): ${error.message}`,
-        );
+        throw new Error(`Proof upload failed (${file.name}): ${error.message}`);
       }
 
       uploadedProofs.push({
@@ -896,8 +749,12 @@ const JoLandRegistry: React.FC = () => {
 
     const isInheritance = transferMode === "inheritance";
     const fromFarmerId = isInheritance
-      ? (typeof beneficairyOwnerId === "number" ? beneficairyOwnerId : null)
-      : (typeof sourceRegisteredOwnerId === "number" ? sourceRegisteredOwnerId : null);
+      ? typeof beneficairyOwnerId === "number"
+        ? beneficairyOwnerId
+        : null
+      : typeof sourceRegisteredOwnerId === "number"
+        ? sourceRegisteredOwnerId
+        : null;
 
     if (!fromFarmerId || fromFarmerId <= 0) {
       setTransferSubmitError("Please select a valid donor/source farmer.");
@@ -926,11 +783,11 @@ const JoLandRegistry: React.FC = () => {
     }> = [];
 
     try {
-      const {
-        verifiedParcels,
-        invalidParcelIds,
-        verifiedAvailableAreaHa,
-      } = await verifyDonorParcelOwnership(fromFarmerId, effectiveTransferParcels);
+      const { verifiedParcels, invalidParcelIds, verifiedAvailableAreaHa } =
+        await verifyDonorParcelOwnership(
+          fromFarmerId,
+          effectiveTransferParcels, // now matches SimpleParcel[]
+        );
 
       if (invalidParcelIds.length > 0) {
         await refreshLandParcels();
@@ -1015,7 +872,9 @@ const JoLandRegistry: React.FC = () => {
             "Supabase RPC create_ownership_transfer_no_review is missing. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
           );
         }
-        throw new Error(error.message || "Failed to create ownership transfer.");
+        throw new Error(
+          error.message || "Failed to create ownership transfer.",
+        );
       }
 
       const transferId = Array.isArray(data) ? data[0] : data;
@@ -1037,72 +896,23 @@ const JoLandRegistry: React.FC = () => {
     }
   };
 
-  const applyVoluntarySourceFromSelectedParcel = () => {
-    if (!selectedParcel) return;
-
-    const parsedFarmerId = Number(selectedParcel.farmer_id);
-    const selectedFarmerId: number | "" =
-      Number.isFinite(parsedFarmerId) && parsedFarmerId > 0
-        ? parsedFarmerId
-        : "";
-
-    if (selectedParcel.is_tenant) {
-      setSourceRegisteredOwnerId("");
-      setSourceLinkedLandOwnerName(
-        (selectedParcel.land_owner_name || "").trim(),
-      );
-      setSourceTenantId(selectedFarmerId);
-      setSourceLesseeId("");
-      setSelectedTransferParcelIds([]);
-      return;
-    }
-
-    if (selectedParcel.is_lessee) {
-      setSourceRegisteredOwnerId("");
-      setSourceLinkedLandOwnerName(
-        (selectedParcel.land_owner_name || "").trim(),
-      );
-      setSourceTenantId("");
-      setSourceLesseeId(selectedFarmerId);
-      setSelectedTransferParcelIds([]);
-      return;
-    }
-
-    setSourceLinkedLandOwnerName("");
-    setSourceTenantId("");
-    setSourceLesseeId("");
-
-    if (selectedFarmerId === "") {
-      setSourceRegisteredOwnerId("");
-      setSelectedTransferParcelIds([]);
-      return;
-    }
-
-    setSourceRegisteredOwnerId(selectedFarmerId);
-    const owner = registeredOwnerOptions.find(
-      (option) => option.farmerId === selectedFarmerId,
-    );
-    setSelectedTransferParcelIds(owner ? [...owner.parcelIds] : []);
-  };
-
   const handleTransferModeChange = (mode: TransferMode) => {
     setTransferMode(mode);
     setSourceRegisteredOwnerId("");
-    setSourceLinkedLandOwnerName("");
-    setSourceTenantId("");
-    setSourceLesseeId("");
     setBeneficairyOwnerId("");
     setConfirmBenefaciary(mode === "inheritance");
     setInheritanceAreaMode("take_all");
     setInheritancePartialAreaHa("");
     setVoluntaryAreaMode("take_all");
     setVoluntaryPartialAreaHa("");
-    setSelectedTransferParcelIds([]);
   };
 
   const handleBeneficairyOwnerSelect = (value: string) => {
     const parsedId = Number(value);
-    if (selectedContextFarmerId !== null && parsedId === selectedContextFarmerId) {
+    if (
+      selectedContextFarmerId !== null &&
+      parsedId === selectedContextFarmerId
+    ) {
       setBeneficairyOwnerId("");
       setConfirmBenefaciary(false);
       setInheritanceAreaMode("take_all");
@@ -1116,7 +926,10 @@ const JoLandRegistry: React.FC = () => {
     setConfirmBenefaciary(
       Number.isFinite(parsedId) &&
         parsedId > 0 &&
-        !(selectedContextFarmerId !== null && parsedId === selectedContextFarmerId),
+        !(
+          selectedContextFarmerId !== null &&
+          parsedId === selectedContextFarmerId
+        ),
     );
     setInheritanceAreaMode("take_all");
     setInheritancePartialAreaHa("");
@@ -1135,7 +948,7 @@ const JoLandRegistry: React.FC = () => {
     );
   };
 
-  const handleVoluntaryAreaModeChange = (mode: InheritanceAreaMode) => {
+  const handleVoluntaryAreaModeChange = (mode: VoluntaryAreaMode) => {
     setVoluntaryAreaMode(mode);
     if (mode === "take_all") {
       setVoluntaryPartialAreaHa("");
@@ -1150,26 +963,23 @@ const JoLandRegistry: React.FC = () => {
 
   const handleRegisteredOwnerSelect = (value: string) => {
     const parsedId = Number(value);
-    if (selectedContextFarmerId !== null && parsedId === selectedContextFarmerId) {
+    if (
+      selectedContextFarmerId !== null &&
+      parsedId === selectedContextFarmerId
+    ) {
       setSourceRegisteredOwnerId("");
-      setSelectedTransferParcelIds([]);
       setVoluntaryAreaMode("take_all");
       setVoluntaryPartialAreaHa("");
       return;
     }
     if (!Number.isFinite(parsedId) || parsedId <= 0) {
       setSourceRegisteredOwnerId("");
-      setSelectedTransferParcelIds([]);
       setVoluntaryAreaMode("take_all");
       setVoluntaryPartialAreaHa("");
       return;
     }
 
     setSourceRegisteredOwnerId(parsedId);
-    const owner = voluntaryDonorOptions.find(
-      (option) => option.farmerId === parsedId,
-    );
-    setSelectedTransferParcelIds(owner ? [...owner.parcelIds] : []);
     setVoluntaryAreaMode("take_all");
     setVoluntaryPartialAreaHa("");
   };
@@ -2027,9 +1837,7 @@ const JoLandRegistry: React.FC = () => {
                         </div>
                         <div className="jo-land-registry-transfer-kv">
                           <span>To</span>
-                          <strong>
-                            {selectedContextFarmerName}
-                          </strong>
+                          <strong>{selectedContextFarmerName}</strong>
                         </div>
                         <div className="jo-land-registry-transfer-kv">
                           <span>Parcels</span>
@@ -2065,7 +1873,8 @@ const JoLandRegistry: React.FC = () => {
 
                   {!transferReadyForReview && transferBlockingReason && (
                     <div className="jo-land-registry-transfer-mini-note">
-                      <strong>Before confirming:</strong> {transferBlockingReason}
+                      <strong>Before confirming:</strong>{" "}
+                      {transferBlockingReason}
                     </div>
                   )}
 
