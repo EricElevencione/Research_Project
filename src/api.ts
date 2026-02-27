@@ -522,6 +522,80 @@ export const getAvailableSeasons = async (): Promise<ApiResponse> => {
     }
 };
 
+// ==================== TECHNICIAN DASHBOARD ====================
+
+export const getTechDashboardData = async (): Promise<ApiResponse> => {
+    try {
+        const [farmersResult, plotsResult, barangayResult] = await Promise.all([
+            supabase.from('rsbsa_submission').select('id, "FIRST NAME", "LAST NAME", "BARANGAY", "FFRS_CODE"'),
+            supabase.from('land_plots').select('id, farmer_id, ffrs_id, barangay'),
+            supabase.from('barangay_codes').select('barangay_name')
+        ]);
+
+        if (farmersResult.error) throw farmersResult.error;
+
+        const farmers = farmersResult.data || [];
+        const plots = plotsResult.data || [];
+        const barangayCodes = barangayResult.data || [];
+
+        const plottedFarmerIds = new Set<number>();
+        const plottedFfrs = new Set<string>();
+
+        plots.forEach((p: any) => {
+            if (p.farmer_id) plottedFarmerIds.add(p.farmer_id);
+            if (p.ffrs_id) plottedFfrs.add(p.ffrs_id.toUpperCase());
+        });
+
+        const farmerPlotStatus = farmers.map((f: any) => ({
+            ...f,
+            isPlotted: plottedFarmerIds.has(f.id) ||
+                (f.FFRS_CODE && plottedFfrs.has(f.FFRS_CODE.toUpperCase()))
+        }));
+
+        const plottedCount = farmerPlotStatus.filter((f: any) => f.isPlotted).length;
+        const unplottedCount = farmerPlotStatus.filter((f: any) => !f.isPlotted).length;
+
+        const barangayNames: string[] = barangayCodes.length > 0
+            ? barangayCodes.map((b: any) => b.barangay_name)
+            : [...new Set(farmers.map((f: any) => f.BARANGAY).filter(Boolean) as string[])].sort();
+
+        const barangayChecklist = barangayNames.map(brgy => {
+            const bLower = brgy.toLowerCase().trim();
+            const farmersInBrgy = farmerPlotStatus.filter((f: any) =>
+                (f.BARANGAY || '').toLowerCase().trim() === bLower
+            );
+            const plottedInBrgy = farmersInBrgy.filter((f: any) => f.isPlotted);
+            const plotsInBrgy = plots.filter((p: any) =>
+                (p.barangay || '').toLowerCase().trim() === bLower
+            );
+            return {
+                barangay: brgy,
+                farmerCount: farmersInBrgy.length,
+                plottedParcels: plotsInBrgy.length,
+                plottedFarmers: plottedInBrgy.length,
+                isComplete: farmersInBrgy.length > 0 && plottedInBrgy.length >= farmersInBrgy.length
+            };
+        });
+
+        const unplottedByBarangay: Record<string, number> = {};
+        farmerPlotStatus.filter((f: any) => !f.isPlotted).forEach((f: any) => {
+            const brgy = (f.BARANGAY || 'Unknown').trim();
+            unplottedByBarangay[brgy] = (unplottedByBarangay[brgy] || 0) + 1;
+        });
+
+        return createResponse({
+            totalFarmers: farmers.length,
+            totalPlotted: plottedCount,
+            totalUnplotted: unplottedCount,
+            barangayChecklist,
+            unplottedByBarangay
+        }, null, 200);
+    } catch (error: any) {
+        console.error('Error fetching tech dashboard data:', error);
+        return createResponse(null, error.message, 500);
+    }
+};
+
 // ==================== RSBSA SUBMISSION ====================
 
 export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
@@ -1691,6 +1765,9 @@ export default {
     getMonthlyTrends,
     getRecentActivity,
     getAvailableSeasons,
+
+    // Technician Dashboard
+    getTechDashboardData,
 
     // Universal fetch
     apiFetch

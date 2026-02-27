@@ -27,13 +27,12 @@
     min-width: 250px;
     width: 250px;
     height: 100%;
-    max-height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: visible;
-    /* allow active pill to protrude */
     font-family: var(--font-family);
     position: relative;
+    flex-shrink: 0;
 }
 
 /* Ensure buttons use the same system font */

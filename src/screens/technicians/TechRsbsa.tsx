@@ -15,6 +15,10 @@ interface RSBSARecord {
   id: string;
   referenceNumber: string;
   farmerName: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  extName: string;
   farmerAddress: string;
   farmLocation: string;
   gender: string;
@@ -23,8 +27,8 @@ interface RSBSARecord {
   dateSubmitted: string;
   status: string;
   landParcel: string;
-  parcelArea?: string; // Add parcelArea as optional field
-  parcelCount?: number; // Number of parcels owned by the farmer
+  parcelArea?: string;
+  parcelCount?: number;
   ownershipType: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -483,14 +487,6 @@ const TechRsbsa: React.FC = () => {
                         </tr>
                       ) : (
                         filteredOwners.map((record) => {
-                          // Parse the farmer name to extract individual components
-                          const nameParts = record.farmerName.split(', ');
-                          const lastName = nameParts[0] || '';
-                          const firstName = nameParts[1] || '';
-                          const middleName = nameParts[2] || '';
-                          const extName = nameParts[3] || '';
-
-                          // Get parcel area from the record and format it
                           const parcelArea = record.parcelArea ?
                             (record.parcelArea.includes('hectares') ? record.parcelArea : `${record.parcelArea} hectares`)
                             : 'N/A';
@@ -502,10 +498,10 @@ const TechRsbsa: React.FC = () => {
                               style={{ cursor: 'pointer' }}
                             >
                               <td className="tech-rsbsa-ffrs-id">{record.referenceNumber || 'N/A'}</td>
-                              <td>{lastName}</td>
-                              <td>{firstName}</td>
-                              <td>{middleName}</td>
-                              <td>{extName}</td>
+                              <td>{record.lastName || ''}</td>
+                              <td>{record.firstName || ''}</td>
+                              <td>{record.middleName || ''}</td>
+                              <td>{record.extName || ''}</td>
                               <td>{record.gender || 'N/A'}</td>
                               <td>{getDisplayAge(record)}</td>
                               <td>{record.farmerAddress || 'N/A'}</td>
@@ -537,7 +533,7 @@ const TechRsbsa: React.FC = () => {
               </>
             )}
           </div>
-        </div>
+        </div>
         {/* Action Menu - rendered outside table */}
         {openMenuId && menuPosition && (
           <div
