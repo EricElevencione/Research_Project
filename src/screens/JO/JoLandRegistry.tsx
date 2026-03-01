@@ -1,6 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../supabase";
+import {
+  usePartialTransfer,
+  ParcelSplitInput,
+} from "../../components/land_registry/usePartialTransfer";
+import { PartialParcelTransferSection } from "../../components/land_registry/PartialParcelTransferSection";
 import "../../components/layout/sidebarStyle.css";
 import "../../assets/css/jo css/JoLandRegistryStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
@@ -32,9 +37,13 @@ interface LandParcel {
 interface LandHistoryRecord {
   id: number;
   land_parcel_id: number;
+  farm_parcel_id: number | null;
+  farmer_id: number | null;
   parcel_number: string;
   farm_location_barangay: string;
   total_farm_area_ha: number;
+  transferred_area_ha: number | null;
+  remaining_area_ha: number | null;
   land_owner_name: string;
   farmer_name: string;
   farmer_ffrs_code: string;
@@ -46,6 +55,7 @@ interface LandHistoryRecord {
   is_current: boolean;
   change_type: string;
   change_reason: string;
+  notes: string | null;
   previous_history_id: number | null;
 }
 
@@ -58,6 +68,29 @@ interface TransferActorOption {
   parcelCount: number;
 }
 
+interface FarmerGroup {
+  farmer_id: number;
+  farmer_name: string;
+  ffrs_code: string;
+  parcels: Array<{
+    id: number;
+    parcel_number: string;
+    farm_location_barangay: string; // ← match real name
+    farm_location_municipality: string; // ← match real name
+    total_farm_area_ha: number; // ← match real name
+    is_registered_owner?: boolean; // optional if not always present
+    is_tenant?: boolean;
+    is_lessee?: boolean;
+    parent_parcel_id?: number | null; // references donor parcel for splits
+    split_origin_area_ha?: number | null; // original area before split
+  }>;
+  total_farm_area_ha: number;
+  last_updated: string;
+  has_registered_owner: boolean;
+  has_tenant: boolean;
+  has_lessee: boolean;
+}
+
 type TransferMode = "voluntary" | "inheritance";
 type VoluntaryRole = "registered_owner" | "tenant" | "lessee";
 type InheritanceAreaMode = "take_all" | "partial";
@@ -68,9 +101,16 @@ const JoLandRegistry: React.FC = () => {
   const location = useLocation();
 
   // State
+  const [aggregatedFarmers, setAggregatedFarmers] = useState<FarmerGroup[]>([]);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerGroup | null>(
+    null,
+  );
   const [landParcels, setLandParcels] = useState<LandParcel[]>([]);
   const [selectedParcel, setSelectedParcel] = useState<LandParcel | null>(null);
   const [parcelHistory, setParcelHistory] = useState<LandHistoryRecord[]>([]);
+  const [farmerNameMap, setFarmerNameMap] = useState<Map<number, string>>(
+    new Map(),
+  );
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -108,208 +148,54 @@ const JoLandRegistry: React.FC = () => {
   const [transferSubmitError, setTransferSubmitError] = useState("");
   const [transferSubmitSuccess, setTransferSubmitSuccess] = useState("");
 
+  const {
+    parcelScope,
+    setParcelScope,
+    parcelSplitInputs,
+    setParcelTransferArea,
+    initSplitInputs,
+    resetPartialState,
+    validateSplitInputs,
+    executePartialTransfers,
+    partialSubmitting,
+    partialError,
+    setPartialError,
+  } = usePartialTransfer();
+
   const isActive = (path: string) => location.pathname === path;
-
-  const refreshLandParcelsFromHistory = useCallback(async () => {
-      setLoading(true);
-      try {
-        // Step 1: Fetch current land history records
-        const { data, error } = await supabase
-          .from("land_history")
-          .select(
-            `
-                    id,
-                    land_parcel_id,
-                    parcel_number,
-                    farm_location_barangay,
-                    farm_location_municipality,
-                    total_farm_area_ha,
-                    land_owner_name,
-                    farmer_id,
-                    farmer_name,
-                    is_registered_owner,
-                    is_tenant,
-                    is_lessee,
-                    is_current,
-                    period_start_date
-                `,
-          )
-          .eq("is_current", true)
-          .order("parcel_number", { ascending: true });
-
-        if (error) {
-          console.error("Error fetching land parcels:", error);
-        } else {
-          const parcels = data || [];
-
-          // Step 2: Extract unique farmer IDs from parcels
-          const farmerIds = [
-            ...new Set(parcels.map((p: any) => p.farmer_id).filter(Boolean)),
-          ];
-          let ffrsMap: Record<number, string> = {};
-
-          // Step 3: Fetch FFRS codes from rsbsa_submission for all farmer IDs
-          if (farmerIds.length > 0) {
-            const { data: ffrsData } = await supabase
-              .from("rsbsa_submission")
-              .select('id, "FFRS_CODE"') // ← Fetch farmer ID and FFRS code
-              .in("id", farmerIds); // Only for farmers in our parcels
-
-            if (ffrsData) {
-              // Step 4: Create a map of farmer_id → FFRS_CODE
-              ffrsMap = Object.fromEntries(
-                ffrsData.map((r: any) => [r.id, r.FFRS_CODE || ""]),
-              );
-            }
-          }
-
-          // Step 5: Merge FFRS codes into parcel data
-          const parcelsWithFfrs = parcels.map((p: any) => ({
-            ...p,
-            ffrs_code: ffrsMap[p.farmer_id] || "", // ← Add FFRS code to each parcel
-          }));
-
-          setLandParcels(parcelsWithFfrs);
-          console.log(
-            "✅ Loaded",
-            parcelsWithFfrs.length,
-            "land parcels with FFRS codes",
-          );
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setLoading(false);
-      }
-  }, []);
 
   const refreshLandParcels = useCallback(async () => {
     setLoading(true);
-    try {
-      const { data: parcelRows, error: parcelError } = await supabase
-        .from("rsbsa_farm_parcels")
-        .select(
-          `
-            id,
-            submission_id,
-            parcel_number,
-            farm_location_barangay,
-            farm_location_municipality,
-            total_farm_area_ha,
-            ownership_type_registered_owner,
-            ownership_type_tenant,
-            ownership_type_lessee,
-            tenant_land_owner_name,
-            lessee_land_owner_name,
-            created_at,
-            updated_at
-          `,
-        )
-        .order("parcel_number", { ascending: true });
+    console.log("[FETCH START] Starting refresh...");
 
-      if (parcelError) {
-        console.error("Error fetching current farm parcels:", parcelError);
-        await refreshLandParcelsFromHistory();
+    try {
+      const { data, error } = await supabase
+        .from("farmer_aggregated_unified")
+        .select("*")
+        .order("farmer_name", { ascending: true });
+
+      if (error) {
+        console.error("[FETCH ERROR]", error);
         return;
       }
 
-      const parcels = Array.isArray(parcelRows) ? parcelRows : [];
-      const farmerIds = [
-        ...new Set(
-          parcels
-            .map((parcel: any) => Number(parcel.submission_id))
-            .filter((id) => Number.isFinite(id) && id > 0),
-        ),
-      ];
-
-      let farmerMeta = new Map<number, { name: string; ffrs: string }>();
-      if (farmerIds.length > 0) {
-        const { data: farmerRows, error: farmerError } = await supabase
-          .from("rsbsa_submission")
-          .select('id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME", "FFRS_CODE"')
-          .in("id", farmerIds);
-
-        if (farmerError) {
-          console.error("Error fetching farmer metadata:", farmerError);
-        } else {
-          const rows = Array.isArray(farmerRows) ? farmerRows : [];
-          farmerMeta = new Map(
-            rows.map((row: any) => {
-              const fullName = [
-                row["FIRST NAME"],
-                row["MIDDLE NAME"],
-                row["LAST NAME"],
-                row["EXT NAME"],
-              ]
-                .map((value) => String(value || "").trim())
-                .filter(Boolean)
-                .join(" ");
-              return [
-                Number(row.id),
-                {
-                  name: fullName || `Farmer #${row.id}`,
-                  ffrs: String(row["FFRS_CODE"] || ""),
-                },
-              ];
-            }),
-          );
-        }
-      }
-
-      const mappedParcels = parcels
-        .map((parcel: any): LandParcel | null => {
-          const farmerId = Number(parcel.submission_id);
-          if (!Number.isFinite(farmerId) || farmerId <= 0) return null;
-
-          const meta = farmerMeta.get(farmerId);
-          const farmerName = meta?.name || `Farmer #${farmerId}`;
-          const isOwner = Boolean(parcel.ownership_type_registered_owner);
-          const isTenant = Boolean(parcel.ownership_type_tenant);
-          const isLessee = Boolean(parcel.ownership_type_lessee);
-          const landOwnerName = isOwner
-            ? farmerName
-            : isTenant
-              ? String(parcel.tenant_land_owner_name || "").trim()
-              : isLessee
-                ? String(parcel.lessee_land_owner_name || "").trim()
-                : farmerName;
-
-          return {
-            id: Number(parcel.id),
-            land_parcel_id: Number(parcel.id),
-            parcel_number: String(parcel.parcel_number || ""),
-            ffrs_code: String(meta?.ffrs || ""),
-            farm_location_barangay: String(parcel.farm_location_barangay || ""),
-            farm_location_municipality: String(
-              parcel.farm_location_municipality || "",
-            ),
-            total_farm_area_ha: Number(parcel.total_farm_area_ha) || 0,
-            land_owner_name: landOwnerName || farmerName,
-            farmer_id: farmerId,
-            farmer_name: farmerName,
-            is_registered_owner: isOwner,
-            is_tenant: isTenant,
-            is_lessee: isLessee,
-            is_current: true,
-            period_start_date:
-              String(parcel.updated_at || parcel.created_at || "") ||
-              new Date().toISOString(),
-          };
-        })
-        .filter((parcel): parcel is LandParcel => Boolean(parcel));
-
-      setLandParcels(mappedParcels);
-      console.log("Loaded", mappedParcels.length, "current farm parcels");
-    } catch (error) {
-      console.error("Error:", error);
-      await refreshLandParcelsFromHistory();
+      console.log("[FETCH SUCCESS] Raw data received:", data);
+      setAggregatedFarmers(data || []);
+      console.log(
+        "[STATE SET] Set aggregatedFarmers to length:",
+        data?.length || 0,
+      );
+    } catch (err) {
+      console.error("[FETCH CRASH]", err);
     } finally {
       setLoading(false);
+      console.log("[FETCH END] Loading set to false");
     }
-  }, [refreshLandParcelsFromHistory]);
+  }, []);
 
   // Fetch all land parcels with current owners
   useEffect(() => {
+    console.log("Fetching aggregated farmers...");
     refreshLandParcels();
   }, [refreshLandParcels]);
 
@@ -355,26 +241,86 @@ const JoLandRegistry: React.FC = () => {
   };
 
   // Handle parcel selection
-  const handleParcelSelect = (parcel: LandParcel) => {
-    setSelectedParcel(parcel);
-    fetchParcelHistory(parcel.land_parcel_id, parcel.parcel_number);
+  const handleFarmerSelect = (group: FarmerGroup) => {
+    console.log(
+      "handleFarmerSelect called for:",
+      group.farmer_name,
+      group.farmer_id,
+    );
+
+    setSelectedFarmer(group);
+    console.log("setSelectedFarmer called");
+
+    const parcelIds = group.parcels.map((p) => p.id);
+    console.log("Fetching history for parcel IDs:", parcelIds);
+
+    fetchParcelHistoryForIds(parcelIds);
+    console.log("fetchParcelHistoryForIds called");
+
     setShowModal(true);
+    console.log("setShowModal(true) called");
   };
 
+  const fetchParcelHistoryForIds = async (parcelIds: number[]) => {
+    setHistoryLoading(true);
+    try {
+      // Query both land_parcel_id and farm_parcel_id since transfer RPCs use farm_parcel_id
+      const orFilter = parcelIds
+        .map((id) => `land_parcel_id.eq.${id},farm_parcel_id.eq.${id}`)
+        .join(",");
+
+      const { data, error } = await supabase
+        .from("land_history")
+        .select("*")
+        .or(orFilter)
+        .order("period_start_date", { ascending: false });
+
+      if (error) throw error;
+      const records: LandHistoryRecord[] = data || [];
+      setParcelHistory(records);
+
+      // Extract all farmer IDs referenced in notes (e.g. "from farmer 3", "to farmer 7")
+      const referencedIds = new Set<number>();
+      records.forEach((r) => {
+        if (r.farmer_id) referencedIds.add(r.farmer_id);
+        if (r.notes) {
+          const matches = r.notes.matchAll(/(from|to) farmer (\d+)/gi);
+          for (const m of matches) referencedIds.add(Number(m[2]));
+        }
+      });
+
+      if (referencedIds.size > 0) {
+        const { data: farmerRows } = await supabase
+          .from("rsbsa_submission")
+          .select(`id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME"`)
+          .in("id", Array.from(referencedIds));
+
+        const nameMap = new Map<number, string>();
+        (farmerRows || []).forEach((row: any) => {
+          const full = [
+            row["FIRST NAME"],
+            row["MIDDLE NAME"],
+            row["LAST NAME"],
+            row["EXT NAME"],
+          ]
+            .filter(Boolean)
+            .join(" ");
+          nameMap.set(Number(row.id), full);
+        });
+        setFarmerNameMap(nameMap);
+      }
+    } catch (err) {
+      console.error("History fetch error:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
   // Get ownership type label
   const getOwnershipType = (record: LandParcel | LandHistoryRecord) => {
     if (record.is_registered_owner) return "Owner";
     if (record.is_tenant) return "Tenant";
     if (record.is_lessee) return "Lessee";
     return "Unknown";
-  };
-
-  // Get ownership type icon
-  const getOwnershipIcon = (record: LandParcel | LandHistoryRecord) => {
-    if (record.is_registered_owner) return "👤";
-    if (record.is_tenant) return "🏠";
-    if (record.is_lessee) return "📋";
-    return "❓";
   };
 
   // Get ownership class
@@ -404,142 +350,70 @@ const JoLandRegistry: React.FC = () => {
   ].sort();
 
   // Filter parcels
-  const filteredParcels = landParcels
-    .filter((parcel) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        parcel.parcel_number
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        parcel.ffrs_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        parcel.land_owner_name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        parcel.farmer_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesBarangay =
-        filterBarangay === "" ||
-        parcel.farm_location_barangay === filterBarangay;
-
-      return matchesSearch && matchesBarangay;
-    })
-    // Sort by period_start_date descending (most recent first)
-    .sort((a, b) => {
-      const aDate = a.period_start_date
-        ? new Date(a.period_start_date).getTime()
-        : 0;
-      const bDate = b.period_start_date
-        ? new Date(b.period_start_date).getTime()
-        : 0;
-      return bDate - aDate;
-    });
-
+  // Build transfer actor options (for dropdowns) from aggregated farmers
   const buildTransferActorOptions = (
-    parcels: LandParcel[],
+    farmers: FarmerGroup[],
+    excludeFarmerId?: number, // ← second parameter (optional)
   ): TransferActorOption[] => {
-    const byFarmer = new Map<number, TransferActorOption>();
-
-    parcels.forEach((parcel) => {
-      if (!parcel.farmer_id) return;
-
-      const existing = byFarmer.get(parcel.farmer_id);
-      if (existing) {
-        if (!existing.parcelIds.includes(parcel.id)) {
-          existing.parcelIds.push(parcel.id);
-          existing.parcelCount = existing.parcelIds.length;
+    return farmers
+      .filter((group) => {
+        // Exclude the current clicked farmer to prevent self-transfer
+        if (excludeFarmerId && group.farmer_id === excludeFarmerId) {
+          return false;
         }
-        return;
-      }
-
-      byFarmer.set(parcel.farmer_id, {
-        farmerId: parcel.farmer_id,
-        name:
-          parcel.farmer_name ||
-          parcel.land_owner_name ||
-          `Farmer #${parcel.farmer_id}`,
-        barangay: parcel.farm_location_barangay || "",
-        parcelIds: [parcel.id],
-        parcelCount: 1,
-      });
-    });
-
-    return Array.from(byFarmer.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+        return true;
+      })
+      .map((group) => ({
+        farmerId: group.farmer_id,
+        name: group.farmer_name || `Farmer #${group.farmer_id}`,
+        barangay: group.parcels[0]?.farm_location_barangay || "",
+        parcelIds: group.parcels.map((p) => p.id),
+        parcelCount: group.parcels.length,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   };
+
+  const filteredFarmers = useMemo(() => {
+    return aggregatedFarmers.filter((group) => {
+      // Your filter logic here (from previous messages)
+
+      if (group.parcels.length === 0) return false;
+      if (group.total_farm_area_ha <= 0) return false;
+
+      const lowerSearch = searchTerm.toLowerCase();
+      if (group.farmer_name.toLowerCase().includes(lowerSearch)) return true;
+      return group.parcels.some((p) =>
+        p.parcel_number.toLowerCase().includes(lowerSearch),
+      );
+    });
+  }, [aggregatedFarmers, searchTerm]); // Dependencies
 
   const registeredOwnerParcels = landParcels.filter(
     (p) => p.is_registered_owner,
   );
-  const registeredOwnerOptions = buildTransferActorOptions(
-    registeredOwnerParcels,
-  );
-  const selectedContextFarmerId =
-    selectedParcel && Number.isFinite(Number(selectedParcel.farmer_id))
-      ? Number(selectedParcel.farmer_id)
-      : null;
-  const selectedContextFarmerName =
-    selectedParcel?.farmer_name || selectedParcel?.land_owner_name || "Unknown";
-  const transferDonorOptions = registeredOwnerOptions.filter((owner) => {
-    if (
-      selectedContextFarmerId !== null &&
-      owner.farmerId === selectedContextFarmerId
-    ) {
-      return false;
-    }
-    return true;
-  });
-  const voluntaryDonorOptions = transferDonorOptions;
-  const inheritanceDonorOptions = transferDonorOptions;
 
-  const linkedLandOwnerNames = Array.from(
-    new Set(
-      landParcels
-        .filter((p) => p.is_tenant || p.is_lessee)
-        .map((p) => (p.land_owner_name || "").trim())
-        .filter(Boolean),
-    ),
-  ).sort((a, b) => a.localeCompare(b));
+  const selectedContextFarmerId = selectedFarmer?.farmer_id ?? null;
+  const selectedContextFarmerName = selectedFarmer?.farmer_name || "Unknown";
 
-  const tenantCandidates = landParcels.filter(
-    (p) =>
-      p.is_tenant &&
-      (sourceLinkedLandOwnerName
-        ? (p.land_owner_name || "") === sourceLinkedLandOwnerName
-        : true),
-  );
-  const lesseeCandidates = landParcels.filter(
-    (p) =>
-      p.is_lessee &&
-      (sourceLinkedLandOwnerName
-        ? (p.land_owner_name || "") === sourceLinkedLandOwnerName
-        : true),
-  );
+  // Build donor options and exclude the current farmer
+  const registeredOwnerOptions = useMemo(() => {
+    return buildTransferActorOptions(
+      aggregatedFarmers,
+      selectedContextFarmerId ?? undefined, // ← This fixes the type error
+    );
+  }, [aggregatedFarmers, selectedContextFarmerId]);
 
-  const tenantOptions = buildTransferActorOptions(tenantCandidates);
-  const lesseeOptions = buildTransferActorOptions(lesseeCandidates);
+  // Use the same options for both modes
+  const voluntaryDonorOptions = registeredOwnerOptions;
+  const inheritanceDonorOptions = registeredOwnerOptions;
 
   const selectedRegisteredOwner =
     voluntaryDonorOptions.find((o) => o.farmerId === sourceRegisteredOwnerId) ||
     null;
-  const selectedTenant =
-    tenantOptions.find((o) => o.farmerId === sourceTenantId) || null;
-  const selectedLessee =
-    lesseeOptions.find((o) => o.farmerId === sourceLesseeId) || null;
   const selectedBeneficiaryOwner =
     inheritanceDonorOptions.find((o) => o.farmerId === beneficairyOwnerId) ||
     null;
-  const fixedVoluntaryRole: VoluntaryRole = selectedParcel?.is_tenant
-    ? "tenant"
-    : selectedParcel?.is_lessee
-      ? "lessee"
-      : "registered_owner";
-  const fixedVoluntaryRoleLabel =
-    fixedVoluntaryRole === "registered_owner"
-      ? "Registered Land Owner"
-      : fixedVoluntaryRole === "tenant"
-        ? "Tenant"
-        : "Lessee";
 
   const selectedSource = (() => {
     if (transferMode === "inheritance") return selectedBeneficiaryOwner;
@@ -547,17 +421,6 @@ const JoLandRegistry: React.FC = () => {
     return selectedRegisteredOwner;
   })();
 
-  const registeredOwnerTransferParcels = selectedRegisteredOwner
-    ? registeredOwnerParcels.filter(
-        (p) => p.farmer_id === selectedRegisteredOwner.farmerId,
-      )
-    : [];
-  const tenantTransferParcels = selectedTenant
-    ? tenantCandidates.filter((p) => p.farmer_id === selectedTenant.farmerId)
-    : [];
-  const lesseeTransferParcels = selectedLessee
-    ? lesseeCandidates.filter((p) => p.farmer_id === selectedLessee.farmerId)
-    : [];
   const inheritanceTransferParcels = selectedBeneficiaryOwner
     ? registeredOwnerParcels.filter(
         (p) => p.farmer_id === selectedBeneficiaryOwner.farmerId,
@@ -604,12 +467,14 @@ const JoLandRegistry: React.FC = () => {
     { length: Math.max(0, Math.floor(inheritanceDonorTotalAreaHa)) },
     (_, index) => index + 1,
   );
+
   const inheritanceSelectedAreaHa =
     inheritanceAreaMode === "take_all"
       ? inheritanceDonorTotalAreaHa
       : typeof inheritancePartialAreaHa === "number"
         ? inheritancePartialAreaHa
         : 0;
+
   const inheritanceAreaSelectionValid =
     inheritanceAreaMode === "take_all"
       ? inheritanceDonorTotalAreaHa > 0
@@ -622,6 +487,42 @@ const JoLandRegistry: React.FC = () => {
     if (transferMode === "voluntary") return voluntaryTransferParcels;
     return [];
   })();
+
+  const donorFarmerId =
+    transferMode === "voluntary"
+      ? typeof sourceRegisteredOwnerId === "number"
+        ? sourceRegisteredOwnerId
+        : null
+      : transferMode === "inheritance"
+        ? typeof beneficairyOwnerId === "number"
+          ? beneficairyOwnerId
+          : null
+        : null;
+
+  const donorFarmerGroup =
+    aggregatedFarmers.find((g) => g.farmer_id === donorFarmerId) ?? null;
+
+  const donorSplitParcels: ParcelSplitInput[] =
+    donorFarmerGroup?.parcels.map((p) => ({
+      farm_parcel_id: p.id, // ← uses p.id not p.land_parcel_id
+      parcel_number: p.parcel_number,
+      farm_location_barangay: p.farm_location_barangay,
+      total_farm_area_ha: Number(p.total_farm_area_ha) || 0,
+      transfer_area_ha: parcelSplitInputs[p.id] ?? "",
+    })) ?? [];
+
+  const partialTotalTransferAreaHa: number = donorSplitParcels.reduce(
+    (sum, p) => {
+      if (parcelScope === "full")
+        return sum + (Number(p.total_farm_area_ha) || 0);
+      const val = parcelSplitInputs[p.farm_parcel_id];
+      return sum + (typeof val === "number" && val > 0 ? val : 0);
+    },
+    0,
+  );
+
+  const parcelScopeValidationError: string =
+    parcelScope === "partial" ? validateSplitInputs(donorSplitParcels) : "";
 
   const defaultReason =
     transferMode === "inheritance"
@@ -647,16 +548,22 @@ const JoLandRegistry: React.FC = () => {
     if (transferMode === "voluntary" && !selectedRegisteredOwner) {
       return "Select the land owner donating the land.";
     }
-    if (effectiveTransferParcels.length === 0) {
+    if (donorSplitParcels.length === 0) {
       return "No transferable parcels found for the selected donor.";
     }
-    if (transferMode === "inheritance" && !inheritanceAreaSelectionValid) {
-      return "Choose a valid inheritance area to transfer.";
+    if (
+      donorSplitParcels.length > 0 &&
+      parcelScope === "partial" &&
+      parcelScopeValidationError
+    ) {
+      return parcelScopeValidationError;
     }
-    if (transferMode === "voluntary" && !voluntaryAreaSelectionValid) {
-      return "Choose a valid voluntary transfer area.";
+    if (donorSplitParcels.length > 0 && parcelScope === "full") {
+      // full parcel is always valid if donor has parcels — no extra check needed
     }
     if (supportingDocs.length === 0) return "Upload at least one proof image.";
+    if (parcelScope === "partial" && parcelScopeValidationError)
+      return parcelScopeValidationError;
     return "";
   })();
   const transferReadyForReview = transferBlockingReason === "";
@@ -710,7 +617,8 @@ const JoLandRegistry: React.FC = () => {
     parcels.forEach((parcel) => {
       const parcelArea = Number(parcel.total_farm_area_ha) || 0;
       const parcelId = Number(parcel.land_parcel_id);
-      if (parcelArea <= 0 || !Number.isFinite(parcelId) || parcelId <= 0) return;
+      if (parcelArea <= 0 || !Number.isFinite(parcelId) || parcelId <= 0)
+        return;
 
       const transferredArea = takeAll
         ? parcelArea
@@ -814,7 +722,7 @@ const JoLandRegistry: React.FC = () => {
     for (let index = 0; index < files.length; index += 1) {
       const file = files[index];
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const storagePath = `ownership-transfer-proofs/${Date.now()}-${Math.random()
+      const storagePath = `${Date.now()}-${Math.random()
         .toString(36)
         .slice(2, 10)}-${safeName}`;
 
@@ -826,6 +734,7 @@ const JoLandRegistry: React.FC = () => {
         });
 
       if (error) {
+        console.error("Upload error details:", JSON.stringify(error, null, 2));
         if (uploadedProofs.length > 0) {
           await cleanupUploadedProofs(uploadedProofs);
         }
@@ -834,9 +743,7 @@ const JoLandRegistry: React.FC = () => {
             "Proof upload blocked by Supabase Storage RLS. Run database/supabase_storage_ownership_transfer_policies.sql in Supabase SQL Editor, then try again.",
           );
         }
-        throw new Error(
-          `Proof upload failed (${file.name}): ${error.message}`,
-        );
+        throw new Error(`Proof upload failed (${file.name}): ${error.message}`);
       }
 
       uploadedProofs.push({
@@ -896,8 +803,12 @@ const JoLandRegistry: React.FC = () => {
 
     const isInheritance = transferMode === "inheritance";
     const fromFarmerId = isInheritance
-      ? (typeof beneficairyOwnerId === "number" ? beneficairyOwnerId : null)
-      : (typeof sourceRegisteredOwnerId === "number" ? sourceRegisteredOwnerId : null);
+      ? typeof beneficairyOwnerId === "number"
+        ? beneficairyOwnerId
+        : null
+      : typeof sourceRegisteredOwnerId === "number"
+        ? sourceRegisteredOwnerId
+        : null;
 
     if (!fromFarmerId || fromFarmerId <= 0) {
       setTransferSubmitError("Please select a valid donor/source farmer.");
@@ -926,16 +837,21 @@ const JoLandRegistry: React.FC = () => {
     }> = [];
 
     try {
-      const {
-        verifiedParcels,
-        invalidParcelIds,
-        verifiedAvailableAreaHa,
-      } = await verifyDonorParcelOwnership(fromFarmerId, effectiveTransferParcels);
+      // ── Step 1: Verify donor still owns the parcels ──────────────
+      const { verifiedParcels, invalidParcelIds, verifiedAvailableAreaHa } =
+        await verifyDonorParcelOwnership(
+          fromFarmerId,
+          donorSplitParcels.map((p) => ({
+            ...p,
+            id: p.farm_parcel_id,
+            land_parcel_id: p.farm_parcel_id,
+          })) as any,
+        );
 
       if (invalidParcelIds.length > 0) {
         await refreshLandParcels();
         setTransferSubmitError(
-          `Transfer list is outdated. These parcel IDs are no longer owned by the selected donor: ${invalidParcelIds.join(", ")}. Please review and confirm again.`,
+          `Transfer list is outdated. Parcel IDs no longer owned by donor: ${invalidParcelIds.join(", ")}. Please review and try again.`,
         );
         return;
       }
@@ -948,6 +864,9 @@ const JoLandRegistry: React.FC = () => {
         return;
       }
 
+      // ── Step 2: Upload proof documents ───────────────────────────
+      uploadedProofs = await uploadTransferProofs(supportingDocs);
+
       if (areaMode === "partial" && selectedAreaHa > verifiedAvailableAreaHa) {
         await refreshLandParcels();
         setTransferSubmitError(
@@ -956,74 +875,120 @@ const JoLandRegistry: React.FC = () => {
         return;
       }
 
-      const requestedAreaHa =
-        areaMode === "take_all" ? verifiedAvailableAreaHa : selectedAreaHa;
-      const itemPayload = buildTransferItemsPayload(
-        verifiedParcels,
-        requestedAreaHa,
-        areaMode === "take_all",
-      );
+      if (parcelScope === "partial") {
+        // ── PARTIAL: calls execute_partial_parcel_transfer RPC ─────
+        const splitResults = await executePartialTransfers({
+          parcels: donorSplitParcels,
+          donorFarmerId: fromFarmerId,
+          recipientFarmerId: toFarmerId,
+          transferMode: transferMode as "voluntary" | "inheritance",
+          transferReason: finalReasonPreview || "",
+          transferDate: new Date().toISOString().slice(0, 10),
+        });
 
-      if (itemPayload.length === 0) {
-        setTransferSubmitError(
-          "No valid parcel items to submit after ownership verification.",
+        setTransferSubmitSuccess(
+          `Partial transfer complete — ${splitResults.length} parcel(s) split successfully.`,
         );
-        return;
-      }
+      } else {
+        // ── FULL: calls existing create_ownership_transfer_no_review RPC
+        const areaMode = isInheritance
+          ? inheritanceAreaMode
+          : voluntaryAreaMode;
+        const selectedAreaHa = isInheritance
+          ? inheritanceSelectedAreaHa
+          : voluntarySelectedAreaHa;
+        const requestedAreaHa =
+          areaMode === "take_all" ? verifiedAvailableAreaHa : selectedAreaHa;
 
-      uploadedProofs = await uploadTransferProofs(supportingDocs);
+        const itemPayload = buildTransferItemsPayload(
+          verifiedParcels,
+          requestedAreaHa,
+          areaMode === "take_all",
+        );
 
-      const { data, error } = await supabase.rpc(
-        "create_ownership_transfer_no_review",
-        {
-          p_transfer_mode: transferMode,
-          p_from_farmer_id: fromFarmerId,
-          p_to_farmer_id: toFarmerId,
-          p_source_role: "registered_owner",
-          p_area_mode: areaMode,
-          p_area_requested_ha: areaMode === "partial" ? requestedAreaHa : null,
-          p_area_available_ha: verifiedAvailableAreaHa,
-          p_transfer_reason: finalReasonPreview || null,
-          p_transfer_date: new Date().toISOString().slice(0, 10),
-          p_is_deceased_confirmed: isInheritance ? confirmBenefaciary : false,
-          p_items: itemPayload,
-          p_proofs: uploadedProofs,
-        },
-      );
+        if (itemPayload.length === 0) {
+          setTransferSubmitError(
+            "No valid parcel items to submit after ownership verification.",
+          );
+          return;
+        }
 
-      if (error) {
-        const rpcCode = String((error as any)?.code || "");
-        const rpcMessage = String(error?.message || "");
-        const rpcDetails = String((error as any)?.details || "");
-        if (
-          /column\s+\"transfer_type\"\s+of relation\s+\"ownership_transfers\"\s+does not exist/i.test(
-            `${rpcMessage} ${rpcDetails}`,
-          )
-        ) {
+        const { data, error } = await supabase.rpc(
+          "create_ownership_transfer_no_review",
+          {
+            p_transfer_mode: transferMode,
+            p_from_farmer_id: fromFarmerId,
+            p_to_farmer_id: toFarmerId,
+            p_source_role: "registered_owner",
+            p_area_mode: areaMode,
+            p_area_requested_ha:
+              areaMode === "partial" ? requestedAreaHa : null,
+            p_area_available_ha: verifiedAvailableAreaHa,
+            p_transfer_reason: finalReasonPreview || null,
+            p_transfer_date: new Date().toISOString().slice(0, 10),
+            p_is_deceased_confirmed: isInheritance ? confirmBenefaciary : false,
+            p_items: itemPayload,
+            p_proofs: uploadedProofs,
+          },
+        );
+
+        if (error) {
+          const rpcCode = String((error as any)?.code || "");
+          const rpcMessage = String(error?.message || "");
+          const rpcDetails = String((error as any)?.details || "");
+          if (
+            /column\s+\"transfer_type\"\s+of relation\s+\"ownership_transfers\"\s+does not exist/i.test(
+              `${rpcMessage} ${rpcDetails}`,
+            )
+          ) {
+            throw new Error(
+              "Supabase table ownership_transfers is missing required columns. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
+            );
+          }
+          if (
+            rpcCode === "PGRST202" ||
+            /create_ownership_transfer_no_review/i.test(
+              `${rpcMessage} ${rpcDetails}`,
+            ) ||
+            /404/.test(rpcMessage)
+          ) {
+            throw new Error(
+              "Supabase RPC create_ownership_transfer_no_review is missing. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
+            );
+          }
           throw new Error(
-            "Supabase table ownership_transfers is missing required columns. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
+            error.message || "Failed to create ownership transfer.",
           );
         }
-        if (
-          rpcCode === "PGRST202" ||
-          /create_ownership_transfer_no_review/i.test(
-            `${rpcMessage} ${rpcDetails}`,
-          ) ||
-          /404/.test(rpcMessage)
-        ) {
-          throw new Error(
-            "Supabase RPC create_ownership_transfer_no_review is missing. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
-          );
-        }
-        throw new Error(error.message || "Failed to create ownership transfer.");
+
+        const transferId = Array.isArray(data) ? data[0] : data;
+        setTransferSubmitSuccess(
+          `Transfer submitted successfully${transferId ? ` (ID: ${transferId})` : ""}.`,
+        );
       }
 
-      const transferId = Array.isArray(data) ? data[0] : data;
-      setTransferSubmitSuccess(
-        `Transfer submitted successfully${transferId ? ` (ID: ${transferId})` : ""}.`,
-      );
+      // ── Step 4: Post-transfer cleanup (runs for BOTH paths) ──────
+      await supabase.rpc("check_and_update_farmer_parcel_status", {
+        p_farmer_id: fromFarmerId,
+      });
+
+      // ── Step 5: Sync farmer visibility across all modules ────────
+      // Sets rsbsa_submission.status = 'No Parcels' + archived_at if
+      // donor has 0 parcels left, or restores to 'Active Farmer' otherwise.
+      await supabase.rpc("sync_farmer_no_parcels_status", {
+        p_farmer_id: fromFarmerId,
+      });
 
       await refreshLandParcels();
+
+      const updatedDonor = aggregatedFarmers.find(
+        (g) => g.farmer_id === fromFarmerId,
+      );
+      if (!updatedDonor || updatedDonor.parcels.length === 0) {
+        setSelectedFarmer(null);
+        setShowModal(false);
+      }
+
       closeTransferModal();
     } catch (error: any) {
       if (uploadedProofs.length > 0) {
@@ -1102,7 +1067,10 @@ const JoLandRegistry: React.FC = () => {
 
   const handleBeneficairyOwnerSelect = (value: string) => {
     const parsedId = Number(value);
-    if (selectedContextFarmerId !== null && parsedId === selectedContextFarmerId) {
+    if (
+      selectedContextFarmerId !== null &&
+      parsedId === selectedContextFarmerId
+    ) {
       setBeneficairyOwnerId("");
       setConfirmBenefaciary(false);
       setInheritanceAreaMode("take_all");
@@ -1116,7 +1084,10 @@ const JoLandRegistry: React.FC = () => {
     setConfirmBenefaciary(
       Number.isFinite(parsedId) &&
         parsedId > 0 &&
-        !(selectedContextFarmerId !== null && parsedId === selectedContextFarmerId),
+        !(
+          selectedContextFarmerId !== null &&
+          parsedId === selectedContextFarmerId
+        ),
     );
     setInheritanceAreaMode("take_all");
     setInheritancePartialAreaHa("");
@@ -1150,7 +1121,10 @@ const JoLandRegistry: React.FC = () => {
 
   const handleRegisteredOwnerSelect = (value: string) => {
     const parsedId = Number(value);
-    if (selectedContextFarmerId !== null && parsedId === selectedContextFarmerId) {
+    if (
+      selectedContextFarmerId !== null &&
+      parsedId === selectedContextFarmerId
+    ) {
       setSourceRegisteredOwnerId("");
       setSelectedTransferParcelIds([]);
       setVoluntaryAreaMode("take_all");
@@ -1178,11 +1152,22 @@ const JoLandRegistry: React.FC = () => {
     const incomingFiles = Array.from(event.target.files || []);
     if (incomingFiles.length === 0) return;
 
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
     const validFiles = incomingFiles.filter(
       (file) => file.type === "image/png" || file.type === "image/jpeg",
     );
 
     if (validFiles.length === 0) {
+      event.target.value = "";
+      return;
+    }
+
+    const oversized = validFiles.filter((f) => f.size > MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      setTransferSubmitError(
+        `File(s) too large (max 10 MB): ${oversized.map((f) => f.name).join(", ")}`,
+      );
       event.target.value = "";
       return;
     }
@@ -1291,29 +1276,30 @@ const JoLandRegistry: React.FC = () => {
           </div>
 
           {/* Stats */}
+          {/* Stats – fully using aggregatedFarmers */}
           <div className="jo-land-registry-stats">
             <div className="jo-land-registry-stat-card">
-              <h3>Total Parcels</h3>
+              <h3>Land Owners</h3>
               <p className="jo-land-registry-stat-number">
-                {landParcels.length}
+                {filteredFarmers.length}
               </p>
             </div>
+
             <div className="jo-land-registry-stat-card">
-              <h3>Barangays</h3>
+              <h3>Tenant</h3>
               <p className="jo-land-registry-stat-number">
-                {uniqueBarangays.length}
+                {aggregatedFarmers.reduce((sum, group) => {
+                  return sum + (group.parcels.some((p) => p.is_tenant) ? 1 : 0);
+                }, 0)}
               </p>
             </div>
+
             <div className="jo-land-registry-stat-card">
-              <h3>Owners</h3>
+              <h3>Lessee</h3>
               <p className="jo-land-registry-stat-number">
-                {landParcels.filter((p) => p.is_registered_owner).length}
-              </p>
-            </div>
-            <div className="jo-land-registry-stat-card">
-              <h3>Tenants/Lessees</h3>
-              <p className="jo-land-registry-stat-number">
-                {landParcels.filter((p) => p.is_tenant || p.is_lessee).length}
+                {aggregatedFarmers.reduce((sum, group) => {
+                  return sum + (group.parcels.some((p) => p.is_lessee) ? 1 : 0);
+                }, 0)}
               </p>
             </div>
           </div>
@@ -1367,7 +1353,7 @@ const JoLandRegistry: React.FC = () => {
                         Loading land parcels...
                       </td>
                     </tr>
-                  ) : filteredParcels.length === 0 ? (
+                  ) : filteredFarmers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="jo-land-registry-empty-cell">
                         {searchTerm || filterBarangay
@@ -1376,30 +1362,41 @@ const JoLandRegistry: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredParcels.map((parcel) => (
+                    filteredFarmers.map((group) => (
                       <tr
-                        key={parcel.id}
-                        onClick={() => handleParcelSelect(parcel)}
+                        key={group.farmer_id}
+                        onClick={() => handleFarmerSelect(group)}
                         className={
-                          selectedParcel?.id === parcel.id ? "selected" : ""
+                          selectedFarmer?.farmer_id === group.farmer_id
+                            ? "selected"
+                            : ""
                         }
                       >
                         <td>
-                          <strong>{parcel.ffrs_code || "—"}</strong>
+                          <strong>{group.ffrs_code || "—"}</strong>
+                        </td>
+                        <td>{group.farmer_name || "—"}</td>
+                        <td>
+                          {group.has_tenant ? (
+                            <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-tenant">
+                              Tenant
+                            </span>
+                          ) : group.has_lessee ? (
+                            <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-lessee">
+                              Lessee
+                            </span>
+                          ) : (
+                            <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-owner">
+                              Owner
+                            </span>
+                          )}
                         </td>
                         <td>
-                          {parcel.farmer_name || parcel.land_owner_name || "—"}
+                          {group.parcels[0]?.farm_location_barangay ||
+                            "Multiple"}
                         </td>
-                        <td>
-                          <span
-                            className={`jo-land-registry-ownership-pill jo-land-registry-ownership-${getOwnershipClass(parcel)}`}
-                          >
-                            {getOwnershipType(parcel)}
-                          </span>
-                        </td>
-                        <td>{parcel.farm_location_barangay || "—"}</td>
-                        <td>{parcel.total_farm_area_ha?.toFixed(2) || "0"}</td>
-                        <td>{formatDate(parcel.period_start_date)}</td>
+                        <td>{group.total_farm_area_ha.toFixed(2) || "0"}</td>
+                        <td>{formatDate(group.last_updated)}</td>
                       </tr>
                     ))
                   )}
@@ -1410,7 +1407,7 @@ const JoLandRegistry: React.FC = () => {
         </div>
 
         {/* Detail Modal */}
-        {showModal && selectedParcel && (
+        {showModal && selectedFarmer && (
           <div
             className="jo-land-registry-modal-overlay"
             onClick={() => setShowModal(false)}
@@ -1420,7 +1417,7 @@ const JoLandRegistry: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="jo-land-registry-modal-header">
-                <h3>📋 Land Parcel Details</h3>
+                <h3>Land Parcel Details</h3>
                 <button
                   className="jo-land-registry-close-button"
                   onClick={() => setShowModal(false)}
@@ -1428,8 +1425,9 @@ const JoLandRegistry: React.FC = () => {
                   ×
                 </button>
               </div>
+
               <div className="jo-land-registry-modal-body">
-                {/* Current Owner Section */}
+                {/* Current Holder Section – updated to use selectedFarmer */}
                 <div className="jo-land-registry-detail-section">
                   <div
                     style={{
@@ -1457,136 +1455,161 @@ const JoLandRegistry: React.FC = () => {
                       </button>
                     </div>
                   </div>
+
                   <div className="jo-land-registry-owner-card">
                     <div className="jo-land-registry-owner-avatar">
-                      {getOwnershipIcon(selectedParcel)}
+                      {/* Update if you have icon logic for group */}
+                      👤
                     </div>
                     <div className="jo-land-registry-owner-details">
-                      <h4>
-                        {selectedParcel.farmer_name ||
-                          selectedParcel.land_owner_name ||
-                          "Unknown"}
-                      </h4>
+                      <h4>{selectedFarmer.farmer_name || "Unknown"}</h4>
                       <span className="jo-land-registry-owner-type">
-                        {getOwnershipType(selectedParcel)}
+                        Owner {/* Temporary – update with real flags later */}
                       </span>
                     </div>
                   </div>
+
+                  {/* Info grid – update to use group data */}
                   <div className="jo-land-registry-info-grid">
                     <div className="jo-land-registry-info-item">
                       <span className="jo-land-registry-info-label">
                         FFRS Code
                       </span>
                       <span className="jo-land-registry-info-value">
-                        {selectedParcel.ffrs_code || "—"}
+                        {selectedFarmer.ffrs_code || "—"}
                       </span>
                     </div>
-                    <div className="jo-land-registry-info-item">
-                      <span className="jo-land-registry-info-label">
-                        Parcel Number
-                      </span>
-                      <span className="jo-land-registry-info-value">
-                        {selectedParcel.parcel_number ||
-                          `#${selectedParcel.id}`}
-                      </span>
-                    </div>
+                    {/* Add more info items as needed – total area, etc. */}
                     <div className="jo-land-registry-info-item">
                       <span className="jo-land-registry-info-label">
                         Total Area
                       </span>
                       <span className="jo-land-registry-info-value">
-                        {selectedParcel.total_farm_area_ha?.toFixed(2) || "0"}{" "}
-                        hectares
+                        {selectedFarmer.total_farm_area_ha.toFixed(2)} hectares
                       </span>
                     </div>
-                    <div className="jo-land-registry-info-item">
-                      <span className="jo-land-registry-info-label">
-                        Barangay
-                      </span>
-                      <span className="jo-land-registry-info-value">
-                        {selectedParcel.farm_location_barangay || "—"}
-                      </span>
-                    </div>
-                    <div className="jo-land-registry-info-item">
-                      <span className="jo-land-registry-info-label">
-                        Municipality
-                      </span>
-                      <span className="jo-land-registry-info-value">
-                        {selectedParcel.farm_location_municipality ||
-                          "Dumangas"}
-                      </span>
-                    </div>
-                    <div className="jo-land-registry-info-item">
-                      <span className="jo-land-registry-info-label">
-                        Effective Since
-                      </span>
-                      <span className="jo-land-registry-info-value">
-                        {formatDate(selectedParcel.period_start_date)}
-                      </span>
-                    </div>
-                    {selectedParcel.land_owner_name &&
-                      !selectedParcel.is_registered_owner && (
-                        <div className="jo-land-registry-info-item">
-                          <span className="jo-land-registry-info-label">
-                            Land Owner
-                          </span>
-                          <span className="jo-land-registry-info-value">
-                            {selectedParcel.land_owner_name}
-                          </span>
-                        </div>
-                      )}
                   </div>
                 </div>
 
-                {/* History Section */}
+                {/* History Section – already using parcelHistory */}
                 <div className="jo-land-registry-detail-section">
-                  <h4>📜 Ownership History</h4>
+                  <h4>📜 Land Ownership History</h4>
                   {historyLoading ? (
-                    <div className="jo-land-registry-no-history">
-                      Loading history...
-                    </div>
+                    <p>Loading history...</p>
                   ) : parcelHistory.length === 0 ? (
-                    <div className="jo-land-registry-no-history">
-                      No history records found
-                    </div>
+                    <p>No history records found.</p>
                   ) : (
                     <div className="jo-land-registry-history-list">
-                      {parcelHistory.map((record, index) => (
-                        <div
-                          key={record.id}
-                          className={`jo-land-registry-history-item ${record.is_current ? "current" : ""}`}
-                        >
-                          <div className="jo-land-registry-history-number">
-                            {index + 1}
-                          </div>
-                          <div
-                            className={`jo-land-registry-history-badge ${getOwnershipClass(record)}`}
-                          >
-                            {getOwnershipType(record)}
-                          </div>
-                          <div className="jo-land-registry-history-details">
-                            <span className="jo-land-registry-history-name">
-                              {record.farmer_name ||
-                                record.land_owner_name ||
-                                "Unknown"}
-                              {record.is_current && (
-                                <span className="jo-land-registry-current-tag">
-                                  Current
+                      {[...parcelHistory]
+                        .sort((a, b) => {
+                          const dateDiff =
+                            new Date(b.period_start_date).getTime() -
+                            new Date(a.period_start_date).getTime();
+                          if (dateDiff !== 0) return dateDiff;
+                          // Same date: higher id = inserted later = show first
+                          return b.id - a.id;
+                        })
+                        .map((record) => {
+                          // Build a human-readable description of who transferred to whom
+                          const isTransfer = /TRANSFER/i.test(
+                            record.change_type || "",
+                          );
+                          const ownerName =
+                            record.farmer_name ||
+                            record.land_owner_name ||
+                            "Unknown";
+
+                          // Parse the notes field to extract the other party
+                          // Notes format: "Full transfer from farmer X to Y" or "Partial split X.XX ha to/from farmer Y"
+                          let transferDescription = "";
+                          if (isTransfer && record.notes) {
+                            const fromMatch =
+                              record.notes.match(/from farmer (\d+)/i);
+                            const toMatch =
+                              record.notes.match(/to farmer (\d+)/i);
+                            const fromId = fromMatch
+                              ? Number(fromMatch[1])
+                              : null;
+                            const toId = toMatch ? Number(toMatch[1]) : null;
+
+                            // Find the other farmer's name from farmerNameMap (includes archived farmers)
+                            const otherFarmerId =
+                              fromId && fromId !== record.farmer_id
+                                ? fromId
+                                : toId;
+                            const otherName = otherFarmerId
+                              ? (farmerNameMap.get(otherFarmerId) ?? null)
+                              : null;
+
+                            if (otherName) {
+                              // Determine direction: did this record's farmer receive or give?
+                              if (
+                                toMatch &&
+                                Number(toMatch[1]) !== record.farmer_id
+                              ) {
+                                transferDescription = `Transferred to ${otherName}`;
+                              } else if (
+                                fromMatch &&
+                                Number(fromMatch[1]) !== record.farmer_id
+                              ) {
+                                transferDescription = `Received from ${otherName}`;
+                              }
+                            }
+                          }
+
+                          return (
+                            <div
+                              key={record.id}
+                              className={`jo-land-registry-history-item ${record.is_current ? "current" : ""}`}
+                            >
+                              <div
+                                className={`jo-land-registry-history-badge ${getOwnershipClass(record)}`}
+                              >
+                                {isTransfer
+                                  ? record.change_type === "TRANSFER_PARTIAL"
+                                    ? "Partial Transfer"
+                                    : "Transfer"
+                                  : getOwnershipType(record)}
+                              </div>
+                              <div className="jo-land-registry-history-details">
+                                <span className="jo-land-registry-history-name">
+                                  {transferDescription || ownerName}
+                                  {record.is_current && (
+                                    <span className="jo-land-registry-current-tag">
+                                      Current Owner
+                                    </span>
+                                  )}
                                 </span>
-                              )}
-                            </span>
-                            <span className="jo-land-registry-history-meta">
-                              <span>
-                                📅 {formatDate(record.period_start_date)} -{" "}
-                                {formatDate(record.period_end_date)}
-                              </span>
-                              {record.change_reason && (
-                                <span>📝 {record.change_reason}</span>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                                <span className="jo-land-registry-history-meta">
+                                  <span>
+                                    📅 {formatDate(record.period_start_date)} –{" "}
+                                    {formatDate(record.period_end_date)}
+                                  </span>
+                                  {record.transferred_area_ha != null && (
+                                    <span>
+                                      📐 {record.transferred_area_ha.toFixed(2)}{" "}
+                                      ha transferred
+                                    </span>
+                                  )}
+                                  {record.parcel_number &&
+                                    !record.is_current && (
+                                      <span>
+                                        🪪 Parcel #
+                                        {
+                                          (record.parcel_number.match(
+                                            /\d+/,
+                                          ) || [record.parcel_number])[0]
+                                        }
+                                      </span>
+                                    )}
+                                  {record.change_reason && (
+                                    <span>📝 {record.change_reason}</span>
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -1606,498 +1629,436 @@ const JoLandRegistry: React.FC = () => {
         )}
 
         {/* Transfer Ownership Modal */}
-        {showTransferModal && selectedParcel && (
-          <div
-            className="jo-land-registry-modal-overlay"
-            onClick={closeTransferModal}
-          >
+        {showTransferModal &&
+          selectedFarmer && ( // ← CHANGED: use selectedFarmer instead of selectedParcel
             <div
-              className="jo-land-registry-modal jo-land-registry-transfer-modal"
-              onClick={(e) => e.stopPropagation()}
+              className="jo-land-registry-modal-overlay"
+              onClick={closeTransferModal}
             >
-              <div className="jo-land-registry-modal-header jo-land-registry-transfer-header">
-                <h3>Transfer Ownership</h3>
-                <button
-                  className="jo-land-registry-close-button"
-                  onClick={closeTransferModal}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="jo-land-registry-modal-body">
-                <div className="jo-land-registry-transfer-flow">
-                  <div className="jo-land-registry-transfer-note">
-                    <strong>Scope:</strong> Transfer applies immediately to
-                    parcel ownership and proof image records.
-                  </div>
-                  {transferSubmitError && (
-                    <div
-                      className="jo-land-registry-transfer-note"
-                      style={{
-                        borderColor: "#fecaca",
-                        borderLeftColor: "#dc2626",
-                        background: "#fef2f2",
-                        color: "#991b1b",
-                      }}
-                    >
-                      <strong>Transfer Error:</strong> {transferSubmitError}
-                    </div>
-                  )}
-                  {transferSubmitSuccess && (
-                    <div
-                      className="jo-land-registry-transfer-note"
-                      style={{
-                        borderColor: "#bbf7d0",
-                        borderLeftColor: "#16a34a",
-                        background: "#f0fdf4",
-                        color: "#166534",
-                      }}
-                    >
-                      <strong>Success:</strong> {transferSubmitSuccess}
-                    </div>
-                  )}
+              <div
+                className="jo-land-registry-modal jo-land-registry-transfer-modal"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="jo-land-registry-modal-header jo-land-registry-transfer-header">
+                  <h3>Transfer Ownership</h3>
+                  <button
+                    className="jo-land-registry-close-button"
+                    onClick={closeTransferModal}
+                  >
+                    ×
+                  </button>
+                </div>
 
-                  <div className="jo-land-registry-transfer-section-card">
-                    <h4>Current Context</h4>
-                    <div className="jo-land-registry-transfer-kv">
-                      <span>Opened From Parcel</span>
-                      <strong>
-                        {selectedParcel.parcel_number ||
-                          `#${selectedParcel.id}`}
-                      </strong>
+                <div className="jo-land-registry-modal-body">
+                  <div className="jo-land-registry-transfer-flow">
+                    <div className="jo-land-registry-transfer-note">
+                      <strong>Scope:</strong> Transfer applies immediately to
+                      parcel ownership and proof image records.
                     </div>
-                    <div className="jo-land-registry-transfer-kv">
-                      <span>Current Holder</span>
-                      <strong>
-                        {selectedParcel.farmer_name ||
-                          selectedParcel.land_owner_name ||
-                          "Unknown"}
-                      </strong>
-                    </div>
-                  </div>
 
-                  <div className="jo-land-registry-transfer-section-card">
-                    <h4>Step 1: Transfer Type</h4>
-                    <div className="jo-land-registry-transfer-choice-grid">
-                      <button
-                        type="button"
-                        className={`jo-land-registry-transfer-choice ${transferMode === "voluntary" ? "active" : ""}`}
-                        onClick={() => handleTransferModeChange("voluntary")}
+                    {transferSubmitError && (
+                      <div
+                        className="jo-land-registry-transfer-note"
+                        style={{
+                          borderColor: "#fecaca",
+                          borderLeftColor: "#dc2626",
+                          background: "#fef2f2",
+                          color: "#991b1b",
+                        }}
                       >
-                        Voluntary Transfer
-                      </button>
-                      <button
-                        type="button"
-                        className={`jo-land-registry-transfer-choice ${transferMode === "inheritance" ? "active" : ""}`}
-                        onClick={() => handleTransferModeChange("inheritance")}
+                        <strong>Transfer Error:</strong> {transferSubmitError}
+                      </div>
+                    )}
+
+                    {transferSubmitSuccess && (
+                      <div
+                        className="jo-land-registry-transfer-note"
+                        style={{
+                          borderColor: "#bbf7d0",
+                          borderLeftColor: "#16a34a",
+                          background: "#f0fdf4",
+                          color: "#166534",
+                        }}
                       >
-                        Inheritance
-                      </button>
-                    </div>
-                  </div>
+                        <strong>Success:</strong> {transferSubmitSuccess}
+                      </div>
+                    )}
 
-                  <div className="jo-land-registry-transfer-section-card">
-                    <h4>Recipient (Fixed)</h4>
-                    <div className="jo-land-registry-transfer-kv">
-                      <span>Will Receive Transfer</span>
-                      <strong>{selectedContextFarmerName}</strong>
-                    </div>
-                    <div className="jo-land-registry-transfer-mini-note">
-                      Recipient is auto-set from the opened parcel holder.
-                    </div>
-                  </div>
-
-                  {transferMode === "voluntary" && (
                     <div className="jo-land-registry-transfer-section-card">
-                      <h4>Step 2: Select Voluntary Donor</h4>
-                      <label className="jo-land-registry-transfer-label">
-                        Land Owner (Donor)
-                      </label>
-                      <select
-                        className="jo-land-registry-transfer-select"
-                        value={
-                          selectedRegisteredOwner ? sourceRegisteredOwnerId : ""
-                        }
-                        onChange={(e) =>
-                          handleRegisteredOwnerSelect(e.target.value)
-                        }
-                      >
-                        <option value="">Choose land owner...</option>
-                        {voluntaryDonorOptions.map((owner) => (
-                          <option key={owner.farmerId} value={owner.farmerId}>
-                            {owner.name} ({owner.parcelCount} parcel
-                            {owner.parcelCount > 1 ? "s" : ""})
-                          </option>
-                        ))}
-                      </select>
+                      <h4>Current Context</h4>
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Opened From Farmer</span>
+                        <strong>{selectedFarmer.farmer_name}</strong>{" "}
+                        {/* ← CHANGED */}
+                      </div>
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Current Holder</span>
+                        <strong>{selectedFarmer.farmer_name}</strong>{" "}
+                        {/* ← CHANGED */}
+                      </div>
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Total Area</span>
+                        <strong>
+                          {selectedFarmer.total_farm_area_ha.toFixed(2)} ha
+                        </strong>
+                      </div>
+                    </div>
 
-                      {selectedContextFarmerId !== null && (
-                        <div className="jo-land-registry-transfer-mini-note">
-                          The selected farmer is excluded from donor options to
-                          prevent self-transfer.
-                        </div>
-                      )}
+                    <div className="jo-land-registry-transfer-section-card">
+                      <h4>Step 1: Transfer Type</h4>
+                      <div className="jo-land-registry-transfer-choice-grid">
+                        <button
+                          type="button"
+                          className={`jo-land-registry-transfer-choice ${transferMode === "voluntary" ? "active" : ""}`}
+                          onClick={() => handleTransferModeChange("voluntary")}
+                        >
+                          Voluntary Transfer
+                        </button>
+                        <button
+                          type="button"
+                          className={`jo-land-registry-transfer-choice ${transferMode === "inheritance" ? "active" : ""}`}
+                          onClick={() =>
+                            handleTransferModeChange("inheritance")
+                          }
+                        >
+                          Inheritance
+                        </button>
+                      </div>
+                    </div>
 
-                      {selectedRegisteredOwner &&
-                        voluntaryTransferParcels.length > 0 && (
-                          <div className="jo-land-registry-transfer-parcel-box">
-                            <div className="jo-land-registry-transfer-subheading">
-                              Donor Parcels
-                            </div>
-                            <ul className="jo-land-registry-transfer-list">
-                              {voluntaryTransferParcels.map((parcel) => (
-                                <li key={parcel.id}>
-                                  {parcel.parcel_number || `#${parcel.id}`} -{" "}
-                                  {parcel.farm_location_barangay} (
-                                  {parcel.total_farm_area_ha.toFixed(2)} ha)
-                                </li>
-                              ))}
-                            </ul>
+                    {transferMode === "voluntary" && (
+                      <div className="jo-land-registry-transfer-section-card">
+                        <h4>Step 2: Select Voluntary Donor</h4>
+                        <label className="jo-land-registry-transfer-label">
+                          Land Owner (Donor)
+                        </label>
+                        <select
+                          className="jo-land-registry-transfer-select"
+                          value={
+                            selectedRegisteredOwner
+                              ? sourceRegisteredOwnerId
+                              : ""
+                          }
+                          onChange={(e) =>
+                            handleRegisteredOwnerSelect(e.target.value)
+                          }
+                        >
+                          <option value="">Choose land owner...</option>
+                          {voluntaryDonorOptions.map((owner) => (
+                            <option key={owner.farmerId} value={owner.farmerId}>
+                              {owner.name} ({owner.parcelCount} parcel
+                              {owner.parcelCount > 1 ? "s" : ""})
+                            </option>
+                          ))}
+                        </select>
 
-                            <label className="jo-land-registry-transfer-label">
-                              How Much Land Is Transferred?
-                            </label>
-                            <div className="jo-land-registry-transfer-choice-grid">
-                              <button
-                                type="button"
-                                className={`jo-land-registry-transfer-choice ${voluntaryAreaMode === "take_all" ? "active" : ""}`}
-                                onClick={() =>
-                                  handleVoluntaryAreaModeChange("take_all")
-                                }
-                              >
-                                Take All ({voluntaryDonorTotalAreaHa.toFixed(2)}{" "}
-                                ha)
-                              </button>
-                              <button
-                                type="button"
-                                className={`jo-land-registry-transfer-choice ${voluntaryAreaMode === "partial" ? "active" : ""}`}
-                                onClick={() =>
-                                  handleVoluntaryAreaModeChange("partial")
-                                }
-                              >
-                                Choose Hectares
-                              </button>
-                            </div>
+                        {selectedContextFarmerId !== null && (
+                          <div className="jo-land-registry-transfer-mini-note">
+                            The selected farmer is excluded from donor options
+                            to prevent self-transfer.
+                          </div>
+                        )}
 
-                            {voluntaryAreaMode === "partial" && (
-                              <>
-                                <label className="jo-land-registry-transfer-label">
-                                  Transfer Area (ha)
-                                </label>
-                                <select
-                                  className="jo-land-registry-transfer-select"
-                                  value={voluntaryPartialAreaHa}
-                                  onChange={(e) => {
-                                    const parsedValue = Number(e.target.value);
-                                    setVoluntaryPartialAreaHa(
-                                      Number.isFinite(parsedValue) &&
-                                        parsedValue > 0
-                                        ? parsedValue
-                                        : "",
-                                    );
-                                  }}
-                                >
-                                  <option value="">Choose hectares...</option>
-                                  {voluntaryHectareOptions.map((value) => (
-                                    <option key={value} value={value}>
-                                      {value} hectare{value > 1 ? "s" : ""}
-                                    </option>
-                                  ))}
-                                </select>
-                                {voluntaryHectareOptions.length === 0 && (
-                                  <div className="jo-land-registry-transfer-mini-note">
-                                    No whole-hectare options available. Use{" "}
-                                    <strong>Take All</strong>.
+                        {selectedRegisteredOwner &&
+                          donorSplitParcels.length > 0 && (
+                            <div className="jo-land-registry-transfer-parcel-box">
+                              <div className="jo-land-registry-transfer-subheading">
+                                Donor Parcels ({donorSplitParcels.length})
+                              </div>
+                              <div className="jo-land-registry-donor-parcel-cards">
+                                {donorSplitParcels.map((parcel) => (
+                                  <div
+                                    key={parcel.farm_parcel_id}
+                                    className="jo-land-registry-donor-parcel-card"
+                                  >
+                                    <div className="jo-land-registry-donor-parcel-card-header">
+                                      <span className="jo-land-registry-donor-parcel-number">
+                                        {parcel.parcel_number ||
+                                          `#${parcel.farm_parcel_id}`}
+                                      </span>
+                                      <span className="jo-land-registry-donor-parcel-area-badge">
+                                        {parcel.total_farm_area_ha.toFixed(2)}{" "}
+                                        ha
+                                      </span>
+                                    </div>
+                                    <div className="jo-land-registry-donor-parcel-card-body">
+                                      <div className="jo-land-registry-donor-parcel-detail">
+                                        <span className="jo-land-registry-donor-parcel-detail-label">
+                                          Barangay
+                                        </span>
+                                        <span className="jo-land-registry-donor-parcel-detail-value">
+                                          {parcel.farm_location_barangay || "—"}
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
-                                )}
-                              </>
-                            )}
+                                ))}
+                              </div>
 
-                            <div className="jo-land-registry-transfer-mini-note">
-                              Transfer amount preview:{" "}
-                              <strong>
-                                {voluntarySelectedAreaHa.toFixed(2)} ha
-                              </strong>{" "}
-                              of{" "}
-                              <strong>
-                                {voluntaryDonorTotalAreaHa.toFixed(2)} ha
-                              </strong>
-                              .
+                              <PartialParcelTransferSection
+                                donorParcels={donorSplitParcels}
+                                parcelScope={parcelScope}
+                                onParcelScopeChange={(scope) => {
+                                  setParcelScope(scope);
+                                  if (scope === "partial")
+                                    initSplitInputs(donorSplitParcels);
+                                }}
+                                parcelSplitInputs={parcelSplitInputs}
+                                onSetParcelTransferArea={setParcelTransferArea}
+                                validationError={parcelScopeValidationError}
+                                totalTransferAreaHa={partialTotalTransferAreaHa}
+                                donorTotalAreaHa={donorSplitParcels.reduce(
+                                  (s, p) =>
+                                    s + (Number(p.total_farm_area_ha) || 0),
+                                  0,
+                                )}
+                              />
                             </div>
+                          )}
+                      </div>
+                    )}
+
+                    {transferMode === "inheritance" && (
+                      <div className="jo-land-registry-transfer-section-card">
+                        <h4>Step 2: Select Beneficiary Land Owner</h4>
+
+                        <label className="jo-land-registry-transfer-label">
+                          Land Owner (Donor)
+                        </label>
+                        <select
+                          className="jo-land-registry-transfer-select"
+                          value={
+                            selectedBeneficiaryOwner ? beneficairyOwnerId : ""
+                          }
+                          onChange={(e) =>
+                            handleBeneficairyOwnerSelect(e.target.value)
+                          }
+                        >
+                          <option value="">Choose land owner...</option>
+                          {inheritanceDonorOptions.map((owner) => (
+                            <option key={owner.farmerId} value={owner.farmerId}>
+                              {owner.name} ({owner.parcelCount} parcel
+                              {owner.parcelCount > 1 ? "s" : ""})
+                            </option>
+                          ))}
+                        </select>
+                        {selectedContextFarmerId !== null && (
+                          <div className="jo-land-registry-transfer-mini-note">
+                            The selected farmer is excluded from donor options
+                            to prevent self-transfer.
                           </div>
                         )}
-                    </div>
-                  )}
 
-                  {transferMode === "inheritance" && (
-                    <div className="jo-land-registry-transfer-section-card">
-                      <h4>Step 2: Select Beneficiary Land Owner</h4>
-
-                      <label className="jo-land-registry-transfer-label">
-                        Land Owner (Donor)
-                      </label>
-                      <select
-                        className="jo-land-registry-transfer-select"
-                        value={
-                          selectedBeneficiaryOwner ? beneficairyOwnerId : ""
-                        }
-                        onChange={(e) =>
-                          handleBeneficairyOwnerSelect(e.target.value)
-                        }
-                      >
-                        <option value="">Choose land owner...</option>
-                        {inheritanceDonorOptions.map((owner) => (
-                          <option key={owner.farmerId} value={owner.farmerId}>
-                            {owner.name} ({owner.parcelCount} parcel
-                            {owner.parcelCount > 1 ? "s" : ""})
-                          </option>
-                        ))}
-                      </select>
-                      {selectedContextFarmerId !== null && (
-                        <div className="jo-land-registry-transfer-mini-note">
-                          The selected farmer is excluded from donor options to
-                          prevent self-transfer.
-                        </div>
-                      )}
-
-                      {/* ONLY SHOW AFTER BENEFICIARY IS SELECTED */}
-                      {beneficairyOwnerId &&
-                        inheritanceTransferParcels.length > 0 && (
+                        {/* ONLY SHOW AFTER BENEFICIARY IS SELECTED */}
+                        {beneficairyOwnerId && donorSplitParcels.length > 0 && (
                           <div className="jo-land-registry-transfer-parcel-box">
                             <div className="jo-land-registry-transfer-subheading">
-                              Beneficiary Parcels
+                              Donor Parcels ({donorSplitParcels.length})
                             </div>
-
-                            <ul className="jo-land-registry-transfer-list">
-                              {inheritanceTransferParcels.map((parcel) => (
-                                <li key={parcel.id}>
-                                  {parcel.parcel_number || `#${parcel.id}`} -{" "}
-                                  {parcel.farm_location_barangay} (
-                                  {parcel.total_farm_area_ha.toFixed(2)} ha)
-                                </li>
+                            <div className="jo-land-registry-donor-parcel-cards">
+                              {donorSplitParcels.map((parcel) => (
+                                <div
+                                  key={parcel.farm_parcel_id}
+                                  className="jo-land-registry-donor-parcel-card"
+                                >
+                                  <div className="jo-land-registry-donor-parcel-card-header">
+                                    <span className="jo-land-registry-donor-parcel-number">
+                                      {parcel.parcel_number ||
+                                        `#${parcel.farm_parcel_id}`}
+                                    </span>
+                                    <span className="jo-land-registry-donor-parcel-area-badge">
+                                      {parcel.total_farm_area_ha.toFixed(2)} ha
+                                    </span>
+                                  </div>
+                                  <div className="jo-land-registry-donor-parcel-card-body">
+                                    <div className="jo-land-registry-donor-parcel-detail">
+                                      <span className="jo-land-registry-donor-parcel-detail-label">
+                                        Barangay
+                                      </span>
+                                      <span className="jo-land-registry-donor-parcel-detail-value">
+                                        {parcel.farm_location_barangay || "—"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
                               ))}
-                            </ul>
-
-                            {/* ←←← THIS IS THE FIX: Choice buttons now appear immediately */}
-                            <div className="jo-land-registry-option-bar">
-                              <div className="jo-land-registry-farmer-parcel-split">
-                                <button
-                                  type="button"
-                                  className={`jo-land-registry-transfer-choice ${inheritanceAreaMode === "partial" ? "active" : ""}`}
-                                  onClick={() =>
-                                    handleInheritanceAreaModeChange("partial")
-                                  }
-                                >
-                                  Choose Hectares
-                                </button>
-                              </div>
-                              <div className="jo-land-registry-farmer-parcel-take-all">
-                                <button
-                                  type="button"
-                                  className={`jo-land-registry-transfer-choice ${inheritanceAreaMode === "take_all" ? "active" : ""}`}
-                                  onClick={() =>
-                                    handleInheritanceAreaModeChange("take_all")
-                                  }
-                                >
-                                  Take All (
-                                  {inheritanceDonorTotalAreaHa.toFixed(2)} ha)
-                                </button>
-                              </div>
                             </div>
 
-                            {/* Partial area selector - only when "Choose Hectares" is active */}
-                            {inheritanceAreaMode === "partial" && (
-                              <>
-                                <label className="jo-land-registry-transfer-label">
-                                  Inherited Area (ha)
-                                </label>
-                                <select
-                                  className="jo-land-registry-transfer-select"
-                                  value={inheritancePartialAreaHa}
-                                  onChange={(e) => {
-                                    const parsedValue = Number(e.target.value);
-                                    setInheritancePartialAreaHa(
-                                      Number.isFinite(parsedValue) &&
-                                        parsedValue > 0
-                                        ? parsedValue
-                                        : "",
-                                    );
-                                  }}
-                                >
-                                  <option value="">Choose hectares...</option>
-                                  {inheritanceHectareOptions.map((value) => (
-                                    <option key={value} value={value}>
-                                      {value} hectare{value > 1 ? "s" : ""}
-                                    </option>
-                                  ))}
-                                </select>
-                              </>
-                            )}
-
-                            <div className="jo-land-registry-transfer-mini-note">
-                              Inheritance amount preview:{" "}
-                              <strong>
-                                {inheritanceSelectedAreaHa.toFixed(2)} ha
-                              </strong>{" "}
-                              of{" "}
-                              <strong>
-                                {inheritanceDonorTotalAreaHa.toFixed(2)} ha
-                              </strong>
-                              .
-                            </div>
+                            <PartialParcelTransferSection
+                              donorParcels={donorSplitParcels}
+                              parcelScope={parcelScope}
+                              onParcelScopeChange={(scope) => {
+                                setParcelScope(scope);
+                                if (scope === "partial")
+                                  initSplitInputs(donorSplitParcels);
+                              }}
+                              parcelSplitInputs={parcelSplitInputs}
+                              onSetParcelTransferArea={setParcelTransferArea}
+                              validationError={parcelScopeValidationError}
+                              totalTransferAreaHa={partialTotalTransferAreaHa}
+                              donorTotalAreaHa={donorSplitParcels.reduce(
+                                (s, p) =>
+                                  s + (Number(p.total_farm_area_ha) || 0),
+                                0,
+                              )}
+                            />
                           </div>
                         )}
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {(transferMode === "voluntary" ||
-                    transferMode === "inheritance") && (
-                    <div className="jo-land-registry-transfer-section-card">
-                      <h4>
-                        {transferMode === "voluntary"
-                          ? "Step 3: Supporting Documents"
-                          : "Step 3: Supporting Documents"}
-                      </h4>
-                      <label className="jo-land-registry-transfer-label">
-                        Upload proof photo(s) - PNG/JPG (multiple)
-                      </label>
-                      <input
-                        type="file"
-                        accept=".png,.jpg,.jpeg,image/png,image/jpeg"
-                        multiple
-                        onChange={handleDocsSelected}
-                        className="jo-land-registry-transfer-file-input"
-                      />
+                    {(transferMode === "voluntary" ||
+                      transferMode === "inheritance") && (
+                      <div className="jo-land-registry-transfer-section-card">
+                        <h4>
+                          {transferMode === "voluntary"
+                            ? "Step 3: Supporting Documents"
+                            : "Step 3: Supporting Documents"}
+                        </h4>
+                        <label className="jo-land-registry-transfer-label">
+                          Upload proof photo(s) - PNG/JPG (multiple)
+                        </label>
+                        <input
+                          type="file"
+                          accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+                          multiple
+                          onChange={handleDocsSelected}
+                          className="jo-land-registry-transfer-file-input"
+                        />
 
-                      {supportingDocs.length > 0 && (
-                        <ul className="jo-land-registry-transfer-doc-list">
-                          {supportingDocs.map((doc, index) => (
-                            <li
-                              key={`${doc.name}-${doc.lastModified}-${index}`}
-                            >
-                              <span>
-                                {doc.name} ({(doc.size / 1024).toFixed(1)} KB)
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => removeDoc(index)}
+                        {supportingDocs.length > 0 && (
+                          <ul className="jo-land-registry-transfer-doc-list">
+                            {supportingDocs.map((doc, index) => (
+                              <li
+                                key={`${doc.name}-${doc.lastModified}-${index}`}
                               >
-                                Remove
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
+                                <span>
+                                  {doc.name} ({(doc.size / 1024).toFixed(1)} KB)
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeDoc(index)}
+                                >
+                                  Remove
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
 
-                  {(transferMode === "voluntary" ||
-                    transferMode === "inheritance") && (
-                    <div className="jo-land-registry-transfer-section-card">
-                      <h4>
-                        {transferMode === "voluntary"
-                          ? "Step 4: Reason + Review"
-                          : "Step 4: Reason + Review"}
-                      </h4>
-                      <label className="jo-land-registry-transfer-label">
-                        Reason (Optional)
-                      </label>
-                      <textarea
-                        className="jo-land-registry-transfer-textarea"
-                        placeholder="Add optional note..."
-                        value={transferReason}
-                        onChange={(e) => setTransferReason(e.target.value)}
-                      />
+                    {(transferMode === "voluntary" ||
+                      transferMode === "inheritance") && (
+                      <div className="jo-land-registry-transfer-section-card">
+                        <h4>
+                          {transferMode === "voluntary"
+                            ? "Step 4: Reason + Review"
+                            : "Step 4: Reason + Review"}
+                        </h4>
+                        <label className="jo-land-registry-transfer-label">
+                          Reason (Optional)
+                        </label>
+                        <textarea
+                          className="jo-land-registry-transfer-textarea"
+                          placeholder="Add optional note..."
+                          value={transferReason}
+                          onChange={(e) => setTransferReason(e.target.value)}
+                        />
 
+                        <div className="jo-land-registry-transfer-mini-note">
+                          Applied reason preview:{" "}
+                          <strong>
+                            {finalReasonPreview || "No reason yet"}
+                          </strong>
+                        </div>
+
+                        <div className="jo-land-registry-transfer-review">
+                          <div className="jo-land-registry-transfer-kv">
+                            <span>Transfer Type</span>
+                            <strong>{transferModeLabel}</strong>
+                          </div>
+                          <div className="jo-land-registry-transfer-kv">
+                            <span>From</span>
+                            <strong>
+                              {selectedSource?.name || "Not selected"}
+                            </strong>
+                          </div>
+                          <div className="jo-land-registry-transfer-kv">
+                            <span>To</span>
+                            <strong>{selectedContextFarmerName}</strong>
+                          </div>
+                          <div className="jo-land-registry-transfer-kv">
+                            <span>Parcels</span>
+                            <strong>{donorSplitParcels.length}</strong>
+                          </div>
+                          <div className="jo-land-registry-transfer-kv">
+                            <span>Transfer Area</span>
+                            <strong>
+                              {transferMode === "inheritance"
+                                ? `${inheritanceSelectedAreaHa.toFixed(2)} ha`
+                                : `${voluntarySelectedAreaHa.toFixed(2)} ha`}
+                            </strong>
+                          </div>
+                          <div className="jo-land-registry-transfer-kv">
+                            <span>Effectivity</span>
+                            <strong>Immediate</strong>
+                          </div>
+                        </div>
+
+                        {donorSplitParcels.length > 0 && (
+                          <ul className="jo-land-registry-transfer-list">
+                            {donorSplitParcels.map((parcel) => (
+                              <li key={parcel.farm_parcel_id}>
+                                {parcel.parcel_number ||
+                                  `#${parcel.farm_parcel_id}`}{" "}
+                                - {parcel.farm_location_barangay} (
+                                {parcel.total_farm_area_ha.toFixed(2)} ha)
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+
+                    {!transferReadyForReview && transferBlockingReason && (
                       <div className="jo-land-registry-transfer-mini-note">
-                        Applied reason preview:{" "}
-                        <strong>{finalReasonPreview || "No reason yet"}</strong>
+                        <strong>Before confirming:</strong>{" "}
+                        {transferBlockingReason}
                       </div>
+                    )}
 
-                      <div className="jo-land-registry-transfer-review">
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>Transfer Type</span>
-                          <strong>{transferModeLabel}</strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>From</span>
-                          <strong>
-                            {selectedSource?.name || "Not selected"}
-                          </strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>To</span>
-                          <strong>
-                            {selectedContextFarmerName}
-                          </strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>Parcels</span>
-                          <strong>{effectiveTransferParcels.length}</strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>Transfer Area</span>
-                          <strong>
-                            {transferMode === "inheritance"
-                              ? `${inheritanceSelectedAreaHa.toFixed(2)} ha`
-                              : `${voluntarySelectedAreaHa.toFixed(2)} ha`}
-                          </strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>Effectivity</span>
-                          <strong>Immediate</strong>
-                        </div>
-                      </div>
-
-                      {effectiveTransferParcels.length > 0 && (
-                        <ul className="jo-land-registry-transfer-list">
-                          {effectiveTransferParcels.map((parcel) => (
-                            <li key={parcel.id}>
-                              {parcel.parcel_number || `#${parcel.id}`} -{" "}
-                              {parcel.farm_location_barangay} (
-                              {parcel.total_farm_area_ha.toFixed(2)} ha)
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                    <div className="jo-land-registry-transfer-actions">
+                      <button
+                        type="button"
+                        className="jo-land-registry-transfer-cancel"
+                        onClick={closeTransferModal}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="jo-land-registry-transfer-confirm"
+                        onClick={handleTransferConfirm}
+                        disabled={
+                          !transferReadyForReview || isSubmittingTransfer
+                        }
+                        title={
+                          transferReadyForReview
+                            ? "Ready to submit transfer"
+                            : transferBlockingReason
+                        }
+                      >
+                        {isSubmittingTransfer
+                          ? "Submitting..."
+                          : "Confirm Transfer"}
+                      </button>
                     </div>
-                  )}
-
-                  {!transferReadyForReview && transferBlockingReason && (
-                    <div className="jo-land-registry-transfer-mini-note">
-                      <strong>Before confirming:</strong> {transferBlockingReason}
-                    </div>
-                  )}
-
-                  <div className="jo-land-registry-transfer-actions">
-                    <button
-                      type="button"
-                      className="jo-land-registry-transfer-cancel"
-                      onClick={closeTransferModal}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="jo-land-registry-transfer-confirm"
-                      onClick={handleTransferConfirm}
-                      disabled={!transferReadyForReview || isSubmittingTransfer}
-                      title={
-                        transferReadyForReview
-                          ? "Ready to submit transfer"
-                          : transferBlockingReason
-                      }
-                    >
-                      {isSubmittingTransfer
-                        ? "Submitting..."
-                        : "Confirm Transfer"}
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     </div>
   );

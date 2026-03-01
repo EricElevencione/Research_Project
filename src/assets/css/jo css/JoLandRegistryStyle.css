@@ -408,19 +408,14 @@
 }
 
 .jo-land-registry-history-item {
-  display: grid;
-  grid-template-columns: 40px 100px 1fr;
+  display: flex;
+  flex-direction: row;
   gap: 16px;
+  align-items: center;
   padding: 16px;
-  background: #f8f9fa;
   border-radius: 10px;
   border-left: 4px solid #a0c878;
   transition: all 0.2s ease;
-}
-
-.jo-land-registry-history-item:hover {
-  background: #e9ecef;
-  transform: translateX(4px);
 }
 
 .jo-land-registry-history-item.current {
@@ -484,6 +479,9 @@
   font-weight: 600;
   font-size: 16px;
   color: #212529;
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
 
 .jo-land-registry-history-meta {
@@ -731,6 +729,309 @@
   gap: 4px;
 }
 
+/* ─── Donor Parcel Cards ─── */
+.jo-land-registry-donor-parcel-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.jo-land-registry-donor-parcel-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.jo-land-registry-donor-parcel-card:hover {
+  border-color: #0ea5e9;
+  box-shadow: 0 1px 6px rgba(14, 165, 233, 0.12);
+}
+
+.jo-land-registry-donor-parcel-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #ecfeff 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.jo-land-registry-donor-parcel-number {
+  font-weight: 700;
+  font-size: 14px;
+  color: #0f172a;
+  letter-spacing: 0.3px;
+}
+
+.jo-land-registry-donor-parcel-area-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #0ea5e9;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.jo-land-registry-donor-parcel-card-body {
+  padding: 10px 14px;
+}
+
+.jo-land-registry-donor-parcel-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jo-land-registry-donor-parcel-detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 70px;
+}
+
+.jo-land-registry-donor-parcel-detail-value {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+/* ─── PartialParcelTransferSection Styles ─── */
+
+/* Radio scope selector */
+.jo-land-registry-transfer-scope-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+
+.jo-land-registry-transfer-radio-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.jo-land-registry-transfer-radio-label:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.jo-land-registry-transfer-radio-label input[type="radio"] {
+  margin-top: 3px;
+  accent-color: #0ea5e9;
+  flex-shrink: 0;
+}
+
+.jo-land-registry-transfer-radio-label input[type="radio"]:checked + span {
+  color: #075985;
+}
+
+.jo-land-registry-transfer-radio-label
+  input[type="radio"]:checked
+  ~ span
+  strong {
+  color: #0369a1;
+}
+
+/* Parcel list inside PartialParcelTransferSection */
+.jo-land-registry-transfer-parcel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.jo-land-registry-transfer-parcel-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px 14px;
+  transition: border-color 0.15s ease;
+}
+
+.jo-land-registry-transfer-parcel-row:hover {
+  border-color: #cbd5e1;
+}
+
+.jo-land-registry-transfer-parcel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-bottom: 6px;
+}
+
+.jo-land-registry-transfer-parcel-number {
+  font-weight: 700;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.jo-land-registry-transfer-parcel-location {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.jo-land-registry-transfer-parcel-area {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+/* Full-transfer badge */
+.jo-land-registry-transfer-parcel-full-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 4px;
+}
+
+/* Partial-transfer split inputs */
+.jo-land-registry-transfer-parcel-split-inputs {
+  margin-top: 6px;
+}
+
+.jo-land-registry-transfer-parcel-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jo-land-registry-transfer-parcel-input-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  min-width: 90px;
+}
+
+.jo-land-registry-transfer-ha-input {
+  width: 140px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  text-align: right;
+  background: #fff;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.jo-land-registry-transfer-ha-input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+.jo-land-registry-transfer-ha-input--error {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.jo-land-registry-transfer-ha-input--error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.jo-land-registry-transfer-ha-unit {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Inline validation & preview */
+.jo-land-registry-transfer-input-error {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.jo-land-registry-transfer-input-error--block {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  background: #fef2f2;
+  font-size: 13px;
+}
+
+.jo-land-registry-transfer-remaining-preview {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.jo-land-registry-transfer-remaining-preview strong {
+  color: #0f172a;
+}
+
+.jo-land-registry-transfer-remaining-preview code {
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #334155;
+  font-family: "Courier New", monospace;
+}
+
+/* Scope summary */
+.jo-land-registry-transfer-scope-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #166534;
+  margin-top: 4px;
+}
+
+.jo-land-registry-transfer-scope-summary strong {
+  color: #14532d;
+}
+
+.jo-land-registry-transfer-scope-pct {
+  font-size: 12px;
+  color: #15803d;
+  font-weight: 500;
+}
+
 .jo-land-registry-transfer-doc-list {
   list-style: none;
   padding: 0;
@@ -886,5 +1187,19 @@
   .jo-land-registry-transfer-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .jo-land-registry-donor-parcel-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .jo-land-registry-transfer-parcel-input-row {
+    flex-wrap: wrap;
+  }
+
+  .jo-land-registry-transfer-ha-input {
+    width: 100%;
   }
 }
