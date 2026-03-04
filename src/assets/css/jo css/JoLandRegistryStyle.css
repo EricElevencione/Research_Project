@@ -1080,6 +1080,131 @@
   gap: 8px 12px;
 }
 
+/* ── Redesigned Review Blocks ── */
+.jo-land-registry-transfer-review-block {
+  margin-top: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jo-land-registry-transfer-review-block-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+
+/* Transfer Type tags */
+.jo-land-registry-review-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.jo-land-registry-review-tag-voluntary {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.jo-land-registry-review-tag-inheritance {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+/* From → To row */
+.jo-land-registry-transfer-flow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.jo-land-registry-transfer-party {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.jo-land-registry-transfer-party-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.jo-land-registry-transfer-party-name {
+  font-size: 13px;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.jo-land-registry-transfer-party-sub {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.jo-land-registry-transfer-arrow {
+  font-size: 20px;
+  color: #0ea5e9;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Parcel list inside review */
+.jo-land-registry-transfer-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-land-registry-transfer-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 5px 8px;
+}
+
+.jo-land-registry-transfer-list-parcel {
+  font-weight: 600;
+  color: #0369a1;
+  flex-shrink: 0;
+}
+
+.jo-land-registry-transfer-list-brgy {
+  color: #475569;
+  flex: 1;
+}
+
+.jo-land-registry-transfer-list-area {
+  font-weight: 600;
+  color: #0f172a;
+  flex-shrink: 0;
+}
+
 .jo-land-registry-transfer-kv {
   display: flex;
   flex-direction: column;

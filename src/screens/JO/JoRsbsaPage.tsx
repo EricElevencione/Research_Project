@@ -421,6 +421,13 @@ const JoRsbsaPage: React.FC = () => {
     }
 
     return true;
+  }).sort((a, b) => {
+    // Sort newest first: compare by dateSubmitted, fall back to id descending
+    const dateA = a.dateSubmitted ? new Date(a.dateSubmitted).getTime() : 0;
+    const dateB = b.dateSubmitted ? new Date(b.dateSubmitted).getTime() : 0;
+    if (dateB !== dateA) return dateB - dateA;
+    // Fallback: higher id = newer record
+    return Number(b.id) - Number(a.id);
   });
 
   return (

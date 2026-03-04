@@ -504,7 +504,7 @@ const JoLandRegistry: React.FC = () => {
 
   const donorSplitParcels: ParcelSplitInput[] =
     donorFarmerGroup?.parcels.map((p) => ({
-      farm_parcel_id: p.id, // ← uses p.id not p.land_parcel_id
+      farm_parcel_id: p.id,
       parcel_number: p.parcel_number,
       farm_location_barangay: p.farm_location_barangay,
       total_farm_area_ha: Number(p.total_farm_area_ha) || 0,
@@ -1687,11 +1687,6 @@ const JoLandRegistry: React.FC = () => {
                     <div className="jo-land-registry-transfer-section-card">
                       <h4>Current Context</h4>
                       <div className="jo-land-registry-transfer-kv">
-                        <span>Opened From Farmer</span>
-                        <strong>{selectedFarmer.farmer_name}</strong>{" "}
-                        {/* ← CHANGED */}
-                      </div>
-                      <div className="jo-land-registry-transfer-kv">
                         <span>Current Holder</span>
                         <strong>{selectedFarmer.farmer_name}</strong>{" "}
                         {/* ← CHANGED */}
@@ -1973,51 +1968,167 @@ const JoLandRegistry: React.FC = () => {
                           </strong>
                         </div>
 
-                        <div className="jo-land-registry-transfer-review">
-                          <div className="jo-land-registry-transfer-kv">
-                            <span>Transfer Type</span>
-                            <strong>{transferModeLabel}</strong>
+                        {/* ── Review: Section 1 – Transfer Type ── */}
+                        <div className="jo-land-registry-transfer-review-block">
+                          <div className="jo-land-registry-transfer-review-block-title">
+                            Transfer Type
                           </div>
                           <div className="jo-land-registry-transfer-kv">
-                            <span>From</span>
-                            <strong>
-                              {selectedSource?.name || "Not selected"}
-                            </strong>
-                          </div>
-                          <div className="jo-land-registry-transfer-kv">
-                            <span>To</span>
-                            <strong>{selectedContextFarmerName}</strong>
-                          </div>
-                          <div className="jo-land-registry-transfer-kv">
-                            <span>Parcels</span>
-                            <strong>{donorSplitParcels.length}</strong>
-                          </div>
-                          <div className="jo-land-registry-transfer-kv">
-                            <span>Transfer Area</span>
-                            <strong>
-                              {transferMode === "inheritance"
-                                ? `${inheritanceSelectedAreaHa.toFixed(2)} ha`
-                                : `${voluntarySelectedAreaHa.toFixed(2)} ha`}
-                            </strong>
-                          </div>
-                          <div className="jo-land-registry-transfer-kv">
-                            <span>Effectivity</span>
-                            <strong>Immediate</strong>
+                            <span>Reason</span>
+                            <strong>{finalReasonPreview || "—"}</strong>
                           </div>
                         </div>
 
-                        {donorSplitParcels.length > 0 && (
-                          <ul className="jo-land-registry-transfer-list">
-                            {donorSplitParcels.map((parcel) => (
-                              <li key={parcel.farm_parcel_id}>
-                                {parcel.parcel_number ||
-                                  `#${parcel.farm_parcel_id}`}{" "}
-                                - {parcel.farm_location_barangay} (
-                                {parcel.total_farm_area_ha.toFixed(2)} ha)
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                        {/* ── Review: Section 2 – From / To ── */}
+                        <div className="jo-land-registry-transfer-review-block">
+                          <div className="jo-land-registry-transfer-review-block-title">
+                            Transfer Parties
+                          </div>
+                          <div className="jo-land-registry-transfer-flow-row">
+                            <div className="jo-land-registry-transfer-party">
+                              <span className="jo-land-registry-transfer-party-label">
+                                FROM
+                              </span>
+                              <strong className="jo-land-registry-transfer-party-name">
+                                {selectedSource?.name || (
+                                  <em style={{ color: "#9ca3af" }}>
+                                    Not selected
+                                  </em>
+                                )}
+                              </strong>
+                              {selectedSource && (
+                                <span className="jo-land-registry-transfer-party-sub">
+                                  {selectedSource.parcelCount} parcel
+                                  {selectedSource.parcelCount !== 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+                            <div className="jo-land-registry-transfer-arrow">
+                              →
+                            </div>
+                            <div className="jo-land-registry-transfer-party">
+                              <span className="jo-land-registry-transfer-party-label">
+                                TO
+                              </span>
+                              <strong className="jo-land-registry-transfer-party-name">
+                                {selectedContextFarmerName}
+                              </strong>
+                              <span className="jo-land-registry-transfer-party-sub">
+                                Recipient
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ── Review: Section 3 – Area, Parcels & Effectivity ── */}
+                        {(() => {
+                          // Build the live parcel rows depending on scope
+                          const reviewParcels =
+                            parcelScope === "partial"
+                              ? donorSplitParcels
+                                  .map((p) => {
+                                    const entered =
+                                      parcelSplitInputs[p.farm_parcel_id];
+                                    const area =
+                                      typeof entered === "number" && entered > 0
+                                        ? entered
+                                        : null;
+                                    return { ...p, reviewArea: area };
+                                  })
+                                  .filter((p) => p.reviewArea !== null)
+                              : donorSplitParcels.map((p) => ({
+                                  ...p,
+                                  reviewArea: p.total_farm_area_ha,
+                                }));
+
+                          const reviewTotalHa = reviewParcels.reduce(
+                            (sum, p) => sum + (p.reviewArea ?? 0),
+                            0,
+                          );
+
+                          return (
+                            <div className="jo-land-registry-transfer-review-block">
+                              <div className="jo-land-registry-transfer-review-block-title">
+                                Transfer Details
+                              </div>
+                              <div className="jo-land-registry-transfer-kv">
+                                <span>Scope</span>
+                                <strong>
+                                  {parcelScope === "partial"
+                                    ? "Partial"
+                                    : "Full Transfer"}
+                                </strong>
+                              </div>
+                              <div className="jo-land-registry-transfer-kv">
+                                <span>Parcels Involved</span>
+                                <strong>
+                                  {reviewParcels.length}
+                                  {parcelScope === "partial" &&
+                                    donorSplitParcels.length >
+                                      reviewParcels.length && (
+                                      <span
+                                        style={{
+                                          color: "#94a3b8",
+                                          fontWeight: 400,
+                                          fontSize: 11,
+                                          marginLeft: 4,
+                                        }}
+                                      >
+                                        of {donorSplitParcels.length} entered
+                                      </span>
+                                    )}
+                                </strong>
+                              </div>
+                              <div className="jo-land-registry-transfer-kv">
+                                <span>Total Transfer Area</span>
+                                <strong
+                                  style={{
+                                    color:
+                                      reviewTotalHa > 0 ? "#0f172a" : "#94a3b8",
+                                  }}
+                                >
+                                  {reviewTotalHa > 0
+                                    ? `${reviewTotalHa.toFixed(2)} ha`
+                                    : parcelScope === "partial"
+                                      ? "Enter values above"
+                                      : "—"}
+                                </strong>
+                              </div>
+                              <div className="jo-land-registry-transfer-kv">
+                                <span>Effectivity</span>
+                                <strong>Immediate</strong>
+                              </div>
+                              {reviewParcels.length > 0 ? (
+                                <ul className="jo-land-registry-transfer-list">
+                                  {reviewParcels.map((parcel) => (
+                                    <li key={parcel.farm_parcel_id}>
+                                      <span className="jo-land-registry-transfer-list-parcel">
+                                        {parcel.parcel_number ||
+                                          `#${parcel.farm_parcel_id}`}
+                                      </span>
+                                      <span className="jo-land-registry-transfer-list-brgy">
+                                        {parcel.farm_location_barangay}
+                                      </span>
+                                      <span className="jo-land-registry-transfer-list-area">
+                                        {(parcel.reviewArea ?? 0).toFixed(2)} ha
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : parcelScope === "partial" ? (
+                                <p
+                                  style={{
+                                    fontSize: 12,
+                                    color: "#94a3b8",
+                                    margin: "4px 0 0",
+                                  }}
+                                >
+                                  No transfer areas entered yet.
+                                </p>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 
