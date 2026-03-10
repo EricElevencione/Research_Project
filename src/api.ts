@@ -1015,6 +1015,7 @@ const normalizeRsbsaSubmissionUpdateData = (raw: any): Record<string, any> => {
     "FARMER_POULTRY",
     "FARMER_POULTRY_TEXT",
   ];
+  
 
   directColumnKeys.forEach((key) => {
     if (!Object.prototype.hasOwnProperty.call(raw, key)) return;

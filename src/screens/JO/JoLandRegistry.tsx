@@ -276,7 +276,12 @@ const JoLandRegistry: React.FC = () => {
         .order("period_start_date", { ascending: false });
 
       if (error) throw error;
-      const records: LandHistoryRecord[] = data || [];
+      const raw: LandHistoryRecord[] = data || [];
+
+      // Only show actual ownership change events — hide initial registration rows.
+      const records = raw.filter(
+        (rec) => (rec.change_type || "").toUpperCase() !== "NEW",
+      );
       setParcelHistory(records);
 
       // Extract all farmer IDs referenced in notes (e.g. "from farmer 3", "to farmer 7")
@@ -1491,126 +1496,268 @@ const JoLandRegistry: React.FC = () => {
                   </div>
                 </div>
 
-                {/* History Section – already using parcelHistory */}
+                {/* History Section – grouped by parcel */}
                 <div className="jo-land-registry-detail-section">
                   <h4>📜 Land Ownership History</h4>
                   {historyLoading ? (
                     <p>Loading history...</p>
                   ) : parcelHistory.length === 0 ? (
-                    <p>No history records found.</p>
+                    <p>No ownership changes recorded yet.</p>
                   ) : (
-                    <div className="jo-land-registry-history-list">
-                      {[...parcelHistory]
+                    (() => {
+                      // Group records by farm_parcel_id (fallback: land_parcel_id)
+                      const parcelGroups = new Map<
+                        string,
+                        typeof parcelHistory
+                      >();
+                      [...parcelHistory]
                         .sort((a, b) => {
                           const dateDiff =
                             new Date(b.period_start_date).getTime() -
                             new Date(a.period_start_date).getTime();
                           if (dateDiff !== 0) return dateDiff;
-                          // Same date: higher id = inserted later = show first
                           return b.id - a.id;
                         })
-                        .map((record) => {
-                          // Build a human-readable description of who transferred to whom
-                          const isTransfer = /TRANSFER/i.test(
-                            record.change_type || "",
+                        .forEach((record) => {
+                          const key = String(
+                            record.farm_parcel_id ??
+                              record.land_parcel_id ??
+                              "unknown",
                           );
-                          const ownerName =
-                            record.farmer_name ||
-                            record.land_owner_name ||
-                            "Unknown";
+                          if (!parcelGroups.has(key)) parcelGroups.set(key, []);
+                          parcelGroups.get(key)!.push(record);
+                        });
 
-                          // Parse the notes field to extract the other party
-                          // Notes format: "Full transfer from farmer X to Y" or "Partial split X.XX ha to/from farmer Y"
-                          let transferDescription = "";
-                          if (isTransfer && record.notes) {
-                            const fromMatch =
-                              record.notes.match(/from farmer (\d+)/i);
-                            const toMatch =
-                              record.notes.match(/to farmer (\d+)/i);
-                            const fromId = fromMatch
-                              ? Number(fromMatch[1])
-                              : null;
-                            const toId = toMatch ? Number(toMatch[1]) : null;
+                      const groupEntries = Array.from(parcelGroups.entries());
 
-                            // Find the other farmer's name from farmerNameMap (includes archived farmers)
-                            const otherFarmerId =
-                              fromId && fromId !== record.farmer_id
-                                ? fromId
-                                : toId;
-                            const otherName = otherFarmerId
-                              ? (farmerNameMap.get(otherFarmerId) ?? null)
-                              : null;
+                      return (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "16px",
+                          }}
+                        >
+                          {groupEntries.map(
+                            ([parcelKey, records], groupIdx) => {
+                              const representative = records[0];
+                              const parcelLabel = representative.parcel_number
+                                ? `Parcel #${(representative.parcel_number.match(/\d+/) || [representative.parcel_number])[0]}`
+                                : `Parcel ${groupIdx + 1}`;
+                              const currentRecord = records.find(
+                                (r) => r.is_current,
+                              );
+                              const areaHa =
+                                currentRecord?.total_farm_area_ha ??
+                                representative.total_farm_area_ha;
+                              const barangay =
+                                representative.farm_location_barangay;
 
-                            if (otherName) {
-                              // Determine direction: did this record's farmer receive or give?
-                              if (
-                                toMatch &&
-                                Number(toMatch[1]) !== record.farmer_id
-                              ) {
-                                transferDescription = `Transferred to ${otherName}`;
-                              } else if (
-                                fromMatch &&
-                                Number(fromMatch[1]) !== record.farmer_id
-                              ) {
-                                transferDescription = `Received from ${otherName}`;
-                              }
-                            }
-                          }
+                              return (
+                                <div
+                                  key={parcelKey}
+                                  style={{
+                                    border: "1px solid #d1fae5",
+                                    borderRadius: "10px",
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  {/* Parcel header strip */}
+                                  <span
+                                    style={{
+                                      fontWeight: 700,
+                                      fontSize: "14px",
+                                    }}
+                                  ></span>
 
-                          return (
-                            <div
-                              key={record.id}
-                              className={`jo-land-registry-history-item ${record.is_current ? "current" : ""}`}
-                            >
-                              <div
-                                className={`jo-land-registry-history-badge ${getOwnershipClass(record)}`}
-                              >
-                                {isTransfer
-                                  ? record.change_type === "TRANSFER_PARTIAL"
-                                    ? "Partial Transfer"
-                                    : "Transfer"
-                                  : getOwnershipType(record)}
-                              </div>
-                              <div className="jo-land-registry-history-details">
-                                <span className="jo-land-registry-history-name">
-                                  {transferDescription || ownerName}
-                                  {record.is_current && (
-                                    <span className="jo-land-registry-current-tag">
-                                      Current Owner
-                                    </span>
-                                  )}
-                                </span>
-                                <span className="jo-land-registry-history-meta">
-                                  <span>
-                                    📅 {formatDate(record.period_start_date)} –{" "}
-                                    {formatDate(record.period_end_date)}
-                                  </span>
-                                  {record.transferred_area_ha != null && (
-                                    <span>
-                                      📐 {record.transferred_area_ha.toFixed(2)}{" "}
-                                      ha transferred
-                                    </span>
-                                  )}
-                                  {record.parcel_number &&
-                                    !record.is_current && (
-                                      <span>
-                                        🪪 Parcel #
-                                        {
-                                          (record.parcel_number.match(
-                                            /\d+/,
-                                          ) || [record.parcel_number])[0]
+                                  {/* Timeline entries for this parcel */}
+                                  <div
+                                    className="jo-land-registry-history-list"
+                                    style={{ padding: "10px" }}
+                                  >
+                                    {records.map((record) => {
+                                      const isPartial =
+                                        record.change_type ===
+                                        "TRANSFER_PARTIAL";
+                                      const isTransfer = /TRANSFER/i.test(
+                                        record.change_type || "",
+                                      );
+                                      const recipientName =
+                                        record.farmer_name ||
+                                        record.land_owner_name ||
+                                        "Unknown";
+
+                                      // Resolve donor name from notes ("from farmer <id>")
+                                      let donorName: string | null = null;
+                                      if (isTransfer && record.notes) {
+                                        const fromMatch =
+                                          record.notes.match(
+                                            /from farmer (\d+)/i,
+                                          );
+                                        if (fromMatch) {
+                                          const donorId = Number(fromMatch[1]);
+                                          donorName =
+                                            farmerNameMap.get(donorId) ?? null;
                                         }
-                                      </span>
-                                    )}
-                                  {record.change_reason && (
-                                    <span>📝 {record.change_reason}</span>
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
+                                      }
+
+                                      // Transfer method label
+                                      const methodLabel = isPartial
+                                        ? "Partial transfer — split of original parcel"
+                                        : record.change_reason
+                                          ? `${record.change_reason} — full transfer`
+                                          : "Full transfer";
+
+                                      return (
+                                        <div
+                                          key={record.id}
+                                          style={{
+                                            background: record.is_current
+                                              ? "#f0fdf4"
+                                              : "#fafafa",
+                                            border: `1px solid ${record.is_current ? "#bbf7d0" : "#e5e7eb"}`,
+                                            borderRadius: "8px",
+                                            marginBottom: "10px",
+                                            overflow: "hidden",
+                                          }}
+                                        >
+                                          {/* Card header: type + date + current badge */}
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              justifyContent: "space-between",
+                                              alignItems: "center",
+                                              padding: "8px 12px",
+                                              borderBottom: `1px solid ${record.is_current ? "#bbf7d0" : "#e5e7eb"}`,
+                                              background: record.is_current
+                                                ? "#dcfce7"
+                                                : "#f3f4f6",
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                fontWeight: 700,
+                                                fontSize: "13px",
+                                                color: "#166534",
+                                              }}
+                                            >
+                                              {isPartial
+                                                ? "✂️ Partial Transfer"
+                                                : "🔄 " +
+                                                  (record.change_reason ||
+                                                    "Transfer")}
+                                            </span>
+                                            <div
+                                              style={{
+                                                display: "flex",
+                                                gap: "8px",
+                                                alignItems: "center",
+                                              }}
+                                            >
+                                              <span
+                                                style={{
+                                                  fontSize: "12px",
+                                                  color: "#6b7280",
+                                                }}
+                                              >
+                                                📅{" "}
+                                                {formatDate(
+                                                  record.period_start_date,
+                                                )}
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          {/* Card body */}
+                                          <div
+                                            style={{
+                                              padding: "10px 12px",
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              gap: "6px",
+                                              fontSize: "13px",
+                                              color: "#374151",
+                                            }}
+                                          >
+                                            {/* Method */}
+                                            <div>{methodLabel}</div>
+
+                                            {/* Parcel / area details */}
+                                            <div
+                                              style={{
+                                                color: "#6b7280",
+                                                fontSize: "12px",
+                                                display: "flex",
+                                                flexWrap: "wrap",
+                                                gap: "10px",
+                                              }}
+                                            >
+                                              {record.parcel_number && (
+                                                <span>
+                                                  📋 {record.parcel_number}
+                                                </span>
+                                              )}
+                                              {record.farm_location_barangay && (
+                                                <span>
+                                                  📍{" "}
+                                                  {
+                                                    record.farm_location_barangay
+                                                  }
+                                                </span>
+                                              )}
+                                              {record.transferred_area_ha !=
+                                                null && (
+                                                <span>
+                                                  📐{" "}
+                                                  {record.transferred_area_ha.toFixed(
+                                                    2,
+                                                  )}{" "}
+                                                  ha transferred
+                                                </span>
+                                              )}
+                                              {record.remaining_area_ha !=
+                                                null && (
+                                                <span>
+                                                  🔲{" "}
+                                                  {record.remaining_area_ha.toFixed(
+                                                    2,
+                                                  )}{" "}
+                                                  ha remaining with donor
+                                                </span>
+                                              )}
+                                            </div>
+
+                                            {/* Who: donor → recipient */}
+                                            {(donorName || recipientName) && (
+                                              <div
+                                                style={{
+                                                  display: "flex",
+                                                  alignItems: "center",
+                                                  gap: "8px",
+                                                  fontWeight: 500,
+                                                }}
+                                              >
+                                                <span>{donorName || "—"}</span>
+                                                <span
+                                                  style={{ color: "#9ca3af" }}
+                                                >
+                                                  →
+                                                </span>
+                                                <span>{recipientName}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
 

@@ -208,32 +208,32 @@
 /* Status Pills */
 .jo-land-registry-ownership-pill {
   display: inline-block;
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 700;
   text-align: center;
-  min-width: 100px;
+  min-width: 70px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 
 .jo-land-registry-ownership-owner {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 
 .jo-land-registry-ownership-tenant {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
 }
 
 .jo-land-registry-ownership-lessee {
-  background-color: #cce5ff;
-  color: #004085;
-  border: 1px solid #b8daff;
+  background-color: #ede9fe;
+  color: #5b21b6;
+  border: 1px solid #c4b5fd;
 }
 
 /* Loading and Empty States */
@@ -537,7 +537,7 @@
 }
 
 .jo-land-registry-transfer-header {
-  background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 100%);
+  background: linear-gradient(135deg, #2c5f2d 0%, #3a7d3c 100%);
 }
 
 .jo-land-registry-transfer-flow {
@@ -1244,7 +1244,7 @@
 }
 
 .jo-land-registry-transfer-confirm {
-  background: #0ea5e9;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #fff;
 }
 

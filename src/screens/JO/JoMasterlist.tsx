@@ -525,7 +525,13 @@ const JoMasterlist: React.FC = () => {
       ]);
 
       let matchesStatus = true;
-      if (selectedStatus === "active") {
+      if (selectedStatus === "owner") {
+        matchesStatus = record.ownershipType?.registeredOwner === true;
+      } else if (selectedStatus === "tenant") {
+        matchesStatus = record.ownershipType?.tenant === true;
+      } else if (selectedStatus === "lessee") {
+        matchesStatus = record.ownershipType?.lessee === true;
+      } else if (selectedStatus === "active") {
         matchesStatus = activeStatuses.has(normalizedStatus);
       } else if (selectedStatus === "notActive") {
         matchesStatus = notActiveStatuses.has(normalizedStatus);
@@ -1125,20 +1131,14 @@ const JoMasterlist: React.FC = () => {
                   className="jo-masterlist-status-select"
                 >
                   <option value="all">All</option>
+                  <option value="owner">Owner</option>
+                  <option value="tenant">Tenant</option>
+                  <option value="lessee">Lessee</option>
                   <option value="active">Active</option>
                   <option value="notActive">Not Active</option>
                   <option value="noParcels">No Parcels</option>
                 </select>
               </div>
-
-              <label className="jo-masterlist-archived-toggle">
-                <input
-                  type="checkbox"
-                  checked={showArchived}
-                  onChange={(e) => setShowArchived(e.target.checked)}
-                />
-                <span>Show archived farmers</span>
-              </label>
 
               {/* <div className="refresh-filter">
                 <button
@@ -1166,6 +1166,7 @@ const JoMasterlist: React.FC = () => {
                       "Farmer Address",
                       "Parcel Address",
                       "Parcel Area",
+                      "Ownership Type",
                       "Date Submitted",
                       "Status",
                       "Actions",
@@ -1177,7 +1178,7 @@ const JoMasterlist: React.FC = () => {
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={8} className="jo-masterlist-loading-cell">
+                      <td colSpan={9} className="jo-masterlist-loading-cell">
                         Loading...
                       </td>
                     </tr>
@@ -1185,7 +1186,7 @@ const JoMasterlist: React.FC = () => {
 
                   {error && !loading && (
                     <tr>
-                      <td colSpan={8} className="jo-masterlist-error-cell">
+                      <td colSpan={9} className="jo-masterlist-error-cell">
                         Error: {error}
                       </td>
                     </tr>
@@ -1207,6 +1208,34 @@ const JoMasterlist: React.FC = () => {
                           <td>{record.farmerAddress}</td>
                           <td>{record.farmLocation}</td>
                           <td>{record.parcelArea}</td>
+                          <td>
+                            {record.ownershipType ? (
+                              <span
+                                className={
+                                  `jo-masterlist-ownership-pill ` +
+                                  (record.ownershipType.registeredOwner
+                                    ? "jo-masterlist-ownership-owner"
+                                    : record.ownershipType.tenant
+                                      ? "jo-masterlist-ownership-tenant"
+                                      : record.ownershipType.lessee
+                                        ? "jo-masterlist-ownership-lessee"
+                                        : "jo-masterlist-ownership-unknown")
+                                }
+                              >
+                                {record.ownershipType.registeredOwner
+                                  ? "Owner"
+                                  : record.ownershipType.tenant
+                                    ? "Tenant"
+                                    : record.ownershipType.lessee
+                                      ? "Lessee"
+                                      : "—"}
+                              </span>
+                            ) : (
+                              <span className="jo-masterlist-ownership-pill jo-masterlist-ownership-unknown">
+                                —
+                              </span>
+                            )}
+                          </td>
                           <td>{formatDate(record.dateSubmitted)}</td>
                           <td>
                             <span
@@ -1246,7 +1275,7 @@ const JoMasterlist: React.FC = () => {
                     filteredRecords.length === 0 &&
                     Array.from({ length: 16 }).map((_, i) => (
                       <tr key={`empty-${i}`}>
-                        <td colSpan={8}>&nbsp;</td>
+                        <td colSpan={9}>&nbsp;</td>
                       </tr>
                     ))}
                 </tbody>

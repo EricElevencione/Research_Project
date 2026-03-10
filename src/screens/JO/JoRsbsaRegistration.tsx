@@ -210,6 +210,19 @@ const JoRsbsa: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    roleText: string;
+    parcelCount: number;
+    landOwnerName: string;
+  }>({
+    show: false,
+    roleText: "",
+    parcelCount: 0,
+    landOwnerName: "",
+  });
+
   // Show toast notification
   const showToast = (
     message: string,
@@ -644,14 +657,12 @@ const JoRsbsa: React.FC = () => {
       // For Tenant/Lessee: Show confirmation dialog before proceeding
       if (ownershipCategory === "tenant" || ownershipCategory === "lessee") {
         const roleText = ownershipCategory === "tenant" ? "Tenant" : "Lessee";
-        const confirmMessage = `You selected ${selectedParcelIds.size} parcel${selectedParcelIds.size !== 1 ? "s" : ""} from ${selectedLandOwner.name}.\n\nYou will be registered as a ${roleText}.\n\nProceed?`;
-
-        if (window.confirm(confirmMessage)) {
-          // Apply the selected parcels
-          applySelectedParcels();
-          setErrors({});
-          setCurrentStep(4);
-        }
+        setConfirmModal({
+          show: true,
+          roleText,
+          parcelCount: selectedParcelIds.size,
+          landOwnerName: selectedLandOwner.name,
+        });
         return;
       }
 
@@ -2390,6 +2401,97 @@ const JoRsbsa: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div
+          className="jo-confirm-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="jo-confirm-title"
+        >
+          <div className="jo-confirm-modal">
+            {/* Header */}
+            <div className="jo-confirm-modal-header">
+              <div className="jo-confirm-modal-header-icon">🏛️</div>
+              <div>
+                <h2 id="jo-confirm-title" className="jo-confirm-modal-title">
+                  Registration Confirmation
+                </h2>
+                <p className="jo-confirm-modal-header-sub">
+                  RSBSA — Registry System for Basic Sectors in Agriculture
+                </p>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="jo-confirm-modal-divider" />
+
+            {/* Body */}
+            <div className="jo-confirm-modal-body">
+              <p className="jo-confirm-modal-intro">
+                Please review the following details before proceeding:
+              </p>
+
+              <div className="jo-confirm-modal-details">
+                <div className="jo-confirm-modal-detail-row">
+                  <span className="jo-confirm-modal-detail-label">
+                    Registration Type
+                  </span>
+                  <span className="jo-confirm-modal-detail-value jo-confirm-modal-badge">
+                    {confirmModal.roleText}
+                  </span>
+                </div>
+                <div className="jo-confirm-modal-detail-row">
+                  <span className="jo-confirm-modal-detail-label">
+                    Land Owner
+                  </span>
+                  <span className="jo-confirm-modal-detail-value">
+                    {confirmModal.landOwnerName}
+                  </span>
+                </div>
+                <div className="jo-confirm-modal-detail-row">
+                  <span className="jo-confirm-modal-detail-label">
+                    Selected Parcels
+                  </span>
+                  <span className="jo-confirm-modal-detail-value">
+                    {confirmModal.parcelCount} parcel
+                    {confirmModal.parcelCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              </div>
+
+              <p className="jo-confirm-modal-notice">
+                ⚠️ By confirming, you acknowledge that the information provided
+                is accurate and complete.
+              </p>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="jo-confirm-modal-footer">
+              <button
+                className="jo-confirm-modal-btn-cancel"
+                onClick={() =>
+                  setConfirmModal((prev) => ({ ...prev, show: false }))
+                }
+              >
+                Cancel
+              </button>
+              <button
+                className="jo-confirm-modal-btn-confirm"
+                onClick={() => {
+                  setConfirmModal((prev) => ({ ...prev, show: false }));
+                  applySelectedParcels();
+                  setErrors({});
+                  setCurrentStep(4);
+                }}
+              >
+                ✓ Confirm &amp; Proceed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toast.show && (
