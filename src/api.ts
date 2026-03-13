@@ -648,82 +648,178 @@ export const getAvailableSeasons = async (): Promise<ApiResponse> => {
 
 export const getTechDashboardData = async (): Promise<ApiResponse> => {
   try {
-    const [farmersResult, plotsResult, barangayResult] = await Promise.all([
-      supabase
-        .from("rsbsa_submission")
-        .select('id, "FIRST NAME", "LAST NAME", "BARANGAY", "FFRS_CODE"'),
-      supabase.from("land_plots").select("id, farmer_id, ffrs_id, barangay"),
-      supabase.from("barangay_codes").select("barangay_name"),
-    ]);
+    const [farmersResult, plotsResult, barangayResult, parcelsResult] =
+      await Promise.all([
+        supabase
+          .from("rsbsa_submission")
+          .select('id, "FIRST NAME", "LAST NAME", "BARANGAY", "FFRS_CODE"'),
+        supabase
+          .from("land_plots")
+          .select("id, ffrs_id, barangay, parcel_number, first_name, surname"),
+        supabase.from("barangay_codes").select("barangay_name"),
+        supabase
+          .from("rsbsa_farm_parcels")
+          .select("id, submission_id, parcel_number, farm_location_barangay"),
+      ]);
 
     if (farmersResult.error) throw farmersResult.error;
 
     const farmers = farmersResult.data || [];
     const plots = plotsResult.data || [];
     const barangayCodes = barangayResult.data || [];
+    const farmParcels = parcelsResult.data || [];
 
-    const plottedFarmerIds = new Set<number>();
-    const plottedFfrs = new Set<string>();
+    // Normalise a string for case-insensitive, whitespace-insensitive comparison
+    const normalize = (s: string) => (s || "").toLowerCase().trim();
 
-    plots.forEach((p: any) => {
-      if (p.farmer_id) plottedFarmerIds.add(p.farmer_id);
-      if (p.ffrs_id) plottedFfrs.add(p.ffrs_id.toUpperCase());
+    // Build a lookup: farmer id -> { ffrs, firstName, lastName }
+    const farmerFfrsMap = new Map<
+      number,
+      { ffrs: string; firstName: string; lastName: string }
+    >();
+    farmers.forEach((f: any) => {
+      farmerFfrsMap.set(f.id, {
+        ffrs: (f.FFRS_CODE || "").toUpperCase(),
+        firstName: normalize(f["FIRST NAME"]),
+        lastName: normalize(f["LAST NAME"]),
+      });
     });
 
-    const farmerPlotStatus = farmers.map((f: any) => ({
-      ...f,
-      isPlotted:
-        plottedFarmerIds.has(f.id) ||
-        (f.FFRS_CODE && plottedFfrs.has(f.FFRS_CODE.toUpperCase())),
-    }));
+    // Build a lookup: ffrs_id (uppercase) -> set of plotted barangays (lowercase)
+    const plottedByFfrs = new Map<string, Set<string>>();
+    plots.forEach((p: any) => {
+      if (!p.ffrs_id) return;
+      const key = p.ffrs_id.toUpperCase();
+      if (!plottedByFfrs.has(key)) plottedByFfrs.set(key, new Set());
+      if (p.barangay) plottedByFfrs.get(key)!.add(normalize(p.barangay));
+    });
 
-    const plottedCount = farmerPlotStatus.filter(
-      (f: any) => f.isPlotted,
-    ).length;
-    const unplottedCount = farmerPlotStatus.filter(
-      (f: any) => !f.isPlotted,
-    ).length;
+    // Fallback lookup for plots that were saved without ffrs_id (legacy data).
+    // Key: "firstname|surname|barangay" (all normalised)
+    const plottedByNameBrgy = new Set<string>();
+    plots.forEach((p: any) => {
+      if (p.ffrs_id) return; // already handled by ffrs path
+      if (p.first_name && p.surname && p.barangay) {
+        plottedByNameBrgy.add(
+          `${normalize(p.first_name)}|${normalize(p.surname)}|${normalize(p.barangay)}`,
+        );
+      }
+    });
 
+    // Build enriched parcel list: each rsbsa_farm_parcels row + isPlotted flag.
+    // A parcel is "plotted" if land_plots has an entry with:
+    //   (a) matching ffrs_id AND matching barangay  [primary]
+    //   (b) OR matching first_name + surname + barangay when ffrs_id is absent [fallback]
+    const enrichedParcels = farmParcels.map((parcel: any) => {
+      const info = farmerFfrsMap.get(parcel.submission_id);
+      const ffrs = info?.ffrs || "";
+      const parcelBrgy = normalize(parcel.farm_location_barangay || "");
+
+      // Primary: ffrs + barangay match
+      const plottedBrgys = ffrs ? plottedByFfrs.get(ffrs) : undefined;
+      let isPlotted = plottedBrgys ? plottedBrgys.has(parcelBrgy) : false;
+
+      // Fallback: name + barangay match (covers legacy plots with empty ffrs_id)
+      if (!isPlotted && info && parcelBrgy) {
+        const nameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}`;
+        isPlotted = plottedByNameBrgy.has(nameKey);
+      }
+
+      return {
+        ...parcel,
+        ffrs,
+        parcelBrgy,
+        isPlotted,
+      };
+    });
+
+    // For farmers WITHOUT any rsbsa_farm_parcels entries, create a synthetic
+    // single-parcel entry using rsbsa_submission.BARANGAY (backward compat)
+    const farmerIdsWithParcels = new Set(
+      farmParcels.map((p: any) => p.submission_id),
+    );
+    const syntheticParcels = farmers
+      .filter((f: any) => !farmerIdsWithParcels.has(f.id))
+      .map((f: any) => {
+        const info = farmerFfrsMap.get(f.id);
+        const ffrs = info?.ffrs || "";
+        const parcelBrgy = normalize(f.BARANGAY || "");
+
+        // Primary: ffrs + barangay match
+        const plottedBrgys = ffrs ? plottedByFfrs.get(ffrs) : undefined;
+        let isPlotted = plottedBrgys ? plottedBrgys.has(parcelBrgy) : false;
+
+        // Fallback: name + barangay match
+        if (!isPlotted && info && parcelBrgy) {
+          const nameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}`;
+          isPlotted = plottedByNameBrgy.has(nameKey);
+        }
+
+        return {
+          submission_id: f.id,
+          farm_location_barangay: f.BARANGAY || "",
+          ffrs,
+          parcelBrgy,
+          isPlotted,
+          synthetic: true,
+        };
+      });
+
+    const allParcels = [...enrichedParcels, ...syntheticParcels];
+
+    // Summary counts (parcel-level)
+    const totalParcels = allParcels.length;
+    const plottedCount = allParcels.filter((p: any) => p.isPlotted).length;
+    const unplottedCount = totalParcels - plottedCount;
+
+    // Barangay checklist — group by farm_location_barangay (where the parcel is)
     const barangayNames: string[] =
       barangayCodes.length > 0
         ? barangayCodes.map((b: any) => b.barangay_name)
         : [
             ...new Set(
-              farmers.map((f: any) => f.BARANGAY).filter(Boolean) as string[],
+              allParcels
+                .map((p: any) => p.farm_location_barangay)
+                .filter(Boolean) as string[],
             ),
           ].sort();
 
-    const barangayChecklist = barangayNames.map((brgy) => {
-      const bLower = brgy.toLowerCase().trim();
-      const farmersInBrgy = farmerPlotStatus.filter(
-        (f: any) => (f.BARANGAY || "").toLowerCase().trim() === bLower,
-      );
-      const plottedInBrgy = farmersInBrgy.filter((f: any) => f.isPlotted);
-      const plotsInBrgy = plots.filter(
-        (p: any) => (p.barangay || "").toLowerCase().trim() === bLower,
-      );
-      return {
-        barangay: brgy,
-        farmerCount: farmersInBrgy.length,
-        plottedParcels: plotsInBrgy.length,
-        plottedFarmers: plottedInBrgy.length,
-        isComplete:
-          farmersInBrgy.length > 0 &&
-          plottedInBrgy.length >= farmersInBrgy.length,
-      };
-    });
+    const barangayChecklist = barangayNames
+      .map((brgy) => {
+        const bLower = brgy.toLowerCase().trim();
+        const parcelsInBrgy = allParcels.filter(
+          (p: any) => p.parcelBrgy === bLower,
+        );
+        const plottedInBrgy = parcelsInBrgy.filter((p: any) => p.isPlotted);
+        // Count unique farmers in this barangay
+        const uniqueFarmers = new Set(
+          parcelsInBrgy.map((p: any) => p.submission_id),
+        );
+        return {
+          barangay: brgy,
+          farmerCount: uniqueFarmers.size,
+          parcelCount: parcelsInBrgy.length,
+          plottedParcels: plottedInBrgy.length,
+          isComplete:
+            parcelsInBrgy.length > 0 &&
+            plottedInBrgy.length >= parcelsInBrgy.length,
+        };
+      })
+      .filter((row) => row.parcelCount > 0);
 
+    // Unplotted parcels by barangay
     const unplottedByBarangay: Record<string, number> = {};
-    farmerPlotStatus
-      .filter((f: any) => !f.isPlotted)
-      .forEach((f: any) => {
-        const brgy = (f.BARANGAY || "Unknown").trim();
+    allParcels
+      .filter((p: any) => !p.isPlotted)
+      .forEach((p: any) => {
+        const brgy = (p.farm_location_barangay || "Unknown").trim();
         unplottedByBarangay[brgy] = (unplottedByBarangay[brgy] || 0) + 1;
       });
 
     return createResponse(
       {
         totalFarmers: farmers.length,
+        totalParcels,
         totalPlotted: plottedCount,
         totalUnplotted: unplottedCount,
         barangayChecklist,
@@ -768,14 +864,13 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
   // so individual pages can filter as needed (e.g. RSBSA pages hide transferred owners).
   const filteredData = data || [];
 
-  // Count current parcels per submission
+  // Count ALL parcels per submission (including transferred ones)
+  // "Number of Parcels" = how many parcels the farmer has ever registered,
+  // regardless of whether any were later transferred to another farmer.
   const parcelCountMap = new Map<number, number>();
   (parcelsData || []).forEach((parcel: any) => {
     const subId = parcel.submission_id;
-    const isCurrent = parcel.is_current_owner !== false;
-    if (isCurrent) {
-      parcelCountMap.set(subId, (parcelCountMap.get(subId) || 0) + 1);
-    }
+    parcelCountMap.set(subId, (parcelCountMap.get(subId) || 0) + 1);
   });
 
   // Transform all records and attach ownership info
@@ -1015,7 +1110,6 @@ const normalizeRsbsaSubmissionUpdateData = (raw: any): Record<string, any> => {
     "FARMER_POULTRY",
     "FARMER_POULTRY_TEXT",
   ];
-  
 
   directColumnKeys.forEach((key) => {
     if (!Object.prototype.hasOwnProperty.call(raw, key)) return;

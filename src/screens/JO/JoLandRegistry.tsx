@@ -59,6 +59,14 @@ interface LandHistoryRecord {
   previous_history_id: number | null;
 }
 
+interface ProofItem {
+  storage_bucket: string;
+  storage_path: string;
+  file_name: string;
+  mime_type?: string;
+  file_size_bytes?: number;
+}
+
 // Interface for farmers (for transfer ownership dropdown)
 interface TransferActorOption {
   farmerId: number;
@@ -116,6 +124,20 @@ const JoLandRegistry: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBarangay, setFilterBarangay] = useState("");
   const [showModal, setShowModal] = useState(false);
+
+  // Proof viewer state
+  const [transferProofMap, setTransferProofMap] = useState<
+    Map<string, ProofItem[]>
+  >(new Map());
+  const [transferProofByRecipient, setTransferProofByRecipient] = useState<
+    Map<string, ProofItem[]>
+  >(new Map());
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<
+    { url: string; name: string }[]
+  >([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxLoading, setLightboxLoading] = useState(false);
 
   // Transfer Ownership State
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -294,14 +316,27 @@ const JoLandRegistry: React.FC = () => {
         }
       });
 
-      if (referencedIds.size > 0) {
-        const { data: farmerRows } = await supabase
-          .from("rsbsa_submission")
-          .select(`id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME"`)
-          .in("id", Array.from(referencedIds));
+      const idArray = Array.from(referencedIds);
+
+      if (idArray.length > 0) {
+        // Fetch farmer names and ownership_transfers proofs in parallel
+        const [farmerRowsResult, transfersResult] = await Promise.all([
+          supabase
+            .from("rsbsa_submission")
+            .select(`id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME"`)
+            .in("id", idArray),
+          supabase
+            .from("ownership_transfers")
+            .select("from_farmer_id, to_farmer_id, transfer_date, documents")
+            .or(
+              idArray
+                .map((id) => `from_farmer_id.eq.${id},to_farmer_id.eq.${id}`)
+                .join(","),
+            ),
+        ]);
 
         const nameMap = new Map<number, string>();
-        (farmerRows || []).forEach((row: any) => {
+        (farmerRowsResult.data || []).forEach((row: any) => {
           const full = [
             row["FIRST NAME"],
             row["MIDDLE NAME"],
@@ -313,11 +348,59 @@ const JoLandRegistry: React.FC = () => {
           nameMap.set(Number(row.id), full);
         });
         setFarmerNameMap(nameMap);
+
+        // Build proof lookup map keyed by "fromId-toId" (no date — period_start_date
+        // is the original registration date, not the transfer date, so dates diverge).
+        // Also build a recipient-only fallback map keyed by "toId".
+        const proofMap = new Map<string, ProofItem[]>();
+        const proofMapByRecipient = new Map<string, ProofItem[]>();
+        (transfersResult.data || []).forEach((row: any) => {
+          const fromId = Number(row.from_farmer_id);
+          const toId = Number(row.to_farmer_id);
+          if (!fromId || !toId) return;
+          const proofs: ProofItem[] = Array.isArray(row.documents)
+            ? row.documents
+            : [];
+          if (proofs.length === 0) return;
+          proofMap.set(`${fromId}-${toId}`, proofs);
+          // Recipient fallback: store all proofs received by toId
+          const existing = proofMapByRecipient.get(String(toId)) ?? [];
+          proofMapByRecipient.set(String(toId), [...existing, ...proofs]);
+        });
+        setTransferProofMap(proofMap);
+        setTransferProofByRecipient(proofMapByRecipient);
       }
     } catch (err) {
       console.error("History fetch error:", err);
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  // Fetch signed URLs for proofs and open lightbox
+  const handleViewProof = async (proofs: ProofItem[]) => {
+    setLightboxLoading(true);
+    setLightboxImages([]);
+    setLightboxIndex(0);
+    setLightboxOpen(true);
+    try {
+      const signedUrls = await Promise.all(
+        proofs.map(async (proof) => {
+          const { data, error } = await supabase.storage
+            .from(proof.storage_bucket || TRANSFER_PROOF_BUCKET)
+            .createSignedUrl(proof.storage_path, 3600);
+          return {
+            url: error || !data?.signedUrl ? "" : data.signedUrl,
+            name:
+              proof.file_name || proof.storage_path.split("/").pop() || "proof",
+          };
+        }),
+      );
+      setLightboxImages(signedUrls.filter((img) => img.url));
+    } catch (err) {
+      console.error("Proof URL fetch error:", err);
+    } finally {
+      setLightboxLoading(false);
     }
   };
   // Get ownership type label
@@ -1600,13 +1683,103 @@ const JoLandRegistry: React.FC = () => {
                                             farmerNameMap.get(donorId) ?? null;
                                         }
                                       }
+                                      // Fallback: extract donor from change_reason sentence
+                                      if (!donorName && record.change_reason) {
+                                        const crMatch =
+                                          record.change_reason.match(
+                                            /^Ownership transfer from (.+?) to .+$/i,
+                                          );
+                                        if (crMatch)
+                                          donorName = crMatch[1].trim();
+                                      }
+
+                                      // Clean transfer type label for the header
+                                      const cleanTitle = (() => {
+                                        if (isPartial)
+                                          return "✂️ Partial Transfer";
+                                        const r = (record.change_reason || "")
+                                          .trim()
+                                          .toLowerCase();
+                                        if (r.startsWith("voluntary"))
+                                          return "🔄 Voluntary Transfer";
+                                        if (r.startsWith("inheritance"))
+                                          return "🔄 Inheritance Transfer";
+                                        if (r.startsWith("ownership transfer"))
+                                          return "🔄 Ownership Transfer";
+                                        if (record.change_reason)
+                                          return `🔄 ${record.change_reason}`;
+                                        return "🔄 Transfer";
+                                      })();
+
+                                      // Role badge for the recipient
+                                      const recipientRole =
+                                        record.is_registered_owner
+                                          ? "Owner"
+                                          : record.is_tenant
+                                            ? "Tenant"
+                                            : record.is_lessee
+                                              ? "Lessee"
+                                              : null;
+                                      const roleBadgeBg =
+                                        record.is_registered_owner
+                                          ? "#dcfce7"
+                                          : record.is_tenant
+                                            ? "#dbeafe"
+                                            : record.is_lessee
+                                              ? "#ede9fe"
+                                              : "#f3f4f6";
+                                      const roleBadgeColor =
+                                        record.is_registered_owner
+                                          ? "#166534"
+                                          : record.is_tenant
+                                            ? "#1e40af"
+                                            : record.is_lessee
+                                              ? "#7c3aed"
+                                              : "#6b7280";
+
+                                      // Resolve donor ID from notes for proof lookup
+                                      let donorIdForProof: number | null = null;
+                                      if (isTransfer && record.notes) {
+                                        const dnMatch =
+                                          record.notes.match(
+                                            /from farmer (\d+)/i,
+                                          );
+                                        if (dnMatch)
+                                          donorIdForProof = Number(dnMatch[1]);
+                                      }
+                                      const recipientIdForProof =
+                                        record.farmer_id ?? null;
+                                      // Lookup proofs: primary by pair, fallback by recipient only
+                                      const cardProofs: ProofItem[] | null =
+                                        (() => {
+                                          if (
+                                            donorIdForProof &&
+                                            recipientIdForProof
+                                          ) {
+                                            const byPair = transferProofMap.get(
+                                              `${donorIdForProof}-${recipientIdForProof}`,
+                                            );
+                                            if (byPair && byPair.length > 0)
+                                              return byPair;
+                                          }
+                                          if (recipientIdForProof) {
+                                            const byRecipient =
+                                              transferProofByRecipient.get(
+                                                String(recipientIdForProof),
+                                              );
+                                            if (
+                                              byRecipient &&
+                                              byRecipient.length > 0
+                                            )
+                                              return byRecipient;
+                                          }
+                                          return null;
+                                        })();
 
                                       // Transfer method label
                                       const methodLabel = isPartial
                                         ? "Partial transfer — split of original parcel"
-                                        : record.change_reason
-                                          ? `${record.change_reason} — full transfer`
-                                          : "Full transfer";
+                                        : "Full transfer";
 
                                       return (
                                         <div
@@ -1641,11 +1814,7 @@ const JoLandRegistry: React.FC = () => {
                                                 color: "#166534",
                                               }}
                                             >
-                                              {isPartial
-                                                ? "✂️ Partial Transfer"
-                                                : "🔄 " +
-                                                  (record.change_reason ||
-                                                    "Transfer")}
+                                              {cleanTitle}
                                             </span>
                                             <div
                                               style={{
@@ -1734,18 +1903,79 @@ const JoLandRegistry: React.FC = () => {
                                                   display: "flex",
                                                   alignItems: "center",
                                                   gap: "8px",
+                                                  flexWrap: "wrap",
                                                   fontWeight: 500,
+                                                  marginTop: "2px",
                                                 }}
                                               >
-                                                <span>{donorName || "—"}</span>
+                                                {donorName ? (
+                                                  <span>{donorName}</span>
+                                                ) : (
+                                                  <span
+                                                    style={{
+                                                      color: "#9ca3af",
+                                                      fontStyle: "italic",
+                                                    }}
+                                                  >
+                                                    Unknown donor
+                                                  </span>
+                                                )}
                                                 <span
                                                   style={{ color: "#9ca3af" }}
                                                 >
                                                   →
                                                 </span>
                                                 <span>{recipientName}</span>
+                                                {recipientRole && (
+                                                  <span
+                                                    style={{
+                                                      fontSize: "11px",
+                                                      fontWeight: 600,
+                                                      padding: "1px 7px",
+                                                      borderRadius: "999px",
+                                                      background: roleBadgeBg,
+                                                      color: roleBadgeColor,
+                                                      border: `1px solid ${roleBadgeColor}40`,
+                                                    }}
+                                                  >
+                                                    {recipientRole}
+                                                  </span>
+                                                )}
                                               </div>
                                             )}
+
+                                            {/* Proof button */}
+                                            {cardProofs &&
+                                              cardProofs.length > 0 && (
+                                                <div
+                                                  style={{ marginTop: "6px" }}
+                                                >
+                                                  <button
+                                                    onClick={() =>
+                                                      handleViewProof(
+                                                        cardProofs,
+                                                      )
+                                                    }
+                                                    style={{
+                                                      display: "inline-flex",
+                                                      alignItems: "center",
+                                                      gap: "5px",
+                                                      padding: "4px 12px",
+                                                      fontSize: "12px",
+                                                      fontWeight: 600,
+                                                      color: "#1e40af",
+                                                      background: "#eff6ff",
+                                                      border:
+                                                        "1px solid #bfdbfe",
+                                                      borderRadius: "6px",
+                                                      cursor: "pointer",
+                                                    }}
+                                                  >
+                                                    📷 View Proof (
+                                                    {cardProofs.length})
+                                                  </button>
+                                                </div>
+                                              )}
                                           </div>
                                         </div>
                                       );
@@ -1772,6 +2002,146 @@ const JoLandRegistry: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Proof Lightbox */}
+        {lightboxOpen && (
+          <div
+            onClick={() => setLightboxOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 9999,
+              background: "rgba(0,0,0,0.85)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "12px",
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setLightboxOpen(false)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "20px",
+                background: "none",
+                border: "none",
+                color: "#fff",
+                fontSize: "28px",
+                cursor: "pointer",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+
+            {/* Image area */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "10px",
+                maxWidth: "90vw",
+                maxHeight: "80vh",
+              }}
+            >
+              {lightboxLoading ? (
+                <p style={{ color: "#fff", fontSize: "16px" }}>
+                  Loading proof...
+                </p>
+              ) : lightboxImages.length === 0 ? (
+                <p style={{ color: "#fca5a5", fontSize: "16px" }}>
+                  Could not load proof images.
+                </p>
+              ) : (
+                <>
+                  <img
+                    src={lightboxImages[lightboxIndex].url}
+                    alt={lightboxImages[lightboxIndex].name}
+                    style={{
+                      maxWidth: "85vw",
+                      maxHeight: "68vh",
+                      objectFit: "contain",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 32px rgba(0,0,0,0.6)",
+                    }}
+                  />
+                  <p
+                    style={{
+                      color: "#d1d5db",
+                      fontSize: "12px",
+                      margin: 0,
+                      textAlign: "center",
+                    }}
+                  >
+                    {lightboxImages[lightboxIndex].name}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Controls */}
+            {!lightboxLoading && lightboxImages.length > 0 && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                }}
+              >
+                <button
+                  onClick={() => setLightboxIndex((i) => Math.max(0, i - 1))}
+                  disabled={lightboxIndex === 0}
+                  style={{
+                    padding: "6px 16px",
+                    borderRadius: "6px",
+                    border: "1px solid #4b5563",
+                    background: lightboxIndex === 0 ? "#374151" : "#6b7280",
+                    color: "#fff",
+                    cursor: lightboxIndex === 0 ? "not-allowed" : "pointer",
+                    opacity: lightboxIndex === 0 ? 0.4 : 1,
+                  }}
+                >
+                  ‹ Prev
+                </button>
+                <span style={{ color: "#9ca3af", fontSize: "13px" }}>
+                  {lightboxIndex + 1} / {lightboxImages.length}
+                </span>
+                <button
+                  onClick={() =>
+                    setLightboxIndex((i) =>
+                      Math.min(lightboxImages.length - 1, i + 1),
+                    )
+                  }
+                  disabled={lightboxIndex === lightboxImages.length - 1}
+                  style={{
+                    padding: "6px 16px",
+                    borderRadius: "6px",
+                    border: "1px solid #4b5563",
+                    background:
+                      lightboxIndex === lightboxImages.length - 1
+                        ? "#374151"
+                        : "#6b7280",
+                    color: "#fff",
+                    cursor:
+                      lightboxIndex === lightboxImages.length - 1
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity:
+                      lightboxIndex === lightboxImages.length - 1 ? 0.4 : 1,
+                  }}
+                >
+                  Next ›
+                </button>
+              </div>
+            )}
           </div>
         )}
 
