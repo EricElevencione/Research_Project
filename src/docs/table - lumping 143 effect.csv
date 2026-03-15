@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Lumping143
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Promotes vigorous vegetative establishment; apply at transplanting and peak tillering stage.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Provides strong nutritional start; complete basal application reduces early-season deficiency stress.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Provides N + sulfur support for vegetative growth; effective in paddies with sulfur deficiency.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Strengthens stalk and reduces lodging risk; K improves crop standability at high yield.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Lumping143
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Triacontanol promotes early tillering and root development; foliar spray at 2–3 WAT improves establishment.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Bacteria and fungi improve soil nutrient cycling; nano-NPK provides precise nutrition for inbred variety establishment.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Rhizosphere organic activity improves nutrient use efficiency; reduces synthetic fertilizer needs while supporting inbred yield.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla provides sustainable N for inbred variety; organic matter improves soil conditions for consistent yield.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Water-soluble NPK corrects mid-season deficiency; foliar application at PI and heading supports inbred yield target.

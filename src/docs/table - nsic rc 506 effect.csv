@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 506
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Enables hybrid-like yield response; high N efficiency variety — responds well to split application.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Provides nutrition foundation for next-gen yield expression; all macro-nutrients support high HI.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Improves N uptake efficiency; S component supports high HI through better N partitioning.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Supports high harvest index; K improves assimilate transport efficiency to grain sinks.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 506
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Boosts next-gen variety's yield ceiling; biostimulant compounds improve sink strength and grain set percentage.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Nano-nutrient delivery supports high harvest index; fungi improve phosphorus acquisition for large panicle development.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic compounds feed high-yield soil microbiome; supports sustained nutrient release matching next-gen variety's demand.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla pre-incorporation builds soil N reserve; supports next-gen inbred's high yield potential with organic N base.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK boosts next-gen inbred's high yield potential; supplemental application at 2–3 stages maximizes HI.

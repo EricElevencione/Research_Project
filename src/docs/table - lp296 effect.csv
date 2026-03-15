@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on LP296
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Enhances tiller number and panicle count; split N application at 3 growth stages recommended.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Supports rapid establishment; balanced NPK promotes uniform crop stand and early tiller development.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Improves grain protein and N accumulation; sulfur synergy reduces lodging in high-yield conditions.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Enhances grain filling and reduces chalkiness; K at PI stage improves overall grain quality.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on LP296
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Iron and zinc support crop vigor; brassinosteroid application at PI stage reduces spikelet sterility.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Humic acid improves nutrient retention; nano-K and algae extract support panicle development and grain weight.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic acids and root exudates improve K and P mobilization; supports sustainable intensification of inbred rice production.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Biological N fixation reduces input costs for inbred production; Azolla improves soil organic matter over multiple seasons.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK improves nutrient use efficiency; water-soluble application at critical stages maximizes inbred grain yield.

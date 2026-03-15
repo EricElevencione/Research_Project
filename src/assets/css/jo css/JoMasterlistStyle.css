@@ -223,27 +223,27 @@
 }
 
 .jo-masterlist-ownership-owner {
-  background-color: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background-color: #1e3a8a;
+  border: 1px solid #132a5f;
+  color: #ffffff;
 }
 
 .jo-masterlist-ownership-tenant {
-  background-color: #d1fae5;
-  color: #065f46;
-  border: 1px solid #6ee7b7;
+  background-color: #10b981;
+  border: 1px solid #0a7e5e;
+  color: #ffffff;
 }
 
 .jo-masterlist-ownership-lessee {
-  background-color: #ede9fe;
-  color: #5b21b6;
-  border: 1px solid #c4b5fd;
+  background-color: #f59e0b;
+  border: 1px solid #c47c08;
+  color: #ffffff;
 }
 
 .jo-masterlist-ownership-unknown {
-  background-color: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background-color: #64748b;
+  border: 1px solid #475569;
+  color: #ffffff;
 }
 
 /* Archived toggle */

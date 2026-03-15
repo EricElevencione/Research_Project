@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 216
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Improves eating quality grain protein; moderate N rates needed to maintain soft cooked texture.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Promotes healthy vegetative growth without excess nitrogen; maintains grain quality characteristics.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Moderately improves grain protein; careful S rate management needed to maintain eating quality.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Improves cooking quality through better starch development; K supports amylose content regulation.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 216
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,"Improves eating quality through better starch quality; micronutrients (Zn, Fe) support enzyme activity for amylose synthesis."
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Fulvic acid improves nutrient uptake without excess; quality-focused application maintains eating quality characteristics.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic compounds support microbial production of auxins and cytokinins; improves grain quality through better plant hormone balance.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Organic N from Azolla maintains moderate N supply; prevents excess N that could reduce eating quality of this variety.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Moderate foliar NPK maintains eating quality; careful K application at heading improves grain starch composition.

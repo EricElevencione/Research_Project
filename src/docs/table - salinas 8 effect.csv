@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Salinas 8
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Enhances grain filling in salt-affected fields; split N application reduces salt-nitrogen interaction stress.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Supports saline-tolerant variety establishment; complete basal nutrition builds early stress resilience.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Provides N and S for salt-stressed plant recovery; supports protein synthesis under stress.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Improves saline stress tolerance; K application reduces Na accumulation in plant tissues.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Salinas 8
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Vitamin B complex supports metabolic recovery under salt stress; biostimulant improves root function in saline conditions.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Fungal component improves root function in saline soil; fulvic acid reduces salt toxicity on root membranes.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic mix supports halotolerant microbial activity; improves biological salt detoxification in saline paddy environment.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla biomass improves CEC of saline soils; released organic acids may help reduce salt concentration near roots.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK supports plant nutrition when roots are impaired by salinity; rapid absorption maintains yield in salt-affected fields.

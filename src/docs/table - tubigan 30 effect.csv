@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Tubigan 30
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Improves milling recovery; moderate N application preserves premium grain quality.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Promotes strong root system for premium grain development; phosphorus critical for milling quality.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Improves head rice recovery through grain protein support; S component enhances milling quality.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Significantly improves milling recovery; K is critical for premium grain quality in this variety.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Tubigan 30
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Improves head rice recovery through enhanced grain development; Zn and Fe support premium milling quality.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Sea kelp and nano-K support premium grain development; humic acid improves milling quality of this variety.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Improves micronutrient bioavailability for premium grain; organic acids enhance Zn and Fe uptake for milling quality.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Organic N supports premium grain quality development; Azolla avoids excess N peaks that reduce milling quality.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK at heading improves head rice percentage; water-soluble K supports premium milling quality development.

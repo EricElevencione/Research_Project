@@ -9,3 +9,9 @@
 8,Chicken Manure,Solid,Organic NPK,Basal,Solid/Bulk,"Organic N-P-K source; improves soil fertility, biology and water retention"
 9,Rice Straw (incorporated),Solid,Organic-K,Basal (post-harvest),Bulk,Potassium source; incorporated after harvest for slow decomposition and K recycling
 10,Carbonized Rice Hull (CRH),Solid,Organic/Biochar,Basal,Granular,"PhilRice CtRH Carbonizer biochar; improves drainage, soil pH buffer and water retention"
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Description & Key Effect
+1,Biofertilizer (Liquid Conc.),Liquid,Biostimulant,Foliar / Soil drench,Liquid,"Brassinosteroid, triacontanol, Fe, K₂O, Cu, Zn, Vitamins B1/B2/B6; promotes root growth, stress tolerance and grain set"
+2,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,"N, phosphate, soluble K, algae, bacteria, fungi, sea kelp, humic & fulvic acids; nano-scale delivery for enhanced uptake"
+3,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic materials + root fluids; activates beneficial soil microbes and improves rhizosphere nutrient availability
+4,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood paddy,Liquid/Organic,Water fern that fixes 20–30 kg N/ha; used as green manure in flooded paddies to reduce synthetic N needs
+5,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray (critical stages),Liquid,Water-soluble NPK for direct leaf absorption; corrects mid-season deficiency within 48–72 hrs; bypasses soil fixation

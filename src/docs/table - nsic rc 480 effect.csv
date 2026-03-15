@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 480
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Enhances leaf area and light interception; top-dress at active tillering for optimum tiller production.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Enhances seedling establishment and root growth; potassium improves early drought stress tolerance.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Supports sustained canopy greenness; S component improves N utilization efficiency.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Improves stress tolerance; K supports high yield stability across different soil conditions.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 480
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Triacontanol enhances photosynthesis under field conditions; biostimulant reduces heat/drought stress impact on yield.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Algae-derived biostimulants improve stress tolerance; nano-nutrient delivery reduces fertilizer application frequency.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Root exudate activity improves soil aggregation; enhances water-holding capacity in sandy or degraded paddy soils.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Biological N fixation supplements chemical N; Azolla biomass improves soil moisture retention for irrigated inbred.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK at critical stages improves nutrient uptake efficiency; reduces total fertilizer input while maintaining yield.

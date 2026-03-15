@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 402
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Supports sustained nitrogen uptake; split application at 3 stages improves grain yield by ~15%.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Supports early stand establishment; balanced NPK reduces nutrient deficiency risks at transplanting.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Provides N + S for improved grain quality; sulfur reduces protein dilution at high yields.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Enhances grain plumpness and weight; K at PI stage significantly improves head rice recovery.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 402
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Zinc and micronutrient support improves N use efficiency; foliar application at tillering boosts leaf area and crop vigor.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,"Microbial inoculants (bacteria, fungi) enhance nutrient cycling; nano-P improves phosphorus use efficiency."
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic acids improve P solubilization; reduces P fixation in clay-heavy paddy soils common in lowlands.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Green manure improves soil fertility index; Azolla-released nutrients support high-yield inbred's demand sustainably.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Water-soluble NPK at PI improves panicle exsertion; foliar application bypasses soil P fixation common in lowland paddies.

@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Mestiso 55
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Increases leaf greenness (SPAD value); supports high yield potential through improved canopy photosynthesis.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Boosts early seedling vigor; NPK balance improves transplanting survival and establishment.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Promotes deep green leaf color indicating high N status; sulfur supports enzyme activity.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Boosts stress tolerance and root activity; potassium supports grain filling under heat stress.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Mestiso 55
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Potassium oxide component strengthens cell walls; biostimulant action supports canopy health under humid field conditions.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Nano-potash enhances K uptake efficiency; beneficial fungi improve root colonization and nutrient scavenging.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Root exudates feed beneficial bacteria producing phytohormones; improves tillering response and root biomass of hybrid.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Biological N fixation reduces chemical fertilizer cost; Azolla residue improves soil water retention in irrigated paddies.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Supplemental foliar N at PI improves panicle size; water-soluble K at heading reduces spikelet sterility in hybrid.

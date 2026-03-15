@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Salinas 6
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Improves salinity tolerance by boosting plant vigor; careful N rate management needed in saline soils.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Helps overcome early saline stress through balanced nutrition; phosphorus improves ion uptake selectivity.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Acidifying effect beneficial in alkaline saline soils; sulfur may partially offset sodium effects.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Counteracts sodium uptake in saline soils; K+ competes with Na+ to improve ion selectivity.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Salinas 6
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,"Micronutrients (Fe, Zn, Cu) improve plant resilience in saline soils; brassinosteroid reduces Na-induced oxidative stress."
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Humic acid chelates Na ions reducing plant uptake; nano-K improves K:Na selectivity in saline conditions.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic acids help leach excess salts from root zone; promotes salt-tolerant microbial communities in saline soils.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla tolerant forms can grow in mildly saline water; organic N and organic matter help buffer soil salinity effects.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK bypasses saline soil nutrient barriers; direct leaf absorption improves nutrition despite salt-impaired root function.

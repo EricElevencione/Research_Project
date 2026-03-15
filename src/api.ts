@@ -1727,6 +1727,49 @@ export const deleteLandPlot = async (
 
 // ==================== DISTRIBUTION ALLOCATIONS ====================
 
+export interface FertilizerCatalogItem {
+  id: number;
+  code: string;
+  name: string;
+  n_pk: string | null;
+  default_unit: string;
+  is_active: boolean;
+  display_order: number;
+}
+
+export interface SeedCatalogItem {
+  id: number;
+  variety_code: string;
+  name: string;
+  default_unit: string;
+  is_active: boolean;
+  display_order: number;
+}
+
+export const getFertilizerCatalog = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("fertilizer_catalog")
+    .select("id, code, name, n_pk, default_unit, is_active, display_order")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data || [], null, 200);
+};
+
+export const getSeedCatalog = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("seed_catalog")
+    .select("id, variety_code, name, default_unit, is_active, display_order")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data || [], null, 200);
+};
+
 export const getAllocations = async (): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("regional_allocations")
@@ -2083,6 +2126,14 @@ export const apiFetch = async (
         if (method === "GET") return getDistributionRecords();
         if (method === "POST") return createDistributionRecord(body);
       }
+      if (parts[1] === "catalog") {
+        if (parts[2] === "fertilizers" && method === "GET") {
+          return getFertilizerCatalog();
+        }
+        if (parts[2] === "seeds" && method === "GET") {
+          return getSeedCatalog();
+        }
+      }
     }
 
     // Landowners route
@@ -2135,6 +2186,8 @@ export default {
   getCropPlantingInfo,
 
   // Allocations
+  getFertilizerCatalog,
+  getSeedCatalog,
   getAllocations,
   getAllocationById,
   getAllocationBySeason,

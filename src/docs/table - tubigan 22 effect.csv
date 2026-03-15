@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Tubigan 22
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Promotes steady tillering; apply at 15 and 35 DAT for irrigated lowland conditions.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Supports irrigated lowland establishment; balanced NPK improves plant stand uniformity.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Supports irrigated lowland N demand; sulfur addresses common S deficiency in intensive paddies.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Strengthens stalk and improves irrigated lowland performance; reduces lodging at high N rates.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Tubigan 22
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Zinc component corrects common Zn deficiency in irrigated lowlands; improves plant vigor and yield.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Nano-phosphate improves P use efficiency in irrigated soils; bacterial component reduces P fixation losses.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Enhances soil microbial diversity in intensively farmed irrigated paddies; reduces soil fatigue from continuous cropping.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla reduces inorganic N input in irrigated fields; biomass decomposition improves soil structure over cropping seasons.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar application supplements soil-applied fertilizers; NPK spray corrects mid-season deficiency in irrigated lowland paddies.

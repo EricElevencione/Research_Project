@@ -131,7 +131,7 @@ const Dashboard: React.FC = () => {
           {/* Header with season selector */}
           <div className="admin-dash-header">
             <div>
-              <h1 className="admin-dash-title">JO Executive Dashboard</h1>
+              <h1 className="admin-dash-title">Admin Dashboard</h1>
               <p className="admin-dash-subtitle">
                 {selectedAllocationId
                   ? availableAllocations.find(

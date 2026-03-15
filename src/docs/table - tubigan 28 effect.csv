@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Tubigan 28
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Enhances tiller count in early-maturing variety; apply smaller split doses due to short 112-day growth duration.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Rapidly establishes short-duration variety; complete basal nutrition maximizes the limited growth period.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Effective for short-duration variety; quick N release supports rapid growth in 112-day cycle.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Improves early-maturing variety standability; K reduces lodging risk in short-duration growth.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Tubigan 28
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Accelerates maturation in early-maturing variety; micronutrients support rapid grain filling within 112-day window.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Rapid nano-nutrient uptake suits short-duration growth; algae extract accelerates maturation and grain filling.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Rapid rhizosphere activation suits short-duration variety; organic compounds quickly boost beneficial microbial activity.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Fast N release from Azolla suits short-duration variety; early incorporation before transplanting boosts early N availability.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Quick-release foliar NPK suits 112-day variety; timely application at PI and heading maximizes short growth window.

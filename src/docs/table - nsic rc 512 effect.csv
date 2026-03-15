@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 512
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Increases panicle weight; recommended to use SPAD meter for precision N management.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Promotes uniform stand establishment; phosphorus component critical for early panicle differentiation.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Supports high yield with improved protein content; S ensures complete N metabolism.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Improves grain sink activity; K application at heading reduces unfilled grain percentage.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 512
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Improves grain fill completeness; brassinosteroid action at heading stage reduces empty spikelet percentage.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Humic and fulvic acids improve root elongation; nano-K improves assimilate movement to developing grains.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Rhizosphere activation improves micronutrient uptake; organic acids support iron reduction needed in flooded soils.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla green manure increases available N by 20–30 kg/ha; supports high spikelet number potential of this variety.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Water-soluble K at heading improves grain set; foliar application maximizes the high spikelet number of this variety.
