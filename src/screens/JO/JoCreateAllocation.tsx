@@ -205,6 +205,9 @@ const JoCreateAllocation: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdAllocationId, setCreatedAllocationId] = useState<number | null>(
+    null,
+  );
 
   // Function to determine season based on date
   const determineSeasonFromDate = (dateString: string): string => {
@@ -289,6 +292,7 @@ const JoCreateAllocation: React.FC = () => {
     >,
   ) => {
     const { name, value } = e.target;
+    const isSeedField = SEED_FIELDS.some((field) => field.key === name);
 
     // If allocation_date changes, automatically update season
     if (name === "allocation_date") {
@@ -304,7 +308,14 @@ const JoCreateAllocation: React.FC = () => {
       name.includes("liters")
     ) {
       const parsedValue =
-        value === "" ? "" : Math.max(0, parseInt(value, 10) || 0);
+        value === ""
+          ? ""
+          : Math.max(
+              0,
+              isSeedField
+                ? Number.parseFloat(value) || 0
+                : Number.parseInt(value, 10) || 0,
+            );
       setFormData((prev) => ({
         ...prev,
         [name]: parsedValue,
@@ -348,10 +359,8 @@ const JoCreateAllocation: React.FC = () => {
         throw new Error("No allocation ID returned from server");
       }
 
-      // Success - navigate to add farmer request page
-      alert(
-        "✅ Regional allocation created successfully! Now add farmers to this allocation.",
-      );
+      // Success - show in-app modal and let user choose when to continue
+      setCreatedAllocationId(allocationId);
 
       // Log audit trail
       try {
@@ -374,17 +383,16 @@ const JoCreateAllocation: React.FC = () => {
       } catch (auditErr) {
         console.error("Audit log failed (non-blocking):", auditErr);
       }
-
-      console.log(
-        "🔗 Navigating to:",
-        `/jo-add-farmer-request/${allocationId}`,
-      );
-      navigate(`/jo-add-farmer-request/${allocationId}`);
     } catch (err: any) {
       setError(err.message || "Failed to save allocation");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleProceedToAddFarmers = () => {
+    if (!createdAllocationId) return;
+    navigate(`/jo-add-farmer-request/${createdAllocationId}`);
   };
 
   return (
@@ -584,8 +592,8 @@ const JoCreateAllocation: React.FC = () => {
                             value={formData[field.key]}
                             onChange={handleInputChange}
                             min="0"
-                            step="1"
-                            inputMode="numeric"
+                            step="any"
+                            inputMode="decimal"
                             className="jo-allocation-input"
                           />
                         </div>
@@ -639,6 +647,44 @@ const JoCreateAllocation: React.FC = () => {
               </div>
             </form>
           </div>
+
+          {createdAllocationId && (
+            <div
+              className="jo-allocation-success-overlay"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="jo-allocation-success-modal">
+                <div className="jo-allocation-success-icon">✅</div>
+                <h3 className="jo-allocation-success-title">
+                  Regional allocation created
+                </h3>
+                <p className="jo-allocation-success-text">
+                  Your allocation was saved successfully. You can now add
+                  farmers to this batch.
+                </p>
+                <div className="jo-allocation-success-meta">
+                  Allocation ID: <strong>{createdAllocationId}</strong>
+                </div>
+                <div className="jo-allocation-success-actions">
+                  <button
+                    type="button"
+                    className="jo-allocation-success-btn-secondary"
+                    onClick={() => setCreatedAllocationId(null)}
+                  >
+                    Stay on this page
+                  </button>
+                  <button
+                    type="button"
+                    className="jo-allocation-success-btn-primary"
+                    onClick={handleProceedToAddFarmers}
+                  >
+                    Add farmers now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

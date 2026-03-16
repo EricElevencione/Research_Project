@@ -348,37 +348,41 @@
 }
 
 .jo-masterlist-edit-modal-header {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 24px 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 3px solid #047857;
 }
 
-.jo-masterlist-edit-modal-header h3 {
+.jo-masterlist-edit-modal-header h2 {
   margin: 0;
-  color: #2c5f2d;
-  font-size: 20px;
+  font-size: 24px;
+  font-weight: 700;
 }
 
 .jo-masterlist-close-button {
-  background: none;
-  border: none;
-  font-size: 28px;
-  color: #666;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 32px;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
   cursor: pointer;
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  padding: 0;
+  line-height: 1;
 }
 
 .jo-masterlist-close-button:hover {
-  background-color: #f0f0f0;
-  color: #333;
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
 }
 
 .jo-masterlist-edit-modal-body {

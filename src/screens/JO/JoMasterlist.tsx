@@ -1316,7 +1316,7 @@ const JoMasterlist: React.FC = () => {
           <div className="jo-masterlist-edit-modal-overlay">
             <div className="jo-masterlist-edit-modal">
               <div className="jo-masterlist-edit-modal-header">
-                <h3>Edit Land Owner Information</h3>
+                <h2>Edit Land Owner Information</h2>
                 <button
                   className="jo-masterlist-close-button"
                   onClick={handleCancel}

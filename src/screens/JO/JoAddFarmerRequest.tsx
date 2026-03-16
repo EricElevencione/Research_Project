@@ -36,37 +36,121 @@ interface AllocationDetails {
   urea_46_0_0_bags?: number;
   complete_14_14_14_bags?: number;
   ammonium_sulfate_21_0_0_bags?: number;
+  np_16_20_0_bags?: number;
   muriate_potash_0_0_60_bags?: number;
+  zinc_sulfate_bags?: number;
+  vermicompost_bags?: number;
+  chicken_manure_bags?: number;
+  rice_straw_kg?: number;
+  carbonized_rice_hull_bags?: number;
+  biofertilizer_liters?: number;
+  nanobiofertilizer_liters?: number;
+  organic_root_exudate_mix_liters?: number;
+  azolla_microphylla_kg?: number;
+  foliar_liquid_fertilizer_npk_liters?: number;
+  rice_seeds_nsic_rc160_kg?: number;
+  rice_seeds_nsic_rc222_kg?: number;
   jackpot_kg?: number;
   us88_kg?: number;
   th82_kg?: number;
   rh9000_kg?: number;
   lumping143_kg?: number;
   lp296_kg?: number;
+  mestiso_1_kg?: number;
+  mestiso_20_kg?: number;
+  mestiso_29_kg?: number;
+  mestiso_55_kg?: number;
+  mestiso_73_kg?: number;
+  mestiso_99_kg?: number;
+  mestiso_103_kg?: number;
+  nsic_rc402_kg?: number;
+  nsic_rc480_kg?: number;
+  nsic_rc216_kg?: number;
+  nsic_rc218_kg?: number;
+  nsic_rc506_kg?: number;
+  nsic_rc508_kg?: number;
+  nsic_rc512_kg?: number;
+  nsic_rc534_kg?: number;
+  tubigan_28_kg?: number;
+  tubigan_30_kg?: number;
+  tubigan_22_kg?: number;
+  sahod_ulan_2_kg?: number;
+  sahod_ulan_10_kg?: number;
+  salinas_6_kg?: number;
+  salinas_7_kg?: number;
+  salinas_8_kg?: number;
+  malagkit_5_kg?: number;
 }
 
 interface FarmerRequestForm {
   farmer_id: number;
   requested_urea_bags: number;
   requested_complete_14_bags: number;
+  requested_complete_16_bags: number;
   requested_ammonium_sulfate_bags: number;
+  requested_ammonium_phosphate_bags: number;
   requested_muriate_potash_bags: number;
+  requested_zinc_sulfate_bags: number;
+  requested_vermicompost_bags: number;
+  requested_chicken_manure_bags: number;
+  requested_rice_straw_kg: number;
+  requested_carbonized_rice_hull_bags: number;
+  requested_biofertilizer_liters: number;
+  requested_nanobiofertilizer_liters: number;
+  requested_organic_root_exudate_mix_liters: number;
+  requested_azolla_microphylla_kg: number;
+  requested_foliar_liquid_fertilizer_npk_liters: number;
+  requested_rice_seeds_nsic_rc160_kg: number;
+  requested_rice_seeds_nsic_rc222_kg: number;
   requested_jackpot_kg: number;
   requested_us88_kg: number;
   requested_th82_kg: number;
   requested_rh9000_kg: number;
   requested_lumping143_kg: number;
   requested_lp296_kg: number;
+  requested_mestiso_1_kg: number;
+  requested_mestiso_20_kg: number;
+  requested_mestiso_29_kg: number;
+  requested_mestiso_55_kg: number;
+  requested_mestiso_73_kg: number;
+  requested_mestiso_99_kg: number;
+  requested_mestiso_103_kg: number;
+  requested_nsic_rc402_kg: number;
+  requested_nsic_rc480_kg: number;
+  requested_nsic_rc216_kg: number;
+  requested_nsic_rc218_kg: number;
+  requested_nsic_rc506_kg: number;
+  requested_nsic_rc508_kg: number;
+  requested_nsic_rc512_kg: number;
+  requested_nsic_rc534_kg: number;
+  requested_tubigan_28_kg: number;
+  requested_tubigan_30_kg: number;
+  requested_tubigan_22_kg: number;
+  requested_sahod_ulan_2_kg: number;
+  requested_sahod_ulan_10_kg: number;
+  requested_salinas_6_kg: number;
+  requested_salinas_7_kg: number;
+  requested_salinas_8_kg: number;
+  requested_malagkit_5_kg: number;
   notes: string;
 }
 
 type RequestField = keyof Omit<FarmerRequestForm, "farmer_id" | "notes">;
 
-const FERTILIZER_ITEMS: Array<{
+type AllocationItem = {
   label: string;
   allocationField: keyof AllocationDetails;
   requestField: RequestField;
-}> = [
+};
+
+type AllocationSummaryItem = {
+  label: string;
+  allocated: number;
+  requested: number;
+  remaining: number;
+};
+
+const FERTILIZER_ITEMS: AllocationItem[] = [
   {
     label: "Urea (46-0-0)",
     allocationField: "urea_46_0_0_bags",
@@ -78,6 +162,11 @@ const FERTILIZER_ITEMS: Array<{
     requestField: "requested_complete_14_bags",
   },
   {
+    label: "16-20-0",
+    allocationField: "np_16_20_0_bags",
+    requestField: "requested_ammonium_phosphate_bags",
+  },
+  {
     label: "Ammonium Sulfate (21-0-0)",
     allocationField: "ammonium_sulfate_21_0_0_bags",
     requestField: "requested_ammonium_sulfate_bags",
@@ -87,13 +176,69 @@ const FERTILIZER_ITEMS: Array<{
     allocationField: "muriate_potash_0_0_60_bags",
     requestField: "requested_muriate_potash_bags",
   },
+  {
+    label: "Zinc Sulfate",
+    allocationField: "zinc_sulfate_bags",
+    requestField: "requested_zinc_sulfate_bags",
+  },
+  {
+    label: "Vermicompost",
+    allocationField: "vermicompost_bags",
+    requestField: "requested_vermicompost_bags",
+  },
+  {
+    label: "Chicken Manure",
+    allocationField: "chicken_manure_bags",
+    requestField: "requested_chicken_manure_bags",
+  },
+  {
+    label: "Rice Straw (incorporated)",
+    allocationField: "rice_straw_kg",
+    requestField: "requested_rice_straw_kg",
+  },
+  {
+    label: "Carbonized Rice Hull (CRH)",
+    allocationField: "carbonized_rice_hull_bags",
+    requestField: "requested_carbonized_rice_hull_bags",
+  },
+  {
+    label: "Biofertilizer (Liquid Concentrate)",
+    allocationField: "biofertilizer_liters",
+    requestField: "requested_biofertilizer_liters",
+  },
+  {
+    label: "Nanobiofertilizer",
+    allocationField: "nanobiofertilizer_liters",
+    requestField: "requested_nanobiofertilizer_liters",
+  },
+  {
+    label: "Organic Root Exudate Mix",
+    allocationField: "organic_root_exudate_mix_liters",
+    requestField: "requested_organic_root_exudate_mix_liters",
+  },
+  {
+    label: "Azolla microphylla",
+    allocationField: "azolla_microphylla_kg",
+    requestField: "requested_azolla_microphylla_kg",
+  },
+  {
+    label: "Foliar Liquid Fertilizer (NPK)",
+    allocationField: "foliar_liquid_fertilizer_npk_liters",
+    requestField: "requested_foliar_liquid_fertilizer_npk_liters",
+  },
 ];
 
-const SEED_ITEMS: Array<{
-  label: string;
-  allocationField: keyof AllocationDetails;
-  requestField: RequestField;
-}> = [
+const SEED_ITEMS: AllocationItem[] = [
+  {
+    label: "NSIC Rc 160",
+    allocationField: "rice_seeds_nsic_rc160_kg",
+    requestField: "requested_rice_seeds_nsic_rc160_kg",
+  },
+  {
+    label: "NSIC Rc 222",
+    allocationField: "rice_seeds_nsic_rc222_kg",
+    requestField: "requested_rice_seeds_nsic_rc222_kg",
+  },
   {
     label: "Jackpot",
     allocationField: "jackpot_kg",
@@ -124,6 +269,126 @@ const SEED_ITEMS: Array<{
     allocationField: "lp296_kg",
     requestField: "requested_lp296_kg",
   },
+  {
+    label: "Mestiso 1 (M1)",
+    allocationField: "mestiso_1_kg",
+    requestField: "requested_mestiso_1_kg",
+  },
+  {
+    label: "Mestiso 20 (M20)",
+    allocationField: "mestiso_20_kg",
+    requestField: "requested_mestiso_20_kg",
+  },
+  {
+    label: "Mestiso 29",
+    allocationField: "mestiso_29_kg",
+    requestField: "requested_mestiso_29_kg",
+  },
+  {
+    label: "Mestiso 55",
+    allocationField: "mestiso_55_kg",
+    requestField: "requested_mestiso_55_kg",
+  },
+  {
+    label: "Mestiso 73",
+    allocationField: "mestiso_73_kg",
+    requestField: "requested_mestiso_73_kg",
+  },
+  {
+    label: "Mestiso 99",
+    allocationField: "mestiso_99_kg",
+    requestField: "requested_mestiso_99_kg",
+  },
+  {
+    label: "Mestiso 103",
+    allocationField: "mestiso_103_kg",
+    requestField: "requested_mestiso_103_kg",
+  },
+  {
+    label: "NSIC Rc 402",
+    allocationField: "nsic_rc402_kg",
+    requestField: "requested_nsic_rc402_kg",
+  },
+  {
+    label: "NSIC Rc 480",
+    allocationField: "nsic_rc480_kg",
+    requestField: "requested_nsic_rc480_kg",
+  },
+  {
+    label: "NSIC Rc 216",
+    allocationField: "nsic_rc216_kg",
+    requestField: "requested_nsic_rc216_kg",
+  },
+  {
+    label: "NSIC Rc 218",
+    allocationField: "nsic_rc218_kg",
+    requestField: "requested_nsic_rc218_kg",
+  },
+  {
+    label: "NSIC Rc 506",
+    allocationField: "nsic_rc506_kg",
+    requestField: "requested_nsic_rc506_kg",
+  },
+  {
+    label: "NSIC Rc 508",
+    allocationField: "nsic_rc508_kg",
+    requestField: "requested_nsic_rc508_kg",
+  },
+  {
+    label: "NSIC Rc 512",
+    allocationField: "nsic_rc512_kg",
+    requestField: "requested_nsic_rc512_kg",
+  },
+  {
+    label: "NSIC Rc 534",
+    allocationField: "nsic_rc534_kg",
+    requestField: "requested_nsic_rc534_kg",
+  },
+  {
+    label: "Tubigan 28",
+    allocationField: "tubigan_28_kg",
+    requestField: "requested_tubigan_28_kg",
+  },
+  {
+    label: "Tubigan 30",
+    allocationField: "tubigan_30_kg",
+    requestField: "requested_tubigan_30_kg",
+  },
+  {
+    label: "Tubigan 22",
+    allocationField: "tubigan_22_kg",
+    requestField: "requested_tubigan_22_kg",
+  },
+  {
+    label: "Sahod Ulan 2",
+    allocationField: "sahod_ulan_2_kg",
+    requestField: "requested_sahod_ulan_2_kg",
+  },
+  {
+    label: "Sahod Ulan 10",
+    allocationField: "sahod_ulan_10_kg",
+    requestField: "requested_sahod_ulan_10_kg",
+  },
+  {
+    label: "Salinas 6",
+    allocationField: "salinas_6_kg",
+    requestField: "requested_salinas_6_kg",
+  },
+  {
+    label: "Salinas 7",
+    allocationField: "salinas_7_kg",
+    requestField: "requested_salinas_7_kg",
+  },
+  {
+    label: "Salinas 8",
+    allocationField: "salinas_8_kg",
+    requestField: "requested_salinas_8_kg",
+  },
+  {
+    label: "Malagkit 5",
+    allocationField: "malagkit_5_kg",
+    requestField: "requested_malagkit_5_kg",
+  },
 ];
 
 const JoAddFarmerRequest: React.FC = () => {
@@ -145,14 +410,52 @@ const JoAddFarmerRequest: React.FC = () => {
     farmer_id: 0,
     requested_urea_bags: 0,
     requested_complete_14_bags: 0,
+    requested_complete_16_bags: 0,
     requested_ammonium_sulfate_bags: 0,
+    requested_ammonium_phosphate_bags: 0,
     requested_muriate_potash_bags: 0,
+    requested_zinc_sulfate_bags: 0,
+    requested_vermicompost_bags: 0,
+    requested_chicken_manure_bags: 0,
+    requested_rice_straw_kg: 0,
+    requested_carbonized_rice_hull_bags: 0,
+    requested_biofertilizer_liters: 0,
+    requested_nanobiofertilizer_liters: 0,
+    requested_organic_root_exudate_mix_liters: 0,
+    requested_azolla_microphylla_kg: 0,
+    requested_foliar_liquid_fertilizer_npk_liters: 0,
+    requested_rice_seeds_nsic_rc160_kg: 0,
+    requested_rice_seeds_nsic_rc222_kg: 0,
     requested_jackpot_kg: 0,
     requested_us88_kg: 0,
     requested_th82_kg: 0,
     requested_rh9000_kg: 0,
     requested_lumping143_kg: 0,
     requested_lp296_kg: 0,
+    requested_mestiso_1_kg: 0,
+    requested_mestiso_20_kg: 0,
+    requested_mestiso_29_kg: 0,
+    requested_mestiso_55_kg: 0,
+    requested_mestiso_73_kg: 0,
+    requested_mestiso_99_kg: 0,
+    requested_mestiso_103_kg: 0,
+    requested_nsic_rc402_kg: 0,
+    requested_nsic_rc480_kg: 0,
+    requested_nsic_rc216_kg: 0,
+    requested_nsic_rc218_kg: 0,
+    requested_nsic_rc506_kg: 0,
+    requested_nsic_rc508_kg: 0,
+    requested_nsic_rc512_kg: 0,
+    requested_nsic_rc534_kg: 0,
+    requested_tubigan_28_kg: 0,
+    requested_tubigan_30_kg: 0,
+    requested_tubigan_22_kg: 0,
+    requested_sahod_ulan_2_kg: 0,
+    requested_sahod_ulan_10_kg: 0,
+    requested_salinas_6_kg: 0,
+    requested_salinas_7_kg: 0,
+    requested_salinas_8_kg: 0,
+    requested_malagkit_5_kg: 0,
     notes: "",
   });
 
@@ -275,6 +578,56 @@ const JoAddFarmerRequest: React.FC = () => {
   const hasVisibleAllocationItems =
     visibleFertilizerItems.length > 0 || visibleSeedItems.length > 0;
 
+  const toSafeNumber = (value: unknown): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const formatSummaryValue = (value: number): string => {
+    return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+  };
+
+  const buildSummaryItems = (
+    items: AllocationItem[],
+  ): AllocationSummaryItem[] => {
+    return items.map((item) => {
+      const allocated = toSafeNumber(allocation?.[item.allocationField]);
+      const requested = Math.max(0, toSafeNumber(formData[item.requestField]));
+      return {
+        label: item.label,
+        allocated,
+        requested,
+        remaining: allocated - requested,
+      };
+    });
+  };
+
+  const fertilizerSummaryItems = buildSummaryItems(visibleFertilizerItems);
+  const seedSummaryItems = buildSummaryItems(visibleSeedItems);
+
+  const fertilizerTotals = fertilizerSummaryItems.reduce(
+    (totals, item) => ({
+      allocated: totals.allocated + item.allocated,
+      requested: totals.requested + item.requested,
+      remaining: totals.remaining + item.remaining,
+    }),
+    { allocated: 0, requested: 0, remaining: 0 },
+  );
+
+  const seedTotals = seedSummaryItems.reduce(
+    (totals, item) => ({
+      allocated: totals.allocated + item.allocated,
+      requested: totals.requested + item.requested,
+      remaining: totals.remaining + item.remaining,
+    }),
+    { allocated: 0, requested: 0, remaining: 0 },
+  );
+
+  const hasOverAllocation = [
+    ...fertilizerSummaryItems,
+    ...seedSummaryItems,
+  ].some((item) => item.remaining < 0);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -336,15 +689,61 @@ const JoAddFarmerRequest: React.FC = () => {
         created_by: null,
         requested_urea_bags: formData.requested_urea_bags,
         requested_complete_14_bags: formData.requested_complete_14_bags,
+        requested_complete_16_bags: formData.requested_complete_16_bags,
         requested_ammonium_sulfate_bags:
           formData.requested_ammonium_sulfate_bags,
+        requested_ammonium_phosphate_bags:
+          formData.requested_ammonium_phosphate_bags,
         requested_muriate_potash_bags: formData.requested_muriate_potash_bags,
+        requested_zinc_sulfate_bags: formData.requested_zinc_sulfate_bags,
+        requested_vermicompost_bags: formData.requested_vermicompost_bags,
+        requested_chicken_manure_bags: formData.requested_chicken_manure_bags,
+        requested_rice_straw_kg: formData.requested_rice_straw_kg,
+        requested_carbonized_rice_hull_bags:
+          formData.requested_carbonized_rice_hull_bags,
+        requested_biofertilizer_liters: formData.requested_biofertilizer_liters,
+        requested_nanobiofertilizer_liters:
+          formData.requested_nanobiofertilizer_liters,
+        requested_organic_root_exudate_mix_liters:
+          formData.requested_organic_root_exudate_mix_liters,
+        requested_azolla_microphylla_kg:
+          formData.requested_azolla_microphylla_kg,
+        requested_foliar_liquid_fertilizer_npk_liters:
+          formData.requested_foliar_liquid_fertilizer_npk_liters,
+        requested_rice_seeds_nsic_rc160_kg:
+          formData.requested_rice_seeds_nsic_rc160_kg,
+        requested_rice_seeds_nsic_rc222_kg:
+          formData.requested_rice_seeds_nsic_rc222_kg,
         requested_jackpot_kg: formData.requested_jackpot_kg,
         requested_us88_kg: formData.requested_us88_kg,
         requested_th82_kg: formData.requested_th82_kg,
         requested_rh9000_kg: formData.requested_rh9000_kg,
         requested_lumping143_kg: formData.requested_lumping143_kg,
         requested_lp296_kg: formData.requested_lp296_kg,
+        requested_mestiso_1_kg: formData.requested_mestiso_1_kg,
+        requested_mestiso_20_kg: formData.requested_mestiso_20_kg,
+        requested_mestiso_29_kg: formData.requested_mestiso_29_kg,
+        requested_mestiso_55_kg: formData.requested_mestiso_55_kg,
+        requested_mestiso_73_kg: formData.requested_mestiso_73_kg,
+        requested_mestiso_99_kg: formData.requested_mestiso_99_kg,
+        requested_mestiso_103_kg: formData.requested_mestiso_103_kg,
+        requested_nsic_rc402_kg: formData.requested_nsic_rc402_kg,
+        requested_nsic_rc480_kg: formData.requested_nsic_rc480_kg,
+        requested_nsic_rc216_kg: formData.requested_nsic_rc216_kg,
+        requested_nsic_rc218_kg: formData.requested_nsic_rc218_kg,
+        requested_nsic_rc506_kg: formData.requested_nsic_rc506_kg,
+        requested_nsic_rc508_kg: formData.requested_nsic_rc508_kg,
+        requested_nsic_rc512_kg: formData.requested_nsic_rc512_kg,
+        requested_nsic_rc534_kg: formData.requested_nsic_rc534_kg,
+        requested_tubigan_28_kg: formData.requested_tubigan_28_kg,
+        requested_tubigan_30_kg: formData.requested_tubigan_30_kg,
+        requested_tubigan_22_kg: formData.requested_tubigan_22_kg,
+        requested_sahod_ulan_2_kg: formData.requested_sahod_ulan_2_kg,
+        requested_sahod_ulan_10_kg: formData.requested_sahod_ulan_10_kg,
+        requested_salinas_6_kg: formData.requested_salinas_6_kg,
+        requested_salinas_7_kg: formData.requested_salinas_7_kg,
+        requested_salinas_8_kg: formData.requested_salinas_8_kg,
+        requested_malagkit_5_kg: formData.requested_malagkit_5_kg,
       });
 
       if (response.error) {
@@ -378,16 +777,64 @@ const JoAddFarmerRequest: React.FC = () => {
             requested_seed_total_kg: totalSeedsRequested,
             requested_urea_bags: formData.requested_urea_bags,
             requested_complete_14_bags: formData.requested_complete_14_bags,
+            requested_complete_16_bags: formData.requested_complete_16_bags,
             requested_ammonium_sulfate_bags:
               formData.requested_ammonium_sulfate_bags,
+            requested_ammonium_phosphate_bags:
+              formData.requested_ammonium_phosphate_bags,
             requested_muriate_potash_bags:
               formData.requested_muriate_potash_bags,
+            requested_zinc_sulfate_bags: formData.requested_zinc_sulfate_bags,
+            requested_vermicompost_bags: formData.requested_vermicompost_bags,
+            requested_chicken_manure_bags:
+              formData.requested_chicken_manure_bags,
+            requested_rice_straw_kg: formData.requested_rice_straw_kg,
+            requested_carbonized_rice_hull_bags:
+              formData.requested_carbonized_rice_hull_bags,
+            requested_biofertilizer_liters:
+              formData.requested_biofertilizer_liters,
+            requested_nanobiofertilizer_liters:
+              formData.requested_nanobiofertilizer_liters,
+            requested_organic_root_exudate_mix_liters:
+              formData.requested_organic_root_exudate_mix_liters,
+            requested_azolla_microphylla_kg:
+              formData.requested_azolla_microphylla_kg,
+            requested_foliar_liquid_fertilizer_npk_liters:
+              formData.requested_foliar_liquid_fertilizer_npk_liters,
+            requested_rice_seeds_nsic_rc160_kg:
+              formData.requested_rice_seeds_nsic_rc160_kg,
+            requested_rice_seeds_nsic_rc222_kg:
+              formData.requested_rice_seeds_nsic_rc222_kg,
             requested_jackpot_kg: formData.requested_jackpot_kg,
             requested_us88_kg: formData.requested_us88_kg,
             requested_th82_kg: formData.requested_th82_kg,
             requested_rh9000_kg: formData.requested_rh9000_kg,
             requested_lumping143_kg: formData.requested_lumping143_kg,
             requested_lp296_kg: formData.requested_lp296_kg,
+            requested_mestiso_1_kg: formData.requested_mestiso_1_kg,
+            requested_mestiso_20_kg: formData.requested_mestiso_20_kg,
+            requested_mestiso_29_kg: formData.requested_mestiso_29_kg,
+            requested_mestiso_55_kg: formData.requested_mestiso_55_kg,
+            requested_mestiso_73_kg: formData.requested_mestiso_73_kg,
+            requested_mestiso_99_kg: formData.requested_mestiso_99_kg,
+            requested_mestiso_103_kg: formData.requested_mestiso_103_kg,
+            requested_nsic_rc402_kg: formData.requested_nsic_rc402_kg,
+            requested_nsic_rc480_kg: formData.requested_nsic_rc480_kg,
+            requested_nsic_rc216_kg: formData.requested_nsic_rc216_kg,
+            requested_nsic_rc218_kg: formData.requested_nsic_rc218_kg,
+            requested_nsic_rc506_kg: formData.requested_nsic_rc506_kg,
+            requested_nsic_rc508_kg: formData.requested_nsic_rc508_kg,
+            requested_nsic_rc512_kg: formData.requested_nsic_rc512_kg,
+            requested_nsic_rc534_kg: formData.requested_nsic_rc534_kg,
+            requested_tubigan_28_kg: formData.requested_tubigan_28_kg,
+            requested_tubigan_30_kg: formData.requested_tubigan_30_kg,
+            requested_tubigan_22_kg: formData.requested_tubigan_22_kg,
+            requested_sahod_ulan_2_kg: formData.requested_sahod_ulan_2_kg,
+            requested_sahod_ulan_10_kg: formData.requested_sahod_ulan_10_kg,
+            requested_salinas_6_kg: formData.requested_salinas_6_kg,
+            requested_salinas_7_kg: formData.requested_salinas_7_kg,
+            requested_salinas_8_kg: formData.requested_salinas_8_kg,
+            requested_malagkit_5_kg: formData.requested_malagkit_5_kg,
             request_notes: formData.notes || null,
           },
           {
@@ -604,6 +1051,101 @@ const JoAddFarmerRequest: React.FC = () => {
                 </div>
               </div>
 
+              {hasVisibleAllocationItems && (
+                <div className="jo-add-farmer-section jo-add-farmer-allocation-summary">
+                  <h3 className="jo-add-farmer-section-title">
+                    📊 Allocation Summary
+                  </h3>
+
+                  <div className="jo-add-farmer-summary-totals-grid">
+                    <div
+                      className={`jo-add-farmer-summary-total-card ${fertilizerTotals.remaining < 0 ? "is-warning" : ""}`}
+                    >
+                      <h4>Fertilizers</h4>
+                      <p>
+                        Allocated:{" "}
+                        {formatSummaryValue(fertilizerTotals.allocated)}
+                      </p>
+                      <p>
+                        Entered:{" "}
+                        {formatSummaryValue(fertilizerTotals.requested)}
+                      </p>
+                      <p>
+                        Remaining:{" "}
+                        {formatSummaryValue(fertilizerTotals.remaining)}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`jo-add-farmer-summary-total-card ${seedTotals.remaining < 0 ? "is-warning" : ""}`}
+                    >
+                      <h4>Seeds</h4>
+                      <p>
+                        Allocated: {formatSummaryValue(seedTotals.allocated)}
+                      </p>
+                      <p>Entered: {formatSummaryValue(seedTotals.requested)}</p>
+                      <p>
+                        Remaining: {formatSummaryValue(seedTotals.remaining)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {fertilizerSummaryItems.length > 0 && (
+                    <div className="jo-add-farmer-summary-table-wrap">
+                      <h4 className="jo-add-farmer-summary-subtitle">
+                        Fertilizer Items
+                      </h4>
+                      <div className="jo-add-farmer-summary-table">
+                        <div className="jo-add-farmer-summary-header">
+                          <span>Item</span>
+                          <span>Allocated</span>
+                          <span>Entered</span>
+                          <span>Remaining</span>
+                        </div>
+                        {fertilizerSummaryItems.map((item) => (
+                          <div
+                            key={item.label}
+                            className={`jo-add-farmer-summary-row ${item.remaining < 0 ? "is-warning" : ""}`}
+                          >
+                            <span>{item.label}</span>
+                            <span>{formatSummaryValue(item.allocated)}</span>
+                            <span>{formatSummaryValue(item.requested)}</span>
+                            <span>{formatSummaryValue(item.remaining)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {seedSummaryItems.length > 0 && (
+                    <div className="jo-add-farmer-summary-table-wrap">
+                      <h4 className="jo-add-farmer-summary-subtitle">
+                        Seed Items
+                      </h4>
+                      <div className="jo-add-farmer-summary-table">
+                        <div className="jo-add-farmer-summary-header">
+                          <span>Item</span>
+                          <span>Allocated</span>
+                          <span>Entered</span>
+                          <span>Remaining</span>
+                        </div>
+                        {seedSummaryItems.map((item) => (
+                          <div
+                            key={item.label}
+                            className={`jo-add-farmer-summary-row ${item.remaining < 0 ? "is-warning" : ""}`}
+                          >
+                            <span>{item.label}</span>
+                            <span>{formatSummaryValue(item.allocated)}</span>
+                            <span>{formatSummaryValue(item.requested)}</span>
+                            <span>{formatSummaryValue(item.remaining)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="jo-add-farmer-section">
                 <h3 className="jo-add-farmer-section-title">
                   🌱 Requested Fertilizers (bags)
@@ -628,7 +1170,7 @@ const JoAddFarmerRequest: React.FC = () => {
                           value={Number(formData[item.requestField]) || 0}
                           onChange={handleInputChange}
                           min="0"
-                          step="0.01"
+                          step="1"
                           className="jo-add-farmer-input"
                         />
                       </div>
@@ -661,7 +1203,8 @@ const JoAddFarmerRequest: React.FC = () => {
                           value={Number(formData[item.requestField]) || 0}
                           onChange={handleInputChange}
                           min="0"
-                          step="0.01"
+                          step="any"
+                          inputMode="decimal"
                           className="jo-add-farmer-input"
                         />
                       </div>
@@ -689,6 +1232,13 @@ const JoAddFarmerRequest: React.FC = () => {
               </div>
 
               {error && <div className="jo-add-farmer-error-box">{error}</div>}
+
+              {hasOverAllocation && (
+                <div className="jo-add-farmer-warning-box">
+                  Some entered values are above allocation. You can still
+                  submit, but please review remaining values highlighted in red.
+                </div>
+              )}
 
               <div className="jo-add-farmer-actions">
                 <button

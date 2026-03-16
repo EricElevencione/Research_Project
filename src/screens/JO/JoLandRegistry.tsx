@@ -1363,35 +1363,6 @@ const JoLandRegistry: React.FC = () => {
             </p>
           </div>
 
-          {/* Stats */}
-          {/* Stats – fully using aggregatedFarmers */}
-          <div className="jo-land-registry-stats">
-            <div className="jo-land-registry-stat-card">
-              <h3>Land Owners</h3>
-              <p className="jo-land-registry-stat-number">
-                {filteredFarmers.length}
-              </p>
-            </div>
-
-            <div className="jo-land-registry-stat-card">
-              <h3>Tenant</h3>
-              <p className="jo-land-registry-stat-number">
-                {aggregatedFarmers.reduce((sum, group) => {
-                  return sum + (group.parcels.some((p) => p.is_tenant) ? 1 : 0);
-                }, 0)}
-              </p>
-            </div>
-
-            <div className="jo-land-registry-stat-card">
-              <h3>Lessee</h3>
-              <p className="jo-land-registry-stat-number">
-                {aggregatedFarmers.reduce((sum, group) => {
-                  return sum + (group.parcels.some((p) => p.is_lessee) ? 1 : 0);
-                }, 0)}
-              </p>
-            </div>
-          </div>
-
           {/* Content Card */}
           <div className="jo-land-registry-content-card">
             {/* Filters */}
