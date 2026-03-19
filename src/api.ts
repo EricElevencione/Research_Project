@@ -252,26 +252,83 @@ export const getDashboardStats = async (
       allocationRows = seasonAllocations || [];
     }
 
-    const fertilizerAllocated = allocationRows.reduce(
-      (sum, allocation) =>
-        sum +
-        (allocation.urea_46_0_0_bags || 0) +
-        (allocation.complete_14_14_14_bags || 0) +
-        (allocation.ammonium_sulfate_21_0_0_bags || 0) +
-        (allocation.muriate_potash_0_0_60_bags || 0),
-      0,
-    );
+    const fertilizerAllocationFields = [
+      "urea_46_0_0_bags",
+      "complete_14_14_14_bags",
+      "complete_16_16_16_bags",
+      "np_16_20_0_bags",
+      "ammonium_phosphate_16_20_0_bags",
+      "ammonium_sulfate_21_0_0_bags",
+      "muriate_potash_0_0_60_bags",
+      "zinc_sulfate_bags",
+      "vermicompost_bags",
+      "chicken_manure_bags",
+      "rice_straw_kg",
+      "carbonized_rice_hull_bags",
+      "biofertilizer_liters",
+      "nanobiofertilizer_liters",
+      "organic_root_exudate_mix_liters",
+      "azolla_microphylla_kg",
+      "foliar_liquid_fertilizer_npk_liters",
+    ] as const;
 
-    const seedsAllocated = allocationRows.reduce(
-      (sum, allocation) =>
-        sum +
-        (allocation.jackpot_kg || 0) +
-        (allocation.us88_kg || 0) +
-        (allocation.th82_kg || 0) +
-        (allocation.rh9000_kg || 0) +
-        (allocation.lumping143_kg || 0) +
-        (allocation.lp296_kg || 0),
-      0,
+    const seedAllocationFields = [
+      "rice_seeds_nsic_rc160_kg",
+      "rice_seeds_nsic_rc222_kg",
+      "jackpot_kg",
+      "us88_kg",
+      "th82_kg",
+      "rh9000_kg",
+      "lumping143_kg",
+      "lp296_kg",
+      "mestiso_1_kg",
+      "mestiso_20_kg",
+      "mestiso_29_kg",
+      "mestiso_55_kg",
+      "mestiso_73_kg",
+      "mestiso_99_kg",
+      "mestiso_103_kg",
+      "nsic_rc402_kg",
+      "nsic_rc480_kg",
+      "nsic_rc216_kg",
+      "nsic_rc218_kg",
+      "nsic_rc506_kg",
+      "nsic_rc508_kg",
+      "nsic_rc512_kg",
+      "nsic_rc534_kg",
+      "tubigan_28_kg",
+      "tubigan_30_kg",
+      "tubigan_22_kg",
+      "sahod_ulan_2_kg",
+      "sahod_ulan_10_kg",
+      "salinas_6_kg",
+      "salinas_7_kg",
+      "salinas_8_kg",
+      "malagkit_5_kg",
+    ] as const;
+
+    const sumAllocationFields = (
+      rows: any[],
+      fields: readonly string[],
+    ): number => {
+      return rows.reduce(
+        (total, row) =>
+          total +
+          fields.reduce(
+            (fieldSum, field) => fieldSum + (Number(row?.[field]) || 0),
+            0,
+          ),
+        0,
+      );
+    };
+
+    const fertilizerAllocated = sumAllocationFields(
+      allocationRows,
+      fertilizerAllocationFields,
+    );
+    const seedsAllocated = sumAllocationFields(
+      allocationRows,
+      seedAllocationFields,
     );
 
     const seasonRequestIds = seasonRequests.map((r) => r.id);

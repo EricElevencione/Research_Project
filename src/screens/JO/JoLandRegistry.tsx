@@ -431,11 +431,14 @@ const JoLandRegistry: React.FC = () => {
   };
 
   // Get unique barangays for filter
-  const uniqueBarangays = [
-    ...new Set(
-      landParcels.map((p) => p.farm_location_barangay).filter(Boolean),
-    ),
-  ].sort();
+  const uniqueBarangays = useMemo(() => {
+    const barangays = aggregatedFarmers.flatMap((group) =>
+      group.parcels
+        .map((parcel) => (parcel.farm_location_barangay || "").trim())
+        .filter(Boolean),
+    );
+    return [...new Set(barangays)].sort((a, b) => a.localeCompare(b));
+  }, [aggregatedFarmers]);
 
   // Filter parcels
 
@@ -464,18 +467,27 @@ const JoLandRegistry: React.FC = () => {
 
   const filteredFarmers = useMemo(() => {
     return aggregatedFarmers.filter((group) => {
-      // Your filter logic here (from previous messages)
-
       if (group.parcels.length === 0) return false;
       if (group.total_farm_area_ha <= 0) return false;
 
+      if (filterBarangay) {
+        const hasBarangayMatch = group.parcels.some(
+          (p) =>
+            (p.farm_location_barangay || "").trim().toLowerCase() ===
+            filterBarangay.trim().toLowerCase(),
+        );
+        if (!hasBarangayMatch) return false;
+      }
+
       const lowerSearch = searchTerm.toLowerCase();
+      if (!lowerSearch) return true;
+
       if (group.farmer_name.toLowerCase().includes(lowerSearch)) return true;
       return group.parcels.some((p) =>
         p.parcel_number.toLowerCase().includes(lowerSearch),
       );
     });
-  }, [aggregatedFarmers, searchTerm]); // Dependencies
+  }, [aggregatedFarmers, searchTerm, filterBarangay]);
 
   const registeredOwnerParcels = landParcels.filter(
     (p) => p.is_registered_owner,

@@ -60,6 +60,14 @@ interface ParcelDetail {
   lesseeLandOwnerName: string;
 }
 
+const INACTIVE_STATUS_VALUES = new Set([
+  "inactive",
+  "inactive farmer",
+  "not active",
+  "deactivated",
+  "archived",
+]);
+
 const JoRsbsaPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -383,52 +391,65 @@ const JoRsbsaPage: React.FC = () => {
   }, [registeredOwners]);
 
   // Filter registered owners based on search query and filters
-  const filteredOwners = registeredOwners.filter((record) => {
-    // Parse name parts once
-    const nameParts = record.farmerName.split(", ");
-    const lastName = nameParts[0] || "";
-    const restOfName = (nameParts[1] || "")
-      .split(" ")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    const firstName = restOfName[0] || "";
-    const middleName = restOfName[1] || "";
-    const extName = restOfName[2] || "";
+  const filteredOwners = registeredOwners
+    .filter((record) => {
+      // Parse name parts once
+      const nameParts = record.farmerName.split(", ");
+      const lastName = nameParts[0] || "";
+      const restOfName = (nameParts[1] || "")
+        .split(" ")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      const firstName = restOfName[0] || "";
+      const middleName = restOfName[1] || "";
+      const extName = restOfName[2] || "";
 
-    // Search query filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        lastName.toLowerCase().includes(query) ||
-        firstName.toLowerCase().includes(query) ||
-        middleName.toLowerCase().includes(query) ||
-        extName.toLowerCase().includes(query) ||
-        record.farmerAddress?.toLowerCase().includes(query) ||
-        record.gender?.toLowerCase().includes(query) ||
-        record.referenceNumber?.toLowerCase().includes(query) ||
-        record.referenceNumber
-          ?.replace(/-/g, "")
-          .toLowerCase()
-          .includes(query.replace(/-/g, ""));
+      // Search query filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          lastName.toLowerCase().includes(query) ||
+          firstName.toLowerCase().includes(query) ||
+          middleName.toLowerCase().includes(query) ||
+          extName.toLowerCase().includes(query) ||
+          record.farmerAddress?.toLowerCase().includes(query) ||
+          record.gender?.toLowerCase().includes(query) ||
+          record.referenceNumber?.toLowerCase().includes(query) ||
+          record.referenceNumber
+            ?.replace(/-/g, "")
+            .toLowerCase()
+            .includes(query.replace(/-/g, ""));
 
-      if (!matchesSearch) return false;
+        if (!matchesSearch) return false;
+      }
+
+      // Barangay filter
+      if (selectedBarangay !== "all") {
+        const barangay = record.farmerAddress?.split(",")[0]?.trim();
+        if (barangay !== selectedBarangay) return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort newest first: compare by dateSubmitted, fall back to id descending
+      const dateA = a.dateSubmitted ? new Date(a.dateSubmitted).getTime() : 0;
+      const dateB = b.dateSubmitted ? new Date(b.dateSubmitted).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA;
+      // Fallback: higher id = newer record
+      return Number(b.id) - Number(a.id);
+    });
+
+  const getStatusPillClass = (status: string) => {
+    const normalizedStatus = status.toLowerCase().trim().replace(/\s+/g, " ");
+    if (normalizedStatus === "no parcels") {
+      return "jo-rsbsa-status-no-parcels";
     }
-
-    // Barangay filter
-    if (selectedBarangay !== "all") {
-      const barangay = record.farmerAddress?.split(",")[0]?.trim();
-      if (barangay !== selectedBarangay) return false;
+    if (INACTIVE_STATUS_VALUES.has(normalizedStatus)) {
+      return "jo-rsbsa-status-inactive";
     }
-
-    return true;
-  }).sort((a, b) => {
-    // Sort newest first: compare by dateSubmitted, fall back to id descending
-    const dateA = a.dateSubmitted ? new Date(a.dateSubmitted).getTime() : 0;
-    const dateB = b.dateSubmitted ? new Date(b.dateSubmitted).getTime() : 0;
-    if (dateB !== dateA) return dateB - dateA;
-    // Fallback: higher id = newer record
-    return Number(b.id) - Number(a.id);
-  });
+    return "jo-rsbsa-status-active";
+  };
 
   return (
     <div className="jo-rsbsa-page-container">
@@ -648,13 +669,12 @@ const JoRsbsaPage: React.FC = () => {
                             </td>
                             <td>
                               {(() => {
-                                const st =
-                                  (record as any).status || "Active Farmer";
-                                const isNoParcels =
-                                  st.toLowerCase().trim() === "no parcels";
+                                const st = String(
+                                  (record as any).status || "Active Farmer",
+                                );
                                 return (
                                   <span
-                                    className={`jo-rsbsa-status-pill ${isNoParcels ? "jo-rsbsa-status-no-parcels" : "jo-rsbsa-status-active"}`}
+                                    className={`jo-rsbsa-status-pill ${getStatusPillClass(st)}`}
                                   >
                                     {st}
                                   </span>
