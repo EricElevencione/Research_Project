@@ -1443,6 +1443,182 @@ const AuditTrail: React.FC = () => {
     );
   };
 
+  const formatNumberDisplay = (value: number) => {
+    return new Intl.NumberFormat("en-PH", {
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  const formatSimpleFieldValue = (key: string, value: any): string => {
+    if (value === null || value === undefined || value === "") return "N/A";
+
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+
+    if (typeof value === "number") {
+      if (key === "area") return `${formatNumberDisplay(value)} ha`;
+      return formatNumberDisplay(value);
+    }
+
+    if (typeof value === "string") {
+      if (key === "geometry_type") return value;
+      if (key === "coordinate_accuracy") {
+        return value
+          .replace(/[_-]+/g, " ")
+          .split(" ")
+          .filter(Boolean)
+          .map(
+            (part) =>
+              `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`,
+          )
+          .join(" ");
+      }
+      return value;
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  };
+
+  const extractLandPlotSummaryPayload = (
+    value: any,
+    logContext?: AuditLog | null,
+  ): Record<string, any> | null => {
+    const parsed = parseJsonLikeValue(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const moduleName = (logContext?.module || "").toUpperCase().trim();
+    const recordType = (logContext?.record_type || "").toLowerCase().trim();
+    const record = parsed as Record<string, any>;
+    const hasLandPlotShapeFields = [
+      "geometry_type",
+      "area",
+      "barangay",
+      "coordinate_accuracy",
+    ].some((key) => key in record);
+
+    if (
+      moduleName === "LAND_PLOTS" ||
+      recordType.includes("land_plot") ||
+      hasLandPlotShapeFields
+    ) {
+      return record;
+    }
+
+    return null;
+  };
+
+  const renderLandPlotSummaryPayload = (
+    value: any,
+    section: "old" | "new" | "metadata" = "new",
+    logContext?: AuditLog | null,
+  ) => {
+    const payload = extractLandPlotSummaryPayload(value, logContext);
+    if (!payload) return null;
+
+    const rows = [
+      {
+        label: "Geometry Type",
+        value: formatSimpleFieldValue("geometry_type", payload.geometry_type),
+      },
+      {
+        label: "Area",
+        value: formatSimpleFieldValue("area", payload.area),
+      },
+      {
+        label: "Barangay",
+        value: formatSimpleFieldValue("barangay", payload.barangay),
+      },
+      {
+        label: "Coordinate Accuracy",
+        value: formatSimpleFieldValue(
+          "coordinate_accuracy",
+          payload.coordinate_accuracy,
+        ),
+      },
+    ].filter((item) => item.value !== "N/A");
+
+    if (rows.length === 0) return null;
+
+    return (
+      <div
+        className={`admin-audit-land-plot-payload admin-audit-land-plot-payload--${section}`}
+      >
+        <div className="admin-audit-land-plot-header">
+          <span className="admin-audit-land-plot-title">Land Plot Summary</span>
+          <span className="admin-audit-land-plot-tag">
+            {section === "metadata"
+              ? "Metadata"
+              : section === "old"
+                ? "Previous"
+                : "New"}
+          </span>
+        </div>
+
+        <div className="admin-audit-land-plot-grid">
+          {rows.map((row) => (
+            <div key={row.label} className="admin-audit-land-plot-item">
+              <span className="admin-audit-land-plot-label">{row.label}</span>
+              <span className="admin-audit-land-plot-value">{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSimpleObjectPayload = (
+    value: any,
+    section: "old" | "new" | "metadata" = "new",
+  ) => {
+    const parsed = parseJsonLikeValue(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const entries = Object.entries(parsed).filter(
+      ([, fieldValue]) =>
+        fieldValue !== null && fieldValue !== undefined && fieldValue !== "",
+    );
+
+    if (entries.length === 0 || entries.length > 8) {
+      return null;
+    }
+
+    const hasNestedValues = entries.some(([, fieldValue]) => {
+      return (
+        typeof fieldValue === "object" &&
+        fieldValue !== null &&
+        !Array.isArray(fieldValue)
+      );
+    });
+
+    if (hasNestedValues) {
+      return null;
+    }
+
+    return (
+      <div
+        className={`admin-audit-simple-payload admin-audit-simple-payload--${section}`}
+      >
+        <div className="admin-audit-simple-grid">
+          {entries.map(([key, fieldValue]) => (
+            <div key={key} className="admin-audit-simple-item">
+              <span className="admin-audit-simple-label">{toKeyLabel(key)}</span>
+              <span className="admin-audit-simple-value">
+                {formatSimpleFieldValue(key, fieldValue)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderValueBlock = (
     value: any,
     section: "old" | "new" | "metadata" = "new",
@@ -1469,6 +1645,20 @@ const AuditTrail: React.FC = () => {
     const routeMetadataPayload = renderRouteMetadataPayload(value);
     if (routeMetadataPayload) {
       return routeMetadataPayload;
+    }
+
+    const landPlotSummaryPayload = renderLandPlotSummaryPayload(
+      value,
+      section,
+      logContext,
+    );
+    if (landPlotSummaryPayload) {
+      return landPlotSummaryPayload;
+    }
+
+    const simpleObjectPayload = renderSimpleObjectPayload(value, section);
+    if (simpleObjectPayload) {
+      return simpleObjectPayload;
     }
 
     return (

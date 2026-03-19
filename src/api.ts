@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { AuditModule, getAuditLogger } from "./components/Audit/auditLogger";
 
 /**
  * API Wrapper - Routes all API calls to Supabase
@@ -1690,39 +1691,154 @@ export const getLandPlotById = async (
   return createResponse(data, null, 200);
 };
 
-export const createLandPlot = async (plotData: any): Promise<ApiResponse> => {
-  const { data, error } = await supabase
-    .from("land_plots")
-    .insert(plotData)
-    .select()
-    .single();
+const normalizeLandPlotPayloadForSupabase = (payload: any) => {
+  if (!payload || typeof payload !== "object") return payload;
 
-  if (error) return createResponse(null, error.message, 500);
-  return createResponse(data, null, 201);
+  return {
+    id: payload.id,
+    name: payload.name,
+    ffrs_id: payload.ffrs_id,
+    area: payload.area,
+    coordinate_accuracy:
+      payload.coordinate_accuracy ?? payload.coordinateAccuracy,
+    barangay: payload.barangay,
+    first_name: payload.first_name ?? payload.firstName,
+    middle_name: payload.middle_name ?? payload.middleName,
+    surname: payload.surname,
+    ext_name: payload.ext_name,
+    gender: payload.gender,
+    municipality: payload.municipality,
+    province: payload.province,
+    parcel_address: payload.parcel_address,
+    status: payload.status,
+    street: payload.street,
+    farm_type: payload.farm_type ?? payload.farmType,
+    plot_source: payload.plot_source ?? payload.plotSource,
+    parcel_number: payload.parcel_number ?? payload.parcelNumber,
+    geometry: payload.geometry,
+    created_at: payload.created_at ?? payload.createdAt,
+    updated_at: payload.updated_at ?? payload.updatedAt,
+  };
+};
+
+const getCurrentAuditUser = () => {
+  try {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    return {
+      id: currentUser.id,
+      name: currentUser.name || currentUser.username || "Anonymous",
+      role:
+        currentUser.role || localStorage.getItem("userRole") || "technician",
+    };
+  } catch {
+    return {
+      id: null,
+      name: "Anonymous",
+      role: localStorage.getItem("userRole") || "technician",
+    };
+  }
+};
+
+const buildLandPlotAuditSummary = (plot: any) => ({
+  geometry_type:
+    plot?.geometry && typeof plot.geometry === "object"
+      ? plot.geometry.type
+      : null,
+  area: plot?.area ?? null,
+  barangay: plot?.barangay ?? null,
+  coordinate_accuracy:
+    plot?.coordinate_accuracy ?? plot?.coordinateAccuracy ?? null,
+});
+
+const logLandPlotCreateAudit = async (createdPlot: any) => {
+  try {
+    const user = getCurrentAuditUser();
+    const auditLogger = getAuditLogger();
+
+    await auditLogger.logCRUD(
+      {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+      },
+      "CREATE",
+      AuditModule.LAND_PLOTS,
+      "land_plots",
+      createdPlot?.id || "unknown",
+      `Technician created land geometry on Land Registry page (plot ${createdPlot?.id || "unknown"})`,
+      undefined,
+      buildLandPlotAuditSummary(createdPlot),
+      {
+        includeRouteContext: false,
+        metadata: null,
+      },
+    );
+  } catch (auditError) {
+    console.error("Land plot audit log failed (non-blocking):", auditError);
+  }
+};
+
+export const createLandPlot = async (plotData: any): Promise<ApiResponse> => {
+  try {
+    const payload = normalizeLandPlotPayloadForSupabase(plotData);
+    const { data, error } = await supabase
+      .from("land_plots")
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) return createResponse(null, error.message, 500);
+
+    await logLandPlotCreateAudit(data);
+    return createResponse(data, null, 201);
+  } catch (error: any) {
+    return createResponse(
+      null,
+      error?.message || "Failed to create land plot",
+      500,
+    );
+  }
 };
 
 export const updateLandPlot = async (
   id: string | number,
   updateData: any,
 ): Promise<ApiResponse> => {
-  const { data, error } = await supabase
-    .from("land_plots")
-    .update(updateData)
-    .eq("id", id)
-    .select()
-    .single();
+  try {
+    const payload = normalizeLandPlotPayloadForSupabase(updateData);
+    const { data, error } = await supabase
+      .from("land_plots")
+      .update(payload)
+      .eq("id", id)
+      .select()
+      .single();
 
-  if (error) return createResponse(null, error.message, 500);
-  return createResponse(data, null, 200);
+    if (error) return createResponse(null, error.message, 500);
+    return createResponse(data, null, 200);
+  } catch (error: any) {
+    return createResponse(
+      null,
+      error?.message || "Failed to update land plot",
+      500,
+    );
+  }
 };
 
 export const deleteLandPlot = async (
   id: string | number,
 ): Promise<ApiResponse> => {
-  const { error } = await supabase.from("land_plots").delete().eq("id", id);
+  try {
+    const { error } = await supabase.from("land_plots").delete().eq("id", id);
+    if (error) return createResponse(null, error.message, 500);
 
-  if (error) return createResponse(null, error.message, 500);
-  return createResponse({ success: true }, null, 200);
+    return createResponse({ success: true }, null, 200);
+  } catch (error: any) {
+    return createResponse(
+      null,
+      error?.message || "Failed to delete land plot",
+      500,
+    );
+  }
 };
 
 // ==================== DISTRIBUTION ALLOCATIONS ====================

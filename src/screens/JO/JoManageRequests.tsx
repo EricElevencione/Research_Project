@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  getAllocations,
+  getAllocationById,
   getFarmerRequests,
   deleteFarmerRequest,
   updateFarmerRequest,
@@ -514,13 +514,9 @@ const JoManageRequests: React.FC = () => {
 
   const fetchAllocation = async () => {
     try {
-      const response = await getAllocations();
+      const response = await getAllocationById(allocationId || "0");
       if (!response.error) {
-        const allocations = response.data || [];
-        const found = allocations.find(
-          (a: any) => a.id === parseInt(allocationId || "0"),
-        );
-        setAllocation(found || null);
+        setAllocation(response.data || null);
       }
     } catch (err) {
       console.error("Failed to fetch allocation:", err);
@@ -533,14 +529,11 @@ const JoManageRequests: React.FC = () => {
       setError(null);
 
       // First get the allocation to get the season
-      const allocationResponse = await getAllocations();
+      const allocationResponse = await getAllocationById(allocationId || "0");
       if (allocationResponse.error) {
         throw new Error("Failed to fetch allocation");
       }
-      const allocations = allocationResponse.data || [];
-      const currentAllocation = allocations.find(
-        (a: any) => a.id === parseInt(allocationId || "0"),
-      );
+      const currentAllocation = allocationResponse.data || null;
 
       if (!currentAllocation) {
         throw new Error("Allocation not found");

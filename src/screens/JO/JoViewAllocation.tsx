@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getAllocations, getFarmerRequests } from "../../api";
+import { getAllocationById, getFarmerRequests } from "../../api";
 import "../../assets/css/jo css/JoViewAllocationStyle.css";
 import "../../components/layout/sidebarStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
@@ -154,11 +154,6 @@ const JoViewAllocation: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
-
   useEffect(() => {
     fetchAllocationData();
   }, [allocationId]);
@@ -171,16 +166,14 @@ const JoViewAllocation: React.FC = () => {
       console.log("🔍 Fetching allocation with ID:", allocationId);
 
       // Fetch allocation details
-      const allocationResponse = await getAllocations();
+      const allocationResponse = await getAllocationById(allocationId || "0");
       if (allocationResponse.error) {
         throw new Error("Failed to fetch allocation");
       }
-      const allocations = allocationResponse.data || [];
+      const currentAllocation = allocationResponse.data || null;
+      const allocations = currentAllocation ? [currentAllocation] : [];
       console.log("📦 All allocations:", allocations);
 
-      const currentAllocation = allocations.find(
-        (a: any) => a.id === parseInt(allocationId || "0"),
-      );
       console.log("🎯 Current allocation:", currentAllocation);
 
       if (!currentAllocation) {
@@ -190,8 +183,9 @@ const JoViewAllocation: React.FC = () => {
 
       // Fetch farmer requests for this specific allocation
       const requestsResponse = await getFarmerRequests(allocationId, true);
+      const requestsData = requestsResponse.data || [];
+
       if (!requestsResponse.error) {
-        const requestsData = requestsResponse.data || [];
         setRequests(requestsData);
       }
     } catch (err: any) {
@@ -265,12 +259,8 @@ const JoViewAllocation: React.FC = () => {
     );
   }
 
-  const visibleFertilizerRows = FERTILIZER_ROWS.filter(
-    (row) => getTotalAllocated(row.allocated) > 0,
-  );
-  const visibleSeedRows = SEED_ROWS.filter(
-    (row) => getTotalAllocated(row.allocated) > 0,
-  );
+  const visibleFertilizerRows = FERTILIZER_ROWS;
+  const visibleSeedRows = SEED_ROWS;
 
   const totalAllocatedFertilizer = visibleFertilizerRows.reduce(
     (sum, row) => sum + getTotalAllocated(row.allocated),

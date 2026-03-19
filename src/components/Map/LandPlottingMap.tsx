@@ -303,7 +303,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       drawingDisabled,
       geometryPreview,
       shapes,
-      polygonExistsForCurrentParcel,
       targetAreaHa,
     },
     ref,
