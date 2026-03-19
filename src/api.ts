@@ -817,7 +817,7 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
                 registration_date: row.created_at,
                 ownership_status: row.OWNERSHIP_TYPE_REGISTERED_OWNER ? 'Owner' :
                     row.OWNERSHIP_TYPE_TENANT ? 'Tenant' :
-                    row.OWNERSHIP_TYPE_LESSEE ? 'Lessee' : 'Other',
+                        row.OWNERSHIP_TYPE_LESSEE ? 'Lessee' : 'Other',
                 is_owner: row.OWNERSHIP_TYPE_REGISTERED_OWNER,
                 is_tenant: row.OWNERSHIP_TYPE_TENANT,
                 is_lessee: row.OWNERSHIP_TYPE_LESSEE,
@@ -1030,11 +1030,15 @@ export const deleteAllocation = async (id: string | number): Promise<ApiResponse
 
 // ==================== FARMER REQUESTS ====================
 
-export const getFarmerRequests = async (season?: string): Promise<ApiResponse> => {
+export const getFarmerRequests = async (season?: string, farmerId?: string | number): Promise<ApiResponse> => {
     let query = supabase.from('farmer_requests').select('*');
 
     if (season) {
         query = query.eq('season', season);
+    }
+
+    if (farmerId !== undefined && farmerId !== null && farmerId !== '') {
+        query = query.eq('farmer_id', farmerId);
     }
 
     const { data, error } = await query;

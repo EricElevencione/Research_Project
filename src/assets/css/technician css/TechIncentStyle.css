@@ -46,6 +46,116 @@
     margin-bottom: 24px;
 }
 
+/* Operational Progress Section */
+.tech-incent-progress-section {
+    margin-bottom: 20px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ecfdf5 0%, #f9fafb 50%, #e0f2fe 100%);
+    border: 1px solid #d1fae5;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tech-incent-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.tech-incent-progress-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #047857;
+    margin: 0;
+}
+
+.tech-incent-progress-subtitle {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.tech-incent-progress-season-select {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 200px;
+}
+
+.tech-incent-progress-season-select label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.tech-incent-progress-season-select select {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    background-color: #ffffff;
+}
+
+.tech-incent-progress-season-select select:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.tech-incent-progress-summary {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.tech-incent-progress-stat {
+    flex: 1;
+    min-width: 120px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.tech-incent-progress-stat-label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.tech-incent-progress-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.tech-incent-burndown-wrapper {
+    margin-top: 8px;
+    height: 180px;
+}
+
+.tech-incent-burndown-empty {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+/* sparkline inside allocation card */
+.tech-incent-card-sparkline {
+    margin-bottom: 12px;
+    width: 100%;
+    height: 40px;
+}
+
 /* Content Card */
 .tech-incent-content-card {
     background-color: white;
@@ -283,6 +393,51 @@
     background: #f9fafb;
 }
 
+/* Per-allocation usage sparkline */
+.tech-incent-usage-row {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tech-incent-usage-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.tech-incent-usage-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tech-incent-usage-bar-track {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.tech-incent-usage-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+    transition: width 0.3s ease;
+}
+
+.tech-incent-usage-percentage {
+    font-size: 12px;
+    font-weight: 600;
+    color: #047857;
+    min-width: 40px;
+    text-align: right;
+}
+
 .tech-incent-stat-row {
     display: flex;
     gap: 12px;
@@ -518,6 +673,15 @@
     .tech-incent-dashboard-header {
         flex-direction: column;
         gap: 16px;
+    }
+
+    .tech-incent-progress-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .tech-incent-progress-season-select {
+        width: 100%;
     }
 
     .tech-incent-page-header {

@@ -1,0 +1,89 @@
+/* ─── Technician Data Quality Cards ────────────────────── */
+
+.tech-data-quality-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.tech-data-quality-card {
+    border: 1.5px solid;
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.tech-data-quality-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: translate(30%, -30%);
+}
+
+.tech-data-quality-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.tech-data-quality-icon {
+    font-size: 2.25rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.tech-data-quality-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1;
+}
+
+.tech-data-quality-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.tech-data-quality-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ─── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 1400px) {
+    .tech-data-quality-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .tech-data-quality-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .tech-data-quality-card {
+        padding: 1rem;
+    }
+
+    .tech-data-quality-value {
+        font-size: 1.5rem;
+    }
+}

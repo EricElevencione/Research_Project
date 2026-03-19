@@ -502,3 +502,83 @@
         padding: 16px;
     }
 }
+
+/* Duplicate Alerts */
+.tech-rsbsa-duplicate-alerts {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.tech-rsbsa-alerts-title {
+    color: #856404;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    margin-top: 0;
+}
+
+.tech-rsbsa-alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tech-rsbsa-duplicate-alert {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.tech-rsbsa-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.tech-rsbsa-alert-name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.tech-rsbsa-alert-count {
+    background: #dc3545;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.tech-rsbsa-alert-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tech-rsbsa-alert-record {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+/* Missing Data Indicators */
+.tech-rsbsa-row-missing-data {
+    background-color: #fff3cd !important;
+}
+
+.tech-rsbsa-row-missing-data:hover {
+    background-color: #ffeaa7 !important;
+}
+
+.tech-rsbsa-warning-icon {
+    margin-left: 8px;
+    font-size: 14px;
+    vertical-align: middle;
+    cursor: help;
+}

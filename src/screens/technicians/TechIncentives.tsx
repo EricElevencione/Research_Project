@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { getAllocations, getFarmerRequests, updateAllocation, createAllocation, deleteAllocation } from '../../api';
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    Tooltip,
+    CartesianGrid,
+    ResponsiveContainer,
+} from 'recharts';
+import { getAllocations, getFarmerRequests, updateAllocation, createAllocation, deleteAllocation, getDistributionRecords } from '../../api';
 import { useNavigate, useLocation } from "react-router-dom";
 import '../../assets/css/technician css/TechIncentStyle.css';
 import '../../components/layout/sidebarStyle.css';
@@ -11,6 +20,12 @@ import FarmerIcon from '../../assets/images/farmer (1).png';
 import LogoutIcon from '../../assets/images/logout.png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 
+
+interface SparklinePoint {
+    date: string;
+    remaining: number;
+    distributed: number;
+}
 
 interface RegionalAllocation {
     id: number;
@@ -27,6 +42,11 @@ interface RegionalAllocation {
     corn_seeds_opm_kg: number;
     vegetable_seeds_kg: number;
     farmer_count?: number;
+    totalAllocated?: number;
+    totalDistributed?: number;
+    remainingStock?: number;
+    usageProgress?: number; // 0-1
+    sparklineData?: SparklinePoint[]; // small inline chart data
 }
 
 const TechIncentives: React.FC = () => {
@@ -42,6 +62,10 @@ const TechIncentives: React.FC = () => {
     const [editFormData, setEditFormData] = useState<RegionalAllocation | null>(null);
     const [savingEdit, setSavingEdit] = useState(false);
     const [requestCount, setRequestCount] = useState<number>(0);
+    const [selectedSeason, setSelectedSeason] = useState<string | null>(null);
+    const [seasonRequestsMap, setSeasonRequestsMap] = useState<Record<string, any[]>>({});
+    const [seasonDistributionsMap, setSeasonDistributionsMap] = useState<Record<string, any[]>>({});
+    const [burndownData, setBurndownData] = useState<{ date: string; remaining: number; distributed: number }[]>([]);
 
     useEffect(() => {
         fetchAllocations();
@@ -52,34 +76,134 @@ const TechIncentives: React.FC = () => {
             setLoading(true);
             setError(null);
 
-            const response = await getAllocations();
+            const [allocationsResponse, requestsResponse, distributionsResponse] = await Promise.all([
+                getAllocations(),
+                getFarmerRequests(),
+                getDistributionRecords()
+            ]);
 
-            if (response.error) {
-                throw new Error(response.error);
+            if (allocationsResponse.error) {
+                throw new Error(allocationsResponse.error);
             }
 
-            const data = response.data || [];
+            const allocationData: RegionalAllocation[] = allocationsResponse.data || [];
+            const allRequests: any[] = requestsResponse.error ? [] : (requestsResponse.data || []);
+            const allDistributions: any[] = distributionsResponse.error ? [] : (distributionsResponse.data || []);
 
-            // Fetch farmer count for each allocation
-            const allocationsWithCounts = await Promise.all(
-                data.map(async (allocation: RegionalAllocation) => {
-                    try {
-                        const requestsResponse = await getFarmerRequests(allocation.season);
-                        if (!requestsResponse.error) {
-                            const requests = requestsResponse.data || [];
-                            return { ...allocation, farmer_count: requests.length };
-                        }
-                        return { ...allocation, farmer_count: 0 };
-                    } catch {
-                        return { ...allocation, farmer_count: 0 };
-                    }
-                })
+            const requestsBySeason: Record<string, any[]> = {};
+            const requestById: Record<number, any> = {};
+
+            allRequests.forEach((request: any) => {
+                if (!request?.season) return;
+                const season = request.season;
+
+                if (!requestsBySeason[season]) {
+                    requestsBySeason[season] = [];
+                }
+                requestsBySeason[season].push(request);
+
+                if (request.id !== undefined && request.id !== null) {
+                    requestById[request.id] = request;
+                }
+            });
+
+            const distributionsBySeason: Record<string, any[]> = {};
+
+            allDistributions.forEach((record: any) => {
+                const requestId = record.request_id;
+                if (!requestId) return;
+
+                const req = requestById[requestId];
+                if (!req?.season) return;
+
+                const season = req.season;
+                if (!distributionsBySeason[season]) {
+                    distributionsBySeason[season] = [];
+                }
+                distributionsBySeason[season].push(record);
+            });
+
+            setSeasonRequestsMap(requestsBySeason);
+            setSeasonDistributionsMap(distributionsBySeason);
+
+            const allocationsWithMetrics = allocationData.map((allocation: RegionalAllocation) => {
+                const season = allocation.season;
+                const seasonRequests = requestsBySeason[season] || [];
+                const seasonDistributions = distributionsBySeason[season] || [];
+
+                const fertilizerTotal = getTotalFertilizer(allocation);
+                const seedsTotal = getTotalSeeds(allocation);
+                const totalAllocated = fertilizerTotal + seedsTotal;
+
+                const totalDistributed = seasonDistributions.reduce((sum: number, record: any) => {
+                    const fert = Number(record.fertilizer_bags_given) || 0;
+                    const seeds = Number(record.seed_kg_given) || 0;
+                    return sum + fert + seeds;
+                }, 0);
+
+                const remainingStock = Math.max(0, totalAllocated - totalDistributed);
+                const usageProgress = totalAllocated > 0 ? totalDistributed / totalAllocated : 0;
+
+                // build sparkline/burndown data for this allocation (used on card and details)
+                let sparkline: SparklinePoint[] = [];
+                const formatLabel = (raw: any) => raw
+                    ? new Date(raw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    : '';
+
+                if (seasonDistributions.length === 0) {
+                    const startLabel = formatLabel(allocation.allocation_date);
+                    sparkline = [
+                        { date: startLabel, remaining: totalAllocated, distributed: 0 }
+                    ];
+                } else {
+                    const sorted = [...seasonDistributions].sort((a, b) => {
+                        const aDate = new Date(a.distribution_date || a.created_at || a.createdAt || a.updated_at || 0).getTime();
+                        const bDate = new Date(b.distribution_date || b.created_at || b.createdAt || b.updated_at || 0).getTime();
+                        return aDate - bDate;
+                    });
+                    let cumulative = 0;
+                    const points: SparklinePoint[] = sorted.map((record: any) => {
+                        const rawDate = record.distribution_date || record.created_at || record.createdAt;
+                        const dateLabel = formatLabel(rawDate);
+                        const fert = Number(record.fertilizer_bags_given) || 0;
+                        const seeds = Number(record.seed_kg_given) || 0;
+                        cumulative += fert + seeds;
+                        const remaining = Math.max(0, totalAllocated - cumulative);
+                        return { date: dateLabel, remaining, distributed: cumulative };
+                    });
+                    const allocationStartLabel = formatLabel(allocation.allocation_date);
+                    sparkline = [
+                        { date: allocationStartLabel, remaining: totalAllocated, distributed: 0 },
+                        ...points
+                    ];
+                }
+
+                return {
+                    ...allocation,
+                    farmer_count: seasonRequests.length,
+                    totalAllocated,
+                    totalDistributed,
+                    remainingStock,
+                    usageProgress,
+                    sparklineData: sparkline,
+                };
+            });
+
+            const sortedAllocations = [...allocationsWithMetrics].sort((a, b) =>
+                new Date(b.allocation_date).getTime() - new Date(a.allocation_date).getTime()
             );
-            setAllocations(allocationsWithCounts);
+
+            setAllocations(sortedAllocations);
+
+            if (!selectedSeason && sortedAllocations.length > 0) {
+                setSelectedSeason(sortedAllocations[0].season);
+            }
         } catch (error: any) {
             console.error('Error fetching allocations:', error);
             setError(error.message || 'Failed to connect to server');
             setAllocations([]);
+            setSeasonRequestsMap({});
+            setSeasonDistributionsMap({});
         } finally {
             setLoading(false);
         }
@@ -146,6 +270,26 @@ const TechIncentives: React.FC = () => {
             (Number(allocation.vegetable_seeds_kg) || 0);
         return isNaN(total) ? 0 : total;
     };
+
+    const getUsagePercent = (allocation: RegionalAllocation) => {
+        const progress = allocation.usageProgress ?? 0;
+        if (!isFinite(progress) || progress <= 0) return 0;
+        return Math.min(100, Math.round(progress * 100));
+    };
+
+    useEffect(() => {
+        // pull precomputed sparkline/burndown from allocation object
+        if (!selectedSeason) {
+            setBurndownData([]);
+            return;
+        }
+        const allocation = allocations.find(a => a.season === selectedSeason);
+        if (!allocation || !allocation.sparklineData) {
+            setBurndownData([]);
+            return;
+        }
+        setBurndownData(allocation.sparklineData);
+    }, [selectedSeason, allocations]);
 
     const handleEditAllocation = async (allocation: RegionalAllocation) => {
         try {
@@ -217,6 +361,8 @@ const TechIncentives: React.FC = () => {
             setSavingEdit(false);
         }
     };
+
+    const selectedAllocation = selectedSeason ? allocations.find(a => a.season === selectedSeason) || null : null;
 
     return (
         <div className="tech-incent-page-container">
@@ -300,6 +446,95 @@ const TechIncentives: React.FC = () => {
                     </button>
 
                     <div className="tech-incent-content-card">
+                        {allocations.length > 0 && selectedAllocation && (
+                            <div className="tech-incent-progress-section">
+                                <div className="tech-incent-progress-header">
+                                    <div>
+                                        <h3 className="tech-incent-progress-title">Operational Progress</h3>
+                                        <p className="tech-incent-progress-subtitle">
+                                            Burn-down of remaining stock as incentives are distributed
+                                        </p>
+                                    </div>
+                                    <div className="tech-incent-progress-season-select">
+                                        <label htmlFor="tech-incent-season-select">Season</label>
+                                        <select
+                                            id="tech-incent-season-select"
+                                            value={selectedSeason || ''}
+                                            onChange={(e) => setSelectedSeason(e.target.value)}
+                                        >
+                                            {allocations.map((allocation) => (
+                                                <option key={allocation.id} value={allocation.season}>
+                                                    {formatSeasonName(allocation.season)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="tech-incent-progress-summary">
+                                    <div className="tech-incent-progress-stat">
+                                        <span className="tech-incent-progress-stat-label">Allocated (bags + kg)</span>
+                                        <span className="tech-incent-progress-stat-value">
+                                            {(
+                                                selectedAllocation.totalAllocated ??
+                                                (getTotalFertilizer(selectedAllocation) + getTotalSeeds(selectedAllocation))
+                                            ).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="tech-incent-progress-stat">
+                                        <span className="tech-incent-progress-stat-label">Distributed</span>
+                                        <span className="tech-incent-progress-stat-value">
+                                            {(selectedAllocation.totalDistributed ?? 0).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="tech-incent-progress-stat">
+                                        <span className="tech-incent-progress-stat-label">Remaining</span>
+                                        <span className="tech-incent-progress-stat-value">
+                                            {(
+                                                selectedAllocation.remainingStock ??
+                                                Math.max(
+                                                    0,
+                                                    (selectedAllocation.totalAllocated ??
+                                                        (getTotalFertilizer(selectedAllocation) + getTotalSeeds(selectedAllocation))) -
+                                                    (selectedAllocation.totalDistributed ?? 0)
+                                                )
+                                            ).toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="tech-incent-burndown-wrapper">
+                                    {burndownData.length === 0 ? (
+                                        <div className="tech-incent-burndown-empty">
+                                            No distribution/approval records yet for this season.
+                                        </div>
+                                    ) : (
+                                        <ResponsiveContainer width="100%" height={180}>
+                                            <LineChart data={burndownData}>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="date" />
+                                                <YAxis />
+                                                <Tooltip />
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="remaining"
+                                                    name="Remaining"
+                                                    stroke="#10b981"
+                                                    strokeWidth={2}
+                                                    dot={{ r: 3 }}
+                                                />
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="distributed"
+                                                    name="Distributed"
+                                                    stroke="#3b82f6"
+                                                    strokeWidth={2}
+                                                    dot={{ r: 3 }}
+                                                />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         {loading ? (
                             <div className="tech-incent-loading">Loading allocations...</div>
                         ) : error ? (
@@ -325,7 +560,7 @@ const TechIncentives: React.FC = () => {
                                 <h3>No Allocations Available</h3>
                                 <p>Contact the JO officer to create regional allocations</p>
                             </div>
-                        ) : (
+                                ) : (
                             <div className="tech-incent-grid">
                                 {allocations.map((allocation) => (
                                     <div key={allocation.id} className="tech-incent-card">
@@ -343,6 +578,22 @@ const TechIncentives: React.FC = () => {
                                         </div>
 
                                         <div className="tech-incent-card-body">
+                                            {/* sparkline chart inline */}
+                                            {allocation.sparklineData && (
+                                                <div className="tech-incent-card-sparkline">
+                                                    <ResponsiveContainer width="100%" height={40}>
+                                                        <LineChart data={allocation.sparklineData}>
+                                                            <Line
+                                                                type="monotone"
+                                                                dataKey="remaining"
+                                                                stroke="#10b981"
+                                                                strokeWidth={1}
+                                                                dot={false}
+                                                            />
+                                                        </LineChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            )}
                                             <div className="tech-incent-stat-row">
                                                 <div className="tech-incent-stat-item">
                                                     <span className="tech-incent-stat-label">Total Fertilizer</span>
@@ -357,6 +608,20 @@ const TechIncentives: React.FC = () => {
                                                 <div className="tech-incent-stat-item">
                                                     <span className="tech-incent-stat-label">Farmer Requests</span>
                                                     <span className="tech-incent-stat-value">{allocation.farmer_count || 0} farmers</span>
+                                                </div>
+                                            </div>
+                                            <div className="tech-incent-usage-row">
+                                                <span className="tech-incent-usage-label">Usage progress</span>
+                                                <div className="tech-incent-usage-bar-container">
+                                                    <div className="tech-incent-usage-bar-track">
+                                                        <div
+                                                            className="tech-incent-usage-bar-fill"
+                                                            style={{ width: `${getUsagePercent(allocation)}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="tech-incent-usage-percentage">
+                                                        {getUsagePercent(allocation)}%
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>

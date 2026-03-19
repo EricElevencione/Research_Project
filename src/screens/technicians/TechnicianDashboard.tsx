@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import '../../components/layout/sidebarStyle.css';
 import '../../assets/css/technician css/TechnicianDashboardStyle.css';
 import FarmlandMap from '../../components/Map/FarmlandMap';
+import { DataQualityCards } from '../../components/Dashboard/TechnicianDataQualityCards';
+import { BarangayCompletionChecklist } from '../../components/Dashboard/TechnicianBarangayChecklist';
+import { useTechnicianDashboardStats } from '../../hooks/useTechnicianDashboardStats';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
@@ -14,6 +17,7 @@ import IncentivesIcon from '../../assets/images/incentives.png';
 const TechnicianDashboard: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const dashData = useTechnicianDashboardStats();
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -84,11 +88,41 @@ const TechnicianDashboard: React.FC = () => {
 
                 {/* Main content starts here */}
                 <div className="tech-dashboard-main-content">
-                    <h2 className="tech-dashboard-page-title">Dashboard</h2>
+                    <h2 className="tech-dashboard-page-title">Data Quality Dashboard</h2>
 
-                    <div className="tech-dashboard-map-area">
-                        <FarmlandMap />
-                    </div>
+                    {dashData.loading ? (
+                        <div className="tech-dashboard-loading">
+                            <div className="spinner"></div>
+                            <p>Loading data quality metrics...</p>
+                        </div>
+                    ) : dashData.error ? (
+                        <div className="tech-dashboard-error">
+                            <p>Error: {dashData.error}</p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Data Quality Cards */}
+                            <DataQualityCards metrics={dashData.dataQuality} />
+
+                            {/* Map Section */}
+                            <div className="tech-dashboard-map-card">
+                                <div className="tech-dashboard-map-header">
+                                    <div>
+                                        <h3>🗺️ Farmer Registration Map</h3>
+                                    </div>
+                                </div>
+                                <div className="tech-dashboard-map-area">
+                                    <FarmlandMap 
+                                        isTechnicianView={true}
+                                        unplottedFarmers={dashData.unplottedFarmers}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Barangay Completion Checklist */}
+                            <BarangayCompletionChecklist barangayStats={dashData.barangayStats} />
+                        </>
+                    )}
                 </div>
             </div>
         </div>

@@ -57,6 +57,7 @@ const LandPlottingPage: React.FC = () => {
     }>({});
     const [rsbsaRecord, setRsbsaRecord] = useState<any>(null);
     const [currentParcel, setCurrentParcel] = useState<any>(null);
+    const [farmerParcels, setFarmerParcels] = useState<any[]>([]);
     // State to track the actual parcel barangay (from RSBSA form)
     const [parcelBarangay, setParcelBarangay] = useState<string>('');
 
@@ -520,6 +521,9 @@ const LandPlottingPage: React.FC = () => {
                 }
             }
 
+            // Store all parcels for this farmer for progress calculations
+            setFarmerParcels(farmParcels || []);
+
             if (parcelIndex !== undefined && farmParcels) {
                 const parcel = farmParcels[parcelIndex];
                 console.log('Selected parcel:', parcel);
@@ -680,19 +684,97 @@ const LandPlottingPage: React.FC = () => {
     };
 
     // Helper: Check if a polygon exists for the current parcel
-    const polygonExistsForCurrentParcel = shapes.some(
-        (shape) => {
-            const geo = shape.layer && shape.layer.toGeoJSON && shape.layer.toGeoJSON();
-            // Only check for Polygon type
-            return (
-                geo && geo.geometry && geo.geometry.type === 'Polygon' &&
-                ((currentParcel && shape.properties && shape.properties.parcelNumber === currentParcel.parcelNumber) ||
-                    (!currentParcel && shape.properties && shape.properties.parcelNumber === undefined))
-            );
-        }
-    );
+    const polygonExistsForCurrentParcel = shapes.some((shape) => {
+        const geo = shape.layer && shape.layer.toGeoJSON && shape.layer.toGeoJSON();
+        // Only check for Polygon type
+        return (
+            geo &&
+            geo.geometry &&
+            geo.geometry.type === 'Polygon' &&
+            ((currentParcel &&
+                shape.properties &&
+                shape.properties.parcelNumber === currentParcel.parcelNumber) ||
+                (!currentParcel && shape.properties && shape.properties.parcelNumber === undefined))
+        );
+    });
 
+    // Total plotted area across all shapes (hectares)
+    const totalPlottedAreaHa = useMemo(() => {
+        if (!shapes || shapes.length === 0) return 0;
+        const seenIds = new Set<string>();
+        let total = 0;
 
+        shapes.forEach((shape) => {
+            const shapeId = shape.id || '';
+            if (seenIds.has(shapeId)) return;
+            seenIds.add(shapeId);
+
+            const rawArea: any = (shape.properties as any)?.area;
+            if (rawArea === null || rawArea === undefined) return;
+            const numericArea =
+                typeof rawArea === 'number'
+                    ? rawArea
+                    : parseFloat(String(rawArea).replace(/,/g, ''));
+            if (!Number.isFinite(numericArea)) return;
+            total += numericArea;
+        });
+
+        return total;
+    }, [shapes]);
+
+    const formattedTotalPlottedArea = useMemo(() => {
+        if (!Number.isFinite(totalPlottedAreaHa)) return '0';
+        if (totalPlottedAreaHa === 0) return '0';
+        return String(Math.round(totalPlottedAreaHa * 10000) / 10000);
+    }, [totalPlottedAreaHa]);
+
+    // Barangay-level plot completion for this farmer:
+    // percentage of parcels with at least one polygon saved
+    const barangayCompletion = useMemo(() => {
+        const stats: Record<string, { totalParcels: number; plottedParcels: number }> = {};
+
+        // Count total parcels per barangay for this farmer
+        (farmerParcels || []).forEach((parcel: any) => {
+            const brgy =
+                parcel.farm_location_barangay ||
+                parcel.farmLocation?.barangay ||
+                (parcel as any).farmLocationBarangay ||
+                (parcel as any).barangay;
+            const key = typeof brgy === 'string' ? brgy.trim() : '';
+            if (!key) return;
+            if (!stats[key]) {
+                stats[key] = { totalParcels: 0, plottedParcels: 0 };
+            }
+            stats[key].totalParcels += 1;
+        });
+
+        if (shapes.length === 0) return stats;
+
+        // Track unique (barangay, parcelNumber) combinations that already counted as plotted
+        const seenParcels = new Set<string>();
+
+        shapes.forEach((shape) => {
+            const props: any = shape.properties || {};
+            const parcelNumber = props.parcelNumber ?? props.parcel_number;
+            const brgy =
+                props.barangay ||
+                props.farm_location_barangay ||
+                props.farmLocationBarangay;
+            const key = typeof brgy === 'string' ? brgy.trim() : '';
+            if (!key || !stats[key]) return;
+
+            const parcelKey =
+                parcelNumber !== undefined && parcelNumber !== null
+                    ? `${key}::${String(parcelNumber)}`
+                    : `${key}::__no_parcel__${shape.id}`;
+
+            if (seenParcels.has(parcelKey)) return;
+            seenParcels.add(parcelKey);
+            stats[key].plottedParcels += 1;
+        });
+
+        return stats;
+    }, [farmerParcels, shapes]);
 
     // Comprehensive debugging for barangay resolution
     console.log("=== BARANGAY DEBUG START ===");
@@ -839,6 +921,7 @@ const LandPlottingPage: React.FC = () => {
             >
                 ←
             </button>
+
             <div className="tech-landplotting-main-wrapper">
                 {/* Left: Map */}
                 <div className="tech-landplotting-map-section">
@@ -864,6 +947,20 @@ const LandPlottingPage: React.FC = () => {
                 </div>
                 {/* Right: Details Panel */}
                 <div className="tech-landplotting-details-panel">
+                    {/* High-level stats */}
+                    <div className="tech-landplotting-stats-grid">
+                        <div className="tech-landplotting-stat-card">
+                            <div className="tech-landplotting-stat-label">Total plotted area</div>
+                            <div className="tech-landplotting-stat-value">
+                                {formattedTotalPlottedArea}
+                                <span className="tech-landplotting-stat-unit"> ha</span>
+                            </div>
+                            <div className="tech-landplotting-stat-sub">
+                                Sum of all mapped parcels for this farmer
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="tech-landplotting-parcel-title">
                         {currentParcel && (currentParcel.parcel_number !== undefined && currentParcel.parcel_number !== null && currentParcel.parcel_number !== '')
                             ? `Farm Parcel #${currentParcel.parcel_number}`
@@ -894,6 +991,45 @@ const LandPlottingPage: React.FC = () => {
                             {` ${getDisplayAreaHectares()}`}
                         </div>
                     </div>
+
+                    {/* Barangay-level completion bars */}
+                    {Object.keys(barangayCompletion).length > 0 && (
+                        <>
+                            <div className="tech-landplotting-section-label">Barangay mapping progress</div>
+                            <div className="tech-landplotting-barangay-progress-list">
+                                {Object.entries(barangayCompletion).map(([barangay, stats]) => {
+                                    const pct =
+                                        stats.totalParcels > 0
+                                            ? Math.round((stats.plottedParcels / stats.totalParcels) * 100)
+                                            : 0;
+                                    return (
+                                        <div
+                                            key={barangay}
+                                            className="tech-landplotting-barangay-progress-item"
+                                        >
+                                            <div className="tech-landplotting-barangay-header">
+                                                <span className="tech-landplotting-barangay-name">
+                                                    {barangay}
+                                                </span>
+                                                <span className="tech-landplotting-barangay-percent">
+                                                    {pct}%
+                                                </span>
+                                            </div>
+                                            <div className="tech-landplotting-progress-bar">
+                                                <div
+                                                    className="tech-landplotting-progress-fill"
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                            </div>
+                                            <div className="tech-landplotting-barangay-meta">
+                                                {stats.plottedParcels} of {stats.totalParcels} parcels mapped
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
 
                     <div className="tech-landplotting-actions-container">
                         <button

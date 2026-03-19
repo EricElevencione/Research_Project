@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from 'recharts';
 import { useNavigate, useLocation } from "react-router-dom";
 import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels, updateRsbsaSubmission } from '../../api';
 import '../../assets/css/technician css/TechRsbsaStyle.css';
@@ -448,6 +457,45 @@ const TechRsbsa: React.FC = () => {
     return Array.from(barangays).sort();
   }, [registeredOwners]);
 
+  // Registration trend: count farmers per month-year
+  const registrationTrend = React.useMemo(() => {
+    const map = new Map<string, number>();
+    registeredOwners.forEach((rec) => {
+      const date = rec.dateSubmitted ? new Date(rec.dateSubmitted) : null;
+      if (!date || Number.isNaN(date.getTime())) return;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    // sort keys
+    const entries = Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    return entries.map(([month, count]) => ({ month, count }));
+  }, [registeredOwners]);
+
+  // Duplicate detection (same last name + first name + barangay)
+  const duplicateMap = React.useMemo(() => {
+    const m = new Map<string, number>();
+    registeredOwners.forEach((rec) => {
+      const nameParts = (rec.farmerName || '').split(',').map(s => s.trim());
+      const last = (nameParts[0] || '').toLowerCase();
+      const first = (nameParts[1] || '').toLowerCase();
+      const barangay = (rec.farmerAddress || '').split(',')[0]?.trim().toLowerCase() || '';
+      const key = `${last}|${first}|${barangay}`;
+      m.set(key, (m.get(key) || 0) + 1);
+    });
+    return m;
+  }, [registeredOwners]);
+
+  // Helper to compute missing fields for a record
+  const getMissingFields = (rec: RSBSARecord) => {
+    const missing: string[] = [];
+    if (!rec.gender) missing.push('Gender');
+    if (!rec.birthdate) missing.push('Birthdate');
+    if (!rec.farmerAddress) missing.push('Address');
+    if (!rec.farmLocation) missing.push('Farm Location');
+    if (!rec.parcelArea) missing.push('Parcel Area');
+    return missing;
+  };
+
   // Filter records based on search term and barangay
   useEffect(() => {
     const filtered = registeredOwners.filter(record => {
@@ -642,11 +690,25 @@ const TechRsbsa: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Registration trend chart */}
+                <div style={{ width: '100%', height: 160, margin: '12px 0' }}>
+                  <ResponsiveContainer>
+                    <LineChart data={registrationTrend}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="count" stroke="#1976d2" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
                 <div className="tech-rsbsa-table-container">
                   <table className="tech-rsbsa-owners-table">
                     <thead>
                       <tr>
                         <th>FFRS ID</th>
+                        <th>Quality</th>
                         <th>Last Name</th>
                         <th>First Name</th>
                         <th>Middle Name</th>
@@ -680,6 +742,15 @@ const TechRsbsa: React.FC = () => {
                             (record.parcelArea.includes('hectares') ? record.parcelArea : `${record.parcelArea} hectares`)
                             : 'N/A';
 
+                          // Determine duplicate and missing fields for this record
+                          const namePartsForKey = (record.farmerName || '').split(',').map(s => s.trim());
+                          const dkLast = (namePartsForKey[0] || '').toLowerCase();
+                          const dkFirst = (namePartsForKey[1] || '').toLowerCase();
+                          const dkBarangay = (record.farmerAddress || '').split(',')[0]?.trim().toLowerCase() || '';
+                          const duplicateKey = `${dkLast}|${dkFirst}|${dkBarangay}`;
+                          const isDuplicate = duplicateMap.get(duplicateKey) > 1;
+                          const missing = getMissingFields(record);
+
                           return (
                             <tr
                               key={record.id}
@@ -687,6 +758,14 @@ const TechRsbsa: React.FC = () => {
                               style={{ cursor: 'pointer' }}
                             >
                               <td className="tech-rsbsa-ffrs-id">{record.referenceNumber || 'N/A'}</td>
+                              <td style={{ whiteSpace: 'nowrap' }}>
+                                {isDuplicate && (
+                                  <span title="Potential duplicate (same name + barangay)" style={{ color: '#c62828', marginRight: 6 }}>🚩</span>
+                                )}
+                                {missing.length > 0 && (
+                                  <span title={`Missing: ${missing.join(', ')}`} style={{ color: '#ff9800' }}>⚠️</span>
+                                )}
+                              </td>
                               <td>{lastName}</td>
                               <td>{firstName}</td>
                               <td>{middleName}</td>
@@ -921,6 +1000,18 @@ const TechRsbsa: React.FC = () => {
                           ))}
                         </div>
                       )}
+                    </div>
+                    {/* link to full profile */}
+                    <div className="farmer-modal-section">
+                      <button
+                        className="btn-action"
+                        onClick={() => {
+                          navigate(`/technician-farmerprofile/${selectedFarmer.id}`);
+                          setShowModal(false);
+                        }}
+                      >
+                        View Full Profile
+                      </button>
                     </div>
                   </>
                 )}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { getRsbsaSubmissionById, getFarmParcels } from '../../api';
-import '../../components/layout/sidebarStyle.css';
+import { getRsbsaSubmissionById, getFarmParcels, getFarmerRequests } from '../../api';
 import '../../assets/css/technician css/FarmerProf.css';
 import LogoImage from '../../assets/images/Logo.png';
 import HomeIcon from '../../assets/images/home.png';
@@ -9,7 +8,6 @@ import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
 import FarmerIcon from '../../assets/images/farmer (1).png';
-import IncentivesIcon from '../../assets/images/incentives.png';
 
 interface FarmerData {
     id: string;
@@ -21,7 +19,6 @@ interface FarmerData {
     extName: string;
     gender: string;
     birthdate: string;
-    age?: number | null;
     farmerAddress: string;
     farmLocation: string;
     parcelArea: string;
@@ -58,6 +55,16 @@ const TechFarmerProf: React.FC = () => {
 
     const [farmer, setFarmer] = useState<FarmerData | null>(null);
     const [parcels, setParcels] = useState<Parcel[]>([]);
+    const [requestHistory, setRequestHistory] = useState<any[]>([]);
+    const [requestLoading, setRequestLoading] = useState(false);
+    const [requestError, setRequestError] = useState<string | null>(null);
+    const [allocationComparison, setAllocationComparison] = useState<{
+        season: string;
+        farmerFertilizerPerHa: number;
+        avgFertilizerPerHa: number;
+        farmerSeedPerHa: number;
+        avgSeedPerHa: number;
+    } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [expandedParcel, setExpandedParcel] = useState<string | null>(null);
@@ -71,18 +78,34 @@ const TechFarmerProf: React.FC = () => {
 
     useEffect(() => {
         if (id) {
+            setLoading(true);
+            setError(null);
             fetchFarmerData(id);
             fetchParcels(id);
         }
     }, [id]);
 
+    useEffect(() => {
+        if (farmer?.id) {
+            fetchRequestHistory(farmer.id);
+        }
+    }, [farmer?.id]);
+
     const fetchFarmerData = async (farmerId: string) => {
+        if (!farmerId) {
+            setError('Invalid farmer ID');
+            setLoading(false);
+            return;
+        }
+
         try {
             const response = await getRsbsaSubmissionById(farmerId);
-            if (response.error) throw new Error('Failed to fetch farmer data');
-            const data = response.data;
-            console.log('Fetched farmer data:', data); // Debug log
-            setFarmer(data);
+            if (response.error || !response.data) {
+                throw new Error(response.error || 'Farmer not found');
+            }
+
+            console.log('Fetched farmer data:', response.data); // Debug log
+            setFarmer(response.data);
             setLoading(false);
         } catch (err: any) {
             setError(err.message || 'Error loading farmer data');
@@ -91,13 +114,94 @@ const TechFarmerProf: React.FC = () => {
     };
 
     const fetchParcels = async (farmerId: string) => {
+        if (!farmerId) return;
+
         try {
             const response = await getFarmParcels(farmerId);
-            if (response.error) throw new Error('Failed to fetch parcels');
-            const data = response.data || [];
-            setParcels(data);
+            if (response.error) {
+                throw new Error(response.error);
+            }
+            setParcels(response.data || []);
         } catch (err: any) {
             console.error('Error fetching parcels:', err);
+        }
+    };
+
+    const fetchRequestHistory = async (farmerId: string) => {
+        setRequestLoading(true);
+        setRequestError(null);
+        try {
+            const response = await getFarmerRequests(undefined, farmerId);
+            if (response.error) throw new Error(response.error);
+
+            const history = Array.isArray(response.data) ? response.data : [];
+            setRequestHistory(history);
+
+            if (history.length > 0) {
+                // Use latest request date to determine current season (fallback to latest season string)
+                const sortedByDate = [...history].sort((a: any, b: any) => {
+                    const ad = new Date(a.request_date || a.created_at || 0).getTime();
+                    const bd = new Date(b.request_date || b.created_at || 0).getTime();
+                    return bd - ad;
+                });
+                const currentSeason = sortedByDate[0].season || '';
+
+                // Compute per-ha allocation for this farmer for current season
+                const currentRequests = history.filter((r: any) => r.season === currentSeason);
+                const farmArea = currentRequests[0]?.farm_area_ha || 0;
+                const farmerFertilizer = (currentRequests[0]?.assigned_fertilizer_bags || 0) || 0;
+                const farmerSeed = (currentRequests[0]?.assigned_seed_kg || 0) || 0;
+                const farmerFertilizerPerHa = farmArea > 0 ? farmerFertilizer / farmArea : 0;
+                const farmerSeedPerHa = farmArea > 0 ? farmerSeed / farmArea : 0;
+
+                // Compare against season averages
+                const seasonResponse = await getFarmerRequests(currentSeason);
+                if (!seasonResponse.error && Array.isArray(seasonResponse.data) && seasonResponse.data.length > 0) {
+                    const seasonData: any[] = seasonResponse.data;
+                    const validEntries = seasonData.filter((r: any) => r.farm_area_ha > 0);
+                    const totalFertilizer = validEntries.reduce((sum, r) => sum + (r.assigned_fertilizer_bags || 0), 0);
+                    const totalSeed = validEntries.reduce((sum, r) => sum + (r.assigned_seed_kg || 0), 0);
+                    const totalArea = validEntries.reduce((sum, r) => sum + (r.farm_area_ha || 0), 0);
+                    const avgFertilizerPerHa = totalArea > 0 ? totalFertilizer / totalArea : 0;
+                    const avgSeedPerHa = totalArea > 0 ? totalSeed / totalArea : 0;
+
+                    setAllocationComparison({
+                        season: currentSeason,
+                        farmerFertilizerPerHa,
+                        avgFertilizerPerHa,
+                        farmerSeedPerHa,
+                        avgSeedPerHa
+                    });
+                } else {
+                    setAllocationComparison({
+                        season: currentSeason,
+                        farmerFertilizerPerHa,
+                        avgFertilizerPerHa: 0,
+                        farmerSeedPerHa,
+                        avgSeedPerHa: 0
+                    });
+                }
+            }
+        } catch (err: any) {
+            console.error('Error fetching request history:', err);
+            setRequestError(err.message || 'Failed to load request history');
+            setRequestHistory([]);
+            setAllocationComparison(null);
+        } finally {
+            setRequestLoading(false);
+        }
+    };
+
+    const handlePrint = () => {
+        if (window.electron?.printToPDF) {
+            window.electron.printToPDF({}).then(() => {
+                // nothing to do; print dialog from Electron
+            }).catch((e) => {
+                console.error('Electron print error:', e);
+                window.print();
+            });
+        } else {
+            window.print();
         }
     };
 
@@ -130,13 +234,9 @@ const TechFarmerProf: React.FC = () => {
         return age;
     };
 
-    const getDisplayAge = () => {
-        // Use age from database if available, otherwise calculate from birthdate
-        if (farmer?.age !== null && farmer?.age !== undefined) {
-            return `${farmer.age} years old`;
-        }
-        const calculatedAge = calculateAge(farmer?.birthdate || '');
-        return calculatedAge !== 'N/A' ? `${calculatedAge} years old` : 'N/A';
+    const formatNumber = (value: number | null | undefined, digits = 2) => {
+        if (value === null || value === undefined || Number.isNaN(value)) return 'N/A';
+        return Number(value).toFixed(digits);
     };
 
     const getTotalArea = () => {
@@ -211,9 +311,26 @@ const TechFarmerProf: React.FC = () => {
                     <div className="tech-prof-main-content">
                         <div className="error-container">
                             <p className="error-message">{error || 'Farmer not found'}</p>
-                            <button onClick={() => navigate('/technician-farmerprofpage')} className="btn-back">
-                                ← Back to List
-                            </button>
+                            <div className="error-actions">
+                                <button
+                                    onClick={() => navigate('/technician-masterlist')}
+                                    className="btn-back"
+                                >
+                                    ← Back to List
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (!id) return;
+                                        setLoading(true);
+                                        setError(null);
+                                        fetchFarmerData(id);
+                                        fetchParcels(id);
+                                    }}
+                                    className="btn-back"
+                                >
+                                    ⟳ Retry
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -254,16 +371,6 @@ const TechFarmerProf: React.FC = () => {
                         </button>
 
                         <button
-                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-incentives')}
-                        >
-                            <span className="nav-icon">
-                                <img src={IncentivesIcon} alt="Incentives" />
-                            </span>
-                            <span className="nav-text">Incentives</span>
-                        </button>
-
-                        <button
                             className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
                             onClick={() => navigate('/technician-masterlist')}
                         >
@@ -298,12 +405,219 @@ const TechFarmerProf: React.FC = () => {
 
                 {/* Main content starts here */}
                 <div className="tech-prof-main-content">
+                    {/* Print-only layout (form-inspired, not a copy) */}
+                    <div className="print-profile">
+                        <div className="print-header">
+                            <div className="print-header-left">
+                                <div className="print-title">Farmer Profile</div>
+                                <div className="print-subtitle">RSBSA Land Management System</div>
+                            </div>
+                            <div className="print-header-right">
+                                <div className="print-photo-box">Photo</div>
+                            </div>
+                        </div>
+
+                        <div className="print-meta">
+                            <div><strong>FFRS ID:</strong> {farmer.referenceNumber || '—'}</div>
+                            <div><strong>Status:</strong> {farmer.status || '—'}</div>
+                            <div><strong>Printed:</strong> {new Date().toLocaleString()}</div>
+                        </div>
+
+                        <div className="print-section">
+                            <div className="print-section-title">Personal Information</div>
+                            <div className="print-grid">
+                                <div className="print-field">
+                                    <div className="print-label">Full Name</div>
+                                    <div className="print-value">{farmer.farmerName || '—'}</div>
+                                </div>
+                                <div className="print-field">
+                                    <div className="print-label">Sex</div>
+                                    <div className="print-value">{farmer.gender || '—'}</div>
+                                </div>
+                                <div className="print-field">
+                                    <div className="print-label">Date of Birth</div>
+                                    <div className="print-value">{formatDate(farmer.birthdate)}</div>
+                                </div>
+                                <div className="print-field">
+                                    <div className="print-label">Age</div>
+                                    <div className="print-value">{calculateAge(farmer.birthdate)} years old</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="print-section">
+                            <div className="print-section-title">Address</div>
+                            <div className="print-grid">
+                                <div className="print-field span-2">
+                                    <div className="print-label">Home Address</div>
+                                    <div className="print-value">{farmer.farmerAddress || '—'}</div>
+                                </div>
+                                <div className="print-field span-2">
+                                    <div className="print-label">Primary Farm Location</div>
+                                    <div className="print-value">{farmer.farmLocation || '—'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="print-section">
+                            <div className="print-section-title">Farm Summary</div>
+                            <div className="print-grid">
+                                <div className="print-field">
+                                    <div className="print-label">Total Parcels</div>
+                                    <div className="print-value">{parcels.length}</div>
+                                </div>
+                                <div className="print-field">
+                                    <div className="print-label">Total Farm Area (ha)</div>
+                                    <div className="print-value">{getTotalArea()}</div>
+                                </div>
+                                <div className="print-field span-2">
+                                    <div className="print-label">Primary Ownership Type</div>
+                                    <div className="print-value">{getOwnershipType()}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="print-section">
+                            <div className="print-section-title">Land Parcels</div>
+                            {parcels.length === 0 ? (
+                                <div className="print-empty">No land parcels registered.</div>
+                            ) : (
+                                <table className="print-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Parcel No.</th>
+                                            <th>Location</th>
+                                            <th>Area (ha)</th>
+                                            <th>Ownership</th>
+                                            <th>Doc No.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {parcels.map((p, idx) => (
+                                            <tr key={p.id}>
+                                                <td>{idx + 1}</td>
+                                                <td>{p.parcel_number || '—'}</td>
+                                                <td>{[p.farm_location_barangay, p.farm_location_municipality].filter(Boolean).join(', ') || '—'}</td>
+                                                <td>{formatNumber(p.total_farm_area_ha, 2)}</td>
+                                                <td>
+                                                    {p.ownership_type_registered_owner ? 'Registered Owner' :
+                                                        p.ownership_type_tenant ? 'Tenant' :
+                                                            p.ownership_type_lessee ? 'Lessee' : '—'}
+                                                </td>
+                                                <td>{p.ownership_document_no || '—'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+
+                        <div className="print-section">
+                            <div className="print-section-title">Allocation Comparison</div>
+                            {allocationComparison ? (
+                                <div className="print-grid">
+                                    <div className="print-field">
+                                        <div className="print-label">Season</div>
+                                        <div className="print-value">{allocationComparison.season || '—'}</div>
+                                    </div>
+                                    <div className="print-field">
+                                        <div className="print-label">Fertilizer / ha (You)</div>
+                                        <div className="print-value">{formatNumber(allocationComparison.farmerFertilizerPerHa)} bags/ha</div>
+                                    </div>
+                                    <div className="print-field">
+                                        <div className="print-label">Fertilizer / ha (Avg)</div>
+                                        <div className="print-value">{formatNumber(allocationComparison.avgFertilizerPerHa)} bags/ha</div>
+                                    </div>
+                                    <div className="print-field">
+                                        <div className="print-label">Seeds / ha (You)</div>
+                                        <div className="print-value">{formatNumber(allocationComparison.farmerSeedPerHa)} kg/ha</div>
+                                    </div>
+                                    <div className="print-field">
+                                        <div className="print-label">Seeds / ha (Avg)</div>
+                                        <div className="print-value">{formatNumber(allocationComparison.avgSeedPerHa)} kg/ha</div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="print-empty">No allocation comparison data available.</div>
+                            )}
+                        </div>
+
+                        <div className="print-section">
+                            <div className="print-section-title">Request History</div>
+                            {requestHistory.length === 0 ? (
+                                <div className="print-empty">No request history found.</div>
+                            ) : (
+                                <table className="print-table print-table-compact">
+                                    <thead>
+                                        <tr>
+                                            <th>Season</th>
+                                            <th>Status</th>
+                                            <th>Request Date</th>
+                                            <th>Farm Area (ha)</th>
+                                            <th>Fertilizer (bags)</th>
+                                            <th>Seeds (kg)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {requestHistory.map((req, idx) => (
+                                            <tr key={idx}>
+                                                <td>{req.season || '—'}</td>
+                                                <td>{req.status || '—'}</td>
+                                                <td>{formatDate(req.request_date || req.created_at)}</td>
+                                                <td>{formatNumber(req.farm_area_ha)}</td>
+                                                <td>{formatNumber(req.assigned_fertilizer_bags)}</td>
+                                                <td>{formatNumber(req.assigned_seed_kg)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+
+                        <div className="print-section">
+                            <div className="print-section-title">Activity Timeline</div>
+                            <div className="print-timeline">
+                                <div className="print-timeline-item">
+                                    <div className="print-timeline-dot" />
+                                    <div className="print-timeline-content">
+                                        <div className="print-timeline-title">Profile Created</div>
+                                        <div className="print-timeline-date">{formatDate(farmer.dateSubmitted)}</div>
+                                    </div>
+                                </div>
+                                {parcels.length > 0 && (
+                                    <div className="print-timeline-item">
+                                        <div className="print-timeline-dot" />
+                                        <div className="print-timeline-content">
+                                            <div className="print-timeline-title">{parcels.length} Land Parcel(s) Registered</div>
+                                            <div className="print-timeline-date">{formatDate(farmer.dateSubmitted)}</div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="print-timeline-item">
+                                    <div className="print-timeline-dot active" />
+                                    <div className="print-timeline-content">
+                                        <div className="print-timeline-title">Current Status: {farmer.status || '—'}</div>
+                                        <div className="print-timeline-date">Active</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+                    </div>
+
                     {/* Header Section */}
                     <div className="profile-header">
                         <div className="header-top">
-                            <button onClick={() => navigate('/technician-farmerprofpage')} className="btn-back">
-                                ← Back to List
-                            </button>
+                            <div className="header-actions">
+                                <button onClick={() => navigate('/technician-masterlist')} className="btn-back">
+                                    ← Back to List
+                                </button>
+                                <button onClick={handlePrint} className="btn-print">
+                                    🖨️ Print Profile
+                                </button>
+                            </div>
                         </div>
 
                         <div className="profile-hero">
@@ -320,6 +634,7 @@ const TechFarmerProf: React.FC = () => {
                                         {farmer.status || 'Not Active'}
                                     </span>
                                 </div>
+                                <div className="completion-label">Profile completeness: {getProfileCompleteness()}%</div>
                             </div>
                         </div>
                     </div>
@@ -335,8 +650,28 @@ const TechFarmerProf: React.FC = () => {
                                 <h3 className="card-title">👤 Personal Information</h3>
                                 <div className="card-content">
                                     <div className="info-row">
+                                        <span className="info-label">FFRS ID:</span>
+                                        <span className="info-value">{farmer.referenceNumber || 'N/A'}</span>
+                                    </div>
+                                    <div className="info-row">
                                         <span className="info-label">Full Name:</span>
                                         <span className="info-value">{farmer.farmerName}</span>
+                                    </div>
+                                    <div className="info-row">
+                                        <span className="info-label">First Name:</span>
+                                        <span className="info-value">{farmer.firstName || 'N/A'}</span>
+                                    </div>
+                                    <div className="info-row">
+                                        <span className="info-label">Middle Name:</span>
+                                        <span className="info-value">{farmer.middleName || 'N/A'}</span>
+                                    </div>
+                                    <div className="info-row">
+                                        <span className="info-label">Last Name:</span>
+                                        <span className="info-value">{farmer.lastName || 'N/A'}</span>
+                                    </div>
+                                    <div className="info-row">
+                                        <span className="info-label">Extension Name:</span>
+                                        <span className="info-value">{farmer.extName || 'N/A'}</span>
                                     </div>
                                     <div className="info-row">
                                         <span className="info-label">Gender:</span>
@@ -348,7 +683,7 @@ const TechFarmerProf: React.FC = () => {
                                     </div>
                                     <div className="info-row">
                                         <span className="info-label">Age:</span>
-                                        <span className="info-value">{getDisplayAge()}</span>
+                                        <span className="info-value">{calculateAge(farmer.birthdate)} years old</span>
                                     </div>
                                 </div>
                             </div>
@@ -421,44 +756,50 @@ const TechFarmerProf: React.FC = () => {
                                                         </span>
                                                     </div>
 
-                                                    {expandedParcel === parcel.id && (
-                                                        <div className="parcel-details">
-                                                            <div className="info-row">
-                                                                <span className="info-label">Farm Location:</span>
-                                                                <span className="info-value">
-                                                                    {parcel.farm_location_barangay}, {parcel.farm_location_municipality}
-                                                                </span>
-                                                            </div>
-                                                            <div className="info-row">
-                                                                <span className="info-label">Parcel Area:</span>
-                                                                <span className="info-value">{parcel.total_farm_area_ha} hectares</span>
-                                                            </div>
-                                                            <div className="info-row">
-                                                                <span className="info-label">Ownership Type:</span>
-                                                                <span className="info-value">
-                                                                    {parcel.ownership_type_registered_owner ? 'Registered Owner' :
-                                                                        parcel.ownership_type_tenant ? 'Tenant' :
-                                                                            parcel.ownership_type_lessee ? 'Lessee' : 'N/A'}
-                                                                </span>
-                                                            </div>
-                                                            {(parcel.tenant_land_owner_name || parcel.lessee_land_owner_name) && (
-                                                                <div className="info-row">
-                                                                    <span className="info-label">Land Owner Name:</span>
-                                                                    <span className="info-value">
-                                                                        {parcel.tenant_land_owner_name || parcel.lessee_land_owner_name}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                            <div className="info-row">
-                                                                <span className="info-label">Agrarian Reform Beneficiary:</span>
-                                                                <span className="info-value">{parcel.agrarian_reform_beneficiary || 'N/A'}</span>
-                                                            </div>
-                                                            <div className="info-row">
-                                                                <span className="info-label">Within Ancestral Domain:</span>
-                                                                <span className="info-value">{parcel.within_ancestral_domain || 'N/A'}</span>
-                                                            </div>
+                                                    <div className={`parcel-details ${expandedParcel === parcel.id ? 'expanded' : 'collapsed'}`}>
+                                                        <div className="info-row">
+                                                            <span className="info-label">Parcel Number:</span>
+                                                            <span className="info-value">{parcel.parcel_number || 'N/A'}</span>
                                                         </div>
-                                                    )}
+                                                        <div className="info-row">
+                                                            <span className="info-label">Farm Location:</span>
+                                                            <span className="info-value">
+                                                                {parcel.farm_location_barangay}, {parcel.farm_location_municipality}
+                                                            </span>
+                                                        </div>
+                                                        <div className="info-row">
+                                                            <span className="info-label">Parcel Area:</span>
+                                                            <span className="info-value">{parcel.total_farm_area_ha} hectares</span>
+                                                        </div>
+                                                        <div className="info-row">
+                                                            <span className="info-label">Ownership Type:</span>
+                                                            <span className="info-value">
+                                                                {parcel.ownership_type_registered_owner ? 'Registered Owner' :
+                                                                    parcel.ownership_type_tenant ? 'Tenant' :
+                                                                        parcel.ownership_type_lessee ? 'Lessee' : 'N/A'}
+                                                            </span>
+                                                        </div>
+                                                        {(parcel.tenant_land_owner_name || parcel.lessee_land_owner_name) && (
+                                                            <div className="info-row">
+                                                                <span className="info-label">Land Owner Name:</span>
+                                                                <span className="info-value">
+                                                                    {parcel.tenant_land_owner_name || parcel.lessee_land_owner_name}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <div className="info-row">
+                                                            <span className="info-label">Ownership Document No:</span>
+                                                            <span className="info-value">{parcel.ownership_document_no || 'N/A'}</span>
+                                                        </div>
+                                                        <div className="info-row">
+                                                            <span className="info-label">Agrarian Reform Beneficiary:</span>
+                                                            <span className="info-value">{parcel.agrarian_reform_beneficiary || 'N/A'}</span>
+                                                        </div>
+                                                        <div className="info-row">
+                                                            <span className="info-label">Within Ancestral Domain:</span>
+                                                            <span className="info-value">{parcel.within_ancestral_domain || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -468,20 +809,74 @@ const TechFarmerProf: React.FC = () => {
 
                             {/* Registration Details Card */}
                             <div className="profile-card">
-                                <h3 className="card-title">📋 Registration & Submission Details</h3>
+                                <h3 className="card-title">� Allocation Comparison</h3>
                                 <div className="card-content">
-                                    <div className="info-row">
-                                        <span className="info-label">Date Registered/Submitted:</span>
-                                        <span className="info-value">{formatDate(farmer.dateSubmitted)}</span>
-                                    </div>
-                                    <div className="info-row">
-                                        <span className="info-label">Reference Number:</span>
-                                        <span className="info-value">{farmer.referenceNumber}</span>
-                                    </div>
-                                    <div className="info-row">
-                                        <span className="info-label">Submission Status:</span>
-                                        <span className="info-value">{farmer.status || 'Pending'}</span>
-                                    </div>
+                                    {allocationComparison ? (
+                                        <>
+                                            <div className="info-row">
+                                                <span className="info-label">Season:</span>
+                                                <span className="info-value">{allocationComparison.season || 'N/A'}</span>
+                                            </div>
+                                            <div className="info-row">
+                                                <span className="info-label">Fertilizer / ha:</span>
+                                                <span className="info-value">
+                                                    You: {formatNumber(allocationComparison.farmerFertilizerPerHa)} bags/ha
+                                                    <br />
+                                                    Avg: {formatNumber(allocationComparison.avgFertilizerPerHa)} bags/ha
+                                                </span>
+                                            </div>
+                                            <div className="info-row">
+                                                <span className="info-label">Seeds / ha:</span>
+                                                <span className="info-value">
+                                                    You: {formatNumber(allocationComparison.farmerSeedPerHa)} kg/ha
+                                                    <br />
+                                                    Avg: {formatNumber(allocationComparison.avgSeedPerHa)} kg/ha
+                                                </span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <p className="no-data">No allocation comparison data available.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="profile-card">
+                                <h3 className="card-title">📑 Request History</h3>
+                                <div className="card-content">
+                                    {requestLoading ? (
+                                        <p className="loading-text">Loading request history…</p>
+                                    ) : requestError ? (
+                                        <p className="error-message">{requestError}</p>
+                                    ) : requestHistory.length === 0 ? (
+                                        <p className="no-data">No request history found.</p>
+                                    ) : (
+                                        <div className="table-wrapper">
+                                            <table className="history-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Season</th>
+                                                        <th>Status</th>
+                                                        <th>Request Date</th>
+                                                        <th>Farm Area (ha)</th>
+                                                        <th>Fertilizer (bags)</th>
+                                                        <th>Seeds (kg)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {requestHistory.map((req, idx) => (
+                                                        <tr key={idx}>
+                                                            <td>{req.season || '—'}</td>
+                                                            <td>{req.status || '—'}</td>
+                                                            <td>{formatDate(req.request_date || req.created_at)}</td>
+                                                            <td>{formatNumber(req.farm_area_ha)}</td>
+                                                            <td>{formatNumber(req.assigned_fertilizer_bags)}</td>
+                                                            <td>{formatNumber(req.assigned_seed_kg)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

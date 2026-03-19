@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup, useMap, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FeatureCollection } from 'geojson'; // Import FeatureCollection and Feature types
 import { getLandPlots, getCropPlantingInfo } from '../../api';
@@ -18,14 +18,25 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+interface UnplottedFarmerData {
+    id: string;
+    farmerName: string;
+    barangay: string;
+    farmLocation: string;
+    latitude: number;
+    longitude: number;
+}
+
 interface FarmlandMapProps {
     onLandPlotSelect?: (properties: any) => void;
     highlightGeometry?: any | null; // optional geometry to highlight
     highlightMatcher?: ((properties: any) => boolean) | null; // optional predicate to highlight existing parcels
     farmerDensity?: Record<string, number>; // barangay name -> farmer count for heatmap
+    isTechnicianView?: boolean; // enable technician-specific features
+    unplottedFarmers?: UnplottedFarmerData[]; // list of farmers without plotted parcels
 }
 
-const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGeometry, highlightMatcher, farmerDensity }) => {
+const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGeometry, highlightMatcher, farmerDensity, isTechnicianView, unplottedFarmers }) => {
     const [farmlandRecords, setFarmlandRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     // Removed unused error state
@@ -446,6 +457,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                         />
                     </LayersControl.Overlay>
                 )}
+
+                {/* Pins removed */}
             </LayersControl>
 
             {municipalBoundaryData && (
@@ -482,12 +495,18 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                             return null;
                         }).filter(Boolean)
                     } as FeatureCollection}
-                    style={() => ({
+                    style={() => isTechnicianView ? {
+                        color: '#22c55e',
+                        weight: 2,
+                        opacity: 0.9,
+                        fillColor: '#86efac',
+                        fillOpacity: 0.6
+                    } : {
                         color: 'blue',
                         weight: 2,
                         opacity: 0.8,
                         fillOpacity: 0.5
-                    })}
+                    }}
                     onEachFeature={(feature, layer) => {
                         if (feature.properties) {
                             // Debug: Log all available properties

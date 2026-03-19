@@ -88,6 +88,53 @@
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
+/* Stats at top of details panel */
+.tech-landplotting-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.tech-landplotting-stat-card {
+    background: linear-gradient(135deg, #ecfdf5 0%, #e0f2fe 100%);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.tech-landplotting-stat-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #047857;
+}
+
+.tech-landplotting-stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #022c22;
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.tech-landplotting-stat-unit {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #047857;
+}
+
+.tech-landplotting-stat-sub {
+    font-size: 0.8rem;
+    color: #4b5563;
+}
+
 .tech-landplotting-parcel-title {
     border-bottom: 3px solid transparent;
     border-image: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
@@ -113,6 +160,61 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-size: 0.85rem;
+}
+
+/* Barangay progress list */
+.tech-landplotting-barangay-progress-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+}
+
+.tech-landplotting-barangay-progress-item {
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e5e7eb;
+}
+
+.tech-landplotting-barangay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+}
+
+.tech-landplotting-barangay-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.tech-landplotting-barangay-percent {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #047857;
+}
+
+.tech-landplotting-progress-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+    margin-bottom: 0.35rem;
+}
+
+.tech-landplotting-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #22c55e 0%, #16a34a 40%, #15803d 100%);
+    transition: width 0.3s ease-out;
+}
+
+.tech-landplotting-barangay-meta {
+    font-size: 0.78rem;
+    color: #6b7280;
 }
 
 .tech-landplotting-details-container {
@@ -167,27 +269,20 @@
     color: #999;
 }
 
-/* R    gap: 1.5rem;
-        padding: 1.5rem;
-    }
 
-    .tech-landplotting-map-section {
-        padding: 1rem;
-    }
 
-    .tech-landplotting-map-container {
-        width: 100%;
-        height: 450px;
-    }
+.tech-landplotting-map-container {
+    width: 100%;
+    height: 450px;
+}
 
-    .tech-landplotting-details-panel {
-        padding: 2rem;
-    }
+.tech-landplotting-details-panel {
+    padding: 2rem;
+}
 
-    .tech-landplotting-container {
-        height: auto;
-        min-height: 90vh;
-    }
+.tech-landplotting-container {
+    height: auto;
+    min-height: 90vh;
 }
 
 @media (max-width: 768px) {
