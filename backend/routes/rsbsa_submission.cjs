@@ -25,13 +25,13 @@ router.post('/', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // console.log('Received RSBSA submission:', {
-        //     draftId,
-        //     data: {
-        //         ...data,
-        //         farmlandParcels: JSON.stringify(data.farmlandParcels, null, 2)
-        //     }
-        // });
+        console.log('Received RSBSA submission:', {
+            draftId,
+            data: {
+                ...data,
+                farmlandParcels: JSON.stringify(data.farmlandParcels, null, 2)
+            }
+        });
 
         const totalFarmArea = data.farmlandParcels
             ? data.farmlandParcels.reduce((total, parcel) => {
@@ -79,15 +79,12 @@ router.post('/', async (req, res) => {
 
         const insertSubmissionQuery = `
             INSERT INTO rsbsa_submission (
-                "LAST NAME", "FIRST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", age,
-                "BARANGAY", "MUNICIPALITY", "FARM LOCATION", "PARCEL AREA", "TOTAL FARM AREA",
+                "LAST NAME", "FIRST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE",
+                "BARANGAY", "MUNICIPALITY", "FARM_LOCATION",
                 "MAIN LIVELIHOOD", "OWNERSHIP_TYPE_REGISTERED_OWNER", "OWNERSHIP_TYPE_TENANT",
-                "OWNERSHIP_TYPE_LESSEE", status,
-                "FARMER_RICE", "FARMER_CORN", "FARMER_OTHER_CROPS", "FARMER_OTHER_CROPS_TEXT",
-                "FARMER_LIVESTOCK", "FARMER_LIVESTOCK_TEXT", "FARMER_POULTRY", "FARMER_POULTRY_TEXT"
+                "OWNERSHIP_TYPE_LESSEE", status
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-                $18, $19, $20, $21, $22, $23, $24, $25
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
             )
             RETURNING id, submitted_at
         `;
@@ -99,25 +96,14 @@ router.post('/', async (req, res) => {
             data.extensionName || '',
             data.gender || '',
             data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-            data.age ? parseInt(data.age) : null,
             data.barangay || '',
             data.municipality || '',
             farmLocation,
-            parcelArea, // PARCEL AREA - now uses first parcel's area
-            totalFarmArea,
             data.mainLivelihood || '',
             ownershipTypeRegisteredOwner,
             ownershipTypeTenant,
             ownershipTypeLessee,
             'Active Farmer',
-            data.farmerRice || false,
-            data.farmerCorn || false,
-            data.farmerOtherCrops || false,
-            data.farmerOtherCropsText || '',
-            data.farmerLivestock || false,
-            data.farmerLivestockText || '',
-            data.farmerPoultry || false,
-            data.farmerPoultryText || '',
         ];
 
         const submissionResult = await client.query(insertSubmissionQuery, submissionValues);
@@ -577,12 +563,11 @@ router.get('/', async (req, res) => {
                 rs."EXT NAME",
                 rs."GENDER",
                 rs."BIRTHDATE",
-                rs.age,
                 rs."BARANGAY",
                 rs."MUNICIPALITY",
-                rs."FARM LOCATION",
-                COALESCE(fp_sum.total_area, rs."TOTAL FARM AREA", 0)::TEXT AS "PARCEL AREA",
-                COALESCE(fp_sum.total_area, rs."TOTAL FARM AREA", 0) AS "TOTAL FARM AREA",
+                rs."FARM_LOCATION",
+                COALESCE(fp_sum.total_area, 0)::TEXT AS "PARCEL AREA",
+                COALESCE(fp_sum.total_area, 0) AS "TOTAL FARM AREA",
                 rs."MAIN LIVELIHOOD",
                 rs.status,
                 rs.submitted_at,
@@ -613,8 +598,8 @@ router.get('/', async (req, res) => {
                 .filter(Boolean)
                 .join(', ');
 
-            const parcelInfo = row["FARM LOCATION"]
-                ? `${row["FARM LOCATION"]}${row["PARCEL AREA"] ? ` (${row["PARCEL AREA"]} ha)` : ''}`
+            const parcelInfo = row["FARM_LOCATION"]
+                ? `${row["FARM_LOCATION"]}${row["PARCEL AREA"] ? ` (${row["PARCEL AREA"]} ha)` : ''}`
                 : 'N/A';
 
             const ownershipType = {
@@ -639,10 +624,9 @@ router.get('/', async (req, res) => {
                 referenceNumber: row["FFRS_CODE"] || `RSBSA-${row.id}`,
                 farmerName: fullName || '—',
                 farmerAddress: `${row["BARANGAY"] || ''}, ${row["MUNICIPALITY"] || ''}`.replace(/^,\s*|,\s*$/g, '') || '—',
-                farmLocation: row["FARM LOCATION"] || '—',
+                farmLocation: row["FARM_LOCATION"] || '—',
                 gender: row["GENDER"] || '—',
                 birthdate: row["BIRTHDATE"] || null,
-                age: row.age || null,
                 dateSubmitted: row.submitted_at || row.created_at,
                 status: row.status || 'Not Active',
                 parcelArea: parcelAreaDisplay,
@@ -698,7 +682,6 @@ router.get('/:id', async (req, res) => {
 
         const barangay = row["BARANGAY"] || '';
         const municipality = row["MUNICIPALITY"] || '';
-        const province = row["PROVINCE"] || '';
 
         const submissionData = {
             id: row.id,
@@ -710,19 +693,10 @@ router.get('/:id', async (req, res) => {
             extName: row["EXT NAME"] || '',
             gender: row["GENDER"] || '',
             birthdate: row["BIRTHDATE"] || '',
-            age: row.age || null,
             mainLivelihood: row["MAIN LIVELIHOOD"] || '',
-            farmerRice: row["FARMER_RICE"] || false,
-            farmerCorn: row["FARMER_CORN"] || false,
-            farmerOtherCrops: row["FARMER_OTHER_CROPS"] || false,
-            farmerOtherCropsText: row["FARMER_OTHER_CROPS_TEXT"] || '',
-            farmerLivestock: row["FARMER_LIVESTOCK"] || false,
-            farmerLivestockText: row["FARMER_LIVESTOCK_TEXT"] || '',
-            farmerPoultry: row["FARMER_POULTRY"] || false,
-            farmerPoultryText: row["FARMER_POULTRY_TEXT"] || '',
-            farmerAddress: [barangay, municipality, province].filter(Boolean).join(', ') || '',
-            farmLocation: row["FARM LOCATION"] || barangay || '',
-            parcelArea: row["PARCEL AREA"] || row["TOTAL FARM AREA"] || '',
+            farmerAddress: [barangay, municipality].filter(Boolean).join(', ') || '',
+            farmLocation: row["FARM_LOCATION"] || barangay || '',
+            parcelArea: row["PARCEL_AREA"] || '',
             status: row.status || 'Not Active',
             dateSubmitted: row.submitted_at || row.created_at,
             ownershipType: {
