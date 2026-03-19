@@ -943,3 +943,276 @@
         transform: translateY(0);
     }
 }
+
+/* ============================================
+   NOTIFICATION TOAST SYSTEM
+   ============================================ */
+
+.jo-manage-notification-toast {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    min-width: 350px;
+    max-width: 500px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    z-index: 10000;
+    animation: jo-manage-slideInRight 0.3s ease-out, jo-manage-pulse 0.5s ease-in-out;
+    backdrop-filter: blur(10px);
+    border: 2px solid;
+}
+
+.jo-manage-notification-toast.jo-manage-notification-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #34d399;
+    color: white;
+}
+
+.jo-manage-notification-toast.jo-manage-notification-error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-color: #f87171;
+    color: white;
+}
+
+.jo-manage-notification-toast.jo-manage-notification-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-color: #fbbf24;
+    color: white;
+}
+
+.jo-manage-notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.jo-manage-notification-icon {
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: jo-manage-scaleIn 0.3s ease-out;
+    flex-shrink: 0;
+}
+
+.jo-manage-notification-message {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.jo-manage-notification-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-weight: bold;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.jo-manage-notification-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.jo-manage-notification-close:active {
+    transform: scale(0.95);
+}
+
+/* Notification Animations */
+@keyframes jo-manage-slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes jo-manage-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+@keyframes jo-manage-scaleIn {
+    from {
+        transform: scale(0) rotate(-180deg);
+    }
+    to {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* Responsive notification */
+@media (max-width: 768px) {
+    .jo-manage-notification-toast {
+        left: 12px;
+        right: 12px;
+        min-width: auto;
+        max-width: none;
+        top: 12px;
+    }
+}
+
+/* Delete Confirmation Modal Styles */
+.jo-manage-delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: jo-manage-fadeIn 0.2s ease-out;
+}
+
+.jo-manage-delete-modal {
+    background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 440px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: jo-manage-scaleIn 0.3s ease-out;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.jo-manage-delete-modal-icon {
+    font-size: 48px;
+    text-align: center;
+    margin-bottom: 16px;
+    animation: jo-manage-pulse 2s infinite;
+}
+
+.jo-manage-delete-modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f2937;
+    text-align: center;
+    margin: 0 0 16px 0;
+}
+
+.jo-manage-delete-modal-message {
+    font-size: 16px;
+    color: #4b5563;
+    text-align: center;
+    margin: 0 0 12px 0;
+    line-height: 1.6;
+}
+
+.jo-manage-delete-modal-message strong {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.jo-manage-delete-modal-warning {
+    font-size: 13px;
+    color: #dc2626;
+    text-align: center;
+    margin: 0 0 24px 0;
+    font-style: italic;
+}
+
+.jo-manage-delete-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.jo-manage-delete-modal-btn {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 140px;
+}
+
+.jo-manage-delete-modal-btn.cancel {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: #374151;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.jo-manage-delete-modal-btn.cancel:hover {
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.jo-manage-delete-modal-btn.delete {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.jo-manage-delete-modal-btn.delete:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.jo-manage-delete-modal-btn:active {
+    transform: translateY(0);
+}
+
+@keyframes jo-manage-fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Responsive adjustments for delete modal */
+@media screen and (max-width: 480px) {
+    .jo-manage-delete-modal {
+        padding: 24px;
+        max-width: 90%;
+    }
+
+    .jo-manage-delete-modal-title {
+        font-size: 20px;
+    }
+
+    .jo-manage-delete-modal-message {
+        font-size: 14px;
+    }
+
+    .jo-manage-delete-modal-actions {
+        flex-direction: column;
+    }
+
+    .jo-manage-delete-modal-btn {
+        width: 100%;
+    }
+}

@@ -90,110 +90,23 @@ const TechIncentives: React.FC = () => {
             const allRequests: any[] = requestsResponse.error ? [] : (requestsResponse.data || []);
             const allDistributions: any[] = distributionsResponse.error ? [] : (distributionsResponse.data || []);
 
-            const requestsBySeason: Record<string, any[]> = {};
-            const requestById: Record<number, any> = {};
-
-            allRequests.forEach((request: any) => {
-                if (!request?.season) return;
-                const season = request.season;
-
-                if (!requestsBySeason[season]) {
-                    requestsBySeason[season] = [];
-                }
-                requestsBySeason[season].push(request);
-
-                if (request.id !== undefined && request.id !== null) {
-                    requestById[request.id] = request;
-                }
-            });
-
-            const distributionsBySeason: Record<string, any[]> = {};
-
-            allDistributions.forEach((record: any) => {
-                const requestId = record.request_id;
-                if (!requestId) return;
-
-                const req = requestById[requestId];
-                if (!req?.season) return;
-
-                const season = req.season;
-                if (!distributionsBySeason[season]) {
-                    distributionsBySeason[season] = [];
-                }
-                distributionsBySeason[season].push(record);
-            });
-
-            setSeasonRequestsMap(requestsBySeason);
-            setSeasonDistributionsMap(distributionsBySeason);
-
-            const allocationsWithMetrics = allocationData.map((allocation: RegionalAllocation) => {
-                const season = allocation.season;
-                const seasonRequests = requestsBySeason[season] || [];
-                const seasonDistributions = distributionsBySeason[season] || [];
-
-                const fertilizerTotal = getTotalFertilizer(allocation);
-                const seedsTotal = getTotalSeeds(allocation);
-                const totalAllocated = fertilizerTotal + seedsTotal;
-
-                const totalDistributed = seasonDistributions.reduce((sum: number, record: any) => {
-                    const fert = Number(record.fertilizer_bags_given) || 0;
-                    const seeds = Number(record.seed_kg_given) || 0;
-                    return sum + fert + seeds;
-                }, 0);
-
-                const remainingStock = Math.max(0, totalAllocated - totalDistributed);
-                const usageProgress = totalAllocated > 0 ? totalDistributed / totalAllocated : 0;
-
-                // build sparkline/burndown data for this allocation (used on card and details)
-                let sparkline: SparklinePoint[] = [];
-                const formatLabel = (raw: any) => raw
-                    ? new Date(raw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    : '';
-
-                if (seasonDistributions.length === 0) {
-                    const startLabel = formatLabel(allocation.allocation_date);
-                    sparkline = [
-                        { date: startLabel, remaining: totalAllocated, distributed: 0 }
-                    ];
-                } else {
-                    const sorted = [...seasonDistributions].sort((a, b) => {
-                        const aDate = new Date(a.distribution_date || a.created_at || a.createdAt || a.updated_at || 0).getTime();
-                        const bDate = new Date(b.distribution_date || b.created_at || b.createdAt || b.updated_at || 0).getTime();
-                        return aDate - bDate;
-                    });
-                    let cumulative = 0;
-                    const points: SparklinePoint[] = sorted.map((record: any) => {
-                        const rawDate = record.distribution_date || record.created_at || record.createdAt;
-                        const dateLabel = formatLabel(rawDate);
-                        const fert = Number(record.fertilizer_bags_given) || 0;
-                        const seeds = Number(record.seed_kg_given) || 0;
-                        cumulative += fert + seeds;
-                        const remaining = Math.max(0, totalAllocated - cumulative);
-                        return { date: dateLabel, remaining, distributed: cumulative };
-                    });
-                    const allocationStartLabel = formatLabel(allocation.allocation_date);
-                    sparkline = [
-                        { date: allocationStartLabel, remaining: totalAllocated, distributed: 0 },
-                        ...points
-                    ];
-                }
-
-                return {
-                    ...allocation,
-                    farmer_count: seasonRequests.length,
-                    totalAllocated,
-                    totalDistributed,
-                    remainingStock,
-                    usageProgress,
-                    sparklineData: sparkline,
-                };
-            });
-
-            const sortedAllocations = [...allocationsWithMetrics].sort((a, b) =>
-                new Date(b.allocation_date).getTime() - new Date(a.allocation_date).getTime()
+            // Fetch farmer count for each allocation
+            const allocationsWithCounts = await Promise.all(
+                allocationData.map(async (allocation: RegionalAllocation) => {
+                    try {
+                        const requestsResponse = await getFarmerRequests(allocation.id, true);
+                        if (!requestsResponse.error) {
+                            const requests = requestsResponse.data || [];
+                            return { ...allocation, farmer_count: requests.length };
+                        }
+                        return { ...allocation, farmer_count: 0 };
+                    } catch {
+                        return { ...allocation, farmer_count: 0 };
+                    }
+                })
             );
 
-            setAllocations(sortedAllocations);
+            setAllocations(allocationsWithCounts);
 
             if (!selectedSeason && sortedAllocations.length > 0) {
                 setSelectedSeason(sortedAllocations[0].season);
@@ -293,8 +206,8 @@ const TechIncentives: React.FC = () => {
 
     const handleEditAllocation = async (allocation: RegionalAllocation) => {
         try {
-            // Fetch request count for this season
-            const response = await getFarmerRequests(allocation.season);
+            // Fetch request count for this allocation
+            const response = await getFarmerRequests(allocation.id, true);
             if (!response.error) {
                 const requests = response.data || [];
                 setRequestCount(requests.length);

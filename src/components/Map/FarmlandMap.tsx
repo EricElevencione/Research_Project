@@ -29,14 +29,14 @@ interface UnplottedFarmerData {
 
 interface FarmlandMapProps {
     onLandPlotSelect?: (properties: any) => void;
-    highlightGeometry?: any | null; // optional geometry to highlight
-    highlightMatcher?: ((properties: any) => boolean) | null; // optional predicate to highlight existing parcels
-    farmerDensity?: Record<string, number>; // barangay name -> farmer count for heatmap
-    isTechnicianView?: boolean; // enable technician-specific features
-    unplottedFarmers?: UnplottedFarmerData[]; // list of farmers without plotted parcels
+    highlightGeometry?: any | null;
+    highlightMatcher?: ((properties: any) => boolean) | null;
+    farmerDensity?: Record<string, number>;
+    dashboardMode?: boolean;
+    unplottedByBarangay?: Record<string, number>;
 }
 
-const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGeometry, highlightMatcher, farmerDensity, isTechnicianView, unplottedFarmers }) => {
+const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGeometry, highlightMatcher, farmerDensity, dashboardMode, unplottedByBarangay }) => {
     const [farmlandRecords, setFarmlandRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     // Removed unused error state
@@ -206,6 +206,74 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
         fillOpacity: 0,
     });
 
+    // Dashboard mode: compute barangay centroids for red markers
+    const [barangayCentroids, setBarangayCentroids] = useState<Record<string, [number, number]>>({});
+
+    useEffect(() => {
+        if (!municipalBoundaryData || !dashboardMode) return;
+
+        const centroids: Record<string, [number, number]> = {};
+        const computeCentroid = (geometry: any): [number, number] | null => {
+            if (!geometry?.coordinates) return null;
+            let sumLat = 0, sumLng = 0, count = 0;
+            const walk = (coords: any) => {
+                if (Array.isArray(coords) && coords.length >= 2 && typeof coords[0] === 'number') {
+                    sumLng += coords[0];
+                    sumLat += coords[1];
+                    count++;
+                } else if (Array.isArray(coords)) {
+                    coords.forEach(walk);
+                }
+            };
+            walk(geometry.coordinates);
+            return count > 0 ? [sumLat / count, sumLng / count] : null;
+        };
+
+        (municipalBoundaryData.features || []).forEach((feature: any) => {
+            const name = feature.properties?.NAME_3 || feature.properties?.barangay || '';
+            if (name && feature.geometry) {
+                const c = computeCentroid(feature.geometry);
+                if (c) centroids[name] = c;
+            }
+        });
+        setBarangayCentroids(centroids);
+    }, [municipalBoundaryData, dashboardMode]);
+
+    const findCentroid = (brgyName: string): [number, number] | null => {
+        if (barangayCentroids[brgyName]) return barangayCentroids[brgyName];
+        const lower = brgyName.toLowerCase().trim();
+        for (const [key, val] of Object.entries(barangayCentroids)) {
+            if (key.toLowerCase().trim() === lower) return val;
+        }
+        return null;
+    };
+
+    const DashboardLegend: React.FC = () => {
+        const map = useMap();
+        useEffect(() => {
+            const legend = new L.Control({ position: 'bottomright' });
+            legend.onAdd = () => {
+                const div = L.DomUtil.create('div', 'tech-map-legend');
+                div.innerHTML = `
+                    <div style="background:white;padding:10px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.25);font-size:12px;font-family:inherit;">
+                        <div style="font-weight:700;margin-bottom:6px;color:#1f2937;">Map Legend</div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+                            <span style="display:inline-block;width:16px;height:16px;background:#22c55e;border:2px solid #15803d;border-radius:3px;"></span>
+                            <span>Plotted Parcels</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:#ef4444;border-radius:50%;color:white;font-size:9px;font-weight:700;">!</span>
+                            <span>Unplotted Farmers</span>
+                        </div>
+                    </div>`;
+                return div;
+            };
+            legend.addTo(map);
+            return () => { legend.remove(); };
+        }, [map]);
+        return null;
+    };
+
     if (loading || boundaryLoading) {
         return <div>Loading map data...</div>;
     }
@@ -316,6 +384,9 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                                 }).filter(Boolean)
                             } as FeatureCollection}
                             style={(feature: any) => {
+                                if (dashboardMode) {
+                                    return { color: '#15803d', weight: 2, opacity: 0.9, fillColor: '#22c55e', fillOpacity: 0.5 };
+                                }
                                 const props = feature?.properties || {};
                                 const isHighlighted = typeof highlightMatcher === 'function' ? !!highlightMatcher(props) : false;
                                 return isHighlighted
@@ -495,18 +566,10 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                             return null;
                         }).filter(Boolean)
                     } as FeatureCollection}
-                    style={() => isTechnicianView ? {
-                        color: '#22c55e',
-                        weight: 2,
-                        opacity: 0.9,
-                        fillColor: '#86efac',
-                        fillOpacity: 0.6
-                    } : {
-                        color: 'blue',
-                        weight: 2,
-                        opacity: 0.8,
-                        fillOpacity: 0.5
-                    }}
+                    style={() => dashboardMode
+                        ? { color: '#15803d', weight: 2, opacity: 0.9, fillColor: '#22c55e', fillOpacity: 0.5 }
+                        : { color: 'blue', weight: 2, opacity: 0.8, fillOpacity: 0.5 }
+                    }
                     onEachFeature={(feature, layer) => {
                         if (feature.properties) {
                             // Debug: Log all available properties
@@ -672,6 +735,42 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({ onLandPlotSelect, highlightGe
                     }}
                 />
             )}
+            {dashboardMode && <DashboardLegend />}
+
+            {dashboardMode && unplottedByBarangay && Object.entries(unplottedByBarangay).map(([brgyName, count]) => {
+                const centroid = findCentroid(brgyName);
+                if (!centroid || count === 0) return null;
+                return (
+                    <Marker
+                        key={`unplotted-${brgyName}`}
+                        position={centroid}
+                        icon={L.divIcon({
+                            className: '',
+                            html: `<div style="
+                                background:#ef4444;
+                                color:white;
+                                border-radius:50%;
+                                width:${Math.min(20 + count * 2, 44)}px;
+                                height:${Math.min(20 + count * 2, 44)}px;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                font-size:${count > 99 ? 10 : 12}px;
+                                font-weight:700;
+                                border:2px solid #b91c1c;
+                                box-shadow:0 2px 6px rgba(0,0,0,.35);
+                            ">${count}</div>`,
+                            iconSize: [Math.min(20 + count * 2, 44), Math.min(20 + count * 2, 44)],
+                            iconAnchor: [Math.min(20 + count * 2, 44) / 2, Math.min(20 + count * 2, 44) / 2]
+                        })}
+                    >
+                        <Popup>
+                            <div style={{ fontWeight: 600, marginBottom: 4 }}>{brgyName}</div>
+                            <div>{count} unplotted farmer{count !== 1 ? 's' : ''}</div>
+                        </Popup>
+                    </Marker>
+                );
+            })}
         </MapContainer>
     );
 };

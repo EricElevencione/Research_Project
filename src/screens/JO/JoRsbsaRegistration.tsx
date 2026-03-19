@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getLandOwners, getFarmParcels, createRsbsaSubmission } from '../../api';
 import { supabase } from '../../supabase';
+import { getAuditLogger, AuditAction, AuditModule } from '../../components/Audit/auditLogger';
 import '../../assets/css/jo css/JoRsbsaRegistrationStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -188,6 +189,7 @@ const JoRsbsa: React.FC = () => {
     message: '',
     type: 'success'
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -552,6 +554,16 @@ const JoRsbsa: React.FC = () => {
       if (!formData.middleName?.trim()) newErrors.middleName = 'Middle name is required';
       if (!formData.gender?.trim()) newErrors.gender = 'Gender is required';
       if (!formData.dateOfBirth?.trim()) newErrors.dateOfBirth = 'Date of birth is required';
+      if (!formData.age?.trim()) {
+        newErrors.age = 'Age is required';
+      } else {
+        const ageValue = Number(formData.age);
+        if (Number.isNaN(ageValue)) {
+          newErrors.age = 'Age must be a valid number';
+        } else if (ageValue < 18) {
+          newErrors.age = 'Age must be at least 18 or above';
+        }
+      }
       if (!formData.barangay?.trim()) newErrors.barangay = 'Barangay is required';
 
       setErrors(newErrors);
@@ -629,6 +641,16 @@ const JoRsbsa: React.FC = () => {
     if (!formData.middleName?.trim()) newErrors.middleName = 'Middle name is required';
     if (!formData.gender?.trim()) newErrors.gender = 'Gender is required';
     if (!formData.dateOfBirth?.trim()) newErrors.dateOfBirth = 'Date of birth is required';
+    if (!formData.age?.trim()) {
+      newErrors.age = 'Age is required';
+    } else {
+      const ageValue = Number(formData.age);
+      if (Number.isNaN(ageValue)) {
+        newErrors.age = 'Age must be a valid number';
+      } else if (ageValue <= 18) {
+        newErrors.age = 'Age must be above 18';
+      }
+    }
     if (!formData.barangay?.trim()) newErrors.barangay = 'Barangay is required';
 
     // Validate based on ownership category
@@ -710,12 +732,104 @@ const JoRsbsa: React.FC = () => {
   };
 
 
+  const buildFarmerAuditFarmDetails = () => {
+    const farmlandParcels = formData.farmlandParcels.map((parcel, index) => {
+      const parsedArea = Number(parcel.totalFarmAreaHa);
+      const totalFarmAreaHa = Number.isFinite(parsedArea) ? parsedArea : 0;
+
+      return {
+        parcelNo: parcel.parcelNo || String(index + 1),
+        farmLocationBarangay: parcel.farmLocationBarangay || null,
+        farmLocationMunicipality: parcel.farmLocationMunicipality || null,
+        totalFarmAreaHa,
+        withinAncestralDomain: parcel.withinAncestralDomain || null,
+        ownershipDocumentNo: parcel.ownershipDocumentNo || null,
+        agrarianReformBeneficiary: parcel.agrarianReformBeneficiary || null,
+        ownershipType: {
+          registeredOwner: !!parcel.ownershipTypeRegisteredOwner,
+          tenant: !!parcel.ownershipTypeTenant,
+          lessee: !!parcel.ownershipTypeLessee,
+          others: !!parcel.ownershipTypeOthers
+        },
+        tenantLandOwnerName: parcel.tenantLandOwnerName || null,
+        lesseeLandOwnerName: parcel.lesseeLandOwnerName || null,
+        ownershipOthersSpecify: parcel.ownershipOthersSpecify || null,
+        existingParcelId: parcel.existingParcelId ?? null,
+        existingParcelNumber: parcel.existingParcelNumber ?? null
+      };
+    });
+
+    const totalFarmAreaHa = farmlandParcels.reduce(
+      (sum, parcel) => sum + (parcel.totalFarmAreaHa || 0),
+      0
+    );
+
+    return {
+      ownershipCategory,
+      totalParcels: farmlandParcels.length,
+      totalFarmAreaHa: Number(totalFarmAreaHa.toFixed(4)),
+      farmLocation: {
+        barangay: formData.barangay || null,
+        municipality: formData.municipality || null,
+        province: formData.province || null
+      },
+      selectedLandOwner: selectedLandOwner
+        ? {
+          id: selectedLandOwner.id,
+          name: selectedLandOwner.name,
+          barangay: selectedLandOwner.barangay,
+          municipality: selectedLandOwner.municipality
+        }
+        : null,
+      selectedParcelIds: Array.from(selectedParcelIds),
+      farmActivities: {
+        mainLivelihood: formData.mainLivelihood || null,
+        farmerRice: !!formData.farmerRice,
+        farmerCorn: !!formData.farmerCorn,
+        farmerOtherCrops: !!formData.farmerOtherCrops,
+        farmerOtherCropsText: formData.farmerOtherCropsText || null,
+        farmerLivestock: !!formData.farmerLivestock,
+        farmerLivestockText: formData.farmerLivestockText || null,
+        farmerPoultry: !!formData.farmerPoultry,
+        farmerPoultryText: formData.farmerPoultryText || null
+      },
+      farmlandParcels
+    };
+  };
+
+
   const handleFinalSubmit = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    let shouldUnlockSubmit = true;
+
     try {
       const submitted = await submitFinalToServer();
       if (submitted && submitted.submissionId) {
+        // Log audit trail for farmer registration
+        try {
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+          const farmerName = `${formData.surname}, ${formData.firstName} ${formData.middleName || ''}`.trim();
+          const farmDetails = buildFarmerAuditFarmDetails();
+          const auditLogger = getAuditLogger();
+          await auditLogger.logFarmerRegistration(
+            {
+              id: currentUser.id,
+              name: currentUser.name || currentUser.username || 'Unknown',
+              role: currentUser.role || 'JO'
+            },
+            submitted.submissionId,
+            farmerName,
+            farmDetails
+          );
+        } catch (auditErr) {
+          console.error('Audit log failed (non-blocking):', auditErr);
+        }
+
         showToast('RSBSA form submitted successfully!', 'success');
         // Navigate back to JO flow after a short delay to show the toast
+        shouldUnlockSubmit = false;
         setTimeout(() => {
           navigate('/jo-rsbsapage');
         }, 1500);
@@ -723,6 +837,10 @@ const JoRsbsa: React.FC = () => {
     } catch (error) {
       console.error('Error submitting form:', error);
       showToast('Error submitting form. Please try again.', 'error');
+    } finally {
+      if (shouldUnlockSubmit) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -768,14 +886,6 @@ const JoRsbsa: React.FC = () => {
               </span>
               <span className="nav-text">Incentives</span>
             </button>
-
-            <div
-              className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-              onClick={() => navigate('/jo-distribution')}
-            >
-              <div className="nav-icon">🚚</div>
-              <span className="nav-text">Distribution Log</span>
-            </div>
 
             <button
               className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
@@ -925,10 +1035,12 @@ const JoRsbsa: React.FC = () => {
                               const today = new Date();
                               let age = today.getFullYear() - birthDate.getFullYear();
                               const monthDiff = today.getMonth() - birthDate.getMonth();
-                              if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                              if (monthDiff <= 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
                                 age--;
                               }
                               setFormData(prev => ({ ...prev, age: String(age) }));
+                            } else {
+                              setFormData(prev => ({ ...prev, age: '' }));
                             }
                           }}
                           className={errors.dateOfBirth ? 'jo-registration-input-error' : ''}
@@ -944,7 +1056,9 @@ const JoRsbsa: React.FC = () => {
                           min="0"
                           max="120"
                           placeholder="Auto-calculated from birthdate"
+                          className={errors.age ? 'jo-registration-input-error' : ''}
                         />
+                        {errors.age && <div className="jo-registration-error">{errors.age}</div>}
                       </div>
                     </div>
 
@@ -1275,81 +1389,7 @@ const JoRsbsa: React.FC = () => {
                 {ownershipCategory === 'registeredOwner' && (
                   <>
                     {/* Existing Parcel Dropdown Section */}
-                    <div className="jo-registration-section-card" style={{ marginBottom: '1.5rem', padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '12px', border: '1px solid #dee2e6' }}>
-                      <div style={{ marginBottom: '1rem' }}>
-                        <h5 style={{ margin: 0, color: '#2c3e50', fontSize: '1.1rem' }}>🔍 Is this land already registered to someone?</h5>
-                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#6c757d' }}>
-                          Select the current owner from the list below to record ownership transfer, or skip to register new land
-                        </p>
-                      </div>
-
-                      {/* Filter input */}
-                      <input
-                        type="text"
-                        placeholder="Type to filter the list below..."
-                        value={existingParcelFilter}
-                        onChange={(e) => setExistingParcelFilter(e.target.value)}
-                        disabled={useExistingParcel}
-                        style={{
-                          width: '100%',
-                          padding: '0.5rem 0.75rem',
-                          border: '1px solid #ced4da',
-                          borderRadius: '6px',
-                          fontSize: '0.9rem',
-                          marginBottom: '0.75rem',
-                          backgroundColor: useExistingParcel ? '#e9ecef' : 'white'
-                        }}
-                      />
-
-                      {/* Owner list */}
-                      {!useExistingParcel && (
-                        <div style={{
-                          maxHeight: '220px',
-                          overflowY: 'auto',
-                          border: '1px solid #dee2e6',
-                          borderRadius: '8px',
-                          backgroundColor: 'white'
-                        }}>
-                          {allRegisteredOwners.length === 0 ? (
-                            <div style={{ padding: '1rem', textAlign: 'center', color: '#6c757d' }}>
-                              No registered owners found
-                            </div>
-                          ) : (
-                            allRegisteredOwners
-                              .filter(p => {
-                                if (!existingParcelFilter.trim()) return true;
-                                const term = existingParcelFilter.toLowerCase();
-                                return (
-                                  (p.current_holder || '').toLowerCase().includes(term) ||
-                                  (p.parcel_number || '').toLowerCase().includes(term) ||
-                                  (p.farm_location_barangay || '').toLowerCase().includes(term)
-                                );
-                              })
-                              .map((parcel) => (
-                                <div
-                                  key={parcel.id}
-                                  onClick={() => handleExistingParcelSelect(parcel)}
-                                  style={{
-                                    padding: '0.75rem 1rem',
-                                    cursor: 'pointer',
-                                    borderBottom: '1px solid #f0f0f0',
-                                    transition: 'background-color 0.2s'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f7ff'}
-                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                                >
-                                  <div style={{ fontWeight: 'bold', color: '#2c3e50', marginBottom: '0.15rem' }}>
-                                    👤 {parcel.current_holder}
-                                  </div>
-                                  <div style={{ fontSize: '0.85rem', color: '#495057' }}>
-                                    📍 {parcel.parcel_number} • {parcel.farm_location_barangay} • {parcel.total_farm_area_ha} ha
-                                  </div>
-                                </div>
-                              ))
-                          )}
-                        </div>
-                      )}
-
+                    <div className="jo-registration-section-card">
                       {/* Selected owner confirmation */}
                       {useExistingParcel && selectedExistingParcel && (
                         <div style={{
@@ -1670,12 +1710,18 @@ const JoRsbsa: React.FC = () => {
 
             <div className="jo-registration-form-actions">
               {currentStep > 1 && (
-                <button className="jo-registration-btn-save" onClick={handlePrevStep}>Previous</button>
+                <button className="jo-registration-btn-save" onClick={handlePrevStep} disabled={isSubmitting}>
+                  Previous
+                </button>
               )}
               {currentStep < 4 ? (
-                <button className="jo-registration-btn-submit" onClick={handleSubmitForm}>Next Step</button>
+                <button className="jo-registration-btn-submit" onClick={handleSubmitForm} disabled={isSubmitting}>
+                  Next Step
+                </button>
               ) : (
-                <button className="jo-registration-btn-submit" onClick={handleSubmitForm}>Submit Form</button>
+                <button className="jo-registration-btn-submit" onClick={handleSubmitForm} disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Submit Form'}
+                </button>
               )}
             </div>
           </div>
@@ -1706,4 +1752,3 @@ const JoRsbsa: React.FC = () => {
 };
 
 export default JoRsbsa;
-

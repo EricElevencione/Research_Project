@@ -179,14 +179,6 @@ const JoRegionalAllocation: React.FC = () => {
                         <span className="nav-text">Land Registry</span>
                     </div>
 
-                    <div
-                        className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                        onClick={() => navigate('/jo-distribution')}
-                    >
-                        <div className="nav-icon">🚚</div>
-                        <span className="nav-text">Distribution Log</span>
-                    </div>
-
                     <button
                         className="sidebar-nav-item logout"
                         onClick={() => navigate('/')}

@@ -5,7 +5,7 @@
 /* Page Layout */
 .jo-incent-page-container {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f0f0f0;
 }
 
@@ -18,9 +18,9 @@
 .jo-incent-main-content {
     flex: 1;
     padding: 20px;
-    display: flex;
-    flex-direction: column;
+    display: block;
     background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+    overflow: auto;
 }
 
 .jo-incent-page-header {
@@ -43,6 +43,11 @@
     margin-top: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     min-height: 400px;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    display: flow-root;
+    flex: 0 0 auto;
 }
 
 /* Form Title Styling */
@@ -562,8 +567,11 @@
 /* Allocations Grid */
 .jo-incent-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 24px;
+    width: 100%;
+    margin-top: 0;
+    align-items: start;
 }
 
 /* Allocation Card */
@@ -574,6 +582,9 @@
     overflow: hidden;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .jo-incent-card:hover {
@@ -717,9 +728,39 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
+
+@media (max-width: 1200px) and (min-width: 769px) {
     .jo-incent-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Mobile: Ensure full-width stacking, no horizontal overflow */
+@media (max-width: 768px) {
+    .jo-incent-grid {
+        grid-template-columns: 1fr; /* Single column, full width */
+        gap: 20px; /* Slightly reduce gap for mobile, but enough to prevent vertical "overlap" illusion */
+    }
+
+    .jo-incent-card {
+        width: 100%; /* Explicit full width */
+        min-width: 0; /* Allow shrinking if needed */
+        max-width: 100%; /* Prevent exceeding container */
+    }
+
+    .jo-incent-main-content {
+        padding: 15px; /* Existing, but ensure no side overflow */
+    }
+}
+
+/* Extra small mobile (e.g., <480px): Tighter adjustments */
+@media (max-width: 480px) {
+    .jo-incent-grid {
+        gap: 16px;
+    }
+
+    .jo-incent-card {
+        border-radius: 8px; /* Soften corners if overlaps were hiding edges */
     }
 }
 

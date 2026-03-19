@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useNavigate, useLocation } from "react-router-dom";
-import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels, updateRsbsaSubmission } from '../../api';
+import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels } from '../../api';
 import '../../assets/css/technician css/TechRsbsaStyle.css';
 import '../../assets/css/jo css/FarmerDetailModal.css';
 import '../../components/layout/sidebarStyle.css';
@@ -18,22 +18,26 @@ import HomeIcon from '../../assets/images/home.png';
 import RSBSAIcon from '../../assets/images/rsbsa.png';
 import ApproveIcon from '../../assets/images/approve.png';
 import LogoutIcon from '../../assets/images/logout.png';
-import FarmerIcon from '../../assets/images/farmer (1).png';
 import IncentivesIcon from '../../assets/images/incentives.png';
 
 interface RSBSARecord {
   id: string;
   referenceNumber: string;
   farmerName: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  extName: string;
   farmerAddress: string;
   farmLocation: string;
   gender: string;
-  birthdate: string;
+  birthdate?: string;
+  age?: number | string | null;
   dateSubmitted: string;
   status: string;
   landParcel: string;
-  parcelArea?: string; // Add parcelArea as optional field
-  parcelCount?: number; // Number of parcels owned by the farmer
+  parcelArea?: string;
+  parcelCount?: number;
   ownershipType: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -69,7 +73,6 @@ const TechRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [filteredOwners, setFilteredOwners] = useState<RSBSARecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,60 +82,9 @@ const TechRsbsa: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [editingRecord, setEditingRecord] = useState<RSBSARecord | null>(null);
-  const [editFormData, setEditFormData] = useState<Partial<RSBSARecord>>({});
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(null);
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
-
-  // List of barangays in Dumangas
-  const barangays = [
-    "Aurora-Del Pilar",
-    "Bacay",
-    "Bacong",
-    "Balabag",
-    "Balud",
-    "Bantud",
-    "Bantud Fabrica",
-    "Baras",
-    "Barasan",
-    "Basa-Mabini Bonifacio",
-    "Bolilao",
-    "Buenaflor Embarkadero",
-    "Burgos-Regidor",
-    "Calao",
-    "Cali",
-    "Cansilayan",
-    "Capaliz",
-    "Cayos",
-    "Compayan",
-    "Dacutan",
-    "Ermita",
-    "Ilaya 1st",
-    "Ilaya 2nd",
-    "Ilaya 3rd",
-    "Jardin",
-    "Lacturan",
-    "Lopez Jaena - Rizal",
-    "Managuit",
-    "Maquina",
-    "Nanding Lopez",
-    "Pagdugue",
-    "Paloc Bigque",
-    "Paloc Sool",
-    "Patlad",
-    "Pd Monfort North",
-    "Pd Monfort South",
-    "Pulao",
-    "Rosario",
-    "Sapao",
-    "Sulangan",
-    "Tabucan",
-    "Talusan",
-    "Tambobo",
-    "Tamboilan",
-    "Victorias"
-  ].sort(); // Sort alphabetically for better user experience
 
   const toggleMenu = (id: string, event: React.MouseEvent<HTMLButtonElement>) => {
     if (openMenuId === id) {
@@ -208,7 +160,7 @@ const TechRsbsa: React.FC = () => {
       const backendName = farmerData.farmerName || '';
       const reformattedFarmerName = (() => {
         if (!backendName || backendName === 'N/A') return 'N/A';
-        const parts = backendName.split(',').map(p => p.trim()).filter(Boolean);
+        const parts = backendName.split(',').map((p: string) => p.trim()).filter(Boolean);
         if (parts.length === 0) return 'N/A';
         if (parts.length === 1) return parts[0];
         const lastName = parts[0];
@@ -248,148 +200,6 @@ const TechRsbsa: React.FC = () => {
     }
   };
 
-  // Handle edit button click
-  const handleEdit = (recordId: string) => {
-    const recordToEdit = registeredOwners.find(record => record.id === recordId);
-    if (recordToEdit) {
-      setEditingRecord(recordToEdit);
-      setEditFormData({
-        farmerName: recordToEdit.farmerName,
-        farmerAddress: recordToEdit.farmerAddress,
-        farmLocation: recordToEdit.farmLocation,
-        gender: recordToEdit.gender,
-        birthdate: recordToEdit.birthdate,
-        landParcel: recordToEdit.landParcel,
-        parcelArea: extractParcelAreaNumber(recordToEdit.parcelArea || '')
-      });
-    }
-    closeMenu();
-  };
-
-  // Handle form input changes
-  const handleInputChange = (field: keyof RSBSARecord, value: string) => {
-    setEditFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  // Format parcel area to include "hectares" if it's just a number
-  const formatParcelArea = (value: string): string => {
-    if (!value || value.trim() === '') return '';
-
-    // If it's just a number, add "hectares"
-    if (/^\d+(\.\d+)?$/.test(value.trim())) {
-      return `${value.trim()} hectares`;
-    }
-
-    // If it already contains "hectares" or other text, return as is
-    return value;
-  };
-
-  // Handle parcel area input specifically
-  const handleParcelAreaChange = (value: string) => {
-    setEditFormData(prev => ({
-      ...prev,
-      parcelArea: value
-    }));
-  };
-
-  // Extract just the number from parcel area for editing
-  const extractParcelAreaNumber = (value: string): string => {
-    if (!value) return '';
-    // If it contains "hectares", extract just the number part
-    if (value.includes('hectares')) {
-      return value.replace(/\s*hectares\s*$/i, '').trim();
-    }
-    return value;
-  };
-
-  // Handle save changes
-  const handleSave = async () => {
-    if (editingRecord && editFormData) {
-      try {
-        // Start with the existing record data
-        const existingData = {
-          farmerName: editingRecord.farmerName,
-          gender: editingRecord.gender,
-          birthdate: editingRecord.birthdate,
-          farmerAddress: editingRecord.farmerAddress,
-          farmLocation: editingRecord.farmLocation,
-          parcelArea: editingRecord.parcelArea
-        };
-
-        // Format the data for submission
-        const formattedData = {
-          ...existingData,
-          ...editFormData,
-          // Format parcel area to include "hectares" if it's just a number
-          parcelArea: editFormData.parcelArea ? formatParcelArea(editFormData.parcelArea) : undefined,
-        };
-
-        // Remove any undefined or empty values
-        const cleanedData = Object.entries(formattedData)
-          .reduce((acc, [key, value]) => {
-            if (value !== undefined && value !== '') {
-              acc[key] = value;
-            }
-            return acc;
-          }, {} as Record<string, any>);
-
-        // Update the record in the database
-        const response = await updateRsbsaSubmission(editingRecord.id, cleanedData);
-
-        if (response.error) {
-          throw new Error(response.error || `HTTP error! status: ${response.status}`);
-        }
-
-        const updatedRecord = response.data;
-
-        // Update the local state with the response from the server
-        const updatedRecordData = {
-          ...editingRecord,
-          ...formattedData,
-          // Use any additional fields returned from the server
-          ...updatedRecord.updatedRecord
-        };
-
-        // Update the registeredOwners state
-        setRegisteredOwners(prev =>
-          prev.map(record =>
-            record.id === editingRecord.id
-              ? updatedRecordData
-              : record
-          )
-        );
-
-        // Also update the main rsbsaRecords state
-        setRsbsaRecords(prev =>
-          prev.map(record =>
-            record.id === editingRecord.id
-              ? updatedRecordData
-              : record
-          )
-        );
-
-        // Close edit mode
-        setEditingRecord(null);
-        setEditFormData({});
-
-        // Show success message (optional)
-        console.log('Record updated successfully');
-      } catch (error) {
-        console.error('Error updating record:', error);
-        setError('Failed to update record. Please try again.');
-      }
-    }
-  };
-
-  // Handle cancel edit
-  const handleCancel = () => {
-    setEditingRecord(null);
-    setEditFormData({});
-  };
-
   // Fetch RSBSA records from Supabase
   const fetchRSBSARecords = async () => {
     try {
@@ -406,8 +216,6 @@ const TechRsbsa: React.FC = () => {
 
       console.log('Received RSBSA data from Supabase:', data?.length || 0, 'records');
       console.log('Sample record:', data?.[0]);
-
-      setRsbsaRecords(data || []);
 
       // Automatically filter for registered owners only
       const registeredOwnersData = filterRegisteredOwners(data || []);
@@ -554,17 +362,28 @@ const TechRsbsa: React.FC = () => {
     };
   }, [openMenuId]);
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch {
-      return dateString;
+  const calculateAgeFromBirthdate = (birthdate?: string): number | null => {
+    if (!birthdate) return null;
+    const birthDate = new Date(birthdate);
+    if (Number.isNaN(birthDate.getTime())) return null;
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
     }
+
+    return age >= 0 ? age : null;
+  };
+
+  const getDisplayAge = (record: RSBSARecord): string => {
+    if (record.age !== undefined && record.age !== null && String(record.age).trim() !== '') {
+      return String(record.age);
+    }
+
+    const computedAge = calculateAgeFromBirthdate(record.birthdate);
+    return computedAge !== null ? String(computedAge) : 'N/A';
   };
 
   return (
@@ -714,7 +533,7 @@ const TechRsbsa: React.FC = () => {
                         <th>Middle Name</th>
                         <th>EXT Name</th>
                         <th>Gender</th>
-                        <th>Birthdate</th>
+                        <th>Age</th>
                         <th>Farmer Address</th>
                         <th>Farm Location</th>
                         <th>Parcel Area</th>
@@ -730,14 +549,6 @@ const TechRsbsa: React.FC = () => {
                         </tr>
                       ) : (
                         filteredOwners.map((record) => {
-                          // Parse the farmer name to extract individual components
-                          const nameParts = record.farmerName.split(', ');
-                          const lastName = nameParts[0] || '';
-                          const firstName = nameParts[1] || '';
-                          const middleName = nameParts[2] || '';
-                          const extName = nameParts[3] || '';
-
-                          // Get parcel area from the record and format it
                           const parcelArea = record.parcelArea ?
                             (record.parcelArea.includes('hectares') ? record.parcelArea : `${record.parcelArea} hectares`)
                             : 'N/A';
@@ -758,20 +569,12 @@ const TechRsbsa: React.FC = () => {
                               style={{ cursor: 'pointer' }}
                             >
                               <td className="tech-rsbsa-ffrs-id">{record.referenceNumber || 'N/A'}</td>
-                              <td style={{ whiteSpace: 'nowrap' }}>
-                                {isDuplicate && (
-                                  <span title="Potential duplicate (same name + barangay)" style={{ color: '#c62828', marginRight: 6 }}>🚩</span>
-                                )}
-                                {missing.length > 0 && (
-                                  <span title={`Missing: ${missing.join(', ')}`} style={{ color: '#ff9800' }}>⚠️</span>
-                                )}
-                              </td>
-                              <td>{lastName}</td>
-                              <td>{firstName}</td>
-                              <td>{middleName}</td>
-                              <td>{extName}</td>
+                              <td>{record.lastName || ''}</td>
+                              <td>{record.firstName || ''}</td>
+                              <td>{record.middleName || ''}</td>
+                              <td>{record.extName || ''}</td>
                               <td>{record.gender || 'N/A'}</td>
-                              <td>{record.birthdate ? formatDate(record.birthdate) : 'N/A'}</td>
+                              <td>{getDisplayAge(record)}</td>
                               <td>{record.farmerAddress || 'N/A'}</td>
                               <td>{record.farmLocation || 'N/A'}</td>
                               <td>{parcelArea}</td>
@@ -802,84 +605,6 @@ const TechRsbsa: React.FC = () => {
             )}
           </div>
         </div>
-
-        {/* Edit Modal */}
-        {editingRecord && (
-          <div className="tech-rsbsa-edit-modal-overlay">
-            <div className="tech-rsbsa-edit-modal">
-              <div className="tech-rsbsa-edit-modal-header">
-                <h3>Edit Land Owner Information</h3>
-                <button className="tech-rsbsa-close-button" onClick={handleCancel}>×</button>
-              </div>
-              <div className="tech-rsbsa-edit-modal-body">
-                <div className="tech-rsbsa-form-group">
-                  <label>Farmer Name:</label>
-                  <input
-                    type="text"
-                    value={editFormData.farmerName || ''}
-                    onChange={(e) => handleInputChange('farmerName', e.target.value)}
-                    placeholder="Last Name, First Name, Middle Name, Ext Name"
-                  />
-                </div>
-                <div className="tech-rsbsa-form-group">
-                  <label>Gender:</label>
-                  <select
-                    value={editFormData.gender || ''}
-                    onChange={(e) => handleInputChange('gender', e.target.value)}
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </select>
-                </div>
-                <div className="tech-rsbsa-form-group">
-                  <label>Birthdate:</label>
-                  <input
-                    type="date"
-                    value={editFormData.birthdate || ''}
-                    onChange={(e) => handleInputChange('birthdate', e.target.value)}
-                  />
-                </div>
-                <div className="tech-rsbsa-form-group">
-                  <label>Farmer Address:</label>
-                  <input
-                    type="text"
-                    value={editFormData.farmerAddress || ''}
-                    onChange={(e) => handleInputChange('farmerAddress', e.target.value)}
-                  />
-                </div>
-                <div className="tech-rsbsa-form-group">
-                  <label>Farm Location (Barangay):</label>
-                  <select
-                    value={editFormData.farmLocation || ''}
-                    onChange={(e) => handleInputChange('farmLocation', e.target.value)}
-                  >
-                    <option value="">Select Barangay</option>
-                    {barangays.map((barangay) => (
-                      <option key={barangay} value={barangay}>
-                        {barangay}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="tech-rsbsa-form-group">
-                  <label>Parcel Area:</label>
-                  <input
-                    type="text"
-                    value={editFormData.parcelArea || ''}
-                    onChange={(e) => handleParcelAreaChange(e.target.value)}
-                    placeholder="e.g., 2.5 (will show as '2.5 hectares')"
-                  />
-                </div>
-              </div>
-              <div className="tech-rsbsa-edit-modal-footer">
-                <button className="tech-rsbsa-cancel-button" onClick={handleCancel}>Cancel</button>
-                <button className="tech-rsbsa-save-button" onClick={handleSave}>Save Changes</button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Action Menu - rendered outside table */}
         {openMenuId && menuPosition && (
           <div
@@ -890,7 +615,6 @@ const TechRsbsa: React.FC = () => {
               left: menuPosition.left,
             }}
           >
-            <button onClick={() => { handleEdit(openMenuId); }}>Edit</button>
             <button onClick={() => { navigate(`/technician-pick-land-parcel/${openMenuId}`); closeMenu(); }}>Land Parcel</button>
           </div>
         )}
@@ -1026,3 +750,4 @@ const TechRsbsa: React.FC = () => {
 };
 
 export default TechRsbsa;
+

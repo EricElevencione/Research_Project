@@ -61,6 +61,7 @@ const landHistoryRoutes = require('./routes/land-history.cjs');
 const distributionRoutes = require('./routes/distribution.cjs');
 const transferRoutes = require('./routes/transfer.cjs');
 const auditRoutes = require('./routes/audit.cjs');
+const uploadRoutes = require('./routes/uploads.cjs');
 
 // ============================================================================
 // EXPRESS APP SETUP
@@ -120,6 +121,7 @@ app.use('/api/land-owners-with-tenants', (req, res, next) => {
 
 // Ownership transfer
 app.use('/api/transfer-ownership', transferRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Agricultural input distribution system (DSS)
 app.use('/api/distribution', distributionRoutes);

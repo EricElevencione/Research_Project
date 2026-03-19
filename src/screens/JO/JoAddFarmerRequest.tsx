@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAllocations, getFarmerRequests, getRsbsaSubmissions, createFarmerRequest } from '../../api';
+import { getAuditLogger, AuditModule } from '../../components/Audit/auditLogger';
 import '../../assets/css/jo css/JoAddFarmerRequestStyle.css';
 import '../../components/layout/sidebarStyle.css';
 import LogoImage from '../../assets/images/Logo.png';
@@ -51,6 +52,9 @@ const JoAddFarmerRequest: React.FC = () => {
     const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [existingRequests, setExistingRequests] = useState<number[]>([]);
+    const [showNotification, setShowNotification] = useState(false);
+    const [notificationMessage, setNotificationMessage] = useState('');
+    const [notificationType, setNotificationType] = useState<'success' | 'error'>('success');
 
     const [formData, setFormData] = useState<FarmerRequestForm>({
         farmer_id: 0,
@@ -106,10 +110,11 @@ const JoAddFarmerRequest: React.FC = () => {
     };
 
     const fetchExistingRequests = async () => {
-        if (!allocation?.season) return;
+        if (!allocationId) return;
 
         try {
-            const response = await getFarmerRequests(allocation.season);
+            // Fetch requests by allocation_id, not season
+            const response = await getFarmerRequests(allocationId, true);
             if (!response.error) {
                 const requests = response.data || [];
                 const farmerIds = requests.map((req: any) => Number(req.farmer_id));
@@ -128,8 +133,9 @@ const JoAddFarmerRequest: React.FC = () => {
                 const transformedFarmers = data
                     .filter((item: any) => {
                         const status = String(item.status ?? '').toLowerCase().trim();
-                        // Only show active farmers - exclude 'no parcels' and non-active statuses
-                        return status !== 'no parcels' && status === 'active farmer';
+                        // Show active and submitted farmers - exclude 'no parcels' and inactive statuses
+                        const allowedStatuses = ['active farmer', 'submitted', 'approved', 'active'];
+                        return status !== 'no parcels' && allowedStatuses.includes(status);
                     })
                     .map((item: any) => {
                         const nameParts = (item.farmerName || '').split(', ');
@@ -208,6 +214,7 @@ const JoAddFarmerRequest: React.FC = () => {
             );
 
             const response = await createFarmerRequest({
+                allocation_id: Number(allocationId),
                 season: allocation?.season,
                 farmer_id: formData.farmer_id,
                 farmer_name: farmerFullName,
@@ -236,9 +243,70 @@ const JoAddFarmerRequest: React.FC = () => {
                 throw new Error(response.error || 'Failed to save farmer request');
             }
 
-            alert('✅ Farmer request added successfully!');
-            navigate(`/jo-manage-requests/${allocationId}`);
+            // Log audit trail
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                const auditLogger = getAuditLogger();
+                const allocationLabel = allocation?.season
+                    ? allocation.season.replace('_', ' ').toUpperCase()
+                    : 'UNKNOWN SEASON';
+
+                await auditLogger.logCRUD(
+                    {
+                        id: currentUser.id,
+                        name: currentUser.name || currentUser.username || 'Unknown',
+                        role: currentUser.role || 'JO'
+                    },
+                    'CREATE',
+                    AuditModule.REQUESTS,
+                    'farmer_request',
+                    response.data?.id || 0,
+                    `Added farmer request for ${farmerFullName} (${allocationLabel})`,
+                    undefined,
+                    {
+                        farmer_name: farmerFullName,
+                        allocation_season: allocation?.season || null,
+                        allocation_date: allocation?.allocation_date || null,
+                        requested_fertilizer_total_bags: totalFertilizerRequested,
+                        requested_seed_total_kg: totalSeedsRequested,
+                        requested_urea_bags: formData.requested_urea_bags,
+                        requested_complete_14_bags: formData.requested_complete_14_bags,
+                        requested_ammonium_sulfate_bags: formData.requested_ammonium_sulfate_bags,
+                        requested_muriate_potash_bags: formData.requested_muriate_potash_bags,
+                        requested_jackpot_kg: formData.requested_jackpot_kg,
+                        requested_us88_kg: formData.requested_us88_kg,
+                        requested_th82_kg: formData.requested_th82_kg,
+                        requested_rh9000_kg: formData.requested_rh9000_kg,
+                        requested_lumping143_kg: formData.requested_lumping143_kg,
+                        requested_lp296_kg: formData.requested_lp296_kg,
+                        request_notes: formData.notes || null
+                    },
+                    {
+                        includeRouteContext: false,
+                        metadata: null
+                    }
+                );
+            } catch (auditErr) {
+                console.error('Audit log failed (non-blocking):', auditErr);
+            }
+
+            // Show success notification
+            setNotificationType('success');
+            setNotificationMessage('Farmer request added successfully!');
+            setShowNotification(true);
+            
+            // Hide notification and navigate after delay
+            setTimeout(() => {
+                setShowNotification(false);
+                setTimeout(() => {
+                    navigate(`/jo-manage-requests/${allocationId}`);
+                }, 300);
+            }, 2000);
         } catch (err: any) {
+            setNotificationType('error');
+            setNotificationMessage(err.message || 'Failed to save farmer request');
+            setShowNotification(true);
+            setTimeout(() => setShowNotification(false), 4000);
             setError(err.message || 'Failed to save farmer request');
         } finally {
             setLoading(false);
@@ -258,6 +326,24 @@ const JoAddFarmerRequest: React.FC = () => {
 
     return (
         <div className="jo-add-farmer-page-container">
+            {/* Notification Toast */}
+            {showNotification && (
+                <div className={`notification-toast notification-${notificationType}`}>
+                    <div className="notification-content">
+                        <span className="notification-icon">
+                            {notificationType === 'success' ? '✅' : '❌'}
+                        </span>
+                        <span className="notification-message">{notificationMessage}</span>
+                    </div>
+                    <button 
+                        className="notification-close"
+                        onClick={() => setShowNotification(false)}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+            
             <div className="jo-add-farmer-page">
                 {/* Sidebar */}
                 <div className="sidebar">
@@ -305,14 +391,6 @@ const JoAddFarmerRequest: React.FC = () => {
                             </span>
                             <span className="nav-text">Masterlist</span>
                         </button>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-distribution')}
-                        >
-                            <div className="nav-icon">🚚</div>
-                            <span className="nav-text">Distribution Log</span>
-                        </div>
 
                         <div
                             className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}

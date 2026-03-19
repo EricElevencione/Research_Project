@@ -86,8 +86,8 @@ const JoViewAllocation: React.FC = () => {
             }
             setAllocation(currentAllocation);
 
-            // Fetch farmer requests for this season
-            const requestsResponse = await getFarmerRequests(currentAllocation.season);
+            // Fetch farmer requests for this specific allocation
+            const requestsResponse = await getFarmerRequests(allocationId, true);
             if (!requestsResponse.error) {
                 const requestsData = requestsResponse.data || [];
                 setRequests(requestsData);
@@ -229,14 +229,6 @@ const JoViewAllocation: React.FC = () => {
                                 <img src={MasterlistIcon} alt="Masterlist" />
                             </span>
                             <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/jo-distribution') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-distribution')}
-                        >
-                            <span className="nav-icon">🚚</span>
-                            <span className="nav-text">Distribution Log</span>
                         </button>
 
                         <div
