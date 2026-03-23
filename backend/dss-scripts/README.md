@@ -5,7 +5,7 @@ This folder contains all DSS-related computation scripts, engines, and knowledge
 ## 📁 Folder Structure
 
 ```
-dss-scripts/
+scripts/
 ├── checks/              # Database verification scripts
 │   ├── check_allocations.js
 │   ├── check_approved_requests.js
@@ -28,17 +28,20 @@ dss-scripts/
 ## 🔧 Scripts Description
 
 ### Checks (checks/)
+
 - **check_allocations.js** - Verifies regional allocations table structure and data
 - **check_approved_requests.js** - Reviews approved farmer requests
 - **check_distribution.js** - Validates distribution records
 
 ### Tests (tests/)
+
 - **test_dss.js** - Basic DSS functionality tests
 - **test_dss_real.js** - Tests with real database data
 - **test-alternatives.js** - Tests alternative suggestion engine
 - **review_gap_calculation.js** - Validates gap analysis calculations
 
 ### Engines (engines/)
+
 - **alternativeEngine.cjs** - Suggests fertilizer substitutions when stock is insufficient
   - Uses agronomic equivalency formulas
   - Provides confidence scores and Tagalog instructions
@@ -50,6 +53,7 @@ dss-scripts/
   - Provides actionable implementation steps
 
 ### Knowledge (knowledge/)
+
 - **fertilizerEquivalency.json** - Comprehensive fertilizer knowledge base
   - NPK conversion factors
   - Crop-specific recommendations
@@ -58,22 +62,26 @@ dss-scripts/
 ## 🚀 Usage
 
 ### Running Check Scripts
+
 ```bash
 node backend/dss-scripts/checks/check_allocations.js
 node backend/dss-scripts/checks/check_distribution.js
 ```
 
 ### Running Test Scripts
+
 ```bash
 node backend/dss-scripts/tests/test_dss_real.js
 node backend/dss-scripts/tests/review_gap_calculation.js
 ```
 
 ### Using Engines in Server
+
 The engines are imported in `backend/server.cjs`:
+
 ```javascript
-const FertilizerAlternativeEngine = require('./dss-scripts/engines/alternativeEngine.cjs');
-const RecommendationEngine = require('./dss-scripts/engines/recommendationEngine.cjs');
+const FertilizerAlternativeEngine = require("./dss-scripts/engines/alternativeEngine.cjs");
+const RecommendationEngine = require("./dss-scripts/engines/recommendationEngine.cjs");
 ```
 
 ## 📊 API Endpoints Using DSS
@@ -85,13 +93,14 @@ const RecommendationEngine = require('./dss-scripts/engines/recommendationEngine
 ## 🔄 Dependencies
 
 All scripts use the PostgreSQL database connection:
+
 ```javascript
 const pool = new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'Masterlist',
-    password: 'postgresadmin',
-    port: 5432
+  user: "postgres",
+  host: "localhost",
+  database: "Masterlist",
+  password: "postgresadmin",
+  port: 5432,
 });
 ```
 

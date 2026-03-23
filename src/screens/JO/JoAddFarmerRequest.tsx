@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   getAllocations,
@@ -405,6 +405,10 @@ const JoAddFarmerRequest: React.FC = () => {
   const [notificationType, setNotificationType] = useState<"success" | "error">(
     "success",
   );
+  const [showExceedConfirmModal, setShowExceedConfirmModal] = useState(false);
+  const [liveExceedMessage, setLiveExceedMessage] = useState<string | null>(
+    null,
+  );
 
   const [formData, setFormData] = useState<FarmerRequestForm>({
     farmer_id: 0,
@@ -458,6 +462,8 @@ const JoAddFarmerRequest: React.FC = () => {
     requested_malagkit_5_kg: 0,
     notes: "",
   });
+  const [debouncedFormData, setDebouncedFormData] =
+    useState<FarmerRequestForm>(formData);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -575,6 +581,14 @@ const JoAddFarmerRequest: React.FC = () => {
     (item) => (Number(allocation?.[item.allocationField]) || 0) > 0,
   );
 
+  const fertilizerLabelSet = useMemo(
+    () => new Set(visibleFertilizerItems.map((item) => item.label)),
+    [visibleFertilizerItems],
+  );
+
+  const getExceededUnitByLabel = (label: string): "bags" | "kg" =>
+    fertilizerLabelSet.has(label) ? "bags" : "kg";
+
   const hasVisibleAllocationItems =
     visibleFertilizerItems.length > 0 || visibleSeedItems.length > 0;
 
@@ -623,14 +637,72 @@ const JoAddFarmerRequest: React.FC = () => {
     { allocated: 0, requested: 0, remaining: 0 },
   );
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedFormData(formData);
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [formData]);
+
+  const getInlineExceedAmount = (item: AllocationItem): number => {
+    const allocated = toSafeNumber(allocation?.[item.allocationField]);
+    const requested = Math.max(
+      0,
+      toSafeNumber(debouncedFormData[item.requestField]),
+    );
+    return Math.max(0, requested - allocated);
+  };
+
   const hasOverAllocation = [
     ...fertilizerSummaryItems,
     ...seedSummaryItems,
   ].some((item) => item.remaining < 0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const exceededSummaryItems = useMemo(
+    () =>
+      [...fertilizerSummaryItems, ...seedSummaryItems].filter(
+        (item) => item.remaining < 0,
+      ),
+    [fertilizerSummaryItems, seedSummaryItems],
+  );
 
+  useEffect(() => {
+    if (exceededSummaryItems.length === 0) {
+      setLiveExceedMessage(null);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const formatValue = (value: number): string =>
+        Number.isInteger(value) ? value.toString() : value.toFixed(2);
+
+      const sample = exceededSummaryItems
+        .slice(0, 3)
+        .map(
+          (item) =>
+            `${item.label} (${formatValue(Math.abs(item.remaining))} over)`,
+        )
+        .join(", ");
+
+      const more =
+        exceededSummaryItems.length > 3
+          ? ` and ${exceededSummaryItems.length - 3} more item(s)`
+          : "";
+
+      setLiveExceedMessage(
+        `Warning: request exceeds available allocation for ${sample}${more}.`,
+      );
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [exceededSummaryItems]);
+
+  const runSubmitRequest = async () => {
     if (!formData.farmer_id) {
       setError("Please select a farmer");
       return;
@@ -867,6 +939,22 @@ const JoAddFarmerRequest: React.FC = () => {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (hasOverAllocation) {
+      setShowExceedConfirmModal(true);
+      return;
+    }
+
+    await runSubmitRequest();
+  };
+
+  const handleConfirmSubmitWithExceeded = async () => {
+    setShowExceedConfirmModal(false);
+    await runSubmitRequest();
+  };
+
   const filteredFarmers = farmers.filter((farmer) => {
     if (existingRequests.includes(Number(farmer.id))) {
       return false;
@@ -881,6 +969,50 @@ const JoAddFarmerRequest: React.FC = () => {
 
   return (
     <div className="jo-add-farmer-page-container">
+      {showExceedConfirmModal && (
+        <div className="jo-add-farmer-modal-backdrop">
+          <div className="jo-add-farmer-modal-card" role="dialog" aria-modal="true">
+            <h3 className="jo-add-farmer-modal-title">⚠️ Exceeds Allocation</h3>
+            <p className="jo-add-farmer-modal-message">
+              Some requested values exceed the available incentives/allocation.
+              You can go back and edit the values, or submit anyway and adjust later.
+            </p>
+
+            <div className="jo-add-farmer-modal-list">
+              {exceededSummaryItems.slice(0, 6).map((item) => (
+                <div key={item.label} className="jo-add-farmer-modal-list-item">
+                  {item.label}: exceeded by {formatSummaryValue(Math.abs(item.remaining))} {getExceededUnitByLabel(item.label)}
+                </div>
+              ))}
+              {exceededSummaryItems.length > 6 && (
+                <div className="jo-add-farmer-modal-list-item">
+                  ...and {exceededSummaryItems.length - 6} more item(s)
+                </div>
+              )}
+            </div>
+
+            <div className="jo-add-farmer-modal-actions">
+              <button
+                type="button"
+                className="jo-add-farmer-modal-cancel"
+                onClick={() => setShowExceedConfirmModal(false)}
+                disabled={loading}
+              >
+                Change Values
+              </button>
+              <button
+                type="button"
+                className="jo-add-farmer-modal-submit"
+                onClick={handleConfirmSubmitWithExceeded}
+                disabled={loading}
+              >
+                Submit Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showNotification && (
         <div className={`notification-toast notification-${notificationType}`}>
           <div className="notification-content">
@@ -983,6 +1115,12 @@ const JoAddFarmerRequest: React.FC = () => {
 
           <div className="jo-add-farmer-content-card">
             <form onSubmit={handleSubmit}>
+              {liveExceedMessage && (
+                <div className="jo-add-farmer-warning-box">
+                  {liveExceedMessage}
+                </div>
+              )}
+
               <div className="jo-add-farmer-section">
                 <h3 className="jo-add-farmer-section-title">Select Farmer</h3>
                 <div className="jo-add-farmer-search-container">
@@ -1093,7 +1231,7 @@ const JoAddFarmerRequest: React.FC = () => {
                   {fertilizerSummaryItems.length > 0 && (
                     <div className="jo-add-farmer-summary-table-wrap">
                       <h4 className="jo-add-farmer-summary-subtitle">
-                        Fertilizer Items
+                        Fertilizer Items (Bags)
                       </h4>
                       <div className="jo-add-farmer-summary-table">
                         <div className="jo-add-farmer-summary-header">
@@ -1120,7 +1258,7 @@ const JoAddFarmerRequest: React.FC = () => {
                   {seedSummaryItems.length > 0 && (
                     <div className="jo-add-farmer-summary-table-wrap">
                       <h4 className="jo-add-farmer-summary-subtitle">
-                        Seed Items
+                        Seed Items (Kg)
                       </h4>
                       <div className="jo-add-farmer-summary-table">
                         <div className="jo-add-farmer-summary-header">
@@ -1148,7 +1286,7 @@ const JoAddFarmerRequest: React.FC = () => {
 
               <div className="jo-add-farmer-section">
                 <h3 className="jo-add-farmer-section-title">
-                  🌱 Requested Fertilizers (bags)
+                  🌱 Requested Fertilizers (Bags)
                 </h3>
                 <div className="jo-add-farmer-form-grid">
                   {visibleFertilizerItems.length === 0 ? (
@@ -1173,6 +1311,20 @@ const JoAddFarmerRequest: React.FC = () => {
                           step="1"
                           className="jo-add-farmer-input"
                         />
+                        {getInlineExceedAmount(item) > 0 && (
+                          <div
+                            style={{
+                              color: "#b91c1c",
+                              fontSize: "12px",
+                              marginTop: "6px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            the allocation exceeds by{" "}
+                            {formatSummaryValue(getInlineExceedAmount(item))}{" "}
+                            bags.
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -1181,7 +1333,7 @@ const JoAddFarmerRequest: React.FC = () => {
 
               <div className="jo-add-farmer-section">
                 <h3 className="jo-add-farmer-section-title">
-                  🌾 Requested Seeds (kg)
+                  🌾 Requested Seeds (Kg)
                 </h3>
                 <div className="jo-add-farmer-form-grid">
                   {visibleSeedItems.length === 0 ? (
@@ -1207,6 +1359,20 @@ const JoAddFarmerRequest: React.FC = () => {
                           inputMode="decimal"
                           className="jo-add-farmer-input"
                         />
+                        {getInlineExceedAmount(item) > 0 && (
+                          <div
+                            style={{
+                              color: "#b91c1c",
+                              fontSize: "12px",
+                              marginTop: "6px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            the allocation exceeds by{" "}
+                            {formatSummaryValue(getInlineExceedAmount(item))}{" "}
+                            kg.
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -1235,8 +1401,9 @@ const JoAddFarmerRequest: React.FC = () => {
 
               {hasOverAllocation && (
                 <div className="jo-add-farmer-warning-box">
-                  Some entered values are above allocation. You can still
-                  submit, but please review remaining values highlighted in red.
+                  Some entered values are above exceeds the allocation. You can
+                  still submit, but please review remaining values highlighted
+                  in red.
                 </div>
               )}
 

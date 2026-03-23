@@ -919,6 +919,11 @@ const JoManageRequests: React.FC = () => {
     };
   };
 
+  const formatSeasonName = (season: string) => {
+    const [type, year] = season.split("_");
+    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+  };
+
   // Edit request functionality
   const handleEdit = (request: FarmerRequest) => {
     setEditingRequest(request.id);
@@ -1142,8 +1147,13 @@ const JoManageRequests: React.FC = () => {
         {/* Main Content */}
         <div className="main-content">
           <div className="jo-manage-dashboard-header-incent">
-            <div>
+            <div className="jo-manage-header-sub">
               <h2 className="jo-manage-page-header">Manage Farmer Requests</h2>
+              {allocation && (
+                <p className="jo-manage-page-subtitle">
+                  {formatSeasonName(allocation.season)}
+                </p>
+              )}
             </div>
             <div className="jo-manage-requests-back-create-section">
               <button
@@ -1865,7 +1875,7 @@ const JoManageRequests: React.FC = () => {
             style={{ maxWidth: "900px", maxHeight: "85vh", width: "90%" }}
           >
             <div className="jo-manage-requests-modal-header">
-              <h2>💡 DSS Suggestions Overview</h2>
+              <h2>💡 Suggestions Overview</h2>
             </div>
 
             <div

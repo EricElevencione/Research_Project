@@ -1,0 +1,1202 @@
+{
+  "Jackpot": {
+    "seed_rank": 2,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Directly increases tiller number and panicle density"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Foundational; fast establishment, reduces transplanting shock"
+      },
+      {
+        "rank": 3,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Sustained N + sulfur; better volatilization control"
+      },
+      {
+        "rank": 4,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Critical for stem integrity and lodging prevention"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Supports hybrid vigor at tillering and PI"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Boosts early rooting via triacontanol"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Maximizes uptake efficiency; aids early seedling"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Indirect; promotes microbial colonization"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Field management practice; most indirect"
+      }
+    ]
+  },
+  "LP296": {
+    "seed_rank": 3,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Enhances tiller count and panicle number; split 3-stage"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Rapid establishment, uniform stand and early tillers"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Directly targets grain quality; reduces chalkiness"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Improves grain protein, reduces lodging via N+S"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Maximizes inbred grain yield at critical stages"
+      },
+      {
+        "rank": 6,
+        "name": "Nanobiofertilizer",
+        "reason": "Supports panicle development and grain weight"
+      },
+      {
+        "rank": 7,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Reduces spikelet sterility at PI stage"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Improves K and P mobilization; soil health benefit"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Long-term input cost reduction; most indirect"
+      }
+    ]
+  },
+  "Malagkit5": {
+    "seed_rank": 5,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Increases starch accumulation; moderate N maintains glutinous grain quality"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Promotes healthy vegetative growth; maintains specialty grain quality"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Directly supports starch synthesis and waxy starch accumulation"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "S component important for glutinous starch quality; moderate application only"
+      },
+      {
+        "rank": 5,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Supports waxy starch enzyme activity; improves glutinous quality and stickiness"
+      },
+      {
+        "rank": 6,
+        "name": "Nanobiofertilizer",
+        "reason": "Supports starch synthesis enzymes; sea kelp promotes uniform grain filling"
+      },
+      {
+        "rank": 7,
+        "name": "Azolla microphylla",
+        "reason": "Organic N suits moderate N needs; prevents over-application that harms waxy quality"
+      },
+      {
+        "rank": 8,
+        "name": "Foliar Liquid NPK",
+        "reason": "Moderate foliar rates support glutinous quality; K at heading aids waxy starch"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Indirect soil and root benefit; least specific to glutinous grain development"
+      }
+    ]
+  },
+  "Mestiso1": {
+    "seed_rank": 6,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Boosts tiller count, leaf area index, and grain protein; applied at transplanting and 40 DAT"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Balanced NPK at establishment; promotes strong roots and early canopy"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Strengthens culm and significantly improves blast and BLB disease resistance"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "N + S for grain protein; soil acidification improves nutrient availability in alkaline fields"
+      },
+      {
+        "rank": 5,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Brassinosteroids improve pollen viability and filled spikelet ratio at tillering and PI"
+      },
+      {
+        "rank": 6,
+        "name": "Foliar Liquid NPK",
+        "reason": "Rapidly corrects mid-season deficiency at PI stage via direct leaf absorption"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Rapid cuticle penetration; enriches rhizosphere for improved hybrid rooting"
+      },
+      {
+        "rank": 8,
+        "name": "Azolla microphylla",
+        "reason": "Fixes 20–30 kg N/ha; slow organic N release matches vegetative demand"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Activates rhizobacteria for better N and P solubilization; most indirect"
+      }
+    ]
+  },
+  "Mestiso20": {
+    "seed_rank": 7,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Promotes vigorous vegetative growth; top-dress at 21 DAT and PI for max yield"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "All macro-nutrients from day 1; supports high early growth rate in hybrid"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Enhances panicle weight and filled grain percentage; improves grain plumpness"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Sulfur boosts amino acid synthesis; improves grain protein and milling quality"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Improves grain set percentage at heading; bypasses soil nutrient fixation"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Triacontanol stimulates photosynthesis; iron and zinc support chlorophyll and leaf greenness"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Humic and fulvic acids improve nutrient chelation; sea kelp promotes panicle initiation"
+      },
+      {
+        "rank": 8,
+        "name": "Azolla microphylla",
+        "reason": "Supports tillering via slow N release; improves soil organic matter without leaching"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Lowers soil pH around roots; improves micronutrient availability in alkaline soils — most indirect"
+      }
+    ]
+  },
+  "Mestiso29": {
+    "seed_rank": 8,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Enhances spikelet count and panicle weight; split application prevents lodging"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Stimulates uniform root development and tillering; balanced start for high-yield potential"
+      },
+      {
+        "rank": 3,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Sulfur synergy improves N use efficiency; slower release reduces leaching losses"
+      },
+      {
+        "rank": 4,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Increases stalk rigidity and standability; improves water use efficiency in irrigated fields"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Quick-response nutrient supply at reproductive stage; corrects deficiency within 48–72 hours"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Vitamin B complex improves root metabolism; Cu and Zn support spikelet development and grain set"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Nano-phosphate improves P availability in flooded soils; enhances P solubilization near roots"
+      },
+      {
+        "rank": 8,
+        "name": "Azolla microphylla",
+        "reason": "Green manure adds N, P, K and micronutrients; improves soil structure for hybrid root development"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Promotes mycorrhizal and fungal networks for nutrient scavenging; most indirect benefit"
+      }
+    ]
+  },
+  "Mestiso55": {
+    "seed_rank": 9,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Increases leaf greenness (SPAD); supports high yield via improved canopy photosynthesis"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Boosts early seedling vigor; improves transplanting survival and establishment"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Boosts stress tolerance and grain filling under heat stress; supports root activity"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Promotes deep green leaf color; sulfur supports enzyme activity and high N status"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Foliar N improves panicle size at PI; water-soluble K reduces spikelet sterility at heading"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "K oxide strengthens cell walls; biostimulant supports canopy health under humid conditions"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Nano-potash enhances K uptake efficiency; fungi improve root colonization and nutrient scavenging"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Feeds phytohormone-producing bacteria; improves tillering response and root biomass"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Reduces fertilizer cost via biological N fixation; improves soil water retention — most indirect"
+      }
+    ]
+  },
+  "Mestiso73": {
+    "seed_rank": 10,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Critical at PI for grain filling and protein accumulation; supports N-intensive hybrid vigor"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Complete nutritional foundation; critical for hybrid vigor expression in first 3 weeks"
+      },
+      {
+        "rank": 3,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Boosts photosynthetic efficiency via Rubisco activation; sulfur critical for N metabolism"
+      },
+      {
+        "rank": 4,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Improves hybrid stability across environments; reduces susceptibility to environmental stresses"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Supports intensive nutrient demand at 2–3 key growth stages for best response"
+      },
+      {
+        "rank": 6,
+        "name": "Nanobiofertilizer",
+        "reason": "Bacteria fixes additional atmospheric N; bio-nano action supports high nutrient demand"
+      },
+      {
+        "rank": 7,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Promotes root exudate activity; improves rhizosphere microbiome for better nutrient uptake"
+      },
+      {
+        "rank": 8,
+        "name": "Azolla microphylla",
+        "reason": "Pre-crop green manure builds soil N bank; beneficial for high N demand at vegetative stage"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Suppresses pathogenic soil microbes; creates healthier rhizosphere — most indirect benefit"
+      }
+    ]
+  },
+  "Mestiso99": {
+    "seed_rank": 11,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Promotes robust panicle formation; split N reduces luxury consumption and lodging risk"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Supports early root establishment; phosphorus promotes root branching and uptake"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Supports high grain weight; K improves phloem transport of assimilates to grains"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Improves grain N accumulation; particularly effective in alkaline or calcareous soils"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Rapid nutrient correction maximizes hybrid yield; foliar K at flag leaf improves grain filling"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Brassinosteroid signaling enhances stress tolerance; reduces spikelet sterility at reproductive stage"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Fulvic acid improves nutrient transport across cell membranes; enhances photosynthate production"
+      },
+      {
+        "rank": 8,
+        "name": "Azolla microphylla",
+        "reason": "Adds up to 30 kg N/ha organically; improves soil cation exchange capacity for hybrid fields"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Stimulates N-fixing bacteria near roots; partially offsets mineral N — most indirect"
+      }
+    ]
+  },
+  "Mestiso103": {
+    "seed_rank": 12,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Enhances grain weight; precise N timing at PI stage maximizes harvest index"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Enhances early stand uniformity; balanced NPK improves establishment in varied soil conditions"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Reduces lodging at high yield levels; K strengthens cell walls and improves stalk diameter"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Supports grain protein synthesis at heading; N+S improves nutritional grain quality"
+      },
+      {
+        "rank": 5,
+        "name": "Nanobiofertilizer",
+        "reason": "Sea kelp cytokinins and auxins promote grain set; reduces unfilled spikelets at heading"
+      },
+      {
+        "rank": 6,
+        "name": "Foliar Liquid NPK",
+        "reason": "Improves nutrient use efficiency; reduces nutrient loss from flooded paddy soils"
+      },
+      {
+        "rank": 7,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Supports high yield expression; iron addresses micronutrient deficiencies in intensive paddy"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Chelates iron and zinc; improves micronutrient bioavailability under flooded conditions"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Green manure improves soil biology before transplanting; supports early hybrid vigor — most indirect"
+      }
+    ]
+  },
+  "NSIC_Rc160": {
+    "seed_rank": 13,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Increases head rice recovery; must apply at recommended rate only to avoid reducing milling quality"
+      },
+      {
+        "rank": 2,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Boosts head rice percentage; critical for premium grain quality development"
+      },
+      {
+        "rank": 3,
+        "name": "Complete (14-14-14)",
+        "reason": "Supports premium variety establishment; balanced nutrition promotes uniform crop stand"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Sulfur improves protein fractions favorable to cooking quality; apply at tillering stage"
+      },
+      {
+        "rank": 5,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Copper supports oxidative enzyme activity; improves grain translucency for premium quality"
+      },
+      {
+        "rank": 6,
+        "name": "Nanobiofertilizer",
+        "reason": "Sea kelp cytokinins improve grain development; nano-nutrients support premium quality expression"
+      },
+      {
+        "rank": 7,
+        "name": "Azolla microphylla",
+        "reason": "Slow-release N ideal for premium varieties; reduces over-fertilization risk that lowers milling quality"
+      },
+      {
+        "rank": 8,
+        "name": "Foliar Liquid NPK",
+        "reason": "Supports premium grain development; avoids soil luxury consumption via water-soluble application"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Promotes healthy root environment; organic acids improve micronutrient uptake — most indirect"
+      }
+    ]
+  },
+  "NSIC_Rc218": {
+    "seed_rank": 14,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Promotes early canopy closure; basal N at transplanting plus top-dress at tillering"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Enables fast early growth; reduces need for multiple basal applications"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Enhances grain filling and reduces chalky grains; improves translucency of milled rice"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Enhances vegetative vigor with S support; reduces mid-season yellowing in sulfur-deficient soils"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Rapidly absorbed to support tillering and heading; improves crop uniformity and yield stability"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Vitamin B1 improves root growth and carbohydrate metabolism; reduces transplanting shock"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Bacterial N fixation in rhizosphere; reduces total synthetic fertilizer requirement by 10–15%"
+      },
+      {
+        "rank": 8,
+        "name": "Azolla microphylla",
+        "reason": "N release timing aligns with inbred's early vegetative demand; improves soil biology"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Enhances soil microbial biomass and long-term fertility; most indirect benefit"
+      }
+    ]
+  },
+  "NSIC_Rc222": {
+    "seed_rank": 15,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Promotes uniform tillering and high plant stand; apply at transplanting and 21 DAT"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Complete basal nutrition; phosphorus promotes tillering and root proliferation"
+      },
+      {
+        "rank": 3,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Effective in slightly alkaline lowland soils; S improves sulfur-deficient paddy fields"
+      },
+      {
+        "rank": 4,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Reduces lodging in high-yield conditions; improves milling quality through better grain development"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Corrects mid-season deficiency without flooding disruption; improves yield consistency"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Promotes uniform crop stand via root activity; iron reduces mid-season yellowing"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Sustained nano-NPK release matches crop demand; sea kelp and humic acid improve soil biology"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Boosts rhizobacteria population; improves nutrient cycling and reduces synthetic input dependence"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Reduces N fertilizer cost; organic N supports yield without excess mineral N — most indirect"
+      }
+    ]
+  },
+  "NSIC_Rc402": {
+    "seed_rank": 16,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Sustained N uptake; split 3-stage application improves grain yield by ~15%"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Supports early stand establishment; reduces nutrient deficiency risks at transplanting"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Enhances grain plumpness and weight; significantly improves head rice recovery at PI"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "N + S improves grain quality; sulfur reduces protein dilution at high yields"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Improves panicle exsertion at PI; bypasses soil P fixation common in lowland paddies"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Zinc and micronutrients improve N use efficiency; boosts leaf area and crop vigor at tillering"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Microbial inoculants enhance nutrient cycling; nano-P improves phosphorus use efficiency"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Organic acids improve P solubilization; reduces P fixation in clay-heavy lowland soils"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Improves soil fertility index sustainably; most indirect long-term benefit"
+      }
+    ]
+  },
+  "NSIC_Rc480": {
+    "seed_rank": 17,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Enhances leaf area and light interception; top-dress at active tillering for optimum tiller production"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Enhances seedling establishment and root growth; K improves early drought stress tolerance"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Improves stress tolerance; K supports high yield stability across different soil conditions"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Supports sustained canopy greenness; S improves N utilization efficiency"
+      },
+      {
+        "rank": 5,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Triacontanol enhances photosynthesis; reduces heat and drought stress impact on yield"
+      },
+      {
+        "rank": 6,
+        "name": "Foliar Liquid NPK",
+        "reason": "Improves nutrient uptake efficiency at critical stages; reduces total fertilizer input while maintaining yield"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Algae biostimulants improve stress tolerance; nano-delivery reduces fertilizer application frequency"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Improves soil aggregation and water-holding capacity in sandy or degraded paddy soils"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Supplements chemical N biologically; improves soil moisture retention — most indirect"
+      }
+    ]
+  },
+  "NSIC_Rc480": {
+    "seed_rank": 17,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Enhances leaf area and light interception; top-dress at active tillering for optimum tiller production"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Enhances seedling establishment and root growth; K improves early drought stress tolerance"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Improves stress tolerance; K supports high yield stability across different soil conditions"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Supports sustained canopy greenness; S improves N utilization efficiency"
+      },
+      {
+        "rank": 5,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Triacontanol enhances photosynthesis; reduces heat and drought stress impact on yield"
+      },
+      {
+        "rank": 6,
+        "name": "Foliar Liquid NPK",
+        "reason": "Improves nutrient uptake efficiency at critical stages; reduces total fertilizer input while maintaining yield"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Algae biostimulants improve stress tolerance; nano-delivery reduces fertilizer application frequency"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Improves soil aggregation and water-holding capacity in sandy or degraded paddy soils"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Supplements chemical N biologically; improves soil moisture retention — most indirect"
+      }
+    ]
+  },
+  "NSIC_Rc508": {
+    "seed_rank": 18,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Boosts spikelet number per panicle; N at PI stage critical for yield expression"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Stimulates early root and shoot development; supports high spikelet number potential"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Reduces spikelet sterility; K improves pollen viability and fertilization success"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Boosts spikelet grain weight via N-S nutrition; apply at active tillering"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Supports large panicle development; reduces spikelet sterility percentage at heading"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Supports large panicle development; micronutrient package addresses hidden hunger in high-yield soils"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Algae and bacterial consortia improve soil health; nano-NPK supports spikelet development and grain filling"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Improves P and K mobilization; reduces nutrient stratification in flooded paddy soils"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Reduces mineral fertilizer dependence; improves soil health for high-yield production — most indirect"
+      }
+    ]
+  },
+  "NSIC_Rc512": {
+    "seed_rank": 19,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Increases panicle weight; SPAD meter recommended for precision N management"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Promotes uniform stand; phosphorus critical for early panicle differentiation"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Improves grain sink activity; K at heading reduces unfilled grain percentage"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Supports high yield with improved protein content; S ensures complete N metabolism"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Water-soluble K at heading improves grain set; maximizes high spikelet number potential"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Brassinosteroid at heading reduces empty spikelet percentage; improves grain fill completeness"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Humic and fulvic acids improve root elongation; nano-K improves assimilate movement to grains"
+      },
+      {
+        "rank": 8,
+        "name": "Azolla microphylla",
+        "reason": "Increases available N by 20–30 kg/ha; supports high spikelet number potential of this variety"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Rhizosphere activation improves micronutrient uptake; iron reduction support in flooded soils — most indirect"
+      }
+    ]
+  },
+  "NSIC_Rc534": {
+    "seed_rank": 20,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Supports high yield potential; N management at PI and heading key for grain filling"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Supports high-yield potential from establishment; balanced NPK improves crop uniformity"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Supports high yield stability; K improves resilience against end-of-season moisture stress"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Promotes high grain N content; sulfur prevents protein deficiency at heading stage"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Supports yield stability at critical stages; corrects deficiencies under variable field conditions"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Enhances stress resilience at reproductive stage; supports uniform heading and grain maturation"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Sea kelp promotes uniform heading; nano-nutrients correct hidden deficiencies for yield stability"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Promotes soil biological activity; supports N mineralization from organic matter reserves"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Pre-plant incorporation builds soil N; long-term soil fertility improvement — most indirect"
+      }
+    ]
+  },
+  "RH9000": {
+    "seed_rank": 21,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Increases filled grains per panicle; N timing at heading critical for grain plumpness"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Stimulates early root development; balanced NPK ensures vigorous establishment in irrigated fields"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Boosts filled grain ratio; K improves sink strength and assimilate remobilization to grains"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Improves grain filling efficiency; sulfur promotes enzyme systems involved in starch synthesis"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Foliar K at reproductive stage maximizes grain filling; supports assimilate movement to grains"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Enhances grain filling rate; biostimulant improves assimilate mobilization from leaves to grains"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Bacteria provides growth-promoting substances; nano-K improves grain plumpness and weight"
+      },
+      {
+        "rank": 8,
+        "name": "Azolla microphylla",
+        "reason": "Improves soil organic carbon; slow-release N supports consistent hybrid growth"
+      },
+      {
+        "rank": 9,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Feeds earthworms and soil fauna; improves soil physical structure — most indirect"
+      }
+    ]
+  },
+  "SahodUlan2": {
+    "seed_rank": 22,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Supports drought recovery; N after rain events improves biomass restoration"
+      },
+      {
+        "rank": 2,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Improves drought tolerance; K regulates stomatal closure and reduces water loss under stress"
+      },
+      {
+        "rank": 3,
+        "name": "Complete (14-14-14)",
+        "reason": "Improves drought variety establishment; P and K enhance root depth and drought tolerance"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Improves N retention in rainfed conditions; S helps in post-drought recovery nutrition"
+      },
+      {
+        "rank": 5,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Brassinosteroid improves drought stress signaling; helps plant recover faster after dry spells"
+      },
+      {
+        "rank": 6,
+        "name": "Foliar Liquid NPK",
+        "reason": "Applied after rain events maximizes drought recovery; supports rapid biomass restoration"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Humic acid improves water retention in drought-prone soils; algae promotes root depth for water access"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Improves soil moisture retention; enhances water use efficiency in drought-prone areas"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Grown in bunded areas pre-dry season; organic N reserves support early growth — most indirect"
+      }
+    ]
+  },
+  "SahodUlan10": {
+    "seed_rank": 23,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Urea (46-0-0)",
+        "reason": "Enhances rainfed performance; timing N with onset of rain maximizes uptake efficiency"
+      },
+      {
+        "rank": 2,
+        "name": "Complete (14-14-14)",
+        "reason": "Supports rainfed lowland establishment; reduces risk of mid-season nutrient stress"
+      },
+      {
+        "rank": 3,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Enhances rainfed drought recovery; K supports cell turgor maintenance under water stress"
+      },
+      {
+        "rank": 4,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Sustained N for rainfed lowland; S improves uptake in intermittently flooded soils"
+      },
+      {
+        "rank": 5,
+        "name": "Foliar Liquid NPK",
+        "reason": "Supports rainfed crop during dry spells; rapid absorption reduces dependence on soil moisture"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid)",
+        "reason": "Iron and micronutrients support plant health; reduces stress during intermittent drought"
+      },
+      {
+        "rank": 7,
+        "name": "Nanobiofertilizer",
+        "reason": "Beneficial bacteria improve soil structure; nano-NPK supports nutrition during unpredictable rainfall"
+      },
+      {
+        "rank": 8,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Promotes beneficial soil organisms; organic mix helps retain moisture between rain events"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Pre-season N building via flooding; organic N support when rainfall is uncertain — most indirect"
+      }
+    ]
+  },
+  "Salinas6": {
+    "seed_rank": 24,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Counteracts sodium uptake directly; K+ competes with Na+ to improve ion selectivity in saline soils — most targeted salinity intervention"
+      },
+      {
+        "rank": 2,
+        "name": "Foliar Liquid Fertilizer (NPK)",
+        "reason": "Bypasses saline soil nutrient barriers entirely; direct leaf absorption maintains nutrition despite salt-impaired root function"
+      },
+      {
+        "rank": 3,
+        "name": "Nanobiofertilizer",
+        "reason": "Humic acid chelates Na ions reducing plant uptake; nano-K specifically improves K:Na selectivity in saline conditions"
+      },
+      {
+        "rank": 4,
+        "name": "Urea (46-0-0)",
+        "reason": "Improves salinity tolerance by boosting plant vigor; split N application helps manage salt-nitrogen interaction in saline soils"
+      },
+      {
+        "rank": 5,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Organic acids help leach excess salts from root zone; promotes salt-tolerant microbial communities to sustain soil biology under salinity"
+      },
+      {
+        "rank": 6,
+        "name": "Biofertilizer (Liquid Concentrate)",
+        "reason": "Micronutrients (Fe, Zn, Cu) improve plant resilience in saline soils; brassinosteroid reduces Na-induced oxidative stress"
+      },
+      {
+        "rank": 7,
+        "name": "Complete (14-14-14)",
+        "reason": "Helps overcome early saline stress through balanced nutrition; phosphorus improves ion uptake selectivity at establishment"
+      },
+      {
+        "rank": 8,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Acidifying effect is conditionally beneficial in alkaline saline soils; sulfur may partially offset sodium effects — limited direct salinity benefit"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Tolerant forms viable only in mildly saline water; organic buffering of salinity is the most indirect mechanism among all options"
+      }
+    ]
+  },
+  "Salinas7": {
+    "seed_rank": 25,
+    "fertilizer_compatibility": [
+      {
+        "rank": 1,
+        "name": "Muriate of Potash (0-0-60)",
+        "reason": "Reduces salt toxicity through K-Na antagonism; explicitly critical fertilizer for saline-tolerant varieties like Salinas 7"
+      },
+      {
+        "rank": 2,
+        "name": "Foliar Liquid Fertilizer (NPK)",
+        "reason": "Effective when roots are salt-stressed; K foliar spray directly maintains K:Na ratio in leaves, compensating for impaired root uptake"
+      },
+      {
+        "rank": 3,
+        "name": "Nanobiofertilizer",
+        "reason": "Algae-derived osmolytes help plants tolerate salt stress; nano-nutrients support ion homeostasis in saline soil"
+      },
+      {
+        "rank": 4,
+        "name": "Organic Root Exudate Mix",
+        "reason": "Exudate compounds improve Na displacement from exchange sites; organic matter reduces Na toxicity near the root zone"
+      },
+      {
+        "rank": 5,
+        "name": "Biofertilizer (Liquid Concentrate)",
+        "reason": "Potassium oxide component helps maintain K:Na ratio in salt-stressed plants; reduces ion toxicity effects directly"
+      },
+      {
+        "rank": 6,
+        "name": "Urea (46-0-0)",
+        "reason": "Supports saline-stress recovery; nitrogen promotes new tiller production after salt damage to restore canopy"
+      },
+      {
+        "rank": 7,
+        "name": "Complete (14-14-14)",
+        "reason": "Provides nutritional buffer against salinity at establishment; potassium content improves salt tolerance mechanisms"
+      },
+      {
+        "rank": 8,
+        "name": "Ammonium Sulfate (21-0-0)",
+        "reason": "Improves N availability in saline conditions; sulfur supports ion balance though mechanism is indirect compared to K-based options"
+      },
+      {
+        "rank": 9,
+        "name": "Azolla microphylla",
+        "reason": "Organic matter from decomposition gradually improves saline soil structure; desalinization effect is the slowest and most indirect"
+      }
+    ]
+  }
+}

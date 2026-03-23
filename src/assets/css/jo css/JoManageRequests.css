@@ -41,7 +41,18 @@
   font-weight: 600;
   font-size: 28px;
   color: #111827;
+  margin: 0;
+}
+
+.jo-manage-header-sub {
   margin: 0 0 20px 0;
+}
+
+.jo-manage-page-subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 /* Content Card */

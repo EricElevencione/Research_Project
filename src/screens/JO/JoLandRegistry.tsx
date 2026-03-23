@@ -176,12 +176,8 @@ const JoLandRegistry: React.FC = () => {
     parcelSplitInputs,
     setParcelTransferArea,
     initSplitInputs,
-    resetPartialState,
     validateSplitInputs,
     executePartialTransfers,
-    partialSubmitting,
-    partialError,
-    setPartialError,
   } = usePartialTransfer();
 
   const isActive = (path: string) => location.pathname === path;
@@ -221,47 +217,6 @@ const JoLandRegistry: React.FC = () => {
     refreshLandParcels();
   }, [refreshLandParcels]);
 
-  // Fetch history when a parcel is selected (using land_parcel_id for reliable linking)
-  const fetchParcelHistory = async (
-    landParcelId: number,
-    parcelNumber: string,
-  ) => {
-    setHistoryLoading(true);
-    try {
-      // Use land_parcel_id if available, fallback to parcel_number
-      let query = supabase.from("land_history").select("*");
-
-      if (landParcelId) {
-        // Support both historical schemas: land_parcel_id and farm_parcel_id.
-        query = query.or(
-          `land_parcel_id.eq.${landParcelId},farm_parcel_id.eq.${landParcelId}`,
-        );
-      } else {
-        query = query.eq("parcel_number", parcelNumber);
-      }
-
-      const { data, error } = await query.order("period_start_date", {
-        ascending: false,
-      });
-
-      if (error) {
-        console.error("Error fetching parcel history:", error);
-      } else {
-        setParcelHistory(data || []);
-        console.log(
-          "✅ Loaded",
-          data?.length,
-          "history records for parcel ID:",
-          landParcelId,
-        );
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
   // Handle parcel selection
   const handleFarmerSelect = (group: FarmerGroup) => {
     console.log(
@@ -295,7 +250,7 @@ const JoLandRegistry: React.FC = () => {
         .from("land_history")
         .select("*")
         .or(orFilter)
-        .order("period_start_date", { ascending: false });
+        .order("period_start_date", { ascending: true });
 
       if (error) throw error;
       const raw: LandHistoryRecord[] = data || [];
@@ -403,21 +358,6 @@ const JoLandRegistry: React.FC = () => {
       setLightboxLoading(false);
     }
   };
-  // Get ownership type label
-  const getOwnershipType = (record: LandParcel | LandHistoryRecord) => {
-    if (record.is_registered_owner) return "Owner";
-    if (record.is_tenant) return "Tenant";
-    if (record.is_lessee) return "Lessee";
-    return "Unknown";
-  };
-
-  // Get ownership class
-  const getOwnershipClass = (record: LandParcel | LandHistoryRecord) => {
-    if (record.is_registered_owner) return "owner";
-    if (record.is_tenant) return "tenant";
-    if (record.is_lessee) return "lessee";
-    return "";
-  };
 
   // Format date
   const formatDate = (dateString: string | null) => {
@@ -466,27 +406,46 @@ const JoLandRegistry: React.FC = () => {
   };
 
   const filteredFarmers = useMemo(() => {
-    return aggregatedFarmers.filter((group) => {
-      if (group.parcels.length === 0) return false;
-      if (group.total_farm_area_ha <= 0) return false;
+    const toDisplayDayTime = (value: string | null | undefined) => {
+      if (!value) return Number.POSITIVE_INFINITY;
+      const parsed = new Date(value);
+      if (!Number.isFinite(parsed.getTime())) return Number.POSITIVE_INFINITY;
+      return new Date(
+        parsed.getFullYear(),
+        parsed.getMonth(),
+        parsed.getDate(),
+      ).getTime();
+    };
 
-      if (filterBarangay) {
-        const hasBarangayMatch = group.parcels.some(
-          (p) =>
-            (p.farm_location_barangay || "").trim().toLowerCase() ===
-            filterBarangay.trim().toLowerCase(),
+    return aggregatedFarmers
+      .filter((group) => {
+        if (group.parcels.length === 0) return false;
+        if (group.total_farm_area_ha <= 0) return false;
+
+        if (filterBarangay) {
+          const hasBarangayMatch = group.parcels.some(
+            (p) =>
+              (p.farm_location_barangay || "").trim().toLowerCase() ===
+              filterBarangay.trim().toLowerCase(),
+          );
+          if (!hasBarangayMatch) return false;
+        }
+
+        const lowerSearch = searchTerm.toLowerCase();
+        if (!lowerSearch) return true;
+
+        if (group.farmer_name.toLowerCase().includes(lowerSearch)) return true;
+        return group.parcels.some((p) =>
+          p.parcel_number.toLowerCase().includes(lowerSearch),
         );
-        if (!hasBarangayMatch) return false;
-      }
-
-      const lowerSearch = searchTerm.toLowerCase();
-      if (!lowerSearch) return true;
-
-      if (group.farmer_name.toLowerCase().includes(lowerSearch)) return true;
-      return group.parcels.some((p) =>
-        p.parcel_number.toLowerCase().includes(lowerSearch),
-      );
-    });
+      })
+      .sort((a, b) => {
+        // Newest to oldest based on the same day shown in the Since column.
+        const dateDiff =
+          toDisplayDayTime(b.last_updated) - toDisplayDayTime(a.last_updated);
+        if (dateDiff !== 0) return dateDiff;
+        return a.farmer_name.localeCompare(b.farmer_name);
+      });
   }, [aggregatedFarmers, searchTerm, filterBarangay]);
 
   const registeredOwnerParcels = landParcels.filter(
@@ -1571,403 +1530,309 @@ const JoLandRegistry: React.FC = () => {
                     <p>No ownership changes recorded yet.</p>
                   ) : (
                     (() => {
-                      // Group records by farm_parcel_id (fallback: land_parcel_id)
-                      const parcelGroups = new Map<
-                        string,
-                        typeof parcelHistory
-                      >();
-                      [...parcelHistory]
-                        .sort((a, b) => {
-                          const dateDiff =
-                            new Date(b.period_start_date).getTime() -
-                            new Date(a.period_start_date).getTime();
-                          if (dateDiff !== 0) return dateDiff;
-                          return b.id - a.id;
-                        })
-                        .forEach((record) => {
-                          const key = String(
-                            record.farm_parcel_id ??
-                              record.land_parcel_id ??
-                              "unknown",
-                          );
-                          if (!parcelGroups.has(key)) parcelGroups.set(key, []);
-                          parcelGroups.get(key)!.push(record);
-                        });
+                      // Sort by the same day users see in the UI (local date), then by ID.
+                      // This avoids confusion from parcel-group ordering and keeps a single timeline flow.
+                      const toDisplayDayTime = (
+                        dateValue: string | null | undefined,
+                      ) => {
+                        if (!dateValue) return Number.POSITIVE_INFINITY;
+                        const parsed = new Date(dateValue);
+                        if (!Number.isFinite(parsed.getTime())) {
+                          return Number.POSITIVE_INFINITY;
+                        }
+                        return new Date(
+                          parsed.getFullYear(),
+                          parsed.getMonth(),
+                          parsed.getDate(),
+                        ).getTime();
+                      };
 
-                      const groupEntries = Array.from(parcelGroups.entries());
+                      const sortedHistory = [...parcelHistory].sort((a, b) => {
+                        const dateDiff =
+                          toDisplayDayTime(b.period_start_date) -
+                          toDisplayDayTime(a.period_start_date);
+                        if (dateDiff !== 0) return dateDiff;
+                        return b.id - a.id;
+                      });
 
                       return (
                         <div
                           style={{
                             display: "flex",
                             flexDirection: "column",
-                            gap: "16px",
+                            gap: "10px",
                           }}
                         >
-                          {groupEntries.map(
-                            ([parcelKey, records], groupIdx) => {
-                              const representative = records[0];
-                              const parcelLabel = representative.parcel_number
-                                ? `Parcel #${(representative.parcel_number.match(/\d+/) || [representative.parcel_number])[0]}`
-                                : `Parcel ${groupIdx + 1}`;
-                              const currentRecord = records.find(
-                                (r) => r.is_current,
-                              );
-                              const areaHa =
-                                currentRecord?.total_farm_area_ha ??
-                                representative.total_farm_area_ha;
-                              const barangay =
-                                representative.farm_location_barangay;
+                          {sortedHistory.map((record) => {
+                            const isPartial =
+                              record.change_type === "TRANSFER_PARTIAL";
+                            const isTransfer = /TRANSFER/i.test(
+                              record.change_type || "",
+                            );
+                            const recipientName =
+                              record.farmer_name ||
+                              record.land_owner_name ||
+                              "Unknown";
 
-                              return (
+                            // Resolve donor name from notes ("from farmer <id>")
+                            let donorName: string | null = null;
+                            if (isTransfer && record.notes) {
+                              const fromMatch =
+                                record.notes.match(/from farmer (\d+)/i);
+                              if (fromMatch) {
+                                const donorId = Number(fromMatch[1]);
+                                donorName = farmerNameMap.get(donorId) ?? null;
+                              }
+                            }
+                            // Fallback: extract donor from change_reason sentence
+                            if (!donorName && record.change_reason) {
+                              const crMatch = record.change_reason.match(
+                                /^Ownership transfer from (.+?) to .+$/i,
+                              );
+                              if (crMatch) donorName = crMatch[1].trim();
+                            }
+
+                            // Clean transfer type label for the header
+                            const cleanTitle = (() => {
+                              if (isPartial) return "✂️ Partial Transfer";
+                              const r = (record.change_reason || "")
+                                .trim()
+                                .toLowerCase();
+                              if (r.startsWith("voluntary"))
+                                return "🔄 Voluntary Transfer";
+                              if (r.startsWith("inheritance"))
+                                return "🔄 Inheritance Transfer";
+                              if (r.startsWith("ownership transfer"))
+                                return "🔄 Ownership Transfer";
+                              if (record.change_reason)
+                                return `🔄 ${record.change_reason}`;
+                              return "🔄 Transfer";
+                            })();
+
+                            // Role badge for the recipient
+                            const recipientRole = record.is_registered_owner
+                              ? "Owner"
+                              : record.is_tenant
+                                ? "Tenant"
+                                : record.is_lessee
+                                  ? "Lessee"
+                                  : null;
+                            const roleBadgeBg = record.is_registered_owner
+                              ? "#dcfce7"
+                              : record.is_tenant
+                                ? "#dbeafe"
+                                : record.is_lessee
+                                  ? "#ede9fe"
+                                  : "#f3f4f6";
+                            const roleBadgeColor = record.is_registered_owner
+                              ? "#166534"
+                              : record.is_tenant
+                                ? "#1e40af"
+                                : record.is_lessee
+                                  ? "#7c3aed"
+                                  : "#6b7280";
+
+                            // Resolve donor ID from notes for proof lookup
+                            let donorIdForProof: number | null = null;
+                            if (isTransfer && record.notes) {
+                              const dnMatch =
+                                record.notes.match(/from farmer (\d+)/i);
+                              if (dnMatch) donorIdForProof = Number(dnMatch[1]);
+                            }
+                            const recipientIdForProof =
+                              record.farmer_id ?? null;
+                            // Lookup proofs: primary by pair, fallback by recipient only
+                            const cardProofs: ProofItem[] | null = (() => {
+                              if (donorIdForProof && recipientIdForProof) {
+                                const byPair = transferProofMap.get(
+                                  `${donorIdForProof}-${recipientIdForProof}`,
+                                );
+                                if (byPair && byPair.length > 0) return byPair;
+                              }
+                              if (recipientIdForProof) {
+                                const byRecipient =
+                                  transferProofByRecipient.get(
+                                    String(recipientIdForProof),
+                                  );
+                                if (byRecipient && byRecipient.length > 0)
+                                  return byRecipient;
+                              }
+                              return null;
+                            })();
+
+                            // Transfer method label
+                            const methodLabel = isPartial
+                              ? "Partial transfer — split of original parcel"
+                              : "Full transfer";
+
+                            return (
+                              <div
+                                key={record.id}
+                                style={{
+                                  background: record.is_current
+                                    ? "#f0fdf4"
+                                    : "#fafafa",
+                                  border: `1px solid ${record.is_current ? "#bbf7d0" : "#e5e7eb"}`,
+                                  borderRadius: "8px",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {/* Card header: type + date + current badge */}
                                 <div
-                                  key={parcelKey}
                                   style={{
-                                    border: "1px solid #d1fae5",
-                                    borderRadius: "10px",
-                                    overflow: "hidden",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    padding: "8px 12px",
+                                    borderBottom: `1px solid ${record.is_current ? "#bbf7d0" : "#e5e7eb"}`,
+                                    background: record.is_current
+                                      ? "#dcfce7"
+                                      : "#f3f4f6",
                                   }}
                                 >
-                                  {/* Parcel header strip */}
                                   <span
                                     style={{
                                       fontWeight: 700,
-                                      fontSize: "14px",
+                                      fontSize: "13px",
+                                      color: "#166534",
                                     }}
-                                  ></span>
-
-                                  {/* Timeline entries for this parcel */}
-                                  <div
-                                    className="jo-land-registry-history-list"
-                                    style={{ padding: "10px" }}
                                   >
-                                    {records.map((record) => {
-                                      const isPartial =
-                                        record.change_type ===
-                                        "TRANSFER_PARTIAL";
-                                      const isTransfer = /TRANSFER/i.test(
-                                        record.change_type || "",
-                                      );
-                                      const recipientName =
-                                        record.farmer_name ||
-                                        record.land_owner_name ||
-                                        "Unknown";
-
-                                      // Resolve donor name from notes ("from farmer <id>")
-                                      let donorName: string | null = null;
-                                      if (isTransfer && record.notes) {
-                                        const fromMatch =
-                                          record.notes.match(
-                                            /from farmer (\d+)/i,
-                                          );
-                                        if (fromMatch) {
-                                          const donorId = Number(fromMatch[1]);
-                                          donorName =
-                                            farmerNameMap.get(donorId) ?? null;
-                                        }
-                                      }
-                                      // Fallback: extract donor from change_reason sentence
-                                      if (!donorName && record.change_reason) {
-                                        const crMatch =
-                                          record.change_reason.match(
-                                            /^Ownership transfer from (.+?) to .+$/i,
-                                          );
-                                        if (crMatch)
-                                          donorName = crMatch[1].trim();
-                                      }
-
-                                      // Clean transfer type label for the header
-                                      const cleanTitle = (() => {
-                                        if (isPartial)
-                                          return "✂️ Partial Transfer";
-                                        const r = (record.change_reason || "")
-                                          .trim()
-                                          .toLowerCase();
-                                        if (r.startsWith("voluntary"))
-                                          return "🔄 Voluntary Transfer";
-                                        if (r.startsWith("inheritance"))
-                                          return "🔄 Inheritance Transfer";
-                                        if (r.startsWith("ownership transfer"))
-                                          return "🔄 Ownership Transfer";
-                                        if (record.change_reason)
-                                          return `🔄 ${record.change_reason}`;
-                                        return "🔄 Transfer";
-                                      })();
-
-                                      // Role badge for the recipient
-                                      const recipientRole =
-                                        record.is_registered_owner
-                                          ? "Owner"
-                                          : record.is_tenant
-                                            ? "Tenant"
-                                            : record.is_lessee
-                                              ? "Lessee"
-                                              : null;
-                                      const roleBadgeBg =
-                                        record.is_registered_owner
-                                          ? "#dcfce7"
-                                          : record.is_tenant
-                                            ? "#dbeafe"
-                                            : record.is_lessee
-                                              ? "#ede9fe"
-                                              : "#f3f4f6";
-                                      const roleBadgeColor =
-                                        record.is_registered_owner
-                                          ? "#166534"
-                                          : record.is_tenant
-                                            ? "#1e40af"
-                                            : record.is_lessee
-                                              ? "#7c3aed"
-                                              : "#6b7280";
-
-                                      // Resolve donor ID from notes for proof lookup
-                                      let donorIdForProof: number | null = null;
-                                      if (isTransfer && record.notes) {
-                                        const dnMatch =
-                                          record.notes.match(
-                                            /from farmer (\d+)/i,
-                                          );
-                                        if (dnMatch)
-                                          donorIdForProof = Number(dnMatch[1]);
-                                      }
-                                      const recipientIdForProof =
-                                        record.farmer_id ?? null;
-                                      // Lookup proofs: primary by pair, fallback by recipient only
-                                      const cardProofs: ProofItem[] | null =
-                                        (() => {
-                                          if (
-                                            donorIdForProof &&
-                                            recipientIdForProof
-                                          ) {
-                                            const byPair = transferProofMap.get(
-                                              `${donorIdForProof}-${recipientIdForProof}`,
-                                            );
-                                            if (byPair && byPair.length > 0)
-                                              return byPair;
-                                          }
-                                          if (recipientIdForProof) {
-                                            const byRecipient =
-                                              transferProofByRecipient.get(
-                                                String(recipientIdForProof),
-                                              );
-                                            if (
-                                              byRecipient &&
-                                              byRecipient.length > 0
-                                            )
-                                              return byRecipient;
-                                          }
-                                          return null;
-                                        })();
-
-                                      // Transfer method label
-                                      const methodLabel = isPartial
-                                        ? "Partial transfer — split of original parcel"
-                                        : "Full transfer";
-
-                                      return (
-                                        <div
-                                          key={record.id}
-                                          style={{
-                                            background: record.is_current
-                                              ? "#f0fdf4"
-                                              : "#fafafa",
-                                            border: `1px solid ${record.is_current ? "#bbf7d0" : "#e5e7eb"}`,
-                                            borderRadius: "8px",
-                                            marginBottom: "10px",
-                                            overflow: "hidden",
-                                          }}
-                                        >
-                                          {/* Card header: type + date + current badge */}
-                                          <div
-                                            style={{
-                                              display: "flex",
-                                              justifyContent: "space-between",
-                                              alignItems: "center",
-                                              padding: "8px 12px",
-                                              borderBottom: `1px solid ${record.is_current ? "#bbf7d0" : "#e5e7eb"}`,
-                                              background: record.is_current
-                                                ? "#dcfce7"
-                                                : "#f3f4f6",
-                                            }}
-                                          >
-                                            <span
-                                              style={{
-                                                fontWeight: 700,
-                                                fontSize: "13px",
-                                                color: "#166534",
-                                              }}
-                                            >
-                                              {cleanTitle}
-                                            </span>
-                                            <div
-                                              style={{
-                                                display: "flex",
-                                                gap: "8px",
-                                                alignItems: "center",
-                                              }}
-                                            >
-                                              <span
-                                                style={{
-                                                  fontSize: "12px",
-                                                  color: "#6b7280",
-                                                }}
-                                              >
-                                                📅{" "}
-                                                {formatDate(
-                                                  record.period_start_date,
-                                                )}
-                                              </span>
-                                            </div>
-                                          </div>
-
-                                          {/* Card body */}
-                                          <div
-                                            style={{
-                                              padding: "10px 12px",
-                                              display: "flex",
-                                              flexDirection: "column",
-                                              gap: "6px",
-                                              fontSize: "13px",
-                                              color: "#374151",
-                                            }}
-                                          >
-                                            {/* Method */}
-                                            <div>{methodLabel}</div>
-
-                                            {/* Parcel / area details */}
-                                            <div
-                                              style={{
-                                                color: "#6b7280",
-                                                fontSize: "12px",
-                                                display: "flex",
-                                                flexWrap: "wrap",
-                                                gap: "10px",
-                                              }}
-                                            >
-                                              {record.parcel_number && (
-                                                <span>
-                                                  📋 {record.parcel_number}
-                                                </span>
-                                              )}
-                                              {record.farm_location_barangay && (
-                                                <span>
-                                                  📍{" "}
-                                                  {
-                                                    record.farm_location_barangay
-                                                  }
-                                                </span>
-                                              )}
-                                              {record.transferred_area_ha !=
-                                                null && (
-                                                <span>
-                                                  📐{" "}
-                                                  {record.transferred_area_ha.toFixed(
-                                                    2,
-                                                  )}{" "}
-                                                  ha transferred
-                                                </span>
-                                              )}
-                                              {record.remaining_area_ha !=
-                                                null && (
-                                                <span>
-                                                  🔲{" "}
-                                                  {record.remaining_area_ha.toFixed(
-                                                    2,
-                                                  )}{" "}
-                                                  ha remaining with donor
-                                                </span>
-                                              )}
-                                            </div>
-
-                                            {/* Who: donor → recipient */}
-                                            {(donorName || recipientName) && (
-                                              <div
-                                                style={{
-                                                  display: "flex",
-                                                  alignItems: "center",
-                                                  gap: "8px",
-                                                  flexWrap: "wrap",
-                                                  fontWeight: 500,
-                                                  marginTop: "2px",
-                                                }}
-                                              >
-                                                {donorName ? (
-                                                  <span>{donorName}</span>
-                                                ) : (
-                                                  <span
-                                                    style={{
-                                                      color: "#9ca3af",
-                                                      fontStyle: "italic",
-                                                    }}
-                                                  >
-                                                    Unknown donor
-                                                  </span>
-                                                )}
-                                                <span
-                                                  style={{ color: "#9ca3af" }}
-                                                >
-                                                  →
-                                                </span>
-                                                <span>{recipientName}</span>
-                                                {recipientRole && (
-                                                  <span
-                                                    style={{
-                                                      fontSize: "11px",
-                                                      fontWeight: 600,
-                                                      padding: "1px 7px",
-                                                      borderRadius: "999px",
-                                                      background: roleBadgeBg,
-                                                      color: roleBadgeColor,
-                                                      border: `1px solid ${roleBadgeColor}40`,
-                                                    }}
-                                                  >
-                                                    {recipientRole}
-                                                  </span>
-                                                )}
-                                              </div>
-                                            )}
-
-                                            {/* Proof button */}
-                                            {cardProofs &&
-                                              cardProofs.length > 0 && (
-                                                <div
-                                                  style={{ marginTop: "6px" }}
-                                                >
-                                                  <button
-                                                    onClick={() =>
-                                                      handleViewProof(
-                                                        cardProofs,
-                                                      )
-                                                    }
-                                                    style={{
-                                                      display: "inline-flex",
-                                                      alignItems: "center",
-                                                      gap: "5px",
-                                                      padding: "4px 12px",
-                                                      fontSize: "12px",
-                                                      fontWeight: 600,
-                                                      color: "#1e40af",
-                                                      background: "#eff6ff",
-                                                      border:
-                                                        "1px solid #bfdbfe",
-                                                      borderRadius: "6px",
-                                                      cursor: "pointer",
-                                                    }}
-                                                  >
-                                                    📷 View Proof (
-                                                    {cardProofs.length})
-                                                  </button>
-                                                </div>
-                                              )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
+                                    {cleanTitle}
+                                  </span>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      gap: "8px",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontSize: "12px",
+                                        color: "#6b7280",
+                                      }}
+                                    >
+                                      📅 {formatDate(record.period_start_date)}
+                                    </span>
                                   </div>
                                 </div>
-                              );
-                            },
-                          )}
+
+                                {/* Card body */}
+                                <div
+                                  style={{
+                                    padding: "10px 12px",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "6px",
+                                    fontSize: "13px",
+                                    color: "#374151",
+                                  }}
+                                >
+                                  {/* Method */}
+                                  <div>{methodLabel}</div>
+
+                                  {/* Parcel / area details */}
+                                  <div
+                                    style={{
+                                      color: "#6b7280",
+                                      fontSize: "12px",
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: "10px",
+                                    }}
+                                  >
+                                    {record.parcel_number && (
+                                      <span>📋 {record.parcel_number}</span>
+                                    )}
+                                    {record.farm_location_barangay && (
+                                      <span>
+                                        📍 {record.farm_location_barangay}
+                                      </span>
+                                    )}
+                                    {record.transferred_area_ha != null && (
+                                      <span>
+                                        📐{" "}
+                                        {record.transferred_area_ha.toFixed(2)}{" "}
+                                        ha transferred
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Who: donor → recipient */}
+                                  {(donorName || recipientName) && (
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        flexWrap: "wrap",
+                                        fontWeight: 500,
+                                        marginTop: "2px",
+                                      }}
+                                    >
+                                      {donorName ? (
+                                        <span>{donorName}</span>
+                                      ) : (
+                                        <span
+                                          style={{
+                                            color: "#9ca3af",
+                                            fontStyle: "italic",
+                                          }}
+                                        >
+                                          Unknown donor
+                                        </span>
+                                      )}
+                                      <span style={{ color: "#9ca3af" }}>
+                                        →
+                                      </span>
+                                      <span>{recipientName}</span>
+                                      {recipientRole && (
+                                        <span
+                                          style={{
+                                            fontSize: "11px",
+                                            fontWeight: 600,
+                                            padding: "1px 7px",
+                                            borderRadius: "999px",
+                                            background: roleBadgeBg,
+                                            color: roleBadgeColor,
+                                            border: `1px solid ${roleBadgeColor}40`,
+                                          }}
+                                        >
+                                          {recipientRole}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Proof button */}
+                                  {cardProofs && cardProofs.length > 0 && (
+                                    <div style={{ marginTop: "6px" }}>
+                                      <button
+                                        onClick={() =>
+                                          handleViewProof(cardProofs)
+                                        }
+                                        style={{
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "5px",
+                                          padding: "4px 12px",
+                                          fontSize: "12px",
+                                          fontWeight: 600,
+                                          color: "#1e40af",
+                                          background: "#eff6ff",
+                                          border: "1px solid #bfdbfe",
+                                          borderRadius: "6px",
+                                          cursor: "pointer",
+                                        }}
+                                      >
+                                        📷 View Proof ({cardProofs.length})
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })()

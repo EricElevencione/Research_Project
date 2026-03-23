@@ -576,6 +576,91 @@
   transform: scale(0.95);
 }
 
+.jo-add-farmer-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.jo-add-farmer-modal-card {
+  width: min(560px, 100%);
+  background: #ffffff;
+  border-radius: 14px;
+  border: 2px solid #fb923c;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+  padding: 20px;
+}
+
+.jo-add-farmer-modal-title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  color: #9a3412;
+}
+
+.jo-add-farmer-modal-message {
+  margin: 0 0 14px;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.jo-add-farmer-modal-list {
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+  padding: 10px;
+}
+
+.jo-add-farmer-modal-list-item {
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.jo-add-farmer-modal-list-item:last-child {
+  margin-bottom: 0;
+}
+
+.jo-add-farmer-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.jo-add-farmer-modal-cancel,
+.jo-add-farmer-modal-submit {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.jo-add-farmer-modal-cancel {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.jo-add-farmer-modal-submit {
+  background: #ea580c;
+  color: #ffffff;
+}
+
+.jo-add-farmer-modal-cancel:disabled,
+.jo-add-farmer-modal-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Animations */
 @keyframes slideInRight {
   from {

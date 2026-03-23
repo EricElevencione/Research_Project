@@ -1,0 +1,219 @@
+{
+  "meta": {
+    "source": "PhilRice Abonong Swak, Fertilizer Derby, RCEF, and CtRH Carbonizer Programs",
+    "total_fertilizers": 15,
+    "tier_1_count": 9,
+    "tier_2_count": 6,
+    "categories": ["solid", "liquid"],
+    "tiers": {
+      "1": "Ranked fertilizers — have per-seed compatibility rankings in philrice.json",
+      "2": "Unranked fertilizers — used as last-resort fallbacks grouped by nutrient_role"
+    },
+    "nutrient_roles": {
+      "nitrogen_source": "Primary or supplemental nitrogen provider",
+      "npk_complete": "Balanced N-P-K for general establishment",
+      "potassium_source": "Primary potassium provider",
+      "phosphorus_source": "Primary phosphorus provider",
+      "biostimulant": "Biological or nano-scale growth enhancer",
+      "bio_nitrogen_fixer": "Biological nitrogen fixation via organism",
+      "npk_foliar": "Water-soluble foliar NPK for rapid leaf absorption",
+      "micronutrient": "Corrects specific micronutrient deficiencies",
+      "soil_conditioner": "Improves soil structure, biology, or water retention"
+    }
+  },
+  "fertilizers": [
+    {
+      "id": "urea",
+      "name": "Urea (46-0-0)",
+      "category": "solid",
+      "nutrient_type": "Nitrogen",
+      "tier": 1,
+      "nutrient_role": "nitrogen_source",
+      "application_timing": "Basal + Top-dress",
+      "form": "Granular",
+      "description": "Primary nitrogen source; promotes tillering, leaf area, and grain protein content"
+    },
+    {
+      "id": "complete_14",
+      "name": "Complete (14-14-14)",
+      "category": "solid",
+      "nutrient_type": "NPK",
+      "tier": 1,
+      "nutrient_role": "npk_complete",
+      "application_timing": "Basal",
+      "form": "Granular",
+      "description": "Balanced complete fertilizer for early establishment and uniform tillering"
+    },
+    {
+      "id": "ammonium_sulfate",
+      "name": "Ammonium Sulfate (21-0-0)",
+      "category": "solid",
+      "nutrient_type": "Nitrogen + Sulfur",
+      "tier": 1,
+      "nutrient_role": "nitrogen_source",
+      "application_timing": "Top-dress",
+      "form": "Granular",
+      "description": "N + S source; effective in alkaline soils; boosts grain protein and enzyme activity"
+    },
+    {
+      "id": "muriate_of_potash",
+      "name": "Muriate of Potash (0-0-60)",
+      "category": "solid",
+      "nutrient_type": "Potassium",
+      "tier": 1,
+      "nutrient_role": "potassium_source",
+      "application_timing": "Top-dress at PI",
+      "form": "Granular",
+      "description": "Strengthens stalks, improves disease resistance, milling quality and grain filling"
+    },
+    {
+      "id": "biofertilizer",
+      "name": "Biofertilizer (Liquid Concentrate)",
+      "category": "liquid",
+      "nutrient_type": "Biostimulant",
+      "tier": 1,
+      "nutrient_role": "biostimulant",
+      "application_timing": "Foliar / Soil drench",
+      "form": "Liquid",
+      "description": "Brassinosteroid, triacontanol, Fe, K₂O, Cu, Zn, Vitamins B1/B2/B6; promotes root growth, stress tolerance and grain set"
+    },
+    {
+      "id": "nanobiofertilizer",
+      "name": "Nanobiofertilizer",
+      "category": "liquid",
+      "nutrient_type": "Nano NPK + Bio",
+      "tier": 1,
+      "nutrient_role": "biostimulant",
+      "application_timing": "Foliar spray",
+      "form": "Liquid",
+      "description": "N, phosphate, soluble K, algae, bacteria, fungi, sea kelp, humic & fulvic acids; nano-scale delivery for enhanced uptake"
+    },
+    {
+      "id": "organic_root_exudate",
+      "name": "Organic Root Exudate Mix",
+      "category": "liquid",
+      "nutrient_type": "Organic-Bio",
+      "tier": 1,
+      "nutrient_role": "soil_conditioner",
+      "application_timing": "Soil drench",
+      "form": "Liquid",
+      "description": "Organic materials + root fluids; activates beneficial soil microbes and improves rhizosphere nutrient availability"
+    },
+    {
+      "id": "azolla",
+      "name": "Azolla microphylla",
+      "category": "liquid",
+      "nutrient_type": "Bio-N Fixer",
+      "tier": 1,
+      "nutrient_role": "bio_nitrogen_fixer",
+      "application_timing": "Incorporate / Flood paddy",
+      "form": "Liquid/Organic",
+      "description": "Water fern that fixes 20–30 kg N/ha; used as green manure in flooded paddies to reduce synthetic N needs"
+    },
+    {
+      "id": "foliar_liquid_npk",
+      "name": "Foliar Liquid Fertilizer (NPK)",
+      "category": "liquid",
+      "nutrient_type": "NPK Foliar",
+      "tier": 1,
+      "nutrient_role": "npk_foliar",
+      "application_timing": "Foliar spray (critical stages)",
+      "form": "Liquid",
+      "description": "Water-soluble NPK for direct leaf absorption; corrects mid-season deficiency within 48–72 hrs; bypasses soil fixation"
+    },
+    {
+      "id": "npk_16_20_0",
+      "name": "16-20-0",
+      "category": "solid",
+      "nutrient_type": "NP",
+      "tier": 2,
+      "nutrient_role": "phosphorus_source",
+      "application_timing": "Basal",
+      "form": "Granular",
+      "description": "Phosphorus-rich basal fertilizer for root development and early establishment; use when primary phosphorus source is unavailable"
+    },
+    {
+      "id": "zinc_sulfate",
+      "name": "Zinc Sulfate",
+      "category": "solid",
+      "nutrient_type": "Micronutrient",
+      "tier": 2,
+      "nutrient_role": "micronutrient",
+      "application_timing": "Seedbed / Basal",
+      "form": "Granular",
+      "description": "Corrects zinc deficiency; applied in seedbed or as basal; improves plant metabolism"
+    },
+    {
+      "id": "vermicompost",
+      "name": "Vermicompost",
+      "category": "solid",
+      "nutrient_type": "Organic NPK",
+      "tier": 2,
+      "nutrient_role": "nitrogen_source",
+      "application_timing": "Basal",
+      "form": "Solid/Bulk",
+      "description": "Organic soil amendment; improves soil structure, microbial activity and water retention; last-resort nitrogen fallback"
+    },
+    {
+      "id": "chicken_manure",
+      "name": "Chicken Manure",
+      "category": "solid",
+      "nutrient_type": "Organic NPK",
+      "tier": 2,
+      "nutrient_role": "nitrogen_source",
+      "application_timing": "Basal",
+      "form": "Solid/Bulk",
+      "description": "Organic N-P-K source; improves soil fertility, biology and water retention; last-resort nitrogen fallback"
+    },
+    {
+      "id": "rice_straw",
+      "name": "Rice Straw (incorporated)",
+      "category": "solid",
+      "nutrient_type": "Organic-K",
+      "tier": 2,
+      "nutrient_role": "potassium_source",
+      "application_timing": "Basal (post-harvest)",
+      "form": "Bulk",
+      "description": "Potassium source; incorporated after harvest for slow decomposition and K recycling; last-resort potassium fallback"
+    },
+    {
+      "id": "carbonized_rice_hull",
+      "name": "Carbonized Rice Hull (CRH)",
+      "category": "solid",
+      "nutrient_type": "Organic/Biochar",
+      "tier": 2,
+      "nutrient_role": "soil_conditioner",
+      "application_timing": "Basal",
+      "form": "Granular",
+      "description": "PhilRice CtRH Carbonizer biochar; improves drainage, soil pH buffer and water retention; soil conditioner fallback"
+    }
+  ],
+  "fallback_rules": {
+    "description": "When a Tier 1 fertilizer is in shortage, follow this resolution order",
+    "resolution_order": [
+      {
+        "step": 1,
+        "action": "Walk down the seed's fertilizer_compatibility list in philrice.json and suggest the next available Tier 1 fertilizer"
+      },
+      {
+        "step": 2,
+        "action": "If all Tier 1 fertilizers for that nutrient_role are unavailable, suggest Tier 2 fertilizers with the same nutrient_role as a last resort"
+      },
+      {
+        "step": 3,
+        "action": "If no match exists in the same nutrient_role, flag the shortage as unresolvable and alert the system operator"
+      }
+    ],
+    "nutrient_role_fallback_map": {
+      "nitrogen_source": ["vermicompost", "chicken_manure"],
+      "npk_complete": [],
+      "potassium_source": ["rice_straw"],
+      "phosphorus_source": ["npk_16_20_0"],
+      "biostimulant": [],
+      "bio_nitrogen_fixer": [],
+      "npk_foliar": [],
+      "micronutrient": ["zinc_sulfate"],
+      "soil_conditioner": ["carbonized_rice_hull"]
+    }
+  }
+}
