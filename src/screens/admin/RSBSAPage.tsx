@@ -107,11 +107,12 @@ const JoRsbsa: React.FC = () => {
       setRsbsaRecords(dataWithTotalArea);
       const registeredOwnersData = filterRegisteredOwners(
         dataWithTotalArea,
-      ).sort(
-        (a: any, b: any) =>
-          new Date(b.dateSubmitted ?? 0).getTime() -
-          new Date(a.dateSubmitted ?? 0).getTime(),
-      );
+      ).sort((a: any, b: any) => {
+        // Sort by dateSubmitted in descending order (newest at top, oldest at bottom)
+        const dateA = new Date(a.dateSubmitted ?? 0).getTime();
+        const dateB = new Date(b.dateSubmitted ?? 0).getTime();
+        return dateB - dateA; // Newest first
+      });
       console.log(
         "Filtered registered owners:",
         JSON.stringify(registeredOwnersData, null, 2),

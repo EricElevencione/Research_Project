@@ -41,21 +41,29 @@ router.get("/fertilizers", (req, res) => {
 
 router.post("/fertilizer", (req, res) => {
   const { seedId, shortageFertId, unavailableIds } = req.body || {};
+  const normalizedSeedId =
+    typeof seedId === "string" && seedId.trim().length > 0 ? seedId : null;
 
-  if (!seedId || !shortageFertId) {
+  if (!shortageFertId) {
     return res.status(400).json({
-      error: "seedId and shortageFertId are required.",
+      error: "shortageFertId is required.",
     });
   }
 
-  if (!seedById.get(seedId) || !fertilizerById.get(shortageFertId)) {
+  if (normalizedSeedId && !seedById.get(normalizedSeedId)) {
     return res.status(404).json({
-      error: "Seed or fertilizer id was not found.",
+      error: "Seed id was not found.",
+    });
+  }
+
+  if (!fertilizerById.get(shortageFertId)) {
+    return res.status(404).json({
+      error: "Fertilizer id was not found.",
     });
   }
 
   const result = resolveFertilizerShortage(
-    seedId,
+    normalizedSeedId,
     shortageFertId,
     unavailableIds,
   );

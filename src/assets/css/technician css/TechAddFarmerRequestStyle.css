@@ -373,6 +373,98 @@
   font-size: 14px;
 }
 
+.tech-add-farmer-inline-exceed {
+  color: #b91c1c;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.tech-add-farmer-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.tech-add-farmer-modal-card {
+  width: min(560px, 100%);
+  background: #ffffff;
+  border-radius: 14px;
+  border: 2px solid #f59e0b;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+  padding: 20px;
+}
+
+.tech-add-farmer-modal-title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  color: #92400e;
+}
+
+.tech-add-farmer-modal-message {
+  margin: 0 0 14px;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tech-add-farmer-modal-list {
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  background: #fffbeb;
+  padding: 10px;
+}
+
+.tech-add-farmer-modal-list-item {
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tech-add-farmer-modal-list-item:last-child {
+  margin-bottom: 0;
+}
+
+.tech-add-farmer-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.tech-add-farmer-modal-cancel,
+.tech-add-farmer-modal-submit {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tech-add-farmer-modal-cancel {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.tech-add-farmer-modal-submit {
+  background: #d97706;
+  color: #ffffff;
+}
+
+.tech-add-farmer-modal-cancel:disabled,
+.tech-add-farmer-modal-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Action Buttons */
 .tech-add-farmer-actions {
   display: flex;

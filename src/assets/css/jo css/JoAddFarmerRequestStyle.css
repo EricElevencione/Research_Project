@@ -349,6 +349,66 @@
   font-size: 14px;
 }
 
+.jo-add-farmer-inline-suggestion-card {
+  margin-top: 8px;
+  border: 1px solid #fdba74;
+  background: #fff7ed;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.jo-add-farmer-inline-suggestion-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9a3412;
+  margin-bottom: 4px;
+}
+
+.jo-add-farmer-inline-suggestion-message {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #7c2d12;
+}
+
+.jo-add-farmer-inline-suggestion-resolved,
+.jo-add-farmer-inline-suggestion-tier2_fallback {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.jo-add-farmer-inline-suggestion-resolved
+  .jo-add-farmer-inline-suggestion-title,
+.jo-add-farmer-inline-suggestion-tier2_fallback
+  .jo-add-farmer-inline-suggestion-title {
+  color: #166534;
+}
+
+.jo-add-farmer-inline-suggestion-resolved
+  .jo-add-farmer-inline-suggestion-message,
+.jo-add-farmer-inline-suggestion-tier2_fallback
+  .jo-add-farmer-inline-suggestion-message {
+  color: #14532d;
+}
+
+.jo-add-farmer-inline-suggestion-unresolvable,
+.jo-add-farmer-inline-suggestion-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.jo-add-farmer-inline-suggestion-unresolvable
+  .jo-add-farmer-inline-suggestion-title,
+.jo-add-farmer-inline-suggestion-error .jo-add-farmer-inline-suggestion-title {
+  color: #991b1b;
+}
+
+.jo-add-farmer-inline-suggestion-unresolvable
+  .jo-add-farmer-inline-suggestion-message,
+.jo-add-farmer-inline-suggestion-error
+  .jo-add-farmer-inline-suggestion-message {
+  color: #7f1d1d;
+}
+
 .jo-add-farmer-textarea {
   width: 100%;
   padding: 12px 16px;

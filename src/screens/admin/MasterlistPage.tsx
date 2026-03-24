@@ -686,7 +686,13 @@ const Masterlist: React.FC = () => {
                             <td>{formatDate(record.dateSubmitted)}</td>
                             <td>
                               <span
-                                className={`masterlist-admin-status-pill ${record.status === "Active Farmer" ? "masterlist-admin-status-approved" : "masterlist-admin-status-not-approved"}`}
+                                className={`masterlist-admin-status-pill ${
+                                  record.status === "Active Farmer"
+                                    ? "masterlist-admin-status-approved"
+                                    : record.status === "Submitted"
+                                      ? "masterlist-admin-status-submitted"
+                                      : "masterlist-admin-status-not-approved"
+                                }`}
                               >
                                 {record.status || "Not Active"}
                               </span>

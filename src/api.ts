@@ -1943,6 +1943,220 @@ export const getSeedCatalog = async (): Promise<ApiResponse> => {
   return createResponse(data || [], null, 200);
 };
 
+// ==================== SHORTAGES SUGGESTIONS ====================
+
+type FertilizerShortagePayload = {
+  seedId: string | null;
+  shortageFertId: string;
+  unavailableIds?: string[];
+};
+
+type SeedShortagePayload = {
+  seedId: string;
+  unavailableIds?: string[];
+};
+
+const SHORTAGES_API_COOLDOWN_MS = 30_000;
+let shortagesApiCooldownUntil = 0;
+
+const USE_SUPABASE_SHORTAGES =
+  String(import.meta.env.VITE_USE_SUPABASE_SHORTAGES || "").toLowerCase() ===
+  "true";
+
+const SUPABASE_SHORTAGES_RPC = {
+  listSeeds: "list_shortages_seeds",
+  listFertilizers: "list_shortages_fertilizers",
+  resolveFertilizer: "resolve_fertilizer_shortage",
+  resolveSeed: "resolve_seed_shortage",
+} as const;
+
+const mapSupabaseShortagesError = (error: any): string => {
+  const message =
+    error?.message ||
+    error?.details ||
+    error?.hint ||
+    "Supabase shortages request failed.";
+  return String(message);
+};
+
+const callShortagesSupabase = async (
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<ApiResponse> => {
+  try {
+    if (path === "/seeds") {
+      const { data, error } = await supabase.rpc(
+        SUPABASE_SHORTAGES_RPC.listSeeds,
+      );
+      if (error)
+        return createResponse(null, mapSupabaseShortagesError(error), 500);
+      return createResponse(data ?? [], null, 200);
+    }
+
+    if (path === "/fertilizers") {
+      const { data, error } = await supabase.rpc(
+        SUPABASE_SHORTAGES_RPC.listFertilizers,
+      );
+      if (error)
+        return createResponse(null, mapSupabaseShortagesError(error), 500);
+      return createResponse(data ?? [], null, 200);
+    }
+
+    if (path === "/fertilizer") {
+      const { data, error } = await supabase.rpc(
+        SUPABASE_SHORTAGES_RPC.resolveFertilizer,
+        {
+          seed_id: body?.seedId ?? null,
+          shortage_fert_id: body?.shortageFertId,
+          unavailable_ids: Array.isArray(body?.unavailableIds)
+            ? body?.unavailableIds
+            : [],
+        },
+      );
+      if (error)
+        return createResponse(null, mapSupabaseShortagesError(error), 500);
+      return createResponse(data, null, 200);
+    }
+
+    if (path === "/seed") {
+      const { data, error } = await supabase.rpc(
+        SUPABASE_SHORTAGES_RPC.resolveSeed,
+        {
+          seed_id: body?.seedId,
+          unavailable_ids: Array.isArray(body?.unavailableIds)
+            ? body?.unavailableIds
+            : [],
+        },
+      );
+      if (error)
+        return createResponse(null, mapSupabaseShortagesError(error), 500);
+      return createResponse(data, null, 200);
+    }
+
+    return createResponse(null, `Unsupported shortages path: ${path}`, 400);
+  } catch (error: any) {
+    return createResponse(
+      null,
+      error?.message || "Unable to connect to Supabase shortages RPC.",
+      500,
+    );
+  }
+};
+
+const callShortagesApiViaNode = async (
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<ApiResponse> => {
+  const now = Date.now();
+  if (now < shortagesApiCooldownUntil) {
+    const secondsLeft = Math.ceil((shortagesApiCooldownUntil - now) / 1000);
+    return createResponse(
+      null,
+      `Shortages API is temporarily unavailable. Retrying automatically in ${secondsLeft}s.`,
+      503,
+    );
+  }
+
+  try {
+    const response = await fetch(`/api/shortages${path}`, {
+      method: body ? "POST" : "GET",
+      headers: body
+        ? {
+            "Content-Type": "application/json",
+          }
+        : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const payload = await response
+      .json()
+      .catch(() => ({ error: "Invalid JSON response from shortages API." }));
+
+    if (!response.ok) {
+      const errorMessage =
+        payload?.error || payload?.message || "Shortages API request failed.";
+
+      if (
+        response.status >= 500 &&
+        typeof payload?.error === "string" &&
+        /invalid json response from shortages api|proxy|econnrefused/i.test(
+          payload.error,
+        )
+      ) {
+        shortagesApiCooldownUntil = Date.now() + SHORTAGES_API_COOLDOWN_MS;
+      }
+
+      return createResponse(null, errorMessage, response.status);
+    }
+
+    shortagesApiCooldownUntil = 0;
+    return createResponse(payload, null, response.status || 200);
+  } catch (error: any) {
+    shortagesApiCooldownUntil = Date.now() + SHORTAGES_API_COOLDOWN_MS;
+    return createResponse(
+      null,
+      error?.message || "Unable to connect to shortages API.",
+      500,
+    );
+  }
+};
+
+export const getShortagesSeeds = async (): Promise<ApiResponse> => {
+  if (!USE_SUPABASE_SHORTAGES) {
+    return callShortagesApiViaNode("/seeds");
+  }
+
+  const supabaseResponse = await callShortagesSupabase("/seeds");
+  if (!supabaseResponse.error) {
+    return supabaseResponse;
+  }
+
+  return callShortagesApiViaNode("/seeds");
+};
+
+export const getShortagesFertilizers = async (): Promise<ApiResponse> => {
+  if (!USE_SUPABASE_SHORTAGES) {
+    return callShortagesApiViaNode("/fertilizers");
+  }
+
+  const supabaseResponse = await callShortagesSupabase("/fertilizers");
+  if (!supabaseResponse.error) {
+    return supabaseResponse;
+  }
+
+  return callShortagesApiViaNode("/fertilizers");
+};
+
+export const resolveFertilizerShortageSuggestion = async (
+  payload: FertilizerShortagePayload,
+): Promise<ApiResponse> => {
+  if (!USE_SUPABASE_SHORTAGES) {
+    return callShortagesApiViaNode("/fertilizer", payload);
+  }
+
+  const supabaseResponse = await callShortagesSupabase("/fertilizer", payload);
+  if (!supabaseResponse.error) {
+    return supabaseResponse;
+  }
+
+  return callShortagesApiViaNode("/fertilizer", payload);
+};
+
+export const resolveSeedShortageSuggestion = async (
+  payload: SeedShortagePayload,
+): Promise<ApiResponse> => {
+  if (!USE_SUPABASE_SHORTAGES) {
+    return callShortagesApiViaNode("/seed", payload);
+  }
+
+  const supabaseResponse = await callShortagesSupabase("/seed", payload);
+  if (!supabaseResponse.error) {
+    return supabaseResponse;
+  }
+
+  return callShortagesApiViaNode("/seed", payload);
+};
+
 export const getAllocations = async (): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("regional_allocations")
@@ -2361,6 +2575,10 @@ export default {
   // Allocations
   getFertilizerCatalog,
   getSeedCatalog,
+  getShortagesSeeds,
+  getShortagesFertilizers,
+  resolveFertilizerShortageSuggestion,
+  resolveSeedShortageSuggestion,
   getAllocations,
   getAllocationById,
   getAllocationBySeason,

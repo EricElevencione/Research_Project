@@ -5,7 +5,15 @@ import {
   getFarmerRequests,
   getRsbsaSubmissions,
   createFarmerRequest,
+  resolveFertilizerShortageSuggestion,
+  resolveSeedShortageSuggestion,
 } from "../../api";
+import {
+  FERTILIZER_FIELD_MAPS,
+  SEED_FIELD_MAPS,
+  type ShortageFieldMap,
+} from "../../constants/shortageFieldMaps";
+import { detectActiveSeedId } from "../../utils/detectActiveSeedId";
 import {
   getAuditLogger,
   AuditModule,
@@ -137,8 +145,10 @@ interface FarmerRequestForm {
 
 type RequestField = keyof Omit<FarmerRequestForm, "farmer_id" | "notes">;
 
-type AllocationItem = {
-  label: string;
+type AllocationItem = Omit<
+  ShortageFieldMap,
+  "requestField" | "allocationField"
+> & {
   allocationField: keyof AllocationDetails;
   requestField: RequestField;
 };
@@ -150,246 +160,25 @@ type AllocationSummaryItem = {
   remaining: number;
 };
 
-const FERTILIZER_ITEMS: AllocationItem[] = [
-  {
-    label: "Urea (46-0-0)",
-    allocationField: "urea_46_0_0_bags",
-    requestField: "requested_urea_bags",
-  },
-  {
-    label: "Complete (14-14-14)",
-    allocationField: "complete_14_14_14_bags",
-    requestField: "requested_complete_14_bags",
-  },
-  {
-    label: "16-20-0",
-    allocationField: "np_16_20_0_bags",
-    requestField: "requested_ammonium_phosphate_bags",
-  },
-  {
-    label: "Ammonium Sulfate (21-0-0)",
-    allocationField: "ammonium_sulfate_21_0_0_bags",
-    requestField: "requested_ammonium_sulfate_bags",
-  },
-  {
-    label: "Muriate of Potash (0-0-60)",
-    allocationField: "muriate_potash_0_0_60_bags",
-    requestField: "requested_muriate_potash_bags",
-  },
-  {
-    label: "Zinc Sulfate",
-    allocationField: "zinc_sulfate_bags",
-    requestField: "requested_zinc_sulfate_bags",
-  },
-  {
-    label: "Vermicompost",
-    allocationField: "vermicompost_bags",
-    requestField: "requested_vermicompost_bags",
-  },
-  {
-    label: "Chicken Manure",
-    allocationField: "chicken_manure_bags",
-    requestField: "requested_chicken_manure_bags",
-  },
-  {
-    label: "Rice Straw (incorporated)",
-    allocationField: "rice_straw_kg",
-    requestField: "requested_rice_straw_kg",
-  },
-  {
-    label: "Carbonized Rice Hull (CRH)",
-    allocationField: "carbonized_rice_hull_bags",
-    requestField: "requested_carbonized_rice_hull_bags",
-  },
-  {
-    label: "Biofertilizer (Liquid Concentrate)",
-    allocationField: "biofertilizer_liters",
-    requestField: "requested_biofertilizer_liters",
-  },
-  {
-    label: "Nanobiofertilizer",
-    allocationField: "nanobiofertilizer_liters",
-    requestField: "requested_nanobiofertilizer_liters",
-  },
-  {
-    label: "Organic Root Exudate Mix",
-    allocationField: "organic_root_exudate_mix_liters",
-    requestField: "requested_organic_root_exudate_mix_liters",
-  },
-  {
-    label: "Azolla microphylla",
-    allocationField: "azolla_microphylla_kg",
-    requestField: "requested_azolla_microphylla_kg",
-  },
-  {
-    label: "Foliar Liquid Fertilizer (NPK)",
-    allocationField: "foliar_liquid_fertilizer_npk_liters",
-    requestField: "requested_foliar_liquid_fertilizer_npk_liters",
-  },
-];
+type InlineSuggestion = {
+  title: string;
+  message: string;
+  status: "resolved" | "tier2_fallback" | "unresolvable" | "error";
+};
 
-const SEED_ITEMS: AllocationItem[] = [
-  {
-    label: "NSIC Rc 160",
-    allocationField: "rice_seeds_nsic_rc160_kg",
-    requestField: "requested_rice_seeds_nsic_rc160_kg",
-  },
-  {
-    label: "NSIC Rc 222",
-    allocationField: "rice_seeds_nsic_rc222_kg",
-    requestField: "requested_rice_seeds_nsic_rc222_kg",
-  },
-  {
-    label: "Jackpot",
-    allocationField: "jackpot_kg",
-    requestField: "requested_jackpot_kg",
-  },
-  {
-    label: "US88",
-    allocationField: "us88_kg",
-    requestField: "requested_us88_kg",
-  },
-  {
-    label: "TH82",
-    allocationField: "th82_kg",
-    requestField: "requested_th82_kg",
-  },
-  {
-    label: "RH9000",
-    allocationField: "rh9000_kg",
-    requestField: "requested_rh9000_kg",
-  },
-  {
-    label: "Lumping143",
-    allocationField: "lumping143_kg",
-    requestField: "requested_lumping143_kg",
-  },
-  {
-    label: "LP296",
-    allocationField: "lp296_kg",
-    requestField: "requested_lp296_kg",
-  },
-  {
-    label: "Mestiso 1 (M1)",
-    allocationField: "mestiso_1_kg",
-    requestField: "requested_mestiso_1_kg",
-  },
-  {
-    label: "Mestiso 20 (M20)",
-    allocationField: "mestiso_20_kg",
-    requestField: "requested_mestiso_20_kg",
-  },
-  {
-    label: "Mestiso 29",
-    allocationField: "mestiso_29_kg",
-    requestField: "requested_mestiso_29_kg",
-  },
-  {
-    label: "Mestiso 55",
-    allocationField: "mestiso_55_kg",
-    requestField: "requested_mestiso_55_kg",
-  },
-  {
-    label: "Mestiso 73",
-    allocationField: "mestiso_73_kg",
-    requestField: "requested_mestiso_73_kg",
-  },
-  {
-    label: "Mestiso 99",
-    allocationField: "mestiso_99_kg",
-    requestField: "requested_mestiso_99_kg",
-  },
-  {
-    label: "Mestiso 103",
-    allocationField: "mestiso_103_kg",
-    requestField: "requested_mestiso_103_kg",
-  },
-  {
-    label: "NSIC Rc 402",
-    allocationField: "nsic_rc402_kg",
-    requestField: "requested_nsic_rc402_kg",
-  },
-  {
-    label: "NSIC Rc 480",
-    allocationField: "nsic_rc480_kg",
-    requestField: "requested_nsic_rc480_kg",
-  },
-  {
-    label: "NSIC Rc 216",
-    allocationField: "nsic_rc216_kg",
-    requestField: "requested_nsic_rc216_kg",
-  },
-  {
-    label: "NSIC Rc 218",
-    allocationField: "nsic_rc218_kg",
-    requestField: "requested_nsic_rc218_kg",
-  },
-  {
-    label: "NSIC Rc 506",
-    allocationField: "nsic_rc506_kg",
-    requestField: "requested_nsic_rc506_kg",
-  },
-  {
-    label: "NSIC Rc 508",
-    allocationField: "nsic_rc508_kg",
-    requestField: "requested_nsic_rc508_kg",
-  },
-  {
-    label: "NSIC Rc 512",
-    allocationField: "nsic_rc512_kg",
-    requestField: "requested_nsic_rc512_kg",
-  },
-  {
-    label: "NSIC Rc 534",
-    allocationField: "nsic_rc534_kg",
-    requestField: "requested_nsic_rc534_kg",
-  },
-  {
-    label: "Tubigan 28",
-    allocationField: "tubigan_28_kg",
-    requestField: "requested_tubigan_28_kg",
-  },
-  {
-    label: "Tubigan 30",
-    allocationField: "tubigan_30_kg",
-    requestField: "requested_tubigan_30_kg",
-  },
-  {
-    label: "Tubigan 22",
-    allocationField: "tubigan_22_kg",
-    requestField: "requested_tubigan_22_kg",
-  },
-  {
-    label: "Sahod Ulan 2",
-    allocationField: "sahod_ulan_2_kg",
-    requestField: "requested_sahod_ulan_2_kg",
-  },
-  {
-    label: "Sahod Ulan 10",
-    allocationField: "sahod_ulan_10_kg",
-    requestField: "requested_sahod_ulan_10_kg",
-  },
-  {
-    label: "Salinas 6",
-    allocationField: "salinas_6_kg",
-    requestField: "requested_salinas_6_kg",
-  },
-  {
-    label: "Salinas 7",
-    allocationField: "salinas_7_kg",
-    requestField: "requested_salinas_7_kg",
-  },
-  {
-    label: "Salinas 8",
-    allocationField: "salinas_8_kg",
-    requestField: "requested_salinas_8_kg",
-  },
-  {
-    label: "Malagkit 5",
-    allocationField: "malagkit_5_kg",
-    requestField: "requested_malagkit_5_kg",
-  },
-];
+const FERTILIZER_ITEMS: AllocationItem[] = FERTILIZER_FIELD_MAPS.map(
+  (item) => ({
+    ...item,
+    allocationField: item.allocationField as keyof AllocationDetails,
+    requestField: item.requestField as RequestField,
+  }),
+);
+
+const SEED_ITEMS: AllocationItem[] = SEED_FIELD_MAPS.map((item) => ({
+  ...item,
+  allocationField: item.allocationField as keyof AllocationDetails,
+  requestField: item.requestField as RequestField,
+}));
 
 const JoAddFarmerRequest: React.FC = () => {
   const navigate = useNavigate();
@@ -464,6 +253,9 @@ const JoAddFarmerRequest: React.FC = () => {
   });
   const [debouncedFormData, setDebouncedFormData] =
     useState<FarmerRequestForm>(formData);
+  const [inlineSuggestions, setInlineSuggestions] = useState<
+    Record<string, InlineSuggestion>
+  >({});
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -656,6 +448,15 @@ const JoAddFarmerRequest: React.FC = () => {
     return Math.max(0, requested - allocated);
   };
 
+  const getInlineExceedAmountFromData = (
+    item: AllocationItem,
+    data: FarmerRequestForm,
+  ): number => {
+    const allocated = toSafeNumber(allocation?.[item.allocationField]);
+    const requested = Math.max(0, toSafeNumber(data[item.requestField]));
+    return Math.max(0, requested - allocated);
+  };
+
   const hasOverAllocation = [
     ...fertilizerSummaryItems,
     ...seedSummaryItems,
@@ -701,6 +502,131 @@ const JoAddFarmerRequest: React.FC = () => {
       window.clearTimeout(timer);
     };
   }, [exceededSummaryItems]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const resolveInlineSuggestions = async () => {
+      if (!allocation) {
+        setInlineSuggestions({});
+        return;
+      }
+
+      const exceededItems = [...visibleFertilizerItems, ...visibleSeedItems]
+        .filter(
+          (item) => getInlineExceedAmountFromData(item, debouncedFormData) > 0,
+        )
+        .sort((a, b) => a.label.localeCompare(b.label));
+
+      if (exceededItems.length === 0) {
+        setInlineSuggestions({});
+        return;
+      }
+
+      const nextSuggestions: Record<string, InlineSuggestion> = {};
+      const activeSeedId = detectActiveSeedId(
+        debouncedFormData as unknown as Record<string, unknown>,
+      );
+      const noSubstituteMessageFor = (itemLabel: string): string =>
+        `No substitute found for ${itemLabel}. Consider contacting your supplier for restock.`;
+
+      await Promise.all(
+        exceededItems.map(async (item) => {
+          if (item.category === "fertilizer") {
+            const response = await resolveFertilizerShortageSuggestion({
+              seedId: activeSeedId,
+              shortageFertId: item.shortageId,
+            });
+
+            const payload: any = response.data;
+            if (response.error || !payload) {
+              nextSuggestions[item.requestField] = {
+                title: "Suggestion unavailable",
+                message:
+                  response.error || "Unable to load fertilizer suggestion.",
+                status: "error",
+              };
+              return;
+            }
+
+            if (
+              payload.status === "resolved" ||
+              payload.status === "tier2_fallback"
+            ) {
+              const tierLabel =
+                payload.status === "tier2_fallback"
+                  ? "Tier 2 fallback"
+                  : "Tier 1";
+              nextSuggestions[item.requestField] = {
+                title: `Suggested: ${payload.suggestion?.name || "N/A"}`,
+                message:
+                  payload.suggestion?.reason ||
+                  `${tierLabel} substitute selected for ${payload.shortage?.name || item.label}.`,
+                status: payload.status,
+              };
+              return;
+            }
+
+            nextSuggestions[item.requestField] = {
+              title: "No fertilizer substitute found",
+              message: noSubstituteMessageFor(item.label),
+              status: "unresolvable",
+            };
+            return;
+          }
+
+          const response = await resolveSeedShortageSuggestion({
+            seedId: item.shortageId,
+          });
+
+          const payload: any = response.data;
+          if (response.error || !payload) {
+            nextSuggestions[item.requestField] = {
+              title: "Suggestion unavailable",
+              message:
+                response.error || "Unable to load seed substitute suggestion.",
+              status: "error",
+            };
+            return;
+          }
+
+          const topSubstitute = Array.isArray(payload.substitutes)
+            ? payload.substitutes[0]
+            : null;
+
+          if (payload.status === "resolved" && topSubstitute) {
+            const maturityText =
+              topSubstitute.maturity_diff_days == null
+                ? "maturity diff unavailable"
+                : `${topSubstitute.maturity_diff_days >= 0 ? "+" : ""}${topSubstitute.maturity_diff_days} days`;
+
+            nextSuggestions[item.requestField] = {
+              title: `Suggested: ${topSubstitute.name}`,
+              message: `Best substitute for ${payload.original?.name || item.label}; maturity delta ${maturityText}.`,
+              status: "resolved",
+            };
+            return;
+          }
+
+          nextSuggestions[item.requestField] = {
+            title: "No seed substitute found",
+            message: noSubstituteMessageFor(item.label),
+            status: "unresolvable",
+          };
+        }),
+      );
+
+      if (!isCancelled) {
+        setInlineSuggestions(nextSuggestions);
+      }
+    };
+
+    resolveInlineSuggestions();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [allocation, debouncedFormData, visibleFertilizerItems, visibleSeedItems]);
 
   const runSubmitRequest = async () => {
     if (!formData.farmer_id) {
@@ -971,17 +897,24 @@ const JoAddFarmerRequest: React.FC = () => {
     <div className="jo-add-farmer-page-container">
       {showExceedConfirmModal && (
         <div className="jo-add-farmer-modal-backdrop">
-          <div className="jo-add-farmer-modal-card" role="dialog" aria-modal="true">
+          <div
+            className="jo-add-farmer-modal-card"
+            role="dialog"
+            aria-modal="true"
+          >
             <h3 className="jo-add-farmer-modal-title">⚠️ Exceeds Allocation</h3>
             <p className="jo-add-farmer-modal-message">
               Some requested values exceed the available incentives/allocation.
-              You can go back and edit the values, or submit anyway and adjust later.
+              You can go back and edit the values, or submit anyway and adjust
+              later.
             </p>
 
             <div className="jo-add-farmer-modal-list">
               {exceededSummaryItems.slice(0, 6).map((item) => (
                 <div key={item.label} className="jo-add-farmer-modal-list-item">
-                  {item.label}: exceeded by {formatSummaryValue(Math.abs(item.remaining))} {getExceededUnitByLabel(item.label)}
+                  {item.label}: exceeded by{" "}
+                  {formatSummaryValue(Math.abs(item.remaining))}{" "}
+                  {getExceededUnitByLabel(item.label)}
                 </div>
               ))}
               {exceededSummaryItems.length > 6 && (
@@ -1325,6 +1258,19 @@ const JoAddFarmerRequest: React.FC = () => {
                             bags.
                           </div>
                         )}
+                        {getInlineExceedAmount(item) > 0 &&
+                          inlineSuggestions[item.requestField] && (
+                            <div
+                              className={`jo-add-farmer-inline-suggestion-card jo-add-farmer-inline-suggestion-${inlineSuggestions[item.requestField].status}`}
+                            >
+                              <div className="jo-add-farmer-inline-suggestion-title">
+                                {inlineSuggestions[item.requestField].title}
+                              </div>
+                              <div className="jo-add-farmer-inline-suggestion-message">
+                                {inlineSuggestions[item.requestField].message}
+                              </div>
+                            </div>
+                          )}
                       </div>
                     ))
                   )}
@@ -1373,6 +1319,19 @@ const JoAddFarmerRequest: React.FC = () => {
                             kg.
                           </div>
                         )}
+                        {getInlineExceedAmount(item) > 0 &&
+                          inlineSuggestions[item.requestField] && (
+                            <div
+                              className={`jo-add-farmer-inline-suggestion-card jo-add-farmer-inline-suggestion-${inlineSuggestions[item.requestField].status}`}
+                            >
+                              <div className="jo-add-farmer-inline-suggestion-title">
+                                {inlineSuggestions[item.requestField].title}
+                              </div>
+                              <div className="jo-add-farmer-inline-suggestion-message">
+                                {inlineSuggestions[item.requestField].message}
+                              </div>
+                            </div>
+                          )}
                       </div>
                     ))
                   )}
