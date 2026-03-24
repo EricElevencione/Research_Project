@@ -68,6 +68,7 @@ const TechFarmerProf: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [expandedParcel, setExpandedParcel] = useState<string | null>(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const isActive = (path: string) => {
         if (path === '/technician-farmerprofile') {
@@ -344,7 +345,7 @@ const TechFarmerProf: React.FC = () => {
             <div className="page">
 
                 {/* Sidebar starts here */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -401,10 +402,16 @@ const TechFarmerProf: React.FC = () => {
                         </button>
                     </nav>
                 </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
                 {/* Sidebar ends here */}
 
                 {/* Main content starts here */}
                 <div className="tech-prof-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Farmer Profile</div>
+                    </div>
                     {/* Print-only layout (form-inspired, not a copy) */}
                     <div className="print-profile">
                         <div className="print-header">

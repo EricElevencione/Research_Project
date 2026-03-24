@@ -200,6 +200,7 @@ const AuditTrail: React.FC = () => {
     const [viewMode, setViewMode] = useState<'list' | 'stats'>('list');
     const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -1192,9 +1193,9 @@ const handleExport = async (format: 'json' | 'csv') => {
 
     return (
         <div className="admin-audit-page-container">
-            <div className="admin-audit-main-page">
+            <div className="admin-audit-main-page has-mobile-sidebar">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -1249,9 +1250,14 @@ const handleExport = async (format: 'json' | 'csv') => {
                         </button>
                     </nav>
                 </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
                 <div className="admin-audit-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Audit Trail</div>
+                    </div>
                     {/* Header */}
                     <div className="admin-audit-header">
                         <div className="admin-audit-header-left">

@@ -42,6 +42,7 @@
 
 .tech-landplotting-main-wrapper {
     display: flex;
+    flex-direction: column;
     flex: 1;
     height: 100%;
     gap: 2rem;
@@ -49,12 +50,13 @@
 }
 
 .tech-landplotting-map-section {
-    flex: 1.2;
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
+    min-height: 400px;
 }
 
 .tech-landplotting-map-container {
@@ -76,7 +78,7 @@
 }
 
 .tech-landplotting-details-panel {
-    flex: 0.8;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     background: white;
@@ -84,7 +86,7 @@
     padding: 2.5rem;
     justify-content: flex-start;
     overflow-y: auto;
-    max-height: 100%;
+    max-height: 45%;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
@@ -253,20 +255,8 @@
     opacity: 0.5;
     background: linear-gradient(135deg, #cbd5e0 0%, #a0aec0 100%);
     box-shadow: none;
-    transform: none solid #222;
-    background: #fff;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.95rem;
-    color: #222;
-}
-
-.tech-landplotting-save-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-    background: #f5f5f5;
-    color: #999;
+    transform: none;
+    color: #ffffff;
 }
 
 
@@ -294,6 +284,7 @@
     .tech-landplotting-main-wrapper {
         padding: 1rem;
         gap: 1rem;
+        flex-direction: column;
     }
 
     .tech-landplotting-parcel-title {
@@ -315,6 +306,7 @@
 
     .tech-landplotting-details-panel {
         padding: 1.5rem;
+        max-height: 50%;
     }
 
     .tech-landplotting-details-container {
@@ -344,10 +336,36 @@
 
 .tech-landplotting-details-panel::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
 
-    .tech-landplotting-save-button {
-        width: 100%;
-        padding: 0.75rem 2rem;
+@media (max-width: 640px) {
+    .tech-landplotting-container {
+        margin: 0.5rem;
+        border-radius: 12px;
+        min-height: calc(100vh - 1rem);
+    }
+
+    .tech-landplotting-main-wrapper {
+        padding: 0.75rem;
+    }
+
+    .tech-landplotting-map-section {
+        padding: 0.75rem;
+        min-height: 280px;
+    }
+
+    .tech-landplotting-map-container {
+        height: 280px;
+        border-radius: 12px;
+    }
+
+    .tech-landplotting-details-panel {
+        padding: 1rem;
+        max-height: none;
+    }
+
+    .tech-landplotting-stat-value {
+        font-size: 1.35rem;
     }
 }
 

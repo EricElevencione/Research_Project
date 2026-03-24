@@ -26,7 +26,7 @@
     display: flex;
     flex-direction: column;
     background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
-    overflow: hidden;
+    overflow: auto;
 }
 
 /* Dashboard Header */
@@ -43,8 +43,16 @@
     border-radius: 8px;
     padding: 24px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    max-height: calc(100vh - 120px);
+    max-height: none;
     overflow-y: auto;
+}
+
+@media (max-width: 1024px) {
+    .page-container {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+    }
 }
 
 /* Loading and Error States */

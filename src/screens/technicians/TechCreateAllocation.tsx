@@ -39,6 +39,7 @@ const TechCreateAllocation: React.FC = () => {
         message: '',
         type: 'success'
     });
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Show toast notification
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success', duration: number = 3000) => {
@@ -143,7 +144,7 @@ const TechCreateAllocation: React.FC = () => {
         <div className="tech-allocation-page-container">
             <div className="tech-allocation-page">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -211,8 +212,14 @@ const TechCreateAllocation: React.FC = () => {
                     </nav>
                 </div>
 
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
                 {/* Main Content */}
                 <div className="tech-allocation-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Create Allocation</div>
+                    </div>
                     <div className="tech-allocation-header">
                         <h2 className="tech-allocation-title">Create Regional Allocation</h2>
                         <p className="tech-allocation-subtitle">Input fertilizer and seed allocation from Regional Office</p>

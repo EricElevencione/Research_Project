@@ -66,6 +66,7 @@ const TechIncentives: React.FC = () => {
     const [seasonRequestsMap, setSeasonRequestsMap] = useState<Record<string, any[]>>({});
     const [seasonDistributionsMap, setSeasonDistributionsMap] = useState<Record<string, any[]>>({});
     const [burndownData, setBurndownData] = useState<{ date: string; remaining: number; distributed: number }[]>([]);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         fetchAllocations();
@@ -108,8 +109,8 @@ const TechIncentives: React.FC = () => {
 
             setAllocations(allocationsWithCounts);
 
-            if (!selectedSeason && sortedAllocations.length > 0) {
-                setSelectedSeason(sortedAllocations[0].season);
+            if (!selectedSeason && allocationsWithCounts.length > 0) {
+                setSelectedSeason(allocationsWithCounts[0].season);
             }
         } catch (error: any) {
             console.error('Error fetching allocations:', error);
@@ -283,7 +284,7 @@ const TechIncentives: React.FC = () => {
             <div className="tech-incent-page">
 
                 {/* Sidebar starts here */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -342,8 +343,16 @@ const TechIncentives: React.FC = () => {
                 </div>
                 {/* Sidebar ends here */}
 
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
                 {/* Main content starts here */}
                 <div className="tech-incent-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>
+                            ☰
+                        </button>
+                        <div className="tech-incent-mobile-title">Technician Incentives</div>
+                    </div>
 
                     <div className="tech-incent-dashboard-header">
                         <div>

@@ -23,6 +23,19 @@
     height: 100%;
 }
 
+@media (max-width: 1024px) {
+    .jo-dashboard-page-container {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+    }
+
+    .jo-dashboard-page {
+        height: auto;
+        min-height: 100vh;
+    }
+}
+
 .jo-dashboard-page-title {
     font-weight: 600;
     font-size: 28px;

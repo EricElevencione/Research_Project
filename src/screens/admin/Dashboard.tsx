@@ -18,6 +18,7 @@ const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [selectedSeason, setSelectedSeason] = useState<string>('');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const dashData = useAdminDashboardStats(selectedSeason || undefined);
 
@@ -50,10 +51,10 @@ const Dashboard: React.FC = () => {
     return (
         <div className="admin-page-container">
 
-            <div className="admin-dashboard-page">
+            <div className="admin-dashboard-page has-mobile-sidebar">
 
                 {/* Sidebar starts here */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -120,14 +121,19 @@ const Dashboard: React.FC = () => {
                     </nav>
                 </div>
                 {/* Sidebar ends here */}
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main content starts here */}
                 <div className="admin-dashboard-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Admin</div>
+                    </div>
 
                     {/* Header with season selector */}
                     <div className="admin-dash-header">
                         <div>
-                            <h1 className="admin-dash-title">JO Executive Dashboard</h1>
+                            <h1 className="admin-dash-title">Admin Dashboard</h1>
                             <p className="admin-dash-subtitle">
                                 {formatSeasonLabel(selectedSeason || dashData.currentSeason)} &bull;
                                 Last updated: {dashData.lastUpdated.toLocaleTimeString()}

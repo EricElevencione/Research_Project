@@ -60,6 +60,7 @@ const TechAddFarmerRequest: React.FC = () => {
         message: '',
         type: 'success'
     });
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Show toast notification
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success', duration: number = 3000) => {
@@ -331,7 +332,7 @@ const TechAddFarmerRequest: React.FC = () => {
         <div className="tech-add-farmer-page-container">
             <div className="tech-add-farmer-page">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -399,8 +400,14 @@ const TechAddFarmerRequest: React.FC = () => {
                     </nav>
                 </div>
 
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
                 {/* Main Content */}
                 <div className="tech-add-farmer-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Add Request</div>
+                    </div>
                     <div className="tech-add-farmer-header">
                         <h2 className="tech-add-farmer-title">➕ Add Farmer Request</h2>
                         <p className="tech-add-farmer-subtitle">

@@ -89,6 +89,7 @@ const JoManageRequests: React.FC = () => {
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
     const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning'>('success');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Delete Confirmation Modal State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -640,9 +641,9 @@ const JoManageRequests: React.FC = () => {
                 </div>
             )}
             
-            <div className="page">
+            <div className="page has-mobile-sidebar">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -708,9 +709,14 @@ const JoManageRequests: React.FC = () => {
 
                     </nav>
                 </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
                 <div className="main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">JO Requests</div>
+                    </div>
                     <div className="jo-manage-dashboard-header-incent">
                         <div>
                             <h2 className="jo-manage-page-header">Manage Farmer Requests</h2>

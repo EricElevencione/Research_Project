@@ -73,6 +73,7 @@ const ManageRequests: React.FC = () => {
     // Suggestions Modal Feature
     const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
     const [expandedFarmerInModal, setExpandedFarmerInModal] = useState<number | null>(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // DSS Feature: Apply alternatives
     const [selectedAlternative, setSelectedAlternative] = useState<{ [key: number]: { suggestionIdx: number, alternativeIdx: number } }>({});
@@ -697,9 +698,9 @@ const ManageRequests: React.FC = () => {
                     }
                 }
             `}</style>
-            <div className="admin-req-page">
+            <div className="admin-req-page has-mobile-sidebar">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -764,9 +765,14 @@ const ManageRequests: React.FC = () => {
                         </button>
                     </nav>
                 </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
                 <div className="admin-req-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Admin Requests</div>
+                    </div>
                     <div className="admin-req-dashboard-header">
                         <div>
                             <h2 className="admin-req-page-header">View Farmer Requests</h2>

@@ -55,6 +55,7 @@ const JoAddFarmerRequest: React.FC = () => {
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
     const [notificationType, setNotificationType] = useState<'success' | 'error'>('success');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const [formData, setFormData] = useState<FarmerRequestForm>({
         farmer_id: 0,
@@ -344,9 +345,9 @@ const JoAddFarmerRequest: React.FC = () => {
                 </div>
             )}
             
-            <div className="jo-add-farmer-page">
+            <div className="jo-add-farmer-page has-mobile-sidebar">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -412,9 +413,14 @@ const JoAddFarmerRequest: React.FC = () => {
 
                     </nav>
                 </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
                 <div className="jo-add-farmer-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">JO Add Request</div>
+                    </div>
                     <div className="jo-add-farmer-header">
                         <h2 className="jo-add-farmer-title">➕ Add Farmer Request</h2>
                         <p className="jo-add-farmer-subtitle">

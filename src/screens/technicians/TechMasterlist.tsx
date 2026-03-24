@@ -85,6 +85,7 @@ const TechMasterlist: React.FC = () => {
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedOwnershipType, setSelectedOwnershipType] = useState<string>('all');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -665,7 +666,7 @@ const TechMasterlist: React.FC = () => {
       <div className="tech-masterlist-page">
 
         {/* Sidebar starts here */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <nav className="sidebar-nav">
             <div className='sidebar-logo'>
               <img src={LogoImage} alt="Logo" />
@@ -725,7 +726,13 @@ const TechMasterlist: React.FC = () => {
         </div>
         {/* Sidebar ends here */}
 
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
         <div className="tech-masterlist-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">Masterlist</div>
+          </div>
           <div className="tech-masterlist-dashboard-header">
             <div>
               <h2 className="tech-masterlist-page-title">Masterlist</h2>

@@ -51,6 +51,7 @@ const JoViewAllocation: React.FC = () => {
     const [requests, setRequests] = useState<FarmerRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -183,9 +184,9 @@ const JoViewAllocation: React.FC = () => {
 
     return (
         <div className="jo-view-alloc-page-container">
-            <div className="jo-view-alloc-page">
+            <div className="jo-view-alloc-page has-mobile-sidebar">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -250,9 +251,14 @@ const JoViewAllocation: React.FC = () => {
                         </button>
                     </nav>
                 </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
                 <div className="jo-view-alloc-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">JO View Allocation</div>
+                    </div>
                     {/* Header */}
                     <div className="jo-view-alloc-header">
                         <div>

@@ -91,6 +91,7 @@ const TechManageRequests: React.FC = () => {
         message: '',
         type: 'success'
     });
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Show toast notification
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -750,7 +751,7 @@ const TechManageRequests: React.FC = () => {
         <div className="page-container">
             <div className="page">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -808,8 +809,14 @@ const TechManageRequests: React.FC = () => {
                     </nav>
                 </div>
 
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
                 {/* Main Content */}
                 <div className="tech-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Manage Requests</div>
+                    </div>
                     <div className="tech-manage-dashboard-header-incent">
                         <div className="tech-manage-header-sub">
                             <h2 className="tech-manage-page-header">Manage Farmer Requests</h2>

@@ -80,6 +80,7 @@ const TechRsbsa: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(null);
@@ -392,7 +393,7 @@ const TechRsbsa: React.FC = () => {
       <div className="tech-rsbsa-page">
 
         {/* Sidebar starts here */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <nav className="sidebar-nav">
             <div className='sidebar-logo'>
               <img src={LogoImage} alt="Logo" />
@@ -450,10 +451,16 @@ const TechRsbsa: React.FC = () => {
 
           </nav>
         </div>
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
         {/* Sidebar ends here */}
 
         {/* Main content starts here */}
         <div className="tech-rsbsa-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">RSBSA</div>
+          </div>
           <div className="tech-rsbsa-dashboard-header">
             <div>
               <h2 className="tech-rsbsa-page-title">Registered Land Owners</h2>

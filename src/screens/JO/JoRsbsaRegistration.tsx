@@ -189,6 +189,7 @@ const JoRsbsa: React.FC = () => {
     message: '',
     type: 'success'
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Show toast notification
@@ -848,10 +849,10 @@ const JoRsbsa: React.FC = () => {
   return (
     <div className="jo-registration-page-container">
 
-      <div className="jo-registration-page">
+      <div className="jo-registration-page has-mobile-sidebar">
 
         {/* Sidebar starts here */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <nav className="sidebar-nav">
             <div className='sidebar-logo'>
               <img src={LogoImage} alt="Logo" />
@@ -920,9 +921,14 @@ const JoRsbsa: React.FC = () => {
           </nav>
         </div>
         {/* Sidebar ends here */}
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
         {/* Main content starts here */}
         <div className="jo-registration-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">JO RSBSA Registration</div>
+          </div>
           <h2>RSBSA Enrollment Form</h2>
 
           <div className="jo-registration-back-button">

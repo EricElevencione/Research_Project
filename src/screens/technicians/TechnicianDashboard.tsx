@@ -30,11 +30,11 @@ interface DashboardData {
 const TechnicianDashboard: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const dashData = useTechnicianDashboardStats();
 
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [checklistFilter, setChecklistFilter] = useState<'all' | 'incomplete' | 'complete'>('all');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -69,7 +69,7 @@ const TechnicianDashboard: React.FC = () => {
             <div className="tech-dashboard-page">
 
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -112,8 +112,14 @@ const TechnicianDashboard: React.FC = () => {
                     </nav>
                 </div>
 
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
                 {/* Main content */}
                 <div className="tech-dashboard-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Dashboard</div>
+                    </div>
                     <h2 className="tech-dashboard-page-title">Data Quality Dashboard</h2>
 
                     {/* Stat cards */}

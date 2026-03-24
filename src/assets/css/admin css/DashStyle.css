@@ -15,6 +15,19 @@
     height: 100%;
 }
 
+@media (max-width: 1024px) {
+    .admin-page-container {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+    }
+
+    .admin-dashboard-page {
+        height: auto;
+        min-height: 100vh;
+    }
+}
+
 .admin-dashboard-main-content {
     flex: 1;
     padding: 24px;

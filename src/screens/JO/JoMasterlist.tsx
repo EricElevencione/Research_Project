@@ -158,6 +158,7 @@ const JoMasterlist: React.FC = () => {
   const [parcelErrors, setParcelErrors] = useState<Record<string, string>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -856,9 +857,9 @@ const JoMasterlist: React.FC = () => {
 
   return (
     <div className="jo-masterlist-page-container">
-      <div className="jo-masterlist-page">
+      <div className="jo-masterlist-page has-mobile-sidebar">
         {/* Sidebar starts here */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <nav className="sidebar-nav">
             <div className='sidebar-logo'>
               <img src={LogoImage} alt="Logo" />
@@ -925,9 +926,14 @@ const JoMasterlist: React.FC = () => {
           </nav>
         </div>
         {/* Sidebar ends here */}
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
         {/* Main content starts here */}
         <div className="jo-masterlist-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">JO Masterlist</div>
+          </div>
           <div className="jo-masterlist-dashboard-header">
             <div>
               <h2 className="jo-masterlist-page-title">Masterlist</h2>

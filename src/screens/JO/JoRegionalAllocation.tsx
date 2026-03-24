@@ -33,6 +33,7 @@ interface RegionalAllocation {
 const JoRegionalAllocation: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -122,10 +123,10 @@ const JoRegionalAllocation: React.FC = () => {
         formData.vegetable_seeds_kg;
 
     return (
-        <div className="regional-allocation-container">
+        <div className="regional-allocation-container has-mobile-sidebar">
 
             {/* Sidebar starts here */}
-            <div className="sidebar">
+            <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                 <nav className="sidebar-nav">
                     <div className='sidebar-logo'>
                         <img src={LogoImage} alt="Logo" />
@@ -192,9 +193,14 @@ const JoRegionalAllocation: React.FC = () => {
                 </nav>
             </div>
             {/* Sidebar ends here */}
+            <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
             {/* Main Content */}
             <div className="main-content jo-regional-main-content">
+                <div className="tech-incent-mobile-header">
+                    <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                    <div className="tech-incent-mobile-title">JO Regional Allocation</div>
+                </div>
 
                 <div className="content-header jo-regional-content-header">
                     <h2>Regional Allocation Input</h2>

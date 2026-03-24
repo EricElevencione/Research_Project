@@ -30,6 +30,7 @@ interface AllocationFormData {
 
 const JoCreateAllocation: React.FC = () => {
     const navigate = useNavigate();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -149,9 +150,9 @@ const JoCreateAllocation: React.FC = () => {
 
     return (
         <div className="jo-allocation-page-container">
-            <div className="jo-allocation-page">
+            <div className="jo-allocation-page has-mobile-sidebar">
                 {/* Sidebar */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -217,9 +218,14 @@ const JoCreateAllocation: React.FC = () => {
 
                     </nav>
                 </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
                 <div className="jo-allocation-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">JO Create Allocation</div>
+                    </div>
                     <div className="jo-allocation-header">
                         <h2 className="jo-allocation-title">Create Regional Allocation</h2>
                         <p className="jo-allocation-subtitle">Input fertilizer and seed allocation from Regional Office</p>

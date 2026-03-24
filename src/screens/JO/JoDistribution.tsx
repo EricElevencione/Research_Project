@@ -113,6 +113,7 @@ const JoDistribution: React.FC = () => {
     const [editFormData, setEditFormData] = useState<RegionalAllocation | null>(null);
     const [requestCount, setRequestCount] = useState<number>(0);
     const [savingEdit, setSavingEdit] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Completion Report State
     const [showCompletionReport, setShowCompletionReport] = useState(false);
@@ -537,9 +538,9 @@ const JoDistribution: React.FC = () => {
     };
 
     return (
-        <div className="distribution-container">
+        <div className="distribution-container has-mobile-sidebar">
             {/* Sidebar starts here */}
-            <div className="sidebar">
+            <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                 <nav className="sidebar-nav">
                     <div className='sidebar-logo'>
                         <img src={LogoImage} alt="Logo" />
@@ -606,9 +607,14 @@ const JoDistribution: React.FC = () => {
                 </nav>
             </div>
             {/* Sidebar ends here */}
+            <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
             {/* Main Content */}
             <div className="main-content distribution-main-content">
+                <div className="tech-incent-mobile-header">
+                    <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                    <div className="tech-incent-mobile-title">JO Distribution</div>
+                </div>
                 <div className="content-header distribution-content-header">
                     <h2>Distribution Logs</h2>
                     <p>View all approved farmer distributions organized by regional allocation</p>

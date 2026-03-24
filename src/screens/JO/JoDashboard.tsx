@@ -120,6 +120,7 @@ const JoDashboard: React.FC = () => {
 	const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+	const [sidebarOpen, setSidebarOpen] = useState(false);
 
 	// Season selector state
 	const [availableSeasons, setAvailableSeasons] = useState<AvailableSeason[]>([]);
@@ -301,10 +302,10 @@ const JoDashboard: React.FC = () => {
 	return (
 		<div className="jo-dashboard-page-container">
 			
-			<div className="jo-dashboard-page">
+			<div className="jo-dashboard-page has-mobile-sidebar">
 
 				{/* Sidebar */}
-				<div className="sidebar">
+				<div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
 					<nav className="sidebar-nav">
 						<div className='sidebar-logo'>
 							<img src={LogoImage} alt="Logo" />
@@ -369,9 +370,14 @@ const JoDashboard: React.FC = () => {
 						</button>
 					</nav>
 				</div>
+				<div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
 				{/* Main Content - Executive Dashboard */}
 				<div className="jo-executive-dashboard">
+					<div className="tech-incent-mobile-header">
+						<button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+						<div className="tech-incent-mobile-title">JO Dashboard</div>
+					</div>
 					{/* Header */}
 					<div className="executive-header">
 						<div className="header-left">

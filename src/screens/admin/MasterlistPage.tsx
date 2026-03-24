@@ -44,6 +44,7 @@ const Masterlist: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [farmerStatus, setFarmerStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -208,9 +209,9 @@ const Masterlist: React.FC = () => {
 
   return (
     <div className="masterlist-admin-page-container">
-      <div className="masterlist-admin-page">
+      <div className="masterlist-admin-page has-mobile-sidebar">
         {/* Sidebar starts here */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <nav className="sidebar-nav">
             <div className='sidebar-logo'>
               <img src={LogoImage} alt="Logo" />
@@ -278,9 +279,14 @@ const Masterlist: React.FC = () => {
           </nav>
         </div>
         {/* Sidebar ends here */}
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
         {/* Main content starts here */}
         <div className="masterlist-admin-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">Admin Masterlist</div>
+          </div>
           <div className="masterlist-admin-dashboard-header">
             <h2 className="masterlist-admin-page-header">Masterlist</h2>
           </div>
