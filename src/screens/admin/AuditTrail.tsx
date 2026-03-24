@@ -554,10 +554,7 @@ const AuditTrail: React.FC = () => {
   // Replace handleExport
   const handleExport = async (format: "json" | "csv") => {
     try {
-      const content = await auditAPI.exportLogs(
-        buildAuditFilters(),
-        format,
-      );
+      const content = await auditAPI.exportLogs(buildAuditFilters(), format);
 
       // Create download link
       const blob = new Blob([content], {
@@ -1958,7 +1955,9 @@ const AuditTrail: React.FC = () => {
                   ? "⚠️"
                   : "❌"}
             </span>
-            <span className="admin-audit-toast-message">{notificationMessage}</span>
+            <span className="admin-audit-toast-message">
+              {notificationMessage}
+            </span>
           </div>
           <button
             className="admin-audit-toast-close"
