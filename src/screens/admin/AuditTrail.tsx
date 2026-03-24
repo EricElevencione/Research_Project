@@ -104,19 +104,57 @@ interface AllocationLookupRow {
   allocation_date: string | null;
   urea_46_0_0_bags: number | null;
   complete_14_14_14_bags: number | null;
+  np_16_20_0_bags: number | null;
   ammonium_sulfate_21_0_0_bags: number | null;
   muriate_potash_0_0_60_bags: number | null;
+  zinc_sulfate_bags: number | null;
+  vermicompost_bags: number | null;
+  chicken_manure_bags: number | null;
+  rice_straw_kg: number | null;
+  carbonized_rice_hull_bags: number | null;
+  biofertilizer_liters: number | null;
+  nanobiofertilizer_liters: number | null;
+  organic_root_exudate_mix_liters: number | null;
+  azolla_microphylla_kg: number | null;
+  foliar_liquid_fertilizer_npk_liters: number | null;
+  rice_seeds_nsic_rc160_kg: number | null;
+  rice_seeds_nsic_rc222_kg: number | null;
   jackpot_kg: number | null;
   us88_kg: number | null;
   th82_kg: number | null;
   rh9000_kg: number | null;
   lumping143_kg: number | null;
   lp296_kg: number | null;
+  mestiso_1_kg: number | null;
+  mestiso_20_kg: number | null;
+  mestiso_29_kg: number | null;
+  mestiso_55_kg: number | null;
+  mestiso_73_kg: number | null;
+  mestiso_99_kg: number | null;
+  mestiso_103_kg: number | null;
+  nsic_rc402_kg: number | null;
+  nsic_rc480_kg: number | null;
+  nsic_rc216_kg: number | null;
+  nsic_rc218_kg: number | null;
+  nsic_rc506_kg: number | null;
+  nsic_rc508_kg: number | null;
+  nsic_rc512_kg: number | null;
+  nsic_rc534_kg: number | null;
+  tubigan_28_kg: number | null;
+  tubigan_30_kg: number | null;
+  tubigan_22_kg: number | null;
+  sahod_ulan_2_kg: number | null;
+  sahod_ulan_10_kg: number | null;
+  salinas_6_kg: number | null;
+  salinas_7_kg: number | null;
+  salinas_8_kg: number | null;
+  malagkit_5_kg: number | null;
 }
 
 const ALLOCATION_FERTILIZER_FIELDS: AllocationFieldDefinition[] = [
   { key: "urea_46_0_0_bags", label: "Urea (46-0-0)", unit: "bags" },
   { key: "complete_14_14_14_bags", label: "Complete (14-14-14)", unit: "bags" },
+  { key: "np_16_20_0_bags", label: "16-20-0", unit: "bags" },
   {
     key: "ammonium_sulfate_21_0_0_bags",
     label: "Ammonium Sulfate (21-0-0)",
@@ -127,15 +165,75 @@ const ALLOCATION_FERTILIZER_FIELDS: AllocationFieldDefinition[] = [
     label: "Muriate Potash (0-0-60)",
     unit: "bags",
   },
+  { key: "zinc_sulfate_bags", label: "Zinc Sulfate", unit: "bags" },
+  { key: "vermicompost_bags", label: "Vermicompost", unit: "bags" },
+  { key: "chicken_manure_bags", label: "Chicken Manure", unit: "bags" },
+  { key: "rice_straw_kg", label: "Rice Straw", unit: "kg" },
+  {
+    key: "carbonized_rice_hull_bags",
+    label: "Carbonized Rice Hull (CRH)",
+    unit: "bags",
+  },
+  {
+    key: "biofertilizer_liters",
+    label: "Biofertilizer (Liquid Concentrate)",
+    unit: "liters",
+  },
+  {
+    key: "nanobiofertilizer_liters",
+    label: "Nanobiofertilizer",
+    unit: "liters",
+  },
+  {
+    key: "organic_root_exudate_mix_liters",
+    label: "Organic Root Exudate Mix",
+    unit: "liters",
+  },
+  {
+    key: "azolla_microphylla_kg",
+    label: "Azolla microphylla",
+    unit: "kg",
+  },
+  {
+    key: "foliar_liquid_fertilizer_npk_liters",
+    label: "Foliar Liquid Fertilizer (NPK)",
+    unit: "liters",
+  },
 ];
 
 const ALLOCATION_SEED_FIELDS: AllocationFieldDefinition[] = [
+  { key: "rice_seeds_nsic_rc160_kg", label: "NSIC Rc 160", unit: "kg" },
+  { key: "rice_seeds_nsic_rc222_kg", label: "NSIC Rc 222", unit: "kg" },
   { key: "jackpot_kg", label: "Jackpot", unit: "kg" },
   { key: "us88_kg", label: "US88", unit: "kg" },
   { key: "th82_kg", label: "TH82", unit: "kg" },
   { key: "rh9000_kg", label: "RH9000", unit: "kg" },
   { key: "lumping143_kg", label: "Lumping 143", unit: "kg" },
   { key: "lp296_kg", label: "LP296", unit: "kg" },
+  { key: "mestiso_1_kg", label: "Mestiso 1", unit: "kg" },
+  { key: "mestiso_20_kg", label: "Mestiso 20", unit: "kg" },
+  { key: "mestiso_29_kg", label: "Mestiso 29", unit: "kg" },
+  { key: "mestiso_55_kg", label: "Mestiso 55", unit: "kg" },
+  { key: "mestiso_73_kg", label: "Mestiso 73", unit: "kg" },
+  { key: "mestiso_99_kg", label: "Mestiso 99", unit: "kg" },
+  { key: "mestiso_103_kg", label: "Mestiso 103", unit: "kg" },
+  { key: "nsic_rc402_kg", label: "NSIC Rc 402", unit: "kg" },
+  { key: "nsic_rc480_kg", label: "NSIC Rc 480", unit: "kg" },
+  { key: "nsic_rc216_kg", label: "NSIC Rc 216", unit: "kg" },
+  { key: "nsic_rc218_kg", label: "NSIC Rc 218", unit: "kg" },
+  { key: "nsic_rc506_kg", label: "NSIC Rc 506", unit: "kg" },
+  { key: "nsic_rc508_kg", label: "NSIC Rc 508", unit: "kg" },
+  { key: "nsic_rc512_kg", label: "NSIC Rc 512", unit: "kg" },
+  { key: "nsic_rc534_kg", label: "NSIC Rc 534", unit: "kg" },
+  { key: "tubigan_28_kg", label: "Tubigan 28", unit: "kg" },
+  { key: "tubigan_30_kg", label: "Tubigan 30", unit: "kg" },
+  { key: "tubigan_22_kg", label: "Tubigan 22", unit: "kg" },
+  { key: "sahod_ulan_2_kg", label: "Sahod Ulan 2", unit: "kg" },
+  { key: "sahod_ulan_10_kg", label: "Sahod Ulan 10", unit: "kg" },
+  { key: "salinas_6_kg", label: "Salinas 6", unit: "kg" },
+  { key: "salinas_7_kg", label: "Salinas 7", unit: "kg" },
+  { key: "salinas_8_kg", label: "Salinas 8", unit: "kg" },
+  { key: "malagkit_5_kg", label: "Malagkit 5", unit: "kg" },
 ];
 
 const ALLOCATION_DETECTION_FIELDS = [
@@ -204,6 +302,18 @@ const AuditTrail: React.FC = () => {
 
   // Filters
   const [timeRangeMonths, setTimeRangeMonths] = useState<string>("1");
+  const [userNameFilter, setUserNameFilter] = useState<string>("");
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
+  const [actionFilter, setActionFilter] = useState<string>("all");
+  const [moduleFilter, setModuleFilter] = useState<string>("all");
+  const [searchFilter, setSearchFilter] = useState<string>("");
+
+  // Notifications
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationType, setNotificationType] = useState<
+    "success" | "error" | "warning"
+  >("success");
 
   // View state
   const [viewMode, setViewMode] = useState<"list" | "stats">("list");
@@ -237,6 +347,20 @@ const AuditTrail: React.FC = () => {
     "#14b8a6",
   ];
 
+  const ACTION_FILTER_OPTIONS = Object.keys(ACTION_COLORS);
+  const MODULE_FILTER_OPTIONS = Object.keys(MODULE_PAGE_FALLBACKS).sort();
+
+  const showToast = (
+    message: string,
+    type: "success" | "error" | "warning",
+    timeout = 3200,
+  ) => {
+    setNotificationType(type);
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setTimeout(() => setShowNotification(false), timeout);
+  };
+
   const buildDateRangeFilters = useCallback(() => {
     if (timeRangeMonths === "all") {
       return {};
@@ -257,12 +381,33 @@ const AuditTrail: React.FC = () => {
     };
   }, [timeRangeMonths]);
 
+  const buildAuditFilters = useCallback(() => {
+    const userName = userNameFilter.trim();
+    const search = searchFilter.trim();
+
+    return {
+      ...buildDateRangeFilters(),
+      userName: userName || undefined,
+      userRole: userRoleFilter !== "all" ? userRoleFilter : undefined,
+      action: actionFilter !== "all" ? actionFilter : undefined,
+      module: moduleFilter !== "all" ? moduleFilter : undefined,
+      search: search || undefined,
+    };
+  }, [
+    actionFilter,
+    buildDateRangeFilters,
+    moduleFilter,
+    searchFilter,
+    userNameFilter,
+    userRoleFilter,
+  ]);
+
   // Replace fetchLogs
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const result = await auditAPI.getLogs({
-        ...buildDateRangeFilters(),
+        ...buildAuditFilters(),
         page: pagination.page,
         limit: pagination.limit,
       });
@@ -275,11 +420,11 @@ const AuditTrail: React.FC = () => {
       }));
     } catch (error) {
       console.error("Error fetching audit logs:", error);
-      alert("Failed to fetch audit logs");
+      showToast("Failed to fetch audit logs", "error");
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, buildDateRangeFilters]);
+  }, [pagination.page, pagination.limit, buildAuditFilters]);
 
   // Fetch stats
   // Replace fetchStats
@@ -313,14 +458,51 @@ const AuditTrail: React.FC = () => {
                     allocation_date,
                     urea_46_0_0_bags,
                     complete_14_14_14_bags,
+                    np_16_20_0_bags,
                     ammonium_sulfate_21_0_0_bags,
                     muriate_potash_0_0_60_bags,
+                    zinc_sulfate_bags,
+                    vermicompost_bags,
+                    chicken_manure_bags,
+                    rice_straw_kg,
+                    carbonized_rice_hull_bags,
+                    biofertilizer_liters,
+                    nanobiofertilizer_liters,
+                    organic_root_exudate_mix_liters,
+                    azolla_microphylla_kg,
+                    foliar_liquid_fertilizer_npk_liters,
+                    rice_seeds_nsic_rc160_kg,
+                    rice_seeds_nsic_rc222_kg,
                     jackpot_kg,
                     us88_kg,
                     th82_kg,
                     rh9000_kg,
                     lumping143_kg,
-                    lp296_kg
+                    lp296_kg,
+                    mestiso_1_kg,
+                    mestiso_20_kg,
+                    mestiso_29_kg,
+                    mestiso_55_kg,
+                    mestiso_73_kg,
+                    mestiso_99_kg,
+                    mestiso_103_kg,
+                    nsic_rc402_kg,
+                    nsic_rc480_kg,
+                    nsic_rc216_kg,
+                    nsic_rc218_kg,
+                    nsic_rc506_kg,
+                    nsic_rc508_kg,
+                    nsic_rc512_kg,
+                    nsic_rc534_kg,
+                    tubigan_28_kg,
+                    tubigan_30_kg,
+                    tubigan_22_kg,
+                    sahod_ulan_2_kg,
+                    sahod_ulan_10_kg,
+                    salinas_6_kg,
+                    salinas_7_kg,
+                    salinas_8_kg,
+                    malagkit_5_kg
                 `);
 
       if (error) {
@@ -358,12 +540,22 @@ const AuditTrail: React.FC = () => {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
+  const clearFilters = () => {
+    setTimeRangeMonths("1");
+    setUserNameFilter("");
+    setUserRoleFilter("all");
+    setActionFilter("all");
+    setModuleFilter("all");
+    setSearchFilter("");
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
   // Export logs
   // Replace handleExport
   const handleExport = async (format: "json" | "csv") => {
     try {
       const content = await auditAPI.exportLogs(
-        buildDateRangeFilters(),
+        buildAuditFilters(),
         format,
       );
 
@@ -381,7 +573,7 @@ const AuditTrail: React.FC = () => {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error exporting logs:", error);
-      alert("Failed to export logs");
+      showToast("Failed to export logs", "error");
     }
   };
 
@@ -710,7 +902,23 @@ const AuditTrail: React.FC = () => {
     payload: Record<string, any>,
     fields: AllocationFieldDefinition[],
   ) => {
-    return fields.map((field) => (
+    const enteredFields = fields.filter((field) => {
+      const num = Number(payload[field.key]);
+      return Number.isFinite(num) && num !== 0;
+    });
+
+    if (enteredFields.length === 0) {
+      return (
+        <div className="admin-audit-allocation-row">
+          <span className="admin-audit-allocation-label">
+            No inputs recorded
+          </span>
+          <span className="admin-audit-allocation-value">-</span>
+        </div>
+      );
+    }
+
+    return enteredFields.map((field) => (
       <div className="admin-audit-allocation-row" key={field.key}>
         <span className="admin-audit-allocation-label">{field.label}</span>
         <span className="admin-audit-allocation-value">
@@ -805,6 +1013,66 @@ const AuditTrail: React.FC = () => {
           <span className="admin-audit-allocation-notes-value">
             {notesText}
           </span>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAllocationChangeSummary = (oldValue: any, newValue: any) => {
+    const oldPayload = parseJsonLikeValue(oldValue);
+    const newPayload = parseJsonLikeValue(newValue);
+
+    if (
+      !oldPayload ||
+      typeof oldPayload !== "object" ||
+      Array.isArray(oldPayload) ||
+      !newPayload ||
+      typeof newPayload !== "object" ||
+      Array.isArray(newPayload) ||
+      !isAllocationPayload(oldPayload) ||
+      !isAllocationPayload(newPayload)
+    ) {
+      return null;
+    }
+
+    const changedFields = [
+      ...ALLOCATION_FERTILIZER_FIELDS,
+      ...ALLOCATION_SEED_FIELDS,
+    ]
+      .map((field) => {
+        const oldNum = Number(oldPayload[field.key] ?? 0);
+        const newNum = Number(newPayload[field.key] ?? 0);
+        const safeOld = Number.isFinite(oldNum) ? oldNum : 0;
+        const safeNew = Number.isFinite(newNum) ? newNum : 0;
+        const delta = safeNew - safeOld;
+        return {
+          ...field,
+          oldValue: safeOld,
+          newValue: safeNew,
+          delta,
+        };
+      })
+      .filter((field) => field.delta !== 0);
+
+    if (changedFields.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="admin-audit-detail-section">
+        <h4>Seed/Fertilizer Change Tracking</h4>
+        <div className="admin-audit-simple-grid">
+          {changedFields.map((field) => (
+            <div key={field.key} className="admin-audit-simple-item">
+              <span className="admin-audit-simple-label">{field.label}</span>
+              <span className="admin-audit-simple-value">
+                {formatAllocationAmount(field.oldValue, field.unit)} {" -> "}
+                {formatAllocationAmount(field.newValue, field.unit)} (
+                {field.delta > 0 ? "+" : ""}
+                {formatAllocationAmount(field.delta, field.unit)})
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -1608,7 +1876,9 @@ const AuditTrail: React.FC = () => {
         <div className="admin-audit-simple-grid">
           {entries.map(([key, fieldValue]) => (
             <div key={key} className="admin-audit-simple-item">
-              <span className="admin-audit-simple-label">{toKeyLabel(key)}</span>
+              <span className="admin-audit-simple-label">
+                {toKeyLabel(key)}
+              </span>
               <span className="admin-audit-simple-value">
                 {formatSimpleFieldValue(key, fieldValue)}
               </span>
@@ -1674,6 +1944,32 @@ const AuditTrail: React.FC = () => {
 
   return (
     <div className="admin-audit-page-container">
+      {showNotification && (
+        <div
+          className={`admin-audit-toast admin-audit-toast-${notificationType}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="admin-audit-toast-content">
+            <span className="admin-audit-toast-icon">
+              {notificationType === "success"
+                ? "✅"
+                : notificationType === "warning"
+                  ? "⚠️"
+                  : "❌"}
+            </span>
+            <span className="admin-audit-toast-message">{notificationMessage}</span>
+          </div>
+          <button
+            className="admin-audit-toast-close"
+            onClick={() => setShowNotification(false)}
+            aria-label="Close notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div className="admin-audit-main-page">
         {/* Sidebar */}
         <div className="sidebar">
@@ -1796,6 +2092,12 @@ const AuditTrail: React.FC = () => {
                     >
                       Refresh
                     </button>
+                    <button
+                      className="admin-audit-btn admin-audit-btn-secondary"
+                      onClick={clearFilters}
+                    >
+                      Clear Filters
+                    </button>
                     <div className="admin-audit-export-dropdown">
                       <button className="admin-audit-btn admin-audit-btn-export">
                         Export
@@ -1809,6 +2111,87 @@ const AuditTrail: React.FC = () => {
                         </button>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                <div className="admin-audit-filters-row">
+                  <div className="admin-audit-filter-group">
+                    <label>User Name</label>
+                    <input
+                      type="text"
+                      value={userNameFilter}
+                      onChange={(e) => {
+                        setUserNameFilter(e.target.value);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                      placeholder="Filter by actor name"
+                    />
+                  </div>
+
+                  <div className="admin-audit-filter-group">
+                    <label>Keyword Search</label>
+                    <input
+                      type="text"
+                      value={searchFilter}
+                      onChange={(e) => {
+                        setSearchFilter(e.target.value);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                      placeholder="Description, record type, module"
+                    />
+                  </div>
+
+                  <div className="admin-audit-filter-group">
+                    <label>User Role</label>
+                    <select
+                      value={userRoleFilter}
+                      onChange={(e) => {
+                        setUserRoleFilter(e.target.value);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                    >
+                      <option value="all">All Roles</option>
+                      <option value="admin">Admin</option>
+                      <option value="technician">Technician</option>
+                      <option value="jo">JO</option>
+                      <option value="anonymous">Anonymous</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-audit-filter-group">
+                    <label>Action</label>
+                    <select
+                      value={actionFilter}
+                      onChange={(e) => {
+                        setActionFilter(e.target.value);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                    >
+                      <option value="all">All Actions</option>
+                      {ACTION_FILTER_OPTIONS.map((action) => (
+                        <option key={action} value={action}>
+                          {action}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="admin-audit-filter-group">
+                    <label>Module</label>
+                    <select
+                      value={moduleFilter}
+                      onChange={(e) => {
+                        setModuleFilter(e.target.value);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                    >
+                      <option value="all">All Modules</option>
+                      {MODULE_FILTER_OPTIONS.map((moduleName) => (
+                        <option key={moduleName} value={moduleName}>
+                          {moduleName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -2222,6 +2605,13 @@ const AuditTrail: React.FC = () => {
                   {renderValueBlock(selectedLog.new_values, "new", selectedLog)}
                 </div>
               )}
+
+              {selectedLog.old_values &&
+                selectedLog.new_values &&
+                renderAllocationChangeSummary(
+                  selectedLog.old_values,
+                  selectedLog.new_values,
+                )}
             </div>
           </div>
         </div>

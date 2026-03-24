@@ -1119,3 +1119,66 @@
 .jo-incent-delete-toast-close:hover {
   opacity: 0.8;
 }
+
+/* Save/Update Notification Toast */
+.jo-incent-update-toast {
+  position: fixed;
+  top: 84px;
+  right: 18px;
+  z-index: 10021;
+  min-width: 340px;
+  max-width: 520px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+  border-left: 5px solid transparent;
+  animation: jo-incent-slideUp 0.25s ease;
+}
+
+.jo-incent-update-toast.success {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #86efac;
+  border-left-color: #10b981;
+  color: #065f46;
+}
+
+.jo-incent-update-toast.error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fca5a5;
+  border-left-color: #ef4444;
+  color: #991b1b;
+}
+
+.jo-incent-update-toast-message {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.jo-incent-update-toast-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.jo-incent-update-toast-close:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+  .jo-incent-update-toast {
+    top: 76px;
+    right: 12px;
+    left: 12px;
+    min-width: 0;
+    max-width: none;
+  }
+}

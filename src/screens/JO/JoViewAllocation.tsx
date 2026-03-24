@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getAllocationById, getFarmerRequests } from "../../api";
 import "../../assets/css/jo css/JoViewAllocationStyle.css";
 import "../../components/layout/sidebarStyle.css";
@@ -17,27 +17,57 @@ interface FarmerRequest {
   requested_urea_bags: number;
   requested_complete_14_bags: number;
   requested_ammonium_sulfate_bags: number;
+  requested_ammonium_phosphate_bags: number;
   requested_muriate_potash_bags: number;
+  requested_zinc_sulfate_bags: number;
+  requested_vermicompost_bags: number;
+  requested_chicken_manure_bags: number;
+  requested_rice_straw_kg: number;
+  requested_carbonized_rice_hull_bags: number;
+  requested_biofertilizer_liters: number;
+  requested_nanobiofertilizer_liters: number;
+  requested_organic_root_exudate_mix_liters: number;
+  requested_azolla_microphylla_kg: number;
+  requested_foliar_liquid_fertilizer_npk_liters: number;
+  requested_rice_seeds_nsic_rc160_kg: number;
+  requested_rice_seeds_nsic_rc222_kg: number;
   requested_jackpot_kg: number;
   requested_us88_kg: number;
   requested_th82_kg: number;
   requested_rh9000_kg: number;
   requested_lumping143_kg: number;
   requested_lp296_kg: number;
+  requested_mestiso_1_kg: number;
+  requested_mestiso_20_kg: number;
+  requested_mestiso_29_kg: number;
+  requested_mestiso_55_kg: number;
+  requested_mestiso_73_kg: number;
+  requested_mestiso_99_kg: number;
+  requested_mestiso_103_kg: number;
+  requested_nsic_rc402_kg: number;
+  requested_nsic_rc480_kg: number;
+  requested_nsic_rc216_kg: number;
+  requested_nsic_rc218_kg: number;
+  requested_nsic_rc506_kg: number;
+  requested_nsic_rc508_kg: number;
+  requested_nsic_rc512_kg: number;
+  requested_nsic_rc534_kg: number;
+  requested_tubigan_28_kg: number;
+  requested_tubigan_30_kg: number;
+  requested_tubigan_22_kg: number;
+  requested_sahod_ulan_2_kg: number;
+  requested_sahod_ulan_10_kg: number;
+  requested_salinas_6_kg: number;
+  requested_salinas_7_kg: number;
+  requested_salinas_8_kg: number;
+  requested_malagkit_5_kg: number;
   status: string;
 }
 
-type RequestValueField =
-  | "requested_urea_bags"
-  | "requested_complete_14_bags"
-  | "requested_ammonium_sulfate_bags"
-  | "requested_muriate_potash_bags"
-  | "requested_jackpot_kg"
-  | "requested_us88_kg"
-  | "requested_th82_kg"
-  | "requested_rh9000_kg"
-  | "requested_lumping143_kg"
-  | "requested_lp296_kg";
+type RequestValueField = Exclude<
+  keyof FarmerRequest,
+  "id" | "farmer_name" | "barangay" | "status"
+>;
 
 interface AllocationDetails {
   id: number;
@@ -45,34 +75,64 @@ interface AllocationDetails {
   allocation_date: string;
   urea_46_0_0_bags: number;
   complete_14_14_14_bags: number;
+  np_16_20_0_bags: number;
   ammonium_sulfate_21_0_0_bags: number;
   muriate_potash_0_0_60_bags: number;
+  zinc_sulfate_bags: number;
+  vermicompost_bags: number;
+  chicken_manure_bags: number;
+  rice_straw_kg: number;
+  carbonized_rice_hull_bags: number;
+  biofertilizer_liters: number;
+  nanobiofertilizer_liters: number;
+  organic_root_exudate_mix_liters: number;
+  azolla_microphylla_kg: number;
+  foliar_liquid_fertilizer_npk_liters: number;
+  rice_seeds_nsic_rc160_kg: number;
+  rice_seeds_nsic_rc222_kg: number;
   jackpot_kg: number;
   us88_kg: number;
   th82_kg: number;
   rh9000_kg: number;
   lumping143_kg: number;
   lp296_kg: number;
+  mestiso_1_kg: number;
+  mestiso_20_kg: number;
+  mestiso_29_kg: number;
+  mestiso_55_kg: number;
+  mestiso_73_kg: number;
+  mestiso_99_kg: number;
+  mestiso_103_kg: number;
+  nsic_rc402_kg: number;
+  nsic_rc480_kg: number;
+  nsic_rc216_kg: number;
+  nsic_rc218_kg: number;
+  nsic_rc506_kg: number;
+  nsic_rc508_kg: number;
+  nsic_rc512_kg: number;
+  nsic_rc534_kg: number;
+  tubigan_28_kg: number;
+  tubigan_30_kg: number;
+  tubigan_22_kg: number;
+  sahod_ulan_2_kg: number;
+  sahod_ulan_10_kg: number;
+  salinas_6_kg: number;
+  salinas_7_kg: number;
+  salinas_8_kg: number;
+  malagkit_5_kg: number;
   notes?: string;
 }
 
-type AllocationValueField =
-  | "urea_46_0_0_bags"
-  | "complete_14_14_14_bags"
-  | "ammonium_sulfate_21_0_0_bags"
-  | "muriate_potash_0_0_60_bags"
-  | "jackpot_kg"
-  | "us88_kg"
-  | "th82_kg"
-  | "rh9000_kg"
-  | "lumping143_kg"
-  | "lp296_kg";
+type AllocationValueField = Exclude<
+  keyof AllocationDetails,
+  "id" | "season" | "allocation_date" | "notes"
+>;
 
 const FERTILIZER_ROWS: Array<{
   name: string;
   allocated: AllocationValueField;
   requested: RequestValueField;
-  unit: "bags" | "kg";
+  unit: "bags" | "kg" | "liters";
 }> = [
   {
     name: "Urea (46-0-0)",
@@ -87,6 +147,12 @@ const FERTILIZER_ROWS: Array<{
     unit: "bags",
   },
   {
+    name: "16-20-0",
+    allocated: "np_16_20_0_bags",
+    requested: "requested_ammonium_phosphate_bags",
+    unit: "bags",
+  },
+  {
     name: "Ammonium Sulfate (21-0-0)",
     allocated: "ammonium_sulfate_21_0_0_bags",
     requested: "requested_ammonium_sulfate_bags",
@@ -98,6 +164,66 @@ const FERTILIZER_ROWS: Array<{
     requested: "requested_muriate_potash_bags",
     unit: "bags",
   },
+  {
+    name: "Zinc Sulfate",
+    allocated: "zinc_sulfate_bags",
+    requested: "requested_zinc_sulfate_bags",
+    unit: "bags",
+  },
+  {
+    name: "Vermicompost",
+    allocated: "vermicompost_bags",
+    requested: "requested_vermicompost_bags",
+    unit: "bags",
+  },
+  {
+    name: "Chicken Manure",
+    allocated: "chicken_manure_bags",
+    requested: "requested_chicken_manure_bags",
+    unit: "bags",
+  },
+  {
+    name: "Rice Straw",
+    allocated: "rice_straw_kg",
+    requested: "requested_rice_straw_kg",
+    unit: "kg",
+  },
+  {
+    name: "Carbonized Rice Hull (CRH)",
+    allocated: "carbonized_rice_hull_bags",
+    requested: "requested_carbonized_rice_hull_bags",
+    unit: "bags",
+  },
+  {
+    name: "Biofertilizer (Liquid Concentrate)",
+    allocated: "biofertilizer_liters",
+    requested: "requested_biofertilizer_liters",
+    unit: "liters",
+  },
+  {
+    name: "Nanobiofertilizer",
+    allocated: "nanobiofertilizer_liters",
+    requested: "requested_nanobiofertilizer_liters",
+    unit: "liters",
+  },
+  {
+    name: "Organic Root Exudate Mix",
+    allocated: "organic_root_exudate_mix_liters",
+    requested: "requested_organic_root_exudate_mix_liters",
+    unit: "liters",
+  },
+  {
+    name: "Azolla microphylla",
+    allocated: "azolla_microphylla_kg",
+    requested: "requested_azolla_microphylla_kg",
+    unit: "kg",
+  },
+  {
+    name: "Foliar Liquid Fertilizer (NPK)",
+    allocated: "foliar_liquid_fertilizer_npk_liters",
+    requested: "requested_foliar_liquid_fertilizer_npk_liters",
+    unit: "liters",
+  },
 ];
 
 const SEED_ROWS: Array<{
@@ -106,6 +232,18 @@ const SEED_ROWS: Array<{
   requested: RequestValueField;
   unit: "bags" | "kg";
 }> = [
+  {
+    name: "NSIC Rc 160",
+    allocated: "rice_seeds_nsic_rc160_kg",
+    requested: "requested_rice_seeds_nsic_rc160_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 222",
+    allocated: "rice_seeds_nsic_rc222_kg",
+    requested: "requested_rice_seeds_nsic_rc222_kg",
+    unit: "kg",
+  },
   {
     name: "Jackpot",
     allocated: "jackpot_kg",
@@ -142,10 +280,155 @@ const SEED_ROWS: Array<{
     requested: "requested_lp296_kg",
     unit: "kg",
   },
+  {
+    name: "Mestiso 1",
+    allocated: "mestiso_1_kg",
+    requested: "requested_mestiso_1_kg",
+    unit: "kg",
+  },
+  {
+    name: "Mestiso 20",
+    allocated: "mestiso_20_kg",
+    requested: "requested_mestiso_20_kg",
+    unit: "kg",
+  },
+  {
+    name: "Mestiso 29",
+    allocated: "mestiso_29_kg",
+    requested: "requested_mestiso_29_kg",
+    unit: "kg",
+  },
+  {
+    name: "Mestiso 55",
+    allocated: "mestiso_55_kg",
+    requested: "requested_mestiso_55_kg",
+    unit: "kg",
+  },
+  {
+    name: "Mestiso 73",
+    allocated: "mestiso_73_kg",
+    requested: "requested_mestiso_73_kg",
+    unit: "kg",
+  },
+  {
+    name: "Mestiso 99",
+    allocated: "mestiso_99_kg",
+    requested: "requested_mestiso_99_kg",
+    unit: "kg",
+  },
+  {
+    name: "Mestiso 103",
+    allocated: "mestiso_103_kg",
+    requested: "requested_mestiso_103_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 402",
+    allocated: "nsic_rc402_kg",
+    requested: "requested_nsic_rc402_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 480",
+    allocated: "nsic_rc480_kg",
+    requested: "requested_nsic_rc480_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 216",
+    allocated: "nsic_rc216_kg",
+    requested: "requested_nsic_rc216_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 218",
+    allocated: "nsic_rc218_kg",
+    requested: "requested_nsic_rc218_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 506",
+    allocated: "nsic_rc506_kg",
+    requested: "requested_nsic_rc506_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 508",
+    allocated: "nsic_rc508_kg",
+    requested: "requested_nsic_rc508_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 512",
+    allocated: "nsic_rc512_kg",
+    requested: "requested_nsic_rc512_kg",
+    unit: "kg",
+  },
+  {
+    name: "NSIC Rc 534",
+    allocated: "nsic_rc534_kg",
+    requested: "requested_nsic_rc534_kg",
+    unit: "kg",
+  },
+  {
+    name: "Tubigan 28",
+    allocated: "tubigan_28_kg",
+    requested: "requested_tubigan_28_kg",
+    unit: "kg",
+  },
+  {
+    name: "Tubigan 30",
+    allocated: "tubigan_30_kg",
+    requested: "requested_tubigan_30_kg",
+    unit: "kg",
+  },
+  {
+    name: "Tubigan 22",
+    allocated: "tubigan_22_kg",
+    requested: "requested_tubigan_22_kg",
+    unit: "kg",
+  },
+  {
+    name: "Sahod Ulan 2",
+    allocated: "sahod_ulan_2_kg",
+    requested: "requested_sahod_ulan_2_kg",
+    unit: "kg",
+  },
+  {
+    name: "Sahod Ulan 10",
+    allocated: "sahod_ulan_10_kg",
+    requested: "requested_sahod_ulan_10_kg",
+    unit: "kg",
+  },
+  {
+    name: "Salinas 6",
+    allocated: "salinas_6_kg",
+    requested: "requested_salinas_6_kg",
+    unit: "kg",
+  },
+  {
+    name: "Salinas 7",
+    allocated: "salinas_7_kg",
+    requested: "requested_salinas_7_kg",
+    unit: "kg",
+  },
+  {
+    name: "Salinas 8",
+    allocated: "salinas_8_kg",
+    requested: "requested_salinas_8_kg",
+    unit: "kg",
+  },
+  {
+    name: "Malagkit 5",
+    allocated: "malagkit_5_kg",
+    requested: "requested_malagkit_5_kg",
+    unit: "kg",
+  },
 ];
 
 const JoViewAllocation: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { allocationId } = useParams<{ allocationId: string }>();
   const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
   const [requests, setRequests] = useState<FarmerRequest[]>([]);
@@ -259,8 +542,16 @@ const JoViewAllocation: React.FC = () => {
     );
   }
 
-  const visibleFertilizerRows = FERTILIZER_ROWS;
-  const visibleSeedRows = SEED_ROWS;
+  const visibleFertilizerRows = FERTILIZER_ROWS.filter(
+    (row) =>
+      getTotalAllocated(row.allocated) > 0 ||
+      getTotalRequested(row.requested) > 0,
+  );
+  const visibleSeedRows = SEED_ROWS.filter(
+    (row) =>
+      getTotalAllocated(row.allocated) > 0 ||
+      getTotalRequested(row.requested) > 0,
+  );
 
   const totalAllocatedFertilizer = visibleFertilizerRows.reduce(
     (sum, row) => sum + getTotalAllocated(row.allocated),
@@ -451,13 +742,15 @@ const JoViewAllocation: React.FC = () => {
                         <tr key={fertilizer.name}>
                           <td>{fertilizer.name}</td>
                           <td className="allocated">
-                            {allocated.toFixed(2)} bags
+                            {allocated.toFixed(2)} {fertilizer.unit}
                           </td>
-                          <td>{requested.toFixed(2)} bags</td>
+                          <td>
+                            {requested.toFixed(2)} {fertilizer.unit}
+                          </td>
                           <td
                             className={remaining < 0 ? "negative" : "positive"}
                           >
-                            {remaining.toFixed(2)} bags
+                            {remaining.toFixed(2)} {fertilizer.unit}
                           </td>
                           <td>
                             <span
@@ -479,8 +772,8 @@ const JoViewAllocation: React.FC = () => {
                     )}
                     <tr className="total-row">
                       <td>TOTAL</td>
-                      <td>{totalAllocatedFertilizer.toFixed(2)} bags</td>
-                      <td>{totalRequestedFertilizer.toFixed(2)} bags</td>
+                      <td>{totalAllocatedFertilizer.toFixed(2)}</td>
+                      <td>{totalRequestedFertilizer.toFixed(2)}</td>
                       <td
                         className={
                           totalAllocatedFertilizer - totalRequestedFertilizer <
@@ -491,8 +784,7 @@ const JoViewAllocation: React.FC = () => {
                       >
                         {(
                           totalAllocatedFertilizer - totalRequestedFertilizer
-                        ).toFixed(2)}{" "}
-                        bags
+                        ).toFixed(2)}
                       </td>
                       <td>
                         <span

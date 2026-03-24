@@ -4,7 +4,7 @@ import {
   getAllocations,
   getFarmerRequests,
   deleteAllocation,
-  createAllocation,
+  updateAllocation,
 } from "../../api";
 import "../../assets/css/jo css/JoIncentStyle.css";
 import "../../components/layout/sidebarStyle.css";
@@ -22,26 +22,214 @@ interface RegionalAllocation {
   allocation_date: string;
   urea_46_0_0_bags: number;
   complete_14_14_14_bags: number;
-  complete_16_16_16_bags?: number;
+  np_16_20_0_bags?: number;
   ammonium_sulfate_21_0_0_bags: number;
-  ammonium_phosphate_16_20_0_bags?: number;
   muriate_potash_0_0_60_bags: number;
+  zinc_sulfate_bags?: number;
+  vermicompost_bags?: number;
+  chicken_manure_bags?: number;
+  rice_straw_kg?: number;
+  carbonized_rice_hull_bags?: number;
+  biofertilizer_liters?: number;
+  nanobiofertilizer_liters?: number;
+  organic_root_exudate_mix_liters?: number;
+  azolla_microphylla_kg?: number;
+  foliar_liquid_fertilizer_npk_liters?: number;
   rice_seeds_nsic_rc160_kg: number;
   rice_seeds_nsic_rc222_kg: number;
-  rice_seeds_nsic_rc440_kg: number;
-  corn_seeds_hybrid_kg: number;
-  corn_seeds_opm_kg: number;
-  vegetable_seeds_kg: number;
   jackpot_kg?: number;
   us88_kg?: number;
   th82_kg?: number;
   rh9000_kg?: number;
   lumping143_kg?: number;
   lp296_kg?: number;
+  mestiso_1_kg?: number;
+  mestiso_20_kg?: number;
+  mestiso_29_kg?: number;
+  mestiso_55_kg?: number;
+  mestiso_73_kg?: number;
+  mestiso_99_kg?: number;
+  mestiso_103_kg?: number;
+  nsic_rc402_kg?: number;
+  nsic_rc480_kg?: number;
+  nsic_rc216_kg?: number;
+  nsic_rc218_kg?: number;
+  nsic_rc506_kg?: number;
+  nsic_rc508_kg?: number;
+  nsic_rc512_kg?: number;
+  nsic_rc534_kg?: number;
+  tubigan_28_kg?: number;
+  tubigan_30_kg?: number;
+  tubigan_22_kg?: number;
+  sahod_ulan_2_kg?: number;
+  sahod_ulan_10_kg?: number;
+  salinas_6_kg?: number;
+  salinas_7_kg?: number;
+  salinas_8_kg?: number;
+  malagkit_5_kg?: number;
   notes?: string;
   status?: string;
   farmer_count?: number;
 }
+
+type AllocationNumericField =
+  | "urea_46_0_0_bags"
+  | "complete_14_14_14_bags"
+  | "np_16_20_0_bags"
+  | "ammonium_sulfate_21_0_0_bags"
+  | "muriate_potash_0_0_60_bags"
+  | "zinc_sulfate_bags"
+  | "vermicompost_bags"
+  | "chicken_manure_bags"
+  | "rice_straw_kg"
+  | "carbonized_rice_hull_bags"
+  | "biofertilizer_liters"
+  | "nanobiofertilizer_liters"
+  | "organic_root_exudate_mix_liters"
+  | "azolla_microphylla_kg"
+  | "foliar_liquid_fertilizer_npk_liters"
+  | "rice_seeds_nsic_rc160_kg"
+  | "rice_seeds_nsic_rc222_kg"
+  | "jackpot_kg"
+  | "us88_kg"
+  | "th82_kg"
+  | "rh9000_kg"
+  | "lumping143_kg"
+  | "lp296_kg"
+  | "mestiso_1_kg"
+  | "mestiso_20_kg"
+  | "mestiso_29_kg"
+  | "mestiso_55_kg"
+  | "mestiso_73_kg"
+  | "mestiso_99_kg"
+  | "mestiso_103_kg"
+  | "nsic_rc402_kg"
+  | "nsic_rc480_kg"
+  | "nsic_rc216_kg"
+  | "nsic_rc218_kg"
+  | "nsic_rc506_kg"
+  | "nsic_rc508_kg"
+  | "nsic_rc512_kg"
+  | "nsic_rc534_kg"
+  | "tubigan_28_kg"
+  | "tubigan_30_kg"
+  | "tubigan_22_kg"
+  | "sahod_ulan_2_kg"
+  | "sahod_ulan_10_kg"
+  | "salinas_6_kg"
+  | "salinas_7_kg"
+  | "salinas_8_kg"
+  | "malagkit_5_kg";
+
+const EDIT_FERTILIZER_FIELDS: Array<{
+  key: AllocationNumericField;
+  label: string;
+  category: "Solid" | "Liquid";
+}> = [
+  { key: "urea_46_0_0_bags", label: "Urea (46-0-0)", category: "Solid" },
+  {
+    key: "complete_14_14_14_bags",
+    label: "Complete (14-14-14)",
+    category: "Solid",
+  },
+  { key: "np_16_20_0_bags", label: "16-20-0", category: "Solid" },
+  {
+    key: "ammonium_sulfate_21_0_0_bags",
+    label: "Ammonium Sulfate (21-0-0)",
+    category: "Solid",
+  },
+  {
+    key: "muriate_potash_0_0_60_bags",
+    label: "Muriate of Potash (0-0-60)",
+    category: "Solid",
+  },
+  { key: "zinc_sulfate_bags", label: "Zinc Sulfate", category: "Solid" },
+  { key: "vermicompost_bags", label: "Vermicompost", category: "Solid" },
+  {
+    key: "chicken_manure_bags",
+    label: "Chicken Manure",
+    category: "Solid",
+  },
+  {
+    key: "rice_straw_kg",
+    label: "Rice Straw (incorporated)",
+    category: "Solid",
+  },
+  {
+    key: "carbonized_rice_hull_bags",
+    label: "Carbonized Rice Hull (CRH)",
+    category: "Solid",
+  },
+  {
+    key: "biofertilizer_liters",
+    label: "Biofertilizer (Liquid Concentrate)",
+    category: "Liquid",
+  },
+  {
+    key: "nanobiofertilizer_liters",
+    label: "Nanobiofertilizer",
+    category: "Liquid",
+  },
+  {
+    key: "organic_root_exudate_mix_liters",
+    label: "Organic Root Exudate Mix",
+    category: "Liquid",
+  },
+  {
+    key: "azolla_microphylla_kg",
+    label: "Azolla microphylla",
+    category: "Liquid",
+  },
+  {
+    key: "foliar_liquid_fertilizer_npk_liters",
+    label: "Foliar Liquid Fertilizer (NPK)",
+    category: "Liquid",
+  },
+];
+
+const EDIT_SEED_FIELDS: Array<{
+  key: AllocationNumericField;
+  label: string;
+  category: "Hybrid" | "Inbred";
+}> = [
+  { key: "rice_seeds_nsic_rc160_kg", label: "NSIC Rc 160", category: "Inbred" },
+  { key: "rice_seeds_nsic_rc222_kg", label: "NSIC Rc 222", category: "Inbred" },
+  { key: "jackpot_kg", label: "Jackpot", category: "Hybrid" },
+  { key: "us88_kg", label: "US88", category: "Hybrid" },
+  { key: "th82_kg", label: "TH82", category: "Hybrid" },
+  { key: "rh9000_kg", label: "RH9000", category: "Hybrid" },
+  { key: "lumping143_kg", label: "Lumping143", category: "Inbred" },
+  { key: "lp296_kg", label: "LP296", category: "Inbred" },
+  { key: "mestiso_1_kg", label: "Mestiso 1 (M1)", category: "Hybrid" },
+  { key: "mestiso_20_kg", label: "Mestiso 20 (M20)", category: "Hybrid" },
+  { key: "mestiso_29_kg", label: "Mestiso 29", category: "Hybrid" },
+  { key: "mestiso_55_kg", label: "Mestiso 55", category: "Hybrid" },
+  { key: "mestiso_73_kg", label: "Mestiso 73", category: "Hybrid" },
+  { key: "mestiso_99_kg", label: "Mestiso 99", category: "Hybrid" },
+  { key: "mestiso_103_kg", label: "Mestiso 103", category: "Hybrid" },
+  { key: "nsic_rc402_kg", label: "NSIC Rc 402", category: "Inbred" },
+  { key: "nsic_rc480_kg", label: "NSIC Rc 480", category: "Inbred" },
+  { key: "nsic_rc216_kg", label: "NSIC Rc 216", category: "Inbred" },
+  { key: "nsic_rc218_kg", label: "NSIC Rc 218", category: "Inbred" },
+  { key: "nsic_rc506_kg", label: "NSIC Rc 506", category: "Inbred" },
+  { key: "nsic_rc508_kg", label: "NSIC Rc 508", category: "Inbred" },
+  { key: "nsic_rc512_kg", label: "NSIC Rc 512", category: "Inbred" },
+  { key: "nsic_rc534_kg", label: "NSIC Rc 534", category: "Inbred" },
+  { key: "tubigan_28_kg", label: "Tubigan 28", category: "Inbred" },
+  { key: "tubigan_30_kg", label: "Tubigan 30", category: "Inbred" },
+  { key: "tubigan_22_kg", label: "Tubigan 22", category: "Inbred" },
+  { key: "sahod_ulan_2_kg", label: "Sahod Ulan 2", category: "Inbred" },
+  { key: "sahod_ulan_10_kg", label: "Sahod Ulan 10", category: "Inbred" },
+  { key: "salinas_6_kg", label: "Salinas 6", category: "Inbred" },
+  { key: "salinas_7_kg", label: "Salinas 7", category: "Inbred" },
+  { key: "salinas_8_kg", label: "Salinas 8", category: "Inbred" },
+  { key: "malagkit_5_kg", label: "Malagkit 5", category: "Inbred" },
+];
+
+const EDIT_NUMERIC_FIELDS: AllocationNumericField[] = [
+  ...EDIT_FERTILIZER_FIELDS.map((field) => field.key),
+  ...EDIT_SEED_FIELDS.map((field) => field.key),
+];
 
 const FERTILIZER_TOTAL_FIELDS: Array<keyof RegionalAllocation | string> = [
   "urea_46_0_0_bags",
@@ -124,6 +312,12 @@ const JoIncentives: React.FC = () => {
   const [deleteNotificationMessage, setDeleteNotificationMessage] =
     useState("");
   const [deleteNotificationType, setDeleteNotificationType] = useState<
+    "success" | "error"
+  >("success");
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
+  const [updateNotificationMessage, setUpdateNotificationMessage] =
+    useState("");
+  const [updateNotificationType, setUpdateNotificationType] = useState<
     "success" | "error"
   >("success");
 
@@ -243,8 +437,18 @@ const JoIncentives: React.FC = () => {
       setRequestCount(0);
     }
 
-    setEditAllocationModal(allocation);
-    setEditFormData(allocation);
+    const normalizedAllocation: RegionalAllocation = {
+      ...allocation,
+      ...Object.fromEntries(
+        EDIT_NUMERIC_FIELDS.map((field) => [
+          field,
+          Number((allocation as any)[field]) || 0,
+        ]),
+      ),
+    };
+
+    setEditAllocationModal(normalizedAllocation);
+    setEditFormData(normalizedAllocation);
   };
 
   const handleEditInputChange = (
@@ -259,8 +463,8 @@ const JoIncentives: React.FC = () => {
     if (name.includes("bags")) {
       // Bags should be integers
       parsedValue = parseInt(value) || 0;
-    } else if (name.includes("kg")) {
-      // Seeds can have decimals
+    } else if (name.includes("kg") || name.includes("liters")) {
+      // Seeds and liquid inputs can have decimals
       parsedValue = parseFloat(value) || 0;
     }
 
@@ -291,6 +495,43 @@ const JoIncentives: React.FC = () => {
     });
   };
 
+  const visibleEditFertilizerFields = editAllocationModal
+    ? EDIT_FERTILIZER_FIELDS.filter(
+        (field) => Number((editAllocationModal as any)[field.key]) > 0,
+      )
+    : [];
+
+  const visibleEditSeedFields = editAllocationModal
+    ? EDIT_SEED_FIELDS.filter(
+        (field) => Number((editAllocationModal as any)[field.key]) > 0,
+      )
+    : [];
+
+  const buildAllocationUpdatePayload = (allocation: RegionalAllocation) => {
+    return {
+      season: allocation.season,
+      allocation_date: allocation.allocation_date,
+      notes: allocation.notes || "",
+      ...Object.fromEntries(
+        EDIT_NUMERIC_FIELDS.map((field) => [
+          field,
+          Number((allocation as any)[field]) || 0,
+        ]),
+      ),
+    };
+  };
+
+  const showUpdateToast = (
+    message: string,
+    type: "success" | "error",
+    timeout = 3000,
+  ) => {
+    setUpdateNotificationType(type);
+    setUpdateNotificationMessage(message);
+    setShowUpdateNotification(true);
+    setTimeout(() => setShowUpdateNotification(false), timeout);
+  };
+
   const handleSaveEdit = async () => {
     if (!editFormData) return;
 
@@ -306,19 +547,24 @@ const JoIncentives: React.FC = () => {
 
     setSavingEdit(true);
     try {
-      const response = await createAllocation(editFormData);
+      const payload = buildAllocationUpdatePayload(editFormData);
+      const response = await updateAllocation(editFormData.id, payload);
 
       if (response.error) {
         throw new Error(response.error || "Failed to update allocation");
       }
 
-      alert("✅ Allocation updated successfully!");
+      showUpdateToast("✅ Allocation updated successfully!", "success", 2600);
       setEditAllocationModal(null);
       setEditFormData(null);
       fetchAllocations(); // Refresh allocations list
     } catch (error: any) {
       console.error("Error updating allocation:", error);
-      alert(`❌ Error updating allocation: ${error.message}`);
+      showUpdateToast(
+        `❌ Error updating allocation: ${error.message || "Please try again."}`,
+        "error",
+        3800,
+      );
     } finally {
       setSavingEdit(false);
     }
@@ -337,6 +583,25 @@ const JoIncentives: React.FC = () => {
             className="jo-incent-delete-toast-close"
             onClick={() => setShowDeleteNotification(false)}
             aria-label="Close notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {showUpdateNotification && (
+        <div
+          className={`jo-incent-update-toast ${updateNotificationType === "success" ? "success" : "error"}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="jo-incent-update-toast-message">
+            {updateNotificationMessage}
+          </span>
+          <button
+            className="jo-incent-update-toast-close"
+            onClick={() => setShowUpdateNotification(false)}
+            aria-label="Close update notification"
           >
             ×
           </button>
@@ -764,176 +1029,91 @@ const JoIncentives: React.FC = () => {
                     {/* Fertilizers */}
                     <div style={{ marginBottom: "24px" }}>
                       <h4 className="jo-incent-modal-section-title">
-                        🌱 Fertilizer Allocation (bags)
+                        🌱 Fertilizer Allocation
                       </h4>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2, 1fr)",
-                          gap: "12px",
-                        }}
-                      >
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            Urea (46-0-0)
-                          </label>
-                          <input
-                            type="number"
-                            name="urea_46_0_0_bags"
-                            value={editFormData.urea_46_0_0_bags || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            Complete (14-14-14)
-                          </label>
-                          <input
-                            type="number"
-                            name="complete_14_14_14_bags"
-                            value={editFormData.complete_14_14_14_bags || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            Complete (16-16-16)
-                          </label>
-                          <input
-                            type="number"
-                            name="complete_16_16_16_bags"
-                            value={editFormData.complete_16_16_16_bags || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            Ammonium Sulfate (21-0-0)
-                          </label>
-                          <input
-                            type="number"
-                            name="ammonium_sulfate_21_0_0_bags"
-                            value={
-                              editFormData.ammonium_sulfate_21_0_0_bags || 0
-                            }
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            Ammonium Phosphate (16-20-0)
-                          </label>
-                          <input
-                            type="number"
-                            name="ammonium_phosphate_16_20_0_bags"
-                            value={
-                              editFormData.ammonium_phosphate_16_20_0_bags || 0
-                            }
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            Muriate of Potash (0-0-60)
-                          </label>
-                          <input
-                            type="number"
-                            name="muriate_potash_0_0_60_bags"
-                            value={editFormData.muriate_potash_0_0_60_bags || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                      </div>
+                      {visibleEditFertilizerFields.length === 0 ? (
+                        <p
+                          style={{
+                            margin: 0,
+                            color: "#6b7280",
+                            fontSize: "14px",
+                          }}
+                        >
+                          No fertilizer inputs were allocated.
+                        </p>
+                      ) : (
+                        (["Solid", "Liquid"] as const).map((category) => {
+                          const categoryFields =
+                            visibleEditFertilizerFields.filter(
+                              (field) => field.category === category,
+                            );
+
+                          if (categoryFields.length === 0) return null;
+
+                          return (
+                            <div
+                              key={category}
+                              style={{ marginBottom: "16px" }}
+                            >
+                              <h5
+                                style={{
+                                  margin: "0 0 8px 0",
+                                  fontSize: "14px",
+                                  fontWeight: 600,
+                                  color: "#374151",
+                                }}
+                              >
+                                {category} Fertilizers
+                              </h5>
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "repeat(2, 1fr)",
+                                  gap: "12px",
+                                }}
+                              >
+                                {categoryFields.map((field) => (
+                                  <div key={field.key}>
+                                    <label
+                                      style={{
+                                        display: "block",
+                                        marginBottom: "6px",
+                                        fontSize: "14px",
+                                      }}
+                                    >
+                                      {field.label}
+                                    </label>
+                                    <input
+                                      type="number"
+                                      name={field.key}
+                                      value={
+                                        Number(
+                                          (editFormData as any)[field.key],
+                                        ) || 0
+                                      }
+                                      onChange={handleEditInputChange}
+                                      min="0"
+                                      step={
+                                        field.key.includes("liters") ||
+                                        field.key.includes("kg")
+                                          ? "0.01"
+                                          : "1"
+                                      }
+                                      style={{
+                                        width: "100%",
+                                        padding: "8px 12px",
+                                        border: "1px solid #d1d5db",
+                                        borderRadius: "6px",
+                                        fontSize: "14px",
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
 
                     {/* Seeds */}
@@ -941,170 +1121,83 @@ const JoIncentives: React.FC = () => {
                       <h4 className="jo-incent-modal-section-title">
                         🌾 Seed Allocation (kg)
                       </h4>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2, 1fr)",
-                          gap: "12px",
-                        }}
-                      >
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            Jackpot
-                          </label>
-                          <input
-                            type="number"
-                            name="jackpot_kg"
-                            value={editFormData.jackpot_kg || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            US88
-                          </label>
-                          <input
-                            type="number"
-                            name="us88_kg"
-                            value={editFormData.us88_kg || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            TH82
-                          </label>
-                          <input
-                            type="number"
-                            name="th82_kg"
-                            value={editFormData.th82_kg || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            RH9000
-                          </label>
-                          <input
-                            type="number"
-                            name="rh9000_kg"
-                            value={editFormData.rh9000_kg || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            Lumping143
-                          </label>
-                          <input
-                            type="number"
-                            name="lumping143_kg"
-                            value={editFormData.lumping143_kg || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            LP296
-                          </label>
-                          <input
-                            type="number"
-                            name="lp296_kg"
-                            value={editFormData.lp296_kg || 0}
-                            onChange={handleEditInputChange}
-                            min="0"
-                            step="0.01"
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                            }}
-                          />
-                        </div>
-                      </div>
+                      {visibleEditSeedFields.length === 0 ? (
+                        <p
+                          style={{
+                            margin: 0,
+                            color: "#6b7280",
+                            fontSize: "14px",
+                          }}
+                        >
+                          No seed inputs were allocated.
+                        </p>
+                      ) : (
+                        (["Hybrid", "Inbred"] as const).map((category) => {
+                          const categoryFields = visibleEditSeedFields.filter(
+                            (field) => field.category === category,
+                          );
+
+                          if (categoryFields.length === 0) return null;
+
+                          return (
+                            <div
+                              key={category}
+                              style={{ marginBottom: "16px" }}
+                            >
+                              <h5
+                                style={{
+                                  margin: "0 0 8px 0",
+                                  fontSize: "14px",
+                                  fontWeight: 600,
+                                  color: "#374151",
+                                }}
+                              >
+                                {category} Seeds
+                              </h5>
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "repeat(2, 1fr)",
+                                  gap: "12px",
+                                }}
+                              >
+                                {categoryFields.map((field) => (
+                                  <div key={field.key}>
+                                    <label
+                                      style={{
+                                        display: "block",
+                                        marginBottom: "6px",
+                                        fontSize: "14px",
+                                      }}
+                                    >
+                                      {field.label}
+                                    </label>
+                                    <input
+                                      type="number"
+                                      name={field.key}
+                                      value={
+                                        Number(
+                                          (editFormData as any)[field.key],
+                                        ) || 0
+                                      }
+                                      onChange={handleEditInputChange}
+                                      min="0"
+                                      step="0.01"
+                                      style={{
+                                        width: "100%",
+                                        padding: "8px 12px",
+                                        border: "1px solid #d1d5db",
+                                        borderRadius: "6px",
+                                        fontSize: "14px",
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
 
                     {/* Notes */}
