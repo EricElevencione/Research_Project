@@ -294,6 +294,7 @@ const ViewAllocation: React.FC = () => {
     const [allSeasonRequests, setAllSeasonRequests] = useState<Map<string, any[]>>(new Map());
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -472,9 +473,9 @@ const ViewAllocation: React.FC = () => {
 
     return (
         <div className="admin-viewalloc-page-container">
-            <div className="admin-viewalloc-page">
+            <div className="admin-viewalloc-page has-mobile-sidebar">
                 {/* Sidebar starts here */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -541,9 +542,14 @@ const ViewAllocation: React.FC = () => {
                     </nav>
                 </div>
                 {/* Sidebar ends here */}
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main Content */}
                 <div className="admin-viewalloc-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Admin Allocation</div>
+                    </div>
                     <div className="admin-viewalloc-header">
                         <h2 className="admin-viewalloc-title">View Allocation</h2>
                         <p className="admin-viewalloc-subtitle">Regional Allocation Details</p>

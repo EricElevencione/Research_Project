@@ -26,6 +26,8 @@ interface RSBSARecord {
   dateSubmitted: string;
   status: string;
   landParcel: string;
+  // Simple per-record data quality based on key fields present in masterlist
+  completeness: number;
   ownershipType?: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -94,8 +96,7 @@ const TechMasterlist: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [selectedOwnershipType, setSelectedOwnershipType] =
-    useState<string>("all");
+  const [selectedOwnershipType, setSelectedOwnershipType] = useState<string>('all');
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -283,6 +284,36 @@ const TechMasterlist: React.FC = () => {
       if (response.error) throw new Error(response.error);
       const data = response.data;
 
+      const calculateRecordCompleteness = (record: {
+        referenceNumber: string;
+        farmerName: string;
+        farmerAddress: string;
+        farmLocation: string;
+        parcelArea: string;
+        dateSubmitted: string;
+        status: string;
+      }): number => {
+        const fields = [
+          record.referenceNumber,
+          record.farmerName,
+          record.farmerAddress,
+          record.farmLocation,
+          record.parcelArea,
+          record.dateSubmitted,
+          record.status,
+        ];
+
+        const total = fields.length;
+        if (total === 0) return 0;
+
+        const completed = fields.filter((value) => {
+          const v = String(value ?? '').trim();
+          return v !== '' && v !== '—';
+        }).length;
+
+        return Math.round((completed / total) * 100);
+      };
+
       // Filter out farmers with 'No Parcels' status
       const filteredData = (Array.isArray(data) ? data : []).filter(
         (item: any) => {
@@ -306,7 +337,7 @@ const TechMasterlist: React.FC = () => {
           : "";
         const status = String(item.status ?? "Not Active");
 
-        return {
+        const baseRecord = {
           id: String(item.id),
           referenceNumber,
           farmerName,
@@ -316,6 +347,13 @@ const TechMasterlist: React.FC = () => {
           dateSubmitted,
           status,
           landParcel,
+        };
+
+        const completeness = calculateRecordCompleteness(baseRecord);
+
+        return {
+          ...baseRecord,
+          completeness,
           ownershipType: item.ownershipType || {
             registeredOwner: false,
             tenant: false,
@@ -713,7 +751,7 @@ const TechMasterlist: React.FC = () => {
     <div className="tech-masterlist-page-container">
       <div className="tech-masterlist-page">
         {/* Sidebar starts here */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -772,7 +810,13 @@ const TechMasterlist: React.FC = () => {
         </div>
         {/* Sidebar ends here */}
 
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
         <div className="tech-masterlist-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">Masterlist</div>
+          </div>
           <div className="tech-masterlist-dashboard-header">
             <div>
               <h2 className="tech-masterlist-page-title">Masterlist</h2>
@@ -829,13 +873,13 @@ const TechMasterlist: React.FC = () => {
                 <thead>
                   <tr>
                     {[
-                      "FFRS System Generated",
-                      "Farmer Name",
-                      "Farmer Address",
-                      "Parcel Address",
-                      "Parcel Area",
-                      "Date Submitted",
-                      "Status",
+                      'FFRS System Generated',
+                      'Farmer Name',
+                      'Farmer Address',
+                      'Parcel Address',
+                      'Parcel Area',
+                      'Date Submitted',
+                      'Status'
                     ].map((header) => (
                       <th key={header}>{header}</th>
                     ))}
@@ -843,18 +887,10 @@ const TechMasterlist: React.FC = () => {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr>
-                      <td colSpan={7} className="tech-masterlist-loading-cell">
-                        Loading...
-                      </td>
-                    </tr>
+                    <tr><td colSpan={7} className="tech-masterlist-loading-cell">Loading...</td></tr>
                   )}
                   {error && !loading && (
-                    <tr>
-                      <td colSpan={7} className="tech-masterlist-error-cell">
-                        Error: {error}
-                      </td>
-                    </tr>
+                    <tr><td colSpan={7} className="tech-masterlist-error-cell">Error: {error}</td></tr>
                   )}
                   {!loading &&
                     !error &&
@@ -871,6 +907,7 @@ const TechMasterlist: React.FC = () => {
                         <td>{record.farmLocation}</td>
                         <td>{record.parcelArea}</td>
                         <td>{formatDate(record.dateSubmitted)}</td>
+                        <td>{record.completeness}%</td>
                         <td>
                           <button
                             className={`tech-masterlist-status-button tech-masterlist-${getStatusClass(record.status)}`}
@@ -889,7 +926,7 @@ const TechMasterlist: React.FC = () => {
                     filteredRecords.length === 0 &&
                     Array.from({ length: 16 }).map((_, i) => (
                       <tr key={`empty-${i}`}>
-                        <td colSpan={7}>&nbsp;</td>
+                        <td colSpan={8}>&nbsp;</td>
                       </tr>
                     ))}
                 </tbody>
@@ -1189,6 +1226,18 @@ const TechMasterlist: React.FC = () => {
                           ))}
                         </div>
                       )}
+                    </div>
+                    {/* link to full profile */}
+                    <div className="farmer-modal-section">
+                      <button
+                        className="btn-action"
+                        onClick={() => {
+                          navigate(`/technician-farmerprofile/${selectedFarmer.id}`);
+                          setShowModal(false);
+                        }}
+                      >
+                        View Full Profile
+                      </button>
                     </div>
                   </>
                 )}

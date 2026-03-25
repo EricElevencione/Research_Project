@@ -184,10 +184,18 @@ const determineSeasonFromDate = (dateString: string): string => {
 };
 
 const JoRegionalAllocation: React.FC = () => {
+<<<<<<< HEAD
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+=======
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
   const todayDate = new Date().toISOString().split("T")[0];
   const [formData, setFormData] = useState<RegionalAllocation>({
@@ -306,6 +314,7 @@ const JoRegionalAllocation: React.FC = () => {
     setLoading(true);
     setSaveSuccess(false);
 
+<<<<<<< HEAD
     try {
       const payload: Record<string, string | number> = {
         season: formData.season,
@@ -316,6 +325,17 @@ const JoRegionalAllocation: React.FC = () => {
       NUMERIC_FIELDS.forEach((field) => {
         payload[field] = Number(formData[field]) || 0;
       });
+=======
+    return (
+        <div className="regional-allocation-container has-mobile-sidebar">
+
+            {/* Sidebar starts here */}
+            <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+                <nav className="sidebar-nav">
+                    <div className='sidebar-logo'>
+                        <img src={LogoImage} alt="Logo" />
+                    </div>
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
       const response = await createAllocation(payload);
 
@@ -361,6 +381,7 @@ const JoRegionalAllocation: React.FC = () => {
             <span className="nav-text">Home</span>
           </button>
 
+<<<<<<< HEAD
           <button
             className={`sidebar-nav-item ${isActive("/jo-rsbsapage") ? "active" : ""}`}
             onClick={() => navigate("/jo-rsbsapage")}
@@ -380,6 +401,19 @@ const JoRegionalAllocation: React.FC = () => {
             </span>
             <span className="nav-text">Incentives</span>
           </button>
+=======
+                </nav>
+            </div>
+            {/* Sidebar ends here */}
+            <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
+            {/* Main Content */}
+            <div className="main-content jo-regional-main-content">
+                <div className="tech-incent-mobile-header">
+                    <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                    <div className="tech-incent-mobile-title">JO Regional Allocation</div>
+                </div>
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
           <button
             className={`sidebar-nav-item ${isActive("/jo-masterlist") ? "active" : ""}`}

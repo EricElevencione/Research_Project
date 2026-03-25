@@ -1,0 +1,255 @@
+/* ─── Barangay Completion Checklist ────────────────────── */
+
+.tech-barangay-checklist-container {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+    margin-bottom: 1.5rem;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.tech-barangay-checklist-container:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.tech-barangay-checklist-header {
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f3f4f6;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+.tech-barangay-checklist-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.tech-barangay-checklist-subtitle {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.tech-barangay-overall-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 200px;
+}
+
+.tech-barangay-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.tech-barangay-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #06b6d4, #10b981);
+    transition: width 0.3s ease;
+}
+
+.tech-barangay-progress-text {
+    font-weight: 600;
+    color: #059669;
+    min-width: 35px;
+    text-align: right;
+    font-size: 0.75rem;
+}
+
+/* ─── Table Styles ─────────────────────────────────────── */
+
+.tech-barangay-checklist-table {
+    overflow-x: auto;
+}
+
+.tech-barangay-checklist-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+}
+
+.tech-barangay-checklist-table thead {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.tech-barangay-checklist-table th {
+    padding: 0.5rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tech-barangay-checklist-table tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.tech-barangay-checklist-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.tech-barangay-checklist-table td {
+    padding: 0.5rem;
+    color: #374151;
+    font-size: 0.8rem;
+}
+
+.tech-row-complete {
+    background: rgba(34, 197, 94, 0.05) !important;
+}
+
+.tech-row-complete:hover {
+    background: rgba(34, 197, 94, 0.1) !important;
+}
+
+.tech-row-incomplete {
+    background: rgba(245, 158, 11, 0.02);
+}
+
+.tech-row-incomplete:hover {
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.tech-barangay-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.tech-align-center {
+    text-align: center;
+}
+
+/* ─── Coverage Bar ─────────────────────────────────────── */
+
+.tech-coverage-bar {
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 2px;
+}
+
+.tech-coverage-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.tech-coverage-text {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+/* ─── Status Badges ────────────────────────────────────── */
+
+.tech-status-complete {
+    display: inline-block;
+    background: #dcfce7;
+    color: #166534;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.tech-status-incomplete {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+/* ─── Footer Stats ─────────────────────────────────────── */
+
+.tech-barangay-checklist-footer {
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+.tech-checklist-stats {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.8rem;
+}
+
+.tech-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tech-stat-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.tech-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+/* ─── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+    .tech-barangay-checklist-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .tech-barangay-overall-progress {
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .tech-checklist-stats {
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .tech-barangay-checklist-header {
+        padding: 1rem;
+    }
+
+    .tech-barangay-checklist-table th,
+    .tech-barangay-checklist-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.8125rem;
+    }
+
+    .tech-barangay-name {
+        min-width: 120px;
+    }
+
+    .tech-barangay-checklist-footer {
+        padding: 1rem;
+    }
+
+    .tech-checklist-stats {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+}

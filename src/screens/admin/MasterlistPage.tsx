@@ -71,6 +71,7 @@ const Masterlist: React.FC = () => {
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+<<<<<<< HEAD
   const [farmerStatus, setFarmerStatus] = useState<
     "all" | "active" | "inactive"
   >("all");
@@ -79,6 +80,11 @@ const Masterlist: React.FC = () => {
     useState<FarmerDetailModal | null>(null);
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+=======
+  const [farmerStatus, setFarmerStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -437,6 +443,7 @@ const Masterlist: React.FC = () => {
   };
 
   return (
+<<<<<<< HEAD
     <>
       <div className="masterlist-admin-page-container">
         <div className="masterlist-admin-page">
@@ -446,6 +453,16 @@ const Masterlist: React.FC = () => {
               <div className="sidebar-logo">
                 <img src={LogoImage} alt="Logo" />
               </div>
+=======
+    <div className="masterlist-admin-page-container">
+      <div className="masterlist-admin-page has-mobile-sidebar">
+        {/* Sidebar starts here */}
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+          <nav className="sidebar-nav">
+            <div className='sidebar-logo'>
+              <img src={LogoImage} alt="Logo" />
+            </div>
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
               <button
                 className={`sidebar-nav-item ${isActive("/dashboard") ? "active" : ""}`}
@@ -495,6 +512,7 @@ const Masterlist: React.FC = () => {
                 <span className="nav-text">Masterlist</span>
               </button>
 
+<<<<<<< HEAD
               <button
                 className={`sidebar-nav-item ${isActive("/logout") ? "active" : ""}`}
                 onClick={() => navigate("/")}
@@ -505,6 +523,41 @@ const Masterlist: React.FC = () => {
                 <span className="nav-text">Logout</span>
               </button>
             </nav>
+=======
+            <button
+              className={`sidebar-nav-item ${isActive('/masterlist') ? 'active' : ''}`}
+              onClick={() => navigate('/masterlist')}
+            >
+              <span className="nav-icon">
+                <img src={ApproveIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Masterlist</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive('/logout') ? 'active' : ''}`}
+              onClick={() => navigate('/')}
+            >
+              <span className="nav-icon">
+                <img src={LogoutIcon} alt="Logout" />
+              </span>
+              <span className="nav-text">Logout</span>
+            </button>
+
+          </nav>
+        </div>
+        {/* Sidebar ends here */}
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
+        {/* Main content starts here */}
+        <div className="masterlist-admin-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">Admin Masterlist</div>
+          </div>
+          <div className="masterlist-admin-dashboard-header">
+            <h2 className="masterlist-admin-page-header">Masterlist</h2>
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
           </div>
           {/* Sidebar ends here */}
 

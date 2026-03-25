@@ -928,6 +928,13 @@ const ManageRequests: React.FC = () => {
                     }
                 }
             `}</style>
+            <div className="admin-req-page has-mobile-sidebar">
+                {/* Sidebar */}
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+                    <nav className="sidebar-nav">
+                        <div className='sidebar-logo'>
+                            <img src={LogoImage} alt="Logo" />
+                        </div>
       <div className="admin-req-page">
         {/* Sidebar */}
         <div className="sidebar">
@@ -984,6 +991,18 @@ const ManageRequests: React.FC = () => {
               <span className="nav-text">Masterlist</span>
             </button>
 
+                        <button
+                            className="sidebar-nav-item logout"
+                            onClick={handleLogout}
+                        >
+                            <span className="nav-icon">
+                                <img src={LogoutIcon} alt="Logout" />
+                            </span>
+                            <span className="nav-text">Logout</span>
+                        </button>
+                    </nav>
+                </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
             <button className="sidebar-nav-item logout" onClick={handleLogout}>
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
@@ -993,6 +1012,23 @@ const ManageRequests: React.FC = () => {
           </nav>
         </div>
 
+                {/* Main Content */}
+                <div className="admin-req-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Admin Requests</div>
+                    </div>
+                    <div className="admin-req-dashboard-header">
+                        <div>
+                            <h2 className="admin-req-page-header">View Farmer Requests</h2>
+                        </div>
+                        <button
+                            className="admin-req-btn-back"
+                            onClick={() => navigate('/incentives')}
+                        >
+                            ← Back to Allocations
+                        </button>
+                    </div>
         {/* Main Content */}
         <div className="admin-req-main-content">
           <div className="admin-req-dashboard-header">

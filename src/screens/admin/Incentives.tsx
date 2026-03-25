@@ -36,6 +36,7 @@ const Incentives: React.FC = () => {
     const [allocations, setAllocations] = useState<RegionalAllocation[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         fetchAllocations();
@@ -127,10 +128,10 @@ const Incentives: React.FC = () => {
     return (
         <div className="admin-incent-page-container">
 
-            <div className="admin-incent-page">
+            <div className="admin-incent-page has-mobile-sidebar">
 
                 {/* Sidebar starts here */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className='sidebar-logo'>
                             <img src={LogoImage} alt="Logo" />
@@ -197,9 +198,14 @@ const Incentives: React.FC = () => {
                     </nav>
                 </div>
                 {/* Sidebar ends here */}
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
                 {/* Main content starts here */}
                 <div className="admin-incent-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Admin Incentives</div>
+                    </div>
 
                     <div className="admin-incent-dashboard-header">
                         <h2 className="admin-incent-page-header">Distribution Management</h2>

@@ -74,11 +74,8 @@ router.get("/", async (req, res) => {
                 farm_type,
                 plot_source,
                 parcel_number,
-                CASE 
-                    WHEN geometry_postgis IS NOT NULL THEN ST_AsGeoJSON(geometry_postgis)::jsonb
-                    ELSE geometry
-                END as geometry,
-                ST_Area(geometry_postgis::geography) / 10000 as calculated_area_ha,
+                COALESCE(geometry_postgis::jsonb, geometry) as geometry,
+                area as calculated_area_ha,
                 created_at,
                 updated_at
             FROM land_plots
@@ -137,7 +134,7 @@ router.post("/", async (req, res) => {
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                 $11, $12, $13, $14, $15, $16, $17, $18, $19, 
-                $20, ST_SetSRID(ST_GeomFromGeoJSON($21), 4326),
+                $20, $21,
                 $22, $23
             )
             RETURNING 
@@ -145,8 +142,8 @@ router.post("/", async (req, res) => {
                 barangay, first_name, middle_name, surname, ext_name,
                 gender, municipality, province, parcel_address, status,
                 street, farm_type, plot_source, parcel_number,
-                ST_AsGeoJSON(geometry_postgis)::jsonb as geometry,
-                ST_Area(geometry_postgis::geography) / 10000 as calculated_area_ha,
+                COALESCE(geometry_postgis::jsonb, geometry) as geometry,
+                area as calculated_area_ha,
                 created_at, updated_at
         `;
 
@@ -250,6 +247,24 @@ router.put("/:id", async (req, res) => {
 
     for (const [bodyKey, dbColumn] of Object.entries(allowedFields)) {
       if (body[bodyKey] !== undefined) {
+        // Special handling for geometry
+        if (bodyKey === "geometry") {
+          updateFields.push(`${dbColumn} = $${paramCounter}`);
+          values.push(JSON.stringify(body[bodyKey]));
+          paramCounter++;
+          // Also update PostGIS geometry as text
+          updateFields.push(`geometry_postgis = $${paramCounter}`);
+          values.push(JSON.stringify(body[bodyKey]));
+          paramCounter++;
+        } else {
+          updateFields.push(`${dbColumn} = $${paramCounter}`);
+          values.push(body[bodyKey]);
+          paramCounter++;
+        }
+      }
+    }
+    for (const [bodyKey, dbColumn] of Object.entries(allowedFields)) {
+      if (body[bodyKey] !== undefined) {
         // Special handling for geometry (update both JSONB and PostGIS)
         if (bodyKey === "geometry") {
           updateFields.push(`${dbColumn} = $${paramCounter}`);
@@ -290,8 +305,8 @@ router.put("/:id", async (req, res) => {
                 barangay, first_name, middle_name, surname, ext_name,
                 gender, municipality, province, parcel_address, status,
                 street, farm_type, plot_source, parcel_number,
-                ST_AsGeoJSON(geometry_postgis)::jsonb as geometry,
-                ST_Area(geometry_postgis::geography) / 10000 as calculated_area_ha,
+                COALESCE(geometry_postgis::jsonb, geometry) as geometry,
+                area as calculated_area_ha,
                 created_at, updated_at
         `;
 

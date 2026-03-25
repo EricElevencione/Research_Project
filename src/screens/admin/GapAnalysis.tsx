@@ -60,6 +60,7 @@ const GapAnalysis: React.FC = () => {
     const [recommendations, setRecommendations] = useState<any>(null);
     const [loadingRecs, setLoadingRecs] = useState(false);
     const [showRecommendations, setShowRecommendations] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const isActive = (path: string) => {
         return window.location.pathname === path;
@@ -182,9 +183,9 @@ const GapAnalysis: React.FC = () => {
     };
 
     return (
-        <div className="gap-analysis-container">
+        <div className="gap-analysis-container has-mobile-sidebar">
             {/* Sidebar starts here */}
-            <div className="sidebar">
+            <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                 <nav className="sidebar-nav">
                     <div className='sidebar-logo'>
                         <img src={LogoImage} alt="Logo" />
@@ -251,9 +252,14 @@ const GapAnalysis: React.FC = () => {
                 </nav>
             </div>
             {/* Sidebar ends here */}
+            <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
             {/* Main Content */}
             <div className="main-content gap-main-content">
+                <div className="tech-incent-mobile-header">
+                    <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                    <div className="tech-incent-mobile-title">Admin Gap Analysis</div>
+                </div>
                 <div className="content-header gap-content-header">
                     <h2>Supply-Demand Gap Analysis</h2>
                     <p>Compare regional allocation vs farmer requests to identify shortages and surpluses</p>

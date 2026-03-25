@@ -77,11 +77,18 @@ const JoRsbsaPage: React.FC = () => {
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+<<<<<<< HEAD
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
     null,
   );
+=======
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBarangay, setSelectedBarangay] = useState<string>('all');
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -453,9 +460,15 @@ const JoRsbsaPage: React.FC = () => {
 
   return (
     <div className="jo-rsbsa-page-container">
+<<<<<<< HEAD
       <div className="jo-rsbsa-page">
+=======
+
+      <div className="jo-rsbsa-page has-mobile-sidebar">
+
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
         {/* Sidebar starts here */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -521,9 +534,14 @@ const JoRsbsaPage: React.FC = () => {
           </nav>
         </div>
         {/* Sidebar ends here */}
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
         {/* Main content starts here */}
         <div className="jo-rsbsa-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">JO RSBSA</div>
+          </div>
           <h2 className="jo-rsbsa-page-title">Registered Land Owners</h2>
           <p className="jo-rsbsa-page-subtitle">
             View and manage registered land owners from RSBSA submissions

@@ -169,6 +169,7 @@ const JoLandRegistry: React.FC = () => {
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
   const [transferSubmitError, setTransferSubmitError] = useState("");
   const [transferSubmitSuccess, setTransferSubmitSuccess] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const {
     parcelScope,
@@ -1256,9 +1257,9 @@ const JoLandRegistry: React.FC = () => {
 
   return (
     <div className="jo-land-registry-page-container">
-      <div className="jo-land-registry-page">
+      <div className="jo-land-registry-page has-mobile-sidebar">
         {/* Sidebar */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -1323,9 +1324,14 @@ const JoLandRegistry: React.FC = () => {
             </button>
           </nav>
         </div>
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
         {/* Main Content */}
         <div className="jo-land-registry-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">JO Land Registry</div>
+          </div>
           {/* Header */}
           <div className="jo-land-registry-dashboard-header">
             <h1 className="jo-land-registry-page-title">🗺️ Land Registry</h1>

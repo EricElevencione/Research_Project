@@ -43,3 +43,72 @@ body,
     padding: 0;
     overflow-y: auto !important;
 }
+
+/* ===========================
+   RESPONSIVE PAGE LAYOUT
+   =========================== */
+
+/* Desktop and Tablet layout (768px and up) */
+@media (min-width: 768px) {
+    .page-container {
+        display: flex;
+        flex-direction: row;
+        height: 100vh;
+    }
+
+    .page {
+        flex-direction: row;
+        width: 100%;
+        height: 100%;
+    }
+}
+
+/* Mobile layout (< 768px) */
+@media (max-width: 767px) {
+    .page-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        height: auto;
+    }
+
+    .page {
+        flex-direction: column;
+        width: 100%;
+        height: auto;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    html,
+    body,
+    #root {
+        height: auto;
+        overflow-y: auto;
+    }
+}
+
+/* Prevent layout shifts on mobile */
+@media (max-width: 639px) {
+    * {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* Prevent double tap zoom issues */
+@media (hover: none) and (pointer: coarse) {
+    button,
+    a,
+    input[type="button"],
+    input[type="submit"] {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+}

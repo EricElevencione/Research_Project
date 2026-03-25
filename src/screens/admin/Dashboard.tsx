@@ -26,6 +26,10 @@ const Dashboard: React.FC = () => {
   const [selectedAllocationId, setSelectedAllocationId] = useState<
     number | undefined
   >(undefined);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [selectedSeason, setSelectedSeason] = useState<string>('');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const dashData = useAdminDashboardStats(selectedAllocationId);
 
@@ -64,6 +68,17 @@ const Dashboard: React.FC = () => {
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
             </div>
+    return (
+        <div className="admin-page-container">
+
+            <div className="admin-dashboard-page has-mobile-sidebar">
+
+                {/* Sidebar starts here */}
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+                    <nav className="sidebar-nav">
+                        <div className='sidebar-logo'>
+                            <img src={LogoImage} alt="Logo" />
+                        </div>
 
             <button
               className={`sidebar-nav-item ${isActive("/dashboard") ? "active" : ""}`}
@@ -125,6 +140,20 @@ const Dashboard: React.FC = () => {
           </nav>
         </div>
         {/* Sidebar ends here */}
+                        <button
+                            className={`sidebar-nav-item ${isActive('/logout') ? 'active' : ''}`}
+                            onClick={() => navigate('/')}
+                        >
+                            <span className="nav-icon">
+                                <img src={LogoutIcon} alt="Logout" />
+                            </span>
+                            <span className="nav-text">Logout</span>
+                        </button>
+
+                    </nav>
+                </div>
+                {/* Sidebar ends here */}
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
 
         {/* Main content starts here */}
         <div className="admin-dashboard-main-content">
@@ -142,6 +171,33 @@ const Dashboard: React.FC = () => {
               </p>
             </div>
           </div>
+                {/* Main content starts here */}
+                <div className="admin-dashboard-main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Admin</div>
+                    </div>
+
+                    {/* Header with season selector */}
+                    <div className="admin-dash-header">
+                        <div>
+                            <h1 className="admin-dash-title">Admin Dashboard</h1>
+                            <p className="admin-dash-subtitle">
+                                {formatSeasonLabel(selectedSeason || dashData.currentSeason)} &bull;
+                                Last updated: {dashData.lastUpdated.toLocaleTimeString()}
+                            </p>
+                        </div>
+                        <select
+                            className="admin-dash-season-select"
+                            value={selectedSeason}
+                            onChange={(e) => setSelectedSeason(e.target.value)}
+                        >
+                            <option value="">Current Season</option>
+                            {availableSeasons.map(s => (
+                                <option key={s} value={s}>{formatSeasonLabel(s)}</option>
+                            ))}
+                        </select>
+                    </div>
 
           {dashData.loading ? (
             <div className="admin-dash-loading">

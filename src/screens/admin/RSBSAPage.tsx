@@ -65,9 +65,14 @@ const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+<<<<<<< HEAD
   const [activePage, setActivePage] = useState<"farmers" | "demo-analytics">(
     "farmers",
   );
+=======
+  const [activePage, setActivePage] = useState<'farmers' | 'demo-analytics'>('farmers');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -311,9 +316,15 @@ const JoRsbsa: React.FC = () => {
 
   return (
     <div className="rsbsa-admin-page-container">
+<<<<<<< HEAD
       <div className="rsbsa-admin-page">
+=======
+
+      <div className="rsbsa-admin-page has-mobile-sidebar">
+
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
         {/* Sidebar starts here */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -379,8 +390,17 @@ const JoRsbsa: React.FC = () => {
           </nav>
         </div>
         {/* Sidebar ends here */}
+<<<<<<< HEAD
+=======
+        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
         {/* Main content area */}
         <div className="rsbsa-admin-main-content">
+          <div className="tech-incent-mobile-header">
+            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <div className="tech-incent-mobile-title">Admin RSBSA</div>
+          </div>
           <h2 className="rsbsa-admin-page-title">RSBSA Management</h2>
           <div className="rsbsa-admin-page-subtitle">
             View and manage registered land owners from RSBSA submissions

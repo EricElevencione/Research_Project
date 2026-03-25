@@ -242,9 +242,52 @@
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+
+/* Tablets - Landscape (1024px - 1199px) */
+@media (max-width: 1199px) and (min-width: 768px) {
+    .main-content {
+        padding: 1.5rem;
+    }
+
+    .main-content h2 {
+        font-size: 1.6rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .content-card {
+        padding: 1.5rem;
+    }
+
+    .controls-section {
+        gap: 0.8rem;
+    }
+
+    .farmers-table th,
+    .farmers-table td {
+        padding: 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .farmers-table th {
+        font-size: 0.85rem;
+    }
+
+    .view-profile-btn {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Tablets - Portrait (640px - 767px) */
+@media (max-width: 767px) and (min-width: 640px) {
     .main-content {
         padding: 1rem;
+        max-height: calc(100vh - 100px);
+    }
+
+    .main-content h2 {
+        font-size: 1.4rem;
+        margin-bottom: 1rem;
     }
 
     .content-card {
@@ -254,6 +297,85 @@
     .controls-section {
         flex-direction: column;
         align-items: stretch;
+        gap: 0.8rem;
+        margin-bottom: 1rem;
+    }
+
+    .search-container,
+    .sort-container {
+        width: 100%;
+    }
+
+    .sort-container {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .sort-select {
+        flex: 1;
+        width: auto;
+        min-width: 120px;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border-radius: 6px;
+    }
+
+    .farmers-table {
+        min-width: 550px;
+        font-size: 0.9rem;
+    }
+
+    .farmers-table th {
+        padding: 0.7rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    .farmers-table td {
+        padding: 0.7rem 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    .view-profile-btn {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.6rem;
+        font-size: 0.75rem;
+    }
+
+    .search-input,
+    .sort-select {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.95rem;
+    }
+}
+
+/* Mobile Devices (480px - 639px) */
+@media (max-width: 639px) and (min-width: 480px) {
+    .main-content {
+        padding: 0.75rem;
+        max-height: calc(100vh - 90px);
+    }
+
+    .main-content h2 {
+        font-size: 1.2rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .content-card {
+        padding: 0.75rem;
+        border-radius: 8px;
+    }
+
+    .controls-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+        margin-bottom: 0.8rem;
     }
 
     .search-container,
@@ -266,38 +388,201 @@
         align-items: stretch;
     }
 
+    .sort-container label {
+        font-size: 0.85rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .search-input,
     .sort-select {
         width: 100%;
+        padding: 0.5rem 0.7rem;
+        font-size: 0.9rem;
+        border-radius: 6px;
+    }
+
+    .results-summary {
+        padding: 0.6rem 0.8rem;
+        margin-bottom: 0.8rem;
+        font-size: 0.85rem;
     }
 
     .table-container {
-        overflow-x: scroll;
+        overflow-x: auto;
+        border-radius: 6px;
+        -webkit-overflow-scrolling: touch;
     }
 
     .farmers-table {
-        min-width: 600px;
+        min-width: 500px;
     }
 
-    .farmers-table th,
+    .farmers-table thead {
+        background-color: #667eea;
+    }
+
+    .farmers-table th {
+        padding: 0.6rem 0.45rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+
     .farmers-table td {
-        padding: 0.75rem 0.5rem;
-        font-size: 0.85rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .main-content h2 {
-        font-size: 1.5rem;
-    }
-
-    .farmers-table th,
-    .farmers-table td {
-        padding: 0.6rem 0.4rem;
+        padding: 0.6rem 0.45rem;
         font-size: 0.8rem;
     }
 
+    .farmer-name-cell {
+        font-size: 0.85rem;
+    }
+
     .view-profile-btn {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.7rem;
+        white-space: nowrap;
+    }
+
+    .status-badge {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .no-data {
+        padding: 2rem 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .retry-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Small Mobile Devices (< 480px) */
+@media (max-width: 479px) {
+    .main-content {
+        padding: 0.5rem;
+        max-height: calc(100vh - 70px);
+    }
+
+    .main-content h2 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .content-card {
+        padding: 0.5rem;
+        border-radius: 6px;
+    }
+
+    .controls-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.4rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .search-container,
+    .sort-container {
+        width: 100%;
+    }
+
+    .sort-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sort-container label {
+        font-size: 0.75rem;
+        margin-bottom: 0.2rem;
+        font-weight: 600;
+    }
+
+    .search-input,
+    .sort-select {
+        width: 100%;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        border: 2px solid #e0e0e0;
+    }
+
+    .results-summary {
+        padding: 0.5rem 0.6rem;
+        margin-bottom: 0.6rem;
+        font-size: 0.75rem;
+        border-radius: 4px;
+    }
+
+    /* Convert table to card layout on very small screens */
+    .table-container {
+        overflow-x: auto;
+        border-radius: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .farmers-table {
+        min-width: 450px;
+        font-size: 0.75rem;
+    }
+
+    .farmers-table thead {
+        background-color: #667eea;
+    }
+
+    .farmers-table th {
+        padding: 0.4rem 0.35rem;
+        font-size: 0.65rem;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
+    .farmers-table td {
+        padding: 0.4rem 0.35rem;
+        font-size: 0.7rem;
+        word-break: break-word;
+    }
+
+    .farmer-name-cell {
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .view-profile-btn {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.65rem;
+        min-width: 50px;
+        white-space: nowrap;
+    }
+
+    .status-badge {
+        padding: 0.15rem 0.35rem;
+        font-size: 0.6rem;
+        border-radius: 12px;
+    }
+
+    .no-data {
+        padding: 1.5rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .retry-button {
         padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .loading-container,
+    .error-container {
+        min-height: 200px;
+        gap: 0.6rem;
+    }
+
+    .loading-container p,
+    .error-container p {
+        font-size: 0.9rem;
+    }
+}
         font-size: 0.85rem;
     }
 }

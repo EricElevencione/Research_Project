@@ -487,12 +487,20 @@ const JoManageRequests: React.FC = () => {
     number | null
   >(null);
 
+<<<<<<< HEAD
   // Notification State
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState<
     "success" | "error" | "warning"
   >("success");
+=======
+    // Notification State
+    const [showNotification, setShowNotification] = useState(false);
+    const [notificationMessage, setNotificationMessage] = useState('');
+    const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning'>('success');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
   // Delete Confirmation Modal State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -1076,12 +1084,619 @@ const JoManageRequests: React.FC = () => {
         </div>
       )}
 
+<<<<<<< HEAD
       <div className="page">
         {/* Sidebar */}
         <div className="sidebar">
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
+=======
+        const approvedLumping143 = requestsList
+            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
+            .reduce((sum, r) => sum + Number(r.requested_lumping143_kg || 0), 0);
+
+        const approvedLp296 = requestsList
+            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
+            .reduce((sum, r) => sum + Number(r.requested_lp296_kg || 0), 0);
+
+        const remainingJackpot = Number(allocToUse.jackpot_kg || 0) - approvedJackpot;
+        const remainingUs88 = Number(allocToUse.us88_kg || 0) - approvedUs88;
+        const remainingTh82 = Number(allocToUse.th82_kg || 0) - approvedTh82;
+        const remainingRh9000 = Number(allocToUse.rh9000_kg || 0) - approvedRh9000;
+        const remainingLumping143 = Number(allocToUse.lumping143_kg || 0) - approvedLumping143;
+        const remainingLp296 = Number(allocToUse.lp296_kg || 0) - approvedLp296;
+
+        const requestedJackpot = Number(request.requested_jackpot_kg || 0);
+        const requestedUs88 = Number(request.requested_us88_kg || 0);
+        const requestedTh82 = Number(request.requested_th82_kg || 0);
+        const requestedRh9000 = Number(request.requested_rh9000_kg || 0);
+        const requestedLumping143 = Number(request.requested_lumping143_kg || 0);
+        const requestedLp296 = Number(request.requested_lp296_kg || 0);
+
+        const seedShortage = (requestedJackpot > remainingJackpot) ||
+            (requestedUs88 > remainingUs88) ||
+            (requestedTh82 > remainingTh82) ||
+            (requestedRh9000 > remainingRh9000) ||
+            (requestedLumping143 > remainingLumping143) ||
+            (requestedLp296 > remainingLp296);
+
+        // Debug logging
+        if (request.status === 'pending') {
+            console.log(`🔍 Shortage Check for ${request.farmer_name}:`, {
+                fertilizers: {
+                    urea: { requested: requestedUrea, remaining: remainingUrea, shortage: requestedUrea > remainingUrea },
+                    complete: { requested: requestedComplete, remaining: remainingComplete, shortage: requestedComplete > remainingComplete },
+                    amSul: { requested: requestedAmSul, remaining: remainingAmSul, shortage: requestedAmSul > remainingAmSul },
+                    potash: { requested: requestedPotash, remaining: remainingPotash, shortage: requestedPotash > remainingPotash }
+                },
+                seeds: {
+                    jackpot: { requested: requestedJackpot, remaining: remainingJackpot, shortage: requestedJackpot > remainingJackpot },
+                    us88: { requested: requestedUs88, remaining: remainingUs88, shortage: requestedUs88 > remainingUs88 },
+                    th82: { requested: requestedTh82, remaining: remainingTh82, shortage: requestedTh82 > remainingTh82 },
+                    rh9000: { requested: requestedRh9000, remaining: remainingRh9000, shortage: requestedRh9000 > remainingRh9000 },
+                    lumping143: { requested: requestedLumping143, remaining: remainingLumping143, shortage: requestedLumping143 > remainingLumping143 },
+                    lp296: { requested: requestedLp296, remaining: remainingLp296, shortage: requestedLp296 > remainingLp296 }
+                }
+            });
+        }
+
+        // Return true if any fertilizer OR seed shortage exists
+        return fertilizerShortage || seedShortage;
+    };
+
+    return (
+        <div className="page-container">
+            {/* Notification Toast */}
+            {showNotification && (
+                <div className={`jo-manage-notification-toast jo-manage-notification-${notificationType}`}>
+                    <div className="jo-manage-notification-content">
+                        <span className="jo-manage-notification-icon">
+                            {notificationType === 'success' ? '✅' : notificationType === 'warning' ? '⚠️' : '❌'}
+                        </span>
+                        <span className="jo-manage-notification-message">{notificationMessage}</span>
+                    </div>
+                    <button 
+                        className="jo-manage-notification-close"
+                        onClick={() => setShowNotification(false)}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+            
+            <div className="page has-mobile-sidebar">
+                {/* Sidebar */}
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+                    <nav className="sidebar-nav">
+                        <div className='sidebar-logo'>
+                            <img src={LogoImage} alt="Logo" />
+                        </div>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/jo-dashboard') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-dashboard')}
+                        >
+                            <span className="nav-icon">
+                                <img src={HomeIcon} alt="Home" />
+                            </span>
+                            <span className="nav-text">Home</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/jo-rsbsapage') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-rsbsapage')}
+                        >
+                            <span className="nav-icon">
+                                <img src={RSBSAIcon} alt="RSBSA" />
+                            </span>
+                            <span className="nav-text">RSBSA</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-incentives')}
+                        >
+                            <span className="nav-icon">
+                                <img src={IncentivesIcon} alt="Incentives" />
+                            </span>
+                            <span className="nav-text">Incentives</span>
+                        </button>
+
+                        <button
+                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-masterlist')}
+                        >
+                            <span className="nav-icon">
+                                <img src={MasterlistIcon} alt="Masterlist" />
+                            </span>
+                            <span className="nav-text">Masterlist</span>
+                        </button>
+
+                        <div
+                            className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}
+                            onClick={() => navigate('/jo-land-registry')}
+                        >
+                            <div className="nav-icon">🗺️</div>
+                            <span className="nav-text">Land Registry</span>
+                        </div>
+
+                        <button
+                            className="sidebar-nav-item logout"
+                            onClick={() => navigate('/')}
+                        >
+                            <span className="nav-icon">
+                                <img src={LogoutIcon} alt="Logout" />
+                            </span>
+                            <span className="nav-text">Logout</span>
+                        </button>
+
+                    </nav>
+                </div>
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
+                {/* Main Content */}
+                <div className="main-content">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">JO Requests</div>
+                    </div>
+                    <div className="jo-manage-dashboard-header-incent">
+                        <div>
+                            <h2 className="jo-manage-page-header">Manage Farmer Requests</h2>
+                        </div>
+                        <div className="jo-manage-requests-back-create-section">
+                            <button
+                                className="jo-manage-requests-back-btn"
+                                onClick={() => navigate('/jo-incentives')}
+                            >
+                                ←
+                            </button>
+                            <button
+                                className="jo-manage-requests-add-btn"
+                                onClick={() => navigate(`/jo-add-farmer-request/${allocationId}`)}
+                            >
+                                ➕ Add Farmer Request
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="jo-manage-content-card-incent">
+                        {/* Filters */}
+                        <div className="jo-manage-requests-filters">
+                            <input
+                                type="text"
+                                placeholder="🔍 Search by farmer name or barangay..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="jo-manage-requests-search-input"
+                            />
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="jo-manage-requests-filter-select"
+                            >
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                            <select
+                                value={barangayFilter}
+                                onChange={(e) => setBarangayFilter(e.target.value)}
+                                className="jo-manage-requests-filter-select"
+                            >
+                                <option value="all">All Barangays</option>
+                                {getUniqueBarangays().map(barangay => (
+                                    <option key={barangay} value={barangay}>{barangay}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Allocation vs Requests Comparison */}
+                        <div className="jo-manage-requests-comparison-grid">
+                            {/* Regional Allocation Card */}
+                            <div className="jo-manage-requests-allocation-card">
+                                <h3 className="jo-manage-requests-card-header allocation">
+                                    📦 Regional Allocation (Total Received)
+                                </h3>
+                                <div className="jo-manage-requests-card-content">
+                                    <div className="jo-manage-requests-stat-box fertilizers">
+                                        <span className="jo-manage-requests-stat-label fertilizers">🌱 Total Fertilizers</span>
+                                        <span className="jo-manage-requests-stat-value fertilizers">
+                                            {allocation ? (
+                                                (Number(allocation.urea_46_0_0_bags || 0) +
+                                                    Number(allocation.complete_14_14_14_bags || 0) +
+                                                    Number(allocation.ammonium_sulfate_21_0_0_bags || 0) +
+                                                    Number(allocation.muriate_potash_0_0_60_bags || 0)).toFixed(2)
+                                            ) : '0.00'} bags
+                                        </span>
+                                    </div>
+                                    <div className="jo-manage-requests-stat-box seeds">
+                                        <span className="jo-manage-requests-stat-label seeds">🌾 Total Seeds</span>
+                                        <span className="jo-manage-requests-stat-value seeds">
+                                            {allocation ? (
+                                                (Number(allocation.jackpot_kg || 0) +
+                                                    Number(allocation.us88_kg || 0) +
+                                                    Number(allocation.th82_kg || 0) +
+                                                    Number(allocation.rh9000_kg || 0) +
+                                                    Number(allocation.lumping143_kg || 0) +
+                                                    Number(allocation.lp296_kg || 0)).toFixed(2)
+                                            ) : '0.00'} kg
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Total Farmer Requests Card */}
+                            <div className="jo-manage-requests-farmer-requests-card">
+                                <h3 className="jo-manage-requests-card-header total-requests">
+                                    📊 Total Farmer Requests
+                                </h3>
+                                <div className="jo-manage-requests-card-content">
+                                    <div className="jo-manage-requests-stat-box fertilizers">
+                                        <span className="jo-manage-requests-stat-label fertilizers">🌱 Total Fertilizers Requested</span>
+                                        <span className="jo-manage-requests-stat-value fertilizers">
+                                            {getTotalRequested('requested_urea_bags') +
+                                                getTotalRequested('requested_complete_14_bags') +
+                                                getTotalRequested('requested_ammonium_sulfate_bags') +
+                                                getTotalRequested('requested_muriate_potash_bags')} bags
+                                        </span>
+                                    </div>
+                                    <div className="jo-manage-requests-stat-box seeds">
+                                        <span className="jo-manage-requests-stat-label seeds">🌾 Total Seeds Requested</span>
+                                        <span className="jo-manage-requests-stat-value seeds">
+                                            {getTotalRequested('requested_jackpot_kg') +
+                                                getTotalRequested('requested_us88_kg') +
+                                                getTotalRequested('requested_th82_kg') +
+                                                getTotalRequested('requested_rh9000_kg') +
+                                                getTotalRequested('requested_lumping143_kg') +
+                                                getTotalRequested('requested_lp296_kg')} kg
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Approved Farmer Requests Card */}
+                            <div className="jo-manage-requests-farmer-requests-card approved">
+                                <h3 className="jo-manage-requests-card-header farmer-requests">
+                                    ✅ Approved Farmer Requests
+                                </h3>
+                                <div className="jo-manage-requests-card-content">
+                                    <div className="jo-manage-requests-stat-box fertilizers">
+                                        <span className="jo-manage-requests-stat-label fertilizers">🌱 Total Fertilizers</span>
+                                        <span className="jo-manage-requests-stat-value fertilizers">
+                                            {(() => {
+                                                const approvedRequests = requests.filter(r => r.status === 'approved');
+                                                const total = approvedRequests.reduce((sum, r) =>
+                                                    sum + Number(r.requested_urea_bags || 0) +
+                                                    Number(r.requested_complete_14_bags || 0) +
+                                                    Number(r.requested_ammonium_sulfate_bags || 0) +
+                                                    Number(r.requested_muriate_potash_bags || 0), 0
+                                                );
+                                                return Number(total).toFixed(2);
+                                            })()} bags
+                                        </span>
+                                    </div>
+                                    <div className="jo-manage-requests-stat-box seeds">
+                                        <span className="jo-manage-requests-stat-label seeds">🌾 Total Seeds</span>
+                                        <span className="jo-manage-requests-stat-value seeds">
+                                            {(() => {
+                                                const approvedRequests = requests.filter(r => r.status === 'approved');
+                                                const total = approvedRequests.reduce((sum, r) =>
+                                                    sum + Number(r.requested_jackpot_kg || 0) +
+                                                    Number(r.requested_us88_kg || 0) +
+                                                    Number(r.requested_th82_kg || 0) +
+                                                    Number(r.requested_rh9000_kg || 0) +
+                                                    Number(r.requested_lumping143_kg || 0) +
+                                                    Number(r.requested_lp296_kg || 0), 0
+                                                );
+                                                return Number(total).toFixed(2);
+                                            })()} kg
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Rejected Farmer Requests Card */}
+                            <div className="jo-manage-requests-farmer-requests-card rejected">
+                                <h3 className="jo-manage-requests-card-header farmer-requests-rejected">
+                                    ❌ Rejected Farmer Requests
+                                </h3>
+                                <div className="jo-manage-requests-card-content">
+                                    <div className="jo-manage-requests-stat-box fertilizers">
+                                        <span className="jo-manage-requests-stat-label fertilizers">🌱 Total Fertilizers</span>
+                                        <span className="jo-manage-requests-stat-value fertilizers">
+                                            {(() => {
+                                                const rejectedRequests = requests.filter(r => r.status === 'rejected');
+                                                const total = rejectedRequests.reduce((sum, r) =>
+                                                    sum + Number(r.requested_urea_bags || 0) +
+                                                    Number(r.requested_complete_14_bags || 0) +
+                                                    Number(r.requested_ammonium_sulfate_bags || 0) +
+                                                    Number(r.requested_muriate_potash_bags || 0), 0
+                                                );
+                                                return Number(total).toFixed(2);
+                                            })()} bags
+                                        </span>
+                                    </div>
+                                    <div className="jo-manage-requests-stat-box seeds">
+                                        <span className="jo-manage-requests-stat-label seeds">🌾 Total Seeds</span>
+                                        <span className="jo-manage-requests-stat-value seeds">
+                                            {(() => {
+                                                const rejectedRequests = requests.filter(r => r.status === 'rejected');
+                                                const total = rejectedRequests.reduce((sum, r) =>
+                                                    sum + Number(r.requested_jackpot_kg || 0) +
+                                                    Number(r.requested_us88_kg || 0) +
+                                                    Number(r.requested_th82_kg || 0) +
+                                                    Number(r.requested_rh9000_kg || 0) +
+                                                    Number(r.requested_lumping143_kg || 0) +
+                                                    Number(r.requested_lp296_kg || 0), 0
+                                                );
+                                                return Number(total).toFixed(2);
+                                            })()} kg
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Summary Cards */}
+                        <div className="jo-manage-requests-summary-grid">
+                            <div className="jo-manage-requests-summary-card total">
+                                <div className="jo-manage-requests-summary-label">Total Requests</div>
+                                <div className="jo-manage-requests-summary-value">{filteredRequests.length}</div>
+                            </div>
+                            <div className="jo-manage-requests-summary-card pending">
+                                <div className="jo-manage-requests-summary-label pending">Pending</div>
+                                <div className="jo-manage-requests-summary-value pending">
+                                    {filteredRequests.filter(r => r.status === 'pending').length}
+                                </div>
+                            </div>
+                            <div className="jo-manage-requests-summary-card approved">
+                                <div className="jo-manage-requests-summary-label approved">Approved</div>
+                                <div className="jo-manage-requests-summary-value approved">
+                                    {filteredRequests.filter(r => r.status === 'approved').length}
+                                </div>
+                            </div>
+                            <div className="jo-manage-requests-summary-card rejected">
+                                <div className="jo-manage-requests-summary-label rejected">Rejected</div>
+                                <div className="jo-manage-requests-summary-value rejected">
+                                    {filteredRequests.filter(r => r.status === 'rejected').length}
+                                </div>
+                            </div>
+                            {/* Combined Shortage & Suggestions Card */}
+                            <div
+                                className="jo-manage-requests-summary-card shortage"
+                                onClick={() => setShowSuggestionsModal(true)}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                {newSuggestionsCount > 0 && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '-8px',
+                                        right: '-8px',
+                                        background: '#ef4444',
+                                        color: 'white',
+                                        borderRadius: '50%',
+                                        width: '24px',
+                                        height: '24px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        border: '2px solid white',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                        animation: 'pulse 2s infinite'
+                                    }}>
+                                        {newSuggestionsCount}
+                                    </div>
+                                )}
+                                <div style={{ fontSize: '14px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    ⚠️ Shortages & Suggestions
+                                </div>
+                                <div style={{ fontSize: '24px', fontWeight: '600', color: '#92400e' }}>
+                                    {autoSuggestionsCount} / {Object.keys(alternatives).filter(key => {
+                                        const alt = alternatives[parseInt(key)];
+                                        return alt?.suggestions?.suggestions?.length > 0;
+                                    }).length}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#78350f', marginTop: '4px' }}>
+                                    {autoSuggestionsCount} shortages, {Object.keys(alternatives).filter(key => {
+                                        const alt = alternatives[parseInt(key)];
+                                        return alt?.suggestions?.suggestions?.length > 0;
+                                    }).length} with solutions • Click to view
+                                </div>
+                            </div>
+                        </div>
+
+                        {loading ? (
+                            <div className="loading-message">Loading requests...</div>
+                        ) : error ? (
+                            <div className="error-state">
+                                <div className="error-icon">⚠️</div>
+                                <h3>Error Loading Requests</h3>
+                                <p>{error}</p>
+                            </div>
+                        ) : filteredRequests.length === 0 ? (
+                            <div className="empty-state">
+                                <div className="empty-icon">📝</div>
+                                <h3>No Farmer Requests</h3>
+                                <p>No requests found matching your filters</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Info Box for Visual Indicators */}
+                                {filteredRequests.filter(r => r.status === 'pending' && checkPotentialShortage(r)).length > 0 && (
+                                    <div className="jo-manage-requests-info-box">
+                                        <span style={{ fontSize: '24px' }}>💡</span>
+                                        <div style={{ flex: 1 }}>
+                                            <strong style={{ color: '#92400e', fontSize: '14px' }}>
+                                                Alternatives Auto-Loaded & Available
+                                            </strong>
+                                            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#78350f' }}>
+                                                Rows highlighted in yellow (⚠️) have detected shortages.
+                                                Alternative fertilizer options have been automatically loaded based on agronomic equivalency.
+                                                Click the "💡 Suggestions" card above to view and apply alternatives.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="jo-manage-requests-table-container">
+                                    <table style={{
+                                        width: '100%',
+                                        borderCollapse: 'collapse',
+                                        fontSize: '14px'
+                                    }}>
+                                        <thead>
+                                            <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Farmer Name</th>
+                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Barangay</th>
+                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Fertilizers (bags)</th>
+                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Seeds (kg)</th>
+                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Status</th>
+                                                <th style={{ padding: '12px', textAlign: 'center', fontWeight: '600' }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredRequests.map(request => {
+                                                const totalFertilizer = Number(request.requested_urea_bags || 0) +
+                                                    Number(request.requested_complete_14_bags || 0) +
+                                                    Number(request.requested_ammonium_sulfate_bags || 0) +
+                                                    Number(request.requested_muriate_potash_bags || 0);
+
+                                                const totalSeeds = Number(request.requested_jackpot_kg || 0) +
+                                                    Number(request.requested_us88_kg || 0) +
+                                                    Number(request.requested_th82_kg || 0) +
+                                                    Number(request.requested_rh9000_kg || 0) +
+                                                    Number(request.requested_lumping143_kg || 0) +
+                                                    Number(request.requested_lp296_kg || 0);
+
+                                                // Check if this request might have shortages
+                                                const hasShortage = request.status === 'pending' && checkPotentialShortage(request);
+
+                                                return (
+                                                    <React.Fragment key={request.id}>
+                                                        <tr style={{
+                                                            borderBottom: '1px solid #e5e7eb',
+                                                            background: hasShortage ? '#fef3c7' : 'transparent'
+                                                        }}>
+                                                            <td style={{ padding: '12px' }}>
+                                                                {hasShortage && (
+                                                                    <span
+                                                                        title="Potential shortage - alternatives auto-loaded"
+                                                                        style={{
+                                                                            marginRight: '8px',
+                                                                            fontSize: '16px'
+                                                                        }}
+                                                                    >
+
+                                                                    </span>
+                                                                )}
+                                                                {hasShortage && alternatives[request.id] && (
+                                                                    <span
+                                                                        title="Alternatives ready - click to view"
+                                                                    >
+
+                                                                    </span>
+                                                                )}
+                                                                {request.farmer_name}
+                                                            </td>
+                                                            <td style={{ padding: '12px' }}>{request.barangay}</td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                {totalFertilizer.toFixed(2)}
+                                                                {hasShortage && (
+                                                                    <span
+                                                                        title="Alternatives auto-displayed below"
+                                                                    >
+
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>{totalSeeds.toFixed(2)}</td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <span style={{
+                                                                    padding: '4px 12px',
+                                                                    borderRadius: '12px',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '600',
+                                                                    background: request.status === 'pending' ? '#fef3c7' :
+                                                                        request.status === 'approved' ? '#d1fae5' : '#fee2e2',
+                                                                    color: request.status === 'pending' ? '#92400e' :
+                                                                        request.status === 'approved' ? '#065f46' : '#991b1b'
+                                                                }}>
+                                                                    {request.status.toUpperCase()}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                                                    {request.status === 'pending' && (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => handleEdit(request)}
+                                                                                style={{
+                                                                                    padding: '6px 12px',
+                                                                                    background: '#f59e0b',
+                                                                                    color: 'white',
+                                                                                    border: 'none',
+                                                                                    borderRadius: '4px',
+                                                                                    cursor: 'pointer',
+                                                                                    fontSize: '12px'
+                                                                                }}
+                                                                            >
+                                                                                ✏️ Edit
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={() => handleDelete(request.id, request.farmer_name)}
+                                                                        style={{
+                                                                            padding: '6px 12px',
+                                                                            background: '#6b7280',
+                                                                            color: 'white',
+                                                                            border: 'none',
+                                                                            borderRadius: '4px',
+                                                                            cursor: 'pointer',
+                                                                            fontSize: '12px'
+                                                                        }}
+                                                                    >
+                                                                        🗑️ Delete
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr style={{ background: '#f9fafb', borderTop: '2px solid #e5e7eb', fontWeight: '600' }}>
+                                                <td colSpan={2} style={{ padding: '12px' }}>TOTALS</td>
+                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                    {(getTotalRequested('requested_urea_bags') +
+                                                        getTotalRequested('requested_complete_14_bags') +
+                                                        getTotalRequested('requested_ammonium_sulfate_bags') +
+                                                        getTotalRequested('requested_muriate_potash_bags')).toFixed(2)}
+                                                </td>
+                                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                    {(getTotalRequested('requested_jackpot_kg') +
+                                                        getTotalRequested('requested_us88_kg') +
+                                                        getTotalRequested('requested_th82_kg') +
+                                                        getTotalRequested('requested_rh9000_kg') +
+                                                        getTotalRequested('requested_lumping143_kg') +
+                                                        getTotalRequested('requested_lp296_kg')).toFixed(2)}
+                                                </td>
+                                                <td colSpan={3}></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+>>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
             </div>
 
             <button

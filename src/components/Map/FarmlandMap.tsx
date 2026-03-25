@@ -27,6 +27,15 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+interface UnplottedFarmerData {
+    id: string;
+    farmerName: string;
+    barangay: string;
+    farmLocation: string;
+    latitude: number;
+    longitude: number;
+}
+
 interface FarmlandMapProps {
   onLandPlotSelect?: (properties: any) => void;
   highlightGeometry?: any | null;
@@ -741,6 +750,22 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
           </LayersControl.Overlay>
         )}
       </LayersControl>
+                {highlightGeometry && (
+                    <LayersControl.Overlay checked name="Hovered Parcel">
+                        <GeoJSON
+                            key="highlight-geometry"
+                            data={{
+                                type: 'FeatureCollection', features: [
+                                    { type: 'Feature', geometry: highlightGeometry, properties: {} }
+                                ]
+                            } as any}
+                            style={() => ({ color: '#e74c3c', weight: 3, opacity: 1, fillOpacity: 0.2 })}
+                        />
+                    </LayersControl.Overlay>
+                )}
+
+                {/* Pins removed */}
+            </LayersControl>
 
       {municipalBoundaryData && (
         <GeoJSON

@@ -365,6 +365,21 @@ td.brgy-status {
 }
 
 @media (max-width: 768px) {
+  .tech-dashboard-page-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .tech-dashboard-page {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .tech-dashboard-main-content {
+    padding: 12px;
+    overflow: auto;
+  }
   .tech-dashboard-main-content {
     padding: 12px;
   }

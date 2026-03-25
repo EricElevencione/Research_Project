@@ -49,6 +49,7 @@ const TechPickLandParcel: React.FC = () => {
     const [landParcels, setLandParcels] = useState<FarmParcel[]>([]);
     const [selectedParcel, setSelectedParcel] = useState<FarmParcel | null>(null);
     const [hoveredParcel, setHoveredParcel] = useState<FarmParcel | null>(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Helper used for matching against land plots in the map
     const normalize = (str: string) => (str || '').trim().toLowerCase();
@@ -197,7 +198,7 @@ const TechPickLandParcel: React.FC = () => {
         <div className="page-container">
             <div className="page">
                 {/* Sidebar starts here */}
-                <div className="sidebar">
+                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <nav className="sidebar-nav">
                         <div className="sidebar-logo">
                             <img src={LogoImage} alt="Logo" />
@@ -257,8 +258,14 @@ const TechPickLandParcel: React.FC = () => {
                 </div>
                 {/* Sidebar ends here */}
 
+                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+
                 {/* Main content starts here */}
                 <div className="main-content jo-map-layout">
+                    <div className="tech-incent-mobile-header">
+                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+                        <div className="tech-incent-mobile-title">Land Parcels</div>
+                    </div>
                     <button onClick={() => navigate('/technician-rsbsa')} className="back-button" aria-label="Back to RSBSA list">←</button>
                     <div className="content-header">
                         <h2>Land Parcel Selection</h2>

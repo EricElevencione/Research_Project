@@ -29,6 +29,26 @@
     #c8e6c9 100%
   );
   overflow: auto;
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    135deg,
+    #e8f5e9 0%,
+    #f1f8e9 25%,
+    #ffffff 50%,
+    #e8f5e9 75%,
+    #c8e6c9 100%
+  );
+  overflow: auto;
+  min-height: 0;
+}
+
+.tech-incent-content-card {
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
 }
 
 .tech-incent-page-header {
@@ -45,19 +65,134 @@
   font-weight: 400;
 }
 
+/* Mobile hamburger header */
+.tech-incent-mobile-header {
+  display: none;
+}
+
+.tech-incent-hamburger {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+
 /* Dashboard Header */
 .tech-incent-dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
-  flex-direction: column;
 }
 
-/* Back and Create Buttons Container */
-.tech-incent-back-create {
+/* Operational Progress Section */
+.tech-incent-progress-section {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f9fafb 50%, #e0f2fe 100%);
+  border: 1px solid #d1fae5;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tech-incent-progress-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.tech-incent-progress-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #047857;
+  margin: 0;
+}
+
+.tech-incent-progress-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.tech-incent-progress-season-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+
+.tech-incent-progress-season-select label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.tech-incent-progress-season-select select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background-color: #ffffff;
+}
+
+.tech-incent-progress-season-select select:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.tech-incent-progress-summary {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tech-incent-progress-stat {
+  flex: 1;
+  min-width: 120px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.tech-incent-progress-stat-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.tech-incent-progress-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.tech-incent-burndown-wrapper {
+  margin-top: 8px;
+  height: 180px;
+}
+
+.tech-incent-burndown-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* sparkline inside allocation card */
+.tech-incent-card-sparkline {
+  margin-bottom: 12px;
+  width: 100%;
+  height: 40px;
 }
 
 /* Content Card */
@@ -510,6 +645,51 @@
   background: #f9fafb;
 }
 
+/* Per-allocation usage sparkline */
+.tech-incent-usage-row {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tech-incent-usage-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.tech-incent-usage-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tech-incent-usage-bar-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.tech-incent-usage-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+  transition: width 0.3s ease;
+}
+
+.tech-incent-usage-percentage {
+  font-size: 12px;
+  font-weight: 600;
+  color: #047857;
+  min-width: 40px;
+  text-align: right;
+}
+
 .tech-incent-stat-row {
   display: flex;
   gap: 12px;
@@ -634,6 +814,19 @@
     flex-direction: column;
     gap: 16px;
   }
+  .tech-incent-dashboard-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .tech-incent-progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tech-incent-progress-season-select {
+    width: 100%;
+  }
 
   .tech-incent-page-header {
     font-size: 24px;
@@ -683,6 +876,109 @@
     flex: 1 1 100%;
     padding: 10px 14px;
     font-size: 13px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .tech-incent-page-container {
+    flex-direction: column;
+  }
+
+  .tech-incent-page {
+    flex-direction: column;
+    min-height: auto;
+    height: auto;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .sidebar.sidebar-open {
+    display: flex !important;
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 260px;
+    max-width: 90%;
+    height: 100vh;
+    z-index: 9999;
+    background-color: #fff;
+    border-radius: 0 0 12px 0;
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+  }
+
+  .sidebar-nav {
+    width: 100% !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 10px 12px;
+  }
+
+  .sidebar-nav-item {
+    width: 100%;
+    margin: 2px 0;
+    padding: 10px 12px;
+    text-align: left;
+    border-radius: 0;
+  }
+
+  .sidebar-logo {
+    display: none;
+  }
+
+  .tech-incent-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .tech-incent-hamburger {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    color: #1f2937;
+    cursor: pointer;
+  }
+
+  .tech-incent-mobile-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #065f46;
+    flex: 1;
+    margin-left: 16px;
+    text-align: left;
+  }
+
+  .tech-incent-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .tech-incent-sidebar-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .tech-incent-main-content {
+    padding: 12px;
+    margin-top: 10px;
+  }
+
+  .tech-incent-content-card {
+    padding: 16px;
   }
 }
 
