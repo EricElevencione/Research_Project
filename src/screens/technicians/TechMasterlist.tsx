@@ -422,6 +422,12 @@ const TechMasterlist: React.FC = () => {
     return matchesStatus && matchesSearch && matchesOwnership;
   });
 
+  const sortedFilteredRecords = [...filteredRecords].sort((a, b) => {
+    const timeA = a.dateSubmitted ? new Date(a.dateSubmitted).getTime() : 0;
+    const timeB = b.dateSubmitted ? new Date(b.dateSubmitted).getTime() : 0;
+    return timeB - timeA; // newest first
+  });
+
   const formatDate = (iso: string) => {
     if (!iso) return "—";
     try {
@@ -494,9 +500,10 @@ const TechMasterlist: React.FC = () => {
   };
 
   const getFilteredPrintRecords = () => {
-    let filtered = rsbsaRecords.filter(
-      (record) => record.status === "Active Farmer",
-    );
+    const shouldIncludeAllFarmers = printFilter.type === "all_farmers";
+    let filtered = shouldIncludeAllFarmers
+      ? [...rsbsaRecords]
+      : rsbsaRecords.filter((record) => record.status === "Active Farmer");
 
     if (printFilter.type === "lastname" && printFilter.value) {
       filtered = filtered.filter((record) => {
@@ -519,6 +526,19 @@ const TechMasterlist: React.FC = () => {
     }
 
     return filtered;
+  };
+
+  const openBrowserPrintPreview = (html: string): boolean => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to print the farmers list.");
+      return false;
+    }
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    return true;
   };
 
   const getUniqueLastNames = () => {
@@ -561,7 +581,11 @@ const TechMasterlist: React.FC = () => {
       return;
     }
 
-    let filterDescription = "All Active Farmers";
+    const printingAllFarmers = printFilter.type === "all_farmers";
+
+    let filterDescription = printingAllFarmers
+      ? "All Farmers"
+      : "All Active Farmers";
     if (printFilter.type === "lastname" && printFilter.value) {
       filterDescription = `Family Name: ${printFilter.value}`;
     } else if (printFilter.type === "barangay" && printFilter.value) {
@@ -569,6 +593,10 @@ const TechMasterlist: React.FC = () => {
     } else if (printFilter.type === "date" && printFilter.value) {
       filterDescription = `Date Submitted: ${formatDate(printFilter.value)}`;
     }
+
+    const reportTitle = printingAllFarmers
+      ? "ALL FARMERS LIST"
+      : "ACTIVE FARMERS LIST";
 
     const printContent = `
       <!DOCTYPE html>
@@ -685,7 +713,7 @@ const TechMasterlist: React.FC = () => {
           
           <div class="content-wrapper">
             <div class="header">
-              <h1>ACTIVE FARMERS LIST</h1>
+              <h1>${reportTitle}</h1>
               <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
             </div>
             
@@ -734,35 +762,30 @@ const TechMasterlist: React.FC = () => {
     `;
 
     // Check if running in Electron with print API available
+    let printStarted = false;
     if (window.electron?.printContent) {
       try {
         const result = await window.electron.printContent(printContent);
-        if (!result.success && result.error) {
+        if (result.success) {
+          printStarted = true;
+        } else if (result.error) {
           console.error("Print failed:", result.error);
-          // User cancelled the print dialog - this is normal, don't show error
+          // User cancelled the print dialog - this is normal.
           if (result.error !== "cancelled") {
-            alert("Print failed: " + result.error);
+            printStarted = openBrowserPrintPreview(printContent);
           }
         }
       } catch (err: any) {
         console.error("Print error:", err);
-        alert("Failed to print: " + err.message);
+        printStarted = openBrowserPrintPreview(printContent);
       }
     } else {
-      // Fallback for browser environment
-      const printWindow = window.open("", "_blank");
-      if (!printWindow) {
-        alert("Please allow popups to print the active farmers list.");
-        return;
-      }
+      // Browser fallback: open preview window with explicit Print button.
+      printStarted = openBrowserPrintPreview(printContent);
+    }
 
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
-      };
+    if (!printStarted && !window.electron?.printContent) {
+      return;
     }
 
     // Close the modal and reset filter
@@ -933,8 +956,8 @@ const TechMasterlist: React.FC = () => {
                   )}
                   {!loading &&
                     !error &&
-                    filteredRecords.length > 0 &&
-                    filteredRecords.map((record) => (
+                    sortedFilteredRecords.length > 0 &&
+                    sortedFilteredRecords.map((record) => (
                       <tr
                         key={record.id}
                         onClick={() => fetchFarmerDetails(record.id)}
@@ -961,7 +984,7 @@ const TechMasterlist: React.FC = () => {
                     ))}
                   {!loading &&
                     !error &&
-                    filteredRecords.length === 0 &&
+                    sortedFilteredRecords.length === 0 &&
                     Array.from({ length: 16 }).map((_, i) => (
                       <tr key={`empty-${i}`}>
                         <td colSpan={8}>&nbsp;</td>
@@ -1020,6 +1043,7 @@ const TechMasterlist: React.FC = () => {
                     }
                     className="tech-masterlist-print-filter-select"
                   >
+                    <option value="all_farmers">Print All Farmers</option>
                     <option value="all">Print All Active Farmers</option>
                     <option value="lastname">Filter by Family Name</option>
                     <option value="barangay">Filter by Barangay</option>
@@ -1096,9 +1120,11 @@ const TechMasterlist: React.FC = () => {
                   </div>
                 )}
 
-                {(printFilter.type === "all" || printFilter.value) && (
+                {(printFilter.type === "all" ||
+                  printFilter.type === "all_farmers" ||
+                  printFilter.value) && (
                   <div className="tech-masterlist-print-match-count">
-                    📊 {getFilteredPrintRecords().length} active farmer
+                    📊 {getFilteredPrintRecords().length} farmer
                     {getFilteredPrintRecords().length !== 1 ? "s" : ""} will be
                     printed
                   </div>
@@ -1117,7 +1143,11 @@ const TechMasterlist: React.FC = () => {
                 <button
                   className="tech-masterlist-print-modal-print-button"
                   onClick={printActiveFarmers}
-                  disabled={printFilter.type !== "all" && !printFilter.value}
+                  disabled={
+                    printFilter.type !== "all" &&
+                    printFilter.type !== "all_farmers" &&
+                    !printFilter.value
+                  }
                 >
                   🖨️ Print
                 </button>

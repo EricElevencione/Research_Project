@@ -825,10 +825,30 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
 
     const allParcels = [...enrichedParcels, ...syntheticParcels];
 
-    // Summary counts (parcel-level)
+    // Summary counts
     const totalParcels = allParcels.length;
-    const plottedCount = allParcels.filter((p: any) => p.isPlotted).length;
-    const unplottedCount = totalParcels - plottedCount;
+    const plottedParcelCount = allParcels.filter(
+      (p: any) => p.isPlotted,
+    ).length;
+    const unplottedParcelCount = totalParcels - plottedParcelCount;
+
+    const allFarmerIds = new Set(
+      allParcels
+        .map((p: any) => p.submission_id)
+        .filter((id: any) => id !== null && id !== undefined),
+    );
+    const plottedFarmerIds = new Set(
+      allParcels
+        .filter((p: any) => p.isPlotted)
+        .map((p: any) => p.submission_id)
+        .filter((id: any) => id !== null && id !== undefined),
+    );
+
+    const plottedFarmerCount = plottedFarmerIds.size;
+    const unplottedFarmerCount = Math.max(
+      0,
+      allFarmerIds.size - plottedFarmerCount,
+    );
 
     // Barangay checklist — group by farm_location_barangay (where the parcel is)
     const barangayNames: string[] =
@@ -849,37 +869,49 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
           (p: any) => p.parcelBrgy === bLower,
         );
         const plottedInBrgy = parcelsInBrgy.filter((p: any) => p.isPlotted);
-        // Count unique farmers in this barangay
         const uniqueFarmers = new Set(
-          parcelsInBrgy.map((p: any) => p.submission_id),
+          parcelsInBrgy
+            .map((p: any) => p.submission_id)
+            .filter((id: any) => id !== null && id !== undefined),
         );
+        const plottedFarmers = new Set(
+          plottedInBrgy
+            .map((p: any) => p.submission_id)
+            .filter((id: any) => id !== null && id !== undefined),
+        );
+
         return {
           barangay: brgy,
           farmerCount: uniqueFarmers.size,
+          plottedFarmers: plottedFarmers.size,
           parcelCount: parcelsInBrgy.length,
           plottedParcels: plottedInBrgy.length,
           isComplete:
-            parcelsInBrgy.length > 0 &&
-            plottedInBrgy.length >= parcelsInBrgy.length,
+            uniqueFarmers.size > 0 && plottedFarmers.size >= uniqueFarmers.size,
         };
       })
       .filter((row) => row.parcelCount > 0);
 
-    // Unplotted parcels by barangay
+    // Unplotted farmers by barangay
     const unplottedByBarangay: Record<string, number> = {};
-    allParcels
-      .filter((p: any) => !p.isPlotted)
-      .forEach((p: any) => {
-        const brgy = (p.farm_location_barangay || "Unknown").trim();
-        unplottedByBarangay[brgy] = (unplottedByBarangay[brgy] || 0) + 1;
-      });
+    barangayChecklist.forEach((row: any) => {
+      const unplottedCount = Math.max(
+        0,
+        Number(row.farmerCount || 0) - Number(row.plottedFarmers || 0),
+      );
+      if (unplottedCount > 0) {
+        unplottedByBarangay[row.barangay] = unplottedCount;
+      }
+    });
 
     return createResponse(
       {
         totalFarmers: farmers.length,
         totalParcels,
-        totalPlotted: plottedCount,
-        totalUnplotted: unplottedCount,
+        totalPlotted: plottedFarmerCount,
+        totalUnplotted: unplottedFarmerCount,
+        totalPlottedParcels: plottedParcelCount,
+        totalUnplottedParcels: unplottedParcelCount,
         barangayChecklist,
         unplottedByBarangay,
       },

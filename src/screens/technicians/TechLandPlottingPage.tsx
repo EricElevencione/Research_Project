@@ -1083,7 +1083,7 @@ const LandPlottingPage: React.FC = () => {
         <div className={`toast-notification toast-${toast.type}`}>
           <span>{toast.message}</span>
           <button onClick={() => setToast(null)} className="toast-close">
-            ├ù
+            X
           </button>
         </div>
       )}
@@ -1093,7 +1093,7 @@ const LandPlottingPage: React.FC = () => {
         onClick={handleBackClick}
         aria-label="Back"
       >
-        ΓåÉ
+        Back
       </button>
 
       <div className="tech-landplotting-main-wrapper">

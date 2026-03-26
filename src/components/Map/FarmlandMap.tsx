@@ -215,11 +215,15 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
   const [barangayCentroids, setBarangayCentroids] = useState<
     Record<string, [number, number]>
   >({});
+  const [barangayMunicipalities, setBarangayMunicipalities] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     if (!municipalBoundaryData || !dashboardMode) return;
 
     const centroids: Record<string, [number, number]> = {};
+    const municipalities: Record<string, string> = {};
     const computeCentroid = (geometry: any): [number, number] | null => {
       if (!geometry?.coordinates) return null;
       let sumLat = 0,
@@ -245,12 +249,16 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
     (municipalBoundaryData.features || []).forEach((feature: any) => {
       const name =
         feature.properties?.NAME_3 || feature.properties?.barangay || "";
+      const municipality =
+        feature.properties?.NAME_2 || feature.properties?.municipality || "";
       if (name && feature.geometry) {
         const c = computeCentroid(feature.geometry);
         if (c) centroids[name] = c;
+        if (municipality) municipalities[name] = municipality;
       }
     });
     setBarangayCentroids(centroids);
+    setBarangayMunicipalities(municipalities);
   }, [municipalBoundaryData, dashboardMode]);
 
   const findCentroid = (brgyName: string): [number, number] | null => {
@@ -260,6 +268,16 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
       if (key.toLowerCase().trim() === lower) return val;
     }
     return null;
+  };
+
+  const findMunicipality = (brgyName: string): string => {
+    if (barangayMunicipalities[brgyName])
+      return barangayMunicipalities[brgyName];
+    const lower = brgyName.toLowerCase().trim();
+    for (const [key, val] of Object.entries(barangayMunicipalities)) {
+      if (key.toLowerCase().trim() === lower) return val;
+    }
+    return "Dumangas";
   };
 
   const DashboardLegend: React.FC = () => {
@@ -372,6 +390,44 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
             />
           )}
         </LayersControl.Overlay>
+
+        {dashboardMode && (
+          <LayersControl.Overlay checked name="Barangay Labels">
+            <LayerGroup>
+              {Object.entries(barangayCentroids).map(([brgyName, position]) => {
+                const municipality = findMunicipality(brgyName);
+                return (
+                  <Marker
+                    key={`label-${brgyName}`}
+                    position={position}
+                    interactive={false}
+                    zIndexOffset={-800}
+                    icon={L.divIcon({
+                      className: "",
+                      html: `<div style="
+                        background: rgba(255,255,255,0.86);
+                        border: 1px solid rgba(30, 64, 175, 0.2);
+                        border-radius: 6px;
+                        padding: 2px 6px;
+                        line-height: 1.15;
+                        text-align: center;
+                        box-shadow: 0 1px 4px rgba(0,0,0,0.16);
+                        min-width: 72px;
+                        white-space: nowrap;
+                        pointer-events: none;
+                      ">
+                        <div style="font-size: 10px; font-weight: 700; color: #1f2937;">${brgyName}</div>
+                        <div style="font-size: 9px; color: #334155;">${municipality}</div>
+                      </div>`,
+                      iconSize: [120, 30],
+                      iconAnchor: [60, 15],
+                    })}
+                  />
+                );
+              })}
+            </LayerGroup>
+          </LayersControl.Overlay>
+        )}
 
         {Object.entries(barangayBoundaries).map(([name, data]) => (
           <LayersControl.Overlay
@@ -688,6 +744,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
         unplottedByBarangay &&
         Object.entries(unplottedByBarangay).map(([brgyName, count]) => {
           const centroid = findCentroid(brgyName);
+          const municipality = findMunicipality(brgyName);
           if (!centroid || count === 0) return null;
           return (
             <Marker
@@ -722,6 +779,9 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
               <Popup>
                 <div style={{ fontWeight: 600, marginBottom: 4 }}>
                   {brgyName}
+                </div>
+                <div style={{ color: "#475569", marginBottom: 4 }}>
+                  {municipality}
                 </div>
                 <div>
                   {count} unplotted farmer{count !== 1 ? "s" : ""}

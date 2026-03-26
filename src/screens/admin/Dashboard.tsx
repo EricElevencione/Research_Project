@@ -210,20 +210,6 @@ const Dashboard: React.FC = () => {
                     farmerDensity={farmerDensityMap}
                   />
                 </div>
-                <div className="admin-map-legend">
-                  <span className="admin-map-legend-title">
-                    Farmer Density:
-                  </span>
-                  {heatmapLegend.map((item, idx) => (
-                    <span key={idx} className="admin-map-legend-item">
-                      <span
-                        className="admin-map-legend-swatch"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      {item.label}
-                    </span>
-                  ))}
-                </div>
               </div>
 
               {/* Charts Row: Season Comparison + Claim Rate Trend */}
