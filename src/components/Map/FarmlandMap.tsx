@@ -27,15 +27,6 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-interface UnplottedFarmerData {
-    id: string;
-    farmerName: string;
-    barangay: string;
-    farmLocation: string;
-    latitude: number;
-    longitude: number;
-}
-
 interface FarmlandMapProps {
   onLandPlotSelect?: (properties: any) => void;
   highlightGeometry?: any | null;
@@ -50,7 +41,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
   onLandPlotSelect,
   highlightGeometry,
   highlightMatcher,
-  farmerDensity,
+  farmerDensity: _farmerDensity,
   dashboardMode,
   unplottedByBarangay,
   hideLegend,
@@ -67,9 +58,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
   >({});
   const [boundaryLoading, setBoundaryLoading] = useState(true);
   const [boundaryError, setBoundaryError] = useState<string | null>(null);
-  const [cropInfoMap, setCropInfoMap] = useState<{ [featureKey: string]: any }>(
-    {},
-  );
 
   // Helper to fetch crop/planting info by farmer name and location (uses Supabase directly)
   const fetchCropPlantingInfo = async (
@@ -207,52 +195,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
     });
     setParcelCountsByBarangay(counts);
   }, [farmlandRecords]);
-
-  // Red-to-green density color scale for farmer density heatmap
-  const getDensityColor = (value: number) => {
-    if (value === 0) return "#ef4444"; // red — zero farmers
-    if (value === 1) return "#f97316"; // orange
-    if (value === 2) return "#eab308"; // yellow
-    if (value <= 4) return "#84cc16"; // lime
-    if (value <= 8) return "#22c55e"; // green
-    return "#14532d"; // dark green — well-covered
-  };
-
-  const getChoroplethColor = (value: number) => {
-    // If farmerDensity is provided, use density color scale
-    if (farmerDensity) return getDensityColor(value);
-    // Default parcel-count color scale
-    return value > 20
-      ? "#14532d"
-      : value > 10
-        ? "#166534"
-        : value > 5
-          ? "#16a34a"
-          : value > 2
-            ? "#22c55e"
-            : value > 0
-              ? "#86efac"
-              : "#d1fae5";
-  };
-
-  const choroplethStyle = (feature: any) => {
-    const props = feature?.properties || {};
-    const barangayName: string = (
-      props.NAME_3 ||
-      props.barangay ||
-      ""
-    ).toString();
-    // Use farmerDensity if provided, otherwise use parcel counts
-    const densityData = farmerDensity || parcelCountsByBarangay;
-    const value = densityData[barangayName] || 0;
-    return {
-      color: "#134e4a",
-      weight: 1,
-      opacity: 1,
-      fillColor: getChoroplethColor(value),
-      fillOpacity: farmerDensity ? 0.7 : 0.9,
-    } as L.PathOptions;
-  };
 
   // Fallback styles for non-choropleth layers (in case they are still rendered)
   const getMunicipalStyle = () => ({
@@ -527,11 +469,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                     feature.properties.firstName ||
                     feature.properties.first_name ||
                     "";
-                  const middleName =
-                    feature.properties.middleName ||
-                    feature.properties.middle_name ||
-                    "";
-
                   const location = feature.properties.barangay || "";
                   // Use a unique ID based on feature properties (sanitized for DOM)
                   const featureId =
@@ -597,11 +534,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         middleName,
                         location,
                       );
-                      setCropInfoMap((prev) => ({
-                        ...prev,
-                        [featureKey]: cropInfo,
-                      }));
-
                       setTimeout(() => {
                         const cell = document.getElementById(
                           `crops-cell-${featureKey}`,
@@ -750,350 +682,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
           </LayersControl.Overlay>
         )}
       </LayersControl>
-                {highlightGeometry && (
-                    <LayersControl.Overlay checked name="Hovered Parcel">
-                        <GeoJSON
-                            key="highlight-geometry"
-                            data={{
-                                type: 'FeatureCollection', features: [
-                                    { type: 'Feature', geometry: highlightGeometry, properties: {} }
-                                ]
-                            } as any}
-                            style={() => ({ color: '#e74c3c', weight: 3, opacity: 1, fillOpacity: 0.2 })}
-                        />
-                    </LayersControl.Overlay>
-                )}
-
-                {/* Pins removed */}
-            </LayersControl>
-
-      {municipalBoundaryData && (
-        <GeoJSON
-          key="municipal-boundary"
-          data={municipalBoundaryData}
-          style={getMunicipalStyle}
-        />
-      )}
-
-      {Object.entries(barangayBoundaries).map(([name, data]) => (
-        <GeoJSON
-          key={`barangay-boundary-${name}`}
-          data={data}
-          style={getBarangayStyle}
-        />
-      ))}
-
-      {farmlandRecords && farmlandRecords.length > 0 && (
-        <GeoJSON
-          key="farmland-data"
-          data={
-            {
-              type: "FeatureCollection",
-              features: farmlandRecords
-                .map((record) => {
-                  if (record.geometry && record.geometry.type) {
-                    return {
-                      type: "Feature",
-                      geometry: record.geometry,
-                      properties: {
-                        ...record,
-                      },
-                    };
-                  }
-                  return null;
-                })
-                .filter(Boolean),
-            } as FeatureCollection
-          }
-          style={() =>
-            dashboardMode
-              ? {
-                  color: "#15803d",
-                  weight: 2,
-                  opacity: 0.9,
-                  fillColor: "#22c55e",
-                  fillOpacity: 0.5,
-                }
-              : { color: "blue", weight: 2, opacity: 0.8, fillOpacity: 0.5 }
-          }
-          onEachFeature={(feature, layer) => {
-            if (feature.properties) {
-              // Debug: Log all available properties
-              console.log(
-                "Feature properties:",
-                JSON.stringify(feature.properties, null, 2),
-              );
-              console.log(
-                "Available property keys:",
-                Object.keys(feature.properties),
-              );
-
-              // Get name parts from land_plot properties
-              const surname =
-                feature.properties.surname ||
-                feature.properties.last_name ||
-                "";
-              const firstName =
-                feature.properties.firstName ||
-                feature.properties.first_name ||
-                "";
-              const middleName =
-                feature.properties.middleName ||
-                feature.properties.middle_name ||
-                "";
-              const location = feature.properties.barangay || "";
-
-              // Use a unique ID based on feature properties (sanitized for DOM)
-              const featureId =
-                feature.properties.id ||
-                feature.properties.gid ||
-                `${firstName}-${surname}-${location}`;
-              const featureKey =
-                String(featureId).replace(/[^a-zA-Z0-9-_]/g, "_") + "_alt";
-
-              console.log(
-                "Map click (alt) - featureKey:",
-                featureKey,
-                "firstName:",
-                firstName,
-                "surname:",
-                surname,
-              );
-
-              // Initial popup content with crop/planting info
-              let popupContent = `<div class="farmland-popup-container" style="min-width: 320px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                                <div class="farmland-popup-crops-section" style="padding-top: 8px;">
-                                    <div class="farmland-popup-crops-title" style="font-weight: 600; color: #16a34a; margin-bottom: 6px; font-size: 0.9em;">🌾 Crops & Planting Info</div>
-                                    <div id="crops-cell-${featureKey}" class="farmland-popup-crops-content" style="color: #6c757d; font-style: italic;">Loading...</div>
-                                </div>
-                            </div>`;
-              layer.bindPopup(popupContent, { maxWidth: 600, maxHeight: 500 });
-
-              layer.on({
-                click: async () => {
-                  if (onLandPlotSelect) {
-                    onLandPlotSelect(feature.properties);
-                  }
-
-                  // Check both camelCase and snake_case field names
-                  const surname =
-                    feature.properties.surname ||
-                    feature.properties.last_name ||
-                    "";
-                  const firstName =
-                    feature.properties.firstName ||
-                    feature.properties.first_name ||
-                    "";
-                  const middleName =
-                    feature.properties.middleName ||
-                    feature.properties.middle_name ||
-                    "";
-                  // Fetch crop/planting info
-                  console.log("Fetching crop/planting info for:", {
-                    surname,
-                    firstName,
-                    middleName,
-                    barangay: location,
-                  });
-                  console.log("Feature properties:", feature.properties);
-                  const cropInfo = await fetchCropPlantingInfo(
-                    surname,
-                    firstName,
-                    middleName,
-                    location,
-                  );
-                  setCropInfoMap((prev) => ({
-                    ...prev,
-                    [featureKey]: cropInfo,
-                  }));
-
-                  setTimeout(() => {
-                    const cell = document.getElementById(
-                      `crops-cell-${featureKey}`,
-                    );
-
-                    if (cell) {
-                      if (!cropInfo.owner && cropInfo.tenants.length === 0) {
-                        cell.innerHTML =
-                          '<div class="farmland-popup-no-data" style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No planting information found.</div>';
-                      } else {
-                        let html = `<div class="farmland-popup-crops-list" style="max-height: 300px; overflow-y: auto;">`;
-
-                        // Owner section
-                        if (cropInfo.owner) {
-                          const ownerStatusColor =
-                            cropInfo.owner.ownership_status === "Owner"
-                              ? "#16a34a"
-                              : cropInfo.owner.ownership_status === "Tenant"
-                                ? "#f59e0b"
-                                : "#6366f1";
-                          const ownerRegDate = cropInfo.owner.registration_date
-                            ? new Date(
-                                cropInfo.owner.registration_date,
-                              ).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "N/A";
-                          html += `<div class="farmland-popup-owner-section">`;
-                          html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: #16a34a; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">🏠 Land Owner</div>`;
-                          html += `<div class="farmland-popup-farmer-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #86efac; border-radius: 8px; padding: 12px; margin-bottom: 10px;">`;
-                          html += `<div class="farmland-popup-farmer-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
-                          html += `<span class="farmland-popup-farmer-name" style="font-weight: 600; color: #166534; font-size: 0.9em;">👤 ${cropInfo.owner.farmer_name}</span>`;
-                          html += `<span class="farmland-popup-farmer-status" style="background: ${ownerStatusColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">${cropInfo.owner.ownership_status}</span>`;
-                          html += `</div>`;
-                          html += `<div class="farmland-popup-farmer-barangay" style="font-size: 0.75em; color: #166534; margin-bottom: 4px;">📍 Barangay: <strong>${location || cropInfo.owner.barangay || "N/A"}</strong></div>`;
-                          html += `<div class="farmland-popup-farmer-date" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;">📅 Registered: ${ownerRegDate}</div>`;
-                          html += `<div class="farmland-popup-crops-label" style="font-size: 0.8em; color: #4b5563; margin-bottom: 4px;">Crops planted:</div>`;
-                          html += `<div class="farmland-popup-crops-tags" style="display: flex; flex-wrap: wrap; gap: 6px;">`;
-                          (cropInfo.owner.crops || ["Not specified"]).forEach(
-                            (crop: string) => {
-                              const cropColor = crop
-                                .toLowerCase()
-                                .includes("rice")
-                                ? "#22c55e"
-                                : crop.toLowerCase().includes("corn")
-                                  ? "#eab308"
-                                  : crop.toLowerCase().includes("livestock")
-                                    ? "#f97316"
-                                    : crop.toLowerCase().includes("poultry")
-                                      ? "#ef4444"
-                                      : "#8b5cf6";
-                              html += `<span class="farmland-popup-crop-tag" style="background: ${cropColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500;">🌱 ${crop}</span>`;
-                            },
-                          );
-                          html += `</div></div></div>`;
-                        }
-
-                        // Land History timeline section
-                        if (
-                          cropInfo.landHistory &&
-                          cropInfo.landHistory.length > 0
-                        ) {
-                          if (cropInfo.owner) {
-                            html += `<hr style="border: none; border-top: 2px dashed #d1d5db; margin: 12px 0;">`;
-                          }
-                          html += `<div class="farmland-popup-history-section">`;
-                          html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: #6366f1; font-weight: 600; margin-bottom: 10px; padding-left: 4px;">📜 Land Ownership History</div>`;
-                          cropInfo.landHistory.forEach(
-                            (entry: any, idx: number) => {
-                              const isCurrentEntry = entry.is_current;
-                              const changeType = entry.change_type || "NEW";
-                              const cardBg = isCurrentEntry
-                                ? "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)"
-                                : "linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)";
-                              const borderColor = isCurrentEntry
-                                ? "#86efac"
-                                : "#e5e7eb";
-                              const startDate = entry.period_start_date
-                                ? new Date(
-                                    entry.period_start_date,
-                                  ).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "N/A";
-                              const endDate = entry.period_end_date
-                                ? new Date(
-                                    entry.period_end_date,
-                                  ).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "Present";
-                              const typeIcon =
-                                changeType === "TRANSFER" ? "🔄" : "🆕";
-                              const typeBadgeColor =
-                                changeType === "TRANSFER"
-                                  ? "#6366f1"
-                                  : "#16a34a";
-
-                              html += `<div style="position: relative; margin-bottom: 12px;">`;
-
-                              // Card
-                              html += `<div style="background: ${cardBg}; border: 1px solid ${borderColor}; border-radius: 8px; padding: 10px 12px;">`;
-                              // Header row
-                              html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
-                              html += `<span style="font-weight: 600; font-size: 0.85em; color: #1f2937;">👤 ${entry.farmer_name || "Unknown"}</span>`;
-                              html += `<span style="background: ${typeBadgeColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7em; font-weight: 600;">${typeIcon} ${changeType}</span>`;
-                              html += `</div>`;
-                              // Date range
-                              html += `<div style="font-size: 0.75em; color: #6b7280; margin-bottom: 4px;">📅 ${startDate} → ${endDate}</div>`;
-                              // Transfer reason
-                              if (entry.change_reason) {
-                                html += `<div style="font-size: 0.7em; color: #9ca3af; font-style: italic;">💬 ${entry.change_reason}</div>`;
-                              }
-                              // Area
-                              if (entry.total_farm_area_ha) {
-                                html += `<div style="font-size: 0.7em; color: #6b7280; margin-top: 2px;">📐 ${entry.total_farm_area_ha} hectares</div>`;
-                              }
-                              html += `</div></div>`;
-                            },
-                          );
-                          html += `</div></div>`;
-                        }
-
-                        // Tenants section with separator
-                        if (cropInfo.tenants && cropInfo.tenants.length > 0) {
-                          // Add separator line between owner and tenants
-                          if (cropInfo.owner) {
-                            html += `<hr style="border: none; border-top: 2px dashed #d1d5db; margin: 12px 0;">`;
-                          }
-                          html += `<div class="farmland-popup-tenants-section">`;
-                          html += `<div class="farmland-popup-tenants-title" style="font-size: 0.85em; color: #f59e0b; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">👥 Tenants/Lessees on this land:</div>`;
-                          cropInfo.tenants.forEach((tenant: any) => {
-                            const tenantRegDate = tenant.registration_date
-                              ? new Date(
-                                  tenant.registration_date,
-                                ).toLocaleDateString("en-US", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })
-                              : "N/A";
-                            html += `<div class="farmland-popup-tenant-card" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fcd34d; border-radius: 8px; padding: 10px; margin-bottom: 8px;">`;
-                            html += `<div class="farmland-popup-tenant-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
-                            html += `<span class="farmland-popup-tenant-name" style="font-weight: 600; color: #92400e; font-size: 0.85em;">👤 ${tenant.farmer_name}</span>`;
-                            html += `<span class="farmland-popup-tenant-status" style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7em; font-weight: 600;">Tenant</span>`;
-                            html += `</div>`;
-                            html += `<div class="farmland-popup-tenant-date" style="font-size: 0.7em; color: #6b7280; margin-bottom: 6px;">📅 Registered: ${tenantRegDate}</div>`;
-                            html += `<div class="farmland-popup-tenant-crops-label" style="font-size: 0.75em; color: #6b7280; margin-bottom: 4px;">Crops planted:</div>`;
-                            html += `<div class="farmland-popup-tenant-crops-tags" style="display: flex; flex-wrap: wrap; gap: 4px;">`;
-                            (tenant.crops || ["Not specified"]).forEach(
-                              (crop: string) => {
-                                const cropColor = crop
-                                  .toLowerCase()
-                                  .includes("rice")
-                                  ? "#22c55e"
-                                  : crop.toLowerCase().includes("corn")
-                                    ? "#eab308"
-                                    : crop.toLowerCase().includes("livestock")
-                                      ? "#f97316"
-                                      : crop.toLowerCase().includes("poultry")
-                                        ? "#ef4444"
-                                        : "#8b5cf6";
-                                html += `<span class="farmland-popup-tenant-crop-tag" style="background: ${cropColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 500;">🌱 ${crop}</span>`;
-                              },
-                            );
-                            html += `</div></div>`;
-                          });
-                          html += `</div>`;
-                        }
-
-                        html += `</div>`;
-                        cell.innerHTML = html;
-                      }
-                    }
-                  }, 100);
-                },
-              });
-            }
-          }}
-        />
-      )}
       {dashboardMode && !hideLegend && <DashboardLegend />}
 
       {dashboardMode &&

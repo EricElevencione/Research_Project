@@ -662,11 +662,8 @@ const TechAddFarmerRequest: React.FC = () => {
         remaining: allocated - requested,
       };
     });
-<<<<<<< HEAD
   };
-=======
-    const [sidebarOpen, setSidebarOpen] = useState(false);
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fertilizerSummaryItems = buildSummaryItems(visibleFertilizerItems);
   const seedSummaryItems = buildSummaryItems(visibleSeedItems);
@@ -1026,7 +1023,6 @@ const TechAddFarmerRequest: React.FC = () => {
               later.
             </p>
 
-<<<<<<< HEAD
             <div className="tech-add-farmer-modal-list">
               {exceededSummaryItems.slice(0, 6).map((item) => (
                 <div
@@ -1041,331 +1037,6 @@ const TechAddFarmerRequest: React.FC = () => {
               {exceededSummaryItems.length > 6 && (
                 <div className="tech-add-farmer-modal-list-item">
                   ...and {exceededSummaryItems.length - 6} more item(s)
-=======
-            showToast('Farmer request added successfully!', 'success', 2000);
-            // Navigate after showing toast
-            setTimeout(() => {
-                navigate(`/technician-manage-requests/${allocationId}`);
-            }, 1500);
-        } catch (err: any) {
-            setError(err.message || 'Failed to save farmer request');
-            showToast(err.message || 'Failed to save farmer request', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const filteredFarmers = farmers.filter(farmer => {
-        if (existingRequests.includes(Number(farmer.id))) {
-            return false;
-        }
-
-        const searchLower = searchTerm.toLowerCase();
-        const fullName = `${farmer.first_name} ${farmer.middle_name} ${farmer.last_name}`.toLowerCase();
-        const rsbsa = farmer.rsbsa_no?.toLowerCase() || '';
-        return fullName.includes(searchLower) || rsbsa.includes(searchLower);
-    });
-
-    return (
-        <div className="tech-add-farmer-page-container">
-            <div className="tech-add-farmer-page">
-                {/* Sidebar */}
-                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-                    <nav className="sidebar-nav">
-                        <div className='sidebar-logo'>
-                            <img src={LogoImage} alt="Logo" />
-                        </div>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-dashboard')}
-                        >
-                            <span className="nav-icon">
-                                <img src={HomeIcon} alt="Home" />
-                            </span>
-                            <span className="nav-text">Home</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-rsbsa')}
-                        >
-                            <span className="nav-icon">
-                                <img src={RSBSAIcon} alt="RSBSA" />
-                            </span>
-                            <span className="nav-text">RSBSA</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-incentives')}
-                        >
-                            <span className="nav-icon">
-                                <img src={IncentivesIcon} alt="Incentives" />
-                            </span>
-                            <span className="nav-text">Incentives</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={MasterlistIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-farmerprofpage') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-farmerprofpage')}
-                        >
-                            <span className="nav-icon">
-                                <img src={FarmerIcon} alt="farmerProf" />
-                            </span>
-                            <span className="nav-text">Farmers Profile</span>
-                        </button>
-
-                        <button
-                            className="sidebar-nav-item logout"
-                            onClick={handleLogout}
-                        >
-                            <span className="nav-icon">
-                                <img src={LogoutIcon} alt="Logout" />
-                            </span>
-                            <span className="nav-text">Logout</span>
-                        </button>
-                    </nav>
-                </div>
-
-                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
-
-                {/* Main Content */}
-                <div className="tech-add-farmer-main-content">
-                    <div className="tech-incent-mobile-header">
-                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
-                        <div className="tech-incent-mobile-title">Add Request</div>
-                    </div>
-                    <div className="tech-add-farmer-header">
-                        <h2 className="tech-add-farmer-title">➕ Add Farmer Request</h2>
-                        <p className="tech-add-farmer-subtitle">
-                            {allocation ? `Season: ${allocation.season.replace('_', ' ').toUpperCase()}` : 'Loading...'}
-                        </p>
-                        <button
-                            className="tech-add-farmer-back-btn"
-                            onClick={() => navigate(`/technician-manage-requests/${allocationId}`)}
-                        >
-                            ← Back to Manage Requests
-                        </button>
-                    </div>
-
-                    <div className="tech-add-farmer-content-card">
-                        <form onSubmit={handleSubmit}>
-                            {/* Farmer Selection */}
-                            <div className="tech-add-farmer-section">
-                                <h3 className="tech-add-farmer-section-title">
-                                    Select Farmer
-                                </h3>
-                                <div className="tech-add-farmer-search-container">
-                                    <input
-                                        type="text"
-                                        placeholder="🔍 Search by name or RSBSA number..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="tech-add-farmer-search-input"
-                                    />
-                                    {existingRequests.length > 0 && (
-                                        <div className="tech-add-farmer-info-box">
-                                            <span>ℹ️</span>
-                                            <span>
-                                                {existingRequests.length} farmer{existingRequests.length !== 1 ? 's' : ''} hidden (already have request{existingRequests.length !== 1 ? 's' : ''} for this season)
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="tech-add-farmer-list-container">
-                                    {filteredFarmers.length === 0 ? (
-                                        <div className="tech-add-farmer-empty-state">
-                                            No farmers found
-                                        </div>
-                                    ) : (
-                                        filteredFarmers.map(farmer => (
-                                            <label
-                                                key={farmer.id}
-                                                className={`tech-add-farmer-item ${Number(formData.farmer_id) === Number(farmer.id) ? 'selected' : ''}`}
-                                                onMouseEnter={(e) => {
-                                                    if (Number(formData.farmer_id) !== Number(farmer.id)) {
-                                                        e.currentTarget.style.backgroundColor = '#f3f4f6';
-                                                    }
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (Number(formData.farmer_id) !== Number(farmer.id)) {
-                                                        e.currentTarget.style.backgroundColor = 'white';
-                                                    }
-                                                }}
-                                                onClick={() => {
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        farmer_id: Number(farmer.id)
-                                                    }));
-                                                }}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="farmer_id"
-                                                    value={farmer.id}
-                                                    checked={Number(formData.farmer_id) === Number(farmer.id)}
-                                                    onChange={() => { }}
-                                                    className="tech-add-farmer-radio"
-                                                />
-                                                <div className="tech-add-farmer-item-content">
-                                                    <div className="tech-add-farmer-name">
-                                                        {farmer.last_name}, {farmer.first_name} {farmer.middle_name ? farmer.middle_name + ' ' : ''}
-                                                        {farmer.extension_name ? farmer.extension_name + ' ' : ''}
-                                                    </div>
-                                                    <div className="tech-add-farmer-details">
-                                                        📍 {farmer.barangay} • RSBSA: {farmer.rsbsa_no}
-                                                    </div>
-                                                </div>
-                                            </label>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Fertilizer Requests */}
-                            <div className="tech-add-farmer-section">
-                                <h3 className="tech-add-farmer-section-title">
-                                    🌱 Requested Fertilizers (bags)
-                                </h3>
-                                <div className="tech-add-farmer-form-grid">
-                                    <div className="tech-add-farmer-form-group">
-                                        <label className="tech-add-farmer-label">
-                                            Urea (46-0-0)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_urea_bags"
-                                            value={formData.requested_urea_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="tech-add-farmer-input"
-                                        />
-                                    </div>
-                                    <div className="tech-add-farmer-form-group">
-                                        <label className="tech-add-farmer-label">
-                                            Complete (14-14-14)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_complete_14_bags"
-                                            value={formData.requested_complete_14_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="tech-add-farmer-input"
-                                        />
-                                    </div>
-                                    <div className="tech-add-farmer-form-group">
-                                        <label className="tech-add-farmer-label">
-                                            Ammonium Sulfate (21-0-0)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_ammonium_sulfate_bags"
-                                            value={formData.requested_ammonium_sulfate_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="tech-add-farmer-input"
-                                        />
-                                    </div>
-                                    <div className="tech-add-farmer-form-group">
-                                        <label className="tech-add-farmer-label">
-                                            Muriate of Potash (0-0-60)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="requested_muriate_potash_bags"
-                                            value={formData.requested_muriate_potash_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="tech-add-farmer-input"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Seed Requests */}
-                            <div className="tech-add-farmer-section">
-                                <h3 className="tech-add-farmer-section-title">
-                                    🌾 Requested Seeds (kg)
-                                </h3>
-                                <div className="tech-add-farmer-form-grid">
-                                    {['Jackpot', 'US88', 'TH82', 'RH9000', 'Lumping143', 'LP296'].map((seedType) => (
-                                        <div key={seedType} className="tech-add-farmer-form-group">
-                                            <label className="tech-add-farmer-label">
-                                                {seedType}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                name={`requested_${seedType.toLowerCase()}_kg`}
-                                                value={(formData as any)[`requested_${seedType.toLowerCase()}_kg`]}
-                                                onChange={handleInputChange}
-                                                min="0"
-                                                step="0.01"
-                                                className="tech-add-farmer-input"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Notes */}
-                            <div className="tech-add-farmer-section">
-                                <label className="tech-add-farmer-label">
-                                    Notes / Remarks
-                                </label>
-                                <textarea
-                                    name="notes"
-                                    value={formData.notes}
-                                    onChange={handleInputChange}
-                                    rows={3}
-                                    placeholder="Add any additional notes..."
-                                    className="tech-add-farmer-textarea"
-                                />
-                            </div>
-
-                            {/* Error Message */}
-                            {error && (
-                                <div className="tech-add-farmer-error-box">
-                                    {error}
-                                </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="tech-add-farmer-actions">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate(`/technician-manage-requests/${allocationId}`)}
-                                    className="tech-add-farmer-cancel-btn"
-                                    disabled={loading}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="tech-add-farmer-submit-btn"
-                                    disabled={loading}
-                                >
-                                    {loading ? '💾 Saving...' : '✅ Add Farmer Request'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
                 </div>
               )}
             </div>
@@ -1394,7 +1065,7 @@ const TechAddFarmerRequest: React.FC = () => {
 
       <div className="tech-add-farmer-page">
         {/* Sidebar */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -1449,8 +1120,23 @@ const TechAddFarmerRequest: React.FC = () => {
           </nav>
         </div>
 
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+
         {/* Main Content */}
         <div className="tech-add-farmer-main-content">
+          <div className="tech-incent-mobile-header">
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
+            <div className="tech-incent-mobile-title">Add Request</div>
+          </div>
+
           <div className="tech-add-farmer-header">
             <h2 className="tech-add-farmer-title">➕ Add Farmer Request</h2>
             <p className="tech-add-farmer-subtitle">

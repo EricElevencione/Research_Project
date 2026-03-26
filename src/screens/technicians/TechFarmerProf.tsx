@@ -132,10 +132,13 @@ const TechFarmerProf: React.FC = () => {
         setRequestLoading(true);
         setRequestError(null);
         try {
-            const response = await getFarmerRequests(undefined, farmerId);
+            const response = await getFarmerRequests();
             if (response.error) throw new Error(response.error);
 
-            const history = Array.isArray(response.data) ? response.data : [];
+            const allRequests = Array.isArray(response.data) ? response.data : [];
+            const history = allRequests.filter(
+                (request: any) => String(request.farmer_id) === String(farmerId),
+            );
             setRequestHistory(history);
 
             if (history.length > 0) {

@@ -14,7 +14,6 @@ import {
   getRsbsaSubmissionById,
   getFarmParcels,
 } from "../../api";
-import L from "leaflet";
 
 // interfaces unchanged...
 interface LandAttributes {
@@ -47,7 +46,7 @@ interface Shape {
 }
 
 const LandPlottingPage: React.FC = () => {
-  const { barangayName: barangayNameParam, recordId } = useParams();
+  const { barangayName: barangayNameParam } = useParams();
   const [searchParams] = useSearchParams();
   const urlParams = new URLSearchParams(window.location.search);
   const barangayNameQuery = urlParams.get("barangayName");
@@ -59,7 +58,6 @@ const LandPlottingPage: React.FC = () => {
   const [selectedShape, setSelectedShape] = useState<Shape | null>(null);
   const [isEditingAttributes, setIsEditingAttributes] = useState(false);
 
-<<<<<<< HEAD
   // New state for parcel context
   const [parcelContext, setParcelContext] = useState<{
     recordId?: string;
@@ -68,21 +66,9 @@ const LandPlottingPage: React.FC = () => {
   }>({});
   const [rsbsaRecord, setRsbsaRecord] = useState<any>(null);
   const [currentParcel, setCurrentParcel] = useState<any>(null);
+  const [farmerParcels, setFarmerParcels] = useState<any[]>([]);
   // State to track the actual parcel barangay (from RSBSA form)
   const [parcelBarangay, setParcelBarangay] = useState<string>("");
-=======
-    // New state for parcel context
-    const [parcelContext, setParcelContext] = useState<{
-        recordId?: string;
-        parcelIndex?: number;
-        viewOnly?: boolean;
-    }>({});
-    const [rsbsaRecord, setRsbsaRecord] = useState<any>(null);
-    const [currentParcel, setCurrentParcel] = useState<any>(null);
-    const [farmerParcels, setFarmerParcels] = useState<any[]>([]);
-    // State to track the actual parcel barangay (from RSBSA form)
-    const [parcelBarangay, setParcelBarangay] = useState<string>('');
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
   const [landAttributes, setLandAttributes] = useState<LandAttributes>({
     name: "",
@@ -252,44 +238,6 @@ const LandPlottingPage: React.FC = () => {
   const handleSaveAttributes = async () => {
     setIsSaving(true);
     try {
-      // --- Area validation: check drawn polygon area vs target parcel area ---
-      const targetAreaHa = parseFloat(
-        currentParcel?.total_farm_area_ha ||
-          currentParcel?.farm_size ||
-          currentParcel?.total_farm_area ||
-          "0",
-      );
-
-      if (targetAreaHa > 0) {
-        for (const shape of shapes) {
-          const geo = shape.layer?.toGeoJSON?.();
-          if (geo?.geometry?.type === "Polygon") {
-            // Compute actual geodesic area in m²
-            const latlngs = (shape.layer.getLatLngs?.() || [])[0] as
-              | L.LatLng[]
-              | undefined;
-            if (latlngs && latlngs.length >= 3) {
-              const drawnAreaM2 = (L as any).GeometryUtil.geodesicArea(latlngs);
-              const drawnAreaHa = drawnAreaM2 / 10000;
-              const tolerance = 1.05; // 5% tolerance
-              if (drawnAreaHa > targetAreaHa * tolerance) {
-                const overPct = (
-                  (drawnAreaHa / targetAreaHa - 1) *
-                  100
-                ).toFixed(1);
-                setToast({
-                  message: `Drawn area (${drawnAreaHa.toFixed(4)} ha) exceeds the target parcel area (${targetAreaHa} ha) by ${overPct}%. Please redraw the polygon within the allowed area.`,
-                  type: "error",
-                });
-                setTimeout(() => setToast(null), 6000);
-                setIsSaving(false);
-                return;
-              }
-            }
-          }
-        }
-      }
-
       // 1. Delete removed shapes from backend
       for (const id of deletedShapeIds) {
         await deleteLandPlot(id);
@@ -323,7 +271,6 @@ const LandPlottingPage: React.FC = () => {
             currentParcel.farmLocation?.cityMunicipality || "Dumangas",
           // Optionally reset other fields as needed
         }));
-<<<<<<< HEAD
       } else {
         setLandAttributes({
           name: "",
@@ -343,364 +290,6 @@ const LandPlottingPage: React.FC = () => {
           street: "",
           farmType: "Irrigated",
           plotSource: "manual",
-=======
-        setIsEditingAttributes(true);
-    };
-
-    // Edit: Add async persistence to backend for edits and deletions
-
-    // Called when a shape is edited and "Save" is clicked
-    const handleShapeEdited = async (shape: Shape) => {
-        setSelectedShape(shape);
-        setLandAttributes(prevAttributes => ({
-            ...prevAttributes,
-            ...shape.properties,
-            barangay: shape.properties.barangay || parcelBarangay || fallbackBarangayName || prevAttributes.barangay,
-            municipality: shape.properties.municipality || 'Dumangas',
-            province: shape.properties.province || 'Iloilo',
-        }));
-        setIsEditingAttributes(true);
-
-        // Persist the edit to the backend
-        try {
-            const response = await updateLandPlot(shape.id, {
-                ...shape.properties,
-                geometry: shape.layer.toGeoJSON().geometry,
-            });
-            if (response.error) throw new Error('Failed to update land plot');
-        } catch (error) {
-            setToast({ message: 'Failed to save changes to the backend.', type: 'error' });
-            setTimeout(() => setToast(null), 4000);
-        }
-        // Refresh shapes from backend after edit
-        await refreshShapesFromBackend();
-    };
-
-    // Called when shapes are deleted and "Save" is clicked
-    const handleMapShapeDeleted = async (e: any) => {
-        // e.shapes is an array of deleted shapes
-        const deletedIds = e.shapes.map((s: any) => s.id);
-        setDeletedShapeIds(prev => [...prev, ...deletedIds]);
-
-        const remainingShapes = shapes.filter(s => !deletedIds.includes(s.id));
-        setShapesAndVersion(remainingShapes);
-
-        // Persist deletions to the backend
-        for (const deletedShape of e.shapes) {
-            try {
-                const response = await deleteLandPlot(deletedShape.id);
-                if (response.error) throw new Error('Failed to delete land plot');
-            } catch (error) {
-                setToast({ message: 'Failed to delete land plot from the backend.', type: 'error' });
-                setTimeout(() => setToast(null), 4000);
-            }
-        }
-        // Refresh shapes from backend after delete
-        await refreshShapesFromBackend();
-
-        if (remainingShapes.length > 0) {
-            setSelectedShape(remainingShapes[0]);
-            setLandAttributes(prev => ({
-                ...prev,
-                ...remainingShapes[0].properties,
-                area: remainingShapes[0].properties.area || 0,
-            }));
-        } else {
-            setSelectedShape(null);
-            setIsEditingAttributes(false);
-            setLandAttributes(prev => ({
-                ...prev,
-                area: 0,
-            }));
-        }
-    };
-
-    const handleBackClick = () => {
-        // If we came from parcel selection, go back there
-        if (parcelContext.recordId) {
-            navigate(`/technician-pick-land-parcel/${parcelContext.recordId}`);
-        } else {
-            navigate('/technician-rsbsa');
-        }
-    };
-
-    useEffect(() => {
-        console.log('🔄 selectedShape changed:', selectedShape);
-        if (selectedShape) {
-            console.log('📝 Setting landAttributes from selectedShape.properties:', selectedShape.properties);
-            setLandAttributes({
-                ...selectedShape.properties,
-                barangay: selectedShape.properties.barangay || parcelBarangay || fallbackBarangayName,
-                municipality: selectedShape.properties.municipality || 'Dumangas',
-                province: selectedShape.properties.province || 'Iloilo'
-            });
-            setIsEditingAttributes(true);
-        } else {
-            console.log('📝 Resetting landAttributes (no shape selected)');
-            setLandAttributes({
-                name: '',
-                ffrs_id: '',
-                area: 0,
-                coordinateAccuracy: 'approximate',
-                barangay: parcelBarangay || fallbackBarangayName,
-                firstName: '',
-                middleName: '',
-                surname: '',
-                ext_name: '',
-                gender: 'Male',
-
-                municipality: 'Dumangas',
-                province: 'Iloilo',
-                parcel_address: '',
-                status: 'Tenant',
-                street: '',
-                farmType: 'Irrigated',
-                plotSource: 'manual', // Reset plotSource on initial load
-            });
-            setIsEditingAttributes(false);
-        }
-    }, [selectedShape, parcelBarangay, fallbackBarangayName]);
-
-    // Parse URL parameters for parcel context
-    useEffect(() => {
-        console.log('🔍 URL Parsing useEffect triggered');
-        console.log('🔍 window.location.search:', window.location.search);
-        console.log('🔍 window.location.hash:', window.location.hash);
-        console.log('🔍 window.location.href:', window.location.href);
-        console.log('🔍 searchParams object:', searchParams);
-        console.log('🔍 searchParams.toString():', searchParams.toString());
-
-        // Use React Router's searchParams for hash routing compatibility
-        const recordId = searchParams.get('recordId');
-        const parcelIndex = searchParams.get('parcelIndex');
-        console.log('🔍 Parsed from searchParams - recordId:', recordId, 'parcelIndex:', parcelIndex);
-
-        const parsedIndex = parcelIndex ? parseInt(parcelIndex, 10) : undefined;
-
-        if (recordId) {
-            console.log('✅ recordId found, setting context and fetching RSBSA record...');
-            setParcelContext({ recordId, parcelIndex: parsedIndex });
-            fetchRSBSARecord(recordId, parsedIndex);
-        } else {
-            console.log('❌ No recordId found in URL');
-        }
-    }, [searchParams.toString()]); // Use toString() to detect any param changes
-
-    // Helper function to fetch farm parcel data from the database
-    const fetchFarmParcelData = async (recordId: string) => {
-        try {
-            const response = await getFarmParcels(recordId);
-            if (response.error || !response.data || response.data.length === 0) {
-                console.log('📍 No farm parcels found for submission:', recordId);
-                return null;
-            }
-            console.log('📍 Fetched', response.data.length, 'farm parcel(s) for submission:', recordId);
-            return response.data; // Return the full array of parcels
-        } catch (error) {
-            console.error('Error fetching farm parcel data:', error);
-            return null;
-        }
-    };
-
-    // Fetch RSBSA record data
-    const fetchRSBSARecord = async (recordId: string, parcelIndex?: number) => {
-        console.log('🚀 fetchRSBSARecord called with:', { recordId, parcelIndex });
-        try {
-            console.log('📡 Fetching RSBSA submission:', recordId);
-            const response = await getRsbsaSubmissionById(recordId);
-            console.log('📡 Response:', response);
-            if (response.error) throw new Error(`HTTP error! ${response.error}`);
-            const data = response.data;
-            console.log('✅ Fetched RSBSA data:', data);
-            setRsbsaRecord(data);
-            console.log('Fetched RSBSA data:', data);
-            console.log('parcelIndex:', parcelIndex);
-
-            // Fetch farm parcel data from the database
-            let farmParcels = data.farmParcels;
-            if (!farmParcels || !Array.isArray(farmParcels) || farmParcels.length === 0) {
-                // If no farmParcels in the RSBSA data, fetch from rsbsa_farm_parcels table
-                const parcelData = await fetchFarmParcelData(recordId);
-                if (parcelData && parcelData.length > 0) {
-                    farmParcels = parcelData;
-                } else {
-                    // Fallback: create basic parcel structure
-                    farmParcels = [{
-                        parcelNumber: data.parcelNumber || 1,
-                        farmLocation: {
-                            barangay: data.farmLocationBarangay || data.addressBarangay || '',
-                            cityMunicipality: data.farmLocationCityMunicipality || data.addressMunicipality || ''
-                        },
-                        totalFarmArea: data.totalFarmArea || data.parcelArea || '',
-                        cropCommodity: data.cropCommodity || '',
-                        size: data.farmSize || data.parcelArea || '',
-                        farmType: data.farmType || '',
-                        organicPractitioner: data.organicPractitioner || '',
-                        plotStatus: 'not_plotted'
-                    }];
-                }
-            }
-
-            // Store all parcels for this farmer for progress calculations
-            setFarmerParcels(farmParcels || []);
-
-            if (parcelIndex !== undefined && farmParcels) {
-                const parcel = farmParcels[parcelIndex];
-                console.log('Selected parcel:', parcel);
-                if (parcel) {
-                    setCurrentParcel(parcel);
-
-                    // Use the farm parcel data from the database
-                    console.log('📍 Raw parcel data:', parcel);
-                    const parcelBarangayLocation = parcel.farm_location_barangay || parcel.farmLocation?.barangay || parcel.farmLocationBarangay || data.addressBarangay || fallbackBarangayName;
-                    const parcelMunicipalityLocation = parcel.farm_location_city_municipality || parcel.farmLocation?.cityMunicipality || parcel.farmLocationCityMunicipality || data.addressMunicipality || 'Dumangas';
-
-                    // Ensure we have a valid barangay
-                    const finalBarangay = parcelBarangayLocation || fallbackBarangayName || '';
-                    setParcelBarangay(finalBarangay);
-                    console.log('📍 Setting parcelBarangay to:', finalBarangay);
-
-                    setLandAttributes(prev => ({
-                        ...prev,
-                        firstName: data.firstName || '',
-                        middleName: data.middleName || '',
-                        surname: data.lastName || data.surname || '',
-                        gender: data.gender || 'Male',
-                        barangay: finalBarangay,
-                        municipality: parcelMunicipalityLocation,
-                        area: parseFloat(parcel.total_farm_area_ha || parcel.farm_size || parcel.total_farm_area || '0'),
-                        parcel_address: `${finalBarangay}, ${parcelMunicipalityLocation}`,
-                        farmType: parcel.farm_type || 'Irrigated',
-                        plotSource: parcel.plot_source || 'manual',
-                        parcelNumber: parcel.parcel_number,
-                    }));
-
-                    // --- NEW: Load all geometry for this parcel and farmer ---
-                    let shapes: Shape[] = [];
-                    let L: any = (window as any).L;
-                    if (!L) {
-                        L = (await import('leaflet'));
-                        L = L.default || L;
-                    }
-                    if (parcel.geometry) {
-                        const layer = L.geoJSON(parcel.geometry).getLayers()[0];
-                        shapes.push({
-                            id: `parcel-${parcel.parcelNumber}`,
-                            layer,
-                            properties: {
-                                ...parcel,
-                                ...data,
-                                area: parcel.size || parcel.totalFarmArea || 0,
-                                parcelNumber: parcel.parcelNumber,
-                            },
-                        });
-                    }
-                    const landPlotsRes = await getLandPlots();
-                    if (!landPlotsRes.error) {
-                        const allPlots = landPlotsRes.data;
-                        // Diagnostic logging
-                        console.log('📦 All plots from backend:', allPlots);
-                        // Robust matching: ignore case, trim, allow missing middle names
-                        const normalize = (str: string) => (str || '').trim().toLowerCase();
-                        const parcelAddr = normalize(`${parcelBarangayLocation}, ${parcelMunicipalityLocation}`);
-                        const surname = normalize(data.lastName || data.surname || '');
-                        const firstName = normalize(data.firstName);
-                        // Log filter values and all plots for debugging
-                        console.log('🔍 Filtering for:', { parcelAddr, surname, firstName });
-                        allPlots.forEach((plot: any) => {
-                            console.log('📍 plot details:', {
-                                parcel_address: plot.parcel_address,
-                                surname: plot.surname,
-                                firstName: plot.firstName,
-                                first_name: plot.first_name,
-                                middleName: plot.middleName,
-                                middle_name: plot.middle_name,
-                                gender: plot.gender,
-                                FULL_PLOT: plot  // Log the entire plot object
-                            });
-                        });
-                        // Relaxed filter: only require parcel_address, surname, and firstName to match
-                        const matches = allPlots.filter((plot: any) => {
-                            // Check both camelCase and snake_case field names
-                            const plotFirstName = normalize(plot.firstName || plot.first_name || '');
-                            const plotSurname = normalize(plot.surname || plot.last_name || '');
-                            const plotParcelAddr = normalize(plot.parcel_address || '');
-
-                            return (
-                                plotParcelAddr === parcelAddr &&
-                                plotSurname === surname &&
-                                plotFirstName === firstName
-                            );
-                        });
-                        // Diagnostic logging
-                        console.log('✅ Filtered plots for this parcel:', matches);
-                        matches.forEach((match: any) => {
-                            const layer = L.geoJSON(match.geometry).getLayers()[0];
-                            layer.options.id = match.id;
-                            console.log('➕ Adding shape with properties:', match);
-                            shapes.push({
-                                id: match.id,
-                                layer,
-                                properties: {
-                                    ...match,
-                                    parcelNumber: parcel.parcel_number,
-                                },
-                            });
-                        });
-                    }
-                    console.log('🔢 Total shapes loaded:', shapes.length);
-                    console.log('📋 All shapes:', shapes);
-                    setShapesAndVersion(shapes);
-                    const selected = shapes.find(s => s.properties.parcelNumber === parcel.parcel_number) || shapes[0];
-                    console.log('🎯 Selected shape:', selected);
-                    console.log('🎯 Selected shape properties:', selected?.properties);
-                    setSelectedShape(selected || null);
-                    setIsEditingAttributes(!!selected);
-                    if (selected) {
-                        console.log('📝 Setting landAttributes from selected shape:', selected.properties);
-                        setLandAttributes((prev) => ({ ...prev, ...selected.properties }));
-                    }
-                    if (!selected) setIsEditingAttributes(false);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching RSBSA record:', error);
-        }
-    };
-
-    useEffect(() => {
-        const handleLandPlotDeleted = (event: any) => {
-            const deletedId = event.detail.id;
-            if (mapRef.current && typeof mapRef.current.deleteShape === 'function') {
-                mapRef.current.deleteShape(deletedId);
-            }
-        };
-        window.addEventListener('land-plot-deleted', handleLandPlotDeleted);
-        return () => {
-            window.removeEventListener('land-plot-deleted', handleLandPlotDeleted);
-        };
-    }, []);
-
-    console.log('currentParcel:', currentParcel);
-
-    const [shapes, setShapes] = useState<Shape[]>([]);
-    const [deletedShapeIds, setDeletedShapeIds] = useState<string[]>([]);
-
-    // Debug: Log when shapes state changes
-    useEffect(() => {
-        console.log('📊 SHAPES STATE CHANGED:', shapes);
-        console.log('📊 SHAPES LENGTH:', shapes.length);
-    }, [shapes]);
-
-    // Helper function to set shapes
-    const setShapesAndVersion = (newShapes: Shape[] | ((prevShapes: Shape[]) => Shape[])) => {
-        console.log('🔧 setShapesAndVersion called with:', newShapes);
-        setShapes(prev => {
-            const updated = typeof newShapes === 'function' ? (newShapes as (prevShapes: Shape[]) => Shape[])(prev) : newShapes;
-            console.log('🔧 Previous shapes:', prev);
-            console.log('🔧 Updated shapes:', updated);
-            return updated;
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
         });
       }
       setIsEditingAttributes(false);
@@ -743,7 +332,6 @@ const LandPlottingPage: React.FC = () => {
         `${parcelBarangay || fallbackBarangayName}, ${landAttributes.municipality || "Dumangas"}`,
     };
 
-<<<<<<< HEAD
     shape.properties = prefilledProperties;
 
     // Assign parcelNumber from currentParcel if available
@@ -876,10 +464,10 @@ const LandPlottingPage: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("🔄 selectedShape changed:", selectedShape);
+    console.log("≡ƒöä selectedShape changed:", selectedShape);
     if (selectedShape) {
       console.log(
-        "📝 Setting landAttributes from selectedShape.properties:",
+        "≡ƒô¥ Setting landAttributes from selectedShape.properties:",
         selectedShape.properties,
       );
       setLandAttributes({
@@ -893,7 +481,7 @@ const LandPlottingPage: React.FC = () => {
       });
       setIsEditingAttributes(true);
     } else {
-      console.log("📝 Resetting landAttributes (no shape selected)");
+      console.log("≡ƒô¥ Resetting landAttributes (no shape selected)");
       setLandAttributes({
         name: "",
         ffrs_id: "",
@@ -920,18 +508,18 @@ const LandPlottingPage: React.FC = () => {
 
   // Parse URL parameters for parcel context
   useEffect(() => {
-    console.log("🔍 URL Parsing useEffect triggered");
-    console.log("🔍 window.location.search:", window.location.search);
-    console.log("🔍 window.location.hash:", window.location.hash);
-    console.log("🔍 window.location.href:", window.location.href);
-    console.log("🔍 searchParams object:", searchParams);
-    console.log("🔍 searchParams.toString():", searchParams.toString());
+    console.log("≡ƒöì URL Parsing useEffect triggered");
+    console.log("≡ƒöì window.location.search:", window.location.search);
+    console.log("≡ƒöì window.location.hash:", window.location.hash);
+    console.log("≡ƒöì window.location.href:", window.location.href);
+    console.log("≡ƒöì searchParams object:", searchParams);
+    console.log("≡ƒöì searchParams.toString():", searchParams.toString());
 
     // Use React Router's searchParams for hash routing compatibility
     const recordId = searchParams.get("recordId");
     const parcelIndex = searchParams.get("parcelIndex");
     console.log(
-      "🔍 Parsed from searchParams - recordId:",
+      "≡ƒöì Parsed from searchParams - recordId:",
       recordId,
       "parcelIndex:",
       parcelIndex,
@@ -941,12 +529,12 @@ const LandPlottingPage: React.FC = () => {
 
     if (recordId) {
       console.log(
-        "✅ recordId found, setting context and fetching RSBSA record...",
+        "Γ£à recordId found, setting context and fetching RSBSA record...",
       );
       setParcelContext({ recordId, parcelIndex: parsedIndex });
       fetchRSBSARecord(recordId, parsedIndex);
     } else {
-      console.log("❌ No recordId found in URL");
+      console.log("Γ¥î No recordId found in URL");
     }
   }, [searchParams.toString()]); // Use toString() to detect any param changes
 
@@ -955,11 +543,11 @@ const LandPlottingPage: React.FC = () => {
     try {
       const response = await getFarmParcels(recordId);
       if (response.error || !response.data || response.data.length === 0) {
-        console.log("📍 No farm parcels found for submission:", recordId);
+        console.log("≡ƒôì No farm parcels found for submission:", recordId);
         return null;
       }
       console.log(
-        "📍 Fetched",
+        "≡ƒôì Fetched",
         response.data.length,
         "farm parcel(s) for submission:",
         recordId,
@@ -973,14 +561,17 @@ const LandPlottingPage: React.FC = () => {
 
   // Fetch RSBSA record data
   const fetchRSBSARecord = async (recordId: string, parcelIndex?: number) => {
-    console.log("🚀 fetchRSBSARecord called with:", { recordId, parcelIndex });
+    console.log("≡ƒÜÇ fetchRSBSARecord called with:", {
+      recordId,
+      parcelIndex,
+    });
     try {
-      console.log("📡 Fetching RSBSA submission:", recordId);
+      console.log("≡ƒôí Fetching RSBSA submission:", recordId);
       const response = await getRsbsaSubmissionById(recordId);
-      console.log("📡 Response:", response);
+      console.log("≡ƒôí Response:", response);
       if (response.error) throw new Error(`HTTP error! ${response.error}`);
       const data = response.data;
-      console.log("✅ Fetched RSBSA data:", data);
+      console.log("Γ£à Fetched RSBSA data:", data);
       setRsbsaRecord(data);
       console.log("Fetched RSBSA data:", data);
       console.log("parcelIndex:", parcelIndex);
@@ -1020,6 +611,9 @@ const LandPlottingPage: React.FC = () => {
         }
       }
 
+      // Store all parcels for this farmer for progress calculations
+      setFarmerParcels(farmParcels || []);
+
       if (parcelIndex !== undefined && farmParcels) {
         const parcel = farmParcels[parcelIndex];
         console.log("Selected parcel:", parcel);
@@ -1027,7 +621,7 @@ const LandPlottingPage: React.FC = () => {
           setCurrentParcel(parcel);
 
           // Use the farm parcel data from the database
-          console.log("📍 Raw parcel data:", parcel);
+          console.log("≡ƒôì Raw parcel data:", parcel);
           const parcelBarangayLocation =
             parcel.farm_location_barangay ||
             parcel.farmLocation?.barangay ||
@@ -1045,11 +639,10 @@ const LandPlottingPage: React.FC = () => {
           const finalBarangay =
             parcelBarangayLocation || fallbackBarangayName || "";
           setParcelBarangay(finalBarangay);
-          console.log("📍 Setting parcelBarangay to:", finalBarangay);
+          console.log("≡ƒôì Setting parcelBarangay to:", finalBarangay);
 
           setLandAttributes((prev) => ({
             ...prev,
-            ffrs_id: data.referenceNumber || data.FFRS_CODE || "",
             firstName: data.firstName || "",
             middleName: data.middleName || "",
             surname: data.lastName || data.surname || "",
@@ -1092,7 +685,7 @@ const LandPlottingPage: React.FC = () => {
           if (!landPlotsRes.error) {
             const allPlots = landPlotsRes.data;
             // Diagnostic logging
-            console.log("📦 All plots from backend:", allPlots);
+            console.log("≡ƒôª All plots from backend:", allPlots);
             // Robust matching: ignore case, trim, allow missing middle names
             const normalize = (str: string) => (str || "").trim().toLowerCase();
             const parcelAddr = normalize(
@@ -1101,13 +694,13 @@ const LandPlottingPage: React.FC = () => {
             const surname = normalize(data.lastName || data.surname || "");
             const firstName = normalize(data.firstName);
             // Log filter values and all plots for debugging
-            console.log("🔍 Filtering for:", {
+            console.log("≡ƒöì Filtering for:", {
               parcelAddr,
               surname,
               firstName,
             });
             allPlots.forEach((plot: any) => {
-              console.log("📍 plot details:", {
+              console.log("≡ƒôì plot details:", {
                 parcel_address: plot.parcel_address,
                 surname: plot.surname,
                 firstName: plot.firstName,
@@ -1136,11 +729,11 @@ const LandPlottingPage: React.FC = () => {
               );
             });
             // Diagnostic logging
-            console.log("✅ Filtered plots for this parcel:", matches);
+            console.log("Γ£à Filtered plots for this parcel:", matches);
             matches.forEach((match: any) => {
               const layer = L.geoJSON(match.geometry).getLayers()[0];
               layer.options.id = match.id;
-              console.log("➕ Adding shape with properties:", match);
+              console.log("Γ₧ò Adding shape with properties:", match);
               shapes.push({
                 id: match.id,
                 layer,
@@ -1151,20 +744,20 @@ const LandPlottingPage: React.FC = () => {
               });
             });
           }
-          console.log("🔢 Total shapes loaded:", shapes.length);
-          console.log("📋 All shapes:", shapes);
+          console.log("≡ƒöó Total shapes loaded:", shapes.length);
+          console.log("≡ƒôï All shapes:", shapes);
           setShapesAndVersion(shapes);
           const selected =
             shapes.find(
               (s) => s.properties.parcelNumber === parcel.parcel_number,
             ) || shapes[0];
-          console.log("🎯 Selected shape:", selected);
-          console.log("🎯 Selected shape properties:", selected?.properties);
+          console.log("≡ƒÄ» Selected shape:", selected);
+          console.log("≡ƒÄ» Selected shape properties:", selected?.properties);
           setSelectedShape(selected || null);
           setIsEditingAttributes(!!selected);
           if (selected) {
             console.log(
-              "📝 Setting landAttributes from selected shape:",
+              "≡ƒô¥ Setting landAttributes from selected shape:",
               selected.properties,
             );
             setLandAttributes((prev) => ({ ...prev, ...selected.properties }));
@@ -1174,127 +767,6 @@ const LandPlottingPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Error fetching RSBSA record:", error);
-=======
-    // Helper: Check if a polygon exists for the current parcel
-    const polygonExistsForCurrentParcel = shapes.some((shape) => {
-        const geo = shape.layer && shape.layer.toGeoJSON && shape.layer.toGeoJSON();
-        // Only check for Polygon type
-        return (
-            geo &&
-            geo.geometry &&
-            geo.geometry.type === 'Polygon' &&
-            ((currentParcel &&
-                shape.properties &&
-                shape.properties.parcelNumber === currentParcel.parcelNumber) ||
-                (!currentParcel && shape.properties && shape.properties.parcelNumber === undefined))
-        );
-    });
-
-    // Total plotted area across all shapes (hectares)
-    const totalPlottedAreaHa = useMemo(() => {
-        if (!shapes || shapes.length === 0) return 0;
-        const seenIds = new Set<string>();
-        let total = 0;
-
-        shapes.forEach((shape) => {
-            const shapeId = shape.id || '';
-            if (seenIds.has(shapeId)) return;
-            seenIds.add(shapeId);
-
-            const rawArea: any = (shape.properties as any)?.area;
-            if (rawArea === null || rawArea === undefined) return;
-            const numericArea =
-                typeof rawArea === 'number'
-                    ? rawArea
-                    : parseFloat(String(rawArea).replace(/,/g, ''));
-            if (!Number.isFinite(numericArea)) return;
-            total += numericArea;
-        });
-
-        return total;
-    }, [shapes]);
-
-    const formattedTotalPlottedArea = useMemo(() => {
-        if (!Number.isFinite(totalPlottedAreaHa)) return '0';
-        if (totalPlottedAreaHa === 0) return '0';
-        return String(Math.round(totalPlottedAreaHa * 10000) / 10000);
-    }, [totalPlottedAreaHa]);
-
-    // Barangay-level plot completion for this farmer:
-    // percentage of parcels with at least one polygon saved
-    const barangayCompletion = useMemo(() => {
-        const stats: Record<string, { totalParcels: number; plottedParcels: number }> = {};
-
-        // Count total parcels per barangay for this farmer
-        (farmerParcels || []).forEach((parcel: any) => {
-            const brgy =
-                parcel.farm_location_barangay ||
-                parcel.farmLocation?.barangay ||
-                (parcel as any).farmLocationBarangay ||
-                (parcel as any).barangay;
-            const key = typeof brgy === 'string' ? brgy.trim() : '';
-            if (!key) return;
-            if (!stats[key]) {
-                stats[key] = { totalParcels: 0, plottedParcels: 0 };
-            }
-            stats[key].totalParcels += 1;
-        });
-
-        if (shapes.length === 0) return stats;
-
-        // Track unique (barangay, parcelNumber) combinations that already counted as plotted
-        const seenParcels = new Set<string>();
-
-        shapes.forEach((shape) => {
-            const props: any = shape.properties || {};
-            const parcelNumber = props.parcelNumber ?? props.parcel_number;
-            const brgy =
-                props.barangay ||
-                props.farm_location_barangay ||
-                props.farmLocationBarangay;
-            const key = typeof brgy === 'string' ? brgy.trim() : '';
-            if (!key || !stats[key]) return;
-
-            const parcelKey =
-                parcelNumber !== undefined && parcelNumber !== null
-                    ? `${key}::${String(parcelNumber)}`
-                    : `${key}::__no_parcel__${shape.id}`;
-
-            if (seenParcels.has(parcelKey)) return;
-            seenParcels.add(parcelKey);
-            stats[key].plottedParcels += 1;
-        });
-
-        return stats;
-    }, [farmerParcels, shapes]);
-
-    // Comprehensive debugging for barangay resolution
-    console.log("=== BARANGAY DEBUG START ===");
-    console.log("📍 landAttributes.barangay:", landAttributes.barangay);
-    console.log("📍 parcelBarangay state:", parcelBarangay);
-    console.log("📍 fallbackBarangayName:", fallbackBarangayName);
-    console.log("📦 currentParcel:", currentParcel);
-    console.log("📦 currentParcel?.farm_location_barangay:", currentParcel?.farm_location_barangay);
-    console.log("👤 rsbsaRecord:", rsbsaRecord);
-    console.log("=== BARANGAY DEBUG END ===");
-
-    // Helpers to robustly derive display values from various possible field names
-    function getDisplayBarangay() {
-        const candidates = [
-            currentParcel?.farm_location_barangay,
-            currentParcel?.farmLocation?.barangay,
-            (currentParcel as any)?.farmLocationBarangay,
-            (currentParcel as any)?.barangay,
-            landAttributes.barangay,
-            (rsbsaRecord as any)?.farmLocationBarangay,
-            rsbsaRecord?.addressBarangay,
-            (rsbsaRecord as any)?.barangay,
-        ];
-        const value = candidates.find(v => typeof v === 'string' && v.trim().length > 0);
-        console.log("🔍 getDisplayBarangay candidates:", candidates);
-        console.log("✅ getDisplayBarangay selected value:", value);
-        return value || 'N/A';
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
     }
   };
 
@@ -1318,22 +790,22 @@ const LandPlottingPage: React.FC = () => {
 
   // Debug: Log when shapes state changes
   useEffect(() => {
-    console.log("📊 SHAPES STATE CHANGED:", shapes);
-    console.log("📊 SHAPES LENGTH:", shapes.length);
+    console.log("≡ƒôè SHAPES STATE CHANGED:", shapes);
+    console.log("≡ƒôè SHAPES LENGTH:", shapes.length);
   }, [shapes]);
 
   // Helper function to set shapes
   const setShapesAndVersion = (
     newShapes: Shape[] | ((prevShapes: Shape[]) => Shape[]),
   ) => {
-    console.log("🔧 setShapesAndVersion called with:", newShapes);
+    console.log("≡ƒöº setShapesAndVersion called with:", newShapes);
     setShapes((prev) => {
       const updated =
         typeof newShapes === "function"
           ? (newShapes as (prevShapes: Shape[]) => Shape[])(prev)
           : newShapes;
-      console.log("🔧 Previous shapes:", prev);
-      console.log("🔧 Updated shapes:", updated);
+      console.log("≡ƒöº Previous shapes:", prev);
+      console.log("≡ƒöº Updated shapes:", updated);
       return updated;
     });
   };
@@ -1343,7 +815,6 @@ const LandPlottingPage: React.FC = () => {
     const geo = shape.layer && shape.layer.toGeoJSON && shape.layer.toGeoJSON();
     // Only check for Polygon type
     return (
-<<<<<<< HEAD
       geo &&
       geo.geometry &&
       geo.geometry.type === "Polygon" &&
@@ -1353,160 +824,101 @@ const LandPlottingPage: React.FC = () => {
         (!currentParcel &&
           shape.properties &&
           shape.properties.parcelNumber === undefined))
-=======
-        <div className="tech-landplotting-container">
-            {/* Toast Notification */}
-            {toast && (
-                <div className={`toast-notification toast-${toast.type}`}>
-                    <span>{toast.message}</span>
-                    <button onClick={() => setToast(null)} className="toast-close">×</button>
-                </div>
-            )}
-            {/* Back Button at top left */}
-            <button
-                className="tech-landplotting-back-button"
-                onClick={handleBackClick}
-                aria-label="Back"
-            >
-                ←
-            </button>
-
-            <div className="tech-landplotting-main-wrapper">
-                {/* Left: Map */}
-                <div className="tech-landplotting-map-section">
-                    <div className="tech-landplotting-map-container">
-                        {/* Map component */}
-                        <div className="tech-landplotting-map-wrapper">
-                            <LandPlottingMap
-                                ref={mapRef}
-                                selectedShape={selectedShape}
-                                onShapeSelected={setSelectedShape}
-                                onShapeCreated={handleShapeCreated}
-                                onShapeEdited={handleShapeEdited}
-                                onShapeDeleted={handleMapShapeDeleted}
-                                barangayName={barangayForMap}
-                                onShapeFinalized={handleShapeFinalized}
-                                drawingDisabled={false}
-                                geometryPreview={null}
-                                shapes={shapes}
-                                polygonExistsForCurrentParcel={polygonExistsForCurrentParcel}
-                            />
-                        </div>
-                    </div>
-                </div>
-                {/* Right: Details Panel */}
-                <div className="tech-landplotting-details-panel">
-                    {/* High-level stats */}
-                    <div className="tech-landplotting-stats-grid">
-                        <div className="tech-landplotting-stat-card">
-                            <div className="tech-landplotting-stat-label">Total plotted area</div>
-                            <div className="tech-landplotting-stat-value">
-                                {formattedTotalPlottedArea}
-                                <span className="tech-landplotting-stat-unit"> ha</span>
-                            </div>
-                            <div className="tech-landplotting-stat-sub">
-                                Sum of all mapped parcels for this farmer
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="tech-landplotting-parcel-title">
-                        {currentParcel && (currentParcel.parcel_number !== undefined && currentParcel.parcel_number !== null && currentParcel.parcel_number !== '')
-                            ? `Farm Parcel #${currentParcel.parcel_number}`
-                            : (selectedShape && (selectedShape.properties as any).parcelNumber !== undefined)
-                                ? `Farm Parcel #${(selectedShape.properties as any).parcelNumber}`
-                                : 'Farm Parcel #1'}
-                    </div>
-                    <div className="tech-landplotting-section-label">Details:</div>
-                    <div className="tech-landplotting-details-container">
-                        <div className="tech-landplotting-detail-row">
-                            <span className="tech-landplotting-detail-label">Name:</span>
-                            {` ${getDisplayName()}`}
-                        </div>
-                        <div className="tech-landplotting-detail-row">
-                            <span className="tech-landplotting-detail-label">Municipality:</span>
-                            {` ${getDisplayMunicipality()}`}
-                        </div>
-                        <div className="tech-landplotting-detail-row">
-                            <span className="tech-landplotting-detail-label">Barangay:</span>
-                            {` ${getDisplayBarangay()}`}
-                        </div>
-                        <div className="tech-landplotting-detail-row">
-                            <span className="tech-landplotting-detail-label">Gender:</span>
-                            {` ${getDisplayGender()}`}
-                        </div>
-                        <div className="tech-landplotting-detail-row">
-                            <span className="tech-landplotting-detail-label">Parcel Area:</span>
-                            {` ${getDisplayAreaHectares()}`}
-                        </div>
-                    </div>
-
-                    {/* Barangay-level completion bars */}
-                    {Object.keys(barangayCompletion).length > 0 && (
-                        <>
-                            <div className="tech-landplotting-section-label">Barangay mapping progress</div>
-                            <div className="tech-landplotting-barangay-progress-list">
-                                {Object.entries(barangayCompletion).map(([barangay, stats]) => {
-                                    const pct =
-                                        stats.totalParcels > 0
-                                            ? Math.round((stats.plottedParcels / stats.totalParcels) * 100)
-                                            : 0;
-                                    return (
-                                        <div
-                                            key={barangay}
-                                            className="tech-landplotting-barangay-progress-item"
-                                        >
-                                            <div className="tech-landplotting-barangay-header">
-                                                <span className="tech-landplotting-barangay-name">
-                                                    {barangay}
-                                                </span>
-                                                <span className="tech-landplotting-barangay-percent">
-                                                    {pct}%
-                                                </span>
-                                            </div>
-                                            <div className="tech-landplotting-progress-bar">
-                                                <div
-                                                    className="tech-landplotting-progress-fill"
-                                                    style={{ width: `${pct}%` }}
-                                                />
-                                            </div>
-                                            <div className="tech-landplotting-barangay-meta">
-                                                {stats.plottedParcels} of {stats.totalParcels} parcels mapped
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </>
-                    )}
-
-                    <div className="tech-landplotting-actions-container">
-                        <button
-                            onClick={handleSaveAttributes}
-                            disabled={!isEditingAttributes || isSaving}
-                            className="tech-landplotting-save-button"
-                        >
-                            {isSaving ? 'Saving...' : 'SAVE'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
     );
   });
 
+  // Total plotted area across all shapes (hectares)
+  const totalPlottedAreaHa = useMemo(() => {
+    if (!shapes || shapes.length === 0) return 0;
+    const seenIds = new Set<string>();
+    let total = 0;
+
+    shapes.forEach((shape) => {
+      const shapeId = shape.id || "";
+      if (seenIds.has(shapeId)) return;
+      seenIds.add(shapeId);
+
+      const rawArea: any = (shape.properties as any)?.area;
+      if (rawArea === null || rawArea === undefined) return;
+      const numericArea =
+        typeof rawArea === "number"
+          ? rawArea
+          : parseFloat(String(rawArea).replace(/,/g, ""));
+      if (!Number.isFinite(numericArea)) return;
+      total += numericArea;
+    });
+
+    return total;
+  }, [shapes]);
+
+  const formattedTotalPlottedArea = useMemo(() => {
+    if (!Number.isFinite(totalPlottedAreaHa)) return "0";
+    if (totalPlottedAreaHa === 0) return "0";
+    return String(Math.round(totalPlottedAreaHa * 10000) / 10000);
+  }, [totalPlottedAreaHa]);
+
+  // Barangay-level plot completion for this farmer:
+  // percentage of parcels with at least one polygon saved
+  const barangayCompletion = useMemo(() => {
+    const stats: Record<
+      string,
+      { totalParcels: number; plottedParcels: number }
+    > = {};
+
+    // Count total parcels per barangay for this farmer
+    (farmerParcels || []).forEach((parcel: any) => {
+      const brgy =
+        parcel.farm_location_barangay ||
+        parcel.farmLocation?.barangay ||
+        (parcel as any).farmLocationBarangay ||
+        (parcel as any).barangay;
+      const key = typeof brgy === "string" ? brgy.trim() : "";
+      if (!key) return;
+      if (!stats[key]) {
+        stats[key] = { totalParcels: 0, plottedParcels: 0 };
+      }
+      stats[key].totalParcels += 1;
+    });
+
+    if (shapes.length === 0) return stats;
+
+    // Track unique (barangay, parcelNumber) combinations that already counted as plotted
+    const seenParcels = new Set<string>();
+
+    shapes.forEach((shape) => {
+      const props: any = shape.properties || {};
+      const parcelNumber = props.parcelNumber ?? props.parcel_number;
+      const brgy =
+        props.barangay ||
+        props.farm_location_barangay ||
+        props.farmLocationBarangay;
+      const key = typeof brgy === "string" ? brgy.trim() : "";
+      if (!key || !stats[key]) return;
+
+      const parcelKey =
+        parcelNumber !== undefined && parcelNumber !== null
+          ? `${key}::${String(parcelNumber)}`
+          : `${key}::__no_parcel__${shape.id}`;
+
+      if (seenParcels.has(parcelKey)) return;
+      seenParcels.add(parcelKey);
+      stats[key].plottedParcels += 1;
+    });
+
+    return stats;
+  }, [farmerParcels, shapes]);
+
   // Comprehensive debugging for barangay resolution
   console.log("=== BARANGAY DEBUG START ===");
-  console.log("📍 landAttributes.barangay:", landAttributes.barangay);
-  console.log("📍 parcelBarangay state:", parcelBarangay);
-  console.log("📍 fallbackBarangayName:", fallbackBarangayName);
-  console.log("📦 currentParcel:", currentParcel);
+  console.log("≡ƒôì landAttributes.barangay:", landAttributes.barangay);
+  console.log("≡ƒôì parcelBarangay state:", parcelBarangay);
+  console.log("≡ƒôì fallbackBarangayName:", fallbackBarangayName);
+  console.log("≡ƒôª currentParcel:", currentParcel);
   console.log(
-    "📦 currentParcel?.farm_location_barangay:",
+    "≡ƒôª currentParcel?.farm_location_barangay:",
     currentParcel?.farm_location_barangay,
   );
-  console.log("👤 rsbsaRecord:", rsbsaRecord);
+  console.log("≡ƒæñ rsbsaRecord:", rsbsaRecord);
   console.log("=== BARANGAY DEBUG END ===");
 
   // Helpers to robustly derive display values from various possible field names
@@ -1524,8 +936,8 @@ const LandPlottingPage: React.FC = () => {
     const value = candidates.find(
       (v) => typeof v === "string" && v.trim().length > 0,
     );
-    console.log("🔍 getDisplayBarangay candidates:", candidates);
-    console.log("✅ getDisplayBarangay selected value:", value);
+    console.log("≡ƒöì getDisplayBarangay candidates:", candidates);
+    console.log("Γ£à getDisplayBarangay selected value:", value);
     return value || "N/A";
   }
 
@@ -1542,7 +954,9 @@ const LandPlottingPage: React.FC = () => {
       rsbsaRecord?.addressBarangay,
       (rsbsaRecord as any)?.barangay,
     ];
-    console.log("🗺️ useMemo barangayForMap - ALL CANDIDATES WITH DETAILS:");
+    console.log(
+      "≡ƒù║∩╕Å useMemo barangayForMap - ALL CANDIDATES WITH DETAILS:",
+    );
     candidates.forEach((c, i) => {
       console.log(`  [${i}]:`, typeof c, `"${c}"`);
     });
@@ -1550,7 +964,7 @@ const LandPlottingPage: React.FC = () => {
       (v) => typeof v === "string" && v.trim().length > 0 && v !== "N/A",
     );
     console.log(
-      "✅ useMemo barangayForMap - FINAL selected value:",
+      "Γ£à useMemo barangayForMap - FINAL selected value:",
       `"${value}"`,
     );
     return value || "";
@@ -1608,13 +1022,13 @@ const LandPlottingPage: React.FC = () => {
 
   function getDisplayName() {
     // Debug logging
-    console.log("🔍 getDisplayName - selectedShape:", selectedShape);
+    console.log("≡ƒöì getDisplayName - selectedShape:", selectedShape);
     console.log(
-      "🔍 getDisplayName - selectedShape?.properties:",
+      "≡ƒöì getDisplayName - selectedShape?.properties:",
       selectedShape?.properties,
     );
-    console.log("🔍 getDisplayName - landAttributes:", landAttributes);
-    console.log("🔍 getDisplayName - rsbsaRecord:", rsbsaRecord);
+    console.log("≡ƒöì getDisplayName - landAttributes:", landAttributes);
+    console.log("≡ƒöì getDisplayName - rsbsaRecord:", rsbsaRecord);
 
     // Check selectedShape first, then landAttributes, then rsbsaRecord
     const sources = [selectedShape?.properties, landAttributes, rsbsaRecord];
@@ -1631,7 +1045,7 @@ const LandPlottingPage: React.FC = () => {
         (source as any).last_name ||
         "";
 
-      console.log("🔍 Checking source:", {
+      console.log("≡ƒöì Checking source:", {
         firstName,
         middleName,
         surname,
@@ -1640,11 +1054,11 @@ const LandPlottingPage: React.FC = () => {
 
       const fullName = `${firstName} ${middleName} ${surname}`.trim();
       if (fullName.length > 0) {
-        console.log("✅ Found name:", fullName);
+        console.log("Γ£à Found name:", fullName);
         return fullName;
       }
     }
-    console.log("❌ No name found, returning N/A");
+    console.log("Γ¥î No name found, returning N/A");
     return "N/A";
   }
 
@@ -1669,7 +1083,7 @@ const LandPlottingPage: React.FC = () => {
         <div className={`toast-notification toast-${toast.type}`}>
           <span>{toast.message}</span>
           <button onClick={() => setToast(null)} className="toast-close">
-            ×
+            ├ù
           </button>
         </div>
       )}
@@ -1679,8 +1093,9 @@ const LandPlottingPage: React.FC = () => {
         onClick={handleBackClick}
         aria-label="Back"
       >
-        ←
+        ΓåÉ
       </button>
+
       <div className="tech-landplotting-main-wrapper">
         {/* Left: Map */}
         <div className="tech-landplotting-map-section">
@@ -1700,21 +1115,28 @@ const LandPlottingPage: React.FC = () => {
                 geometryPreview={null}
                 shapes={shapes}
                 polygonExistsForCurrentParcel={polygonExistsForCurrentParcel}
-                targetAreaHa={
-                  parseFloat(
-                    currentParcel?.total_farm_area_ha ||
-                      currentParcel?.farm_size ||
-                      currentParcel?.total_farm_area ||
-                      landAttributes.area ||
-                      "0",
-                  ) || 0
-                }
               />
             </div>
           </div>
         </div>
         {/* Right: Details Panel */}
         <div className="tech-landplotting-details-panel">
+          {/* High-level stats */}
+          <div className="tech-landplotting-stats-grid">
+            <div className="tech-landplotting-stat-card">
+              <div className="tech-landplotting-stat-label">
+                Total plotted area
+              </div>
+              <div className="tech-landplotting-stat-value">
+                {formattedTotalPlottedArea}
+                <span className="tech-landplotting-stat-unit"> ha</span>
+              </div>
+              <div className="tech-landplotting-stat-sub">
+                Sum of all mapped parcels for this farmer
+              </div>
+            </div>
+          </div>
+
           <div className="tech-landplotting-parcel-title">
             {currentParcel &&
             currentParcel.parcel_number !== undefined &&
@@ -1753,6 +1175,50 @@ const LandPlottingPage: React.FC = () => {
               {` ${getDisplayAreaHectares()}`}
             </div>
           </div>
+
+          {/* Barangay-level completion bars */}
+          {Object.keys(barangayCompletion).length > 0 && (
+            <>
+              <div className="tech-landplotting-section-label">
+                Barangay mapping progress
+              </div>
+              <div className="tech-landplotting-barangay-progress-list">
+                {Object.entries(barangayCompletion).map(([barangay, stats]) => {
+                  const pct =
+                    stats.totalParcels > 0
+                      ? Math.round(
+                          (stats.plottedParcels / stats.totalParcels) * 100,
+                        )
+                      : 0;
+                  return (
+                    <div
+                      key={barangay}
+                      className="tech-landplotting-barangay-progress-item"
+                    >
+                      <div className="tech-landplotting-barangay-header">
+                        <span className="tech-landplotting-barangay-name">
+                          {barangay}
+                        </span>
+                        <span className="tech-landplotting-barangay-percent">
+                          {pct}%
+                        </span>
+                      </div>
+                      <div className="tech-landplotting-progress-bar">
+                        <div
+                          className="tech-landplotting-progress-fill"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="tech-landplotting-barangay-meta">
+                        {stats.plottedParcels} of {stats.totalParcels} parcels
+                        mapped
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           <div className="tech-landplotting-actions-container">
             <button

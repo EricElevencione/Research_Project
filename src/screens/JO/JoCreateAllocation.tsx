@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { createAllocation } from "../../api";
 import {
   getAuditLogger,
@@ -202,19 +202,14 @@ const NUMERIC_FIELDS: AllocationNumericField[] = [
 ];
 
 const JoCreateAllocation: React.FC = () => {
-<<<<<<< HEAD
   const navigate = useNavigate();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdAllocationId, setCreatedAllocationId] = useState<number | null>(
     null,
   );
-=======
-    const navigate = useNavigate();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
   // Function to determine season based on date
   const determineSeasonFromDate = (dateString: string): string => {
@@ -366,20 +361,8 @@ const JoCreateAllocation: React.FC = () => {
         throw new Error("No allocation ID returned from server");
       }
 
-<<<<<<< HEAD
       // Success - show in-app modal and let user choose when to continue
       setCreatedAllocationId(allocationId);
-=======
-    return (
-        <div className="jo-allocation-page-container">
-            <div className="jo-allocation-page has-mobile-sidebar">
-                {/* Sidebar */}
-                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-                    <nav className="sidebar-nav">
-                        <div className='sidebar-logo'>
-                            <img src={LogoImage} alt="Logo" />
-                        </div>
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
       // Log audit trail
       try {
@@ -414,317 +397,15 @@ const JoCreateAllocation: React.FC = () => {
     navigate(`/jo-add-farmer-request/${createdAllocationId}`);
   };
 
-<<<<<<< HEAD
   return (
     <div className="jo-allocation-page-container">
-      <div className="jo-allocation-page">
+      <div className="jo-allocation-page has-mobile-sidebar">
         {/* Sidebar */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
-=======
-                        <button
-                            className={`sidebar-nav-item ${isActive('/jo-incentives') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-incentives')}
-                        >
-                            <span className="nav-icon">
-                                <img src={IncentivesIcon} alt="Incentives" />
-                            </span>
-                            <span className="nav-text">Incentives</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/jo-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={MasterlistIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <div
-                            className={`sidebar-nav-item ${isActive('/jo-land-registry') ? 'active' : ''}`}
-                            onClick={() => navigate('/jo-land-registry')}
-                        >
-                            <div className="nav-icon">🗺️</div>
-                            <span className="nav-text">Land Registry</span>
-                        </div>
-
-                        <button
-                            className="sidebar-nav-item logout"
-                            onClick={() => navigate('/')}
-                        >
-                            <span className="nav-icon">
-                                <img src={LogoutIcon} alt="Logout" />
-                            </span>
-                            <span className="nav-text">Logout</span>
-                        </button>
-
-                    </nav>
-                </div>
-                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
-
-                {/* Main Content */}
-                <div className="jo-allocation-main-content">
-                    <div className="tech-incent-mobile-header">
-                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
-                        <div className="tech-incent-mobile-title">JO Create Allocation</div>
-                    </div>
-                    <div className="jo-allocation-header">
-                        <h2 className="jo-allocation-title">Create Regional Allocation</h2>
-                        <p className="jo-allocation-subtitle">Input fertilizer and seed allocation from Regional Office</p>
-                    </div>
-
-                    <div className="jo-allocation-content-card">
-                        <form onSubmit={handleSubmit}>
-                            {/* Season Selection */}
-                            <div className="jo-allocation-section">
-                                <h3 className="jo-allocation-section-title">
-                                    Season Information
-                                </h3>
-                                <div className="jo-allocation-grid-2">
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            Allocation Date <span className="jo-allocation-required">*</span>
-                                        </label>
-                                        <input
-                                            type="date"
-                                            name="allocation_date"
-                                            value={formData.allocation_date}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            Auto-Detected Season
-                                        </label>
-                                        <div className="jo-allocation-season-display">
-                                            {formData.season ? (
-                                                <span>
-                                                    {formData.season.includes('wet') ? '🌧️ Wet Season' : '☀️ Dry Season'} {formData.season.split('_')[1]}
-                                                </span>
-                                            ) : (
-                                                <span className="jo-allocation-season-placeholder">Select a date first</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <p className="jo-allocation-season-info">
-                                    💡 <strong>Wet Season:</strong> May - October | <strong>Dry Season:</strong> November - April
-                                </p>
-                            </div>
-
-                            {/* Fertilizers Section */}
-                            <div className="jo-allocation-section">
-                                <h3 className="jo-allocation-section-title">
-                                    🌱 Fertilizer Allocation (bags)
-                                </h3>
-                                <div className="jo-allocation-grid-2">
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            Urea (46-0-0)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="urea_46_0_0_bags"
-                                            value={formData.urea_46_0_0_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            Complete (14-14-14)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="complete_14_14_14_bags"
-                                            value={formData.complete_14_14_14_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            Ammonium Sulfate (21-0-0)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="ammonium_sulfate_21_0_0_bags"
-                                            value={formData.ammonium_sulfate_21_0_0_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            Muriate of Potash (0-0-60)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="muriate_potash_0_0_60_bags"
-                                            value={formData.muriate_potash_0_0_60_bags}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Seeds Section */}
-                            <div className="jo-allocation-section">
-                                <h3 className="jo-allocation-section-title">
-                                    🌾 Seed Allocation (kg)
-                                </h3>
-                                <div className="jo-allocation-grid-2">
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            Jackpot
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="jackpot_kg"
-                                            value={formData.jackpot_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            US88
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="us88_kg"
-                                            value={formData.us88_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            TH82
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="th82_kg"
-                                            value={formData.th82_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            RH9000
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="rh9000_kg"
-                                            value={formData.rh9000_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            Lumping143
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="lumping143_kg"
-                                            value={formData.lumping143_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                    <div className="jo-allocation-field">
-                                        <label className="jo-allocation-label">
-                                            LP296
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="lp296_kg"
-                                            value={formData.lp296_kg}
-                                            onChange={handleInputChange}
-                                            min="0"
-                                            step="0.01"
-                                            className="jo-allocation-input"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Notes Section */}
-                            <div className="jo-allocation-section">
-                                <label className="jo-allocation-label">
-                                    Notes / Remarks
-                                </label>
-                                <textarea
-                                    name="notes"
-                                    value={formData.notes}
-                                    onChange={handleInputChange}
-                                    rows={4}
-                                    placeholder="Add any additional notes (e.g., 'First batch', 'Mid-season tranche', 'Emergency allocation')..."
-                                    className="jo-allocation-textarea"
-                                />
-                                <p className="jo-allocation-season-info" style={{ marginTop: '8px' }}>
-                                    💡 <strong>Tip:</strong> You can create multiple allocations for the same season. Use notes to differentiate between batches.
-                                </p>
-                            </div>
-
-                            {/* Error Message */}
-                            {error && (
-                                <div className="jo-allocation-error">
-                                    {error}
-                                </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="jo-allocation-actions">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/jo-incentives')}
-                                    className="jo-allocation-btn-cancel"
-                                    disabled={loading}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="jo-allocation-btn-submit"
-                                    disabled={loading}
-                                >
-                                    {loading ? '💾 Saving...' : '✅ Create Allocation'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
             </div>
-
             <button
               className={`sidebar-nav-item ${isActive("/jo-dashboard") ? "active" : ""}`}
               onClick={() => navigate("/jo-dashboard")}
@@ -773,10 +454,7 @@ const JoCreateAllocation: React.FC = () => {
               <span className="nav-text">Land Registry</span>
             </div>
 
-            <button
-              className="sidebar-nav-item logout"
-              onClick={() => navigate("/")}
-            >
+            <button className="sidebar-nav-item logout" onClick={handleLogout}>
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
               </span>
@@ -785,8 +463,23 @@ const JoCreateAllocation: React.FC = () => {
           </nav>
         </div>
 
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+
         {/* Main Content */}
         <div className="jo-allocation-main-content">
+          <div className="tech-incent-mobile-header">
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
+            <div className="tech-incent-mobile-title">JO Create Allocation</div>
+          </div>
+
           <div className="jo-allocation-header">
             <h2 className="jo-allocation-title">Create Regional Allocation</h2>
             <p className="jo-allocation-subtitle">

@@ -905,15 +905,9 @@ const JoRsbsa: React.FC = () => {
 
   return (
     <div className="jo-registration-page-container">
-<<<<<<< HEAD
       <div className="jo-registration-page">
-=======
-
-      <div className="jo-registration-page has-mobile-sidebar">
-
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
         {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -982,13 +976,23 @@ const JoRsbsa: React.FC = () => {
           </nav>
         </div>
         {/* Sidebar ends here */}
-        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
 
         {/* Main content starts here */}
         <div className="jo-registration-main-content">
           <div className="tech-incent-mobile-header">
-            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
-            <div className="tech-incent-mobile-title">JO RSBSA Registration</div>
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
+            <div className="tech-incent-mobile-title">
+              JO RSBSA Registration
+            </div>
           </div>
           <h2>RSBSA Enrollment Form</h2>
 

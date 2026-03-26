@@ -80,7 +80,7 @@ const TechMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab] = useState("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +96,8 @@ const TechMasterlist: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [selectedOwnershipType, setSelectedOwnershipType] = useState<string>('all');
+  const [selectedOwnershipType, setSelectedOwnershipType] =
+    useState<string>("all");
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -307,8 +308,8 @@ const TechMasterlist: React.FC = () => {
         if (total === 0) return 0;
 
         const completed = fields.filter((value) => {
-          const v = String(value ?? '').trim();
-          return v !== '' && v !== '—';
+          const v = String(value ?? "").trim();
+          return v !== "" && v !== "—";
         }).length;
 
         return Math.round((completed / total) * 100);
@@ -751,7 +752,7 @@ const TechMasterlist: React.FC = () => {
     <div className="tech-masterlist-page-container">
       <div className="tech-masterlist-page">
         {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -810,11 +811,19 @@ const TechMasterlist: React.FC = () => {
         </div>
         {/* Sidebar ends here */}
 
-        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
 
         <div className="tech-masterlist-main-content">
           <div className="tech-incent-mobile-header">
-            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
             <div className="tech-incent-mobile-title">Masterlist</div>
           </div>
           <div className="tech-masterlist-dashboard-header">
@@ -873,13 +882,13 @@ const TechMasterlist: React.FC = () => {
                 <thead>
                   <tr>
                     {[
-                      'FFRS System Generated',
-                      'Farmer Name',
-                      'Farmer Address',
-                      'Parcel Address',
-                      'Parcel Area',
-                      'Date Submitted',
-                      'Status'
+                      "FFRS System Generated",
+                      "Farmer Name",
+                      "Farmer Address",
+                      "Parcel Address",
+                      "Parcel Area",
+                      "Date Submitted",
+                      "Status",
                     ].map((header) => (
                       <th key={header}>{header}</th>
                     ))}
@@ -887,10 +896,18 @@ const TechMasterlist: React.FC = () => {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={7} className="tech-masterlist-loading-cell">Loading...</td></tr>
+                    <tr>
+                      <td colSpan={7} className="tech-masterlist-loading-cell">
+                        Loading...
+                      </td>
+                    </tr>
                   )}
                   {error && !loading && (
-                    <tr><td colSpan={7} className="tech-masterlist-error-cell">Error: {error}</td></tr>
+                    <tr>
+                      <td colSpan={7} className="tech-masterlist-error-cell">
+                        Error: {error}
+                      </td>
+                    </tr>
                   )}
                   {!loading &&
                     !error &&
@@ -1232,7 +1249,9 @@ const TechMasterlist: React.FC = () => {
                       <button
                         className="btn-action"
                         onClick={() => {
-                          navigate(`/technician-farmerprofile/${selectedFarmer.id}`);
+                          navigate(
+                            `/technician-farmerprofile/${selectedFarmer.id}`,
+                          );
                           setShowModal(false);
                         }}
                       >

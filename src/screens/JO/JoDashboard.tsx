@@ -17,19 +17,7 @@ import IncentivesIcon from "../../assets/images/incentives.png";
 import FarmlandMap from "../../components/Map/FarmlandMap";
 
 // Recharts imports (already installed in project)
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface DashboardStats {
   currentSeason: string;
@@ -88,27 +76,6 @@ interface DashboardStats {
   };
 }
 
-interface MonthlyTrend {
-  month: string;
-  monthName: string;
-  fertilizer: number;
-  seeds: number;
-  count: number;
-}
-
-interface RecentActivity {
-  id: number;
-  farmer_name: string;
-  barangay: string;
-  fertilizer_type: string;
-  fertilizer_bags_given: number;
-  seed_type: string;
-  seed_kg_given: number;
-  distribution_date: string;
-  verified_by: string;
-  created_at: string;
-}
-
 interface AvailableSeason {
   id: number;
   season: string;
@@ -120,7 +87,6 @@ interface AvailableSeason {
 }
 
 const JoDashboard: React.FC = () => {
-<<<<<<< HEAD
   const navigate = useNavigate();
   const location = useLocation();
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(
@@ -128,14 +94,7 @@ const JoDashboard: React.FC = () => {
   );
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-=======
-	const navigate = useNavigate();
-	const location = useLocation();
-	const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-	const [sidebarOpen, setSidebarOpen] = useState(false);
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Season selector state
   const [availableSeasons, setAvailableSeasons] = useState<AvailableSeason[]>(
@@ -373,12 +332,11 @@ const JoDashboard: React.FC = () => {
     );
   }
 
-<<<<<<< HEAD
   return (
     <div className="jo-dashboard-page-container">
-      <div className="jo-dashboard-page">
+      <div className="jo-dashboard-page has-mobile-sidebar">
         {/* Sidebar */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -393,19 +351,6 @@ const JoDashboard: React.FC = () => {
               </span>
               <span className="nav-text">Home</span>
             </button>
-=======
-	return (
-		<div className="jo-dashboard-page-container">
-			
-			<div className="jo-dashboard-page has-mobile-sidebar">
-
-				{/* Sidebar */}
-				<div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-					<nav className="sidebar-nav">
-						<div className='sidebar-logo'>
-							<img src={LogoImage} alt="Logo" />
-						</div>
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
             <button
               className={`sidebar-nav-item ${isActive("/jo-rsbsapage") ? "active" : ""}`}
@@ -456,10 +401,22 @@ const JoDashboard: React.FC = () => {
             </button>
           </nav>
         </div>
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
 
-<<<<<<< HEAD
         {/* Main Content - Executive Dashboard */}
         <div className="jo-executive-dashboard">
+          <div className="tech-incent-mobile-header">
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
+            <div className="tech-incent-mobile-title">JO Dashboard</div>
+          </div>
           {/* Header */}
           <div className="executive-header">
             <div className="header-left">
@@ -485,37 +442,6 @@ const JoDashboard: React.FC = () => {
               </div>
             </div>
           </div>
-=======
-						<button
-							className="sidebar-nav-item logout"
-							onClick={() => navigate('/')}
-						>
-							<span className="nav-icon">
-								<img src={LogoutIcon} alt="Logout" />
-							</span>
-							<span className="nav-text">Logout</span>
-						</button>
-					</nav>
-				</div>
-				<div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
-
-				{/* Main Content - Executive Dashboard */}
-				<div className="jo-executive-dashboard">
-					<div className="tech-incent-mobile-header">
-						<button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
-						<div className="tech-incent-mobile-title">JO Dashboard</div>
-					</div>
-					{/* Header */}
-					<div className="executive-header">
-						<div className="header-left">
-							<h1 className="executive-title">JO Executive Dashboard</h1>
-							<p className="executive-subtitle">
-								{formatSeason(selectedSeasonLabel)} •
-								Last updated: {lastUpdated.toLocaleTimeString()}
-							</p>
-						</div>
-					</div>
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
           {/* KPI Cards Section */}
           <div className="kpi-cards-section">

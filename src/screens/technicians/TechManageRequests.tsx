@@ -6,15 +6,11 @@ import {
   updateFarmerRequest,
   deleteFarmerRequest,
   createDistributionRecord,
-  resolveFertilizerShortageSuggestion,
-  resolveSeedShortageSuggestion,
 } from "../../api";
 import {
-  FERTILIZER_FIELD_MAPS,
-  SEED_FIELD_MAPS,
-  type ShortageFieldMap,
-} from "../../constants/shortageFieldMaps";
-import { detectActiveSeedId } from "../../utils/detectActiveSeedId";
+  suggestAlternatives,
+  calculateRemainingStock,
+} from "../../services/alternativeEngine";
 import "../../assets/css/technician css/TechManageRequestsStyle.css";
 import "../../components/layout/sidebarStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
@@ -36,17 +32,54 @@ interface FarmerRequest {
   requested_complete_14_bags: number;
   requested_ammonium_sulfate_bags: number;
   requested_muriate_potash_bags: number;
+  requested_complete_16_bags?: number;
+  requested_ammonium_phosphate_bags?: number;
+  requested_zinc_sulfate_bags?: number;
+  requested_vermicompost_bags?: number;
+  requested_chicken_manure_bags?: number;
+  requested_rice_straw_kg?: number;
+  requested_carbonized_rice_hull_bags?: number;
+  requested_biofertilizer_liters?: number;
+  requested_nanobiofertilizer_liters?: number;
+  requested_organic_root_exudate_mix_liters?: number;
+  requested_azolla_microphylla_kg?: number;
+  requested_foliar_liquid_fertilizer_npk_liters?: number;
+  requested_rice_seeds_nsic_rc160_kg?: number;
+  requested_rice_seeds_nsic_rc222_kg?: number;
   requested_jackpot_kg: number;
   requested_us88_kg: number;
   requested_th82_kg: number;
   requested_rh9000_kg: number;
   requested_lumping143_kg: number;
   requested_lp296_kg: number;
+  requested_mestiso_1_kg?: number;
+  requested_mestiso_20_kg?: number;
+  requested_mestiso_29_kg?: number;
+  requested_mestiso_55_kg?: number;
+  requested_mestiso_73_kg?: number;
+  requested_mestiso_99_kg?: number;
+  requested_mestiso_103_kg?: number;
+  requested_nsic_rc402_kg?: number;
+  requested_nsic_rc480_kg?: number;
+  requested_nsic_rc216_kg?: number;
+  requested_nsic_rc218_kg?: number;
+  requested_nsic_rc506_kg?: number;
+  requested_nsic_rc508_kg?: number;
+  requested_nsic_rc512_kg?: number;
+  requested_nsic_rc534_kg?: number;
+  requested_tubigan_28_kg?: number;
+  requested_tubigan_30_kg?: number;
+  requested_tubigan_22_kg?: number;
+  requested_sahod_ulan_2_kg?: number;
+  requested_sahod_ulan_10_kg?: number;
+  requested_salinas_6_kg?: number;
+  requested_salinas_7_kg?: number;
+  requested_salinas_8_kg?: number;
+  requested_malagkit_5_kg?: number;
   status: string;
   notes?: string;
   request_notes: string;
   created_at: string;
-  [key: string]: any;
 }
 
 interface AllocationDetails {
@@ -56,29 +89,300 @@ interface AllocationDetails {
   urea_46_0_0_bags: number;
   complete_14_14_14_bags: number;
   ammonium_sulfate_21_0_0_bags: number;
+  np_16_20_0_bags?: number;
   muriate_potash_0_0_60_bags: number;
+  zinc_sulfate_bags?: number;
+  vermicompost_bags?: number;
+  chicken_manure_bags?: number;
+  rice_straw_kg?: number;
+  carbonized_rice_hull_bags?: number;
+  biofertilizer_liters?: number;
+  nanobiofertilizer_liters?: number;
+  organic_root_exudate_mix_liters?: number;
+  azolla_microphylla_kg?: number;
+  foliar_liquid_fertilizer_npk_liters?: number;
+  rice_seeds_nsic_rc160_kg?: number;
+  rice_seeds_nsic_rc222_kg?: number;
   jackpot_kg: number;
   us88_kg: number;
   th82_kg: number;
   rh9000_kg: number;
   lumping143_kg: number;
   lp296_kg: number;
-  [key: string]: any;
+  mestiso_1_kg?: number;
+  mestiso_20_kg?: number;
+  mestiso_29_kg?: number;
+  mestiso_55_kg?: number;
+  mestiso_73_kg?: number;
+  mestiso_99_kg?: number;
+  mestiso_103_kg?: number;
+  nsic_rc402_kg?: number;
+  nsic_rc480_kg?: number;
+  nsic_rc216_kg?: number;
+  nsic_rc218_kg?: number;
+  nsic_rc506_kg?: number;
+  nsic_rc508_kg?: number;
+  nsic_rc512_kg?: number;
+  nsic_rc534_kg?: number;
+  tubigan_28_kg?: number;
+  tubigan_30_kg?: number;
+  tubigan_22_kg?: number;
+  sahod_ulan_2_kg?: number;
+  sahod_ulan_10_kg?: number;
+  salinas_6_kg?: number;
+  salinas_7_kg?: number;
+  salinas_8_kg?: number;
+  malagkit_5_kg?: number;
 }
 
-const ALL_SHORTAGE_MAPS: ReadonlyArray<ShortageFieldMap> = [
-  ...FERTILIZER_FIELD_MAPS,
-  ...SEED_FIELD_MAPS,
+type RequestField = Extract<keyof FarmerRequest, `requested_${string}`>;
+
+type AllocationItem = {
+  label: string;
+  allocationField: keyof AllocationDetails;
+  requestField: RequestField;
+};
+
+const EDIT_FERTILIZER_ITEMS: AllocationItem[] = [
+  {
+    label: "Urea (46-0-0)",
+    allocationField: "urea_46_0_0_bags",
+    requestField: "requested_urea_bags",
+  },
+  {
+    label: "Complete (14-14-14)",
+    allocationField: "complete_14_14_14_bags",
+    requestField: "requested_complete_14_bags",
+  },
+  {
+    label: "16-20-0",
+    allocationField: "np_16_20_0_bags",
+    requestField: "requested_ammonium_phosphate_bags",
+  },
+  {
+    label: "Ammonium Sulfate (21-0-0)",
+    allocationField: "ammonium_sulfate_21_0_0_bags",
+    requestField: "requested_ammonium_sulfate_bags",
+  },
+  {
+    label: "Muriate of Potash (0-0-60)",
+    allocationField: "muriate_potash_0_0_60_bags",
+    requestField: "requested_muriate_potash_bags",
+  },
+  {
+    label: "Zinc Sulfate",
+    allocationField: "zinc_sulfate_bags",
+    requestField: "requested_zinc_sulfate_bags",
+  },
+  {
+    label: "Vermicompost",
+    allocationField: "vermicompost_bags",
+    requestField: "requested_vermicompost_bags",
+  },
+  {
+    label: "Chicken Manure",
+    allocationField: "chicken_manure_bags",
+    requestField: "requested_chicken_manure_bags",
+  },
+  {
+    label: "Rice Straw (incorporated)",
+    allocationField: "rice_straw_kg",
+    requestField: "requested_rice_straw_kg",
+  },
+  {
+    label: "Carbonized Rice Hull (CRH)",
+    allocationField: "carbonized_rice_hull_bags",
+    requestField: "requested_carbonized_rice_hull_bags",
+  },
+  {
+    label: "Biofertilizer (Liquid Concentrate)",
+    allocationField: "biofertilizer_liters",
+    requestField: "requested_biofertilizer_liters",
+  },
+  {
+    label: "Nanobiofertilizer",
+    allocationField: "nanobiofertilizer_liters",
+    requestField: "requested_nanobiofertilizer_liters",
+  },
+  {
+    label: "Organic Root Exudate Mix",
+    allocationField: "organic_root_exudate_mix_liters",
+    requestField: "requested_organic_root_exudate_mix_liters",
+  },
+  {
+    label: "Azolla microphylla",
+    allocationField: "azolla_microphylla_kg",
+    requestField: "requested_azolla_microphylla_kg",
+  },
+  {
+    label: "Foliar Liquid Fertilizer (NPK)",
+    allocationField: "foliar_liquid_fertilizer_npk_liters",
+    requestField: "requested_foliar_liquid_fertilizer_npk_liters",
+  },
 ];
 
-const REQUEST_FIELD_BY_SHORTAGE_ID: Record<string, string> =
-  ALL_SHORTAGE_MAPS.reduce(
-    (acc, item) => {
-      acc[item.shortageId] = item.requestField;
-      return acc;
-    },
-    {} as Record<string, string>,
-  );
+const EDIT_SEED_ITEMS: AllocationItem[] = [
+  {
+    label: "NSIC Rc 160",
+    allocationField: "rice_seeds_nsic_rc160_kg",
+    requestField: "requested_rice_seeds_nsic_rc160_kg",
+  },
+  {
+    label: "NSIC Rc 222",
+    allocationField: "rice_seeds_nsic_rc222_kg",
+    requestField: "requested_rice_seeds_nsic_rc222_kg",
+  },
+  {
+    label: "Jackpot",
+    allocationField: "jackpot_kg",
+    requestField: "requested_jackpot_kg",
+  },
+  {
+    label: "US88",
+    allocationField: "us88_kg",
+    requestField: "requested_us88_kg",
+  },
+  {
+    label: "TH82",
+    allocationField: "th82_kg",
+    requestField: "requested_th82_kg",
+  },
+  {
+    label: "RH9000",
+    allocationField: "rh9000_kg",
+    requestField: "requested_rh9000_kg",
+  },
+  {
+    label: "Lumping143",
+    allocationField: "lumping143_kg",
+    requestField: "requested_lumping143_kg",
+  },
+  {
+    label: "LP296",
+    allocationField: "lp296_kg",
+    requestField: "requested_lp296_kg",
+  },
+  {
+    label: "Mestiso 1 (M1)",
+    allocationField: "mestiso_1_kg",
+    requestField: "requested_mestiso_1_kg",
+  },
+  {
+    label: "Mestiso 20 (M20)",
+    allocationField: "mestiso_20_kg",
+    requestField: "requested_mestiso_20_kg",
+  },
+  {
+    label: "Mestiso 29",
+    allocationField: "mestiso_29_kg",
+    requestField: "requested_mestiso_29_kg",
+  },
+  {
+    label: "Mestiso 55",
+    allocationField: "mestiso_55_kg",
+    requestField: "requested_mestiso_55_kg",
+  },
+  {
+    label: "Mestiso 73",
+    allocationField: "mestiso_73_kg",
+    requestField: "requested_mestiso_73_kg",
+  },
+  {
+    label: "Mestiso 99",
+    allocationField: "mestiso_99_kg",
+    requestField: "requested_mestiso_99_kg",
+  },
+  {
+    label: "Mestiso 103",
+    allocationField: "mestiso_103_kg",
+    requestField: "requested_mestiso_103_kg",
+  },
+  {
+    label: "NSIC Rc 402",
+    allocationField: "nsic_rc402_kg",
+    requestField: "requested_nsic_rc402_kg",
+  },
+  {
+    label: "NSIC Rc 480",
+    allocationField: "nsic_rc480_kg",
+    requestField: "requested_nsic_rc480_kg",
+  },
+  {
+    label: "NSIC Rc 216",
+    allocationField: "nsic_rc216_kg",
+    requestField: "requested_nsic_rc216_kg",
+  },
+  {
+    label: "NSIC Rc 218",
+    allocationField: "nsic_rc218_kg",
+    requestField: "requested_nsic_rc218_kg",
+  },
+  {
+    label: "NSIC Rc 506",
+    allocationField: "nsic_rc506_kg",
+    requestField: "requested_nsic_rc506_kg",
+  },
+  {
+    label: "NSIC Rc 508",
+    allocationField: "nsic_rc508_kg",
+    requestField: "requested_nsic_rc508_kg",
+  },
+  {
+    label: "NSIC Rc 512",
+    allocationField: "nsic_rc512_kg",
+    requestField: "requested_nsic_rc512_kg",
+  },
+  {
+    label: "NSIC Rc 534",
+    allocationField: "nsic_rc534_kg",
+    requestField: "requested_nsic_rc534_kg",
+  },
+  {
+    label: "Tubigan 28",
+    allocationField: "tubigan_28_kg",
+    requestField: "requested_tubigan_28_kg",
+  },
+  {
+    label: "Tubigan 30",
+    allocationField: "tubigan_30_kg",
+    requestField: "requested_tubigan_30_kg",
+  },
+  {
+    label: "Tubigan 22",
+    allocationField: "tubigan_22_kg",
+    requestField: "requested_tubigan_22_kg",
+  },
+  {
+    label: "Sahod Ulan 2",
+    allocationField: "sahod_ulan_2_kg",
+    requestField: "requested_sahod_ulan_2_kg",
+  },
+  {
+    label: "Sahod Ulan 10",
+    allocationField: "sahod_ulan_10_kg",
+    requestField: "requested_sahod_ulan_10_kg",
+  },
+  {
+    label: "Salinas 6",
+    allocationField: "salinas_6_kg",
+    requestField: "requested_salinas_6_kg",
+  },
+  {
+    label: "Salinas 7",
+    allocationField: "salinas_7_kg",
+    requestField: "requested_salinas_7_kg",
+  },
+  {
+    label: "Salinas 8",
+    allocationField: "salinas_8_kg",
+    requestField: "requested_salinas_8_kg",
+  },
+  {
+    label: "Malagkit 5",
+    allocationField: "malagkit_5_kg",
+    requestField: "requested_malagkit_5_kg",
+  },
+];
 
 const TechManageRequests: React.FC = () => {
   const navigate = useNavigate();
@@ -114,28 +418,23 @@ const TechManageRequests: React.FC = () => {
   const [editingRequest, setEditingRequest] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<FarmerRequest>>({});
 
+  // Delete confirmation modal state
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    requestId: number | null;
+    farmerName: string;
+  }>({
+    open: false,
+    requestId: null,
+    farmerName: "",
+  });
+  const [isDeletingRequest, setIsDeletingRequest] = useState(false);
+
   // Suggestions Modal Feature
   const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
   const [expandedFarmerInModal, setExpandedFarmerInModal] = useState<
     number | null
   >(null);
-
-<<<<<<< HEAD
-  // Delete confirmation modal
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
-=======
-    // Toast notification state
-    const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' }>({
-        show: false,
-        message: '',
-        type: 'success'
-    });
-    const [sidebarOpen, setSidebarOpen] = useState(false);
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
 
   // Toast notification state
   const [toast, setToast] = useState<{
@@ -147,6 +446,7 @@ const TechManageRequests: React.FC = () => {
     message: "",
     type: "success",
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Show toast notification
   const showToast = (
@@ -231,88 +531,35 @@ const TechManageRequests: React.FC = () => {
     }
   };
 
-  const toSafeNumber = (value: unknown): number => {
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : 0;
-  };
-
-  const calculateRemainingForMapItem = (
-    item: ShortageFieldMap,
-    request: FarmerRequest,
-    requestsList: FarmerRequest[],
-    allocationData: AllocationDetails,
-  ): { remaining: number; requested: number; shortage: number } => {
-    const alreadyAllocated = requestsList
-      .filter(
-        (candidate) =>
-          (candidate.status === "approved" || candidate.status === "pending") &&
-          candidate.id !== request.id,
-      )
-      .reduce(
-        (sum, candidate) => sum + toSafeNumber(candidate[item.requestField]),
-        0,
-      );
-
-    const available = toSafeNumber(allocationData[item.allocationField]);
-    const requested = toSafeNumber(request[item.requestField]);
-    const remaining = available - alreadyAllocated;
-
-    return {
-      remaining,
-      requested,
-      shortage: Math.max(0, requested - remaining),
-    };
-  };
-
-  const getShortageItemsForRequest = (
-    request: FarmerRequest,
-    requestsList: FarmerRequest[],
-    allocationData: AllocationDetails,
-  ) => {
-    return ALL_SHORTAGE_MAPS.map((item) => {
-      const levels = calculateRemainingForMapItem(
-        item,
-        request,
-        requestsList,
-        allocationData,
-      );
-      return {
-        item,
-        ...levels,
-      };
-    }).filter(({ requested, shortage }) => requested > 0 && shortage > 0);
-  };
-
   // Auto-fetch alternatives for all pending requests with shortages
   const autoFetchAlternativesForShortages = async (
     requestsList: FarmerRequest[],
     allocationData: AllocationDetails,
   ) => {
     if (!allocationData) {
-      console.log("⚠️ No allocation data provided, skipping auto-fetch");
+      console.log("ΓÜá∩╕Å No allocation data provided, skipping auto-fetch");
       return;
     }
 
     const pendingRequests = requestsList.filter((r) => r.status === "pending");
     console.log(
-      `📊 Checking ${pendingRequests.length} pending requests for shortages...`,
+      `≡ƒôè Checking ${pendingRequests.length} pending requests for shortages...`,
     );
 
     let countWithShortages = 0;
     let newSuggestions = 0;
 
     for (const request of pendingRequests) {
-      const shortageItems = getShortageItemsForRequest(
+      const hasShortage = checkPotentialShortageForRequest(
         request,
         requestsList,
         allocationData,
       );
-      const hasShortage = shortageItems.length > 0;
 
       if (hasShortage) {
         countWithShortages++;
         console.log(
-          `⚠️ Shortage detected for request #${request.id} (${request.farmer_name})`,
+          `ΓÜá∩╕Å Shortage detected for request #${request.id} (${request.farmer_name})`,
         );
 
         // Auto-fetch if not already loaded
@@ -321,143 +568,40 @@ const TechManageRequests: React.FC = () => {
             setLoadingAlternatives((prev) => ({ ...prev, [request.id]: true }));
 
             console.log(
-              `🤖 Resolving shortages via API for request #${request.id}...`,
+              `≡ƒñû Computing alternatives for request #${request.id}...`,
             );
 
-            const activeSeedId = detectActiveSeedId(
-              request as unknown as Record<string, unknown>,
+            // Calculate remaining stock for this request
+            const remainingStock = calculateRemainingStock(
+              allocationData,
+              requestsList,
+              request.id,
             );
-            const noSubstituteMessageFor = (itemLabel: string): string =>
-              `No substitute found for ${itemLabel}. Consider contacting your supplier for restock.`;
 
-            const combinedSuggestions = [] as any[];
-
-            for (const shortageEntry of shortageItems) {
-              if (shortageEntry.item.category === "fertilizer") {
-                const response = await resolveFertilizerShortageSuggestion({
-                  seedId: activeSeedId,
-                  shortageFertId: shortageEntry.item.shortageId,
-                });
-                const payload: any = response.data;
-
-                if (response.error || !payload) {
-                  combinedSuggestions.push({
-                    category: "fertilizer",
-                    original_fertilizer: shortageEntry.item.shortageId,
-                    original_fertilizer_name: shortageEntry.item.label,
-                    shortage_amount: shortageEntry.shortage,
-                    shortage_unit: shortageEntry.item.unit,
-                    alternatives: [],
-                    recommendation: {
-                      next_steps: [
-                        noSubstituteMessageFor(shortageEntry.item.label),
-                      ],
-                    },
-                  });
-                  continue;
-                }
-
-                combinedSuggestions.push({
-                  category: "fertilizer",
-                  original_fertilizer:
-                    payload.shortage?.id || shortageEntry.item.shortageId,
-                  original_fertilizer_name:
-                    payload.shortage?.name || shortageEntry.item.label,
-                  shortage_amount: shortageEntry.shortage,
-                  shortage_unit: shortageEntry.item.unit,
-                  alternatives: payload.suggestion
-                    ? [
-                        {
-                          substitute_id: payload.suggestion.id,
-                          substitute_name: payload.suggestion.name,
-                          can_fulfill: true,
-                          needed_amount: shortageEntry.shortage,
-                          unit: shortageEntry.item.unit,
-                          confidence_score:
-                            payload.status === "tier2_fallback" ? 0.7 : 0.95,
-                          available_bags: null,
-                          remaining_shortage: 0,
-                        },
-                      ]
-                    : [],
-                  recommendation: payload.suggestion
-                    ? undefined
-                    : {
-                        next_steps: [
-                          noSubstituteMessageFor(shortageEntry.item.label),
-                        ],
-                      },
-                });
-                continue;
-              }
-
-              const response = await resolveSeedShortageSuggestion({
-                seedId: shortageEntry.item.shortageId,
-              });
-              const payload: any = response.data;
-
-              if (response.error || !payload) {
-                combinedSuggestions.push({
-                  category: "seed",
-                  original_seed: shortageEntry.item.shortageId,
-                  original_seed_name: shortageEntry.item.label,
-                  original_fertilizer_name: shortageEntry.item.label,
-                  shortage_amount: shortageEntry.shortage,
-                  shortage_unit: shortageEntry.item.unit,
-                  alternatives: [],
-                  recommendation: {
-                    next_steps: [
-                      response.error || "Unable to resolve seed shortage.",
-                    ],
-                  },
-                });
-                continue;
-              }
-
-              const substitutes = Array.isArray(payload.substitutes)
-                ? payload.substitutes
-                : [];
-
-              combinedSuggestions.push({
-                category: "seed",
-                original_seed:
-                  payload.original?.id || shortageEntry.item.shortageId,
-                original_seed_name:
-                  payload.original?.name || shortageEntry.item.label,
-                original_fertilizer_name:
-                  payload.original?.name || shortageEntry.item.label,
-                shortage_amount: shortageEntry.shortage,
-                shortage_unit: shortageEntry.item.unit,
-                alternatives: substitutes.map((substitute: any) => ({
-                  substitute_id: substitute.id,
-                  substitute_name: substitute.name,
-                  can_fulfill: true,
-                  needed_amount: shortageEntry.shortage,
-                  unit: "kg",
-                  confidence_score: 0.9,
-                  maturity_diff_days: substitute.maturity_diff_days,
-                  yield_diff_tha: substitute.yield_diff_tha,
-                })),
-                recommendation:
-                  substitutes.length > 0
-                    ? undefined
-                    : {
-                        next_steps: [
-                          noSubstituteMessageFor(shortageEntry.item.label),
-                        ],
-                      },
-              });
-            }
-
-            const result = {
-              farmer_name: request.farmer_name,
-              suggestions: {
-                suggestions: combinedSuggestions,
+            // Run client-side alternative engine
+            const result = suggestAlternatives(
+              {
+                farmer_name: request.farmer_name,
+                crop_type: "rice",
+                requested_urea_bags: request.requested_urea_bags || 0,
+                requested_complete_14_bags:
+                  request.requested_complete_14_bags || 0,
+                requested_ammonium_sulfate_bags:
+                  request.requested_ammonium_sulfate_bags || 0,
+                requested_muriate_potash_bags:
+                  request.requested_muriate_potash_bags || 0,
+                requested_jackpot_kg: request.requested_jackpot_kg || 0,
+                requested_us88_kg: request.requested_us88_kg || 0,
+                requested_th82_kg: request.requested_th82_kg || 0,
+                requested_rh9000_kg: request.requested_rh9000_kg || 0,
+                requested_lumping143_kg: request.requested_lumping143_kg || 0,
+                requested_lp296_kg: request.requested_lp296_kg || 0,
               },
-            };
+              remainingStock,
+            );
 
             console.log(
-              `✅ Alternatives computed for request #${request.id}:`,
+              `Alternatives computed for request #${request.id}:`,
               result,
             );
             setAlternatives((prev) => ({ ...prev, [request.id]: result }));
@@ -465,7 +609,7 @@ const TechManageRequests: React.FC = () => {
             newSuggestions++;
           } catch (error) {
             console.error(
-              `❌ Failed to compute alternatives for request ${request.id}:`,
+              `Failed to compute alternatives for request ${request.id}:`,
               error,
             );
           } finally {
@@ -478,15 +622,13 @@ const TechManageRequests: React.FC = () => {
           // Small delay between requests
           await new Promise((resolve) => setTimeout(resolve, 100));
         } else {
-          console.log(
-            `ℹ️ Alternatives already loaded for request #${request.id}`,
-          );
+          console.log(`Alternatives already loaded for request #${request.id}`);
         }
       }
     }
 
     console.log(
-      `📈 Summary: ${countWithShortages} requests with shortages, ${newSuggestions} new alternatives fetched`,
+      `Summary: ${countWithShortages} requests with shortages, ${newSuggestions} new alternatives fetched`,
     );
     setAutoSuggestionsCount(countWithShortages);
     setNewSuggestionsCount(newSuggestions);
@@ -519,39 +661,43 @@ const TechManageRequests: React.FC = () => {
     setFilteredRequests(filtered);
   };
 
-  const handleDelete = (id: number, farmerName: string) => {
-    setDeleteTarget({ id, name: farmerName });
-    setShowDeleteConfirm(true);
+  const openDeleteDialog = (id: number, farmerName: string) => {
+    setDeleteDialog({
+      open: true,
+      requestId: id,
+      farmerName,
+    });
   };
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
+  const closeDeleteDialog = () => {
+    if (isDeletingRequest) return;
+    setDeleteDialog({
+      open: false,
+      requestId: null,
+      farmerName: "",
+    });
+  };
 
-    setShowDeleteConfirm(false);
+  const confirmDeleteRequest = async () => {
+    if (!deleteDialog.requestId) return;
 
     try {
-      const response = await deleteFarmerRequest(deleteTarget.id);
+      setIsDeletingRequest(true);
+      const response = await deleteFarmerRequest(deleteDialog.requestId);
 
       if (!response.error) {
-        showToast(
-          `Request from ${deleteTarget.name} deleted successfully`,
-          "success",
-        );
+        showToast("Request deleted successfully", "success");
+        closeDeleteDialog();
         fetchRequests();
       } else {
-        showToast("Failed to delete request. Please try again.", "error");
+        showToast("Failed to delete request", "error");
       }
     } catch (error) {
       console.error("Error deleting request:", error);
-      showToast("Error deleting request. Please try again.", "error");
+      showToast("Error deleting request", "error");
     } finally {
-      setDeleteTarget(null);
+      setIsDeletingRequest(false);
     }
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteConfirm(false);
-    setDeleteTarget(null);
   };
 
   const handleStatusChange = async (id: number, newStatus: string) => {
@@ -571,7 +717,6 @@ const TechManageRequests: React.FC = () => {
         if (newStatus === "approved") {
           await createDistributionLog(id);
         }
-<<<<<<< HEAD
         showToast(
           `Status updated to ${newStatus}`,
           newStatus === "approved"
@@ -659,9 +804,9 @@ const TechManageRequests: React.FC = () => {
       const distResponse = await createDistributionRecord(payload);
 
       if (!distResponse.error) {
-        console.log("✅ Distribution log created automatically");
+        console.log("Γ£à Distribution log created automatically");
       } else {
-        console.error("❌ Failed to create distribution log");
+        console.error("Γ¥î Failed to create distribution log");
       }
     } catch (error) {
       console.error("Error creating distribution log:", error);
@@ -675,18 +820,18 @@ const TechManageRequests: React.FC = () => {
 
   // Edit request functionality
   const handleEdit = (request: FarmerRequest) => {
+    const allEditFields = [...EDIT_FERTILIZER_ITEMS, ...EDIT_SEED_ITEMS].map(
+      (item) => item.requestField,
+    );
+
+    const dynamicFormData = allEditFields.reduce((acc, field) => {
+      acc[field] = Number(request[field] || 0);
+      return acc;
+    }, {} as Partial<FarmerRequest>);
+
     setEditingRequest(request.id);
     setEditFormData({
-      requested_urea_bags: request.requested_urea_bags,
-      requested_complete_14_bags: request.requested_complete_14_bags,
-      requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags,
-      requested_muriate_potash_bags: request.requested_muriate_potash_bags,
-      requested_jackpot_kg: request.requested_jackpot_kg,
-      requested_us88_kg: request.requested_us88_kg,
-      requested_th82_kg: request.requested_th82_kg,
-      requested_rh9000_kg: request.requested_rh9000_kg,
-      requested_lumping143_kg: request.requested_lumping143_kg,
-      requested_lp296_kg: request.requested_lp296_kg,
+      ...dynamicFormData,
       request_notes: request.request_notes || "",
     });
   };
@@ -738,14 +883,14 @@ const TechManageRequests: React.FC = () => {
       setEditingRequest(null);
       setEditFormData({});
 
-      alert("✅ Request updated successfully!");
+      alert("Γ£à Request updated successfully!");
 
       // Refresh from backend to ensure data consistency
       await fetchRequests();
     } catch (err) {
       console.error("Error updating request:", err);
       alert(
-        `❌ Failed to update request: ${err instanceof Error ? err.message : "Unknown error"}`,
+        `Γ¥î Failed to update request: ${err instanceof Error ? err.message : "Unknown error"}`,
       );
     }
   };
@@ -767,15 +912,141 @@ const TechManageRequests: React.FC = () => {
     return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
   };
 
+  const editingRequestData = editingRequest
+    ? requests.find((r) => r.id === editingRequest) || null
+    : null;
+
+  const editableRequestFields: Array<keyof FarmerRequest> = [
+    ...EDIT_FERTILIZER_ITEMS.map((item) => item.requestField),
+    ...EDIT_SEED_ITEMS.map((item) => item.requestField),
+  ];
+
+  const fertilizerRequestFields: RequestField[] = EDIT_FERTILIZER_ITEMS.map(
+    (item) => item.requestField,
+  );
+
+  const seedRequestFields: RequestField[] = EDIT_SEED_ITEMS.map(
+    (item) => item.requestField,
+  );
+
+  const getRequestFieldValue = (
+    request: FarmerRequest,
+    field: keyof FarmerRequest,
+  ): number => {
+    const editedValue =
+      editingRequest === request.id ? editFormData[field] : undefined;
+    const sourceValue = editedValue ?? request[field];
+    return Number(sourceValue || 0);
+  };
+
+  const getRequestTotal = (
+    request: FarmerRequest,
+    fields: Array<keyof FarmerRequest>,
+  ): number => {
+    return fields.reduce(
+      (sum, field) => sum + getRequestFieldValue(request, field),
+      0,
+    );
+  };
+
+  const getAllocationForRequestField = (field: keyof FarmerRequest): number => {
+    if (!allocation) return 0;
+
+    const item = [...EDIT_FERTILIZER_ITEMS, ...EDIT_SEED_ITEMS].find(
+      (entry) => entry.requestField === field,
+    );
+
+    if (!item) return 0;
+    return Number(allocation[item.allocationField] || 0);
+  };
+
+  const getUnitForItem = (item: AllocationItem): string => {
+    if (
+      String(item.requestField).includes("liters") ||
+      String(item.allocationField).includes("liters")
+    ) {
+      return "liters";
+    }
+    if (
+      String(item.requestField).includes("_kg") ||
+      String(item.allocationField).includes("_kg")
+    ) {
+      return "kg";
+    }
+    return "bags";
+  };
+
+  const visibleEditFertilizerItems = EDIT_FERTILIZER_ITEMS.filter((item) => {
+    const requested = Number(editingRequestData?.[item.requestField] || 0);
+    return requested > 0;
+  });
+
+  const visibleEditSeedItems = EDIT_SEED_ITEMS.filter((item) => {
+    const requested = Number(editingRequestData?.[item.requestField] || 0);
+    return requested > 0;
+  });
+
+  const renderEditFieldMeta = (field: keyof FarmerRequest, unit: string) => {
+    if (!editingRequestData || !allocation) return null;
+
+    const allocationValue = getAllocationForRequestField(field);
+    const currentRequestValue = Number(editingRequestData[field] || 0);
+    const editedValue = Number(editFormData[field] ?? currentRequestValue);
+
+    const committedByOthers = requests
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== editingRequestData.id,
+      )
+      .reduce((sum, r) => sum + Number(r[field] || 0), 0);
+
+    const remainingBeforeEdit = allocationValue - committedByOthers;
+    const remainingAfterEdit = remainingBeforeEdit - editedValue;
+    const exceedsBy = Math.abs(Math.min(remainingAfterEdit, 0));
+    const hasRisk = exceedsBy > 0;
+
+    return (
+      <div className="tech-manage-requests-modal-meta">
+        <span>
+          Farmer requested: <strong>{currentRequestValue.toFixed(2)}</strong>{" "}
+          {unit}
+        </span>
+        {hasRisk && (
+          <span className="tech-manage-requests-modal-risk tech-manage-requests-modal-risk-danger">
+            Risk: exceeds available by {exceedsBy.toFixed(2)} {unit}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  const hasAnyEditRisk =
+    !!editingRequestData &&
+    editableRequestFields.some((field) => {
+      const allocationValue = getAllocationForRequestField(field);
+      const currentRequestValue = Number(editingRequestData[field] || 0);
+      const editedValue = Number(editFormData[field] ?? currentRequestValue);
+      const committedByOthers = requests
+        .filter(
+          (r) =>
+            (r.status === "approved" || r.status === "pending") &&
+            r.id !== editingRequestData.id,
+        )
+        .reduce((sum, r) => sum + Number(r[field] || 0), 0);
+
+      return allocationValue - committedByOthers - editedValue < 0;
+    });
+
   // Apply selected alternative to farmer request
   const applyAlternative = async (requestId: number) => {
-    console.log("🔍 applyAlternative called for request:", requestId);
+    console.log("≡ƒöì applyAlternative called for request:", requestId);
     console.log("Selected alternative:", selectedAlternative[requestId]);
     console.log("Alternatives data:", alternatives[requestId]);
 
     const selection = selectedAlternative[requestId];
     if (!selection) {
-      alert("❌ Please select an alternative from the dropdown first");
+      alert("Γ¥î Please select an alternative from the dropdown first");
       return;
     }
 
@@ -783,8 +1054,8 @@ const TechManageRequests: React.FC = () => {
     console.log("Full altData:", altData);
 
     if (!altData || !altData.suggestions?.suggestions) {
-      console.error("❌ Alternative data structure invalid:", altData);
-      alert("❌ Alternative data not found or has invalid structure");
+      console.error("Γ¥î Alternative data structure invalid:", altData);
+      alert("Γ¥î Alternative data not found or has invalid structure");
       return;
     }
 
@@ -795,58 +1066,38 @@ const TechManageRequests: React.FC = () => {
     console.log("Selected alternative detail:", alternative);
 
     if (!alternative) {
-      alert("❌ Selected alternative not found");
+      alert("Γ¥î Selected alternative not found");
       return;
     }
 
-    const category = suggestion.category || "fertilizer";
-    const shortageAmount = toSafeNumber(
-      suggestion.shortage_amount ??
-        suggestion.shortage_bags ??
-        suggestion.shortage_kg ??
-        0,
-    );
-    const shortageUnit =
-      suggestion.shortage_unit || (category === "seed" ? "kg" : "bags");
-    const substituteAmount = toSafeNumber(
-      alternative.needed_amount ??
-        alternative.needed_bags ??
-        alternative.needed_kg ??
-        shortageAmount,
-    );
-
     // Show warning for partial substitutions
-    if (!alternative.can_fulfill && category !== "seed") {
+    if (!alternative.can_fulfill) {
       const confirmed = confirm(
-        `⚠️ WARNING: Partial Substitution\n\n` +
+        `ΓÜá∩╕Å WARNING: Partial Substitution\n\n` +
           `This alternative can only partially cover the shortage:\n` +
-          `- Original shortage: ${shortageAmount} ${shortageUnit}\n` +
-          `- Can cover: ${alternative.partial_coverage || 0} ${shortageUnit}\n` +
-          `- Remaining shortage: ${alternative.remaining_shortage || 0} ${shortageUnit}\n\n` +
+          `- Original shortage: ${suggestion.shortage_bags} bags\n` +
+          `- Can cover: ${alternative.partial_coverage || 0} bags\n` +
+          `- Remaining shortage: ${alternative.remaining_shortage || 0} bags\n\n` +
           `Do you want to continue with this partial substitution?`,
       );
       if (!confirmed) return;
     }
 
-    const originalName =
-      suggestion.original_seed_name ||
-      suggestion.original_fertilizer_name ||
-      suggestion.original_fertilizer ||
-      "Original item";
-    const substituteName = alternative.substitute_name;
-    const confidence = (
-      toSafeNumber(alternative.confidence_score) * 100
-    ).toFixed(0);
+    // Build confirmation message
+    const originalFert = suggestion.original_fertilizer_name;
+    const substituteFert = alternative.substitute_name;
+    const confidence = (alternative.confidence_score * 100).toFixed(0);
 
     const confirmMessage =
-      `📝 Confirm ${category === "seed" ? "Seed" : "Fertilizer"} Substitution\n\n` +
+      `Confirm Fertilizer Substitution\n\n` +
       `Farmer: ${altData.farmer_name}\n\n` +
       `REPLACE:\n` +
-      `❌ ${originalName}: ${shortageAmount} ${shortageUnit} (shortage)\n\n` +
+      `${suggestion.original_fertilizer}: ${suggestion.shortage_bags} bags (shortage)\n\n` +
       `WITH:\n` +
-      `✅ ${substituteName}: ${substituteAmount} ${shortageUnit}\n\n` +
+      `${substituteFert}: ${alternative.needed_bags} bags\n\n` +
       `Confidence: ${confidence}%\n` +
-      `${alternative.can_fulfill ? "✅ Full substitution possible" : "⚠️ Partial substitution"}\n\n` +
+      `Available Stock: ${alternative.available_bags} bags\n\n` +
+      `${alternative.can_fulfill ? "Full substitution possible" : "Partial substitution"}\n\n` +
       `This will update the farmer's request and add a note.\n` +
       `Status will remain PENDING for your final review.\n\n` +
       `Apply this alternative?`;
@@ -866,57 +1117,50 @@ const TechManageRequests: React.FC = () => {
       // Prepare updated request data
       const updatedRequest: any = { ...request };
 
-      const shortageItemId =
-        suggestion.original_seed || suggestion.original_fertilizer;
-      const originalField = shortageItemId
-        ? REQUEST_FIELD_BY_SHORTAGE_ID[shortageItemId]
-        : null;
-      const substituteField =
-        REQUEST_FIELD_BY_SHORTAGE_ID[alternative.substitute_id];
+      // Map original fertilizer type to field name
+      const fieldMapping: { [key: string]: string } = {
+        urea_46_0_0: "requested_urea_bags",
+        complete_14_14_14: "requested_complete_14_bags",
+        ammonium_sulfate_21_0_0: "requested_ammonium_sulfate_bags",
+        muriate_potash_0_0_60: "requested_muriate_potash_bags",
+      };
+
+      const substituteMapping: { [key: string]: string } = {
+        urea_46_0_0: "requested_urea_bags",
+        complete_14_14_14: "requested_complete_14_bags",
+        complete_16_16_16: "requested_complete_14_bags",
+        ammonium_sulfate_21_0_0: "requested_ammonium_sulfate_bags",
+        muriate_potash_0_0_60: "requested_muriate_potash_bags",
+      };
+
+      const originalField = fieldMapping[suggestion.original_fertilizer];
+      const substituteField = substituteMapping[alternative.substitute_id];
 
       if (!originalField || !substituteField) {
-        throw new Error("Invalid field mapping for selected substitute");
+        throw new Error("Invalid fertilizer field mapping");
       }
 
-      let substitutionNote = "";
-      if (category === "seed") {
-        const originalRequestedAmount = toSafeNumber(
-          updatedRequest[originalField],
-        );
-        const transferAmount =
-          originalRequestedAmount > 0
-            ? originalRequestedAmount
-            : shortageAmount;
+      // Update quantities
+      const currentOriginalAmount = updatedRequest[originalField] || 0;
+      const newOriginalAmount = Math.max(
+        0,
+        currentOriginalAmount - suggestion.shortage_bags,
+      );
+      updatedRequest[originalField] = newOriginalAmount;
 
-        // Required rule: zero out original seed field, then move full requested amount to substitute field.
-        updatedRequest[originalField] = 0;
-        updatedRequest[substituteField] = transferAmount;
+      // Add substitute amount
+      const currentSubstituteAmount = updatedRequest[substituteField] || 0;
+      updatedRequest[substituteField] =
+        currentSubstituteAmount + alternative.needed_bags;
 
-        substitutionNote = `[Seed substitution] ${originalName} → ${substituteName} (${transferAmount} kg)`;
-      } else {
-        const currentOriginalAmount = toSafeNumber(
-          updatedRequest[originalField],
-        );
-        const newOriginalAmount = Math.max(
-          0,
-          currentOriginalAmount - shortageAmount,
-        );
-        updatedRequest[originalField] = newOriginalAmount;
-
-        const currentSubstituteAmount = toSafeNumber(
-          updatedRequest[substituteField],
-        );
-        updatedRequest[substituteField] =
-          currentSubstituteAmount + substituteAmount;
-
-        const timestamp = new Date().toLocaleString();
-        substitutionNote =
-          `[${timestamp}] SUBSTITUTION APPLIED: ` +
-          `Replaced ${shortageAmount} ${shortageUnit} ${originalName} with ` +
-          `${substituteAmount} ${shortageUnit} ${substituteName} ` +
-          `(${confidence}% confidence). ` +
-          `${alternative.can_fulfill ? "Full substitution." : `Partial: ${alternative.remaining_shortage || 0} ${shortageUnit} shortage remains.`}`;
-      }
+      // Add note about substitution
+      const timestamp = new Date().toLocaleString();
+      const substitutionNote =
+        `[${timestamp}] SUBSTITUTION APPLIED: ` +
+        `Replaced ${suggestion.shortage_bags} bags ${originalFert} with ` +
+        `${alternative.needed_bags} bags ${substituteFert} ` +
+        `(${confidence}% confidence). ` +
+        `${alternative.can_fulfill ? "Full substitution." : `Partial: ${alternative.remaining_shortage} bags shortage remains.`}`;
 
       updatedRequest.request_notes = request.request_notes
         ? `${request.request_notes}\n\n${substitutionNote}`
@@ -934,10 +1178,10 @@ const TechManageRequests: React.FC = () => {
         );
 
         alert(
-          `✅ Alternative Applied Successfully!\n\n` +
+          `Γ£à Alternative Applied Successfully!\n\n` +
             `Request for ${altData.farmer_name} updated:\n` +
-            `- ${originalName}: adjusted\n` +
-            `- ${substituteName}: adjusted`,
+            `- ${originalFert}: reduced by ${suggestion.shortage_bags} bags\n` +
+            `- ${substituteFert}: increased by ${alternative.needed_bags} bags`,
         );
 
         // Refresh from backend to ensure consistency
@@ -950,7 +1194,7 @@ const TechManageRequests: React.FC = () => {
     } catch (error) {
       console.error("Error applying alternative:", error);
       alert(
-        `❌ Error applying alternative: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Γ¥î Error applying alternative: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     } finally {
       setApplyingAlternative((prev) => ({ ...prev, [requestId]: false }));
@@ -970,1062 +1214,150 @@ const TechManageRequests: React.FC = () => {
     const allocToUse = allocationData || allocation;
     if (!allocToUse) return false;
 
-    return ALL_SHORTAGE_MAPS.some((item) => {
-      const { requested, shortage } = calculateRemainingForMapItem(
-        item,
-        request,
-        requestsList,
-        allocToUse,
+    // Calculate total approved AND pending requests so far (excluding current request)
+    const approvedUrea = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce((sum, r) => sum + Number(r.requested_urea_bags || 0), 0);
+
+    const approvedComplete = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce((sum, r) => sum + Number(r.requested_complete_14_bags || 0), 0);
+
+    const approvedAmSul = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce(
+        (sum, r) => sum + Number(r.requested_ammonium_sulfate_bags || 0),
+        0,
       );
-      return requested > 0 && shortage > 0;
-    });
+
+    const approvedPotash = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce(
+        (sum, r) => sum + Number(r.requested_muriate_potash_bags || 0),
+        0,
+      );
+
+    // Check if current request would exceed remaining stock
+    const remainingUrea =
+      Number(allocToUse.urea_46_0_0_bags || 0) - approvedUrea;
+    const remainingComplete =
+      Number(allocToUse.complete_14_14_14_bags || 0) - approvedComplete;
+    const remainingAmSul =
+      Number(allocToUse.ammonium_sulfate_21_0_0_bags || 0) - approvedAmSul;
+    const remainingPotash =
+      Number(allocToUse.muriate_potash_0_0_60_bags || 0) - approvedPotash;
+
+    const requestedUrea = Number(request.requested_urea_bags || 0);
+    const requestedComplete = Number(request.requested_complete_14_bags || 0);
+    const requestedAmSul = Number(request.requested_ammonium_sulfate_bags || 0);
+    const requestedPotash = Number(request.requested_muriate_potash_bags || 0);
+
+    const fertilizerShortage =
+      requestedUrea > remainingUrea ||
+      requestedComplete > remainingComplete ||
+      requestedAmSul > remainingAmSul ||
+      requestedPotash > remainingPotash;
+
+    // Seed shortages
+    const approvedJackpot = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce((sum, r) => sum + Number(r.requested_jackpot_kg || 0), 0);
+
+    const approvedUs88 = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce((sum, r) => sum + Number(r.requested_us88_kg || 0), 0);
+
+    const approvedTh82 = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce((sum, r) => sum + Number(r.requested_th82_kg || 0), 0);
+
+    const approvedRh9000 = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce((sum, r) => sum + Number(r.requested_rh9000_kg || 0), 0);
+
+    const approvedLumping143 = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce((sum, r) => sum + Number(r.requested_lumping143_kg || 0), 0);
+
+    const approvedLp296 = requestsList
+      .filter(
+        (r) =>
+          (r.status === "approved" || r.status === "pending") &&
+          r.id !== request.id,
+      )
+      .reduce((sum, r) => sum + Number(r.requested_lp296_kg || 0), 0);
+
+    const remainingJackpot =
+      Number(allocToUse.jackpot_kg || 0) - approvedJackpot;
+    const remainingUs88 = Number(allocToUse.us88_kg || 0) - approvedUs88;
+    const remainingTh82 = Number(allocToUse.th82_kg || 0) - approvedTh82;
+    const remainingRh9000 = Number(allocToUse.rh9000_kg || 0) - approvedRh9000;
+    const remainingLumping143 =
+      Number(allocToUse.lumping143_kg || 0) - approvedLumping143;
+    const remainingLp296 = Number(allocToUse.lp296_kg || 0) - approvedLp296;
+
+    const requestedJackpot = Number(request.requested_jackpot_kg || 0);
+    const requestedUs88 = Number(request.requested_us88_kg || 0);
+    const requestedTh82 = Number(request.requested_th82_kg || 0);
+    const requestedRh9000 = Number(request.requested_rh9000_kg || 0);
+    const requestedLumping143 = Number(request.requested_lumping143_kg || 0);
+    const requestedLp296 = Number(request.requested_lp296_kg || 0);
+
+    const seedShortage =
+      requestedJackpot > remainingJackpot ||
+      requestedUs88 > remainingUs88 ||
+      requestedTh82 > remainingTh82 ||
+      requestedRh9000 > remainingRh9000 ||
+      requestedLumping143 > remainingLumping143 ||
+      requestedLp296 > remainingLp296;
+
+    return fertilizerShortage || seedShortage;
   };
 
   return (
     <div className="page-container">
       <div className="page">
         {/* Sidebar */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
-=======
-    };
-
-    // Auto-fetch alternatives for all pending requests with shortages
-    const autoFetchAlternativesForShortages = async (requestsList: FarmerRequest[], allocationData: AllocationDetails) => {
-        if (!allocationData) {
-            console.log('⚠️ No allocation data provided, skipping auto-fetch');
-            return;
-        }
-
-        const pendingRequests = requestsList.filter(r => r.status === 'pending');
-        console.log(`📊 Checking ${pendingRequests.length} pending requests for shortages...`);
-
-        let countWithShortages = 0;
-        let newSuggestions = 0;
-
-        for (const request of pendingRequests) {
-            const hasShortage = checkPotentialShortageForRequest(request, requestsList, allocationData);
-
-            if (hasShortage) {
-                countWithShortages++;
-                console.log(`⚠️ Shortage detected for request #${request.id} (${request.farmer_name})`);
-
-                // Auto-fetch if not already loaded
-                if (!alternatives[request.id]) {
-                    try {
-                        setLoadingAlternatives(prev => ({ ...prev, [request.id]: true }));
-
-                        console.log(`🤖 Computing alternatives for request #${request.id}...`);
-
-                        // Calculate remaining stock for this request
-                        const remainingStock = calculateRemainingStock(allocationData, requestsList, request.id);
-
-                        // Run client-side alternative engine
-                        const result = suggestAlternatives({
-                            farmer_name: request.farmer_name,
-                            crop_type: 'rice',
-                            requested_urea_bags: request.requested_urea_bags || 0,
-                            requested_complete_14_bags: request.requested_complete_14_bags || 0,
-                            requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
-                            requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0,
-                            requested_jackpot_kg: request.requested_jackpot_kg || 0,
-                            requested_us88_kg: request.requested_us88_kg || 0,
-                            requested_th82_kg: request.requested_th82_kg || 0,
-                            requested_rh9000_kg: request.requested_rh9000_kg || 0,
-                            requested_lumping143_kg: request.requested_lumping143_kg || 0,
-                            requested_lp296_kg: request.requested_lp296_kg || 0
-                        }, remainingStock);
-
-                        console.log(`✅ Alternatives computed for request #${request.id}:`, result);
-                        setAlternatives(prev => ({ ...prev, [request.id]: result }));
-                        setShowAlternatives(prev => ({ ...prev, [request.id]: true }));
-                        newSuggestions++;
-                    } catch (error) {
-                        console.error(`❌ Failed to compute alternatives for request ${request.id}:`, error);
-                    } finally {
-                        setLoadingAlternatives(prev => ({ ...prev, [request.id]: false }));
-                    }
-
-                    // Small delay between requests
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                } else {
-                    console.log(`ℹ️ Alternatives already loaded for request #${request.id}`);
-                }
-            }
-        }
-
-        console.log(`📈 Summary: ${countWithShortages} requests with shortages, ${newSuggestions} new alternatives fetched`);
-        setAutoSuggestionsCount(countWithShortages);
-        setNewSuggestionsCount(newSuggestions);
-    };
-
-    const filterRequests = () => {
-        let filtered = [...requests];
-
-        // Search filter
-        if (searchTerm) {
-            filtered = filtered.filter(req =>
-                (req.farmer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (req.barangay || '').toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-
-        // Status filter
-        if (statusFilter !== 'all') {
-            filtered = filtered.filter(req => req.status === statusFilter);
-        }
-
-        // Barangay filter
-        if (barangayFilter !== 'all') {
-            filtered = filtered.filter(req => req.barangay === barangayFilter);
-        }
-
-        setFilteredRequests(filtered);
-    };
-
-    const handleDelete = async (id: number, farmerName: string) => {
-        if (!confirm(`Are you sure you want to delete the request from ${farmerName}?`)) {
-            return;
-        }
-
-        try {
-            const response = await deleteFarmerRequest(id);
-
-            if (!response.error) {
-                alert('✅ Request deleted successfully');
-                fetchRequests();
-            } else {
-                alert('❌ Failed to delete request');
-            }
-        } catch (error) {
-            console.error('Error deleting request:', error);
-            alert('❌ Error deleting request');
-        }
-    };
-
-    const handleStatusChange = async (id: number, newStatus: string) => {
-        try {
-            const response = await updateFarmerRequest(id, { status: newStatus });
-
-            if (!response.error) {
-                // If status is rejected, clear alternatives for this request
-                if (newStatus === 'rejected') {
-                    setAlternatives(prev => {
-                        const updated = { ...prev };
-                        delete updated[id];
-                        return updated;
-                    });
-                }
-                // If status is approved, automatically create distribution log
-                if (newStatus === 'approved') {
-                    await createDistributionLog(id);
-                }
-                showToast(`Status updated to ${newStatus}`, newStatus === 'approved' ? 'success' : newStatus === 'rejected' ? 'warning' : 'success');
-                fetchRequests();
-            } else {
-                showToast('Failed to update status', 'error');
-            }
-        } catch (error) {
-            console.error('Error updating status:', error);
-            showToast('Error updating status', 'error');
-        }
-    };
-
-    // Automatically create distribution log when request is approved
-    const createDistributionLog = async (requestId: number) => {
-        try {
-            // Find the request details
-            const request = requests.find(r => r.id === requestId);
-            if (!request) return;
-
-            // Build fertilizer and seed type strings
-            const fertilizerTypes: string[] = [];
-            if (request.requested_urea_bags) fertilizerTypes.push(`Urea:${request.requested_urea_bags}`);
-            if (request.requested_complete_14_bags) fertilizerTypes.push(`Complete:${request.requested_complete_14_bags}`);
-            if (request.requested_ammonium_sulfate_bags) fertilizerTypes.push(`Ammonium Sulfate:${request.requested_ammonium_sulfate_bags}`);
-            if (request.requested_muriate_potash_bags) fertilizerTypes.push(`Muriate Potash:${request.requested_muriate_potash_bags}`);
-
-            const seedTypes: string[] = [];
-            if (request.requested_jackpot_kg) seedTypes.push(`Jackpot:${request.requested_jackpot_kg}`);
-            if (request.requested_us88_kg) seedTypes.push(`US88:${request.requested_us88_kg}`);
-            if (request.requested_th82_kg) seedTypes.push(`TH82:${request.requested_th82_kg}`);
-            if (request.requested_rh9000_kg) seedTypes.push(`RH9000:${request.requested_rh9000_kg}`);
-            if (request.requested_lumping143_kg) seedTypes.push(`Lumping143:${request.requested_lumping143_kg}`);
-            if (request.requested_lp296_kg) seedTypes.push(`LP296:${request.requested_lp296_kg}`);
-
-            // Calculate totals
-            const totalFertilizer = Math.round(
-                (Number(request.requested_urea_bags) || 0) +
-                (Number(request.requested_complete_14_bags) || 0) +
-                (Number(request.requested_ammonium_sulfate_bags) || 0) +
-                (Number(request.requested_muriate_potash_bags) || 0)
-            );
-
-            const totalSeeds = Number(
-                ((Number(request.requested_jackpot_kg) || 0) +
-                    (Number(request.requested_us88_kg) || 0) +
-                    (Number(request.requested_th82_kg) || 0) +
-                    (Number(request.requested_rh9000_kg) || 0) +
-                    (Number(request.requested_lumping143_kg) || 0) +
-                    (Number(request.requested_lp296_kg) || 0)).toFixed(2)
-            );
-
-            const payload = {
-                request_id: requestId,
-                fertilizer_type: fertilizerTypes.join(', ') || null,
-                fertilizer_bags_given: totalFertilizer,
-                seed_type: seedTypes.join(', ') || null,
-                seed_kg_given: totalSeeds,
-                voucher_code: null,
-                farmer_signature: false,
-                verified_by: null
-            };
-
-            const distResponse = await createDistributionRecord(payload);
-
-            if (!distResponse.error) {
-                console.log('✅ Distribution log created automatically');
-            } else {
-                console.error('❌ Failed to create distribution log');
-            }
-        } catch (error) {
-            console.error('Error creating distribution log:', error);
-        }
-    };
-
-    const getUniqueBarangays = () => {
-        const barangays = [...new Set(requests.map(req => req.barangay))];
-        return barangays.sort();
-    };
-
-    // Edit request functionality
-    const handleEdit = (request: FarmerRequest) => {
-        setEditingRequest(request.id);
-        setEditFormData({
-            requested_urea_bags: request.requested_urea_bags,
-            requested_complete_14_bags: request.requested_complete_14_bags,
-            requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags,
-            requested_muriate_potash_bags: request.requested_muriate_potash_bags,
-            requested_jackpot_kg: request.requested_jackpot_kg,
-            requested_us88_kg: request.requested_us88_kg,
-            requested_th82_kg: request.requested_th82_kg,
-            requested_rh9000_kg: request.requested_rh9000_kg,
-            requested_lumping143_kg: request.requested_lumping143_kg,
-            requested_lp296_kg: request.requested_lp296_kg,
-            request_notes: request.request_notes || ''
-        });
-    };
-
-    const handleSaveEdit = async () => {
-        if (!editingRequest) return;
-
-        try {
-            const originalRequest = requests.find(r => r.id === editingRequest);
-            if (!originalRequest) {
-                throw new Error('Original request not found');
-            }
-
-            // Merge original request with edited form data
-            const updatedRequest = {
-                ...originalRequest,
-                ...editFormData
-            };
-
-            const response = await updateFarmerRequest(editingRequest, updatedRequest);
-
-            if (response.error) {
-                throw new Error('Failed to update request');
-            }
-
-            // Update local state immediately so UI reflects changes right away
-            setRequests(prev => prev.map(r =>
-                r.id === editingRequest ? { ...r, ...editFormData } : r
-            ));
-
-            // Clear alternatives for this request - will be re-evaluated after refresh
-            setAlternatives(prev => {
-                const updated = { ...prev };
-                delete updated[editingRequest];
-                return updated;
-            });
-            setSelectedAlternative(prev => {
-                const updated = { ...prev };
-                delete updated[editingRequest];
-                return updated;
-            });
-
-            // Close edit modal
-            setEditingRequest(null);
-            setEditFormData({});
-
-            alert('✅ Request updated successfully!');
-
-            // Refresh from backend to ensure data consistency
-            await fetchRequests();
-        } catch (err) {
-            console.error('Error updating request:', err);
-            alert(`❌ Failed to update request: ${err instanceof Error ? err.message : 'Unknown error'}`);
-        }
-    };
-
-    const handleCancelEdit = () => {
-        setEditingRequest(null);
-        setEditFormData({});
-    };
-
-    const getTotalRequested = (field: keyof FarmerRequest) => {
-        return filteredRequests.reduce((sum, req) => sum + (Number(req[field]) || 0), 0);
-    };
-
-    const formatSeasonName = (season: string) => {
-        const [type, year] = season.split('_');
-        return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
-    };
-
-    // DSS Feature: Fetch smart alternatives for a farmer request
-    const fetchAlternatives = async (requestId: number) => {
-        try {
-            setLoadingAlternatives(prev => ({ ...prev, [requestId]: true }));
-
-            console.log('🤖 Computing alternatives for request:', requestId);
-
-            const request = requests.find(r => r.id === requestId);
-            if (!request || !allocation) {
-                alert('❌ Request or allocation data not found');
-                return;
-            }
-
-            // Calculate remaining stock and run client-side engine
-            const remainingStock = calculateRemainingStock(allocation, requests, requestId);
-            const result = suggestAlternatives({
-                farmer_name: request.farmer_name,
-                crop_type: 'rice',
-                requested_urea_bags: request.requested_urea_bags || 0,
-                requested_complete_14_bags: request.requested_complete_14_bags || 0,
-                requested_ammonium_sulfate_bags: request.requested_ammonium_sulfate_bags || 0,
-                requested_muriate_potash_bags: request.requested_muriate_potash_bags || 0,
-                requested_jackpot_kg: request.requested_jackpot_kg || 0,
-                requested_us88_kg: request.requested_us88_kg || 0,
-                requested_th82_kg: request.requested_th82_kg || 0,
-                requested_rh9000_kg: request.requested_rh9000_kg || 0,
-                requested_lumping143_kg: request.requested_lumping143_kg || 0,
-                requested_lp296_kg: request.requested_lp296_kg || 0
-            }, remainingStock);
-
-            console.log('✅ Alternatives computed:', result);
-            setAlternatives(prev => ({ ...prev, [requestId]: result }));
-            setShowAlternatives(prev => ({ ...prev, [requestId]: true }));
-        } catch (error) {
-            console.error('❌ Error computing alternatives:', error);
-            alert(`❌ Error computing alternatives: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        } finally {
-            setLoadingAlternatives(prev => ({ ...prev, [requestId]: false }));
-        }
-    };
-
-    // Apply selected alternative to farmer request
-    const applyAlternative = async (requestId: number) => {
-        console.log('🔍 applyAlternative called for request:', requestId);
-        console.log('Selected alternative:', selectedAlternative[requestId]);
-        console.log('Alternatives data:', alternatives[requestId]);
-
-        const selection = selectedAlternative[requestId];
-        if (!selection) {
-            alert('❌ Please select an alternative from the dropdown first');
-            return;
-        }
-
-        const altData = alternatives[requestId];
-        console.log('Full altData:', altData);
-
-        if (!altData || !altData.suggestions?.suggestions) {
-            console.error('❌ Alternative data structure invalid:', altData);
-            alert('❌ Alternative data not found or has invalid structure');
-            return;
-        }
-
-        const suggestion = altData.suggestions.suggestions[selection.suggestionIdx];
-        console.log('Suggestion:', suggestion);
-
-        const alternative = suggestion.alternatives[selection.alternativeIdx];
-        console.log('Selected alternative detail:', alternative);
-
-        if (!alternative) {
-            alert('❌ Selected alternative not found');
-            return;
-        }
-
-        // Show warning for partial substitutions
-        if (!alternative.can_fulfill) {
-            const confirmed = confirm(
-                `⚠️ WARNING: Partial Substitution\n\n` +
-                `This alternative can only partially cover the shortage:\n` +
-                `- Original shortage: ${suggestion.shortage_bags} bags\n` +
-                `- Can cover: ${alternative.partial_coverage || 0} bags\n` +
-                `- Remaining shortage: ${alternative.remaining_shortage || 0} bags\n\n` +
-                `Do you want to continue with this partial substitution?`
-            );
-            if (!confirmed) return;
-        }
-
-        // Build confirmation message
-        const originalFert = suggestion.original_fertilizer_name;
-        const substituteFert = alternative.substitute_name;
-        const confidence = (alternative.confidence_score * 100).toFixed(0);
-
-        const confirmMessage =
-            `📝 Confirm Fertilizer Substitution\n\n` +
-            `Farmer: ${altData.farmer_name}\n\n` +
-            `REPLACE:\n` +
-            `❌ ${suggestion.original_fertilizer}: ${suggestion.shortage_bags} bags (shortage)\n\n` +
-            `WITH:\n` +
-            `✅ ${substituteFert}: ${alternative.needed_bags} bags\n\n` +
-            `Confidence: ${confidence}%\n` +
-            `Available Stock: ${alternative.available_bags} bags\n\n` +
-            `${alternative.can_fulfill ? '✅ Full substitution possible' : '⚠️ Partial substitution'}\n\n` +
-            `This will update the farmer's request and add a note.\n` +
-            `Status will remain PENDING for your final review.\n\n` +
-            `Apply this alternative?`;
-
-        if (!confirm(confirmMessage)) {
-            return;
-        }
-
-        try {
-            setApplyingAlternative(prev => ({ ...prev, [requestId]: true }));
-
-            const request = requests.find(r => r.id === requestId);
-            if (!request) {
-                throw new Error('Request not found');
-            }
-
-            // Prepare updated request data
-            const updatedRequest: any = { ...request };
-
-            // Map original fertilizer type to field name
-            const fieldMapping: { [key: string]: string } = {
-                'urea_46_0_0': 'requested_urea_bags',
-                'complete_14_14_14': 'requested_complete_14_bags',
-                'ammonium_sulfate_21_0_0': 'requested_ammonium_sulfate_bags',
-                'muriate_potash_0_0_60': 'requested_muriate_potash_bags'
-            };
-
-            const substituteMapping: { [key: string]: string } = {
-                'urea_46_0_0': 'requested_urea_bags',
-                'complete_14_14_14': 'requested_complete_14_bags',
-                'complete_16_16_16': 'requested_complete_14_bags',
-                'ammonium_sulfate_21_0_0': 'requested_ammonium_sulfate_bags',
-                'muriate_potash_0_0_60': 'requested_muriate_potash_bags'
-            };
-
-            const originalField = fieldMapping[suggestion.original_fertilizer];
-            const substituteField = substituteMapping[alternative.substitute_id];
-
-            if (!originalField || !substituteField) {
-                throw new Error('Invalid fertilizer field mapping');
-            }
-
-            // Update quantities
-            const currentOriginalAmount = updatedRequest[originalField] || 0;
-            const newOriginalAmount = Math.max(0, currentOriginalAmount - suggestion.shortage_bags);
-            updatedRequest[originalField] = newOriginalAmount;
-
-            // Add substitute amount
-            const currentSubstituteAmount = updatedRequest[substituteField] || 0;
-            updatedRequest[substituteField] = currentSubstituteAmount + alternative.needed_bags;
-
-            // Add note about substitution
-            const timestamp = new Date().toLocaleString();
-            const substitutionNote =
-                `[${timestamp}] SUBSTITUTION APPLIED: ` +
-                `Replaced ${suggestion.shortage_bags} bags ${originalFert} with ` +
-                `${alternative.needed_bags} bags ${substituteFert} ` +
-                `(${confidence}% confidence). ` +
-                `${alternative.can_fulfill ? 'Full substitution.' : `Partial: ${alternative.remaining_shortage} bags shortage remains.`}`;
-
-            updatedRequest.request_notes = request.request_notes
-                ? `${request.request_notes}\n\n${substitutionNote}`
-                : substitutionNote;
-
-            // Send update to backend
-            const response = await updateFarmerRequest(requestId, updatedRequest);
-
-            if (!response.error) {
-                const updatedData = response.data;
-
-                // Update local state immediately with the new data
-                setRequests(prev => prev.map(r =>
-                    r.id === requestId ? { ...r, ...updatedData } : r
-                ));
-
-                alert(
-                    `✅ Alternative Applied Successfully!\n\n` +
-                    `Request for ${altData.farmer_name} updated:\n` +
-                    `- ${originalFert}: reduced by ${suggestion.shortage_bags} bags\n` +
-                    `- ${substituteFert}: increased by ${alternative.needed_bags} bags`
-                );
-
-                // Refresh from backend to ensure consistency
-                await fetchRequests();
-                // Collapse the farmer in the modal after applying
-                setExpandedFarmerInModal(null);
-            } else {
-                throw new Error('Failed to update request');
-            }
-        } catch (error) {
-            console.error('Error applying alternative:', error);
-            alert(`❌ Error applying alternative: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        } finally {
-            setApplyingAlternative(prev => ({ ...prev, [requestId]: false }));
-        }
-    };
-
-    // Helper function to check if a request might have stock issues
-    const checkPotentialShortage = (request: FarmerRequest): boolean => {
-        return checkPotentialShortageForRequest(request, requests);
-    };
-
-    const checkPotentialShortageForRequest = (request: FarmerRequest, requestsList: FarmerRequest[], allocationData?: AllocationDetails): boolean => {
-        const allocToUse = allocationData || allocation;
-        if (!allocToUse) return false;
-
-        // Calculate total approved AND pending requests so far (excluding current request)
-        const approvedUrea = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_urea_bags || 0), 0);
-
-        const approvedComplete = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_complete_14_bags || 0), 0);
-
-        const approvedAmSul = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_ammonium_sulfate_bags || 0), 0);
-
-        const approvedPotash = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_muriate_potash_bags || 0), 0);
-
-        // Check if current request would exceed remaining stock
-        const remainingUrea = Number(allocToUse.urea_46_0_0_bags || 0) - approvedUrea;
-        const remainingComplete = Number(allocToUse.complete_14_14_14_bags || 0) - approvedComplete;
-        const remainingAmSul = Number(allocToUse.ammonium_sulfate_21_0_0_bags || 0) - approvedAmSul;
-        const remainingPotash = Number(allocToUse.muriate_potash_0_0_60_bags || 0) - approvedPotash;
-
-        const requestedUrea = Number(request.requested_urea_bags || 0);
-        const requestedComplete = Number(request.requested_complete_14_bags || 0);
-        const requestedAmSul = Number(request.requested_ammonium_sulfate_bags || 0);
-        const requestedPotash = Number(request.requested_muriate_potash_bags || 0);
-
-        const fertilizerShortage = (requestedUrea > remainingUrea) ||
-            (requestedComplete > remainingComplete) ||
-            (requestedAmSul > remainingAmSul) ||
-            (requestedPotash > remainingPotash);
-
-        // Seed shortages
-        const approvedJackpot = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_jackpot_kg || 0), 0);
-
-        const approvedUs88 = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_us88_kg || 0), 0);
-
-        const approvedTh82 = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_th82_kg || 0), 0);
-
-        const approvedRh9000 = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_rh9000_kg || 0), 0);
-
-        const approvedLumping143 = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_lumping143_kg || 0), 0);
-
-        const approvedLp296 = requestsList
-            .filter(r => (r.status === 'approved' || r.status === 'pending') && r.id !== request.id)
-            .reduce((sum, r) => sum + Number(r.requested_lp296_kg || 0), 0);
-
-        const remainingJackpot = Number(allocToUse.jackpot_kg || 0) - approvedJackpot;
-        const remainingUs88 = Number(allocToUse.us88_kg || 0) - approvedUs88;
-        const remainingTh82 = Number(allocToUse.th82_kg || 0) - approvedTh82;
-        const remainingRh9000 = Number(allocToUse.rh9000_kg || 0) - approvedRh9000;
-        const remainingLumping143 = Number(allocToUse.lumping143_kg || 0) - approvedLumping143;
-        const remainingLp296 = Number(allocToUse.lp296_kg || 0) - approvedLp296;
-
-        const requestedJackpot = Number(request.requested_jackpot_kg || 0);
-        const requestedUs88 = Number(request.requested_us88_kg || 0);
-        const requestedTh82 = Number(request.requested_th82_kg || 0);
-        const requestedRh9000 = Number(request.requested_rh9000_kg || 0);
-        const requestedLumping143 = Number(request.requested_lumping143_kg || 0);
-        const requestedLp296 = Number(request.requested_lp296_kg || 0);
-
-        const seedShortage = (requestedJackpot > remainingJackpot) ||
-            (requestedUs88 > remainingUs88) ||
-            (requestedTh82 > remainingTh82) ||
-            (requestedRh9000 > remainingRh9000) ||
-            (requestedLumping143 > remainingLumping143) ||
-            (requestedLp296 > remainingLp296);
-
-        return fertilizerShortage || seedShortage;
-    };
-
-    return (
-        <div className="page-container">
-            <div className="page">
-                {/* Sidebar */}
-                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-                    <nav className="sidebar-nav">
-                        <div className='sidebar-logo'>
-                            <img src={LogoImage} alt="Logo" />
-                        </div>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-dashboard')}
-                        >
-                            <span className="nav-icon">
-                                <img src={HomeIcon} alt="Home" />
-                            </span>
-                            <span className="nav-text">Home</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-rsbsa')}
-                        >
-                            <span className="nav-icon">
-                                <img src={RSBSAIcon} alt="RSBSA" />
-                            </span>
-                            <span className="nav-text">RSBSA</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-incentives')}
-                        >
-                            <span className="nav-icon">
-                                <img src={IncentivesIcon} alt="Incentives" />
-                            </span>
-                            <span className="nav-text">Incentives</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={ApproveIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
-                            className="sidebar-nav-item logout"
-                            onClick={handleLogout}
-                        >
-                            <span className="nav-icon">
-                                <img src={LogoutIcon} alt="Logout" />
-                            </span>
-                            <span className="nav-text">Logout</span>
-                        </button>
-                    </nav>
-                </div>
-
-                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
-
-                {/* Main Content */}
-                <div className="tech-main-content">
-                    <div className="tech-incent-mobile-header">
-                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
-                        <div className="tech-incent-mobile-title">Manage Requests</div>
-                    </div>
-                    <div className="tech-manage-dashboard-header-incent">
-                        <div className="tech-manage-header-sub">
-                            <h2 className="tech-manage-page-header">Manage Farmer Requests</h2>
-                            {allocation && (
-                                <p className="page-subtitle">{formatSeasonName(allocation.season)}</p>
-                            )}
-                        </div>
-                        <div className="tech-manage-requests-back-create-section">
-                            <button
-                                className="tech-manage-requests-add-btn"
-                                onClick={() => navigate(`/technician-add-farmer-request/${allocationId}`)}
-                            >
-                                ➕ Add Farmer Request
-                            </button>
-                            <button
-                                className="tech-manage-requests-back-btn"
-                                onClick={() => navigate('/technician-incentives')}
-                            >
-                                ←
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="content-card-incent">
-                        {loading ? (
-                            <div className="loading-message">Loading requests...</div>
-                        ) : error ? (
-                            <div className="error-state">
-                                <div className="error-icon">⚠️</div>
-                                <h3>Error Loading Requests</h3>
-                                <p>{error}</p>
-                                <button className="btn-retry" onClick={fetchRequests}>
-                                    🔄 Retry
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                {/* Filters */}
-                                <div className="tech-manage-requests-filters">
-                                    <input
-                                        type="text"
-                                        placeholder="🔍 Search farmer or barangay..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="tech-manage-requests-search-input"
-                                    />
-                                    <select
-                                        value={statusFilter}
-                                        onChange={(e) => setStatusFilter(e.target.value)}
-                                        className="tech-manage-requests-filter-select"
-                                    >
-                                        <option value="all">All Status</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="approved">Approved</option>
-                                        <option value="rejected">Rejected</option>
-                                    </select>
-                                    <select
-                                        value={barangayFilter}
-                                        onChange={(e) => setBarangayFilter(e.target.value)}
-                                        className="tech-manage-requests-filter-select"
-                                    >
-                                        <option value="all">All Barangays</option>
-                                        {getUniqueBarangays().map(brgy => (
-                                            <option key={brgy} value={brgy}>{brgy}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Allocation vs Requests Comparison */}
-                                <div className="tech-manage-requests-comparison-grid">
-                                    {/* Regional Allocation Card */}
-                                    <div className="tech-manage-requests-comparison-card">
-                                        <h3 className="tech-manage-requests-comparison-title">
-                                            📦 Regional Allocation (Total Received)
-                                        </h3>
-                                        <div className="tech-manage-requests-comparison-stats">
-                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                                                <span className="tech-manage-requests-stat-label">🌱 Total Fertilizers</span>
-                                                <span className="tech-manage-requests-stat-value">
-                                                    {allocation ? (
-                                                        (Number(allocation.urea_46_0_0_bags || 0) +
-                                                            Number(allocation.complete_14_14_14_bags || 0) +
-                                                            Number(allocation.ammonium_sulfate_21_0_0_bags || 0) +
-                                                            Number(allocation.muriate_potash_0_0_60_bags || 0)).toFixed(2)
-                                                    ) : '0.00'} bags
-                                                </span>
-                                            </div>
-                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                                                <span className="tech-manage-requests-stat-label">🌾 Total Seeds</span>
-                                                <span className="tech-manage-requests-stat-value">
-                                                    {allocation ? (
-                                                        (Number(allocation.jackpot_kg || 0) +
-                                                            Number(allocation.us88_kg || 0) +
-                                                            Number(allocation.th82_kg || 0) +
-                                                            Number(allocation.rh9000_kg || 0) +
-                                                            Number(allocation.lumping143_kg || 0) +
-                                                            Number(allocation.lp296_kg || 0)).toFixed(2)
-                                                    ) : '0.00'} kg
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Total Farmer Requests Card */}
-                                    <div className="tech-manage-requests-comparison-card">
-                                        <h3 className="tech-manage-requests-comparison-title">
-                                            📊 Total Farmer Requests
-                                        </h3>
-                                        <div className="tech-manage-requests-comparison-stats">
-                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                                                <span className="tech-manage-requests-stat-label">🌱 Total Fertilizers Requested</span>
-                                                <span className="tech-manage-requests-stat-value">
-                                                    {getTotalRequested('requested_urea_bags') +
-                                                        getTotalRequested('requested_complete_14_bags') +
-                                                        getTotalRequested('requested_ammonium_sulfate_bags') +
-                                                        getTotalRequested('requested_muriate_potash_bags')} bags
-                                                </span>
-                                            </div>
-                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                                                <span className="tech-manage-requests-stat-label">🌾 Total Seeds Requested</span>
-                                                <span className="tech-manage-requests-stat-value">
-                                                    {getTotalRequested('requested_jackpot_kg') +
-                                                        getTotalRequested('requested_us88_kg') +
-                                                        getTotalRequested('requested_th82_kg') +
-                                                        getTotalRequested('requested_rh9000_kg') +
-                                                        getTotalRequested('requested_lumping143_kg') +
-                                                        getTotalRequested('requested_lp296_kg')} kg
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Approved Farmer Requests Card */}
-                                    <div className="tech-manage-requests-comparison-card tech-manage-requests-comparison-card-approved">
-                                        <h3 className="tech-manage-requests-comparison-title">
-                                            ✅ Approved Farmer Requests
-                                        </h3>
-                                        <div className="tech-manage-requests-comparison-stats">
-                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                                                <span className="tech-manage-requests-stat-label">🌱 Total Fertilizers</span>
-                                                <span className="tech-manage-requests-stat-value">
-                                                    {(() => {
-                                                        const approvedRequests = requests.filter(r => r.status === 'approved');
-                                                        const total = approvedRequests.reduce((sum, r) =>
-                                                            sum + Number(r.requested_urea_bags || 0) +
-                                                            Number(r.requested_complete_14_bags || 0) +
-                                                            Number(r.requested_ammonium_sulfate_bags || 0) +
-                                                            Number(r.requested_muriate_potash_bags || 0), 0
-                                                        );
-                                                        return Number(total).toFixed(2);
-                                                    })()} bags
-                                                </span>
-                                            </div>
-                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                                                <span className="tech-manage-requests-stat-label">🌾 Total Seeds</span>
-                                                <span className="tech-manage-requests-stat-value">
-                                                    {(() => {
-                                                        const approvedRequests = requests.filter(r => r.status === 'approved');
-                                                        const total = approvedRequests.reduce((sum, r) =>
-                                                            sum + Number(r.requested_jackpot_kg || 0) +
-                                                            Number(r.requested_us88_kg || 0) +
-                                                            Number(r.requested_th82_kg || 0) +
-                                                            Number(r.requested_rh9000_kg || 0) +
-                                                            Number(r.requested_lumping143_kg || 0) +
-                                                            Number(r.requested_lp296_kg || 0), 0
-                                                        );
-                                                        return Number(total).toFixed(2);
-                                                    })()} kg
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Rejected Farmer Requests Card */}
-                                    <div className="tech-manage-requests-comparison-card tech-manage-requests-comparison-card-rejected">
-                                        <h3 className="tech-manage-requests-comparison-title">
-                                            ❌ Rejected Farmer Requests
-                                        </h3>
-                                        <div className="tech-manage-requests-comparison-stats">
-                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                                                <span className="tech-manage-requests-stat-label">🌱 Total Fertilizers</span>
-                                                <span className="tech-manage-requests-stat-value">
-                                                    {(() => {
-                                                        const rejectedRequests = requests.filter(r => r.status === 'rejected');
-                                                        const total = rejectedRequests.reduce((sum, r) =>
-                                                            sum + Number(r.requested_urea_bags || 0) +
-                                                            Number(r.requested_complete_14_bags || 0) +
-                                                            Number(r.requested_ammonium_sulfate_bags || 0) +
-                                                            Number(r.requested_muriate_potash_bags || 0), 0
-                                                        );
-                                                        return Number(total).toFixed(2);
-                                                    })()} bags
-                                                </span>
-                                            </div>
-                                            <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                                                <span className="tech-manage-requests-stat-label">🌾 Total Seeds</span>
-                                                <span className="tech-manage-requests-stat-value">
-                                                    {(() => {
-                                                        const rejectedRequests = requests.filter(r => r.status === 'rejected');
-                                                        const total = rejectedRequests.reduce((sum, r) =>
-                                                            sum + Number(r.requested_jackpot_kg || 0) +
-                                                            Number(r.requested_us88_kg || 0) +
-                                                            Number(r.requested_th82_kg || 0) +
-                                                            Number(r.requested_rh9000_kg || 0) +
-                                                            Number(r.requested_lumping143_kg || 0) +
-                                                            Number(r.requested_lp296_kg || 0), 0
-                                                        );
-                                                        return Number(total).toFixed(2);
-                                                    })()} kg
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Summary Stats */}
-                                <div className="tech-manage-requests-summary-cards">
-                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-total">
-                                        <div className="tech-manage-requests-summary-label">Total Requests</div>
-                                        <div className="tech-manage-requests-summary-value">{filteredRequests.length}</div>
-                                    </div>
-                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-pending">
-                                        <div className="tech-manage-requests-summary-label">Pending</div>
-                                        <div className="tech-manage-requests-summary-value">
-                                            {filteredRequests.filter(r => r.status === 'pending').length}
-                                        </div>
-                                    </div>
-                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-approved">
-                                        <div className="tech-manage-requests-summary-label">Approved</div>
-                                        <div className="tech-manage-requests-summary-value">
-                                            {filteredRequests.filter(r => r.status === 'approved').length}
-                                        </div>
-                                    </div>
-                                    <div className="tech-manage-requests-summary-card tech-manage-requests-summary-rejected">
-                                        <div className="tech-manage-requests-summary-label">Rejected</div>
-                                        <div className="tech-manage-requests-summary-value">
-                                            {filteredRequests.filter(r => r.status === 'rejected').length}
-                                        </div>
-                                    </div>
-                                    {/* Combined Shortage & Suggestions Card */}
-                                    <div
-                                        className="tech-manage-requests-summary-card tech-manage-requests-summary-shortage"
-                                        onClick={() => setShowSuggestionsModal(true)}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        {newSuggestionsCount > 0 && (
-                                            <div className="tech-manage-requests-shortage-pulse-badge">
-                                                {newSuggestionsCount}
-                                            </div>
-                                        )}
-                                        <div className="tech-manage-requests-summary-label">⚠️ Shortages & Suggestions</div>
-                                        <div className="tech-manage-requests-summary-value">
-                                            {autoSuggestionsCount} / {Object.keys(alternatives).filter(key => {
-                                                const alt = alternatives[parseInt(key)];
-                                                return alt?.suggestions?.suggestions?.length > 0;
-                                            }).length}
-                                        </div>
-                                        <div className="tech-manage-requests-summary-hint">
-                                            {autoSuggestionsCount} shortages, {Object.keys(alternatives).filter(key => {
-                                                const alt = alternatives[parseInt(key)];
-                                                return alt?.suggestions?.suggestions?.length > 0;
-                                            }).length} with solutions • Click to view
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Info Box for Visual Indicators */}
-                                {filteredRequests.filter(r => r.status === 'pending' && checkPotentialShortage(r)).length > 0 && (
-                                    <div className="tech-manage-requests-info-box">
-                                        <span className="tech-manage-requests-info-box-icon">💡</span>
-                                        <div className="tech-manage-requests-info-box-content">
-                                            <strong className="tech-manage-requests-info-box-title">
-                                                Alternatives Auto-Loaded & Displayed
-                                            </strong>
-                                            <p className="tech-manage-requests-info-box-text">
-                                                Rows highlighted in yellow (⚠️) show automatic suggestions.
-                                                Alternative fertilizer options are displayed automatically based on agronomic equivalency.
-                                                Click the "💡 Suggestions" card above to view and apply alternatives.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Requests Table */}
-                                {filteredRequests.length === 0 ? (
-                                    <div className="empty-state">
-                                        <div className="empty-icon">📋</div>
-                                        <h3>No Requests Found</h3>
-                                        <p>No farmer requests match your filters</p>
-                                    </div>
-                                ) : (
-                                    <div className="tech-manage-requests-table-container">
-                                        <table className="tech-manage-requests-table">
-                                            <thead className="tech-manage-requests-table-header">
-                                                <tr>
-                                                    <th>Farmer</th>
-                                                    <th>Barangay</th>
-                                                    <th>Status</th>
-                                                    <th>Fertilizers (bags)</th>
-                                                    <th>Seeds (kg)</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredRequests.map((request) => {
-                                                    const totalFertilizer = (Number(request.requested_urea_bags) || 0) +
-                                                        (Number(request.requested_complete_14_bags) || 0) +
-                                                        (Number(request.requested_ammonium_sulfate_bags) || 0) +
-                                                        (Number(request.requested_muriate_potash_bags) || 0);
-
-                                                    const totalSeeds = (Number(request.requested_jackpot_kg) || 0) +
-                                                        (Number(request.requested_us88_kg) || 0) +
-                                                        (Number(request.requested_th82_kg) || 0) +
-                                                        (Number(request.requested_rh9000_kg) || 0) +
-                                                        (Number(request.requested_lumping143_kg) || 0) +
-                                                        (Number(request.requested_lp296_kg) || 0);
-
-                                                    const hasShortage = checkPotentialShortage(request);
-
-                                                    return (
-                                                        <React.Fragment key={request.id}>
-                                                            <tr className={`tech-manage-requests-table-row ${hasShortage ? 'shortage-warning' : ''}`}>
-                                                                <td>
-                                                                    {request.farmer_name}
-                                                                    {hasShortage && request.status === 'pending' && (
-                                                                        <div className="tech-manage-requests-shortage-badge">
-                                                                            ⚠️ Shortage detected
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                                <td>{request.barangay}</td>
-                                                                <td>
-                                                                    <span className={`tech-manage-requests-status-badge tech-manage-requests-status-${request.status}`}>
-                                                                        {request.status}
-                                                                    </span>
-                                                                </td>
-                                                                <td>{totalFertilizer.toFixed(2)}</td>
-                                                                <td>{totalSeeds.toFixed(2)}</td>
-                                                                <td>
-                                                                    <div className="tech-manage-requests-action-buttons">
-                                                                        {request.status === 'pending' && (
-                                                                            <>
-                                                                                <button
-                                                                                    onClick={() => handleStatusChange(request.id, 'approved')}
-                                                                                    className="tech-manage-requests-btn-approve"
-                                                                                >
-                                                                                    ✓ Approve
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => handleEdit(request)}
-                                                                                    className="tech-manage-requests-btn-edit"
-                                                                                >
-                                                                                    ✏️ Edit
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => handleStatusChange(request.id, 'rejected')}
-                                                                                    className="tech-manage-requests-btn-reject"
-                                                                                >
-                                                                                    ✕ Reject
-                                                                                </button>
-                                                                            </>
-                                                                        )}
-                                                                        <button
-                                                                            onClick={() => handleDelete(request.id, request.farmer_name)}
-                                                                            className="tech-manage-requests-btn-delete"
-                                                                        >
-                                                                            🗑️ Delete
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </div>
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
             </div>
 
             <button
@@ -2077,8 +1409,22 @@ const TechManageRequests: React.FC = () => {
           </nav>
         </div>
 
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+
         {/* Main Content */}
         <div className="tech-main-content">
+          <div className="tech-incent-mobile-header">
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              Γÿ░
+            </button>
+            <div className="tech-incent-mobile-title">Manage Requests</div>
+          </div>
           <div className="tech-manage-dashboard-header-incent">
             <div className="tech-manage-header-sub">
               <h2 className="tech-manage-page-header">
@@ -2097,13 +1443,13 @@ const TechManageRequests: React.FC = () => {
                   navigate(`/technician-add-farmer-request/${allocationId}`)
                 }
               >
-                ➕ Add Farmer Request
+                Add Farmer Request
               </button>
               <button
                 className="tech-manage-requests-back-btn"
                 onClick={() => navigate("/technician-incentives")}
               >
-                ←
+                back
               </button>
             </div>
           </div>
@@ -2113,11 +1459,11 @@ const TechManageRequests: React.FC = () => {
               <div className="loading-message">Loading requests...</div>
             ) : error ? (
               <div className="error-state">
-                <div className="error-icon">⚠️</div>
+                <div className="error-icon">ΓÜá∩╕Å</div>
                 <h3>Error Loading Requests</h3>
                 <p>{error}</p>
                 <button className="btn-retry" onClick={fetchRequests}>
-                  🔄 Retry
+                  Retry
                 </button>
               </div>
             ) : (
@@ -2126,7 +1472,7 @@ const TechManageRequests: React.FC = () => {
                 <div className="tech-manage-requests-filters">
                   <input
                     type="text"
-                    placeholder="🔍 Search farmer or barangay..."
+                    placeholder="Search farmer or barangay..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="tech-manage-requests-search-input"
@@ -2160,12 +1506,12 @@ const TechManageRequests: React.FC = () => {
                   {/* Regional Allocation Card */}
                   <div className="tech-manage-requests-comparison-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      📦 Regional Allocation (Total Received)
+                      Regional Allocation (Total Received)
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
                         <span className="tech-manage-requests-stat-label">
-                          🌱 Total Fertilizers
+                          Total Fertilizers
                         </span>
                         <span className="tech-manage-requests-stat-value">
                           {allocation
@@ -2185,7 +1531,7 @@ const TechManageRequests: React.FC = () => {
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
                         <span className="tech-manage-requests-stat-label">
-                          🌾 Total Seeds
+                          Total Seeds
                         </span>
                         <span className="tech-manage-requests-stat-value">
                           {allocation
@@ -2207,12 +1553,12 @@ const TechManageRequests: React.FC = () => {
                   {/* Total Farmer Requests Card */}
                   <div className="tech-manage-requests-comparison-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      📊 Total Farmer Requests
+                      Total Farmer Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
                         <span className="tech-manage-requests-stat-label">
-                          🌱 Total Fertilizers Requested
+                          Total Fertilizers Requested
                         </span>
                         <span className="tech-manage-requests-stat-value">
                           {getTotalRequested("requested_urea_bags") +
@@ -2228,7 +1574,7 @@ const TechManageRequests: React.FC = () => {
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
                         <span className="tech-manage-requests-stat-label">
-                          🌾 Total Seeds Requested
+                          Total Seeds Requested
                         </span>
                         <span className="tech-manage-requests-stat-value">
                           {getTotalRequested("requested_jackpot_kg") +
@@ -2246,12 +1592,12 @@ const TechManageRequests: React.FC = () => {
                   {/* Approved Farmer Requests Card */}
                   <div className="tech-manage-requests-comparison-card tech-manage-requests-comparison-card-approved">
                     <h3 className="tech-manage-requests-comparison-title">
-                      ✅ Approved Farmer Requests
+                      Approved Farmer Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
                         <span className="tech-manage-requests-stat-label">
-                          🌱 Total Fertilizers
+                          Total Fertilizers
                         </span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
@@ -2274,7 +1620,7 @@ const TechManageRequests: React.FC = () => {
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
                         <span className="tech-manage-requests-stat-label">
-                          🌾 Total Seeds
+                          Total Seeds
                         </span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
@@ -2303,12 +1649,12 @@ const TechManageRequests: React.FC = () => {
                   {/* Rejected Farmer Requests Card */}
                   <div className="tech-manage-requests-comparison-card tech-manage-requests-comparison-card-rejected">
                     <h3 className="tech-manage-requests-comparison-title">
-                      ❌ Rejected Farmer Requests
+                      Rejected Farmer Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
                         <span className="tech-manage-requests-stat-label">
-                          🌱 Total Fertilizers
+                          Total Fertilizers
                         </span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
@@ -2331,7 +1677,7 @@ const TechManageRequests: React.FC = () => {
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
                         <span className="tech-manage-requests-stat-label">
-                          🌾 Total Seeds
+                          Total Seeds
                         </span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
@@ -2413,7 +1759,7 @@ const TechManageRequests: React.FC = () => {
                       </div>
                     )}
                     <div className="tech-manage-requests-summary-label">
-                      ⚠️ Shortages & Suggestions
+                      Shortages & Suggestions
                     </div>
                     <div className="tech-manage-requests-summary-value">
                       {autoSuggestionsCount} /{" "}
@@ -2432,7 +1778,7 @@ const TechManageRequests: React.FC = () => {
                           return alt?.suggestions?.suggestions?.length > 0;
                         }).length
                       }{" "}
-                      with solutions • Click to view
+                      with solutions Click to view
                     </div>
                   </div>
                 </div>
@@ -2443,7 +1789,7 @@ const TechManageRequests: React.FC = () => {
                 ).length > 0 && (
                   <div className="tech-manage-requests-info-box">
                     <span className="tech-manage-requests-info-box-icon">
-                      💡
+                      ⚠️
                     </span>
                     <div className="tech-manage-requests-info-box-content">
                       <strong className="tech-manage-requests-info-box-title">
@@ -2453,7 +1799,7 @@ const TechManageRequests: React.FC = () => {
                         Rows highlighted in yellow (⚠️) show automatic
                         suggestions. Alternative fertilizer options are
                         displayed automatically based on agronomic equivalency.
-                        Click the "💡 Suggestions" card above to view and apply
+                        Click the "⚠️ Suggestions" card above to view and apply
                         alternatives.
                       </p>
                     </div>
@@ -2463,7 +1809,7 @@ const TechManageRequests: React.FC = () => {
                 {/* Requests Table */}
                 {filteredRequests.length === 0 ? (
                   <div className="empty-state">
-                    <div className="empty-icon">📋</div>
+                    <div className="empty-icon">back</div>
                     <h3>No Requests Found</h3>
                     <p>No farmer requests match your filters</p>
                   </div>
@@ -2482,21 +1828,15 @@ const TechManageRequests: React.FC = () => {
                       </thead>
                       <tbody>
                         {filteredRequests.map((request) => {
-                          const totalFertilizer =
-                            (Number(request.requested_urea_bags) || 0) +
-                            (Number(request.requested_complete_14_bags) || 0) +
-                            (Number(request.requested_ammonium_sulfate_bags) ||
-                              0) +
-                            (Number(request.requested_muriate_potash_bags) ||
-                              0);
+                          const totalFertilizer = getRequestTotal(
+                            request,
+                            fertilizerRequestFields,
+                          );
 
-                          const totalSeeds =
-                            (Number(request.requested_jackpot_kg) || 0) +
-                            (Number(request.requested_us88_kg) || 0) +
-                            (Number(request.requested_th82_kg) || 0) +
-                            (Number(request.requested_rh9000_kg) || 0) +
-                            (Number(request.requested_lumping143_kg) || 0) +
-                            (Number(request.requested_lp296_kg) || 0);
+                          const totalSeeds = getRequestTotal(
+                            request,
+                            seedRequestFields,
+                          );
 
                           const hasShortage = checkPotentialShortage(request);
 
@@ -2510,7 +1850,7 @@ const TechManageRequests: React.FC = () => {
                                   {hasShortage &&
                                     request.status === "pending" && (
                                       <div className="tech-manage-requests-shortage-badge">
-                                        ⚠️ Shortage detected
+                                        Shortage detected
                                       </div>
                                     )}
                                 </td>
@@ -2537,13 +1877,13 @@ const TechManageRequests: React.FC = () => {
                                           }
                                           className="tech-manage-requests-btn-approve"
                                         >
-                                          ✓ Approve
+                                          Approve
                                         </button>
                                         <button
                                           onClick={() => handleEdit(request)}
                                           className="tech-manage-requests-btn-edit"
                                         >
-                                          ✏️ Edit
+                                          Edit
                                         </button>
                                         <button
                                           onClick={() =>
@@ -2554,20 +1894,20 @@ const TechManageRequests: React.FC = () => {
                                           }
                                           className="tech-manage-requests-btn-reject"
                                         >
-                                          ✕ Reject
+                                          Reject
                                         </button>
                                       </>
                                     )}
                                     <button
                                       onClick={() =>
-                                        handleDelete(
+                                        openDeleteDialog(
                                           request.id,
                                           request.farmer_name,
                                         )
                                       }
                                       className="tech-manage-requests-btn-delete"
                                     >
-                                      🗑️ Delete
+                                      Delete
                                     </button>
                                   </div>
                                 </td>
@@ -2589,14 +1929,27 @@ const TechManageRequests: React.FC = () => {
       {editingRequest && (
         <div className="tech-manage-requests-modal-overlay">
           <div className="tech-manage-requests-modal-content">
-            <div className="tech-manage-requests-modal-header">
-              <h3 className="tech-manage-requests-modal-title">
-                Edit Farmer Request
-              </h3>
-              <p className="tech-manage-requests-modal-subtitle">
-                Adjust quantities and notes before final approval.
-              </p>
-            </div>
+            <h3 className="tech-manage-requests-modal-title">
+              Edit Farmer Request
+            </h3>
+
+            {editingRequestData && (
+              <div className="tech-manage-requests-modal-request-info">
+                <span>
+                  <strong>Farmer:</strong> {editingRequestData.farmer_name}
+                </span>
+                <span>
+                  <strong>Barangay:</strong> {editingRequestData.barangay}
+                </span>
+              </div>
+            )}
+
+            {hasAnyEditRisk && (
+              <div className="tech-manage-requests-modal-risk tech-manage-requests-modal-risk-danger">
+                Warning: one or more edited quantities exceed current available
+                allocation. Adjust the highlighted fields before saving.
+              </div>
+            )}
 
             {/* Fertilizers */}
             <div className="tech-manage-requests-modal-section">
@@ -2604,77 +1957,35 @@ const TechManageRequests: React.FC = () => {
                 Fertilizers (bags)
               </h4>
               <div className="tech-manage-requests-modal-grid">
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    Urea (46-0-0)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_urea_bags || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_urea_bags: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    Complete (14-14-14)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_complete_14_bags || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_complete_14_bags:
-                          parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    Ammonium Sulfate
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_ammonium_sulfate_bags || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_ammonium_sulfate_bags:
-                          parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    Muriate of Potash
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_muriate_potash_bags || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_muriate_potash_bags:
-                          parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
+                {visibleEditFertilizerItems.length === 0 && (
+                  <p className="tech-manage-requests-modal-empty">
+                    No fertilizer items requested by this farmer.
+                  </p>
+                )}
+                {visibleEditFertilizerItems.map((item) => {
+                  const unit = getUnitForItem(item);
+                  return (
+                    <div key={String(item.requestField)}>
+                      <label className="tech-manage-requests-modal-label">
+                        {item.label}
+                      </label>
+                      {renderEditFieldMeta(item.requestField, unit)}
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={Number(editFormData[item.requestField] || 0)}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            [item.requestField]:
+                              parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        className="tech-manage-requests-modal-input"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -2684,109 +1995,35 @@ const TechManageRequests: React.FC = () => {
                 Seeds (kg)
               </h4>
               <div className="tech-manage-requests-modal-grid">
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    Jackpot
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_jackpot_kg || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_jackpot_kg: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    US88
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_us88_kg || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_us88_kg: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    TH82
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_th82_kg || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_th82_kg: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    RH9000
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_rh9000_kg || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_rh9000_kg: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    Lumping143
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_lumping143_kg || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_lumping143_kg:
-                          parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
-                <div className="tech-manage-requests-modal-field">
-                  <label className="tech-manage-requests-modal-label">
-                    LP296
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editFormData.requested_lp296_kg || 0}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        requested_lp296_kg: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="tech-manage-requests-modal-input"
-                  />
-                </div>
+                {visibleEditSeedItems.length === 0 && (
+                  <p className="tech-manage-requests-modal-empty">
+                    No seed items requested by this farmer.
+                  </p>
+                )}
+                {visibleEditSeedItems.map((item) => {
+                  const unit = getUnitForItem(item);
+                  return (
+                    <div key={String(item.requestField)}>
+                      <label className="tech-manage-requests-modal-label">
+                        {item.label}
+                      </label>
+                      {renderEditFieldMeta(item.requestField, unit)}
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={Number(editFormData[item.requestField] || 0)}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            [item.requestField]:
+                              parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        className="tech-manage-requests-modal-input"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -2818,7 +2055,40 @@ const TechManageRequests: React.FC = () => {
                 onClick={handleSaveEdit}
                 className="tech-manage-requests-modal-btn-save"
               >
-                💾 Save Changes
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Request Confirmation Modal */}
+      {deleteDialog.open && (
+        <div className="tech-manage-requests-modal-overlay">
+          <div className="tech-manage-requests-delete-modal-content">
+            <h3 className="tech-manage-requests-modal-title">Delete Request</h3>
+            <p className="tech-manage-requests-delete-modal-text">
+              Are you sure you want to delete the request from
+              <strong> {deleteDialog.farmerName}</strong>?
+            </p>
+            <p className="tech-manage-requests-delete-modal-subtext">
+              This action cannot be undone.
+            </p>
+
+            <div className="tech-manage-requests-modal-actions">
+              <button
+                onClick={closeDeleteDialog}
+                className="tech-manage-requests-modal-btn-cancel"
+                disabled={isDeletingRequest}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteRequest}
+                className="tech-manage-requests-modal-btn-delete-confirm"
+                disabled={isDeletingRequest}
+              >
+                {isDeletingRequest ? "Deleting..." : "Yes, Delete"}
               </button>
             </div>
           </div>
@@ -2828,22 +2098,25 @@ const TechManageRequests: React.FC = () => {
       {/* Suggestions Modal */}
       {showSuggestionsModal && (
         <div className="tech-manage-requests-modal-overlay">
-          <div className="tech-manage-requests-modal-content tech-manage-requests-modal-content-suggestions">
-            <div className="tech-manage-requests-modal-header">
-              <h3 className="tech-manage-requests-modal-title">
-                Suggestions Overview
-              </h3>
-              <p className="tech-manage-requests-modal-subtitle">
-                Review shortage alternatives and apply substitutions for pending
-                requests.
-              </p>
-            </div>
+          <div
+            className="tech-manage-requests-modal-content"
+            style={{ maxWidth: "700px", maxHeight: "80vh" }}
+          >
+            <h3 className="tech-manage-requests-modal-title">
+              Suggestions Overview
+            </h3>
 
-            <div className="tech-manage-requests-modal-scroll">
+            <div
+              style={{
+                overflowY: "auto",
+                maxHeight: "calc(80vh - 140px),",
+                padding: "15px 9px",
+              }}
+            >
               {Object.keys(alternatives).length === 0 ? (
                 <div className="tech-manage-requests-suggestions-empty">
                   <div className="tech-manage-requests-suggestions-empty-icon">
-                    📋
+                    Empty
                   </div>
                   <h4>No Suggestions Available</h4>
                   <p>There are no shortage-based suggestions at this time.</p>
@@ -2882,19 +2155,27 @@ const TechManageRequests: React.FC = () => {
                         >
                           <div className="tech-manage-requests-suggestion-farmer-info">
                             <span className="tech-manage-requests-suggestion-farmer-name">
-                              👤 {altData.farmer_name || request.farmer_name}
+                              ⚠️ {altData.farmer_name || request.farmer_name}
                             </span>
                             <span className="tech-manage-requests-suggestion-farmer-barangay">
-                              📍 {request.barangay}
+                              {request.barangay}
                             </span>
                           </div>
-                          <div className="tech-manage-requests-suggestion-header-right">
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                            }}
+                          >
                             <span className="tech-manage-requests-suggestion-status">
-                              ⚠️ {altData.suggestions.suggestions.length}{" "}
+                              {altData.suggestions.suggestions.length}{" "}
                               shortage(s)
                             </span>
-                            <span className="tech-manage-requests-suggestion-chevron">
-                              {isExpanded ? "▲" : "▼"}
+                            <span
+                              style={{ fontSize: "16px", color: "#7c3aed" }}
+                            >
+                              {isExpanded ? "⚠️" : "⚠️"}
                             </span>
                           </div>
                         </div>
@@ -2910,22 +2191,13 @@ const TechManageRequests: React.FC = () => {
                                 >
                                   <div className="tech-manage-requests-shortage-header">
                                     <span className="tech-manage-requests-shortage-label">
-                                      ❌ Shortage:{" "}
+                                      ⚠️ Shortage:{" "}
                                       <strong>
-                                        {suggestion.original_seed_name ||
-                                          suggestion.original_fertilizer_name}
+                                        {suggestion.original_fertilizer_name}
                                       </strong>
                                     </span>
                                     <span className="tech-manage-requests-shortage-amount">
-                                      {toSafeNumber(
-                                        suggestion.shortage_amount ??
-                                          suggestion.shortage_bags ??
-                                          suggestion.shortage_kg,
-                                      )}{" "}
-                                      {suggestion.shortage_unit ||
-                                        (suggestion.category === "seed"
-                                          ? "kg"
-                                          : "bags")}
+                                      {suggestion.shortage_bags} bags
                                     </span>
                                   </div>
 
@@ -2933,7 +2205,7 @@ const TechManageRequests: React.FC = () => {
                                   suggestion.alternatives.length > 0 ? (
                                     <div className="tech-manage-requests-alternatives-section">
                                       <label className="tech-manage-requests-alternatives-label">
-                                        ✅ Available Alternatives:
+                                        Available Alternatives:
                                       </label>
                                       <select
                                         value={
@@ -2966,25 +2238,14 @@ const TechManageRequests: React.FC = () => {
                                           (alt: any, altIdx: number) => (
                                             <option key={altIdx} value={altIdx}>
                                               {alt.substitute_name} -{" "}
-                                              {toSafeNumber(
-                                                alt.needed_amount ??
-                                                  alt.needed_bags ??
-                                                  alt.needed_kg,
-                                              )}{" "}
-                                              {alt.unit ||
-                                                (suggestion.category === "seed"
-                                                  ? "kg"
-                                                  : "bags")}{" "}
-                                              (
+                                              {alt.needed_bags} bags (
                                               {(
-                                                toSafeNumber(
-                                                  alt.confidence_score,
-                                                ) * 100
+                                                alt.confidence_score * 100
                                               ).toFixed(0)}
                                               % confidence)
                                               {alt.can_fulfill
-                                                ? " ✅ Full"
-                                                : ` ⚠️ Partial (${alt.remaining_shortage} short)`}
+                                                ? " Full"
+                                                : ` Partial (${alt.remaining_shortage} short)`}
                                             </option>
                                           ),
                                         )}
@@ -3000,7 +2261,7 @@ const TechManageRequests: React.FC = () => {
                                             <strong>Selected:</strong>
                                             <div className="tech-manage-requests-selected-alternative-details">
                                               <span>
-                                                •{" "}
+                                                ΓÇó{" "}
                                                 {
                                                   suggestion.alternatives[
                                                     selectedAlternative[
@@ -3010,26 +2271,18 @@ const TechManageRequests: React.FC = () => {
                                                 }
                                               </span>
                                               <span>
-                                                •{" "}
+                                                ΓÇó{" "}
                                                 {
                                                   suggestion.alternatives[
                                                     selectedAlternative[
                                                       requestId
                                                     ].alternativeIdx
-                                                  ].needed_amount
+                                                  ].needed_bags
                                                 }{" "}
-                                                {suggestion.alternatives[
-                                                  selectedAlternative[requestId]
-                                                    .alternativeIdx
-                                                ].unit ||
-                                                  (suggestion.category ===
-                                                  "seed"
-                                                    ? "kg"
-                                                    : "bags")}{" "}
-                                                needed
+                                                bags needed
                                               </span>
                                               <span>
-                                                •{" "}
+                                                ΓÇó{" "}
                                                 {
                                                   suggestion.alternatives[
                                                     selectedAlternative[
@@ -3037,18 +2290,10 @@ const TechManageRequests: React.FC = () => {
                                                     ].alternativeIdx
                                                   ].available_bags
                                                 }{" "}
-                                                {suggestion.alternatives[
-                                                  selectedAlternative[requestId]
-                                                    .alternativeIdx
-                                                ].unit ||
-                                                  (suggestion.category ===
-                                                  "seed"
-                                                    ? "kg"
-                                                    : "bags")}{" "}
-                                                available
+                                                bags available
                                               </span>
                                               <span>
-                                                •{" "}
+                                                ΓÇó{" "}
                                                 {(
                                                   suggestion.alternatives[
                                                     selectedAlternative[
@@ -3064,7 +2309,7 @@ const TechManageRequests: React.FC = () => {
                                     </div>
                                   ) : (
                                     <div className="tech-manage-requests-no-alternatives">
-                                      ❌ No suitable alternatives available
+                                      No suitable alternatives available
                                       {suggestion.recommendation
                                         ?.next_steps && (
                                         <div className="tech-manage-requests-recommendation">
@@ -3100,8 +2345,8 @@ const TechManageRequests: React.FC = () => {
                                   className="tech-manage-requests-btn-apply-alternative"
                                 >
                                   {applyingAlternative[requestId]
-                                    ? "⏳ Applying..."
-                                    : "✅ Apply Selected Alternative"}
+                                    ? "Applying..."
+                                    : "Apply Selected Alternative"}
                                 </button>
                               </div>
                             )}
@@ -3130,44 +2375,13 @@ const TechManageRequests: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && deleteTarget && (
-        <div className="tech-manage-delete-modal-overlay">
-          <div className="tech-manage-delete-modal">
-            <div className="tech-manage-delete-modal-icon">⚠️</div>
-            <h3 className="tech-manage-delete-modal-title">Confirm Delete</h3>
-            <p className="tech-manage-delete-modal-message">
-              Are you sure you want to delete the request from{" "}
-              <strong>{deleteTarget.name}</strong>?
-            </p>
-            <p className="tech-manage-delete-modal-warning">
-              This action cannot be undone.
-            </p>
-            <div className="tech-manage-delete-modal-actions">
-              <button
-                className="tech-manage-delete-modal-btn cancel"
-                onClick={cancelDelete}
-              >
-                Cancel
-              </button>
-              <button
-                className="tech-manage-delete-modal-btn delete"
-                onClick={confirmDelete}
-              >
-                Delete Request
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Toast Notification */}
       {toast.show && (
         <div className={`tech-toast-notification tech-toast-${toast.type}`}>
           <div className="tech-toast-icon">
-            {toast.type === "success" && "✅"}
-            {toast.type === "error" && "❌"}
-            {toast.type === "warning" && "⚠️"}
+            {toast.type === "success" && "✓"}
+            {toast.type === "error" && "✗"}
+            {toast.type === "warning" && "⚠"}
           </div>
           <div className="tech-toast-content">
             <span className="tech-toast-message">{toast.message}</span>
@@ -3175,9 +2389,7 @@ const TechManageRequests: React.FC = () => {
           <button
             className="tech-toast-close"
             onClick={() => setToast((prev) => ({ ...prev, show: false }))}
-          >
-            ×
-          </button>
+          ></button>
         </div>
       )}
     </div>

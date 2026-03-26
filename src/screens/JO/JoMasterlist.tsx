@@ -4,7 +4,6 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
-  deleteRsbsaSubmission,
   updateRsbsaSubmission,
   updateFarmParcel,
 } from "../../api";
@@ -17,7 +16,6 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
-import LandRecsIcon from "../../assets/images/landrecord.png";
 
 interface RSBSARecord {
   id: string;
@@ -166,16 +164,12 @@ const JoMasterlist: React.FC = () => {
   const [loadingParcels, setLoadingParcels] = useState(false);
   const [parcelErrors, setParcelErrors] = useState<Record<string, string>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-<<<<<<< HEAD
   const [menuPosition, setMenuPosition] = useState<{
     top: number;
     left: number;
   } | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
-=======
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
->>>>>>> 3405086e1de361b58526f3720d311f5faef5da57
+  const showArchived = false;
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -1038,7 +1032,7 @@ const JoMasterlist: React.FC = () => {
     <div className="jo-masterlist-page-container">
       <div className="jo-masterlist-page has-mobile-sidebar">
         {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -1104,12 +1098,20 @@ const JoMasterlist: React.FC = () => {
           </nav>
         </div>
         {/* Sidebar ends here */}
-        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
 
         {/* Main content starts here */}
         <div className="jo-masterlist-main-content">
           <div className="tech-incent-mobile-header">
-            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
             <div className="tech-incent-mobile-title">JO Masterlist</div>
           </div>
           <div className="jo-masterlist-dashboard-header">
