@@ -924,7 +924,6 @@ const TechMasterlist: React.FC = () => {
                         <td>{record.farmLocation}</td>
                         <td>{record.parcelArea}</td>
                         <td>{formatDate(record.dateSubmitted)}</td>
-                        <td>{record.completeness}%</td>
                         <td>
                           <button
                             className={`tech-masterlist-status-button tech-masterlist-${getStatusClass(record.status)}`}

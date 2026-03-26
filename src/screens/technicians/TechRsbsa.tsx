@@ -306,21 +306,93 @@ const TechRsbsa: React.FC = () => {
     return Array.from(barangays).sort();
   }, [registeredOwners]);
 
+  const getSubmissionDate = (record: RSBSARecord): Date | null => {
+    const candidates = [
+      record.dateSubmitted,
+      (record as any).date_submitted,
+      (record as any).submitted_at,
+      (record as any).created_at,
+      (record as any).createdAt,
+    ];
+
+    for (const rawValue of candidates) {
+      if (!rawValue) continue;
+      const parsedDate = new Date(rawValue);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    }
+
+    return null;
+  };
+
   // Registration trend: count farmers per month-year
   const registrationTrend = React.useMemo(() => {
-    const map = new Map<string, number>();
-    registeredOwners.forEach((rec) => {
-      const date = rec.dateSubmitted ? new Date(rec.dateSubmitted) : null;
-      if (!date || Number.isNaN(date.getTime())) return;
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      map.set(key, (map.get(key) || 0) + 1);
+    const map = new Map<string, { count: number; label: string }>();
+    const monthFormatter = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      year: "numeric",
     });
+
+    filteredOwners.forEach((rec) => {
+      const date = getSubmissionDate(rec);
+      if (!date) return;
+
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const existing = map.get(monthKey);
+
+      if (existing) {
+        map.set(monthKey, {
+          ...existing,
+          count: existing.count + 1,
+        });
+      } else {
+        map.set(monthKey, {
+          count: 1,
+          label: monthFormatter.format(date),
+        });
+      }
+    });
+
     // sort keys
     const entries = Array.from(map.entries()).sort((a, b) =>
       a[0].localeCompare(b[0]),
     );
-    return entries.map(([month, count]) => ({ month, count }));
-  }, [registeredOwners]);
+
+    return entries.map(([monthKey, value]) => ({
+      monthKey,
+      label: value.label,
+      count: value.count,
+    }));
+  }, [filteredOwners]);
+
+  const trendSummary = React.useMemo(() => {
+    if (registrationTrend.length === 0) {
+      return {
+        total: 0,
+        average: 0,
+        peakLabel: "N/A",
+        peakCount: 0,
+        latestLabel: "N/A",
+        latestCount: 0,
+      };
+    }
+
+    const total = registrationTrend.reduce((sum, item) => sum + item.count, 0);
+    const peak = registrationTrend.reduce((max, item) =>
+      item.count > max.count ? item : max,
+    );
+    const latest = registrationTrend[registrationTrend.length - 1];
+
+    return {
+      total,
+      average: total / registrationTrend.length,
+      peakLabel: peak.label,
+      peakCount: peak.count,
+      latestLabel: latest.label,
+      latestCount: latest.count,
+    };
+  }, [registrationTrend]);
 
   // Duplicate detection (same last name + first name + barangay)
   const duplicateMap = React.useMemo(() => {
@@ -601,22 +673,96 @@ const TechRsbsa: React.FC = () => {
                 </div>
 
                 {/* Registration trend chart */}
-                <div style={{ width: "100%", height: 160, margin: "12px 0" }}>
-                  <ResponsiveContainer>
-                    <LineChart data={registrationTrend}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="count"
-                        stroke="#1976d2"
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="tech-rsbsa-trend-card">
+                  <div className="tech-rsbsa-trend-header">
+                    <h3>Registration Trend</h3>
+                    <p>Monthly count based on current filtered records</p>
+                  </div>
+
+                  <div className="tech-rsbsa-trend-stats">
+                    <div className="tech-rsbsa-trend-stat">
+                      <span className="tech-rsbsa-trend-stat-label">Total</span>
+                      <span className="tech-rsbsa-trend-stat-value">
+                        {trendSummary.total}
+                      </span>
+                    </div>
+                    <div className="tech-rsbsa-trend-stat">
+                      <span className="tech-rsbsa-trend-stat-label">
+                        Avg / month
+                      </span>
+                      <span className="tech-rsbsa-trend-stat-value">
+                        {trendSummary.average.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="tech-rsbsa-trend-stat">
+                      <span className="tech-rsbsa-trend-stat-label">
+                        Peak month
+                      </span>
+                      <span className="tech-rsbsa-trend-stat-value">
+                        {trendSummary.peakLabel} ({trendSummary.peakCount})
+                      </span>
+                    </div>
+                    <div className="tech-rsbsa-trend-stat">
+                      <span className="tech-rsbsa-trend-stat-label">
+                        Latest
+                      </span>
+                      <span className="tech-rsbsa-trend-stat-value">
+                        {trendSummary.latestLabel} ({trendSummary.latestCount})
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="tech-rsbsa-trend-chart-wrap">
+                    {registrationTrend.length === 0 ? (
+                      <div className="tech-rsbsa-trend-empty">
+                        No registration dates available for the current filters.
+                      </div>
+                    ) : (
+                      <ResponsiveContainer>
+                        <LineChart
+                          data={registrationTrend}
+                          margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#e5e7eb"
+                          />
+                          <XAxis
+                            dataKey="label"
+                            tick={{ fontSize: 12, fill: "#6b7280" }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            allowDecimals={false}
+                            tick={{ fontSize: 12, fill: "#6b7280" }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              borderRadius: 8,
+                              border: "1px solid #e5e7eb",
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                            }}
+                            formatter={(value: number) => [
+                              `${value} farmer${value === 1 ? "" : "s"}`,
+                              "Registrations",
+                            ]}
+                            labelFormatter={(label) => `Month: ${label}`}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="count"
+                            stroke="#2f855a"
+                            strokeWidth={3}
+                            dot={{ r: 3, fill: "#2f855a" }}
+                            activeDot={{ r: 5 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
                 </div>
 
                 <div className="tech-rsbsa-table-container">

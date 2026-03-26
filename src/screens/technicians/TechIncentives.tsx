@@ -398,13 +398,6 @@ const TechIncentives: React.FC = () => {
                         Add Farmer
                       </button>
                       <button
-                        className="jo-incent-btn-action jo-incent-btn-edit"
-                        onClick={() => handleEditAllocation(allocation)}
-                        title="Edit Allocation"
-                      >
-                        Edit
-                      </button>
-                      <button
                         className="jo-incent-btn-action jo-incent-btn-manage"
                         onClick={() =>
                           navigate(
@@ -414,18 +407,6 @@ const TechIncentives: React.FC = () => {
                         title="Manage Request"
                       >
                         Manage
-                      </button>
-                      <button
-                        className="jo-incent-btn-action jo-incent-btn-delete"
-                        onClick={() =>
-                          handleDelete(
-                            allocation.id,
-                            formatSeasonName(allocation.season),
-                          )
-                        }
-                        title="Delete Allocation"
-                      >
-                        Delete
                       </button>
                     </div>
                   </div>

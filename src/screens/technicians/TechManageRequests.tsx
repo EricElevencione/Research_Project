@@ -1809,7 +1809,7 @@ const TechManageRequests: React.FC = () => {
                 {/* Requests Table */}
                 {filteredRequests.length === 0 ? (
                   <div className="empty-state">
-                    <div className="empty-icon">back</div>
+                    <div className="empty-icon">📋</div>
                     <h3>No Requests Found</h3>
                     <p>No farmer requests match your filters</p>
                   </div>
