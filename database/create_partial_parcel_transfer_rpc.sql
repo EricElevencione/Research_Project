@@ -123,8 +123,11 @@ BEGIN
   IF p_transfer_area_ha >= (v_parcel_area - 0.0001) THEN
     RAISE EXCEPTION USING
       ERRCODE = 'P0004',
-      MESSAGE = format('Transfer area %.2f must be less than parcel area %.2f for a partial split.',
-                        p_transfer_area_ha, v_parcel_area);
+      MESSAGE = format(
+        'Transfer area %s must be less than parcel area %s for a partial split.',
+        TO_CHAR(ROUND(p_transfer_area_ha::NUMERIC, 2), 'FM999999999999990.00'),
+        TO_CHAR(ROUND(v_parcel_area::NUMERIC, 2), 'FM999999999999990.00')
+      );
   END IF;
 
   v_remaining_area := ROUND((v_parcel_area - p_transfer_area_ha)::NUMERIC, 2);
@@ -159,7 +162,11 @@ BEGIN
     remaining_area_ha    = v_remaining_area,
     change_type          = 'TRANSFER_PARTIAL',
     change_reason        = v_reason,
-    notes                = FORMAT('Partial split %.2f ha to farmer %s', p_transfer_area_ha, p_recipient_farmer_id),
+    notes                = FORMAT(
+      'Partial split %s ha to farmer %s',
+      TO_CHAR(ROUND(p_transfer_area_ha::NUMERIC, 2), 'FM999999999999990.00'),
+      p_recipient_farmer_id
+    ),
     updated_at           = NOW()
   WHERE farm_parcel_id = p_farm_parcel_id
     AND is_current = TRUE;
@@ -189,7 +196,11 @@ BEGIN
       CASE WHEN COALESCE(fp.within_ancestral_domain,  'No') = 'Yes' THEN TRUE ELSE FALSE END,
       v_now, TRUE,
       'TRANSFER_PARTIAL', v_reason,
-      FORMAT('Partial split %.2f ha to farmer %s', p_transfer_area_ha, p_recipient_farmer_id),
+      FORMAT(
+        'Partial split %s ha to farmer %s',
+        TO_CHAR(ROUND(p_transfer_area_ha::NUMERIC, 2), 'FM999999999999990.00'),
+        p_recipient_farmer_id
+      ),
       NOW(), NOW()
     FROM rsbsa_farm_parcels fp
     WHERE fp.id = p_farm_parcel_id;
@@ -275,7 +286,11 @@ BEGIN
     CASE WHEN COALESCE(v_within_domain, 'No') = 'Yes' THEN TRUE ELSE FALSE END,
     v_now, TRUE,
     'TRANSFER_PARTIAL', v_reason,
-    FORMAT('Partial split %.2f ha from farmer %s', p_transfer_area_ha, p_donor_farmer_id),
+    FORMAT(
+      'Partial split %s ha from farmer %s',
+      TO_CHAR(ROUND(p_transfer_area_ha::NUMERIC, 2), 'FM999999999999990.00'),
+      p_donor_farmer_id
+    ),
     NOW(), NOW()
   );
 
@@ -321,7 +336,11 @@ BEGIN
     v_now,
     LOWER(COALESCE(p_transfer_mode, 'voluntary')),
     v_reason,
-    FORMAT('Partial split: %.2f ha of parcel %s', p_transfer_area_ha, p_farm_parcel_id),
+    FORMAT(
+      'Partial split: %s ha of parcel %s',
+      TO_CHAR(ROUND(p_transfer_area_ha::NUMERIC, 2), 'FM999999999999990.00'),
+      p_farm_parcel_id
+    ),
     NOW()
   )
   RETURNING id INTO v_transfer_id;

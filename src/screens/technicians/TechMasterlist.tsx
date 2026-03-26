@@ -98,8 +98,27 @@ const TechMasterlist: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedOwnershipType, setSelectedOwnershipType] =
     useState<string>("all");
+  const [updateNotification, setUpdateNotification] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({
+    show: false,
+    type: "success",
+    message: "",
+  });
 
   const isActive = (path: string) => location.pathname === path;
+
+  const showUpdateNotification = (
+    message: string,
+    type: "success" | "error",
+  ) => {
+    setUpdateNotification({ show: true, type, message });
+    setTimeout(() => {
+      setUpdateNotification((prev) => ({ ...prev, show: false }));
+    }, 3200);
+  };
 
   useEffect(() => {
     fetchRSBSARecords();
@@ -466,8 +485,11 @@ const TechMasterlist: React.FC = () => {
 
       // Clear any existing errors
       setError(null);
+      showUpdateNotification("Farmer status updated successfully.", "success");
     } catch (err: any) {
-      setError(`Failed to update farmer status: ${err.message}`);
+      const errorMessage = `Failed to update farmer status: ${err.message}`;
+      setError(errorMessage);
+      showUpdateNotification(errorMessage, "error");
     }
   };
 
@@ -950,6 +972,27 @@ const TechMasterlist: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {updateNotification.show && (
+          <div
+            className={`tech-masterlist-update-toast ${updateNotification.type}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="tech-masterlist-update-toast-message">
+              {updateNotification.message}
+            </span>
+            <button
+              className="tech-masterlist-update-toast-close"
+              onClick={() =>
+                setUpdateNotification((prev) => ({ ...prev, show: false }))
+              }
+              aria-label="Close notification"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Print Filter Modal */}
         {showPrintModal && (

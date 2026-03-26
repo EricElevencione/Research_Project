@@ -366,6 +366,21 @@ const TechRsbsa: React.FC = () => {
     }));
   }, [filteredOwners]);
 
+  const sortedFilteredOwners = React.useMemo(() => {
+    return [...filteredOwners].sort((a, b) => {
+      const dateA = getSubmissionDate(a);
+      const dateB = getSubmissionDate(b);
+
+      // Keep records with missing dates at the bottom.
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+
+      // Newest first.
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [filteredOwners]);
+
   const trendSummary = React.useMemo(() => {
     if (registrationTrend.length === 0) {
       return {
@@ -784,7 +799,7 @@ const TechRsbsa: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredOwners.length === 0 ? (
+                      {sortedFilteredOwners.length === 0 ? (
                         <tr>
                           <td colSpan={12} className="tech-rsbsa-no-data">
                             {searchTerm
@@ -793,7 +808,7 @@ const TechRsbsa: React.FC = () => {
                           </td>
                         </tr>
                       ) : (
-                        filteredOwners.map((record) => {
+                        sortedFilteredOwners.map((record) => {
                           const parcelArea = record.parcelArea
                             ? record.parcelArea.includes("hectares")
                               ? record.parcelArea

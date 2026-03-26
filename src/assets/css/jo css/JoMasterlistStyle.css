@@ -501,6 +501,57 @@
   background: #218838;
 }
 
+/* Update Notification Toast */
+.jo-masterlist-update-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 12000;
+  min-width: 320px;
+  max-width: 460px;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border: 1px solid transparent;
+}
+
+.jo-masterlist-update-toast.success {
+  background: #ecfdf3;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+
+.jo-masterlist-update-toast.error {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.jo-masterlist-update-toast-message {
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.jo-masterlist-update-toast-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  min-width: 20px;
+}
+
+.jo-masterlist-update-toast-close:hover {
+  opacity: 0.8;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .jo-masterlist-filters-section {
@@ -533,5 +584,13 @@
   .jo-masterlist-edit-modal {
     width: 95%;
     max-height: 95vh;
+  }
+
+  .jo-masterlist-update-toast {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    min-width: unset;
+    max-width: unset;
   }
 }

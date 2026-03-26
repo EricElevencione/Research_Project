@@ -8,13 +8,15 @@ import { supabase } from "../../supabase";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface PartialSplitRpcResult {
-  new_recipient_parcel_id: number;
-  new_donor_history_id: number;
-  new_recipient_history_id: number;
+  new_parcel_id: number;
+  new_parcel_number: string;
+  donor_remaining_ha: number;
+  recipient_area_ha: number;
+  transfer_id: number;
 }
 
 export interface ParcelSplitInput {
-  farm_parcel_id: number;     // rsbsa_farm_parcels.id
+  farm_parcel_id: number; // rsbsa_farm_parcels.id
   parcel_number: string;
   farm_location_barangay: string;
   total_farm_area_ha: number; // current area (donor side)
@@ -76,9 +78,10 @@ export function usePartialTransfer() {
     (parcels: ParcelSplitInput[]): string => {
       if (parcelScope !== "partial") return "";
 
-      const activeParcels = parcels.filter(
-        (p) => parcelSplitInputs[p.farm_parcel_id] !== "",
-      );
+      const activeParcels = parcels.filter((p) => {
+        const input = parcelSplitInputs[p.farm_parcel_id];
+        return input !== "" && input !== undefined;
+      });
 
       if (activeParcels.length === 0) {
         return "Enter the transfer area (ha) for at least one parcel.";
@@ -126,8 +129,14 @@ export function usePartialTransfer() {
       transferReason: string;
       transferDate: string; // YYYY-MM-DD
     }): Promise<PartialSplitRpcResult[]> => {
-      const { parcels, donorFarmerId, recipientFarmerId, transferMode, transferReason, transferDate } =
-        params;
+      const {
+        parcels,
+        donorFarmerId,
+        recipientFarmerId,
+        transferMode,
+        transferReason,
+        transferDate,
+      } = params;
 
       setPartialSubmitting(true);
       setPartialError("");
@@ -136,12 +145,26 @@ export function usePartialTransfer() {
       const results: PartialSplitRpcResult[] = [];
 
       try {
-        const activeParcels = parcels.filter(
-          (p) => parcelSplitInputs[p.farm_parcel_id] !== "",
-        );
+        const activeParcels = parcels.filter((p) => {
+          const input = parcelSplitInputs[p.farm_parcel_id];
+          return input !== "" && input !== undefined;
+        });
+
+        if (activeParcels.length === 0) {
+          throw new Error(
+            "Enter the transfer area (ha) for at least one parcel.",
+          );
+        }
 
         for (const parcel of activeParcels) {
-          const transferAreaHa = Number(parcelSplitInputs[parcel.farm_parcel_id]);
+          const rawInput = parcelSplitInputs[parcel.farm_parcel_id];
+          const transferAreaHa = Number(rawInput);
+
+          if (!Number.isFinite(transferAreaHa) || transferAreaHa <= 0) {
+            throw new Error(
+              `Parcel ${parcel.parcel_number}: transfer area must be greater than 0.`,
+            );
+          }
 
           const { data, error } = await supabase.rpc(
             "execute_partial_parcel_transfer",

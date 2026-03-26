@@ -163,6 +163,15 @@ const JoMasterlist: React.FC = () => {
   const [editingParcels, setEditingParcels] = useState<Parcel[]>([]);
   const [loadingParcels, setLoadingParcels] = useState(false);
   const [parcelErrors, setParcelErrors] = useState<Record<string, string>>({});
+  const [updateNotification, setUpdateNotification] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({
+    show: false,
+    type: "success",
+    message: "",
+  });
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{
     top: number;
@@ -172,6 +181,16 @@ const JoMasterlist: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const isActive = (path: string) => location.pathname === path;
+
+  const showUpdateNotification = (
+    message: string,
+    type: "success" | "error",
+  ) => {
+    setUpdateNotification({ show: true, type, message });
+    setTimeout(() => {
+      setUpdateNotification((prev) => ({ ...prev, show: false }));
+    }, 3200);
+  };
 
   // Fetch farmer details when row is clicked
   const fetchFarmerDetails = async (farmerId: string) => {
@@ -853,6 +872,10 @@ const JoMasterlist: React.FC = () => {
           if (hasErrors) {
             setParcelErrors(newErrors);
             setEditError("Please fix all parcel area errors before saving");
+            showUpdateNotification(
+              "Please fix all parcel area errors before saving.",
+              "error",
+            );
             return;
           }
         }
@@ -865,6 +888,10 @@ const JoMasterlist: React.FC = () => {
           (normalizedAge === null || normalizedAge < 18)
         ) {
           setEditError("Age must be a valid number and at least 18 years old");
+          showUpdateNotification(
+            "Age must be a valid number and at least 18 years old.",
+            "error",
+          );
           return;
         }
 
@@ -1015,15 +1042,18 @@ const JoMasterlist: React.FC = () => {
         setEditingParcels([]);
         setParcelErrors({});
 
-        // Show success message (optional)
-        console.log("Record updated successfully");
+        showUpdateNotification(
+          "Land owner information updated successfully.",
+          "success",
+        );
       } catch (error) {
         console.error("Error updating record:", error);
-        setEditError(
+        const message =
           error instanceof Error
             ? error.message
-            : "Failed to update record. Please try again.",
-        );
+            : "Failed to update record. Please try again.";
+        setEditError(message);
+        showUpdateNotification(message, "error");
       }
     }
   };
@@ -1322,6 +1352,27 @@ const JoMasterlist: React.FC = () => {
             </div>
           )}
         </div>
+
+        {updateNotification.show && (
+          <div
+            className={`jo-masterlist-update-toast ${updateNotification.type}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="jo-masterlist-update-toast-message">
+              {updateNotification.message}
+            </span>
+            <button
+              className="jo-masterlist-update-toast-close"
+              onClick={() =>
+                setUpdateNotification((prev) => ({ ...prev, show: false }))
+              }
+              aria-label="Close notification"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Edit Modal */}
         {editingRecord && (
