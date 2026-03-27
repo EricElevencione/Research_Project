@@ -14,6 +14,7 @@ import IncentivesIcon from "../../assets/images/incentives.png";
 interface BarangayRow {
   barangay: string;
   farmerCount: number;
+  parcelCount: number;
   plottedParcels: number;
   plottedFarmers: number;
   isComplete: boolean;
@@ -274,7 +275,7 @@ const TechnicianDashboard: React.FC = () => {
                     <tr>
                       <th>Barangay</th>
                       <th>Farmers</th>
-                      <th>Plots</th>
+                      <th>Parcels Plotted</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -300,9 +301,9 @@ const TechnicianDashboard: React.FC = () => {
                           <td className="brgy-count">{row.farmerCount}</td>
                           <td className="brgy-count">
                             <span
-                              className={`plot-ratio ${row.isComplete ? "complete" : row.plottedFarmers > 0 ? "partial" : "none"}`}
+                              className={`plot-ratio ${row.isComplete ? "complete" : row.plottedParcels > 0 ? "partial" : "none"}`}
                             >
-                              {row.plottedFarmers}/{row.farmerCount}
+                              {row.plottedParcels}/{row.parcelCount}
                             </span>
                           </td>
                         </tr>

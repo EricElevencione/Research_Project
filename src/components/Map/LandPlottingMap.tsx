@@ -92,34 +92,122 @@ const DrawAreaTracker: React.FC<{ targetAreaHa?: number }> = ({
       edgeLabelsRef.current = [];
     };
 
+    const isSameLatLng = (a: L.LatLng, b: L.LatLng) => {
+      const epsilon = 1e-10;
+      return (
+        Math.abs(a.lat - b.lat) <= epsilon && Math.abs(a.lng - b.lng) <= epsilon
+      );
+    };
+
+    const normalizePolygonVertices = (latlngs: L.LatLng[]) => {
+      const points = (latlngs || []).filter(
+        (pt) => pt && Number.isFinite(pt.lat) && Number.isFinite(pt.lng),
+      );
+
+      if (points.length < 2) return points;
+
+      // Some Leaflet polygon rings repeat the first point as the last point.
+      // Remove that duplicate so the closing segment is not skipped or double-counted.
+      if (isSameLatLng(points[0], points[points.length - 1])) {
+        return points.slice(0, -1);
+      }
+
+      return points;
+    };
+
+    const buildPolygonSegments = (vertices: L.LatLng[]) => {
+      const segments: Array<[L.LatLng, L.LatLng]> = [];
+      if (vertices.length < 2) return segments;
+
+      for (let i = 0; i < vertices.length - 1; i++) {
+        segments.push([vertices[i], vertices[i + 1]]);
+      }
+
+      if (vertices.length >= 3) {
+        segments.push([vertices[vertices.length - 1], vertices[0]]);
+      }
+
+      return segments;
+    };
+
+    const drawEdgeLabelsAndGetPerimeter = (vertices: L.LatLng[]) => {
+      clearEdgeLabels();
+
+      const segments = buildPolygonSegments(vertices);
+      let totalPerimeter = 0;
+
+      segments.forEach(([a, b]) => {
+        const distM = a.distanceTo(b);
+        if (!Number.isFinite(distM) || distM <= 0) {
+          return;
+        }
+
+        totalPerimeter += distM;
+
+        const midLat = (a.lat + b.lat) / 2;
+        const midLng = (a.lng + b.lng) / 2;
+
+        const label = L.marker([midLat, midLng], {
+          icon: L.divIcon({
+            className: "edge-distance-label",
+            html: `<span style="
+              background:rgba(15,23,42,0.85);color:#fbbf24;font-size:11px;
+              font-weight:700;padding:2px 6px;border-radius:4px;
+              white-space:nowrap;pointer-events:none;
+              box-shadow:0 1px 4px rgba(0,0,0,0.4);
+            ">${formatDistanceLabel(distM)}</span>`,
+            iconSize: [0, 0],
+            iconAnchor: [0, 0],
+          }),
+          interactive: false,
+        });
+
+        label.addTo(map);
+        edgeLabelsRef.current.push(label);
+      });
+
+      return totalPerimeter;
+    };
+
     // Use the target area from the prop; read it fresh each call
     const getTargetM2 = () => {
-      const ha = targetAreaHa && targetAreaHa > 0 ? targetAreaHa : 1;
-      return ha * 10000;
+      if (!targetAreaHa || targetAreaHa <= 0) return null;
+      return targetAreaHa * 10000;
     };
 
     const updateOverlay = (m2: number, perimeter: number) => {
       const { mainText, subText } = formatAreaHtml(m2);
       const targetM2 = getTargetM2();
-      const targetHa = targetM2 / 10000;
-      const pct = Math.min(200, (m2 / targetM2) * 100); // allow up to 200% to show overshoot
-      const barPct = Math.min(100, pct);
-      const isOver = m2 > targetM2 * 1.05; // 5% tolerance
-      const isClose = pct >= 90 && !isOver;
-      const barColor = isOver
-        ? "#ef4444"
-        : isClose
-          ? "#22c55e"
-          : pct >= 50
-            ? "#f59e0b"
-            : "#3b82f6";
-      const statusText = isOver
-        ? `<span style="color:#ef4444;font-weight:700">⚠ Exceeds target by ${(pct - 100).toFixed(1)}%</span>`
-        : isClose
-          ? `<span style="color:#22c55e;font-weight:600">✓ Close to target</span>`
-          : "";
-      const targetLabel =
-        targetHa >= 1 ? `${targetHa} ha` : `${targetM2.toLocaleString()} m²`;
+      const hasTarget = typeof targetM2 === "number" && targetM2 > 0;
+      const targetHa = hasTarget ? targetM2 / 10000 : 0;
+      const pct = hasTarget ? Math.min(200, (m2 / targetM2) * 100) : 0;
+      const barPct = hasTarget ? Math.min(100, pct) : 0;
+      const isOver = hasTarget ? m2 > targetM2 * 1.05 : false;
+      const isClose = hasTarget ? pct >= 90 && !isOver : false;
+      const barColor = !hasTarget
+        ? "#64748b"
+        : isOver
+          ? "#ef4444"
+          : isClose
+            ? "#22c55e"
+            : pct >= 50
+              ? "#f59e0b"
+              : "#3b82f6";
+      const statusText = !hasTarget
+        ? `<span style="color:#94a3b8;font-weight:600">Target area unavailable</span>`
+        : isOver
+          ? `<span style="color:#ef4444;font-weight:700">⚠ Exceeds target by ${(pct - 100).toFixed(1)}%</span>`
+          : isClose
+            ? `<span style="color:#22c55e;font-weight:600">✓ Close to target</span>`
+            : "";
+      const targetLabel = !hasTarget
+        ? "N/A"
+        : targetHa >= 1
+          ? `${targetHa} ha`
+          : `${targetM2.toLocaleString()} m²`;
+      const percentLabel = hasTarget
+        ? `${Math.min(pct, 999).toFixed(1)}%`
+        : "--";
 
       overlay.style.display = "block";
       overlay.innerHTML = `
@@ -128,7 +216,7 @@ const DrawAreaTracker: React.FC<{ targetAreaHa?: number }> = ({
         <div style="font-size:12px;color:#94a3b8;margin-top:2px">${subText}</div>
         <div style="margin-top:8px">
           <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:3px">
-            <span>Target: ${targetLabel}</span><span>${Math.min(pct, 999).toFixed(1)}%</span>
+            <span>Target: ${targetLabel}</span><span>${percentLabel}</span>
           </div>
           <div style="background:#1e293b;border-radius:4px;height:6px;overflow:hidden">
             <div style="height:100%;width:${barPct}%;background:${barColor};border-radius:4px;transition:width 0.2s ease"></div>
@@ -153,50 +241,21 @@ const DrawAreaTracker: React.FC<{ targetAreaHa?: number }> = ({
     };
 
     const onDrawVertex = (e: any) => {
-      const latlngs: L.LatLng[] = [];
-      e.layers.eachLayer((layer: any) => latlngs.push(layer.getLatLng()));
+      const rawLatLngs: L.LatLng[] = [];
+      e.layers.eachLayer((layer: any) => rawLatLngs.push(layer.getLatLng()));
+      const vertices = normalizePolygonVertices(rawLatLngs);
 
       // Calculate area
       let areaM2 = 0;
-      if (latlngs.length >= 3) {
-        areaM2 = (L as any).GeometryUtil.geodesicArea(latlngs);
+      if (vertices.length >= 3) {
+        areaM2 = (L as any).GeometryUtil.geodesicArea(vertices);
       }
 
-      // Calculate edge distances + perimeter, place labels on each segment
-      clearEdgeLabels();
-      let totalPerimeter = 0;
-      for (let i = 0; i < latlngs.length; i++) {
-        const a = latlngs[i];
-        const b = latlngs[(i + 1) % latlngs.length];
-        if (i === latlngs.length - 1 && latlngs.length < 3) continue;
+      const totalPerimeter = drawEdgeLabelsAndGetPerimeter(vertices);
 
-        const distM = a.distanceTo(b);
-        totalPerimeter += distM;
-
-        const midLat = (a.lat + b.lat) / 2;
-        const midLng = (a.lng + b.lng) / 2;
-
-        const label = L.marker([midLat, midLng], {
-          icon: L.divIcon({
-            className: "edge-distance-label",
-            html: `<span style="
-              background:rgba(15,23,42,0.85);color:#fbbf24;font-size:11px;
-              font-weight:700;padding:2px 6px;border-radius:4px;
-              white-space:nowrap;pointer-events:none;
-              box-shadow:0 1px 4px rgba(0,0,0,0.4);
-            ">${formatDistanceLabel(distM)}</span>`,
-            iconSize: [0, 0],
-            iconAnchor: [0, 0],
-          }),
-          interactive: false,
-        });
-        label.addTo(map);
-        edgeLabelsRef.current.push(label);
-      }
-
-      if (latlngs.length >= 2) {
+      if (vertices.length >= 2) {
         updateOverlay(areaM2, totalPerimeter);
-      } else if (latlngs.length === 1) {
+      } else if (vertices.length === 1) {
         updateOverlay(0, 0);
       }
     };
@@ -205,36 +264,11 @@ const DrawAreaTracker: React.FC<{ targetAreaHa?: number }> = ({
       // When drawing finishes, show the final area in the overlay (don't hide it)
       const layer = e.layer;
       if (layer && layer.getLatLngs) {
-        const latlngs: L.LatLng[] = layer.getLatLngs()[0] || [];
-        if (latlngs.length >= 3) {
-          const areaM2 = (L as any).GeometryUtil.geodesicArea(latlngs);
-          let totalPerimeter = 0;
-          // Clear vertex edge labels, then place final edge labels
-          clearEdgeLabels();
-          for (let i = 0; i < latlngs.length; i++) {
-            const a = latlngs[i];
-            const b = latlngs[(i + 1) % latlngs.length];
-            const distM = a.distanceTo(b);
-            totalPerimeter += distM;
-            const midLat = (a.lat + b.lat) / 2;
-            const midLng = (a.lng + b.lng) / 2;
-            const label = L.marker([midLat, midLng], {
-              icon: L.divIcon({
-                className: "edge-distance-label",
-                html: `<span style="
-                  background:rgba(15,23,42,0.85);color:#fbbf24;font-size:11px;
-                  font-weight:700;padding:2px 6px;border-radius:4px;
-                  white-space:nowrap;pointer-events:none;
-                  box-shadow:0 1px 4px rgba(0,0,0,0.4);
-                ">${formatDistanceLabel(distM)}</span>`,
-                iconSize: [0, 0],
-                iconAnchor: [0, 0],
-              }),
-              interactive: false,
-            });
-            label.addTo(map);
-            edgeLabelsRef.current.push(label);
-          }
+        const rawLatLngs: L.LatLng[] = layer.getLatLngs()[0] || [];
+        const vertices = normalizePolygonVertices(rawLatLngs);
+        if (vertices.length >= 3) {
+          const areaM2 = (L as any).GeometryUtil.geodesicArea(vertices);
+          const totalPerimeter = drawEdgeLabelsAndGetPerimeter(vertices);
           updateOverlay(areaM2, totalPerimeter);
         }
       }
@@ -283,6 +317,7 @@ interface LandPlottingMapProps {
   geometryPreview?: any;
   shapes?: any[];
   polygonExistsForCurrentParcel?: boolean;
+  currentParcelNumber?: string | number | null;
   targetAreaHa?: number; // Target parcel area in hectares for draw progress
 }
 
@@ -303,6 +338,8 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       drawingDisabled,
       geometryPreview,
       shapes,
+      polygonExistsForCurrentParcel,
+      currentParcelNumber,
       targetAreaHa,
     },
     ref,
@@ -683,26 +720,28 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             </div>`;
     };
 
-    // Helper: Check if a polygon exists for the current parcel (local check)
-    function polygonExistsForParcel(newLayer: any) {
-      // Only check for Polygon type
-      const newParcelNumber =
-        newLayer.options &&
-        newLayer.options.properties &&
-        newLayer.options.properties.parcelNumber;
+    const normalizeParcelNumber = (value: any) => {
+      if (value === null || value === undefined || value === "") return "";
+      return String(value).trim();
+    };
+
+    // Helper: Check if a polygon exists for the currently active parcel (local check)
+    function polygonExistsForParcel() {
+      const activeParcelNumber = normalizeParcelNumber(currentParcelNumber);
       return drawnShapes.some((shape) => {
         const geo =
           shape.layer && shape.layer.toGeoJSON && shape.layer.toGeoJSON();
+        const shapeParcelNumber = normalizeParcelNumber(
+          shape?.properties?.parcelNumber ?? shape?.properties?.parcel_number,
+        );
+
         return (
           geo &&
           geo.geometry &&
           geo.geometry.type === "Polygon" &&
-          ((newParcelNumber !== undefined &&
-            shape.properties &&
-            shape.properties.parcelNumber === newParcelNumber) ||
-            (newParcelNumber === undefined &&
-              shape.properties &&
-              shape.properties.parcelNumber === undefined))
+          (activeParcelNumber
+            ? shapeParcelNumber === activeParcelNumber
+            : !shapeParcelNumber)
         );
       });
     }
@@ -720,7 +759,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       // --- Polygon Specific Logic ---
       if (geometryType === "Polygon") {
         // Use local check for existing polygon for this parcel
-        if (polygonExistsForParcel(layer)) {
+        if (polygonExistsForCurrentParcel || polygonExistsForParcel()) {
           // Show modal and store the layer to remove after confirmation
           setShowPolygonLimitModal(true);
           setPendingLayerToRemove(layer);
@@ -1080,7 +1119,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           height: "100%",
           width: "100%",
           position: "relative",
-          border: "2px solid red",
         }}
       >
         <PolygonLimitModal />
@@ -1153,26 +1191,24 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             })()}
 
           <FeatureGroup ref={featureGroupRef}>
-            {!drawingDisabled && (
-              <EditControl
-                position="topright"
-                onCreated={onCreated}
-                onEdited={onEdited}
-                onDeleted={onDeleted}
-                draw={{
-                  polyline: false,
-                  polygon: { showArea: true },
-                  rectangle: false,
-                  circle: false,
-                  marker: true,
-                  circlemarker: false,
-                }}
-                edit={{
-                  featureGroup: featureGroupRef.current || undefined,
-                  remove: true,
-                }}
-              />
-            )}
+            <EditControl
+              position="topright"
+              onCreated={onCreated}
+              onEdited={onEdited}
+              onDeleted={onDeleted}
+              draw={{
+                polyline: false,
+                polygon: drawingDisabled ? false : { showArea: true },
+                rectangle: false,
+                circle: false,
+                marker: true,
+                circlemarker: false,
+              }}
+              edit={{
+                featureGroup: featureGroupRef.current || undefined,
+                remove: true,
+              }}
+            />
             {/* Geometry preview overlay */}
             {geometryPreview && (
               <GeoJSON

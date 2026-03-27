@@ -59,6 +59,25 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
   const [boundaryLoading, setBoundaryLoading] = useState(true);
   const [boundaryError, setBoundaryError] = useState<string | null>(null);
 
+  const formatDisplayDate = (value: string | null | undefined) => {
+    if (!value) return "N/A";
+    const parsed = new Date(value);
+    if (!Number.isFinite(parsed.getTime())) return "N/A";
+    return parsed.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const escapeHtml = (value: unknown) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
   // Helper to fetch crop/planting info by farmer name and location (uses Supabase directly)
   const fetchCropPlantingInfo = async (
     surname: string,
@@ -81,7 +100,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
           ffrsId,
           farmerId,
         });
-        return { owner: null, tenants: [] };
+        return { owner: null, tenants: [], landHistory: [] };
       }
       console.log("Fetching crop info via Supabase for:", {
         surname,
@@ -107,7 +126,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
       return result;
     } catch (err) {
       console.error("Error fetching crop/planting info:", err);
-      return { owner: null, tenants: [] };
+      return { owner: null, tenants: [], landHistory: [] };
     }
   };
 
@@ -633,14 +652,18 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         const cell = document.getElementById(
                           `crops-cell-${featureKey}`,
                         );
+                        const landHistory = Array.isArray(cropInfo?.landHistory)
+                          ? cropInfo.landHistory
+                          : [];
 
                         if (cell) {
                           if (
                             !cropInfo.owner &&
-                            cropInfo.tenants.length === 0
+                            cropInfo.tenants.length === 0 &&
+                            landHistory.length === 0
                           ) {
                             cell.innerHTML =
-                              '<div class="farmland-popup-no-data" style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No planting information found.</div>';
+                              '<div class="farmland-popup-no-data" style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No owner or history information found for this parcel.</div>';
                           } else {
                             let html = `<div class="farmland-popup-crops-list" style="max-height: 300px; overflow-y: auto;">`;
 
@@ -735,6 +758,80 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                 });
                                 html += `</div></div>`;
                               });
+                              html += `</div>`;
+                            }
+
+                            // Land history section
+                            if (landHistory.length > 0) {
+                              if (
+                                cropInfo.owner ||
+                                cropInfo.tenants.length > 0
+                              ) {
+                                html += `<hr style="border: none; border-top: 2px dashed #d1d5db; margin: 12px 0;">`;
+                              }
+
+                              const sortedHistory = [...landHistory].sort(
+                                (a: any, b: any) => {
+                                  const aTime = new Date(
+                                    a?.period_start_date || a?.created_at || 0,
+                                  ).getTime();
+                                  const bTime = new Date(
+                                    b?.period_start_date || b?.created_at || 0,
+                                  ).getTime();
+                                  return bTime - aTime;
+                                },
+                              );
+
+                              html += `<div class="farmland-popup-history-section">`;
+                              html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: #1d4ed8; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">🕒 Land History</div>`;
+
+                              sortedHistory.forEach((record: any) => {
+                                const changeType =
+                                  record?.change_type || "Update";
+                                const periodStart = formatDisplayDate(
+                                  record?.period_start_date ||
+                                    record?.created_at,
+                                );
+                                const periodEnd = formatDisplayDate(
+                                  record?.period_end_date,
+                                );
+                                const actorName =
+                                  record?.farmer_name ||
+                                  record?.land_owner_name ||
+                                  "Unknown";
+                                const parcelNo =
+                                  record?.parcel_number ||
+                                  feature.properties?.parcel_number ||
+                                  "N/A";
+
+                                const transferredArea = Number(
+                                  record?.transferred_area_ha,
+                                );
+                                const totalArea = Number(
+                                  record?.total_farm_area_ha,
+                                );
+                                const areaLabel = Number.isFinite(
+                                  transferredArea,
+                                )
+                                  ? `${transferredArea.toFixed(4)} ha transferred`
+                                  : Number.isFinite(totalArea)
+                                    ? `${totalArea.toFixed(4)} ha`
+                                    : "Area N/A";
+
+                                html += `<div class="farmland-popup-history-card" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; margin-bottom: 8px;">`;
+                                html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;">`;
+                                html += `<span style="font-weight:600;color:#1e3a8a;font-size:0.82em;">${escapeHtml(changeType)}</span>`;
+                                html += `<span style="font-size:0.72em;color:#334155;">Parcel ${escapeHtml(parcelNo)}</span>`;
+                                html += `</div>`;
+                                html += `<div style="font-size:0.76em;color:#334155;margin-bottom:4px;">👤 ${escapeHtml(actorName)}</div>`;
+                                html += `<div style="font-size:0.74em;color:#475569;margin-bottom:4px;">📅 ${periodStart}${periodEnd !== "N/A" ? ` → ${periodEnd}` : ""}</div>`;
+                                html += `<div style="font-size:0.74em;color:#0f172a;margin-bottom:4px;">📐 ${escapeHtml(areaLabel)}</div>`;
+                                if (record?.notes) {
+                                  html += `<div style="font-size:0.72em;color:#475569;background:#dbeafe;padding:6px;border-radius:6px;">📝 ${escapeHtml(record.notes)}</div>`;
+                                }
+                                html += `</div>`;
+                              });
+
                               html += `</div>`;
                             }
 

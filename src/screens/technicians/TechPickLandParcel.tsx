@@ -381,7 +381,7 @@ const TechPickLandParcel: React.FC = () => {
                           >
                             <div className="parcel-card-top">
                               <span className="parcel-number-pill">
-                                Parcel {parcel.parcelNumber}
+                                Parcel: {parcel.parcelNumber}
                               </span>
                               <span className="parcel-area-pill">
                                 {parcel.totalFarmArea.toFixed(2)} ha
@@ -404,22 +404,6 @@ const TechPickLandParcel: React.FC = () => {
                             <div className="parcel-meta-grid">
                               <div className="parcel-meta-item">
                                 <span className="parcel-meta-label">
-                                  Commodity
-                                </span>
-                                <strong className="parcel-meta-value">
-                                  {parcel.cropCommodity || "N/A"}
-                                </strong>
-                              </div>
-                              <div className="parcel-meta-item">
-                                <span className="parcel-meta-label">
-                                  Farm Type
-                                </span>
-                                <strong className="parcel-meta-value">
-                                  {parcel.farmType || "N/A"}
-                                </strong>
-                              </div>
-                              <div className="parcel-meta-item">
-                                <span className="parcel-meta-label">
                                   Created
                                 </span>
                                 <strong className="parcel-meta-value">
@@ -437,19 +421,6 @@ const TechPickLandParcel: React.FC = () => {
                             </div>
 
                             <div className="parcel-card-footer">
-                              <div className="parcel-card-status-line">
-                                <span
-                                  className={`status-badge ${plotStatusClass}`}
-                                >
-                                  {parcel.plotStatus || "Unplotted"}
-                                </span>
-                                {parcel.organicPractitioner && (
-                                  <span className="parcel-organic-badge">
-                                    Organic
-                                  </span>
-                                )}
-                              </div>
-
                               <span
                                 className={`parcel-ownership-badge ${ownershipMeta.className}`}
                               >

@@ -743,23 +743,34 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
       });
     });
 
-    // Build a lookup: ffrs_id (uppercase) -> set of plotted barangays (lowercase)
+    const toParcelToken = (value: any) => {
+      const normalized = normalize(String(value ?? ""));
+      return normalized || "*";
+    };
+    const getPlotParcelToken = (plot: any) =>
+      toParcelToken(plot?.parcel_number ?? plot?.parcelNumber);
+
+    // Build a lookup: ffrs_id (uppercase) -> set of plotted parcel keys
+    // Key format: "barangay::parcel_number" (parcel_number = "*" for legacy rows)
     const plottedByFfrs = new Map<string, Set<string>>();
     plots.forEach((p: any) => {
       if (!p.ffrs_id) return;
       const key = p.ffrs_id.toUpperCase();
+      const barangay = normalize(p.barangay);
+      if (!barangay) return;
+      const parcelKey = `${barangay}::${getPlotParcelToken(p)}`;
       if (!plottedByFfrs.has(key)) plottedByFfrs.set(key, new Set());
-      if (p.barangay) plottedByFfrs.get(key)!.add(normalize(p.barangay));
+      plottedByFfrs.get(key)!.add(parcelKey);
     });
 
     // Fallback lookup for plots that were saved without ffrs_id (legacy data).
-    // Key: "firstname|surname|barangay" (all normalised)
+    // Key: "firstname|surname|barangay|parcel_number" (all normalised)
     const plottedByNameBrgy = new Set<string>();
     plots.forEach((p: any) => {
       if (p.ffrs_id) return; // already handled by ffrs path
       if (p.first_name && p.surname && p.barangay) {
         plottedByNameBrgy.add(
-          `${normalize(p.first_name)}|${normalize(p.surname)}|${normalize(p.barangay)}`,
+          `${normalize(p.first_name)}|${normalize(p.surname)}|${normalize(p.barangay)}|${getPlotParcelToken(p)}`,
         );
       }
     });
@@ -772,21 +783,30 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
       const info = farmerFfrsMap.get(parcel.submission_id);
       const ffrs = info?.ffrs || "";
       const parcelBrgy = normalize(parcel.farm_location_barangay || "");
+      const parcelToken = toParcelToken(parcel.parcel_number);
+      const parcelKey = `${parcelBrgy}::${parcelToken}`;
+      const parcelWildcardKey = `${parcelBrgy}::*`;
 
-      // Primary: ffrs + barangay match
+      // Primary: ffrs + barangay + parcel_number match
       const plottedBrgys = ffrs ? plottedByFfrs.get(ffrs) : undefined;
-      let isPlotted = plottedBrgys ? plottedBrgys.has(parcelBrgy) : false;
+      let isPlotted = plottedBrgys
+        ? plottedBrgys.has(parcelKey) || plottedBrgys.has(parcelWildcardKey)
+        : false;
 
-      // Fallback: name + barangay match (covers legacy plots with empty ffrs_id)
+      // Fallback: name + barangay + parcel_number (covers legacy plots with empty ffrs_id)
       if (!isPlotted && info && parcelBrgy) {
-        const nameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}`;
-        isPlotted = plottedByNameBrgy.has(nameKey);
+        const nameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}|${parcelToken}`;
+        const wildcardNameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}|*`;
+        isPlotted =
+          plottedByNameBrgy.has(nameKey) ||
+          plottedByNameBrgy.has(wildcardNameKey);
       }
 
       return {
         ...parcel,
         ffrs,
         parcelBrgy,
+        parcelToken,
         isPlotted,
       };
     });
@@ -802,14 +822,17 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         const info = farmerFfrsMap.get(f.id);
         const ffrs = info?.ffrs || "";
         const parcelBrgy = normalize(f.BARANGAY || "");
+        const parcelWildcardKey = `${parcelBrgy}::*`;
 
-        // Primary: ffrs + barangay match
+        // Primary: ffrs + barangay fallback for synthetic rows
         const plottedBrgys = ffrs ? plottedByFfrs.get(ffrs) : undefined;
-        let isPlotted = plottedBrgys ? plottedBrgys.has(parcelBrgy) : false;
+        let isPlotted = plottedBrgys
+          ? plottedBrgys.has(parcelWildcardKey)
+          : false;
 
         // Fallback: name + barangay match
         if (!isPlotted && info && parcelBrgy) {
-          const nameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}`;
+          const nameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}|*`;
           isPlotted = plottedByNameBrgy.has(nameKey);
         }
 
@@ -818,6 +841,7 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
           farm_location_barangay: f.BARANGAY || "",
           ffrs,
           parcelBrgy,
+          parcelToken: "*",
           isPlotted,
           synthetic: true,
         };
@@ -887,7 +911,8 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
           parcelCount: parcelsInBrgy.length,
           plottedParcels: plottedInBrgy.length,
           isComplete:
-            uniqueFarmers.size > 0 && plottedFarmers.size >= uniqueFarmers.size,
+            parcelsInBrgy.length > 0 &&
+            plottedInBrgy.length >= parcelsInBrgy.length,
         };
       })
       .filter((row) => row.parcelCount > 0);
