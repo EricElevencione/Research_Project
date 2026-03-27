@@ -44,6 +44,10 @@ interface RSBSARecord {
   id: string;
   referenceNumber: string;
   farmerName: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  extName?: string;
   farmerAddress: string;
   farmLocation: string;
   gender: string;
@@ -269,6 +273,64 @@ const JoRsbsa: React.FC = () => {
     }
   };
 
+  const getNameParts = (record: RSBSARecord) => {
+    const explicitLastName = (record.lastName || "").trim();
+    const explicitFirstName = (record.firstName || "").trim();
+    const explicitMiddleName = (record.middleName || "").trim();
+    const explicitExtName = (record.extName || "").trim();
+
+    if (
+      explicitLastName ||
+      explicitFirstName ||
+      explicitMiddleName ||
+      explicitExtName
+    ) {
+      return {
+        lastName: explicitLastName,
+        firstName: explicitFirstName,
+        middleName: explicitMiddleName,
+        extName: explicitExtName,
+      };
+    }
+
+    const fullName = (record.farmerName || "").trim();
+    if (!fullName) {
+      return {
+        lastName: "",
+        firstName: "",
+        middleName: "",
+        extName: "",
+      };
+    }
+
+    const [rawLastName, ...remainingParts] = fullName.split(",");
+    const lastName = (rawLastName || "").trim();
+    const remainingName = remainingParts.join(" ").trim();
+    const tokens = remainingName
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+    if (tokens.length === 0) {
+      return {
+        lastName,
+        firstName: "",
+        middleName: "",
+        extName: "",
+      };
+    }
+
+    const extPattern = /^(Jr\.?|Sr\.?|I|II|III|IV|V)$/i;
+    const hasExt = extPattern.test(tokens[tokens.length - 1]);
+
+    return {
+      lastName,
+      firstName: tokens[0] || "",
+      middleName: tokens.slice(1, hasExt ? -1 : undefined).join(" "),
+      extName: hasExt ? tokens[tokens.length - 1] : "",
+    };
+  };
+
   return (
     <div className="rsbsa-admin-page-container">
       <div className="rsbsa-admin-page">
@@ -302,7 +364,7 @@ const JoRsbsa: React.FC = () => {
               className={`sidebar-nav-item ${isActive("/audit-trail") ? "active" : ""}`}
               onClick={() => navigate("/audit-trail")}
             >
-              <span className="nav-icon">[ ]</span>
+              <span className="nav-icon">📋</span>
               <span className="nav-text">Audit Trail</span>
             </button>
 
@@ -313,7 +375,7 @@ const JoRsbsa: React.FC = () => {
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
               </span>
-              <span className="nav-text">Incentives</span>
+              <span className="nav-text">Subsidy</span>
             </button>
 
             <button
@@ -415,11 +477,8 @@ const JoRsbsa: React.FC = () => {
                         </tr>
                       ) : (
                         registeredOwners.map((record) => {
-                          const nameParts = record.farmerName.split(", ");
-                          const lastName = nameParts[0] || "";
-                          const firstName = nameParts[1] || "";
-                          const middleName = nameParts[2] || "";
-                          const extName = nameParts[3] || "";
+                          const { lastName, firstName, middleName, extName } =
+                            getNameParts(record);
                           const area =
                             typeof record.totalFarmArea === "number"
                               ? record.totalFarmArea
@@ -433,7 +492,7 @@ const JoRsbsa: React.FC = () => {
                             >
                               <td>{lastName}</td>
                               <td>{firstName}</td>
-                              <td>{middleName}</td>
+                              <td>{middleName || "N/A"}</td>
                               <td>{extName}</td>
                               <td>{record.gender || "N/A"}</td>
                               <td>
@@ -484,7 +543,7 @@ const JoRsbsa: React.FC = () => {
                 className="farmer-modal-close"
                 onClick={() => setShowModal(false)}
               >
-                x
+                ×
               </button>
             </div>
             <div className="farmer-modal-body">

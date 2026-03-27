@@ -643,7 +643,7 @@ const JoIncentives: React.FC = () => {
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
               </span>
-              <span className="nav-text">Incentives</span>
+              <span className="nav-text">Subsidy</span>
             </button>
 
             <button
@@ -680,7 +680,7 @@ const JoIncentives: React.FC = () => {
         {/* Main content starts here */}
         <div className="jo-incent-main-content">
           <div className="jo-incent-dashboard-header">
-            <h2 className="jo-incent-page-header">Farmer Incentive Requests</h2>
+            <h2 className="jo-incent-page-header">Farmer Allocations</h2>
             <p className="jo-incent-page-subtitle">
               Add farmer requests to available regional allocations
             </p>

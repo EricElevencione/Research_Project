@@ -106,7 +106,7 @@ const Dashboard: React.FC = () => {
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
               </span>
-              <span className="nav-text">Incentives</span>
+              <span className="nav-text">Subsidy</span>
             </button>
 
             <button
@@ -197,10 +197,6 @@ const Dashboard: React.FC = () => {
                 <div className="admin-dashboard-card-header">
                   <div>
                     <h3>🗺️ Barangay Farmer Coverage</h3>
-                    <p className="admin-dashboard-card-subtitle">
-                      Color-coded by farmer density — dark green = well-covered,
-                      red = zero farmers registered
-                    </p>
                   </div>
                 </div>
                 <div className="admin-dashboard-map-container">

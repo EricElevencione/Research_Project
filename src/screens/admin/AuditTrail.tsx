@@ -2012,7 +2012,7 @@ const AuditTrail: React.FC = () => {
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
               </span>
-              <span className="nav-text">Incentives</span>
+              <span className="nav-text">Subsidy</span>
             </button>
 
             <button
@@ -2085,18 +2085,6 @@ const AuditTrail: React.FC = () => {
                     </span>
                   </div>
                   <div className="admin-audit-filters-actions">
-                    <button
-                      className="admin-audit-btn admin-audit-btn-primary"
-                      onClick={() => fetchLogs()}
-                    >
-                      Refresh
-                    </button>
-                    <button
-                      className="admin-audit-btn admin-audit-btn-secondary"
-                      onClick={clearFilters}
-                    >
-                      Clear Filters
-                    </button>
                     <div className="admin-audit-export-dropdown">
                       <button className="admin-audit-btn admin-audit-btn-export">
                         Export
@@ -2115,20 +2103,7 @@ const AuditTrail: React.FC = () => {
 
                 <div className="admin-audit-filters-row">
                   <div className="admin-audit-filter-group">
-                    <label>User Name</label>
-                    <input
-                      type="text"
-                      value={userNameFilter}
-                      onChange={(e) => {
-                        setUserNameFilter(e.target.value);
-                        setPagination((prev) => ({ ...prev, page: 1 }));
-                      }}
-                      placeholder="Filter by actor name"
-                    />
-                  </div>
-
-                  <div className="admin-audit-filter-group">
-                    <label>Keyword Search</label>
+                    <label>Search</label>
                     <input
                       type="text"
                       value={searchFilter}

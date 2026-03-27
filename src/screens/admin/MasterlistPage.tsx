@@ -12,14 +12,12 @@ import { saveAs } from "file-saver";
 import "../../assets/css/admin css/MasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
-import FarmlandMap from "../../components/Map/FarmlandMap";
 import LogoImage from "../../assets/images/Logo.png";
 import HomeIcon from "../../assets/images/home.png";
 import RSBSAIcon from "../../assets/images/rsbsa.png";
 import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
-import LandRecsIcon from "../../assets/images/landrecord.png";
 
 interface FarmerDetailModal {
   id: string;
@@ -63,22 +61,33 @@ interface RSBSARecord {
   };
 }
 
+type SortKey = "dateSubmitted" | "status" | "parcelArea";
+type SortDirection = "asc" | "desc";
+type ExportFormat = "csv" | "xlsx" | "pdf";
+
 const Masterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState("overview");
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [farmerStatus, setFarmerStatus] = useState<
-    "all" | "active" | "inactive"
-  >("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFarmer, setSelectedFarmer] =
     useState<FarmerDetailModal | null>(null);
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({ key: "dateSubmitted", direction: "desc" });
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [openQuickActionsId, setOpenQuickActionsId] = useState<string | null>(
+    null,
+  );
+  const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -225,6 +234,27 @@ const Masterlist: React.FC = () => {
     fetchRSBSARecords();
   }, []);
 
+  useEffect(() => {
+    const handleWindowClick = () => {
+      setOpenQuickActionsId(null);
+      setShowBulkExportMenu(false);
+    };
+
+    window.addEventListener("click", handleWindowClick);
+    return () => window.removeEventListener("click", handleWindowClick);
+  }, []);
+
+  useEffect(() => {
+    setSelectedRecordIds((previous) => {
+      const validIds = new Set(rsbsaRecords.map((record) => record.id));
+      const next = new Set<string>();
+      previous.forEach((id) => {
+        if (validIds.has(id)) next.add(id);
+      });
+      return next;
+    });
+  }, [rsbsaRecords]);
+
   const fetchRSBSARecords = async () => {
     try {
       const response = await getRsbsaSubmissions();
@@ -298,12 +328,6 @@ const Masterlist: React.FC = () => {
 
   const filteredRecords = rsbsaRecords
     .filter((record) => {
-      // Match based on the status field from database
-      const matchesFarmerStatus =
-        farmerStatus === "all" ||
-        (farmerStatus === "active" && record.status === "Active Farmer") ||
-        (farmerStatus === "inactive" && record.status === "Not Active");
-
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         record.farmerName.toLowerCase().includes(q) ||
@@ -311,13 +335,79 @@ const Masterlist: React.FC = () => {
         record.farmerAddress.toLowerCase().includes(q) ||
         record.farmLocation.toLowerCase().includes(q);
 
-      return matchesFarmerStatus && matchesSearch;
+      return matchesSearch;
     })
-    .sort(
-      (a, b) =>
-        new Date(b.dateSubmitted).getTime() -
-        new Date(a.dateSubmitted).getTime(),
-    );
+    .sort((a, b) => {
+      const factor = sortConfig.direction === "asc" ? 1 : -1;
+
+      if (sortConfig.key === "dateSubmitted") {
+        return (
+          (new Date(a.dateSubmitted).getTime() -
+            new Date(b.dateSubmitted).getTime()) *
+          factor
+        );
+      }
+
+      if (sortConfig.key === "status") {
+        return a.status.localeCompare(b.status) * factor;
+      }
+
+      const parseAreaValue = (value: string) => {
+        const parsed = parseFloat(String(value).replace(/[^0-9.-]/g, ""));
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
+      return (
+        (parseAreaValue(a.parcelArea) - parseAreaValue(b.parcelArea)) * factor
+      );
+    });
+
+  const selectedRecords = useMemo(
+    () => rsbsaRecords.filter((record) => selectedRecordIds.has(record.id)),
+    [rsbsaRecords, selectedRecordIds],
+  );
+
+  const allFilteredSelected =
+    filteredRecords.length > 0 &&
+    filteredRecords.every((record) => selectedRecordIds.has(record.id));
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedRecordIds((previous) => {
+      const next = new Set(previous);
+      if (allFilteredSelected) {
+        filteredRecords.forEach((record) => next.delete(record.id));
+      } else {
+        filteredRecords.forEach((record) => next.add(record.id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectRecord = (id: string) => {
+    setSelectedRecordIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSortChange = (key: SortKey) => {
+    setSortConfig((previous) => {
+      if (previous.key === key) {
+        return {
+          key,
+          direction: previous.direction === "asc" ? "desc" : "asc",
+        };
+      }
+      return { key, direction: "desc" };
+    });
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (sortConfig.key !== key) return "↕";
+    return sortConfig.direction === "asc" ? "▲" : "▼";
+  };
 
   // ── Status Counts ──
   const statusCounts = useMemo(() => {
@@ -342,7 +432,26 @@ const Masterlist: React.FC = () => {
     };
   }, [rsbsaRecords]);
 
-  // ── Export helpers ──
+  const formatDate = (iso: string) => {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleDateString();
+    } catch {
+      return "—";
+    }
+  };
+
+  const formatParcelArea = (parcelArea: string) => {
+    const parsed = parseFloat(parcelArea);
+    if (Number.isFinite(parsed)) {
+      return `${parsed.toLocaleString(undefined, {
+        minimumFractionDigits: parsed % 1 === 0 ? 0 : 2,
+        maximumFractionDigits: 2,
+      })} ha`;
+    }
+    return parcelArea && parcelArea !== "—" ? parcelArea : "—";
+  };
+
   const exportColumns = [
     "FFRS System Generated",
     "Farmer Name",
@@ -354,86 +463,116 @@ const Masterlist: React.FC = () => {
     "Farmer Status",
   ];
 
-  const recordToRow = (r: RSBSARecord) => [
-    r.referenceNumber,
-    r.farmerName,
-    r.farmerAddress,
-    r.farmLocation,
-    r.parcelCount,
-    r.parcelArea,
-    formatDate(r.dateSubmitted),
-    r.status || "Not Active",
+  const recordToExportRow = (record: RSBSARecord) => [
+    record.referenceNumber,
+    record.farmerName,
+    record.farmerAddress,
+    record.farmLocation,
+    record.parcelCount,
+    formatParcelArea(record.parcelArea),
+    formatDate(record.dateSubmitted),
+    record.status || "Not Active",
   ];
 
-  const handleExportPDF = () => {
-    const doc = new jsPDF({ orientation: "landscape" });
-    const now = new Date().toLocaleDateString();
+  const downloadCsv = (records: RSBSARecord[], filename: string) => {
+    const escapeCell = (value: string | number) =>
+      `"${String(value).replace(/"/g, '""')}"`;
 
+    const csvRows = [
+      exportColumns.map(escapeCell).join(","),
+      ...records.map((record) =>
+        recordToExportRow(record).map(escapeCell).join(","),
+      ),
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportRecords = (
+    records: RSBSARecord[],
+    format: ExportFormat,
+    label: string,
+  ) => {
+    if (records.length === 0) {
+      alert("No records selected for export.");
+      return;
+    }
+
+    const stamp = new Date().toISOString().split("T")[0];
+    const normalizedLabel = label.replace(/\s+/g, "_");
+
+    if (format === "csv") {
+      downloadCsv(records, `${normalizedLabel}_${stamp}.csv`);
+      return;
+    }
+
+    if (format === "xlsx") {
+      const wsData = [exportColumns, ...records.map(recordToExportRow)];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws["!cols"] = exportColumns.map((_, colIndex) => ({
+        wch:
+          Math.max(
+            exportColumns[colIndex].length,
+            ...records.map(
+              (record) => String(recordToExportRow(record)[colIndex]).length,
+            ),
+          ) + 2,
+      }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Masterlist");
+      const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([buffer], { type: "application/octet-stream" }),
+        `${normalizedLabel}_${stamp}.xlsx`,
+      );
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: "landscape" });
     doc.setFontSize(16);
     doc.text("Farmer Masterlist", 14, 18);
     doc.setFontSize(10);
-
-    const filterInfo: string[] = [];
-    if (farmerStatus !== "all")
-      filterInfo.push(
-        `Status: ${farmerStatus === "active" ? "Active" : "Inactive"}`,
-      );
-    if (searchQuery) filterInfo.push(`Search: "${searchQuery}"`);
-    if (filterInfo.length > 0) {
-      doc.text(`Filters: ${filterInfo.join(" | ")}`, 14, 25);
-    }
-    doc.text(
-      `Generated: ${now}  •  ${filteredRecords.length} record(s)`,
-      14,
-      filterInfo.length > 0 ? 31 : 25,
-    );
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 25);
 
     autoTable(doc, {
       head: [exportColumns],
-      body: filteredRecords.map(recordToRow),
-      startY: filterInfo.length > 0 ? 36 : 30,
+      body: records.map(recordToExportRow),
+      startY: 30,
       styles: { fontSize: 8, cellPadding: 3 },
       headStyles: {
-        fillColor: [160, 200, 120],
-        textColor: [51, 51, 51],
+        fillColor: [16, 185, 129],
+        textColor: [255, 255, 255],
         fontStyle: "bold",
       },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
+      alternateRowStyles: { fillColor: [245, 251, 244] },
     });
 
-    doc.save(`Masterlist_${now.replace(/\//g, "-")}.pdf`);
+    doc.save(`${normalizedLabel}_${stamp}.pdf`);
   };
 
-  const handleExportExcel = () => {
-    const now = new Date().toLocaleDateString();
-    const wsData = [exportColumns, ...filteredRecords.map(recordToRow)];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Auto-fit column widths
-    ws["!cols"] = exportColumns.map((_, ci) => ({
-      wch:
-        Math.max(
-          exportColumns[ci].length,
-          ...filteredRecords.map((r) => String(recordToRow(r)[ci]).length),
-        ) + 2,
-    }));
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Masterlist");
-    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(
-      new Blob([buf], { type: "application/octet-stream" }),
-      `Masterlist_${now.replace(/\//g, "-")}.xlsx`,
-    );
+  const getStatusClassName = (status: string) => {
+    if (status === "Active Farmer") return "masterlist-admin-status-approved";
+    if (status === "Submitted") return "masterlist-admin-status-submitted";
+    return "masterlist-admin-status-not-approved";
   };
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleDateString();
-    } catch {
-      return "—";
-    }
+  const getFarmerInitials = (fullName: string) => {
+    const cleaned = (fullName || "")
+      .replace(/,/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "");
+    return cleaned.join("") || "NA";
   };
 
   return (
@@ -482,7 +621,7 @@ const Masterlist: React.FC = () => {
                 <span className="nav-icon">
                   <img src={IncentivesIcon} alt="Incentives" />
                 </span>
-                <span className="nav-text">Incentives</span>
+                <span className="nav-text">Subsidy</span>
               </button>
 
               <button
@@ -511,7 +650,12 @@ const Masterlist: React.FC = () => {
           {/* Main content starts here */}
           <div className="masterlist-admin-main-content">
             <div className="masterlist-admin-dashboard-header">
-              <h2 className="masterlist-admin-page-header">Masterlist</h2>
+              <div className="masterlist-admin-page-left">
+                <h2 className="masterlist-admin-page-header">Masterlist</h2>
+                <p className="masterlist-admin-page-subtitle">
+                  Browse all RSBSA farmers, filter by status, and manage records
+                </p>
+              </div>
             </div>
 
             {/* Status Count Cards */}
@@ -534,14 +678,6 @@ const Masterlist: React.FC = () => {
                     </span>
                     <span className="masterlist-card-label">Active</span>
                   </div>
-                  <div className="masterlist-card-bar">
-                    <div
-                      className="masterlist-card-bar-fill masterlist-bar-active"
-                      style={{
-                        width: `${statusCounts.total ? (statusCounts.active / statusCounts.total) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
                 </div>
                 <div className="masterlist-status-card masterlist-card-inactive">
                   <div className="masterlist-card-icon">❌</div>
@@ -550,31 +686,6 @@ const Masterlist: React.FC = () => {
                       {statusCounts.inactive}
                     </span>
                     <span className="masterlist-card-label">Inactive</span>
-                  </div>
-                  <div className="masterlist-card-bar">
-                    <div
-                      className="masterlist-card-bar-fill masterlist-bar-inactive"
-                      style={{
-                        width: `${statusCounts.total ? (statusCounts.inactive / statusCounts.total) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="masterlist-status-card masterlist-card-submitted">
-                  <div className="masterlist-card-icon">📋</div>
-                  <div className="masterlist-card-info">
-                    <span className="masterlist-card-count">
-                      {statusCounts.submitted}
-                    </span>
-                    <span className="masterlist-card-label">Submitted</span>
-                  </div>
-                  <div className="masterlist-card-bar">
-                    <div
-                      className="masterlist-card-bar-fill masterlist-bar-submitted"
-                      style={{
-                        width: `${statusCounts.total ? (statusCounts.submitted / statusCounts.total) * 100 : 0}%`,
-                      }}
-                    />
                   </div>
                 </div>
               </div>
@@ -592,66 +703,160 @@ const Masterlist: React.FC = () => {
                     className="masterlist-admin-search-input"
                   />
                 </div>
-
-                <div className="masterlist-admin-status-filter">
-                  <select
-                    value={farmerStatus}
-                    onChange={(e) =>
-                      setFarmerStatus(
-                        e.target.value as "all" | "active" | "inactive",
-                      )
-                    }
-                    className="masterlist-admin-status-select"
-                  >
-                    <option value="all">All Farmers</option>
-                    <option value="active">Active Farmers</option>
-                    <option value="inactive">Inactive Farmers</option>
-                  </select>
-                </div>
-
-                {/* Export Buttons */}
-                <div className="masterlist-export-buttons">
-                  <button
-                    className="masterlist-export-btn masterlist-export-pdf"
-                    onClick={handleExportPDF}
-                    disabled={filteredRecords.length === 0}
-                  >
-                    📄 Export PDF
-                  </button>
-                  <button
-                    className="masterlist-export-btn masterlist-export-excel"
-                    onClick={handleExportExcel}
-                    disabled={filteredRecords.length === 0}
-                  >
-                    📊 Export Excel
-                  </button>
-                </div>
               </div>
+
+              {!loading && !error && (
+                <div className="masterlist-admin-table-meta">
+                  <span>
+                    Showing {filteredRecords.length} of {rsbsaRecords.length}{" "}
+                    farmers
+                  </span>
+                  <span>Tip: Click a row or use Quick Actions.</span>
+                </div>
+              )}
+
+              {!loading && !error && selectedRecordIds.size > 0 && (
+                <div className="masterlist-admin-bulk-toolbar">
+                  <span className="masterlist-admin-bulk-count">
+                    {selectedRecordIds.size} farmer
+                    {selectedRecordIds.size === 1 ? "" : "s"} selected
+                  </span>
+                  <div className="masterlist-admin-bulk-actions">
+                    <div
+                      className="masterlist-admin-bulk-export-wrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        className="masterlist-admin-bulk-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowBulkExportMenu((previous) => !previous);
+                        }}
+                      >
+                        Multi-Export ▾
+                      </button>
+                      {showBulkExportMenu && (
+                        <div className="masterlist-admin-bulk-menu">
+                          <button
+                            className="masterlist-admin-quick-item"
+                            onClick={() => {
+                              exportRecords(
+                                selectedRecords,
+                                "csv",
+                                "Masterlist_Selected",
+                              );
+                              setShowBulkExportMenu(false);
+                            }}
+                          >
+                            Export Selected CSV
+                          </button>
+                          <button
+                            className="masterlist-admin-quick-item"
+                            onClick={() => {
+                              exportRecords(
+                                selectedRecords,
+                                "xlsx",
+                                "Masterlist_Selected",
+                              );
+                              setShowBulkExportMenu(false);
+                            }}
+                          >
+                            Export Selected Excel
+                          </button>
+                          <button
+                            className="masterlist-admin-quick-item"
+                            onClick={() => {
+                              exportRecords(
+                                selectedRecords,
+                                "pdf",
+                                "Masterlist_Selected",
+                              );
+                              setShowBulkExportMenu(false);
+                            }}
+                          >
+                            Export Selected PDF
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className="masterlist-admin-bulk-btn masterlist-admin-bulk-btn-clear"
+                      onClick={() => setSelectedRecordIds(new Set())}
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* RSBSA Records Table */}
               <div className="masterlist-admin-table-container">
                 <table className="masterlist-admin-farmers-table">
                   <thead>
                     <tr>
-                      {[
-                        "FFRS System Generated",
-                        "Farmer Name",
-                        "Farmer Address",
-                        "Parcel Address",
-                        "No. of Parcels",
-                        "Parcel Area",
-                        "Date Submitted",
-                        "Farmer Status",
-                      ].map((header) => (
-                        <th key={header}>{header}</th>
-                      ))}
+                      <th className="masterlist-admin-checkbox-col">
+                        <input
+                          type="checkbox"
+                          className="masterlist-admin-header-checkbox"
+                          checked={allFilteredSelected}
+                          onChange={toggleSelectAllFiltered}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Select all visible farmers"
+                        />
+                      </th>
+                      <th>Farmer</th>
+                      <th>Address</th>
+                      <th>
+                        <button
+                          className={`masterlist-admin-sort-btn ${
+                            sortConfig.key === "parcelArea" ? "is-active" : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSortChange("parcelArea");
+                          }}
+                        >
+                          Parcel Area{" "}
+                          <span>{getSortIndicator("parcelArea")}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button
+                          className={`masterlist-admin-sort-btn ${
+                            sortConfig.key === "dateSubmitted"
+                              ? "is-active"
+                              : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSortChange("dateSubmitted");
+                          }}
+                        >
+                          Date Submitted{" "}
+                          <span>{getSortIndicator("dateSubmitted")}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button
+                          className={`masterlist-admin-sort-btn ${
+                            sortConfig.key === "status" ? "is-active" : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSortChange("status");
+                          }}
+                        >
+                          Status <span>{getSortIndicator("status")}</span>
+                        </button>
+                      </th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading && (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={7}
                           className="masterlist-admin-loading-cell"
                         >
                           Loading...
@@ -661,7 +866,7 @@ const Masterlist: React.FC = () => {
 
                     {error && !loading && (
                       <tr>
-                        <td colSpan={8} className="masterlist-admin-error-cell">
+                        <td colSpan={7} className="masterlist-admin-error-cell">
                           Error: {error}
                         </td>
                       </tr>
@@ -671,44 +876,127 @@ const Masterlist: React.FC = () => {
                       !error &&
                       filteredRecords.length > 0 &&
                       filteredRecords.map((record) => {
+                        const statusText = record.status || "Not Active";
+
                         return (
                           <tr
                             key={record.id}
+                            className="masterlist-admin-table-row"
                             onClick={() => fetchFarmerDetails(record.id)}
-                            style={{ cursor: "pointer" }}
                           >
-                            <td>{record.referenceNumber}</td>
-                            <td>{record.farmerName}</td>
-                            <td>{record.farmerAddress}</td>
-                            <td>{record.farmLocation}</td>
-                            <td>{record.parcelCount}</td>
-                            <td>{record.parcelArea}</td>
-                            <td>{formatDate(record.dateSubmitted)}</td>
+                            <td className="masterlist-admin-checkbox-col">
+                              <input
+                                type="checkbox"
+                                className="masterlist-admin-row-checkbox"
+                                checked={selectedRecordIds.has(record.id)}
+                                onChange={() => toggleSelectRecord(record.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`Select ${record.farmerName}`}
+                              />
+                            </td>
+                            <td>
+                              <div className="masterlist-admin-farmer-cell">
+                                <div className="masterlist-admin-farmer-avatar">
+                                  {getFarmerInitials(record.farmerName)}
+                                </div>
+                                <div className="masterlist-admin-farmer-meta">
+                                  <span className="masterlist-admin-farmer-name">
+                                    {record.farmerName}
+                                  </span>
+                                  <span className="masterlist-admin-farmer-ref">
+                                    Ref: {record.referenceNumber}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="masterlist-admin-address-cell">
+                                <span className="masterlist-admin-address-primary">
+                                  {record.farmerAddress}
+                                </span>
+                                <span className="masterlist-admin-address-secondary">
+                                  Parcel: {record.farmLocation}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="masterlist-admin-parcel-cell">
+                                <span className="masterlist-admin-parcel-count">
+                                  {record.parcelCount} parcel
+                                  {record.parcelCount === 1 ? "" : "s"}
+                                </span>
+                                <span className="masterlist-admin-parcel-area">
+                                  {formatParcelArea(record.parcelArea)}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="masterlist-admin-date">
+                                {formatDate(record.dateSubmitted)}
+                              </span>
+                            </td>
                             <td>
                               <span
-                                className={`masterlist-admin-status-pill ${
-                                  record.status === "Active Farmer"
-                                    ? "masterlist-admin-status-approved"
-                                    : record.status === "Submitted"
-                                      ? "masterlist-admin-status-submitted"
-                                      : "masterlist-admin-status-not-approved"
-                                }`}
+                                className={`masterlist-admin-status-pill ${getStatusClassName(statusText)}`}
                               >
-                                {record.status || "Not Active"}
+                                {statusText}
                               </span>
+                            </td>
+                            <td className="masterlist-admin-actions-cell">
+                              <div
+                                className="masterlist-admin-quick-actions"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  className="masterlist-admin-view-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenQuickActionsId((previous) =>
+                                      previous === record.id ? null : record.id,
+                                    );
+                                  }}
+                                >
+                                  Quick Actions ▾
+                                </button>
+                                {openQuickActionsId === record.id && (
+                                  <div className="masterlist-admin-quick-menu">
+                                    <button
+                                      className="masterlist-admin-quick-item"
+                                      onClick={() => {
+                                        fetchFarmerDetails(record.id);
+                                        setOpenQuickActionsId(null);
+                                      }}
+                                    >
+                                      View
+                                    </button>
+                                    <button
+                                      className="masterlist-admin-quick-item"
+                                      onClick={() => {
+                                        exportRecords(
+                                          [record],
+                                          "xlsx",
+                                          `Farmer_${record.referenceNumber}`,
+                                        );
+                                        setOpenQuickActionsId(null);
+                                      }}
+                                    >
+                                      Export Single Record
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
                       })}
 
-                    {!loading &&
-                      !error &&
-                      filteredRecords.length === 0 &&
-                      Array.from({ length: 16 }).map((_, i) => (
-                        <tr key={`empty-${i}`}>
-                          <td colSpan={8}>&nbsp;</td>
-                        </tr>
-                      ))}
+                    {!loading && !error && filteredRecords.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="masterlist-admin-empty-cell">
+                          No farmers found for the selected filters.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

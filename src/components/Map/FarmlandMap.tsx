@@ -65,14 +65,21 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
     firstName: string,
     middleName: string,
     barangay: string,
+    ffrsId?: string,
+    farmerId?: string | number,
   ) => {
     try {
-      if ((!surname && !firstName) || !barangay) {
+      if (
+        (!surname && !firstName && !ffrsId && !farmerId) ||
+        (!barangay && !ffrsId && !farmerId)
+      ) {
         console.log("Missing required fields for crop/planting info:", {
           surname,
           firstName,
           middleName,
           barangay,
+          ffrsId,
+          farmerId,
         });
         return { owner: null, tenants: [] };
       }
@@ -81,12 +88,20 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
         firstName,
         middleName,
         barangay,
+        ffrsId,
+        farmerId,
       });
+      const identityHint = ffrsId
+        ? String(ffrsId)
+        : farmerId !== undefined && farmerId !== null && String(farmerId).trim()
+          ? `farmer_id:${String(farmerId).trim()}`
+          : undefined;
       const result = await getCropPlantingInfo(
         surname,
         firstName,
         middleName,
         barangay,
+        identityHint,
       );
       console.log("Crop info result:", result);
       return result;
@@ -525,6 +540,14 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                     feature.properties.firstName ||
                     feature.properties.first_name ||
                     "";
+                  const ffrsId =
+                    feature.properties.ffrs_id ||
+                    feature.properties.ffrsId ||
+                    "";
+                  const farmerId =
+                    feature.properties.farmer_id ||
+                    feature.properties.farmerId ||
+                    "";
                   const location = feature.properties.barangay || "";
                   // Use a unique ID based on feature properties (sanitized for DOM)
                   const featureId =
@@ -543,6 +566,10 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                     firstName,
                     "surname:",
                     surname,
+                    "ffrsId:",
+                    ffrsId,
+                    "farmerId:",
+                    farmerId,
                   );
 
                   // Initial popup content with crop/planting info
@@ -576,12 +603,22 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         feature.properties.middleName ||
                         feature.properties.middle_name ||
                         "";
+                      const ffrsId =
+                        feature.properties.ffrs_id ||
+                        feature.properties.ffrsId ||
+                        "";
+                      const farmerId =
+                        feature.properties.farmer_id ||
+                        feature.properties.farmerId ||
+                        "";
                       // Fetch crop/planting info
                       console.log("Fetching crop/planting info for:", {
                         surname,
                         firstName,
                         middleName,
                         barangay: location,
+                        ffrsId,
+                        farmerId,
                       });
                       console.log("Feature properties:", feature.properties);
                       const cropInfo = await fetchCropPlantingInfo(
@@ -589,6 +626,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         firstName,
                         middleName,
                         location,
+                        ffrsId,
+                        farmerId,
                       );
                       setTimeout(() => {
                         const cell = document.getElementById(

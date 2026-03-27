@@ -979,7 +979,7 @@ const ManageRequests: React.FC = () => {
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
               </span>
-              <span className="nav-text">Incentives</span>
+              <span className="nav-text">Subsidy</span>
             </button>
 
             <button
