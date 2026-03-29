@@ -1145,7 +1145,7 @@ const TechAddFarmerRequest: React.FC = () => {
                 : "Loading..."}
             </p>
             <button
-              className="tech-add-farmer-back-btn"
+              className="app-back-button"
               onClick={() =>
                 navigate(`/technician-manage-requests/${allocationId}`)
               }

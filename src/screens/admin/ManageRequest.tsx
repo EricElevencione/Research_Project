@@ -1023,7 +1023,7 @@ const ManageRequests: React.FC = () => {
               <h2 className="admin-req-page-header">View Farmer Requests</h2>
             </div>
             <button
-              className="admin-req-btn-back"
+              className="app-back-button"
               onClick={() => navigate("/incentives")}
             >
               ← Back to Allocations

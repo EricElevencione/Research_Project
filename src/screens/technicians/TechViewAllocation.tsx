@@ -526,7 +526,7 @@ const TechViewAllocation: React.FC = () => {
               <h3>Error Loading Allocation</h3>
               <p>{error || "Allocation not found"}</p>
               <button
-                className="jo-view-alloc-btn jo-view-alloc-btn-secondary"
+                className="app-back-button"
                 onClick={() => navigate("/technician-incentives")}
               >
                 Back to Allocations
@@ -657,10 +657,10 @@ const TechViewAllocation: React.FC = () => {
 
           <div className="jo-view-alloc-header-actions">
             <button
-              className="jo-view-alloc-btn jo-view-alloc-btn-secondary"
+              className="app-back-button"
               onClick={() => navigate("/technician-incentives")}
             >
-              Back
+              ← Back to Allocations
             </button>
             <button
               className="jo-view-alloc-btn jo-view-alloc-btn-primary"

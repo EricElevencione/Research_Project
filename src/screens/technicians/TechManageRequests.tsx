@@ -1446,10 +1446,10 @@ const TechManageRequests: React.FC = () => {
                 Add Farmer Request
               </button>
               <button
-                className="tech-manage-requests-back-btn"
+                className="app-back-button"
                 onClick={() => navigate("/technician-incentives")}
               >
-                back
+                ← Back
               </button>
             </div>
           </div>

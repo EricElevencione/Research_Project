@@ -1324,12 +1324,20 @@ const JoLandRegistry: React.FC = () => {
             </button>
           </nav>
         </div>
-        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
 
         {/* Main Content */}
         <div className="jo-land-registry-main-content">
           <div className="tech-incent-mobile-header">
-            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen((prev) => !prev)}>☰</button>
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
             <div className="tech-incent-mobile-title">JO Land Registry</div>
           </div>
           {/* Header */}
@@ -1380,6 +1388,7 @@ const JoLandRegistry: React.FC = () => {
                     <th>Barangay</th>
                     <th>Area (ha)</th>
                     <th>Since</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1408,8 +1417,13 @@ const JoLandRegistry: React.FC = () => {
                             : ""
                         }
                       >
-                        <td>
-                          <strong>{group.ffrs_code || "—"}</strong>
+                        <td
+                          className="jo-land-registry-ffrs-code"
+                          title={group.ffrs_code || "—"}
+                        >
+                          <strong className="jo-land-registry-ffrs-value">
+                            {group.ffrs_code || "—"}
+                          </strong>
                         </td>
                         <td>{group.farmer_name || "—"}</td>
                         <td>
@@ -1433,6 +1447,20 @@ const JoLandRegistry: React.FC = () => {
                         </td>
                         <td>{group.total_farm_area_ha.toFixed(2) || "0"}</td>
                         <td>{formatDate(group.last_updated)}</td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="jo-land-registry-row-transfer-button"
+                            onClick={() => {
+                              setSelectedFarmer(group);
+                              setShowModal(false);
+                              openTransferModal();
+                            }}
+                            title="Transfer ownership"
+                          >
+                            Transfer
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}

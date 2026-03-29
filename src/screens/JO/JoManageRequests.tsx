@@ -1157,10 +1157,10 @@ const JoManageRequests: React.FC = () => {
             </div>
             <div className="jo-manage-requests-back-create-section">
               <button
-                className="jo-manage-requests-back-btn"
+                className="app-back-button"
                 onClick={() => navigate("/jo-incentives")}
               >
-                ←
+                ← Back
               </button>
               <button
                 className="jo-manage-requests-add-btn"

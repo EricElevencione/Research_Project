@@ -208,13 +208,6 @@ const TechPickLandParcel: React.FC = () => {
     return { label: "Mixed Ownership", className: "mixed" };
   };
 
-  const getPlotStatusClass = (status: string) => {
-    const normalizedStatus = String(status || "").toLowerCase();
-    if (normalizedStatus.includes("plotted")) return "plotted";
-    if (normalizedStatus.includes("pending")) return "pending";
-    return "unplotted";
-  };
-
   return (
     <div className="page-container">
       <div className="page">
@@ -294,15 +287,26 @@ const TechPickLandParcel: React.FC = () => {
             </button>
             <div className="tech-incent-mobile-title">Land Parcels</div>
           </div>
-          <button
-            onClick={() => navigate("/technician-rsbsa")}
-            className="back-button"
-            aria-label="Back to RSBSA list"
-          >
-            ←
-          </button>
           <div className="content-header">
-            <h2>Land Parcel Selection</h2>
+            <div className="content-header-top">
+              <div className="content-header-title-group">
+                <h2>Land Parcel Selection</h2>
+                <p>
+                  Choose a parcel below to continue plotting and boundary
+                  mapping.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/technician-rsbsa")}
+              className="app-back-button"
+              aria-label="Back to RSBSA list"
+            >
+              <span className="app-back-button-arrow" aria-hidden="true">
+                ←
+              </span>
+              <span>Back</span>
+            </button>
             {landOwner && (
               <div className="land-owner-info">
                 <h3>Land Owner: {landOwner.farmerName}</h3>
@@ -367,9 +371,6 @@ const TechPickLandParcel: React.FC = () => {
                     <div className="parcel-grid">
                       {landParcels.map((parcel, idx) => {
                         const ownershipMeta = getOwnershipMeta(parcel);
-                        const plotStatusClass = getPlotStatusClass(
-                          parcel.plotStatus,
-                        );
 
                         return (
                           <button

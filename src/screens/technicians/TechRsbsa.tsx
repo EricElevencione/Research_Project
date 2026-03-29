@@ -1,13 +1,4 @@
 import React, { useState, useEffect } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   getRsbsaSubmissions,
@@ -52,6 +43,9 @@ interface RSBSARecord {
 interface FarmerDetail {
   id: string;
   farmerName: string;
+  referenceNumber: string;
+  dateSubmitted: string;
+  recordStatus: string;
   farmerAddress: string;
   age: number | string;
   gender: string;
@@ -119,7 +113,10 @@ const TechRsbsa: React.FC = () => {
   };
 
   // Fetch farmer details when row is clicked
-  const fetchFarmerDetails = async (farmerId: string) => {
+  const fetchFarmerDetails = async (
+    farmerId: string,
+    summaryRecord?: RSBSARecord,
+  ) => {
     try {
       setLoadingFarmerDetail(true);
 
@@ -204,27 +201,78 @@ const TechRsbsa: React.FC = () => {
         return `${lastName}, ${restOfName}`;
       })();
 
+      const getValue = (...values: any[]): string => {
+        for (const value of values) {
+          if (value === null || value === undefined) continue;
+          const text = String(value).trim();
+          if (text) return text;
+        }
+        return "N/A";
+      };
+
+      const selectedRecord =
+        summaryRecord ||
+        registeredOwners.find((rec) => String(rec.id) === String(farmerId));
+
+      const mappedParcels: ParcelDetail[] = parcelsData.map((p: any) => ({
+        id: p.id,
+        parcelNumber: p.parcel_number || "N/A",
+        farmLocationBarangay: p.farm_location_barangay || "N/A",
+        farmLocationMunicipality: p.farm_location_municipality || "N/A",
+        totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
+        ownershipTypeRegisteredOwner:
+          p.ownership_type_registered_owner || false,
+        ownershipTypeTenant: p.ownership_type_tenant || false,
+        ownershipTypeLessee: p.ownership_type_lessee || false,
+        tenantLandOwnerName: p.tenant_land_owner_name || "",
+        lesseeLandOwnerName: p.lessee_land_owner_name || "",
+      }));
+
+      const parsedSubmissionDate = selectedRecord
+        ? getSubmissionDate(selectedRecord)
+        : null;
+
+      const submittedDateLabel = parsedSubmissionDate
+        ? parsedSubmissionDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : getValue(
+            farmerData.dateSubmitted,
+            (farmerData as any).date_submitted,
+            (farmerData as any).submitted_at,
+            (farmerData as any).created_at,
+          );
+
       const farmerDetail: FarmerDetail = {
         id: farmerId,
         farmerName: reformattedFarmerName,
-        farmerAddress: farmerData.farmerAddress || "N/A",
+        referenceNumber: getValue(
+          selectedRecord?.referenceNumber,
+          farmerData.referenceNumber,
+          data.referenceNumber,
+          data.ffrsId,
+          data.ffrs_id,
+        ),
+        dateSubmitted: submittedDateLabel,
+        recordStatus: getValue(
+          selectedRecord?.status,
+          farmerData.status,
+          data.status,
+        ),
+        farmerAddress: getValue(
+          farmerData.farmerAddress,
+          selectedRecord?.farmerAddress,
+        ),
         age: calculateAge(data.dateOfBirth || data.birthdate || "N/A"),
-        gender: data.gender || "N/A",
-        mainLivelihood: data.mainLivelihood || "N/A",
+        gender: getValue(data.gender, farmerData.gender),
+        mainLivelihood: getValue(
+          data.mainLivelihood,
+          farmerData.mainLivelihood,
+        ),
         farmingActivities: activities,
-        parcels: parcelsData.map((p: any) => ({
-          id: p.id,
-          parcelNumber: p.parcel_number || "N/A",
-          farmLocationBarangay: p.farm_location_barangay || "N/A",
-          farmLocationMunicipality: p.farm_location_municipality || "N/A",
-          totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
-          ownershipTypeRegisteredOwner:
-            p.ownership_type_registered_owner || false,
-          ownershipTypeTenant: p.ownership_type_tenant || false,
-          ownershipTypeLessee: p.ownership_type_lessee || false,
-          tenantLandOwnerName: p.tenant_land_owner_name || "",
-          lesseeLandOwnerName: p.lessee_land_owner_name || "",
-        })),
+        parcels: mappedParcels,
       };
 
       setSelectedFarmer(farmerDetail);
@@ -326,46 +374,6 @@ const TechRsbsa: React.FC = () => {
     return null;
   };
 
-  // Registration trend: count farmers per month-year
-  const registrationTrend = React.useMemo(() => {
-    const map = new Map<string, { count: number; label: string }>();
-    const monthFormatter = new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      year: "numeric",
-    });
-
-    filteredOwners.forEach((rec) => {
-      const date = getSubmissionDate(rec);
-      if (!date) return;
-
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      const existing = map.get(monthKey);
-
-      if (existing) {
-        map.set(monthKey, {
-          ...existing,
-          count: existing.count + 1,
-        });
-      } else {
-        map.set(monthKey, {
-          count: 1,
-          label: monthFormatter.format(date),
-        });
-      }
-    });
-
-    // sort keys
-    const entries = Array.from(map.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0]),
-    );
-
-    return entries.map(([monthKey, value]) => ({
-      monthKey,
-      label: value.label,
-      count: value.count,
-    }));
-  }, [filteredOwners]);
-
   const sortedFilteredOwners = React.useMemo(() => {
     return [...filteredOwners].sort((a, b) => {
       const dateA = getSubmissionDate(a);
@@ -380,60 +388,6 @@ const TechRsbsa: React.FC = () => {
       return dateB.getTime() - dateA.getTime();
     });
   }, [filteredOwners]);
-
-  const trendSummary = React.useMemo(() => {
-    if (registrationTrend.length === 0) {
-      return {
-        total: 0,
-        average: 0,
-        peakLabel: "N/A",
-        peakCount: 0,
-        latestLabel: "N/A",
-        latestCount: 0,
-      };
-    }
-
-    const total = registrationTrend.reduce((sum, item) => sum + item.count, 0);
-    const peak = registrationTrend.reduce((max, item) =>
-      item.count > max.count ? item : max,
-    );
-    const latest = registrationTrend[registrationTrend.length - 1];
-
-    return {
-      total,
-      average: total / registrationTrend.length,
-      peakLabel: peak.label,
-      peakCount: peak.count,
-      latestLabel: latest.label,
-      latestCount: latest.count,
-    };
-  }, [registrationTrend]);
-
-  // Duplicate detection (same last name + first name + barangay)
-  const duplicateMap = React.useMemo(() => {
-    const m = new Map<string, number>();
-    registeredOwners.forEach((rec) => {
-      const nameParts = (rec.farmerName || "").split(",").map((s) => s.trim());
-      const last = (nameParts[0] || "").toLowerCase();
-      const first = (nameParts[1] || "").toLowerCase();
-      const barangay =
-        (rec.farmerAddress || "").split(",")[0]?.trim().toLowerCase() || "";
-      const key = `${last}|${first}|${barangay}`;
-      m.set(key, (m.get(key) || 0) + 1);
-    });
-    return m;
-  }, [registeredOwners]);
-
-  // Helper to compute missing fields for a record
-  const getMissingFields = (rec: RSBSARecord) => {
-    const missing: string[] = [];
-    if (!rec.gender) missing.push("Gender");
-    if (!rec.birthdate) missing.push("Birthdate");
-    if (!rec.farmerAddress) missing.push("Address");
-    if (!rec.farmLocation) missing.push("Farm Location");
-    if (!rec.parcelArea) missing.push("Parcel Area");
-    return missing;
-  };
 
   // Filter records based on search term and barangay
   useEffect(() => {
@@ -692,7 +646,6 @@ const TechRsbsa: React.FC = () => {
                     <thead>
                       <tr>
                         <th>FFRS ID</th>
-                        <th>Quality</th>
                         <th>Last Name</th>
                         <th>First Name</th>
                         <th>Middle Name</th>
@@ -708,7 +661,7 @@ const TechRsbsa: React.FC = () => {
                     <tbody>
                       {sortedFilteredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={12} className="tech-rsbsa-no-data">
+                          <td colSpan={11} className="tech-rsbsa-no-data">
                             {searchTerm
                               ? "No matching records found"
                               : "No registered owners found"}
@@ -722,45 +675,22 @@ const TechRsbsa: React.FC = () => {
                               : `${record.parcelArea} hectares`
                             : "N/A";
 
-                          // Determine duplicate and missing fields for this record
-                          const namePartsForKey = (record.farmerName || "")
-                            .split(",")
-                            .map((s) => s.trim());
-                          const dkLast = (
-                            namePartsForKey[0] || ""
-                          ).toLowerCase();
-                          const dkFirst = (
-                            namePartsForKey[1] || ""
-                          ).toLowerCase();
-                          const dkBarangay =
-                            (record.farmerAddress || "")
-                              .split(",")[0]
-                              ?.trim()
-                              .toLowerCase() || "";
-                          const duplicateKey = `${dkLast}|${dkFirst}|${dkBarangay}`;
-                          const isDuplicate =
-                            (duplicateMap.get(duplicateKey) || 0) > 1;
-                          const missing = getMissingFields(record);
-                          const qualityLabel =
-                            missing.length === 0 && !isDuplicate
-                              ? "Complete"
-                              : [
-                                  ...(isDuplicate ? ["Duplicate"] : []),
-                                  ...(missing.length > 0
-                                    ? [`Missing: ${missing.length}`]
-                                    : []),
-                                ].join(" | ");
-
                           return (
                             <tr
                               key={record.id}
-                              onClick={() => fetchFarmerDetails(record.id)}
+                              onClick={() =>
+                                fetchFarmerDetails(record.id, record)
+                              }
                               style={{ cursor: "pointer" }}
                             >
-                              <td className="tech-rsbsa-ffrs-id">
-                                {record.referenceNumber || "N/A"}
+                              <td
+                                className="tech-rsbsa-ffrs-id"
+                                title={record.referenceNumber || "N/A"}
+                              >
+                                <span className="tech-rsbsa-ffrs-id-value">
+                                  {record.referenceNumber || "N/A"}
+                                </span>
                               </td>
-                              <td>{qualityLabel}</td>
                               <td>{record.lastName || ""}</td>
                               <td>{record.firstName || ""}</td>
                               <td>{record.middleName || ""}</td>
@@ -850,6 +780,34 @@ const TechRsbsa: React.FC = () => {
                   </div>
                 ) : (
                   <>
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">
+                        📌 Record Overview
+                      </h3>
+                      <div className="farmer-modal-info-grid">
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">FFRS ID:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.referenceNumber}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">
+                            Date Submitted:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.dateSubmitted}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Status:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.recordStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Personal Information */}
                     <div className="farmer-modal-section">
                       <h3 className="farmer-modal-section-title">
@@ -977,20 +935,6 @@ const TechRsbsa: React.FC = () => {
                           ))}
                         </div>
                       )}
-                    </div>
-                    {/* link to full profile */}
-                    <div className="farmer-modal-section">
-                      <button
-                        className="btn-action"
-                        onClick={() => {
-                          navigate(
-                            `/technician-farmerprofile/${selectedFarmer.id}`,
-                          );
-                          setShowModal(false);
-                        }}
-                      >
-                        View Full Profile
-                      </button>
                     </div>
                   </>
                 )}

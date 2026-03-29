@@ -38,6 +38,9 @@ interface RSBSARecord {
 interface FarmerDetail {
   id: string;
   farmerName: string;
+  referenceNumber: string;
+  dateSubmitted: string;
+  recordStatus: string;
   farmerAddress: string;
   age: number | string;
   gender: string;
@@ -125,7 +128,10 @@ const TechMasterlist: React.FC = () => {
   }, []);
 
   // Fetch farmer details when row is clicked
-  const fetchFarmerDetails = async (farmerId: string) => {
+  const fetchFarmerDetails = async (
+    farmerId: string,
+    summaryRecord?: RSBSARecord,
+  ) => {
     try {
       setLoadingFarmerDetail(true);
 
@@ -210,6 +216,14 @@ const TechMasterlist: React.FC = () => {
         return `${lastName}, ${restOfName}`;
       })();
 
+      const selectedRecord =
+        summaryRecord ||
+        rsbsaRecords.find((record) => String(record.id) === String(farmerId));
+
+      const submittedDateLabel = selectedRecord?.dateSubmitted
+        ? formatDate(selectedRecord.dateSubmitted)
+        : "N/A";
+
       // Build parcels array from rsbsa_farm_parcels; if empty, fall back to submission-level farm data
       let mappedParcels = parcelsData.map((p: any) => ({
         id: p.id,
@@ -280,6 +294,9 @@ const TechMasterlist: React.FC = () => {
       const farmerDetail: FarmerDetail = {
         id: farmerId,
         farmerName: reformattedFarmerName,
+        referenceNumber: selectedRecord?.referenceNumber || "N/A",
+        dateSubmitted: submittedDateLabel,
+        recordStatus: selectedRecord?.status || farmerData.status || "N/A",
         farmerAddress: farmerData.farmerAddress || "N/A",
         age: calculateAge(data.dateOfBirth || data.birthdate || "N/A"),
         gender: data.gender || "N/A",
@@ -927,7 +944,7 @@ const TechMasterlist: React.FC = () => {
                 <thead>
                   <tr>
                     {[
-                      "FFRS System Generated",
+                      "FFRS ID",
                       "Farmer Name",
                       "Farmer Address",
                       "Parcel Address",
@@ -960,10 +977,17 @@ const TechMasterlist: React.FC = () => {
                     sortedFilteredRecords.map((record) => (
                       <tr
                         key={record.id}
-                        onClick={() => fetchFarmerDetails(record.id)}
+                        onClick={() => fetchFarmerDetails(record.id, record)}
                         style={{ cursor: "pointer" }}
                       >
-                        <td>{record.referenceNumber}</td>
+                        <td
+                          className="tech-masterlist-ffrs-id"
+                          title={record.referenceNumber || "N/A"}
+                        >
+                          <span className="tech-masterlist-ffrs-id-value">
+                            {record.referenceNumber || "N/A"}
+                          </span>
+                        </td>
                         <td>{record.farmerName}</td>
                         <td>{record.farmerAddress}</td>
                         <td>{record.farmLocation}</td>
@@ -987,7 +1011,7 @@ const TechMasterlist: React.FC = () => {
                     sortedFilteredRecords.length === 0 &&
                     Array.from({ length: 16 }).map((_, i) => (
                       <tr key={`empty-${i}`}>
-                        <td colSpan={8}>&nbsp;</td>
+                        <td colSpan={7}>&nbsp;</td>
                       </tr>
                     ))}
                 </tbody>
@@ -1183,6 +1207,34 @@ const TechMasterlist: React.FC = () => {
                   </div>
                 ) : (
                   <>
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">
+                        📌 Record Overview
+                      </h3>
+                      <div className="farmer-modal-info-grid">
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">FFRS ID:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.referenceNumber}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">
+                            Date Submitted:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.dateSubmitted}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Status:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.recordStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Personal Information */}
                     <div className="farmer-modal-section">
                       <h3 className="farmer-modal-section-title">
@@ -1315,20 +1367,6 @@ const TechMasterlist: React.FC = () => {
                           ))}
                         </div>
                       )}
-                    </div>
-                    {/* link to full profile */}
-                    <div className="farmer-modal-section">
-                      <button
-                        className="btn-action"
-                        onClick={() => {
-                          navigate(
-                            `/technician-farmerprofile/${selectedFarmer.id}`,
-                          );
-                          setShowModal(false);
-                        }}
-                      >
-                        View Full Profile
-                      </button>
                     </div>
                   </>
                 )}

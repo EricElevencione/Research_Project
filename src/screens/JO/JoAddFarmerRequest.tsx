@@ -1039,7 +1039,7 @@ const JoAddFarmerRequest: React.FC = () => {
                 : "Loading..."}
             </p>
             <button
-              className="jo-add-farmer-back-btn"
+              className="app-back-button"
               onClick={() => navigate(`/jo-manage-requests/${allocationId}`)}
             >
               ← Back to Manage Requests

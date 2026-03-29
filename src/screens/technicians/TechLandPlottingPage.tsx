@@ -67,7 +67,7 @@ const LandPlottingPage: React.FC = () => {
   }>({});
   const [rsbsaRecord, setRsbsaRecord] = useState<any>(null);
   const [currentParcel, setCurrentParcel] = useState<any>(null);
-  const [farmerParcels, setFarmerParcels] = useState<any[]>([]);
+  const [, setFarmerParcels] = useState<any[]>([]);
   // State to track the actual parcel barangay (from RSBSA form)
   const [parcelBarangay, setParcelBarangay] = useState<string>("");
 
@@ -1149,57 +1149,6 @@ const LandPlottingPage: React.FC = () => {
     return String(Math.round(totalPlottedAreaHa * 10000) / 10000);
   }, [totalPlottedAreaHa]);
 
-  // Barangay-level plot completion for this farmer:
-  // percentage of parcels with at least one polygon saved
-  const barangayCompletion = useMemo(() => {
-    const stats: Record<
-      string,
-      { totalParcels: number; plottedParcels: number }
-    > = {};
-
-    // Count total parcels per barangay for this farmer
-    (farmerParcels || []).forEach((parcel: any) => {
-      const brgy =
-        parcel.farm_location_barangay ||
-        parcel.farmLocation?.barangay ||
-        (parcel as any).farmLocationBarangay ||
-        (parcel as any).barangay;
-      const key = typeof brgy === "string" ? brgy.trim() : "";
-      if (!key) return;
-      if (!stats[key]) {
-        stats[key] = { totalParcels: 0, plottedParcels: 0 };
-      }
-      stats[key].totalParcels += 1;
-    });
-
-    if (shapes.length === 0) return stats;
-
-    // Track unique (barangay, parcelNumber) combinations that already counted as plotted
-    const seenParcels = new Set<string>();
-
-    shapes.forEach((shape) => {
-      const props: any = shape.properties || {};
-      const parcelNumber = props.parcelNumber ?? props.parcel_number;
-      const brgy =
-        props.barangay ||
-        props.farm_location_barangay ||
-        props.farmLocationBarangay;
-      const key = typeof brgy === "string" ? brgy.trim() : "";
-      if (!key || !stats[key]) return;
-
-      const parcelKey =
-        parcelNumber !== undefined && parcelNumber !== null
-          ? `${key}::${String(parcelNumber)}`
-          : `${key}::__no_parcel__${shape.id}`;
-
-      if (seenParcels.has(parcelKey)) return;
-      seenParcels.add(parcelKey);
-      stats[key].plottedParcels += 1;
-    });
-
-    return stats;
-  }, [farmerParcels, shapes]);
-
   // Comprehensive debugging for barangay resolution
   console.log("=== BARANGAY DEBUG START ===");
   console.log("≡ƒôì landAttributes.barangay:", landAttributes.barangay);
@@ -1381,7 +1330,7 @@ const LandPlottingPage: React.FC = () => {
       )}
       {/* Back Button at top left */}
       <button
-        className="tech-landplotting-back-button"
+        className="app-back-button tech-landplotting-back-button"
         onClick={handleBackClick}
         aria-label="Back"
       >

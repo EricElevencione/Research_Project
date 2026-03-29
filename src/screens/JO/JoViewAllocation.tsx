@@ -530,7 +530,7 @@ const JoViewAllocation: React.FC = () => {
               <h3>Error Loading Allocation</h3>
               <p>{error || "Allocation not found"}</p>
               <button
-                className="jo-view-alloc-btn jo-view-alloc-btn-secondary"
+                className="app-back-button"
                 onClick={() => navigate("/jo-incentives")}
               >
                 ← Back to Allocations
@@ -656,7 +656,7 @@ const JoViewAllocation: React.FC = () => {
           </div>
           <div className="jo-view-alloc-header-actions">
             <button
-              className="jo-view-alloc-btn jo-view-alloc-btn-secondary"
+              className="app-back-button"
               onClick={() => navigate("/jo-incentives")}
             >
               ← Back

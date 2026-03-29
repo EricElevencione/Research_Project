@@ -40,26 +40,6 @@
   top: 1rem;
   left: 1rem;
   z-index: 40;
-  border: none;
-  border-radius: 999px;
-  min-width: 84px;
-  height: 2.5rem;
-  padding: 0 1rem;
-  background: linear-gradient(135deg, var(--plot-blue), var(--plot-green));
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  box-shadow: 0 10px 20px rgba(79, 94, 188, 0.26);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.tech-landplotting-back-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 24px rgba(79, 94, 188, 0.32);
 }
 
 .tech-landplotting-map-section {
@@ -100,6 +80,10 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.tech-landplotting-container .app-back-button {
+  margin-bottom: 0.5rem;
 }
 
 .tech-landplotting-map-status.ready {
@@ -397,12 +381,6 @@
     margin: 0.65rem;
     border-radius: 14px;
     min-height: calc(100vh - 1.3rem);
-  }
-
-  .tech-landplotting-back-button {
-    min-width: 72px;
-    height: 2.2rem;
-    font-size: 0.78rem;
   }
 
   .tech-landplotting-main-wrapper {

@@ -233,8 +233,9 @@
 .jo-rsbsa-owners-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
-  min-width: 1000px;
+  table-layout: fixed;
+  font-size: 13px;
+  min-width: 760px;
 }
 
 .jo-rsbsa-owners-table thead {
@@ -243,12 +244,14 @@
 }
 
 .jo-rsbsa-owners-table th {
-  padding: 12px 12px;
+  padding: 10px 9px;
   text-align: left;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.35px;
+  white-space: normal;
+  line-height: 1.3;
   border-right: 1px solid rgba(255, 255, 255, 0.2);
   background-color: #a0c878;
 }
@@ -263,7 +266,7 @@
 }
 
 .jo-rsbsa-owners-table tbody tr:hover {
-  background-color: #d1fae5;
+  background-color: #f9fafb;
   cursor: pointer;
 }
 
@@ -272,9 +275,33 @@
 }
 
 .jo-rsbsa-owners-table td {
-  padding: 16px 12px;
+  padding: 10px 9px;
   color: #374151;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  font-weight: 700;
   border-right: 1px solid #f3f4f6;
+}
+
+.jo-rsbsa-owners-table th:nth-child(1),
+.jo-rsbsa-owners-table td:nth-child(1),
+.jo-rsbsa-owners-table td:nth-child(6),
+.jo-rsbsa-owners-table td:nth-child(8),
+.jo-rsbsa-owners-table td:nth-child(9),
+.jo-rsbsa-owners-table td:nth-child(10) {
+  white-space: nowrap;
+}
+
+.jo-rsbsa-owners-table th:nth-child(1),
+.jo-rsbsa-owners-table td:nth-child(1) {
+  width: 120px;
+}
+
+.jo-rsbsa-owners-table th:nth-child(10),
+.jo-rsbsa-owners-table td:nth-child(10) {
+  width: 102px;
+  overflow: hidden;
 }
 
 .jo-rsbsa-owners-table td:last-child {
@@ -287,8 +314,17 @@
 
 .jo-rsbsa-owners-table td.jo-rsbsa-ffrs-id {
   font-family: var(--font-family);
-  font-weight: 500;
+  font-weight: 700;
   color: #2c5f2d;
+  overflow: hidden;
+}
+
+.jo-rsbsa-ffrs-id-value {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Loading, Error, and No Data States */
@@ -335,14 +371,18 @@
 /* Status Pills */
 .jo-rsbsa-status-pill {
   display: inline-block;
-  padding: 4px 10px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px 8px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
   text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  text-transform: none;
+  letter-spacing: 0.2px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .jo-rsbsa-status-active {
@@ -401,7 +441,7 @@
   }
 
   .jo-rsbsa-owners-table {
-    min-width: 800px;
+    min-width: 700px;
   }
 
   .jo-rsbsa-main-content {

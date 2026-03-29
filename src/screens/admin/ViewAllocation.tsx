@@ -687,7 +687,7 @@ const ViewAllocation: React.FC = () => {
               <h3>Error Loading Allocation</h3>
               <p>{error || "Allocation not found"}</p>
               <button
-                className="admin-viewalloc-btn-back"
+                className="app-back-button"
                 onClick={() => navigate("/Allocations")}
               >
                 ← Back to Allocations
@@ -799,7 +799,7 @@ const ViewAllocation: React.FC = () => {
               📋 View Requests
             </button>
             <button
-              className="admin-viewalloc-btn-nav"
+              className="app-back-button"
               onClick={() => navigate("/Incentives")}
             >
               ← Back to Allocations

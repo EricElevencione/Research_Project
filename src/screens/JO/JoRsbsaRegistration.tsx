@@ -998,9 +998,14 @@ const JoRsbsa: React.FC = () => {
 
           <div className="jo-registration-back-button">
             <button
-              className="jo-registration-btn-back"
+              className="app-back-button"
               onClick={() => navigate("/jo-rsbsapage")}
-            ></button>
+            >
+              <span className="app-back-button-arrow" aria-hidden="true">
+                ←
+              </span>
+              <span>Back</span>
+            </button>
           </div>
 
           <div className="jo-registration-form-container">

@@ -38,6 +38,9 @@ interface RSBSARecord {
 
 interface FarmerDetail {
   id: string;
+  referenceNumber: string;
+  dateSubmitted: string;
+  recordStatus: string;
   farmerName: string;
   farmerAddress: string;
   age: number | string;
@@ -179,7 +182,10 @@ const JoRsbsaPage: React.FC = () => {
   };
 
   // Fetch farmer details when row is clicked
-  const fetchFarmerDetails = async (farmerId: string) => {
+  const fetchFarmerDetails = async (
+    farmerId: string,
+    summaryRecord?: RSBSARecord,
+  ) => {
     try {
       setLoadingFarmerDetail(true);
 
@@ -196,6 +202,17 @@ const JoRsbsaPage: React.FC = () => {
 
       // Handle both JSONB (data property) and structured column formats
       const data = farmerData.data || farmerData;
+      const selectedRecord =
+        summaryRecord ||
+        registeredOwners.find((record) => record.id === farmerId);
+
+      const formattedSubmittedDate = (() => {
+        if (!selectedRecord?.dateSubmitted) return "N/A";
+        const parsedDate = new Date(selectedRecord.dateSubmitted);
+        return Number.isNaN(parsedDate.getTime())
+          ? "N/A"
+          : parsedDate.toLocaleDateString();
+      })();
 
       console.log("Farmer data received:", farmerData);
       console.log("Data object for activities:", data);
@@ -337,6 +354,9 @@ const JoRsbsaPage: React.FC = () => {
 
       const farmerDetail: FarmerDetail = {
         id: farmerId,
+        referenceNumber: selectedRecord?.referenceNumber || "N/A",
+        dateSubmitted: formattedSubmittedDate,
+        recordStatus: selectedRecord?.status || "Active Farmer",
         farmerName: reformattedFarmerName,
         farmerAddress: farmerData.farmerAddress || "N/A",
         age: calculateAge(data.dateOfBirth || data.birthdate || "N/A"),
@@ -655,11 +675,18 @@ const JoRsbsaPage: React.FC = () => {
                           <tr
                             key={record.id}
                             className="jo-rsbsa-clickable-row"
-                            onClick={() => fetchFarmerDetails(record.id)}
+                            onClick={() =>
+                              fetchFarmerDetails(record.id, record)
+                            }
                             style={{ cursor: "pointer" }}
                           >
-                            <td className="jo-rsbsa-ffrs-id">
-                              {record.referenceNumber || "N/A"}
+                            <td
+                              className="jo-rsbsa-ffrs-id"
+                              title={record.referenceNumber || "N/A"}
+                            >
+                              <span className="jo-rsbsa-ffrs-id-value">
+                                {record.referenceNumber || "N/A"}
+                              </span>
                             </td>
                             <td>{lastName}</td>
                             <td>{firstName}</td>
@@ -753,6 +780,34 @@ const JoRsbsaPage: React.FC = () => {
                       }
                       return null;
                     })()}
+
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">
+                        Record Overview
+                      </h3>
+                      <div className="farmer-modal-info-grid">
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">FFRS ID:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.referenceNumber || "N/A"}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">
+                            Date Submitted:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.dateSubmitted || "N/A"}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item farmer-modal-full-width">
+                          <span className="farmer-modal-label">Status:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.recordStatus || "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
                     {/* Personal Information */}
                     <div className="farmer-modal-section">
