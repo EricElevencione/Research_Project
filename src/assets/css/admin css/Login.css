@@ -133,8 +133,10 @@ input[type="password"]:focus {
    MOBILE LOGIN FORMAT
    =========================== */
 @media (max-width: 520px) {
+  /* 100% of parent content box (inside .login-page padding), not vw — avoids horizontal overflow */
   .login-container {
-    width: min(420px, 94vw);
+    width: 100%;
+    max-width: min(420px, 100%);
     height: auto;
     border-radius: 14px;
   }

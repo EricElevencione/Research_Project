@@ -149,12 +149,12 @@ const GapAnalysis: React.FC = () => {
         return Math.abs(num).toLocaleString();
     };
 
-    const renderGapRow = (label: string, item: any, unit: string) => {
+    const renderGapRow = (label: string, item: any, unit: string, itemColumnLabel: string) => {
         // Safety check: return empty row if item is undefined
         if (!item) {
             return (
                 <tr key={label}>
-                    <td className="item-label" data-label="Item">{label}</td>
+                    <td className="item-label" data-label={itemColumnLabel}>{label}</td>
                     <td className="number-cell" colSpan={5}>No data available</td>
                 </tr>
             );
@@ -165,7 +165,7 @@ const GapAnalysis: React.FC = () => {
 
         return (
             <tr key={label}>
-                <td className="item-label" data-label="Item">{label}</td>
+                <td className="item-label" data-label={itemColumnLabel}>{label}</td>
                 <td className="number-cell" data-label="Allocated">{formatNumber(item.allocated)} {unit}</td>
                 <td className="number-cell" data-label="Requested">{formatNumber(item.requested || item.estimated || 0)} {unit}</td>
                 <td className={`number-cell gap-cell ${statusClass}`} data-label="Gap">
@@ -493,10 +493,10 @@ const GapAnalysis: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {renderGapRow('Urea 46-0-0', (gapData as any).fertilizer_gap?.urea, 'bags')}
-                                        {renderGapRow('Complete 14-14-14', (gapData as any).fertilizer_gap?.complete_14_14_14, 'bags')}
-                                        {renderGapRow('Ammonium Sulfate 21-0-0', (gapData as any).fertilizer_gap?.ammonium_sulfate, 'bags')}
-                                        {renderGapRow('Muriate of Potash 0-0-60', (gapData as any).fertilizer_gap?.muriate_potash, 'bags')}
+                                        {renderGapRow('Urea 46-0-0', (gapData as any).fertilizer_gap?.urea, 'bags', 'Fertilizer Type')}
+                                        {renderGapRow('Complete 14-14-14', (gapData as any).fertilizer_gap?.complete_14_14_14, 'bags', 'Fertilizer Type')}
+                                        {renderGapRow('Ammonium Sulfate 21-0-0', (gapData as any).fertilizer_gap?.ammonium_sulfate, 'bags', 'Fertilizer Type')}
+                                        {renderGapRow('Muriate of Potash 0-0-60', (gapData as any).fertilizer_gap?.muriate_potash, 'bags', 'Fertilizer Type')}
                                     </tbody>
                                 </table>
                             </div>
@@ -518,8 +518,8 @@ const GapAnalysis: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {renderGapRow('Rice Seeds', (gapData as any).seeds_gap?.rice_seeds, 'kg')}
-                                        {renderGapRow('Corn Seeds', (gapData as any).seeds_gap?.corn_seeds, 'kg')}
+                                        {renderGapRow('Rice Seeds', (gapData as any).seeds_gap?.rice_seeds, 'kg', 'Seed Type')}
+                                        {renderGapRow('Corn Seeds', (gapData as any).seeds_gap?.corn_seeds, 'kg', 'Seed Type')}
                                     </tbody>
                                 </table>
                             </div>
