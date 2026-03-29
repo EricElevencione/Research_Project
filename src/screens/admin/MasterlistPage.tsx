@@ -658,7 +658,6 @@ const Masterlist: React.FC = () => {
               </div>
             </div>
 
-<<<<<<< HEAD
             {/* Status Count Cards */}
             {!loading && !error && (
               <div className="masterlist-status-cards">
@@ -691,30 +690,6 @@ const Masterlist: React.FC = () => {
                 </div>
               </div>
             )}
-=======
-            {/* RSBSA Records Table */}
-            <div className="masterlist-admin-table-container">
-              <table className="masterlist-admin-farmers-table" data-responsive="stack">
-                <thead>
-                  <tr>
-                    {[
-                      'FFRS System Generated',
-                      'Farmer Name',
-                      'Farmer Address',
-                      'Parcel Address',
-                      'Parcel Area',
-                      'Date Submitted',
-                      'Farmer Status'
-                    ].map((header) => (
-                      <th key={header}>{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && (
-                    <tr><td colSpan={7} className="masterlist-admin-loading-cell">Loading...</td></tr>
-                  )}
->>>>>>> a56c5cb443fac3b0e2bb2aadcf109b8a76693409
 
             <div className="masterlist-admin-content-card">
               {/* Filters and Search */}
@@ -730,7 +705,6 @@ const Masterlist: React.FC = () => {
                 </div>
               </div>
 
-<<<<<<< HEAD
               {!loading && !error && (
                 <div className="masterlist-admin-table-meta">
                   <span>
@@ -740,27 +714,6 @@ const Masterlist: React.FC = () => {
                   <span>Tip: Click a row or use Quick Actions.</span>
                 </div>
               )}
-=======
-                  {!loading && !error && filteredRecords.length > 0 && (
-                    filteredRecords.map((record) => {
-                      return (
-                        <tr key={record.id}>
-                          <td data-label="FFRS System Generated">{record.referenceNumber}</td>
-                          <td data-label="Farmer Name">{record.farmerName}</td>
-                          <td data-label="Farmer Address">{record.farmerAddress}</td>
-                          <td data-label="Parcel Address">{record.farmLocation}</td>
-                          <td data-label="Parcel Area">{record.parcelArea}</td>
-                          <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
-                          <td data-label="Farmer Status">
-                            <span className={`masterlist-admin-status-pill ${record.status === 'Active Farmer' ? 'masterlist-admin-status-approved' : 'masterlist-admin-status-not-approved'}`}>
-                              {record.status || 'Not Active'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
->>>>>>> a56c5cb443fac3b0e2bb2aadcf109b8a76693409
 
               {!loading && !error && selectedRecordIds.size > 0 && (
                 <div className="masterlist-admin-bulk-toolbar">
