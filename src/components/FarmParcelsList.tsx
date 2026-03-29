@@ -56,7 +56,7 @@ const FarmParcelsList: React.FC = () => {
     <div>
       <h2>Farm Parcels</h2>
       <div className="table-container">
-        <table className="parcels-table">
+        <table className="parcels-table" data-responsive="stack">
           <thead>
             <tr>
               <th>Farmer Name</th>
@@ -88,13 +88,13 @@ const FarmParcelsList: React.FC = () => {
 
                 return (
                   <tr key={parcel.id}>
-                    <td>{farmerName}</td>
-                    <td>{parcel.parcel_number}</td>
-                    <td>{location}</td>
-                    <td>{parcel.total_farm_area_ha ? parcel.total_farm_area_ha.toFixed(2) : 'N/A'}</td>
-                    <td>{ownershipTypes.join(', ') || 'N/A'}</td>
-                    <td>{parcel.within_ancestral_domain || 'N/A'}</td>
-                    <td>{parcel.agrarian_reform_beneficiary || 'N/A'}</td>
+                    <td data-label="Farmer Name">{farmerName}</td>
+                    <td data-label="Parcel No.">{parcel.parcel_number}</td>
+                    <td data-label="Location">{location}</td>
+                    <td data-label="Area (ha)">{parcel.total_farm_area_ha ? parcel.total_farm_area_ha.toFixed(2) : 'N/A'}</td>
+                    <td data-label="Ownership Type">{ownershipTypes.join(', ') || 'N/A'}</td>
+                    <td data-label="Ancestral Domain">{parcel.within_ancestral_domain || 'N/A'}</td>
+                    <td data-label="ARB">{parcel.agrarian_reform_beneficiary || 'N/A'}</td>
                   </tr>
                 );
               })

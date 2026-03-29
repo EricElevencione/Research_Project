@@ -154,7 +154,7 @@ const GapAnalysis: React.FC = () => {
         if (!item) {
             return (
                 <tr key={label}>
-                    <td className="item-label">{label}</td>
+                    <td className="item-label" data-label="Item">{label}</td>
                     <td className="number-cell" colSpan={5}>No data available</td>
                 </tr>
             );
@@ -165,15 +165,15 @@ const GapAnalysis: React.FC = () => {
 
         return (
             <tr key={label}>
-                <td className="item-label">{label}</td>
-                <td className="number-cell">{formatNumber(item.allocated)} {unit}</td>
-                <td className="number-cell">{formatNumber(item.requested || item.estimated || 0)} {unit}</td>
-                <td className={`number-cell gap-cell ${statusClass}`}>
+                <td className="item-label" data-label="Item">{label}</td>
+                <td className="number-cell" data-label="Allocated">{formatNumber(item.allocated)} {unit}</td>
+                <td className="number-cell" data-label="Requested">{formatNumber(item.requested || item.estimated || 0)} {unit}</td>
+                <td className={`number-cell gap-cell ${statusClass}`} data-label="Gap">
                     {item.gap > 0 && '+'}
                     {formatNumber(item.gap)} {unit}
                 </td>
-                <td className="number-cell">{(parseFloat(item.percentage) || 0).toFixed(1)}%</td>
-                <td>
+                <td className="number-cell" data-label="Fulfillment Rate">{(parseFloat(item.percentage) || 0).toFixed(1)}%</td>
+                <td data-label="Status">
                     <span className={`status-badge ${statusClass}`}>
                         {statusLabel}
                     </span>
@@ -481,7 +481,7 @@ const GapAnalysis: React.FC = () => {
                         <div className="gap-card">
                             <h3>Fertilizers (50kg bags)</h3>
                             <div className="table-container">
-                                <table className="gap-table">
+                                <table className="gap-table" data-responsive="stack">
                                     <thead>
                                         <tr>
                                             <th>Fertilizer Type</th>
@@ -506,7 +506,7 @@ const GapAnalysis: React.FC = () => {
                         <div className="gap-card">
                             <h3>Seeds (kilograms)</h3>
                             <div className="table-container">
-                                <table className="gap-table">
+                                <table className="gap-table" data-responsive="stack">
                                     <thead>
                                         <tr>
                                             <th>Seed Type</th>

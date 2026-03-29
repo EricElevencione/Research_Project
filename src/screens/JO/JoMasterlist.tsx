@@ -983,7 +983,7 @@ const JoMasterlist: React.FC = () => {
 
             {/* RSBSA Records Table */}
             <div className="jo-masterlist-table-container">
-              <table className="jo-masterlist-farmers-table">
+              <table className="jo-masterlist-farmers-table" data-responsive="stack">
                 <thead>
                   <tr>
                     {[
@@ -1018,19 +1018,19 @@ const JoMasterlist: React.FC = () => {
                           onClick={() => fetchFarmerDetails(record.id)}
                           style={{ cursor: 'pointer' }}
                         >
-                          <td>{record.referenceNumber}</td>
-                          <td>{record.farmerName}</td>
-                          <td>{record.farmerAddress}</td>
-                          <td>{record.farmLocation}</td>
-                          <td>{record.parcelArea}</td>
-                          <td>{formatDate(record.dateSubmitted)}</td>
-                          <td>
+                          <td data-label="FFRS System Generated">{record.referenceNumber}</td>
+                          <td data-label="Farmer Name">{record.farmerName}</td>
+                          <td data-label="Farmer Address">{record.farmerAddress}</td>
+                          <td data-label="Parcel Address">{record.farmLocation}</td>
+                          <td data-label="Parcel Area">{record.parcelArea}</td>
+                          <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
+                          <td data-label="Status">
                             <span className={`jo-masterlist-status-pill jo-masterlist-${getStatusClass(record.status)}`}>
                               {record.status}
                               {/* {record.totalFarmArea || 'N/A'}*/}
                             </span>
                           </td>
-                          <td onClick={(e) => e.stopPropagation()}>
+                          <td data-label="Actions" onClick={(e) => e.stopPropagation()}>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
                               <button
                                 className="jo-masterlist-more-button"

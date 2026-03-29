@@ -783,7 +783,7 @@ const TechMasterlist: React.FC = () => {
               </div>
             </div>
             <div className="tech-masterlist-table-container">
-              <table className="tech-masterlist-farmers-table">
+              <table className="tech-masterlist-farmers-table" data-responsive="stack">
                 <thead>
                   <tr>
                     {[
@@ -814,14 +814,14 @@ const TechMasterlist: React.FC = () => {
                         onClick={() => fetchFarmerDetails(record.id)}
                         style={{ cursor: 'pointer', }}
                       >
-                        <td>{record.referenceNumber}</td>
-                        <td>{record.farmerName}</td>
-                        <td>{record.farmerAddress}</td>
-                        <td>{record.farmLocation}</td>
-                        <td>{record.parcelArea}</td>
-                        <td>{formatDate(record.dateSubmitted)}</td>
-                        <td>{record.completeness}%</td>
-                        <td>
+                        <td data-label="FFRS System Generated">{record.referenceNumber}</td>
+                        <td data-label="Farmer Name">{record.farmerName}</td>
+                        <td data-label="Farmer Address">{record.farmerAddress}</td>
+                        <td data-label="Parcel Address">{record.farmLocation}</td>
+                        <td data-label="Parcel Area">{record.parcelArea}</td>
+                        <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
+                        <td data-label="Data Quality">{record.completeness}%</td>
+                        <td data-label="Status">
                           <button
                             className={`tech-masterlist-status-button tech-masterlist-${getStatusClass(record.status)}`}
                             onClick={(e) => {

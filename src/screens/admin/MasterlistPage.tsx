@@ -372,7 +372,7 @@ const Masterlist: React.FC = () => {
 
             {/* RSBSA Records Table */}
             <div className="masterlist-admin-table-container">
-              <table className="masterlist-admin-farmers-table">
+              <table className="masterlist-admin-farmers-table" data-responsive="stack">
                 <thead>
                   <tr>
                     {[
@@ -401,13 +401,13 @@ const Masterlist: React.FC = () => {
                     filteredRecords.map((record) => {
                       return (
                         <tr key={record.id}>
-                          <td>{record.referenceNumber}</td>
-                          <td>{record.farmerName}</td>
-                          <td>{record.farmerAddress}</td>
-                          <td>{record.farmLocation}</td>
-                          <td>{record.parcelArea}</td>
-                          <td>{formatDate(record.dateSubmitted)}</td>
-                          <td>
+                          <td data-label="FFRS System Generated">{record.referenceNumber}</td>
+                          <td data-label="Farmer Name">{record.farmerName}</td>
+                          <td data-label="Farmer Address">{record.farmerAddress}</td>
+                          <td data-label="Parcel Address">{record.farmLocation}</td>
+                          <td data-label="Parcel Area">{record.parcelArea}</td>
+                          <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
+                          <td data-label="Farmer Status">
                             <span className={`masterlist-admin-status-pill ${record.status === 'Active Farmer' ? 'masterlist-admin-status-approved' : 'masterlist-admin-status-not-approved'}`}>
                               {record.status || 'Not Active'}
                             </span>

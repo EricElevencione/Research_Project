@@ -1,0 +1,65 @@
+/* Responsive stacked tables (mobile-friendly).
+   Opt-in by adding: data-responsive="stack" on <table>. */
+
+@media (max-width: 768px) {
+  table[data-responsive="stack"] {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table[data-responsive="stack"] thead {
+    display: none;
+  }
+
+  table[data-responsive="stack"] tbody,
+  table[data-responsive="stack"] tr,
+  table[data-responsive="stack"] td {
+    display: block;
+    width: 100%;
+  }
+
+  table[data-responsive="stack"] tbody tr {
+    margin-bottom: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  table[data-responsive="stack"] tbody td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    text-align: right;
+    border: none;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  table[data-responsive="stack"] tbody td:last-child {
+    border-bottom: none;
+  }
+
+  table[data-responsive="stack"] tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 46%;
+    max-width: 46%;
+    text-align: left;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  /* If a cell spans all columns (loading/empty/error rows), don't show a label. */
+  table[data-responsive="stack"] tbody td[colspan] {
+    text-align: left;
+    justify-content: flex-start;
+  }
+
+  table[data-responsive="stack"] tbody td[colspan]::before {
+    content: none;
+  }
+}
+
