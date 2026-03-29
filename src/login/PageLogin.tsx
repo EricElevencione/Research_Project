@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "../assets/css/admin css/Login.css"; // Login page styling
 import { useNavigate } from 'react-router-dom'; // Router for navigation
+import DaLogo from "../assets/images/Logo.png";
 
 // Main Login Component
 const Login: React.FC = () => {
@@ -71,6 +72,7 @@ const Login: React.FC = () => {
                 {/* Right section containing login form */}
                 <div className="login-right">
                     {/* Dynamic heading showing user role */}
+                    <img className="login-da-icon" src={DaLogo} alt="DA logo" />
                     <h1>Welcome back</h1>
 
                     <h3>LOGIN</h3>

@@ -1218,7 +1218,10 @@ const JoMasterlist: React.FC = () => {
 
             {/* RSBSA Records Table */}
             <div className="jo-masterlist-table-container">
-              <table className="jo-masterlist-farmers-table">
+              <table
+                className="jo-masterlist-farmers-table"
+                data-responsive="stack"
+              >
                 <thead>
                   <tr>
                     {[
