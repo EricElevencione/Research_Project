@@ -51,7 +51,7 @@
   color: #6b7280;
   font-size: 14px;
   margin-top: 0;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 /* Content Card */
@@ -59,8 +59,8 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 24px;
-  margin-top: 20px;
+  padding: 18px;
+  margin-top: 12px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -72,7 +72,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   gap: 20px;
   flex-wrap: wrap;
   flex-shrink: 0;
@@ -126,7 +126,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: -6px 2px 12px;
+  margin: -2px 2px 10px;
   flex-wrap: wrap;
   color: #4b5563;
   font-size: 13px;
@@ -559,6 +559,7 @@
 
   .masterlist-admin-content-card {
     padding: 16px;
+    margin-top: 10px;
   }
 
   .masterlist-admin-dashboard-header {
@@ -567,6 +568,8 @@
 
   .masterlist-status-cards {
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
   }
 }
 
@@ -575,30 +578,33 @@
    ============================================ */
 .masterlist-status-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-top: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 .masterlist-status-card {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   position: relative;
   overflow: hidden;
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
+  min-height: 64px;
   transition:
-    transform 0.2s ease,
+    transform 0.15s ease,
     box-shadow 0.2s ease;
 }
 
 .masterlist-status-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
 .masterlist-card-total {
@@ -622,29 +628,33 @@
 }
 
 .masterlist-card-icon {
-  font-size: 24px;
+  font-size: 18px;
+  width: 20px;
+  text-align: center;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .masterlist-card-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  min-width: 0;
 }
 
 .masterlist-card-count {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: #111827;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .masterlist-card-label {
-  font-size: 13px;
+  font-size: 11px;
   color: #6b7280;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.35px;
 }
 
 .masterlist-card-bar {

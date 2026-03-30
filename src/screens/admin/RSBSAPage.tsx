@@ -471,7 +471,7 @@ const JoRsbsa: React.FC = () => {
                     <tbody>
                       {registeredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="rsbsa-admin-no-data">
+                          <td colSpan={9} className="rsbsa-admin-no-data">
                             No registered owners found
                           </td>
                         </tr>
@@ -488,7 +488,6 @@ const JoRsbsa: React.FC = () => {
                             <tr
                               key={record.id}
                               onClick={() => fetchFarmerDetails(record.id)}
-                              style={{ cursor: "pointer" }}
                             >
                               <td>{lastName}</td>
                               <td>{firstName}</td>

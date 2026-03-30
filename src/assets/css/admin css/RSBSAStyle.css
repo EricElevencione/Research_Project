@@ -77,43 +77,39 @@
   background: white;
   min-height: 0;
   flex: 1;
-  border-radius: 5px;
-}
-
-.rsbsa-admin-owners-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .rsbsa-admin-owners-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
-  min-width: 1000px;
-}
-
-.rsbsa-admin-owners-table thead {
-  background: #dee2e6;
-  color: rgb(0, 0, 0);
+  table-layout: fixed;
+  background: white;
+  font-size: 13px;
+  min-width: 1080px;
 }
 
 .rsbsa-admin-owners-table th {
-  padding: 12px 12px;
-  text-align: left;
+  background: #a0c878;
+  color: #000;
   font-weight: 600;
-  font-size: 13px;
+  text-align: left;
+  padding: 10px 9px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.35px;
+  white-space: normal;
+  line-height: 1.3;
   border-right: 1px solid rgba(255, 255, 255, 0.2);
-  background-color: #a0c878;
-}
-
-.rsbsa-admin-owners-table th:last-child {
-  border-right: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .rsbsa-admin-owners-table tbody tr {
+  cursor: pointer;
   border-bottom: 1px solid #e5e7eb;
   transition: background-color 0.2s ease;
 }
@@ -127,17 +123,76 @@
 }
 
 .rsbsa-admin-owners-table td {
-  padding: 16px 12px;
+  padding: 10px 9px;
   color: #374151;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  font-weight: 700;
   border-right: 1px solid #f3f4f6;
+  vertical-align: middle;
 }
 
+.rsbsa-admin-owners-table th:last-child,
 .rsbsa-admin-owners-table td:last-child {
   border-right: none;
 }
 
 .rsbsa-admin-owners-table tbody tr:nth-child(even) {
   background-color: #fafafa;
+}
+
+.rsbsa-admin-owners-table th:nth-child(1),
+.rsbsa-admin-owners-table td:nth-child(1) {
+  width: 120px;
+}
+
+.rsbsa-admin-owners-table th:nth-child(2),
+.rsbsa-admin-owners-table td:nth-child(2) {
+  width: 126px;
+}
+
+.rsbsa-admin-owners-table th:nth-child(3),
+.rsbsa-admin-owners-table td:nth-child(3) {
+  width: 126px;
+}
+
+.rsbsa-admin-owners-table th:nth-child(4),
+.rsbsa-admin-owners-table td:nth-child(4) {
+  width: 90px;
+}
+
+.rsbsa-admin-owners-table th:nth-child(5),
+.rsbsa-admin-owners-table td:nth-child(5) {
+  width: 86px;
+}
+
+.rsbsa-admin-owners-table th:nth-child(6),
+.rsbsa-admin-owners-table td:nth-child(6) {
+  width: 112px;
+}
+
+.rsbsa-admin-owners-table th:nth-child(8),
+.rsbsa-admin-owners-table td:nth-child(8) {
+  width: 122px;
+}
+
+.rsbsa-admin-owners-table th:nth-child(9),
+.rsbsa-admin-owners-table td:nth-child(9) {
+  width: 114px;
+}
+
+.rsbsa-admin-owners-table th:nth-child(4),
+.rsbsa-admin-owners-table td:nth-child(4),
+.rsbsa-admin-owners-table th:nth-child(5),
+.rsbsa-admin-owners-table td:nth-child(5),
+.rsbsa-admin-owners-table th:nth-child(6),
+.rsbsa-admin-owners-table td:nth-child(6),
+.rsbsa-admin-owners-table th:nth-child(8),
+.rsbsa-admin-owners-table td:nth-child(8),
+.rsbsa-admin-owners-table th:nth-child(9),
+.rsbsa-admin-owners-table td:nth-child(9) {
+  white-space: nowrap;
 }
 
 /* Loading, Error, and No Data States */
@@ -194,7 +249,7 @@
   }
 
   .rsbsa-admin-owners-table {
-    min-width: 800px;
+    min-width: 980px;
   }
 
   .rsbsa-admin-main-content {
