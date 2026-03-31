@@ -1334,6 +1334,9 @@ const LandPlottingPage: React.FC = () => {
         onClick={handleBackClick}
         aria-label="Back"
       >
+        <span className="app-back-button-arrow" aria-hidden="true">
+          ←
+        </span>
         Back
       </button>
 

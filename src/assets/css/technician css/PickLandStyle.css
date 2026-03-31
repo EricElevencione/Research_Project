@@ -489,6 +489,7 @@
 /* Back button alignment in this layout (visual style is global in index.css) */
 .jo-map-layout .app-back-button {
   align-self: flex-start;
+  margin-bottom: 10px;
 }
 
 /* Responsive Design */
