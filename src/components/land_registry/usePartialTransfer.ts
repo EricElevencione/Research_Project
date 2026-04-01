@@ -23,6 +23,14 @@ export interface ParcelSplitInput {
   transfer_area_ha: number | ""; // user input: portion being transferred
 }
 
+export interface TransferProofUpload {
+  storage_bucket: string;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  file_size_bytes: number;
+}
+
 export type ParcelTransferScope = "full" | "partial";
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -128,6 +136,7 @@ export function usePartialTransfer() {
       transferMode: "voluntary" | "inheritance";
       transferReason: string;
       transferDate: string; // YYYY-MM-DD
+      uploadedProofs: TransferProofUpload[];
     }): Promise<PartialSplitRpcResult[]> => {
       const {
         parcels,
@@ -136,6 +145,7 @@ export function usePartialTransfer() {
         transferMode,
         transferReason,
         transferDate,
+        uploadedProofs,
       } = params;
 
       setPartialSubmitting(true);
@@ -176,6 +186,7 @@ export function usePartialTransfer() {
               p_transfer_mode: transferMode,
               p_transfer_reason: transferReason || null,
               p_transfer_date: transferDate,
+              p_proofs: uploadedProofs,
             },
           );
 

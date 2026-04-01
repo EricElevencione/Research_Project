@@ -944,6 +944,7 @@ const JoLandRegistry: React.FC = () => {
           transferMode: transferMode as "voluntary" | "inheritance",
           transferReason: finalReasonPreview || "",
           transferDate: new Date().toISOString().slice(0, 10),
+          uploadedProofs,
         });
 
         setTransferSubmitSuccess(
@@ -1603,20 +1604,60 @@ const JoLandRegistry: React.FC = () => {
                             const isTransfer = /TRANSFER/i.test(
                               record.change_type || "",
                             );
-                            const recipientName =
-                              record.farmer_name ||
-                              record.land_owner_name ||
-                              "Unknown";
+                            const fromMatch =
+                              isTransfer && record.notes
+                                ? record.notes.match(/from farmer (\d+)/i)
+                                : null;
+                            const toMatch =
+                              isTransfer && record.notes
+                                ? record.notes.match(/to farmer (\d+)/i)
+                                : null;
+                            const fromFarmerIdFromNotes = fromMatch
+                              ? Number(fromMatch[1])
+                              : null;
+                            const toFarmerIdFromNotes = toMatch
+                              ? Number(toMatch[1])
+                              : null;
+
+                            const recipientName = (() => {
+                              if (
+                                toFarmerIdFromNotes &&
+                                (!record.farmer_id ||
+                                  toFarmerIdFromNotes !== record.farmer_id)
+                              ) {
+                                return (
+                                  farmerNameMap.get(toFarmerIdFromNotes) ||
+                                  record.farmer_name ||
+                                  record.land_owner_name ||
+                                  "Unknown"
+                                );
+                              }
+                              return (
+                                record.farmer_name ||
+                                record.land_owner_name ||
+                                "Unknown"
+                              );
+                            })();
 
                             // Resolve donor name from notes ("from farmer <id>")
                             let donorName: string | null = null;
-                            if (isTransfer && record.notes) {
-                              const fromMatch =
-                                record.notes.match(/from farmer (\d+)/i);
-                              if (fromMatch) {
-                                const donorId = Number(fromMatch[1]);
-                                donorName = farmerNameMap.get(donorId) ?? null;
-                              }
+                            if (fromFarmerIdFromNotes) {
+                              donorName =
+                                farmerNameMap.get(fromFarmerIdFromNotes) ??
+                                null;
+                            }
+                            // Older donor-side rows often store "to farmer <id>" only.
+                            // In that case, current row farmer_id is the donor.
+                            if (
+                              !donorName &&
+                              toFarmerIdFromNotes &&
+                              record.farmer_id &&
+                              toFarmerIdFromNotes !== record.farmer_id
+                            ) {
+                              donorName =
+                                farmerNameMap.get(record.farmer_id) ||
+                                record.farmer_name ||
+                                null;
                             }
                             // Fallback: extract donor from change_reason sentence
                             if (!donorName && record.change_reason) {
@@ -1668,13 +1709,21 @@ const JoLandRegistry: React.FC = () => {
 
                             // Resolve donor ID from notes for proof lookup
                             let donorIdForProof: number | null = null;
-                            if (isTransfer && record.notes) {
-                              const dnMatch =
-                                record.notes.match(/from farmer (\d+)/i);
-                              if (dnMatch) donorIdForProof = Number(dnMatch[1]);
+                            if (fromFarmerIdFromNotes) {
+                              donorIdForProof = fromFarmerIdFromNotes;
+                            } else if (
+                              toFarmerIdFromNotes &&
+                              record.farmer_id &&
+                              toFarmerIdFromNotes !== record.farmer_id
+                            ) {
+                              donorIdForProof = record.farmer_id;
                             }
                             const recipientIdForProof =
-                              record.farmer_id ?? null;
+                              toFarmerIdFromNotes &&
+                              (!record.farmer_id ||
+                                toFarmerIdFromNotes !== record.farmer_id)
+                                ? toFarmerIdFromNotes
+                                : (record.farmer_id ?? null);
                             // Lookup proofs: primary by pair, fallback by recipient only
                             const cardProofs: ProofItem[] | null = (() => {
                               if (donorIdForProof && recipientIdForProof) {

@@ -14,6 +14,39 @@
 --   7. Sets transferred_area_ha, remaining_area_ha on land_history rows.
 -- ============================================================================
 
+DROP FUNCTION IF EXISTS public.execute_partial_parcel_transfer(
+  INTEGER,
+  INTEGER,
+  INTEGER,
+  NUMERIC,
+  TEXT,
+  TEXT,
+  DATE,
+  BOOLEAN,
+  BOOLEAN,
+  TEXT
+);
+
+DROP FUNCTION IF EXISTS public.execute_partial_parcel_transfer(
+  INTEGER,
+  INTEGER,
+  INTEGER,
+  NUMERIC,
+  TEXT,
+  TEXT,
+  DATE
+);
+
+DROP FUNCTION IF EXISTS public.execute_partial_parcel_transfer(
+  BIGINT,
+  BIGINT,
+  BIGINT,
+  NUMERIC,
+  TEXT,
+  TEXT,
+  DATE
+);
+
 CREATE OR REPLACE FUNCTION public.execute_partial_parcel_transfer(
   p_farm_parcel_id   BIGINT,
   p_donor_farmer_id  BIGINT,
@@ -21,7 +54,8 @@ CREATE OR REPLACE FUNCTION public.execute_partial_parcel_transfer(
   p_transfer_area_ha NUMERIC,
   p_transfer_mode    TEXT    DEFAULT 'voluntary',
   p_transfer_reason  TEXT    DEFAULT NULL,
-  p_transfer_date    DATE    DEFAULT CURRENT_DATE
+  p_transfer_date    DATE    DEFAULT CURRENT_DATE,
+  p_proofs           JSONB   DEFAULT '[]'::jsonb
 )
 RETURNS TABLE (
   new_parcel_id       BIGINT,
@@ -327,6 +361,7 @@ BEGIN
     transfer_date,
     transfer_type,
     transfer_reason,
+    documents,
     notes,
     created_at
   )
@@ -336,6 +371,7 @@ BEGIN
     v_now,
     LOWER(COALESCE(p_transfer_mode, 'voluntary')),
     v_reason,
+    COALESCE(p_proofs, '[]'::jsonb),
     FORMAT(
       'Partial split: %s ha of parcel %s',
       TO_CHAR(ROUND(p_transfer_area_ha::NUMERIC, 2), 'FM999999999999990.00'),
@@ -356,7 +392,7 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.execute_partial_parcel_transfer(
-  BIGINT, BIGINT, BIGINT, NUMERIC, TEXT, TEXT, DATE
+  BIGINT, BIGINT, BIGINT, NUMERIC, TEXT, TEXT, DATE, JSONB
 ) TO anon, authenticated, service_role;
 
 NOTIFY pgrst, 'reload schema';
