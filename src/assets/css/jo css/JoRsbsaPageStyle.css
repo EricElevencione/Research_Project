@@ -224,92 +224,134 @@
 
 /* Table Container */
 .jo-rsbsa-table-container {
-  overflow-x: auto;
-  background: white;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  background: #fff;
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
 }
 
 .jo-rsbsa-owners-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 13px;
-  min-width: 760px;
-}
-
-.jo-rsbsa-owners-table thead {
-  background: #dee2e6;
-  color: rgb(0, 0, 0);
+  background: #fff;
+  font-size: 14px;
+  min-width: 1040px;
 }
 
 .jo-rsbsa-owners-table th {
-  padding: 10px 9px;
+  padding: 12px;
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.35px;
-  white-space: normal;
-  line-height: 1.3;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
-  background-color: #a0c878;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border-bottom: 1px solid #b6d08f;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
-.jo-rsbsa-owners-table th:last-child {
-  border-right: none;
+.jo-rsbsa-sort-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
 }
 
-.jo-rsbsa-owners-table tbody tr {
-  border-bottom: 1px solid #e5e7eb;
+.jo-rsbsa-sort-btn.is-active {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.jo-rsbsa-owners-table tbody td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #edf2e8;
+  vertical-align: middle;
+  color: #374151;
+}
+
+.jo-rsbsa-owners-table th:nth-child(3),
+.jo-rsbsa-owners-table td:nth-child(3) {
+  min-width: 250px;
+  width: 250px;
+}
+
+.jo-rsbsa-table-row {
+  cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
-.jo-rsbsa-owners-table tbody tr:hover {
-  background-color: #f9fafb;
-  cursor: pointer;
+.jo-rsbsa-owners-table tbody tr.jo-rsbsa-table-row:hover {
+  background-color: #f8fbf4 !important;
 }
 
-.jo-rsbsa-owners-table tbody tr:last-child {
+.jo-rsbsa-owners-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.jo-rsbsa-owners-table td {
-  padding: 10px 9px;
-  color: #374151;
-  line-height: 1.35;
-  white-space: normal;
-  word-break: break-word;
+.jo-rsbsa-farmer-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 240px;
+}
+
+.jo-rsbsa-farmer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #e4f3d8 0%, #b8d98d 100%);
+  color: #2f4a1d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 700;
-  border-right: 1px solid #f3f4f6;
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
-.jo-rsbsa-owners-table th:nth-child(1),
-.jo-rsbsa-owners-table td:nth-child(1),
-.jo-rsbsa-owners-table td:nth-child(6),
-.jo-rsbsa-owners-table td:nth-child(8),
-.jo-rsbsa-owners-table td:nth-child(9),
-.jo-rsbsa-owners-table td:nth-child(10) {
-  white-space: nowrap;
+.jo-rsbsa-farmer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.jo-rsbsa-owners-table th:nth-child(1),
-.jo-rsbsa-owners-table td:nth-child(1) {
-  width: 120px;
+.jo-rsbsa-farmer-name {
+  color: #111827;
+  font-weight: 650;
+  font-size: 14.5px;
 }
 
-.jo-rsbsa-owners-table th:nth-child(10),
-.jo-rsbsa-owners-table td:nth-child(10) {
-  width: 102px;
-  overflow: hidden;
+.jo-rsbsa-farmer-ref {
+  color: #6b7280;
+  font-size: 12px;
 }
 
-.jo-rsbsa-owners-table td:last-child {
-  border-right: none;
+.jo-rsbsa-address-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
-.jo-rsbsa-owners-table tbody tr:nth-child(even) {
-  background-color: #fafafa;
+.jo-rsbsa-parcel-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
 }
 
 .jo-rsbsa-owners-table td.jo-rsbsa-ffrs-id {
@@ -317,6 +359,82 @@
   font-weight: 700;
   color: #2c5f2d;
   overflow: hidden;
+}
+
+.jo-rsbsa-address-primary {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.jo-rsbsa-address-secondary {
+  color: #6b7280;
+  font-size: 12px;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jo-rsbsa-parcel-count {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.jo-rsbsa-parcel-area {
+  color: #14532d;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.jo-rsbsa-date {
+  color: #334155;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.jo-rsbsa-actions-cell {
+  width: 170px;
+}
+
+.jo-rsbsa-actions-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jo-rsbsa-action-btn {
+  border: 1px solid #9fc06e;
+  background: #f6fde9;
+  color: #35511a;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jo-rsbsa-action-btn:hover {
+  background: #ebf8d6;
+  border-color: #84ac53;
+}
+
+.jo-rsbsa-action-btn-edit {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #ffffff;
+}
+
+.jo-rsbsa-action-btn-edit:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
 }
 
 .jo-rsbsa-ffrs-id-value {
@@ -376,13 +494,53 @@
   padding: 4px 8px;
   border-radius: 20px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   text-transform: none;
   letter-spacing: 0.2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.jo-rsbsa-ownership-pill {
+  display: inline-block;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: none;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jo-rsbsa-ownership-owner {
+  background-color: #1e3a8a;
+  border: 1px solid #132a5f;
+  color: #ffffff;
+}
+
+.jo-rsbsa-ownership-tenant {
+  background-color: #10b981;
+  border: 1px solid #0a7e5e;
+  color: #ffffff;
+}
+
+.jo-rsbsa-ownership-lessee {
+  background-color: #f59e0b;
+  border: 1px solid #c47c08;
+  color: #ffffff;
+}
+
+.jo-rsbsa-ownership-unknown {
+  background-color: #64748b;
+  border: 1px solid #475569;
+  color: #ffffff;
 }
 
 .jo-rsbsa-status-active {

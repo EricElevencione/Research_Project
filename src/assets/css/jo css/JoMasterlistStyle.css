@@ -122,121 +122,307 @@
   border-color: #4caf50;
 }
 
+/* Table Meta + Bulk Actions */
+.jo-masterlist-table-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -2px 2px 10px;
+  flex-wrap: wrap;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.jo-masterlist-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 2px 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cde8cf;
+  background: #f4fbf3;
+}
+
+.jo-masterlist-bulk-count {
+  color: #14532d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.jo-masterlist-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jo-masterlist-bulk-export-wrap {
+  position: relative;
+}
+
+.jo-masterlist-bulk-btn {
+  border: 1px solid #6aa661;
+  background: #ffffff;
+  color: #1f4f2e;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jo-masterlist-bulk-btn:hover {
+  background: #edf9ea;
+}
+
+.jo-masterlist-bulk-btn-clear {
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.jo-masterlist-bulk-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 20;
+}
+
 /* Table Container */
 .jo-masterlist-table-container {
-  overflow-x: auto;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
 }
 
 /* Table Styles */
 .jo-masterlist-farmers-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
   background: white;
-  font-size: 13px;
-  min-width: 960px;
+  font-size: 14px;
+  min-width: 1040px;
 }
 
 .jo-masterlist-farmers-table thead th {
-  background: #a0c878;
-  color: #000;
-  font-weight: 600;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-weight: 700;
   text-align: left;
-  padding: 10px 9px;
+  padding: 12px;
+  border-bottom: 1px solid #b6d08f;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.35px;
-  white-space: normal;
-  line-height: 1.3;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.5px;
 }
 
-.jo-masterlist-farmers-table tbody td {
-  padding: 10px 9px;
-  color: #374151;
-  line-height: 1.35;
-  white-space: normal;
-  word-break: break-word;
-  font-weight: 700;
-  border-right: 1px solid #f3f4f6;
+.jo-masterlist-checkbox-col {
+  width: 44px;
+  min-width: 44px;
+  text-align: center;
 }
 
-.jo-masterlist-farmers-table tbody tr:hover {
-  background-color: #f9fafb;
-  transition: background-color 0.2s ease;
+.jo-masterlist-header-checkbox,
+.jo-masterlist-row-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #059669;
   cursor: pointer;
 }
 
-.jo-masterlist-farmers-table tbody tr {
-  border-bottom: 1px solid #e5e7eb;
+.jo-masterlist-sort-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
 }
 
-.jo-masterlist-farmers-table tbody tr:nth-child(even) {
-  background-color: #fafafa;
+.jo-masterlist-sort-btn.is-active {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.jo-masterlist-farmers-table tbody tr:last-child {
+.jo-masterlist-farmers-table tbody td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #edf2e8;
+  vertical-align: middle;
+}
+
+.jo-masterlist-table-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.jo-masterlist-table-row:hover {
+  background-color: #f8fbf4;
+}
+
+.jo-masterlist-farmers-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.jo-masterlist-farmers-table th:last-child,
-.jo-masterlist-farmers-table td:last-child {
-  border-right: none;
+.jo-masterlist-farmer-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 240px;
 }
 
-.jo-masterlist-farmers-table th:nth-child(1),
-.jo-masterlist-farmers-table td:nth-child(1),
-.jo-masterlist-farmers-table th:nth-child(5),
-.jo-masterlist-farmers-table td:nth-child(5),
-.jo-masterlist-farmers-table th:nth-child(6),
-.jo-masterlist-farmers-table td:nth-child(6),
-.jo-masterlist-farmers-table th:nth-child(7),
-.jo-masterlist-farmers-table td:nth-child(7),
-.jo-masterlist-farmers-table th:nth-child(8),
-.jo-masterlist-farmers-table td:nth-child(8),
-.jo-masterlist-farmers-table th:nth-child(9),
-.jo-masterlist-farmers-table td:nth-child(9) {
-  white-space: nowrap;
-}
-
-.jo-masterlist-farmers-table th:nth-child(1),
-.jo-masterlist-farmers-table td:nth-child(1) {
-  width: 112px;
-}
-
-.jo-masterlist-farmers-table th:nth-child(2),
-.jo-masterlist-farmers-table td:nth-child(2) {
-  width: 150px;
-}
-
-.jo-masterlist-farmers-table th:nth-child(8),
-.jo-masterlist-farmers-table td:nth-child(8) {
-  width: 108px;
-}
-
-.jo-masterlist-farmers-table th:nth-child(9),
-.jo-masterlist-farmers-table td:nth-child(9) {
-  width: 82px;
-}
-
-.jo-masterlist-farmers-table td.jo-masterlist-ffrs-id {
-  font-family: var(--font-family);
+.jo-masterlist-farmer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #e4f3d8 0%, #b8d98d 100%);
+  color: #2f4a1d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 700;
-  color: #2c5f2d;
-  overflow: hidden;
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
-.jo-masterlist-ffrs-id-value {
-  display: block;
-  width: 100%;
+.jo-masterlist-farmer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-masterlist-farmer-name {
+  color: #111827;
+  font-weight: 650;
+  font-size: 14.5px;
+}
+
+.jo-masterlist-farmer-ref {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.jo-masterlist-address-cell,
+.jo-masterlist-parcel-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.jo-masterlist-address-primary {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.jo-masterlist-address-secondary {
+  color: #6b7280;
+  font-size: 12px;
+  max-width: 260px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.jo-masterlist-parcel-count {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.jo-masterlist-parcel-area {
+  color: #14532d;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.jo-masterlist-date {
+  color: #334155;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.jo-masterlist-view-btn {
+  border: 1px solid #9fc06e;
+  background: #f6fde9;
+  color: #35511a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jo-masterlist-view-btn:hover {
+  background: #ebf8d6;
+  border-color: #84ac53;
+}
+
+.jo-masterlist-actions-cell {
+  width: 185px;
+}
+
+.jo-masterlist-quick-actions {
+  position: relative;
+  display: inline-flex;
+}
+
+.jo-masterlist-quick-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 210px;
+  background: #ffffff;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 25;
+}
+
+.jo-masterlist-quick-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  text-align: left;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.jo-masterlist-quick-item:hover {
+  background: #f3f9eb;
 }
 
 /* Status Pills */
@@ -325,6 +511,88 @@
   background-color: #64748b;
   border: 1px solid #475569;
   color: #ffffff;
+}
+
+.jo-masterlist-empty-cell {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Status Count Cards */
+.jo-masterlist-status-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.jo-masterlist-status-card {
+  background: white;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  border-left: 3px solid transparent;
+  min-height: 64px;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.jo-masterlist-status-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.jo-masterlist-card-total {
+  border-left-color: #6366f1;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+}
+
+.jo-masterlist-card-active {
+  border-left-color: #22c55e;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.jo-masterlist-card-inactive {
+  border-left-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+}
+
+.jo-masterlist-card-icon {
+  font-size: 18px;
+  width: 20px;
+  text-align: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.jo-masterlist-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.jo-masterlist-card-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+}
+
+.jo-masterlist-card-label {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
 }
 
 /* Archived toggle */
@@ -635,6 +903,12 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .jo-masterlist-page-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
   .jo-masterlist-filters-section {
     flex-direction: column;
     align-items: stretch;
@@ -649,8 +923,21 @@
     font-size: 12px;
   }
 
+  .jo-masterlist-table-meta {
+    font-size: 12px;
+  }
+
+  .jo-masterlist-bulk-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jo-masterlist-bulk-actions {
+    justify-content: space-between;
+  }
+
   .jo-masterlist-farmers-table {
-    min-width: 840px;
+    min-width: 980px;
   }
 
   .jo-masterlist-farmers-table thead th,
@@ -664,6 +951,31 @@
 
   .jo-masterlist-content-card {
     padding: 16px;
+    margin-top: 10px;
+  }
+
+  .jo-masterlist-status-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .jo-masterlist-farmer-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+
+  .jo-masterlist-view-btn {
+    width: 100%;
+    padding: 8px 10px;
+  }
+
+  .jo-masterlist-quick-menu,
+  .jo-masterlist-bulk-menu {
+    right: auto;
+    left: 0;
   }
 
   .jo-masterlist-edit-modal {

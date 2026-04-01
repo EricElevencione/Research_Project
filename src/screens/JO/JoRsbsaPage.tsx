@@ -63,13 +63,8 @@ interface ParcelDetail {
   lesseeLandOwnerName: string;
 }
 
-const INACTIVE_STATUS_VALUES = new Set([
-  "inactive",
-  "inactive farmer",
-  "not active",
-  "deactivated",
-  "archived",
-]);
+type SortKey = "farmer" | "gender" | "parcelArea" | "dateSubmitted";
+type SortDirection = "asc" | "desc";
 
 const JoRsbsaPage: React.FC = () => {
   const navigate = useNavigate();
@@ -87,6 +82,10 @@ const JoRsbsaPage: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({ key: "dateSubmitted", direction: "desc" });
   const showArchived = false;
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const isActive = (path: string) => location.pathname === path;
@@ -453,23 +452,130 @@ const JoRsbsaPage: React.FC = () => {
       return true;
     })
     .sort((a, b) => {
-      // Sort newest first: compare by dateSubmitted, fall back to id descending
-      const dateA = a.dateSubmitted ? new Date(a.dateSubmitted).getTime() : 0;
-      const dateB = b.dateSubmitted ? new Date(b.dateSubmitted).getTime() : 0;
-      if (dateB !== dateA) return dateB - dateA;
-      // Fallback: higher id = newer record
-      return Number(b.id) - Number(a.id);
+      const factor = sortConfig.direction === "asc" ? 1 : -1;
+
+      if (sortConfig.key === "farmer") {
+        const normalizeFarmer = (fullName: string) => {
+          const parts = String(fullName || "")
+            .split(",")
+            .map((part) => part.trim());
+          const last = (parts[0] || "").toLowerCase();
+          const rest = parts.slice(1).join(" ").toLowerCase();
+          return `${last} ${rest}`.trim();
+        };
+
+        return (
+          normalizeFarmer(a.farmerName).localeCompare(
+            normalizeFarmer(b.farmerName),
+          ) * factor
+        );
+      }
+
+      if (sortConfig.key === "gender") {
+        const genderRank = (gender: string) => {
+          const normalized = String(gender || "")
+            .toLowerCase()
+            .trim();
+          if (normalized === "male") return 0;
+          if (normalized === "female") return 1;
+          return 2;
+        };
+
+        const rankDiff = genderRank(a.gender) - genderRank(b.gender);
+        if (rankDiff !== 0) return rankDiff * factor;
+        return (
+          String(a.gender || "").localeCompare(String(b.gender || "")) * factor
+        );
+      }
+
+      if (sortConfig.key === "parcelArea") {
+        const parseArea = (value: number | string | null | undefined) => {
+          const parsed =
+            typeof value === "number"
+              ? value
+              : parseFloat(String(value ?? "0").replace(/[^0-9.-]/g, ""));
+          return Number.isFinite(parsed) ? parsed : 0;
+        };
+
+        return (
+          (parseArea(a.totalFarmArea) - parseArea(b.totalFarmArea)) * factor
+        );
+      }
+
+      const dateA = Date.parse(a.dateSubmitted || "");
+      const dateB = Date.parse(b.dateSubmitted || "");
+      const safeA = Number.isNaN(dateA) ? -Infinity : dateA;
+      const safeB = Number.isNaN(dateB) ? -Infinity : dateB;
+      if (safeA !== safeB) return (safeA - safeB) * factor;
+
+      return (Number(a.id) - Number(b.id)) * factor;
     });
 
-  const getStatusPillClass = (status: string) => {
-    const normalizedStatus = status.toLowerCase().trim().replace(/\s+/g, " ");
-    if (normalizedStatus === "no parcels") {
-      return "jo-rsbsa-status-no-parcels";
+  const handleSortChange = (key: SortKey) => {
+    setSortConfig((previous) => {
+      if (previous.key === key) {
+        return {
+          key,
+          direction: previous.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      if (key === "farmer" || key === "gender") {
+        return { key, direction: "asc" };
+      }
+
+      return { key, direction: "desc" };
+    });
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (sortConfig.key !== key) return "↕";
+    return sortConfig.direction === "asc" ? "▲" : "▼";
+  };
+
+  const getFarmerInitials = (fullName: string) => {
+    const cleaned = (fullName || "")
+      .replace(/,/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "");
+    return cleaned.join("") || "NA";
+  };
+
+  const formatDate = (iso: string) => {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleDateString();
+    } catch {
+      return "—";
     }
-    if (INACTIVE_STATUS_VALUES.has(normalizedStatus)) {
-      return "jo-rsbsa-status-inactive";
-    }
-    return "jo-rsbsa-status-active";
+  };
+
+  const formatParcelArea = (value: number | string | null | undefined) => {
+    const parsed =
+      typeof value === "number" ? value : parseFloat(String(value ?? ""));
+    if (!Number.isFinite(parsed) || parsed <= 0) return "N/A";
+    return `${parsed.toFixed(2)} ha`;
+  };
+
+  const getOwnershipLabel = (record: RSBSARecord) => {
+    if (record.ownershipType?.registeredOwner) return "Owner";
+    if (record.ownershipType?.tenant) return "Tenant";
+    if (record.ownershipType?.lessee) return "Lessee";
+    return "—";
+  };
+
+  const getOwnershipClass = (record: RSBSARecord) => {
+    if (record.ownershipType?.registeredOwner)
+      return "jo-rsbsa-ownership-owner";
+    if (record.ownershipType?.tenant) return "jo-rsbsa-ownership-tenant";
+    if (record.ownershipType?.lessee) return "jo-rsbsa-ownership-lessee";
+    return "jo-rsbsa-ownership-unknown";
+  };
+
+  const handleEditFromRsbsa = (recordId: string) => {
+    navigate("/jo-masterlist", { state: { editRecordId: recordId } });
   };
 
   return (
@@ -633,22 +739,69 @@ const JoRsbsaPage: React.FC = () => {
                 <table className="jo-rsbsa-owners-table">
                   <thead>
                     <tr>
-                      <th>FFRS ID</th>
-                      <th>Last Name</th>
-                      <th>First Name</th>
-                      <th>Middle Name</th>
-                      <th>EXT Name</th>
-                      <th>Gender</th>
-                      <th>Farmer Address</th>
-                      <th>Number of Parcels</th>
-                      <th>Total Farm Area</th>
-                      <th>Status</th>
+                      <th>
+                        <button
+                          className={`jo-rsbsa-sort-btn ${
+                            sortConfig.key === "farmer" ? "is-active" : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSortChange("farmer");
+                          }}
+                        >
+                          Farmer <span>{getSortIndicator("farmer")}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button
+                          className={`jo-rsbsa-sort-btn ${
+                            sortConfig.key === "gender" ? "is-active" : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSortChange("gender");
+                          }}
+                        >
+                          Gender <span>{getSortIndicator("gender")}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button
+                          className={`jo-rsbsa-sort-btn ${
+                            sortConfig.key === "parcelArea" ? "is-active" : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSortChange("parcelArea");
+                          }}
+                        >
+                          Parcel Area{" "}
+                          <span>{getSortIndicator("parcelArea")}</span>
+                        </button>
+                      </th>
+                      <th>
+                        <button
+                          className={`jo-rsbsa-sort-btn ${
+                            sortConfig.key === "dateSubmitted"
+                              ? "is-active"
+                              : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSortChange("dateSubmitted");
+                          }}
+                        >
+                          Date Submitted{" "}
+                          <span>{getSortIndicator("dateSubmitted")}</span>
+                        </button>
+                      </th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOwners.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="jo-rsbsa-no-data">
+                        <td colSpan={5} className="jo-rsbsa-no-data">
                           {searchQuery
                             ? "No results found for your search"
                             : "No registered owners found"}
@@ -656,71 +809,71 @@ const JoRsbsaPage: React.FC = () => {
                       </tr>
                     ) : (
                       filteredOwners.map((record) => {
-                        // Parse the farmer name to extract individual components
-                        // Backend returns "Last, First, Middle, Ext" but we display as "Last, First Middle Ext"
-                        const nameParts = record.farmerName.split(", ");
-                        const lastName = nameParts[0] || "";
-                        // The rest after the comma is "First Middle Ext" - split by spaces
-                        const restOfName = (nameParts[1] || "")
-                          .split(" ")
-                          .map((p) => p.trim())
-                          .filter(Boolean);
-                        const firstName = restOfName[0] || "";
-                        const middleName = restOfName[1] || "";
-                        const extName = restOfName[2] || "";
-
-                        // Parcel count is now calculated and stored in record.parcelCount
-
                         return (
                           <tr
                             key={record.id}
-                            className="jo-rsbsa-clickable-row"
+                            className="jo-rsbsa-clickable-row jo-rsbsa-table-row"
                             onClick={() =>
                               fetchFarmerDetails(record.id, record)
                             }
-                            style={{ cursor: "pointer" }}
                           >
-                            <td
-                              className="jo-rsbsa-ffrs-id"
-                              title={record.referenceNumber || "N/A"}
-                            >
-                              <span className="jo-rsbsa-ffrs-id-value">
-                                {record.referenceNumber || "N/A"}
+                            <td>
+                              <div className="jo-rsbsa-farmer-cell">
+                                <div className="jo-rsbsa-farmer-avatar">
+                                  {getFarmerInitials(record.farmerName)}
+                                </div>
+                                <div className="jo-rsbsa-farmer-meta">
+                                  <span className="jo-rsbsa-farmer-name">
+                                    {record.farmerName || "N/A"}
+                                  </span>
+                                  <span className="jo-rsbsa-farmer-ref">
+                                    Ref: {record.referenceNumber || "N/A"}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td>{record.gender || "N/A"}</td>
+                            <td>
+                              <div className="jo-rsbsa-parcel-cell">
+                                <span className="jo-rsbsa-parcel-count">
+                                  {record.parcelCount || 0} parcel
+                                  {record.parcelCount === 1 ? "" : "s"}
+                                </span>
+                                <span className="jo-rsbsa-parcel-area">
+                                  {formatParcelArea(record.totalFarmArea)}
+                                </span>
+                                <span
+                                  className={`jo-rsbsa-ownership-pill ${getOwnershipClass(record)}`}
+                                >
+                                  {getOwnershipLabel(record)}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="jo-rsbsa-date">
+                                {formatDate(record.dateSubmitted)}
                               </span>
                             </td>
-                            <td>{lastName}</td>
-                            <td>{firstName}</td>
-                            <td>{middleName}</td>
-                            <td>{extName}</td>
-                            <td>{record.gender || "N/A"}</td>
-                            <td>{record.farmerAddress || "N/A"}</td>
-                            <td>{record.parcelCount || 0}</td>
-                            <td>
-                              {(() => {
-                                const area =
-                                  typeof record.totalFarmArea === "number"
-                                    ? record.totalFarmArea
-                                    : parseFloat(
-                                        String(record.totalFarmArea || 0),
-                                      );
-                                return !isNaN(area) && area > 0
-                                  ? `${area.toFixed(2)} ha`
-                                  : "N/A";
-                              })()}
-                            </td>
-                            <td>
-                              {(() => {
-                                const st = String(
-                                  (record as any).status || "Active Farmer",
-                                );
-                                return (
-                                  <span
-                                    className={`jo-rsbsa-status-pill ${getStatusPillClass(st)}`}
-                                  >
-                                    {st}
-                                  </span>
-                                );
-                              })()}
+                            <td
+                              className="jo-rsbsa-actions-cell"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="jo-rsbsa-actions-wrap">
+                                <button
+                                  className="jo-rsbsa-action-btn"
+                                  onClick={() =>
+                                    fetchFarmerDetails(record.id, record)
+                                  }
+                                >
+                                  View
+                                </button>
+                                <button
+                                  className="jo-rsbsa-action-btn jo-rsbsa-action-btn-edit"
+                                  onClick={() => handleEditFromRsbsa(record.id)}
+                                >
+                                  Edit
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );

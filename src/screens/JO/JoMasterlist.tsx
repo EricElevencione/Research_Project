@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   getRsbsaSubmissions,
@@ -7,6 +7,10 @@ import {
   updateRsbsaSubmission,
   updateFarmParcel,
 } from "../../api";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import "../../assets/css/jo css/JoMasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
@@ -24,6 +28,7 @@ interface RSBSARecord {
   farmerAddress: string;
   farmLocation: string;
   parcelArea: string;
+  parcelCount: number;
   age: number | null;
   dateSubmitted: string;
   status: string;
@@ -93,6 +98,10 @@ interface EditFormData {
   parcelArea?: string;
   age?: string;
 }
+
+type SortKey = "dateSubmitted" | "status" | "parcelArea";
+type SortDirection = "asc" | "desc";
+type ExportFormat = "csv" | "xlsx" | "pdf";
 
 const JoMasterlist: React.FC = () => {
   const navigate = useNavigate();
@@ -176,10 +185,14 @@ const JoMasterlist: React.FC = () => {
     message: "",
   });
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{
-    top: number;
-    left: number;
-  } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({ key: "dateSubmitted", direction: "desc" });
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
   const showArchived = false;
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
@@ -515,6 +528,8 @@ const JoMasterlist: React.FC = () => {
             farmerAddress,
             farmLocation,
             parcelArea,
+            parcelCount:
+              typeof item.parcelCount === "number" ? item.parcelCount : 0,
             age,
             dateSubmitted,
             status,
@@ -532,10 +547,26 @@ const JoMasterlist: React.FC = () => {
     }
   };
 
-  const getSubmissionTimestamp = (isoDate: string) => {
-    const timestamp = Date.parse(isoDate);
-    return Number.isNaN(timestamp) ? -Infinity : timestamp;
-  };
+  useEffect(() => {
+    const handleWindowClick = () => {
+      setOpenMenuId(null);
+      setShowBulkExportMenu(false);
+    };
+
+    window.addEventListener("click", handleWindowClick);
+    return () => window.removeEventListener("click", handleWindowClick);
+  }, []);
+
+  useEffect(() => {
+    setSelectedRecordIds((previous) => {
+      const validIds = new Set(rsbsaRecords.map((record) => record.id));
+      const next = new Set<string>();
+      previous.forEach((id) => {
+        if (validIds.has(id)) next.add(id);
+      });
+      return next;
+    });
+  }, [rsbsaRecords]);
 
   const filteredRecords = rsbsaRecords
     .filter((record) => {
@@ -587,11 +618,110 @@ const JoMasterlist: React.FC = () => {
         record.farmLocation.toLowerCase().includes(q);
       return matchesStatus && matchesSearch;
     })
-    .sort(
-      (a, b) =>
-        getSubmissionTimestamp(b.dateSubmitted) -
-        getSubmissionTimestamp(a.dateSubmitted),
-    );
+    .sort((a, b) => {
+      const factor = sortConfig.direction === "asc" ? 1 : -1;
+
+      if (sortConfig.key === "dateSubmitted") {
+        const aTime = Date.parse(a.dateSubmitted);
+        const bTime = Date.parse(b.dateSubmitted);
+        const safeA = Number.isNaN(aTime) ? -Infinity : aTime;
+        const safeB = Number.isNaN(bTime) ? -Infinity : bTime;
+        return (safeA - safeB) * factor;
+      }
+
+      if (sortConfig.key === "status") {
+        return a.status.localeCompare(b.status) * factor;
+      }
+
+      const parseAreaValue = (value: string) => {
+        const parsed = parseFloat(String(value).replace(/[^0-9.-]/g, ""));
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
+      return (
+        (parseAreaValue(a.parcelArea) - parseAreaValue(b.parcelArea)) * factor
+      );
+    });
+
+  const selectedRecords = useMemo(
+    () => rsbsaRecords.filter((record) => selectedRecordIds.has(record.id)),
+    [rsbsaRecords, selectedRecordIds],
+  );
+
+  const allFilteredSelected =
+    filteredRecords.length > 0 &&
+    filteredRecords.every((record) => selectedRecordIds.has(record.id));
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedRecordIds((previous) => {
+      const next = new Set(previous);
+      if (allFilteredSelected) {
+        filteredRecords.forEach((record) => next.delete(record.id));
+      } else {
+        filteredRecords.forEach((record) => next.add(record.id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectRecord = (id: string) => {
+    setSelectedRecordIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSortChange = (key: SortKey) => {
+    setSortConfig((previous) => {
+      if (previous.key === key) {
+        return {
+          key,
+          direction: previous.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return { key, direction: "desc" };
+    });
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (sortConfig.key !== key) return "↕";
+    return sortConfig.direction === "asc" ? "▲" : "▼";
+  };
+
+  const statusCounts = useMemo(() => {
+    const activeStatuses = new Set([
+      "submitted",
+      "approved",
+      "active",
+      "active farmer",
+    ]);
+    const notActiveStatuses = new Set([
+      "not submitted",
+      "not_active",
+      "not active",
+      "draft",
+      "pending",
+      "not approved",
+      "inactive",
+      "no parcels",
+    ]);
+
+    const active = rsbsaRecords.filter((r) =>
+      activeStatuses.has((r.status || "").toLowerCase().trim()),
+    ).length;
+    const inactive = rsbsaRecords.filter((r) =>
+      notActiveStatuses.has((r.status || "").toLowerCase().trim()),
+    ).length;
+
+    return {
+      active,
+      inactive,
+      total: rsbsaRecords.length,
+    };
+  }, [rsbsaRecords]);
 
   const formatDate = (iso: string) => {
     if (!iso) return "—";
@@ -602,24 +732,161 @@ const JoMasterlist: React.FC = () => {
     }
   };
 
+  const formatParcelArea = (parcelArea: string) => {
+    const parsed = parseFloat(parcelArea);
+    if (Number.isFinite(parsed)) {
+      return `${parsed.toLocaleString(undefined, {
+        minimumFractionDigits: parsed % 1 === 0 ? 0 : 2,
+        maximumFractionDigits: 2,
+      })} ha`;
+    }
+    return parcelArea && parcelArea !== "—" ? parcelArea : "—";
+  };
+
+  const exportColumns = [
+    "FFRS System Generated",
+    "Farmer Name",
+    "Farmer Address",
+    "Parcel Address",
+    "No. of Parcels",
+    "Parcel Area",
+    "Date Submitted",
+    "Farmer Status",
+  ];
+
+  const recordToExportRow = (record: RSBSARecord) => [
+    record.referenceNumber,
+    record.farmerName,
+    record.farmerAddress,
+    record.farmLocation,
+    record.parcelCount,
+    formatParcelArea(record.parcelArea),
+    formatDate(record.dateSubmitted),
+    record.status || "Not Submitted",
+  ];
+
+  const downloadCsv = (records: RSBSARecord[], filename: string) => {
+    const escapeCell = (value: string | number) =>
+      `"${String(value).replace(/"/g, '""')}"`;
+
+    const csvRows = [
+      exportColumns.map(escapeCell).join(","),
+      ...records.map((record) =>
+        recordToExportRow(record).map(escapeCell).join(","),
+      ),
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportRecords = (
+    records: RSBSARecord[],
+    format: ExportFormat,
+    label: string,
+  ) => {
+    if (records.length === 0) {
+      alert("No records selected for export.");
+      return;
+    }
+
+    const stamp = new Date().toISOString().split("T")[0];
+    const normalizedLabel = label.replace(/\s+/g, "_");
+
+    if (format === "csv") {
+      downloadCsv(records, `${normalizedLabel}_${stamp}.csv`);
+      return;
+    }
+
+    if (format === "xlsx") {
+      const wsData = [exportColumns, ...records.map(recordToExportRow)];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws["!cols"] = exportColumns.map((_, colIndex) => ({
+        wch:
+          Math.max(
+            exportColumns[colIndex].length,
+            ...records.map(
+              (record) => String(recordToExportRow(record)[colIndex]).length,
+            ),
+          ) + 2,
+      }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Masterlist");
+      const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([buffer], { type: "application/octet-stream" }),
+        `${normalizedLabel}_${stamp}.xlsx`,
+      );
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(16);
+    doc.text("JO Farmer Masterlist", 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 25);
+
+    autoTable(doc, {
+      head: [exportColumns],
+      body: records.map(recordToExportRow),
+      startY: 30,
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: {
+        fillColor: [16, 185, 129],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      alternateRowStyles: { fillColor: [245, 251, 244] },
+    });
+
+    doc.save(`${normalizedLabel}_${stamp}.pdf`);
+  };
+
   const getStatusClass = (status: string) => {
     switch (status) {
       case "Submitted":
-        return "status-approved";
       case "Active Farmer":
-        return "status-approved";
+        return "jo-masterlist-status-approved";
       case "Not Submitted":
-        return "status-not-approved";
+        return "jo-masterlist-status-not-approved";
       case "No Parcels":
-        return "status-no-parcels";
+        return "jo-masterlist-status-no-parcels";
       default:
-        return "status-pending";
+        return "jo-masterlist-status-pending";
     }
   };
 
-  const closeMenu = () => {
-    setOpenMenuId(null);
-    setMenuPosition(null);
+  const getOwnershipLabel = (record: RSBSARecord) => {
+    if (record.ownershipType?.registeredOwner) return "Owner";
+    if (record.ownershipType?.tenant) return "Tenant";
+    if (record.ownershipType?.lessee) return "Lessee";
+    return "—";
+  };
+
+  const getOwnershipClass = (record: RSBSARecord) => {
+    if (record.ownershipType?.registeredOwner)
+      return "jo-masterlist-ownership-owner";
+    if (record.ownershipType?.tenant) return "jo-masterlist-ownership-tenant";
+    if (record.ownershipType?.lessee) return "jo-masterlist-ownership-lessee";
+    return "jo-masterlist-ownership-unknown";
+  };
+
+  const getFarmerInitials = (fullName: string) => {
+    const cleaned = (fullName || "")
+      .replace(/,/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "");
+    return cleaned.join("") || "NA";
   };
 
   const handleCancel = () => {
@@ -760,7 +1027,7 @@ const JoMasterlist: React.FC = () => {
         setLoadingParcels(false);
       }
     }
-    closeMenu();
+    setOpenMenuId(null);
   };
 
   const extractParcelAreaNumber = (value: string): string => {
@@ -770,30 +1037,6 @@ const JoMasterlist: React.FC = () => {
       return value.replace(/\s*hectares\s*$/i, "").trim();
     }
     return value;
-  };
-
-  /**
-   * Toggles the menu for a given record ID.
-   * If the menu is already open for the given ID, it will close the menu.
-   * If the menu is not open for the given ID, it will open the menu at the position of the triggering element.
-   * @param {string} id - The ID of the record to toggle the menu for.
-   * @param {React.MouseEvent<HTMLButtonElement>} event - The event that triggered the toggle menu action.
-   */
-  const toggleMenu = (
-    id: string,
-    event: React.MouseEvent<HTMLButtonElement>,
-  ) => {
-    if (openMenuId === id) {
-      setOpenMenuId(null);
-      setMenuPosition(null);
-    } else {
-      const rect = event.currentTarget.getBoundingClientRect();
-      setMenuPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.right + window.scrollX - 160, // 160px is min-width of menu
-      });
-      setOpenMenuId(id);
-    }
   };
 
   // Updates the edit form data state for a specific field
@@ -1172,8 +1415,41 @@ const JoMasterlist: React.FC = () => {
             </div>
           </div>
 
+          {!loading && !error && (
+            <div className="jo-masterlist-status-cards">
+              <div className="jo-masterlist-status-card jo-masterlist-card-total">
+                <div className="jo-masterlist-card-icon">👥</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {statusCounts.total}
+                  </span>
+                  <span className="jo-masterlist-card-label">
+                    Total Farmers
+                  </span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-active">
+                <div className="jo-masterlist-card-icon">✅</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {statusCounts.active}
+                  </span>
+                  <span className="jo-masterlist-card-label">Active</span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
+                <div className="jo-masterlist-card-icon">❌</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {statusCounts.inactive}
+                  </span>
+                  <span className="jo-masterlist-card-label">Inactive</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="jo-masterlist-content-card">
-            {/* Filters and Search */}
             <div className="jo-masterlist-filters-section">
               <div className="jo-masterlist-search-filter">
                 <input
@@ -1200,49 +1476,157 @@ const JoMasterlist: React.FC = () => {
                   <option value="noParcels">No Parcels</option>
                 </select>
               </div>
-
-              {/* <div className="refresh-filter">
-                <button
-                  onClick={() => {
-                    setLoading(true);
-                    setError(null);
-                    fetchRSBSARecords();
-                  }}
-                  className="refresh-button"
-                  title="Refresh data"
-                >
-                  Refresh
-                </button>
-              </div> */}
             </div>
 
-            {/* RSBSA Records Table */}
+            {!loading && !error && (
+              <div className="jo-masterlist-table-meta">
+                <span>
+                  Showing {filteredRecords.length} of {rsbsaRecords.length}{" "}
+                  farmers
+                </span>
+                <span>Tip: Click a row or use Quick Actions.</span>
+              </div>
+            )}
+
+            {!loading && !error && selectedRecordIds.size > 0 && (
+              <div className="jo-masterlist-bulk-toolbar">
+                <span className="jo-masterlist-bulk-count">
+                  {selectedRecordIds.size} farmer
+                  {selectedRecordIds.size === 1 ? "" : "s"} selected
+                </span>
+                <div className="jo-masterlist-bulk-actions">
+                  <div
+                    className="jo-masterlist-bulk-export-wrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      className="jo-masterlist-bulk-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowBulkExportMenu((previous) => !previous);
+                      }}
+                    >
+                      Multi-Export ▾
+                    </button>
+                    {showBulkExportMenu && (
+                      <div className="jo-masterlist-bulk-menu">
+                        <button
+                          className="jo-masterlist-quick-item"
+                          onClick={() => {
+                            exportRecords(
+                              selectedRecords,
+                              "csv",
+                              "JO_Masterlist_Selected",
+                            );
+                            setShowBulkExportMenu(false);
+                          }}
+                        >
+                          Export Selected CSV
+                        </button>
+                        <button
+                          className="jo-masterlist-quick-item"
+                          onClick={() => {
+                            exportRecords(
+                              selectedRecords,
+                              "xlsx",
+                              "JO_Masterlist_Selected",
+                            );
+                            setShowBulkExportMenu(false);
+                          }}
+                        >
+                          Export Selected Excel
+                        </button>
+                        <button
+                          className="jo-masterlist-quick-item"
+                          onClick={() => {
+                            exportRecords(
+                              selectedRecords,
+                              "pdf",
+                              "JO_Masterlist_Selected",
+                            );
+                            setShowBulkExportMenu(false);
+                          }}
+                        >
+                          Export Selected PDF
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-clear"
+                    onClick={() => setSelectedRecordIds(new Set())}
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="jo-masterlist-table-container">
-              <table
-                className="jo-masterlist-farmers-table"
-                data-responsive="stack"
-              >
+              <table className="jo-masterlist-farmers-table">
                 <thead>
                   <tr>
-                    {[
-                      "FFRS ID",
-                      "Farmer Name",
-                      "Farmer Address",
-                      "Parcel Address",
-                      "Parcel Area",
-                      "Ownership Type",
-                      "Date Submitted",
-                      "Status",
-                      "Actions",
-                    ].map((header) => (
-                      <th key={header}>{header}</th>
-                    ))}
+                    <th className="jo-masterlist-checkbox-col">
+                      <input
+                        type="checkbox"
+                        className="jo-masterlist-header-checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleSelectAllFiltered}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Select all visible farmers"
+                      />
+                    </th>
+                    <th>Farmer</th>
+                    <th>Address</th>
+                    <th>
+                      <button
+                        className={`jo-masterlist-sort-btn ${
+                          sortConfig.key === "parcelArea" ? "is-active" : ""
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSortChange("parcelArea");
+                        }}
+                      >
+                        Parcel Area{" "}
+                        <span>{getSortIndicator("parcelArea")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        className={`jo-masterlist-sort-btn ${
+                          sortConfig.key === "dateSubmitted" ? "is-active" : ""
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSortChange("dateSubmitted");
+                        }}
+                      >
+                        Date Submitted{" "}
+                        <span>{getSortIndicator("dateSubmitted")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        className={`jo-masterlist-sort-btn ${
+                          sortConfig.key === "status" ? "is-active" : ""
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSortChange("status");
+                        }}
+                      >
+                        Status <span>{getSortIndicator("status")}</span>
+                      </button>
+                    </th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={9} className="jo-masterlist-loading-cell">
+                      <td colSpan={7} className="jo-masterlist-loading-cell">
                         Loading...
                       </td>
                     </tr>
@@ -1250,7 +1634,7 @@ const JoMasterlist: React.FC = () => {
 
                   {error && !loading && (
                     <tr>
-                      <td colSpan={9} className="jo-masterlist-error-cell">
+                      <td colSpan={7} className="jo-masterlist-error-cell">
                         Error: {error}
                       </td>
                     </tr>
@@ -1260,126 +1644,171 @@ const JoMasterlist: React.FC = () => {
                     !error &&
                     filteredRecords.length > 0 &&
                     filteredRecords.map((record) => {
+                      const statusText = record.status || "Not Submitted";
+
                       return (
                         <tr
                           key={record.id}
-                          className="jo-masterlist-clickable-row"
+                          className="jo-masterlist-table-row"
                           onClick={() => fetchFarmerDetails(record.id, record)}
-                          style={{ cursor: "pointer" }}
                         >
-                          <td
-                            className="jo-masterlist-ffrs-id"
-                            title={record.referenceNumber || "N/A"}
-                          >
-                            <span className="jo-masterlist-ffrs-id-value">
-                              {record.referenceNumber || "N/A"}
+                          <td className="jo-masterlist-checkbox-col">
+                            <input
+                              type="checkbox"
+                              className="jo-masterlist-row-checkbox"
+                              checked={selectedRecordIds.has(record.id)}
+                              onChange={() => toggleSelectRecord(record.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label={`Select ${record.farmerName}`}
+                            />
+                          </td>
+                          <td>
+                            <div className="jo-masterlist-farmer-cell">
+                              <div className="jo-masterlist-farmer-avatar">
+                                {getFarmerInitials(record.farmerName)}
+                              </div>
+                              <div className="jo-masterlist-farmer-meta">
+                                <span className="jo-masterlist-farmer-name">
+                                  {record.farmerName}
+                                </span>
+                                <span className="jo-masterlist-farmer-ref">
+                                  Ref: {record.referenceNumber}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="jo-masterlist-address-cell">
+                              <span className="jo-masterlist-address-primary">
+                                {record.farmerAddress}
+                              </span>
+                              <span className="jo-masterlist-address-secondary">
+                                Parcel: {record.farmLocation}
+                              </span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="jo-masterlist-parcel-cell">
+                              <span className="jo-masterlist-parcel-count">
+                                {record.parcelCount} parcel
+                                {record.parcelCount === 1 ? "" : "s"}
+                              </span>
+                              <span className="jo-masterlist-parcel-area">
+                                {formatParcelArea(record.parcelArea)}
+                              </span>
+                              <span
+                                className={`jo-masterlist-ownership-pill ${getOwnershipClass(record)}`}
+                              >
+                                {getOwnershipLabel(record)}
+                              </span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="jo-masterlist-date">
+                              {formatDate(record.dateSubmitted)}
                             </span>
                           </td>
-                          <td>{record.farmerName}</td>
-                          <td>{record.farmerAddress}</td>
-                          <td>{record.farmLocation}</td>
-                          <td>{record.parcelArea}</td>
-                          <td>
-                            {record.ownershipType ? (
-                              <span
-                                className={
-                                  `jo-masterlist-ownership-pill ` +
-                                  (record.ownershipType.registeredOwner
-                                    ? "jo-masterlist-ownership-owner"
-                                    : record.ownershipType.tenant
-                                      ? "jo-masterlist-ownership-tenant"
-                                      : record.ownershipType.lessee
-                                        ? "jo-masterlist-ownership-lessee"
-                                        : "jo-masterlist-ownership-unknown")
-                                }
-                              >
-                                {record.ownershipType.registeredOwner
-                                  ? "Owner"
-                                  : record.ownershipType.tenant
-                                    ? "Tenant"
-                                    : record.ownershipType.lessee
-                                      ? "Lessee"
-                                      : "—"}
-                              </span>
-                            ) : (
-                              <span className="jo-masterlist-ownership-pill jo-masterlist-ownership-unknown">
-                                —
-                              </span>
-                            )}
-                          </td>
-                          <td>{formatDate(record.dateSubmitted)}</td>
                           <td>
                             <span
-                              className={`jo-masterlist-status-pill jo-masterlist-${getStatusClass(record.status)}`}
+                              className={`jo-masterlist-status-pill ${getStatusClass(statusText)}`}
                             >
-                              {record.status}
-                              {/* {record.totalFarmArea || 'N/A'}*/}
+                              {statusText}
                             </span>
                           </td>
-                          <td onClick={(e) => e.stopPropagation()}>
+                          <td className="jo-masterlist-actions-cell">
                             <div
-                              style={{
-                                position: "relative",
-                                display: "inline-block",
-                              }}
+                              className="jo-masterlist-quick-actions"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <button
-                                className="jo-masterlist-more-button"
+                                className="jo-masterlist-view-btn"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleMenu(record.id, e);
+                                  setOpenMenuId((previous) =>
+                                    previous === record.id ? null : record.id,
+                                  );
                                 }}
-                                aria-haspopup="true"
-                                aria-expanded={openMenuId === record.id}
-                                title="More actions"
                               >
-                                ...
+                                Quick Actions ▾
                               </button>
+                              {openMenuId === record.id && (
+                                <div className="jo-masterlist-quick-menu">
+                                  <button
+                                    className="jo-masterlist-quick-item"
+                                    onClick={() => {
+                                      fetchFarmerDetails(record.id, record);
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    View
+                                  </button>
+                                  <button
+                                    className="jo-masterlist-quick-item"
+                                    onClick={() => {
+                                      handleEdit(record.id);
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="jo-masterlist-quick-item"
+                                    onClick={() => {
+                                      exportRecords(
+                                        [record],
+                                        "csv",
+                                        `JO_Farmer_${record.referenceNumber}`,
+                                      );
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Export Single CSV
+                                  </button>
+                                  <button
+                                    className="jo-masterlist-quick-item"
+                                    onClick={() => {
+                                      exportRecords(
+                                        [record],
+                                        "xlsx",
+                                        `JO_Farmer_${record.referenceNumber}`,
+                                      );
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Export Single Excel
+                                  </button>
+                                  <button
+                                    className="jo-masterlist-quick-item"
+                                    onClick={() => {
+                                      exportRecords(
+                                        [record],
+                                        "pdf",
+                                        `JO_Farmer_${record.referenceNumber}`,
+                                      );
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Export Single PDF
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>
                       );
                     })}
 
-                  {!loading &&
-                    !error &&
-                    filteredRecords.length === 0 &&
-                    Array.from({ length: 16 }).map((_, i) => (
-                      <tr key={`empty-${i}`}>
-                        <td colSpan={9}>&nbsp;</td>
-                      </tr>
-                    ))}
+                  {!loading && !error && filteredRecords.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="jo-masterlist-empty-cell">
+                        No farmers found for the selected filters.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
-          {/* Global dropdown/menu for row actions */}
-          {openMenuId && menuPosition && (
-            <div
-              className="jo-masterlist-more-menu"
-              style={{
-                position: "absolute",
-                top: menuPosition.top,
-                left: menuPosition.left,
-              }}
-              role="menu"
-            >
-              <button
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  background: "transparent",
-                  border: "none",
-                  padding: "8px 10px",
-                  cursor: "pointer",
-                }}
-                onClick={() => handleEdit(openMenuId)}
-                role="menuitem"
-              >
-                Edit
-              </button>
-            </div>
-          )}
         </div>
 
         {updateNotification.show && (
