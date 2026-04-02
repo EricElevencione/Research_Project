@@ -72,6 +72,33 @@
   border-bottom: 3px solid #047857;
 }
 
+.farmer-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.farmer-modal-print-btn {
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.farmer-modal-print-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.farmer-modal-print-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .farmer-modal-header h2 {
   margin: 0;
   font-size: 24px;

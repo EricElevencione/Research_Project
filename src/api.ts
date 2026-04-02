@@ -727,6 +727,21 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
     const barangayCodes = barangayResult.data || [];
     const farmParcels = parcelsResult.data || [];
 
+    const farmerInfoById = new Map<
+      number,
+      { farmerName: string; referenceNumber: string; barangay: string }
+    >();
+    farmers.forEach((f: any) => {
+      const firstName = String(f["FIRST NAME"] || "").trim();
+      const lastName = String(f["LAST NAME"] || "").trim();
+      const farmerName = [lastName, firstName].filter(Boolean).join(", ");
+      farmerInfoById.set(Number(f.id), {
+        farmerName: farmerName || `Farmer ${f.id}`,
+        referenceNumber: String(f.FFRS_CODE || `RSBSA-${f.id}`),
+        barangay: String(f.BARANGAY || "").trim(),
+      });
+    });
+
     // Normalise a string for case-insensitive, whitespace-insensitive comparison
     const normalize = (s: string) => (s || "").toLowerCase().trim();
 
@@ -929,6 +944,70 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
       }
     });
 
+    // Farmer-specific queue for actionable notifications.
+    const farmerProgressMap = new Map<
+      number,
+      { totalParcels: number; plottedParcels: number; barangay: string }
+    >();
+
+    allParcels.forEach((parcel: any) => {
+      const farmerId = Number(parcel.submission_id);
+      if (!Number.isFinite(farmerId)) return;
+
+      const progress = farmerProgressMap.get(farmerId) || {
+        totalParcels: 0,
+        plottedParcels: 0,
+        barangay:
+          String(parcel.farm_location_barangay || "").trim() ||
+          farmerInfoById.get(farmerId)?.barangay ||
+          "",
+      };
+
+      progress.totalParcels += 1;
+      if (parcel.isPlotted) {
+        progress.plottedParcels += 1;
+      }
+
+      if (!progress.barangay) {
+        progress.barangay =
+          String(parcel.farm_location_barangay || "").trim() ||
+          farmerInfoById.get(farmerId)?.barangay ||
+          "";
+      }
+
+      farmerProgressMap.set(farmerId, progress);
+    });
+
+    const unplottedFarmers = Array.from(farmerProgressMap.entries())
+      .map(([farmerId, progress]) => {
+        const info = farmerInfoById.get(farmerId);
+        const unplottedParcels = Math.max(
+          0,
+          Number(progress.totalParcels || 0) -
+            Number(progress.plottedParcels || 0),
+        );
+
+        return {
+          id: String(farmerId),
+          farmerName: info?.farmerName || `Farmer ${farmerId}`,
+          referenceNumber: info?.referenceNumber || `RSBSA-${farmerId}`,
+          barangay: progress.barangay || info?.barangay || "N/A",
+          totalParcels: Number(progress.totalParcels || 0),
+          plottedParcels: Number(progress.plottedParcels || 0),
+          unplottedParcels,
+        };
+      })
+      .filter((farmer) => farmer.unplottedParcels > 0)
+      .sort((a, b) => {
+        if (b.unplottedParcels !== a.unplottedParcels) {
+          return b.unplottedParcels - a.unplottedParcels;
+        }
+        if (b.totalParcels !== a.totalParcels) {
+          return b.totalParcels - a.totalParcels;
+        }
+        return a.farmerName.localeCompare(b.farmerName);
+      });
+
     return createResponse(
       {
         totalFarmers: farmers.length,
@@ -939,6 +1018,7 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         totalUnplottedParcels: unplottedParcelCount,
         barangayChecklist,
         unplottedByBarangay,
+        unplottedFarmers,
       },
       null,
       200,
@@ -952,6 +1032,60 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
 // ==================== RSBSA SUBMISSION ====================
 
 export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
+  const toPositiveInt = (value: unknown): number => {
+    const parsed = parseInt(String(value ?? ""), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
+
+  const toPositiveNumber = (value: unknown): number => {
+    const parsed = parseFloat(String(value ?? "").replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
+
+  const deriveLegacyParcelFallbackCount = (item: any): number => {
+    const directCountHints = [
+      item?.totalParcels,
+      item?.total_parcels,
+      item?.["TOTAL PARCELS"],
+      item?.num_parcels,
+      item?.["NO OF PARCELS"],
+      item?.["NO. OF PARCELS"],
+    ];
+
+    for (const hint of directCountHints) {
+      const hintCount = toPositiveInt(hint);
+      if (hintCount > 0) return hintCount;
+    }
+
+    const farmlandParcels = item?.farmlandParcels;
+    if (Array.isArray(farmlandParcels) && farmlandParcels.length > 0) {
+      return farmlandParcels.length;
+    }
+
+    const nestedFarmlandParcels = item?.data?.farmlandParcels;
+    if (
+      Array.isArray(nestedFarmlandParcels) &&
+      nestedFarmlandParcels.length > 0
+    ) {
+      return nestedFarmlandParcels.length;
+    }
+
+    const areaHints = [
+      item?.["TOTAL FARM AREA"],
+      item?.total_farm_area,
+      item?.totalFarmArea,
+      item?.["PARCEL AREA"],
+      item?.parcelArea,
+    ];
+
+    const hasPositiveArea = areaHints.some((areaValue) => {
+      return toPositiveNumber(areaValue) > 0;
+    });
+
+    // Legacy submissions may keep only total area with no normalized parcel rows yet.
+    return hasPositiveArea ? 1 : 0;
+  };
+
   // Get all submissions
   const { data, error } = await supabase.from("rsbsa_submission").select("*");
 
@@ -992,11 +1126,19 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
   const transformedData = filteredData.map((item: any) => {
     const record = transformRsbsaRecord(item);
     const hasCurrentParcels = currentOwnershipMap.get(item.id);
+    const normalizedParcelCount = parcelCountMap.get(item.id) || 0;
+    const fallbackParcelCount =
+      normalizedParcelCount > 0
+        ? normalizedParcelCount
+        : deriveLegacyParcelFallbackCount(item);
+
     return {
       ...record,
       // true = has current parcels, false = all transferred, undefined = no parcels at all
       hasCurrentParcels: hasCurrentParcels,
-      parcelCount: parcelCountMap.get(item.id) || 0,
+      parcelCount: fallbackParcelCount,
+      legacyParcelCountEstimated:
+        normalizedParcelCount === 0 && fallbackParcelCount > 0,
       archived_at: item.archived_at ?? null,
       archive_reason: item.archive_reason ?? null,
     };

@@ -5,6 +5,7 @@ import {
   getRsbsaSubmissionById,
   getRsbsaSubmissions,
 } from "../../api";
+import { printRsbsaFormById } from "../../utils/rsbsaPrint";
 import "../../assets/css/admin css/RSBSAStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
@@ -82,6 +83,7 @@ const JoRsbsa: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [isModalPrinting, setIsModalPrinting] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -331,6 +333,27 @@ const JoRsbsa: React.FC = () => {
     };
   };
 
+  const handleModalPrint = async () => {
+    if (!selectedFarmer) return;
+
+    setIsModalPrinting(true);
+    const selectedRecord = rsbsaRecords.find(
+      (record) => String(record.id) === String(selectedFarmer.id),
+    );
+
+    const result = await printRsbsaFormById({
+      farmerId: selectedFarmer.id,
+      fallbackReferenceNumber: selectedRecord?.referenceNumber,
+      fallbackFarmerName: selectedFarmer.farmerName,
+    });
+
+    setIsModalPrinting(false);
+
+    if (!result.success && !result.cancelled) {
+      alert(result.error || "Failed to print the RSBSA form.");
+    }
+  };
+
   return (
     <div className="rsbsa-admin-page-container">
       <div className="rsbsa-admin-page">
@@ -538,12 +561,21 @@ const JoRsbsa: React.FC = () => {
           >
             <div className="farmer-modal-header">
               <h2>Farmer Details</h2>
-              <button
-                className="farmer-modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
+              <div className="farmer-modal-header-actions">
+                <button
+                  className="farmer-modal-print-btn"
+                  onClick={handleModalPrint}
+                  disabled={isModalPrinting}
+                >
+                  {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
+                </button>
+                <button
+                  className="farmer-modal-close"
+                  onClick={() => setShowModal(false)}
+                >
+                  ×
+                </button>
+              </div>
             </div>
             <div className="farmer-modal-body">
               {loadingFarmerDetail ? (

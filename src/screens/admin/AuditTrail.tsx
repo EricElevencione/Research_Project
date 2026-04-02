@@ -2114,59 +2114,6 @@ const AuditTrail: React.FC = () => {
                       placeholder="Description, record type, module"
                     />
                   </div>
-
-                  <div className="admin-audit-filter-group">
-                    <label>User Role</label>
-                    <select
-                      value={userRoleFilter}
-                      onChange={(e) => {
-                        setUserRoleFilter(e.target.value);
-                        setPagination((prev) => ({ ...prev, page: 1 }));
-                      }}
-                    >
-                      <option value="all">All Roles</option>
-                      <option value="admin">Admin</option>
-                      <option value="technician">Technician</option>
-                      <option value="jo">JO</option>
-                      <option value="anonymous">Anonymous</option>
-                    </select>
-                  </div>
-
-                  <div className="admin-audit-filter-group">
-                    <label>Action</label>
-                    <select
-                      value={actionFilter}
-                      onChange={(e) => {
-                        setActionFilter(e.target.value);
-                        setPagination((prev) => ({ ...prev, page: 1 }));
-                      }}
-                    >
-                      <option value="all">All Actions</option>
-                      {ACTION_FILTER_OPTIONS.map((action) => (
-                        <option key={action} value={action}>
-                          {action}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="admin-audit-filter-group">
-                    <label>Module</label>
-                    <select
-                      value={moduleFilter}
-                      onChange={(e) => {
-                        setModuleFilter(e.target.value);
-                        setPagination((prev) => ({ ...prev, page: 1 }));
-                      }}
-                    >
-                      <option value="all">All Modules</option>
-                      {MODULE_FILTER_OPTIONS.map((moduleName) => (
-                        <option key={moduleName} value={moduleName}>
-                          {moduleName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
               </div>
 

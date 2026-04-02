@@ -5,10 +5,10 @@ import {
   getRsbsaSubmissionById,
   getFarmParcels,
 } from "../../api";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import {
+  printRsbsaFormById,
+  printRsbsaFormsByIds,
+} from "../../utils/rsbsaPrint";
 import "../../assets/css/admin css/MasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
@@ -63,7 +63,6 @@ interface RSBSARecord {
 
 type SortKey = "dateSubmitted" | "status" | "parcelArea";
 type SortDirection = "asc" | "desc";
-type ExportFormat = "csv" | "xlsx" | "pdf";
 
 const Masterlist: React.FC = () => {
   const navigate = useNavigate();
@@ -88,6 +87,11 @@ const Masterlist: React.FC = () => {
     null,
   );
   const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
+  const [isModalPrinting, setIsModalPrinting] = useState(false);
+  const [isBulkPrinting, setIsBulkPrinting] = useState(false);
+  const [printingRecordIds, setPrintingRecordIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -452,111 +456,79 @@ const Masterlist: React.FC = () => {
     return parcelArea && parcelArea !== "—" ? parcelArea : "—";
   };
 
-  const exportColumns = [
-    "FFRS System Generated",
-    "Farmer Name",
-    "Farmer Address",
-    "Parcel Address",
-    "No. of Parcels",
-    "Parcel Area",
-    "Date Submitted",
-    "Farmer Status",
-  ];
-
-  const recordToExportRow = (record: RSBSARecord) => [
-    record.referenceNumber,
-    record.farmerName,
-    record.farmerAddress,
-    record.farmLocation,
-    record.parcelCount,
-    formatParcelArea(record.parcelArea),
-    formatDate(record.dateSubmitted),
-    record.status || "Not Active",
-  ];
-
-  const downloadCsv = (records: RSBSARecord[], filename: string) => {
-    const escapeCell = (value: string | number) =>
-      `"${String(value).replace(/"/g, '""')}"`;
-
-    const csvRows = [
-      exportColumns.map(escapeCell).join(","),
-      ...records.map((record) =>
-        recordToExportRow(record).map(escapeCell).join(","),
-      ),
-    ];
-
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const exportRecords = (
-    records: RSBSARecord[],
-    format: ExportFormat,
-    label: string,
-  ) => {
-    if (records.length === 0) {
-      alert("No records selected for export.");
-      return;
-    }
-
-    const stamp = new Date().toISOString().split("T")[0];
-    const normalizedLabel = label.replace(/\s+/g, "_");
-
-    if (format === "csv") {
-      downloadCsv(records, `${normalizedLabel}_${stamp}.csv`);
-      return;
-    }
-
-    if (format === "xlsx") {
-      const wsData = [exportColumns, ...records.map(recordToExportRow)];
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws["!cols"] = exportColumns.map((_, colIndex) => ({
-        wch:
-          Math.max(
-            exportColumns[colIndex].length,
-            ...records.map(
-              (record) => String(recordToExportRow(record)[colIndex]).length,
-            ),
-          ) + 2,
-      }));
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Masterlist");
-      const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      saveAs(
-        new Blob([buffer], { type: "application/octet-stream" }),
-        `${normalizedLabel}_${stamp}.xlsx`,
-      );
-      return;
-    }
-
-    const doc = new jsPDF({ orientation: "landscape" });
-    doc.setFontSize(16);
-    doc.text("Farmer Masterlist", 14, 18);
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 25);
-
-    autoTable(doc, {
-      head: [exportColumns],
-      body: records.map(recordToExportRow),
-      startY: 30,
-      styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: {
-        fillColor: [16, 185, 129],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-      },
-      alternateRowStyles: { fillColor: [245, 251, 244] },
+  const handlePrintSingleRecord = async (record: RSBSARecord) => {
+    setPrintingRecordIds((previous) => {
+      const next = new Set(previous);
+      next.add(record.id);
+      return next;
     });
 
-    doc.save(`${normalizedLabel}_${stamp}.pdf`);
+    const result = await printRsbsaFormById({
+      farmerId: record.id,
+      fallbackReferenceNumber: record.referenceNumber,
+      fallbackFarmerName: record.farmerName,
+    });
+
+    if (!result.success && !result.cancelled) {
+      alert(result.error || "Failed to print the RSBSA form.");
+    }
+
+    setPrintingRecordIds((previous) => {
+      const next = new Set(previous);
+      next.delete(record.id);
+      return next;
+    });
+  };
+
+  const handleBulkPrint = async () => {
+    if (selectedRecords.length === 0) {
+      alert("No records selected for printing.");
+      return;
+    }
+
+    setIsBulkPrinting(true);
+    const result = await printRsbsaFormsByIds(
+      selectedRecords.map((record) => ({
+        farmerId: record.id,
+        fallbackReferenceNumber: record.referenceNumber,
+        fallbackFarmerName: record.farmerName,
+      })),
+    );
+
+    setIsBulkPrinting(false);
+    setShowBulkExportMenu(false);
+
+    if (!result.success && !result.cancelled) {
+      alert(result.error || "Failed to print selected RSBSA forms.");
+      return;
+    }
+
+    if (result.success && (result.failedCount || 0) > 0) {
+      alert(
+        `Printed ${result.printedCount || 0} form(s). ${result.failedCount} record(s) could not be prepared.`,
+      );
+    }
+  };
+
+  const handleModalPrint = async () => {
+    if (!selectedFarmer) return;
+
+    setIsModalPrinting(true);
+
+    const selectedRecord = rsbsaRecords.find(
+      (record) => record.id === selectedFarmer.id,
+    );
+    const result = await printRsbsaFormById({
+      farmerId: selectedFarmer.id,
+      fallbackReferenceNumber: selectedRecord?.referenceNumber,
+      fallbackFarmerName: selectedFarmer.farmerName,
+    });
+
+    setIsModalPrinting(false);
+
+    if (!result.success && !result.cancelled) {
+      alert(result.error || "Failed to print the RSBSA form.");
+    }
   };
 
   const getStatusClassName = (status: string) => {
@@ -733,48 +705,18 @@ const Masterlist: React.FC = () => {
                           setShowBulkExportMenu((previous) => !previous);
                         }}
                       >
-                        Multi-Export ▾
+                        Multi-Print ▾
                       </button>
                       {showBulkExportMenu && (
                         <div className="masterlist-admin-bulk-menu">
                           <button
                             className="masterlist-admin-quick-item"
-                            onClick={() => {
-                              exportRecords(
-                                selectedRecords,
-                                "csv",
-                                "Masterlist_Selected",
-                              );
-                              setShowBulkExportMenu(false);
-                            }}
+                            onClick={handleBulkPrint}
+                            disabled={isBulkPrinting}
                           >
-                            Export Selected CSV
-                          </button>
-                          <button
-                            className="masterlist-admin-quick-item"
-                            onClick={() => {
-                              exportRecords(
-                                selectedRecords,
-                                "xlsx",
-                                "Masterlist_Selected",
-                              );
-                              setShowBulkExportMenu(false);
-                            }}
-                          >
-                            Export Selected Excel
-                          </button>
-                          <button
-                            className="masterlist-admin-quick-item"
-                            onClick={() => {
-                              exportRecords(
-                                selectedRecords,
-                                "pdf",
-                                "Masterlist_Selected",
-                              );
-                              setShowBulkExportMenu(false);
-                            }}
-                          >
-                            Export Selected PDF
+                            {isBulkPrinting
+                              ? "Preparing forms..."
+                              : "Print Selected RSBSA Forms"}
                           </button>
                         </div>
                       )}
@@ -971,16 +913,17 @@ const Masterlist: React.FC = () => {
                                     </button>
                                     <button
                                       className="masterlist-admin-quick-item"
-                                      onClick={() => {
-                                        exportRecords(
-                                          [record],
-                                          "xlsx",
-                                          `Farmer_${record.referenceNumber}`,
-                                        );
+                                      onClick={async () => {
                                         setOpenQuickActionsId(null);
+                                        await handlePrintSingleRecord(record);
                                       }}
+                                      disabled={printingRecordIds.has(
+                                        record.id,
+                                      )}
                                     >
-                                      Export Single Record
+                                      {printingRecordIds.has(record.id)
+                                        ? "Preparing form..."
+                                        : "Print RSBSA Form"}
                                     </button>
                                   </div>
                                 )}
@@ -1017,12 +960,21 @@ const Masterlist: React.FC = () => {
           >
             <div className="farmer-modal-header">
               <h2>Farmer Details</h2>
-              <button
-                className="farmer-modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
+              <div className="farmer-modal-header-actions">
+                <button
+                  className="farmer-modal-print-btn"
+                  onClick={handleModalPrint}
+                  disabled={isModalPrinting}
+                >
+                  {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
+                </button>
+                <button
+                  className="farmer-modal-close"
+                  onClick={() => setShowModal(false)}
+                >
+                  ×
+                </button>
+              </div>
             </div>
             <div className="farmer-modal-body">
               {loadingFarmerDetail ? (

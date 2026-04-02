@@ -4,8 +4,10 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
+  getTechDashboardData,
   updateRsbsaSubmission,
 } from "../../api";
+import { printRsbsaFormById } from "../../utils/rsbsaPrint";
 import "../../assets/css/technician css/TechMasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
@@ -62,6 +64,16 @@ interface ParcelDetail {
   lesseeLandOwnerName: string;
 }
 
+interface UnplottedFarmerItem {
+  id: string;
+  farmerName: string;
+  referenceNumber: string;
+  barangay: string;
+  totalParcels: number;
+  plottedParcels: number;
+  unplottedParcels: number;
+}
+
 // Type declaration for Electron API exposed via preload
 declare global {
   interface Window {
@@ -99,6 +111,7 @@ const TechMasterlist: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [isModalPrinting, setIsModalPrinting] = useState(false);
   const [selectedOwnershipType, setSelectedOwnershipType] =
     useState<string>("all");
   const [updateNotification, setUpdateNotification] = useState<{
@@ -110,6 +123,9 @@ const TechMasterlist: React.FC = () => {
     type: "success",
     message: "",
   });
+  const [unplottedFarmers, setUnplottedFarmers] = useState<
+    UnplottedFarmerItem[]
+  >([]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -317,7 +333,10 @@ const TechMasterlist: React.FC = () => {
 
   const fetchRSBSARecords = async () => {
     try {
-      const response = await getRsbsaSubmissions();
+      const [response, techDashboardResponse] = await Promise.all([
+        getRsbsaSubmissions(),
+        getTechDashboardData(),
+      ]);
       if (response.error) throw new Error(response.error);
       const data = response.data;
 
@@ -400,9 +419,32 @@ const TechMasterlist: React.FC = () => {
       });
 
       setRsbsaRecords(formattedRecords);
+
+      if (!techDashboardResponse.error) {
+        const queue = Array.isArray(
+          techDashboardResponse.data?.unplottedFarmers,
+        )
+          ? techDashboardResponse.data.unplottedFarmers
+          : [];
+        setUnplottedFarmers(
+          queue.map((item: any) => ({
+            id: String(item.id),
+            farmerName: String(item.farmerName || "N/A"),
+            referenceNumber: String(item.referenceNumber || "N/A"),
+            barangay: String(item.barangay || "N/A"),
+            totalParcels: Number(item.totalParcels || 0),
+            plottedParcels: Number(item.plottedParcels || 0),
+            unplottedParcels: Number(item.unplottedParcels || 0),
+          })),
+        );
+      } else {
+        setUnplottedFarmers([]);
+      }
+
       setLoading(false);
     } catch (err: any) {
       setError(err.message ?? "Failed to load RSBSA records");
+      setUnplottedFarmers([]);
       setLoading(false);
     }
   };
@@ -810,6 +852,25 @@ const TechMasterlist: React.FC = () => {
     setPrintFilter({ type: "all", value: "" });
   };
 
+  const handleModalPrint = async () => {
+    if (!selectedFarmer) return;
+
+    setIsModalPrinting(true);
+    const result = await printRsbsaFormById({
+      farmerId: selectedFarmer.id,
+      fallbackReferenceNumber: selectedFarmer.referenceNumber,
+      fallbackFarmerName: selectedFarmer.farmerName,
+    });
+    setIsModalPrinting(false);
+
+    if (!result.success && !result.cancelled) {
+      showUpdateNotification(
+        result.error || "Failed to print RSBSA form.",
+        "error",
+      );
+    }
+  };
+
   return (
     <div className="tech-masterlist-page-container">
       <div className="tech-masterlist-page">
@@ -905,6 +966,22 @@ const TechMasterlist: React.FC = () => {
             </button>
           </div>
           <div className="tech-masterlist-content-card">
+            <div
+              className={`tech-masterlist-unplotted-reminder ${unplottedFarmers.length > 0 ? "has-items" : "all-clear"}`}
+            >
+              <div className="tech-masterlist-unplotted-reminder-head">
+                {unplottedFarmers.length > 0 ? (
+                  <>
+                    <strong>{unplottedFarmers.length}</strong> parcel
+                    {unplottedFarmers.length !== 1 ? "s" : ""} still need
+                    plotting.
+                  </>
+                ) : (
+                  <>All plotting queue items are cleared.</>
+                )}
+              </div>
+            </div>
+
             <div className="tech-masterlist-filters-section">
               <div className="tech-masterlist-search-filter">
                 <input
@@ -1195,12 +1272,21 @@ const TechMasterlist: React.FC = () => {
             >
               <div className="farmer-modal-header">
                 <h2>Farmer Details</h2>
-                <button
-                  className="farmer-modal-close"
-                  onClick={() => setShowModal(false)}
-                >
-                  ×
-                </button>
+                <div className="farmer-modal-header-actions">
+                  <button
+                    className="farmer-modal-print-btn"
+                    onClick={handleModalPrint}
+                    disabled={isModalPrinting}
+                  >
+                    {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
+                  </button>
+                  <button
+                    className="farmer-modal-close"
+                    onClick={() => setShowModal(false)}
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
 
               <div className="farmer-modal-body">

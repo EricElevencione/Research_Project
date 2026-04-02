@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getAllocations, getFarmerRequests } from "../../api";
 import {
   UsageGauges,
@@ -477,6 +477,7 @@ interface AllocationDetails {
 
 const ViewAllocation: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { allocationId } = useParams<{ allocationId: string }>();
   const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
   const [allAllocations, setAllAllocations] = useState<any[]>([]);
@@ -607,6 +608,52 @@ const ViewAllocation: React.FC = () => {
     ];
 
     return { fertilizers, seeds };
+  }, [allocation, requests]);
+
+  const formatSeasonName = (season: string) => {
+    if (!season) return "Unknown Season";
+    const [type, year] = season.split("_");
+    if (!type || !year) return season;
+    return `${type.charAt(0).toUpperCase() + type.slice(1)} ${year}`;
+  };
+
+  const overviewStats = useMemo(() => {
+    if (!allocation) {
+      return {
+        totalFertilizerAllocated: 0,
+        totalSeedsAllocated: 0,
+        approvedRequests: 0,
+        pendingRequests: 0,
+      };
+    }
+
+    const totalFertilizerAllocated =
+      (Number(allocation.urea_46_0_0_bags) || 0) +
+      (Number(allocation.complete_14_14_14_bags) || 0) +
+      (Number(allocation.ammonium_sulfate_21_0_0_bags) || 0) +
+      (Number(allocation.muriate_potash_0_0_60_bags) || 0);
+
+    const totalSeedsAllocated =
+      (Number(allocation.jackpot_kg) || 0) +
+      (Number(allocation.us88_kg) || 0) +
+      (Number(allocation.th82_kg) || 0) +
+      (Number(allocation.rh9000_kg) || 0) +
+      (Number(allocation.lumping143_kg) || 0) +
+      (Number(allocation.lp296_kg) || 0);
+
+    const approvedRequests = requests.filter(
+      (request) => request.status === "approved",
+    ).length;
+    const pendingRequests = requests.filter(
+      (request) => request.status === "pending",
+    ).length;
+
+    return {
+      totalFertilizerAllocated,
+      totalSeedsAllocated,
+      approvedRequests,
+      pendingRequests,
+    };
   }, [allocation, requests]);
 
   useEffect(() => {
@@ -804,6 +851,59 @@ const ViewAllocation: React.FC = () => {
             >
               ← Back to Allocations
             </button>
+          </div>
+
+          <div className="admin-viewalloc-overview-grid">
+            <div className="admin-viewalloc-overview-card admin-viewalloc-card-date">
+              <div className="admin-viewalloc-overview-label">Season</div>
+              <div className="admin-viewalloc-overview-value">
+                {formatSeasonName(allocation.season)}
+              </div>
+              <div className="admin-viewalloc-overview-sub">
+                Allocation Date:{" "}
+                {new Date(allocation.allocation_date).toLocaleDateString()}
+              </div>
+            </div>
+
+            <div className="admin-viewalloc-overview-card admin-viewalloc-card-requests">
+              <div className="admin-viewalloc-overview-label">Requests</div>
+              <div className="admin-viewalloc-overview-value-lg">
+                {requests.length}
+              </div>
+              <div className="admin-viewalloc-overview-sub">
+                {overviewStats.approvedRequests} approved,{" "}
+                {overviewStats.pendingRequests} pending
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-viewalloc-content-card">
+            <UsageGauges
+              fertilizers={gaugeData.fertilizers}
+              seeds={gaugeData.seeds}
+            />
+
+            <BarangayBreakdownTable requests={requests} />
+
+            <SeasonComparisonTable allocations={[...allAllocations]} />
+
+            {!loading && !error && requests.length === 0 && (
+              <div
+                className="admin-viewalloc-loading"
+                style={{ paddingTop: 20 }}
+              >
+                No requests found for this allocation yet.
+              </div>
+            )}
+
+            <div className="admin-viewalloc-notes">
+              <h4>Allocation Snapshot</h4>
+              <p>
+                Total allocated:{" "}
+                {overviewStats.totalFertilizerAllocated.toFixed(1)} fertilizer
+                bags and {overviewStats.totalSeedsAllocated.toFixed(1)} seed kg.
+              </p>
+            </div>
           </div>
 
           {/* ── Analytics Charts ── */}

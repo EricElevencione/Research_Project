@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RSBSA Enrollment Form</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@400;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Sans 3', Arial, sans-serif;
+    font-size: 10px;
+    background: #d0d0d0;
+    color: #000;
+    padding: 20px;
+  }
+
+  .page {
+    background: #fff;
+    width: 215mm;
+    min-height: 330mm;
+    margin: 0 auto 30px;
+    padding: 8mm 8mm;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    position: relative;
+  }
+
+  /* ===== PAGE 1 - FRONT ===== */
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 2px solid #000;
+    padding: 6px 10px;
+    margin-bottom: 0;
+  }
+
+  .logo-circle {
+    width: 52px;
+    height: 52px;
+    border: 2px solid #000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 700;
+    text-align: center;
+    flex-shrink: 0;
+    padding: 4px;
+    line-height: 1.2;
+  }
+
+  .title-block { flex: 1; }
+  .title-block .ani { font-size: 18px; font-weight: 700; line-height: 1; }
+  .title-block .rsbsa { font-size: 22px; font-weight: 900; line-height: 1.1; }
+  .title-block .subtitle { font-size: 9px; margin-top: 2px; }
+
+  .header-mid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 0.5;
+  }
+  .badge-img {
+    width: 60px;
+    height: 40px;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    border: 1px solid #999;
+    text-align: center;
+  }
+
+  .photo-box {
+    border: 2px solid #000;
+    width: 80px;
+    min-height: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+    padding: 4px;
+  }
+  .photo-box .size { font-size: 20px; font-weight: 900; }
+  .photo-box .note { font-size: 8px; font-weight: 400; margin-top: 4px; }
+
+  .revised {
+    text-align: right;
+    font-size: 8px;
+    margin-bottom: 2px;
+  }
+
+  /* Enrollment type row */
+  .enroll-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    border: 1px solid #000;
+    border-top: none;
+    padding: 4px 8px;
+    font-size: 9.5px;
+  }
+  .enroll-row label { font-weight: 700; }
+  .box-input {
+    display: inline-flex;
+    border: 1px solid #000;
+    height: 16px;
+    min-width: 14px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 1px;
+    font-size: 8px;
+  }
+  .ref-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #000;
+    border-top: none;
+    padding: 3px 8px;
+    font-size: 9.5px;
+  }
+  .ref-boxes {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+  }
+  .ref-group { display: flex; gap: 1px; }
+  .ref-group .box-input { min-width: 12px; width: 12px; }
+  .ref-label {
+    font-size: 7px;
+    text-align: center;
+    display: block;
+  }
+
+  .section-header {
+    background: #1a1a1a;
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 8px;
+    letter-spacing: 0.5px;
+    margin-bottom: 0;
+  }
+
+  .form-section {
+    border: 1px solid #000;
+    border-top: none;
+    padding: 6px 8px;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 5px;
+    align-items: flex-end;
+  }
+
+  .field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .field label {
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 1px;
+  }
+
+  .field input[type="text"],
+  .field select {
+    border: none;
+    border-bottom: 1px solid #000;
+    outline: none;
+    font-size: 10px;
+    width: 100%;
+    padding: 1px 2px;
+    background: transparent;
+    font-family: inherit;
+  }
+
+  .field-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9.5px;
+  }
+
+  .field-inline input[type="text"] {
+    border: none;
+    border-bottom: 1px solid #000;
+    flex: 1;
+    outline: none;
+    font-size: 9.5px;
+    font-family: inherit;
+  }
+
+  .boxes-row {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 2px;
+  }
+  .boxes-row .box-input { width: 16px; height: 16px; border: 1px solid #000; }
+
+  .check-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+    align-items: center;
+    font-size: 9.5px;
+  }
+  .check-group label { display: flex; align-items: center; gap: 2px; cursor: pointer; }
+  .check-group input[type="checkbox"] { width: 10px; height: 10px; }
+  .check-group input[type="radio"] { width: 10px; height: 10px; }
+
+  .two-col { display: flex; gap: 12px; }
+  .two-col > * { flex: 1; }
+
+  .line-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9.5px;
+    margin-bottom: 3px;
+  }
+  .line-field span { white-space: nowrap; }
+  .line-field input[type="text"] {
+    flex: 1;
+    border: none;
+    border-bottom: 1px solid #000;
+    outline: none;
+    font-size: 9.5px;
+    font-family: inherit;
+    background: transparent;
+  }
+
+  /* PART II FARM PROFILE */
+  .farm-profile-header {
+    background: #1a1a1a;
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 8px;
+    margin-top: 6px;
+  }
+
+  .livelihood-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #000;
+    font-size: 9px;
+  }
+  .livelihood-table th {
+    background: #e0e0e0;
+    border: 1px solid #000;
+    padding: 3px 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .livelihood-table td {
+    border: 1px solid #000;
+    padding: 3px 5px;
+    vertical-align: top;
+    font-size: 9px;
+  }
+  .livelihood-table .col-label {
+    font-weight: 700;
+    font-size: 9px;
+    text-align: center;
+    background: #f0f0f0;
+  }
+
+  .sub-header { font-style: italic; font-size: 8.5px; font-weight: 700; margin-bottom: 3px; text-decoration: underline; }
+
+  .income-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #000;
+    border-top: none;
+    padding: 4px 8px;
+    font-size: 9.5px;
+    font-weight: 700;
+  }
+  .income-row input[type="text"] {
+    flex: 1;
+    border: none;
+    border-bottom: 1px solid #000;
+    outline: none;
+    font-size: 9.5px;
+    background: transparent;
+    font-family: inherit;
+  }
+
+  /* Client copy tear-off */
+  .tear-off {
+    border: 2px dashed #555;
+    margin-top: 10px;
+    padding: 8px;
+  }
+  .tear-off-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .tear-off-title { font-size: 11px; font-weight: 700; text-align: center; flex: 1; }
+  .tear-off-title .sub { font-size: 9px; font-weight: 400; }
+
+  .not-for-sale {
+    text-align: center;
+    font-weight: 700;
+    font-size: 11px;
+    border-top: 1px solid #000;
+    padding-top: 4px;
+    margin-top: 4px;
+  }
+
+  /* ===== PAGE 2 - BACK ===== */
+  .back-top {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+  }
+
+  .parcels-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #000;
+    padding: 4px 8px;
+    font-size: 10px;
+    margin-bottom: 0;
+  }
+
+  .parcels-header input[type="text"] {
+    border: none;
+    border-bottom: 1px solid #000;
+    outline: none;
+    font-size: 10px;
+    font-family: inherit;
+    background: transparent;
+    min-width: 80px;
+  }
+
+  .farm-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #000;
+  }
+  .farm-table th, .farm-table td {
+    border: 1px solid #000;
+    padding: 3px 4px;
+    font-size: 8.5px;
+    vertical-align: top;
+  }
+  .farm-table th {
+    background: #e8e8e8;
+    font-weight: 700;
+    text-align: center;
+    font-size: 8.5px;
+  }
+  .farm-table .parcel-no {
+    text-align: center;
+    font-weight: 700;
+    font-size: 11px;
+    vertical-align: middle;
+    width: 28px;
+  }
+  .farm-table .desc-cell { width: 200px; }
+  .farm-table input[type="text"] {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid #555;
+    outline: none;
+    font-size: 8.5px;
+    font-family: inherit;
+    background: transparent;
+    margin-bottom: 2px;
+  }
+  .small-label { font-size: 7px; color: #333; display: block; }
+  .check-mini { display: flex; align-items: center; gap: 3px; font-size: 8.5px; }
+  .check-mini input[type="checkbox"] { width: 9px; height: 9px; }
+
+  .legend-row {
+    display: flex;
+    gap: 0;
+    border: 1px solid #000;
+    border-top: none;
+  }
+  .legend-col {
+    flex: 1;
+    padding: 5px 8px;
+    border-right: 1px solid #000;
+    font-size: 8.5px;
+  }
+  .legend-col:last-child { border-right: none; }
+  .legend-col strong { font-size: 9.5px; display: block; margin-bottom: 3px; }
+  .legend-col ol { padding-left: 14px; line-height: 1.5; }
+  .legend-col ul { padding-left: 10px; line-height: 1.6; list-style: none; }
+
+  .declaration {
+    border: 1px solid #000;
+    border-top: none;
+    padding: 6px 8px;
+    font-size: 8.5px;
+    line-height: 1.4;
+    font-style: italic;
+  }
+
+  .sig-row {
+    display: flex;
+    gap: 0;
+    border: 1px solid #000;
+    border-top: none;
+  }
+  .sig-cell {
+    flex: 1;
+    padding: 6px 6px 3px;
+    border-right: 1px solid #000;
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .sig-cell:last-child { border-right: none; }
+  .sig-line {
+    border-top: 1px solid #000;
+    font-size: 8px;
+    font-weight: 700;
+    text-align: center;
+    padding-top: 2px;
+    margin-top: 28px;
+  }
+  .sig-bar {
+    background: #1a1a1a;
+    color: #fff;
+    display: flex;
+    font-size: 8.5px;
+    font-weight: 700;
+  }
+  .sig-bar > div {
+    flex: 1;
+    padding: 3px 6px;
+    border-right: 1px solid #555;
+    text-align: center;
+  }
+  .sig-bar > div:last-child { border-right: none; }
+
+  .verified-bar {
+    background: #1a1a1a;
+    color: #fff;
+    font-weight: 700;
+    font-size: 9.5px;
+    padding: 3px 8px;
+    border: 1px solid #000;
+    border-top: none;
+  }
+
+  .verifier-row {
+    display: flex;
+    gap: 0;
+    border: 1px solid #000;
+    border-top: none;
+  }
+  .verifier-cell {
+    flex: 1;
+    padding: 5px 6px 3px;
+    border-right: 1px solid #000;
+    min-height: 55px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    font-size: 7.5px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .verifier-cell:last-child { border-right: none; }
+  .verifier-line {
+    border-top: 1px solid #000;
+    padding-top: 2px;
+    margin-top: 30px;
+    font-size: 7px;
+    font-weight: 700;
+  }
+
+  .privacy-box {
+    border: 1px solid #000;
+    border-top: none;
+    padding: 5px 8px;
+  }
+  .privacy-header {
+    text-align: center;
+    font-weight: 700;
+    font-size: 10px;
+    background: #e8e8e8;
+    padding: 2px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #000;
+  }
+  .privacy-text { font-size: 8px; line-height: 1.5; }
+
+  .not-for-sale-back {
+    text-align: center;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 4px;
+    border: 1px solid #000;
+    border-top: none;
+  }
+
+  .verified-box2 {
+    border: 1px solid #000;
+    margin-top: 6px;
+  }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; margin: 0; width: 100%; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== PAGE 1: FRONT ==================== -->
+<div class="page">
+  <div class="revised">REVISED VERSION 03-2021</div>
+
+  <!-- Header -->
+  <div class="header-row">
+    <div class="logo-circle">
+      DEPARTMENT<br>OF<br>AGRICULTURE<br>1898
+    </div>
+    <div class="title-block">
+      <div class="ani">ANI AT KITA</div>
+      <div class="rsbsa">RSBSA ENROLLMENT FORM</div>
+      <div class="subtitle">REGISTRY SYSTEM FOR BASIC SECTORS IN AGRICULTURE (RSBSA) •</div>
+    </div>
+    <div class="header-mid">
+      <div class="badge-img" style="font-size:6px; line-height:1.3;">Maasganang ANI<br>Malakas na KITA</div>
+    </div>
+    <div class="photo-box">
+      <div class="size">2x2</div>
+      <div>PICTURE</div>
+      <div class="note">PHOTO TAKEN<br>WITHIN 6 MONTHS</div>
+    </div>
+  </div>
+
+  <!-- Enrollment type -->
+  <div class="enroll-row">
+    <strong>ENROLLMENT TYPE &amp;<br>DATE ADMINISTERED:</strong>
+    <label><input type="checkbox"> New</label>
+    <label><input type="checkbox"> Updating</label>
+    <div style="display:flex; gap:1px; margin-left:4px;">
+      <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+      <span style="padding:0 2px;">-</span>
+      <div class="box-input"></div><div class="box-input"></div>
+      <span style="padding:0 2px;">-</span>
+      <div class="box-input"></div><div class="box-input"></div>
+      <span style="padding:0 2px;">-</span>
+      <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+    </div>
+  </div>
+
+  <!-- Reference number -->
+  <div class="ref-row">
+    <strong>Reference Number:</strong>
+    <div style="display:flex; flex-direction:column;">
+      <div style="display:flex; gap:6px;">
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;">
+            <div class="box-input"></div><div class="box-input"></div>
+          </div>
+          <span class="ref-label">REGION</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;">
+            <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+          </div>
+          <span class="ref-label">PROVINCE</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;">
+            <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+          </div>
+          <span class="ref-label">CITY/MUNI</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;">
+            <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+          </div>
+          <span class="ref-label">BARANGAY</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;">
+            <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART I HEADER -->
+  <div class="section-header" style="margin-top:5px;">PART I: PERSONAL INFORMATION</div>
+
+  <div class="form-section">
+    <!-- Name row -->
+    <div class="field-row" style="margin-bottom:8px;">
+      <div class="field" style="flex:1.2;">
+        <label>Surname</label>
+        <input type="text">
+      </div>
+      <div class="field" style="flex:1.2;">
+        <label>First Name</label>
+        <input type="text">
+      </div>
+    </div>
+
+    <div class="field-row" style="margin-bottom:8px;">
+      <div class="field" style="flex:1;">
+        <label>Middle Name</label>
+        <input type="text">
+      </div>
+      <div class="field" style="flex:0.7;">
+        <label>Extension Name</label>
+        <input type="text">
+      </div>
+      <div class="field" style="flex:0.8;">
+        <label>SEX:</label>
+        <div class="check-group" style="margin-top:2px;">
+          <label><input type="radio" name="sex"> Male</label>
+          <label><input type="radio" name="sex"> Female</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Address -->
+    <div style="font-size:9.5px; font-weight:700; margin-bottom:2px;">ADDRESS</div>
+    <div class="field-row" style="margin-bottom:5px;">
+      <div class="field" style="flex:1;">
+        <input type="text">
+        <span class="small-label">HOUSE/LOT/BLDG. NO./PUROK</span>
+      </div>
+      <div class="field" style="flex:1.2;">
+        <input type="text">
+        <span class="small-label">STREET/SITIO/SUBDV.</span>
+      </div>
+      <div class="field" style="flex:0.8;">
+        <input type="text">
+        <span class="small-label">BARANGAY</span>
+      </div>
+    </div>
+    <div class="field-row" style="margin-bottom:6px;">
+      <div class="field" style="flex:1;">
+        <input type="text">
+        <span class="small-label">MUNICIPALITY/CITY</span>
+      </div>
+      <div class="field" style="flex:0.8;">
+        <input type="text">
+        <span class="small-label">PROVINCE</span>
+      </div>
+      <div class="field" style="flex:0.8;">
+        <input type="text">
+        <span class="small-label">REGION</span>
+      </div>
+    </div>
+
+    <!-- Phone / DOB / Education -->
+    <div class="two-col">
+      <div>
+        <!-- Mobile / Landline -->
+        <div class="field-row" style="margin-bottom:4px;">
+          <div>
+            <div style="font-size:8px; font-weight:700;">MOBILE NUMBER:</div>
+            <div style="display:flex; gap:1px; margin-top:2px;">
+              <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+              <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+              <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:8px; font-weight:700;">LANDLINE NUMBER:</div>
+            <div style="display:flex; gap:1px; margin-top:2px;">
+              <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+              <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+              <div class="box-input"></div><div class="box-input"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DOB / POB -->
+        <div class="field-row" style="margin-bottom:4px; align-items:flex-start;">
+          <div>
+            <div style="font-size:8px; font-weight:700;">DATE OF BIRTH:</div>
+            <div style="display:flex; gap:1px; margin-top:2px;">
+              <div class="box-input"></div><div class="box-input"></div>
+              <span style="padding:0 1px;">-</span>
+              <div class="box-input"></div><div class="box-input"></div>
+              <span style="padding:0 1px;">-</span>
+              <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+            </div>
+            <div style="display:flex; gap:4px; font-size:7px; padding-left:2px;">
+              <span style="width:18px;">MM</span>
+              <span style="width:4px;"></span>
+              <span style="width:18px;">DD</span>
+              <span style="width:4px;"></span>
+              <span>YYYY</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:8px; font-weight:700;">PLACE OF BIRTH:</div>
+            <div class="field" style="margin-top:2px;">
+              <input type="text" style="min-width:80px;">
+              <span class="small-label">MUNICIPALITY</span>
+            </div>
+            <div class="field" style="margin-top:1px;">
+              <div style="display:flex; gap:4px;">
+                <div class="field"><input type="text"><span class="small-label">PROVINCE/STATE</span></div>
+                <div class="field"><input type="text"><span class="small-label">COUNTRY</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="line-field" style="margin-bottom:3px;">
+          <span style="font-weight:700; font-size:8.5px;">RELIGION:</span>
+          <label><input type="radio" name="religion"> Christianity</label>
+          <label><input type="radio" name="religion"> Islam</label>
+          <label><input type="radio" name="religion"> Others, specify</label>
+          <input type="text" style="max-width:60px;">
+        </div>
+
+        <div class="line-field" style="margin-bottom:3px;">
+          <span style="font-weight:700; font-size:8.5px;">CIVIL STATUS:</span>
+          <label><input type="radio" name="civil"> Single</label>
+          <label><input type="radio" name="civil"> Married</label>
+          <label><input type="radio" name="civil"> Widowed</label>
+          <label><input type="radio" name="civil"> Separated</label>
+        </div>
+
+        <div class="line-field" style="margin-bottom:3px;">
+          <div style="flex:1;">
+            <span style="font-weight:700; font-size:8.5px;">NAME OF SPOUSE<br>IF MARRIED:</span>
+          </div>
+          <input type="text">
+        </div>
+        <div class="line-field" style="margin-bottom:3px;">
+          <div style="flex:1;">
+            <span style="font-weight:700; font-size:8.5px;">MOTHER'S<br>MAIDEN NAME:</span>
+          </div>
+          <input type="text">
+        </div>
+        <div class="line-field" style="margin-bottom:3px;">
+          <span style="font-weight:700; font-size:8.5px;">HOUSEHOLD HEAD?</span>
+          <label><input type="radio" name="hh"> Yes</label>
+          <label><input type="radio" name="hh"> No</label>
+        </div>
+        <div class="line-field" style="margin-bottom:2px;">
+          <span style="white-space:nowrap; font-size:8.5px;">If no, name of household head:</span>
+          <input type="text">
+        </div>
+        <div class="line-field" style="margin-bottom:2px;">
+          <span style="white-space:nowrap; font-size:8.5px;">Relationship:</span>
+          <input type="text">
+        </div>
+        <div class="line-field" style="margin-bottom:2px;">
+          <span style="white-space:nowrap; font-size:8.5px;">No. of living household members:</span>
+          <input type="text" style="max-width:40px;">
+        </div>
+        <div class="line-field">
+          <span style="white-space:nowrap; font-size:8.5px;">No. of male:</span>
+          <input type="text" style="max-width:30px;">
+          <span style="white-space:nowrap; font-size:8.5px; margin-left:6px;">No. of female:</span>
+          <input type="text" style="max-width:30px;">
+        </div>
+      </div>
+
+      <!-- Right column -->
+      <div>
+        <div style="font-weight:700; font-size:8.5px; margin-bottom:3px;">HIGHEST FORMAL EDUCATION:</div>
+        <div class="check-group" style="flex-direction:column; align-items:flex-start; gap:2px; margin-bottom:5px;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <label><input type="checkbox"> Pre-school</label>
+            <label><input type="checkbox"> Junior High School (K-12)</label>
+            <label><input type="checkbox"> Vocational</label>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <label><input type="checkbox"> Elementary</label>
+            <label><input type="checkbox"> Senior High School (K-12)</label>
+            <label><input type="checkbox"> Post-graduate</label>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <label><input type="checkbox"> High School (non K-12)</label>
+            <label><input type="checkbox"> College</label>
+            <label><input type="checkbox"> None</label>
+          </div>
+        </div>
+
+        <div class="line-field" style="margin-bottom:4px;">
+          <span style="font-weight:700; font-size:8.5px;">PERSON WITH DISABILITY (PWD):</span>
+          <label><input type="radio" name="pwd"> Yes</label>
+          <label><input type="radio" name="pwd"> No</label>
+        </div>
+
+        <div class="line-field" style="margin-bottom:3px;">
+          <span style="font-size:8.5px;">4P's Beneficiary?</span>
+          <label><input type="radio" name="4ps"> Yes</label>
+          <label><input type="radio" name="4ps"> No</label>
+        </div>
+        <div class="line-field" style="margin-bottom:3px;">
+          <span style="font-size:8.5px;">Member of an <strong>Indigenous Group?</strong></span>
+          <label><input type="radio" name="ig"> Yes</label>
+          <label><input type="radio" name="ig"> No</label>
+        </div>
+        <div class="line-field" style="margin-bottom:5px;">
+          <span style="font-size:8.5px;">If yes, specify:</span>
+          <input type="text">
+        </div>
+
+        <div class="line-field" style="margin-bottom:3px;">
+          <span style="font-size:8.5px;">With Government ID?</span>
+          <label><input type="radio" name="govid"> Yes</label>
+          <label><input type="radio" name="govid"> No</label>
+        </div>
+        <div class="line-field" style="margin-bottom:2px;">
+          <span style="font-size:8.5px; white-space:nowrap;">If yes, specify ID Type:</span>
+          <input type="text">
+        </div>
+        <div class="line-field" style="margin-bottom:5px;">
+          <span style="font-size:8.5px; white-space:nowrap;">ID Number:</span>
+          <input type="text">
+        </div>
+
+        <div class="line-field" style="margin-bottom:3px; flex-wrap:wrap;">
+          <span style="font-size:8.5px;">Member of any <strong>Farmers Association/Cooperative?</strong></span>
+          <label><input type="radio" name="farmas"> Yes</label>
+          <label><input type="radio" name="farmas"> No</label>
+        </div>
+        <div class="line-field" style="margin-bottom:5px;">
+          <span style="font-size:8.5px;">If yes, specify:</span>
+          <input type="text">
+        </div>
+
+        <div style="font-weight:700; font-size:8.5px; margin-bottom:2px;">PERSON TO NOTIFY IN<br>CASE OF EMERGENCY:</div>
+        <input type="text" style="width:100%; border:none; border-bottom:1px solid #000; margin-bottom:4px; outline:none; font-size:9.5px; font-family:inherit; background:transparent;">
+        <div style="font-weight:700; font-size:8.5px; margin-bottom:2px;">CONTACT NUMBER:</div>
+        <div style="display:flex; gap:1px;">
+          <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+          <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+          <div class="box-input"></div><div class="box-input"></div><div class="box-input"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART II FARM PROFILE -->
+  <div class="farm-profile-header">PART II: FARM PROFILE</div>
+
+  <!-- Livelihood checkboxes -->
+  <div style="border:1px solid #000; border-top:none; padding:4px 8px; display:flex; align-items:center; gap:20px; font-size:9.5px; font-weight:700;">
+    <span>MAIN LIVELIHOOD</span>
+    <label><input type="checkbox"> FARMER</label>
+    <label style="margin-left:10px;"><input type="checkbox"> FARMWORKER/LABORER</label>
+    <label style="margin-left:10px;"><input type="checkbox"> FISHERFOLK</label>
+    <label style="margin-left:10px;"><input type="checkbox"> AGRI YOUTH</label>
+  </div>
+
+  <!-- 4 column livelihood table -->
+  <table class="livelihood-table">
+    <tr>
+      <th style="width:25%;">For farmers:</th>
+      <th style="width:22%;">For farmworkers:</th>
+      <th style="width:30%;">For fisherfolk:</th>
+      <th style="width:23%;">For agri youth:</th>
+    </tr>
+    <tr>
+      <td>
+        <div class="sub-header">Type of Farming Activity</div>
+        <div class="check-group" style="flex-direction:column; align-items:flex-start; gap:2px;">
+          <label><input type="checkbox"> Rice</label>
+          <label><input type="checkbox"> Corn</label>
+          <div>
+            <label><input type="checkbox"> Other crops,</label><br>
+            <span style="font-size:8px;">please specify: <input type="text" style="width:80px; border:none; border-bottom:1px solid #000; outline:none; font-family:inherit; font-size:8px; background:transparent;"></span>
+          </div>
+          <div>
+            <label><input type="checkbox"> Livestock,</label><br>
+            <span style="font-size:8px;">please specify: <input type="text" style="width:80px; border:none; border-bottom:1px solid #000; outline:none; font-family:inherit; font-size:8px; background:transparent;"></span>
+          </div>
+          <div>
+            <label><input type="checkbox"> Poultry,</label><br>
+            <span style="font-size:8px;">please specify: <input type="text" style="width:80px; border:none; border-bottom:1px solid #000; outline:none; font-family:inherit; font-size:8px; background:transparent;"></span>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="sub-header">Kind of Work</div>
+        <div class="check-group" style="flex-direction:column; align-items:flex-start; gap:2px;">
+          <label><input type="checkbox"> Land Preparation</label>
+          <label><input type="checkbox"> Planting/Transplanting</label>
+          <label><input type="checkbox"> Cultivation</label>
+          <label><input type="checkbox"> Harvesting</label>
+          <div>
+            <label><input type="checkbox"> Others, please specify:</label><br>
+            <input type="text" style="width:100%; border:none; border-bottom:1px solid #000; outline:none; font-family:inherit; font-size:8.5px; background:transparent;">
+          </div>
+        </div>
+      </td>
+      <td style="font-size:8px;">
+        <p style="margin-bottom:4px;">The Lending Conduit shall coordinate with the Bureau of Fisheries and Aquatic Resources (BFAR) in the issuance of a certification that the fisherfolk-borrower under PUNLA/PLEA is registered under the Municipal Registration (FishR).</p>
+        <div class="sub-header" style="margin-top:4px;">Type of Fishing Activity</div>
+        <div class="check-group" style="flex-direction:column; align-items:flex-start; gap:2px;">
+          <div style="display:flex; gap:8px;">
+            <label><input type="checkbox"> Fish Capture</label>
+            <label><input type="checkbox"> Fish Processing</label>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <label><input type="checkbox"> Aquaculture</label>
+            <label><input type="checkbox"> Fish Vending</label>
+          </div>
+          <label><input type="checkbox"> Gleaning</label>
+          <div>
+            <label><input type="checkbox"> Others, please specify:</label>
+            <input type="text" style="width:100%; border:none; border-bottom:1px solid #000; outline:none; font-family:inherit; font-size:8px; background:transparent;">
+          </div>
+        </div>
+      </td>
+      <td style="font-size:8px;">
+        <p style="margin-bottom:4px;">For the purposes of trainings, financial assistance, and other programs catered to the youth with involvement to any agriculture activity</p>
+        <div class="sub-header">Type of involvement</div>
+        <div class="check-group" style="flex-direction:column; align-items:flex-start; gap:2px;">
+          <label><input type="checkbox"> part of a farming household</label>
+          <label><input type="checkbox"> attending/attended formal agri-fishery related course</label>
+          <label><input type="checkbox"> attending/attended non-formal agri-fishery related course</label>
+          <label><input type="checkbox"> participated in any agricultural activity/program</label>
+          <div>
+            <label><input type="checkbox"> others, specify</label>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Gross Annual Income -->
+  <div class="income-row">
+    <strong>Gross Annual Income Last Year:</strong>
+    <span>Farming:</span>
+    <input type="text">
+    <span style="margin-left:12px;">Non-farming:</span>
+    <input type="text">
+  </div>
+
+  <!-- Tear-off -->
+  <div class="tear-off">
+    <div class="tear-off-header">
+      <div style="width:40px; height:40px; border:1px solid #999; display:flex; align-items:center; justify-content:center; font-size:7px; background:#e0e0e0; flex-shrink:0;">DA LOGO</div>
+      <div class="tear-off-title">
+        Registry System for Basic Sectors in Agriculture (RSBSA)<br>
+        <strong>ENROLLMENT CLIENT'S COPY</strong>
+      </div>
+    </div>
+    <div class="ref-row" style="border:1px solid #000; margin-bottom:4px;">
+      <strong>Reference Number:</strong>
+      <div style="display:flex; gap:6px;">
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;"><div class="box-input"></div><div class="box-input"></div></div>
+          <span class="ref-label">REGION</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;"><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div></div>
+          <span class="ref-label">PROVINCE</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;"><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div></div>
+          <span class="ref-label">CITY/MUNI</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;"><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div></div>
+          <span class="ref-label">BARANGAY</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div style="display:flex; gap:1px;"><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div><div class="box-input"></div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:3px;">
+      <div class="field" style="flex:1;">
+        <input type="text">
+        <label>SURNAME</label>
+      </div>
+      <div class="field" style="flex:1;">
+        <input type="text">
+        <label>FIRST NAME</label>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <div class="field" style="flex:1;">
+        <input type="text">
+        <label>MIDDLE NAME</label>
+      </div>
+      <div class="field" style="flex:1;">
+        <input type="text">
+        <label>EXTENSION NAME</label>
+      </div>
+      <div style="width:50px; display:flex; align-items:center; justify-content:center;">
+        <div style="width:45px; height:35px; border:1px solid #999; background:#e0e0e0; display:flex; align-items:center; justify-content:center; font-size:6px; text-align:center;">DA BADGE</div>
+      </div>
+    </div>
+    <div class="not-for-sale" style="margin-top:4px;">THIS FORM IS NOT FOR SALE</div>
+  </div>
+</div>
+
+
+<!-- ==================== PAGE 2: BACK ==================== -->
+<div class="page">
+
+  <div class="parcels-header">
+    <strong>No. of Farm Parcels:</strong>
+    <input type="text" style="width:40px;">
+    <strong style="margin-left:12px;">Name of Farmer/s In Rotation:</strong>
+    (P1) <input type="text" style="min-width:100px;">
+    (P2) <input type="text" style="min-width:100px;">
+    (P3) <input type="text" style="min-width:80px;">
+  </div>
+
+  <!-- Main farm table -->
+  <table class="farm-table">
+    <thead>
+      <tr>
+        <th rowspan="2" style="width:28px;">FARM<br>PARCEL<br>NO.</th>
+        <th rowspan="2" style="width:195px;">FARM LAND DESCRIPTION</th>
+        <th style="width:90px;">CROP/COMMODITY<br><span style="font-size:7.5px; font-weight:400;">(Rice/Corn/HVC/Livestock/Poultry/Agri-fishery)</span><br><span style="font-size:7.5px; font-weight:700;">For Livestock &amp; Poultry</span><br><span style="font-size:7.5px; font-weight:400;">(specify type of animal)</span></th>
+        <th style="width:45px;">SIZE (ha)</th>
+        <th style="width:50px;">NO. OF HEAD<br><span style="font-size:7.5px; font-weight:400;">(For Livestock and Poultry)</span></th>
+        <th style="width:45px;">FARM TYPE<br><span style="font-size:7.5px; font-weight:400;">**</span></th>
+        <th style="width:45px;">ORGANIC PRACTITIONER<br><span style="font-size:7.5px; font-weight:400;">(Y/N)</span></th>
+        <th style="width:50px;">REMARKS</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- PARCEL 1 -->
+      <tr>
+        <td class="parcel-no" rowspan="1">1</td>
+        <td class="desc-cell">
+          <div class="line-field" style="margin-bottom:3px;">
+            <span style="font-size:8.5px;">Farm Location:</span>
+            <input type="text" style="flex:1;">
+          </div>
+          <div style="text-align:center; font-size:7px; margin-bottom:3px;">BARANGAY</div>
+          <input type="text" style="width:100%; margin-bottom:2px;">
+          <div style="text-align:center; font-size:7px; margin-bottom:4px;">CITY/MUNICIPALITY</div>
+
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:8.5px;">
+            <span>Total Farm Area (in hectares):</span>
+            <input type="text" style="width:30px;">
+            <span>ha</span>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-bottom:3px; font-size:8.5px;">
+            <div>
+              <span style="font-weight:700;">Within Ancestral Domain:</span><br>
+              <label><input type="checkbox"> Yes</label>
+              <label style="margin-left:4px;"><input type="checkbox"> No</label>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:8.5px;">
+            <span>Ownership Document No*:</span>
+            <input type="text" style="width:30px;">
+          </div>
+
+          <div style="margin-bottom:3px; font-size:8.5px;">
+            <span style="font-weight:700;">Agrarian Reform Beneficiary:</span>
+            <label style="margin-left:4px;"><input type="checkbox"> Yes</label>
+            <label style="margin-left:4px;"><input type="checkbox"> No</label>
+          </div>
+
+          <div style="font-size:8.5px; font-weight:700; margin-bottom:2px;">Ownership Type:</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; font-size:8px; margin-bottom:2px;">
+            <label><input type="checkbox"> Registered Owner</label>
+            <label><input type="checkbox"> Others <input type="text" style="width:50px; border:none; border-bottom:1px solid #555; outline:none; font-size:8px;"></label>
+          </div>
+          <div class="line-field" style="margin-bottom:1px; font-size:8px;">
+            <label><input type="checkbox"> Tenant (Name of Land Owner:</label>
+            <input type="text">)
+          </div>
+          <div class="line-field" style="font-size:8px;">
+            <label><input type="checkbox"> Lessee (Name of Land Owner:</label>
+            <input type="text">)
+          </div>
+        </td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+
+      <!-- PARCEL 2 -->
+      <tr>
+        <td class="parcel-no">2</td>
+        <td class="desc-cell">
+          <div class="line-field" style="margin-bottom:3px;">
+            <span style="font-size:8.5px;">Farm Location:</span>
+            <input type="text" style="flex:1;">
+          </div>
+          <div style="text-align:center; font-size:7px; margin-bottom:3px;">BARANGAY</div>
+          <input type="text" style="width:100%; margin-bottom:2px;">
+          <div style="text-align:center; font-size:7px; margin-bottom:4px;">CITY/MUNICIPALITY</div>
+
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:8.5px;">
+            <span>Total Farm Area (in hectares):</span>
+            <input type="text" style="width:30px;">
+            <span>ha</span>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-bottom:3px; font-size:8.5px;">
+            <div>
+              <span style="font-weight:700;">Within Ancestral Domain:</span><br>
+              <label><input type="checkbox"> Yes</label>
+              <label style="margin-left:4px;"><input type="checkbox"> No</label>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:8.5px;">
+            <span>Ownership Document No*:</span>
+            <input type="text" style="width:30px;">
+          </div>
+
+          <div style="margin-bottom:3px; font-size:8.5px;">
+            <span style="font-weight:700;">Agrarian Reform Beneficiary:</span>
+            <label style="margin-left:4px;"><input type="checkbox"> Yes</label>
+            <label style="margin-left:4px;"><input type="checkbox"> No</label>
+          </div>
+
+          <div style="font-size:8.5px; font-weight:700; margin-bottom:2px;">Ownership Type:</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; font-size:8px; margin-bottom:2px;">
+            <label><input type="checkbox"> Registered Owner</label>
+            <label><input type="checkbox"> Others <input type="text" style="width:50px; border:none; border-bottom:1px solid #555; outline:none; font-size:8px;"></label>
+          </div>
+          <div class="line-field" style="margin-bottom:1px; font-size:8px;">
+            <label><input type="checkbox"> Tenant (Name of Land Owner:</label>
+            <input type="text">)
+          </div>
+          <div class="line-field" style="font-size:8px;">
+            <label><input type="checkbox"> Lessee (Name of Land Owner:</label>
+            <input type="text">)
+          </div>
+        </td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+
+      <!-- PARCEL 3 -->
+      <tr>
+        <td class="parcel-no">3</td>
+        <td class="desc-cell">
+          <div class="line-field" style="margin-bottom:3px;">
+            <span style="font-size:8.5px;">Farm Location:</span>
+            <input type="text" style="flex:1;">
+          </div>
+          <div style="text-align:center; font-size:7px; margin-bottom:3px;">BARANGAY</div>
+          <input type="text" style="width:100%; margin-bottom:2px;">
+          <div style="text-align:center; font-size:7px; margin-bottom:4px;">CITY/MUNICIPALITY</div>
+
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:8.5px;">
+            <span>Total Farm Area (in hectares):</span>
+            <input type="text" style="width:30px;">
+            <span>ha</span>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-bottom:3px; font-size:8.5px;">
+            <div>
+              <span style="font-weight:700;">Within Ancestral Domain:</span><br>
+              <label><input type="checkbox"> Yes</label>
+              <label style="margin-left:4px;"><input type="checkbox"> No</label>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:8.5px;">
+            <span>Ownership Document No*:</span>
+            <input type="text" style="width:30px;">
+          </div>
+
+          <div style="margin-bottom:3px; font-size:8.5px;">
+            <span style="font-weight:700;">Agrarian Reform Beneficiary:</span>
+            <label style="margin-left:4px;"><input type="checkbox"> Yes</label>
+            <label style="margin-left:4px;"><input type="checkbox"> No</label>
+          </div>
+
+          <div style="font-size:8.5px; font-weight:700; margin-bottom:2px;">Ownership Type:</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; font-size:8px; margin-bottom:2px;">
+            <label><input type="checkbox"> Registered Owner</label>
+            <label><input type="checkbox"> Others <input type="text" style="width:50px; border:none; border-bottom:1px solid #555; outline:none; font-size:8px;"></label>
+          </div>
+          <div class="line-field" style="margin-bottom:1px; font-size:8px;">
+            <label><input type="checkbox"> Tenant (Name of Land Owner:</label>
+            <input type="text">)
+          </div>
+          <div class="line-field" style="font-size:8px;">
+            <label><input type="checkbox"> Lessee (Name of Land Owner:</label>
+            <input type="text">)
+          </div>
+        </td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Legend -->
+  <div class="legend-row">
+    <div class="legend-col" style="flex:1.5;">
+      <strong>OWNERSHIP DOCUMENT *</strong>
+      <ol>
+        <li>Certificate of Land Transfer</li>
+        <li>Emancipation Patent</li>
+        <li>Individual Certificate of Land Ownership Award (CLOA)</li>
+        <li>Collective CLOA</li>
+        <li>Co-ownership CLOA</li>
+        <li>Agricultural sales patent</li>
+        <li>Homestead patent</li>
+        <li>Free Patent</li>
+        <li>Certificate of Title or Regular Title</li>
+        <li>Certificate of Ancestral Domain Title</li>
+        <li>Certificate of Ancestral Land Title</li>
+        <li>Tax Declaration</li>
+        <li>Others (e.g. Barangay Certification)</li>
+      </ol>
+    </div>
+    <div class="legend-col">
+      <strong>FARM TYPE **</strong>
+      <ul>
+        <li>1 - Irrigated</li>
+        <li>2 - Rainfed Upland</li>
+        <li>3 - Rainfed Lowland</li>
+      </ul>
+      <br>
+      <em style="font-size:8px;">(NOTE: not applicable to agri-fishery)</em>
+    </div>
+  </div>
+
+  <!-- Declaration -->
+  <div class="declaration">
+    I hereby declare that all information indicated above are true and correct, and that they may be used by Department of Agriculture for the purposes of registration to the Registry System for Basic Sectors in Agriculture (RSBSA) and other legitimate interests of the Department pursuant to its mandates.
+  </div>
+
+  <!-- Signature row -->
+  <div class="sig-row">
+    <div class="sig-cell" style="flex:0.6;">
+      <div class="sig-line">DATE</div>
+    </div>
+    <div class="sig-cell" style="flex:1.2;">
+      <div class="sig-line">PRINTED NAME OF APPLICANT</div>
+    </div>
+    <div class="sig-cell" style="flex:1;">
+      <div class="sig-line">SIGNATURE OF APPLICANT</div>
+    </div>
+    <div class="sig-cell" style="flex:0.7;">
+      <div class="sig-line">THUMBMARK</div>
+    </div>
+  </div>
+
+  <!-- Verified bar -->
+  <div class="verified-bar">VERIFIED TRUE AND CORRECT BY:</div>
+
+  <!-- Verifier signatures -->
+  <div class="verifier-row">
+    <div class="verifier-cell">
+      <div class="verifier-line">SIGNATURE ABOVE PRINTED NAME / DATE<br>BARANGAY CHAIRMAN/CITY / MUN. VETERINARIAN (LIVESTOCK)/<br>MILL DISTRICT OFFICER (SUGARCANE)/ IP LEADER / C/M/PARO (ARB)</div>
+    </div>
+    <div class="verifier-cell">
+      <div class="verifier-line">SIGNATURE ABOVE PRINTED NAME / DATE<br>CITY/MUNICIPAL AGRICULTURE OFFICE</div>
+    </div>
+    <div class="verifier-cell">
+      <div class="verifier-line">SIGNATURE ABOVE PRINTED NAME / DATE<br>CAFC/MAFC CHAIRMAN</div>
+    </div>
+  </div>
+
+  <!-- Privacy Policy -->
+  <div class="privacy-box">
+    <div class="privacy-header">DATA PRIVACY POLICY</div>
+    <div class="privacy-text">
+      The collection of personal information is for documentation, planning, reporting and processing purposes in availing agricultural related interventions. Processed data shall only be shared to partner agencies for planning, reporting and other use in accordance to the mandate of the agency. This is in compliance with the Data Sharing Policy of the department.<br><br>
+      You have the right to ask for a copy of your personal data that we hold about you as well as to ask for it to be corrected if you think it is wrong. To do so, please contact &lt;Contact Person and Contact Details&gt;
+    </div>
+  </div>
+
+  <div class="not-for-sale-back">THIS FORM IS NOT FOR SALE</div>
+
+  <!-- Second verified section -->
+  <div class="verified-box2">
+    <div class="verified-bar" style="border:none;">VERIFIED TRUE AND CORRECT BY:</div>
+    <div class="verifier-row" style="border:none; min-height:60px;">
+      <div class="verifier-cell" style="border-right:1px solid #000; min-height:60px;">
+        <div class="verifier-line">SIGNATURE ABOVE PRINTED NAME / DATE<br>BARANGAY CHAIRMAN/ CITY / MUN. VETERINARIAN<br>(LIVESTOCK)/ MILL DISTRICT OFFICER (SUGARCANE) /<br>IP LEADER / C/M/PARO (ARB)</div>
+      </div>
+      <div class="verifier-cell" style="border-right:1px solid #000; min-height:60px;">
+        <div class="verifier-line">SIGNATURE ABOVE PRINTED NAME / DATE<br>CITY/MUNICIPAL AGRICULTURE OFFICE</div>
+      </div>
+      <div class="verifier-cell" style="min-height:60px;">
+        <div class="verifier-line">SIGNATURE ABOVE PRINTED NAME / DATE<br>CAFC/MAFC CHAIRMAN</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

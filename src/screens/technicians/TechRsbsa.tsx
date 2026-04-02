@@ -4,6 +4,7 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
+  getTechDashboardData,
 } from "../../api";
 import "../../assets/css/technician css/TechRsbsaStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
@@ -67,6 +68,16 @@ interface ParcelDetail {
   lesseeLandOwnerName: string;
 }
 
+interface UnplottedFarmerItem {
+  id: string;
+  farmerName: string;
+  referenceNumber: string;
+  barangay: string;
+  totalParcels: number;
+  plottedParcels: number;
+  unplottedParcels: number;
+}
+
 const TechRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -89,6 +100,26 @@ const TechRsbsa: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [unplottedFarmers, setUnplottedFarmers] = useState<
+    UnplottedFarmerItem[]
+  >([]);
+  const [showUnplottedOnly, setShowUnplottedOnly] = useState<boolean>(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("unplotted") === "1";
+  });
+
+  const unplottedFarmerIdSet = React.useMemo(
+    () => new Set(unplottedFarmers.map((farmer) => String(farmer.id))),
+    [unplottedFarmers],
+  );
+
+  const unplottedProgressMap = React.useMemo(() => {
+    const map = new Map<string, UnplottedFarmerItem>();
+    unplottedFarmers.forEach((farmer) => {
+      map.set(String(farmer.id), farmer);
+    });
+    return map;
+  }, [unplottedFarmers]);
 
   const toggleMenu = (
     id: string,
@@ -289,7 +320,10 @@ const TechRsbsa: React.FC = () => {
   const fetchRSBSARecords = async () => {
     try {
       setLoading(true);
-      const response = await getRsbsaSubmissions();
+      const [response, techDashboardResponse] = await Promise.all([
+        getRsbsaSubmissions(),
+        getTechDashboardData(),
+      ]);
 
       if (response.error) {
         console.error("Error fetching RSBSA records:", response.error);
@@ -309,10 +343,33 @@ const TechRsbsa: React.FC = () => {
       // Automatically filter for registered owners only
       const registeredOwnersData = filterRegisteredOwners(data || []);
       setRegisteredOwners(registeredOwnersData);
+
+      if (!techDashboardResponse.error) {
+        const queue = Array.isArray(
+          techDashboardResponse.data?.unplottedFarmers,
+        )
+          ? techDashboardResponse.data.unplottedFarmers
+          : [];
+        setUnplottedFarmers(
+          queue.map((item: any) => ({
+            id: String(item.id),
+            farmerName: String(item.farmerName || "N/A"),
+            referenceNumber: String(item.referenceNumber || "N/A"),
+            barangay: String(item.barangay || "N/A"),
+            totalParcels: Number(item.totalParcels || 0),
+            plottedParcels: Number(item.plottedParcels || 0),
+            unplottedParcels: Number(item.unplottedParcels || 0),
+          })),
+        );
+      } else {
+        setUnplottedFarmers([]);
+      }
+
       setError(null);
     } catch (err: any) {
       console.error("Error fetching RSBSA records:", err);
       setError("Failed to load registered land owners data");
+      setUnplottedFarmers([]);
     } finally {
       setLoading(false);
     }
@@ -392,6 +449,12 @@ const TechRsbsa: React.FC = () => {
   // Filter records based on search term and barangay
   useEffect(() => {
     const filtered = registeredOwners.filter((record) => {
+      const isUnplotted = unplottedFarmerIdSet.has(String(record.id));
+
+      if (showUnplottedOnly && !isUnplotted) {
+        return false;
+      }
+
       // Barangay filter
       if (selectedBarangay !== "all") {
         const barangay = record.farmerAddress?.split(",")[0]?.trim();
@@ -444,7 +507,18 @@ const TechRsbsa: React.FC = () => {
     });
 
     setFilteredOwners(filtered);
-  }, [searchTerm, selectedBarangay, registeredOwners]);
+  }, [
+    searchTerm,
+    selectedBarangay,
+    registeredOwners,
+    showUnplottedOnly,
+    unplottedFarmerIdSet,
+  ]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setShowUnplottedOnly(params.get("unplotted") === "1");
+  }, [location.search]);
 
   // Load data on component mount
   useEffect(() => {
@@ -498,6 +572,29 @@ const TechRsbsa: React.FC = () => {
 
     const computedAge = calculateAgeFromBirthdate(record.birthdate);
     return computedAge !== null ? String(computedAge) : "N/A";
+  };
+
+  const getPlottingRatio = (record: RSBSARecord): string => {
+    const progress = unplottedProgressMap.get(String(record.id));
+    if (progress) {
+      const total = Math.max(0, Number(progress.totalParcels || 0));
+      const plotted = Math.min(
+        total,
+        Math.max(0, Number(progress.plottedParcels || 0)),
+      );
+      return total > 0 ? `${plotted}/${total}` : "0/0";
+    }
+
+    const parsedParcelCount = Number(record.parcelCount || 0);
+    const totalFromRecord = Number.isFinite(parsedParcelCount)
+      ? Math.max(0, parsedParcelCount)
+      : 0;
+
+    if (totalFromRecord > 0) {
+      return `${totalFromRecord}/${totalFromRecord}`;
+    }
+
+    return "1/1";
   };
 
   return (
@@ -605,6 +702,22 @@ const TechRsbsa: React.FC = () => {
               </div>
             ) : (
               <>
+                <div
+                  className={`tech-rsbsa-unplotted-banner ${unplottedFarmers.length > 0 ? "has-items" : "all-clear"}`}
+                >
+                  <div className="tech-rsbsa-unplotted-banner-head">
+                    {unplottedFarmers.length > 0 ? (
+                      <>
+                        <strong>{unplottedFarmers.length}</strong> parcel
+                        {unplottedFarmers.length !== 1 ? "s" : ""} still need
+                        plotting.
+                      </>
+                    ) : (
+                      <>All farmers in queue are plotted.</>
+                    )}
+                  </div>
+                </div>
+
                 {/* Search and Filter Container */}
                 <div className="tech-rsbsa-search-filter-container">
                   <div className="tech-rsbsa-search-container">
@@ -655,13 +768,14 @@ const TechRsbsa: React.FC = () => {
                         <th>Farmer Address</th>
                         <th>Farm Location</th>
                         <th>Parcel Area</th>
+                        <th>Plotted</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedFilteredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={11} className="tech-rsbsa-no-data">
+                          <td colSpan={12} className="tech-rsbsa-no-data">
                             {searchTerm
                               ? "No matching records found"
                               : "No registered owners found"}
@@ -700,6 +814,11 @@ const TechRsbsa: React.FC = () => {
                               <td>{record.farmerAddress || "N/A"}</td>
                               <td>{record.farmLocation || "N/A"}</td>
                               <td>{parcelArea}</td>
+                              <td>
+                                <span className="tech-rsbsa-plot-status-pill">
+                                  {getPlottingRatio(record)}
+                                </span>
+                              </td>
                               <td onClick={(e) => e.stopPropagation()}>
                                 <div
                                   style={{
