@@ -429,6 +429,11 @@ const TechManageRequests: React.FC = () => {
   const [openActionsMenuFor, setOpenActionsMenuFor] = useState<number | null>(
     null,
   );
+  const [actionsMenuPosition, setActionsMenuPosition] = useState<{
+    top: number;
+    left: number;
+    openUp: boolean;
+  } | null>(null);
 
   // Delete confirmation modal state
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -491,14 +496,33 @@ const TechManageRequests: React.FC = () => {
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest(".tech-manage-requests-action-menu-wrapper")) {
+      if (
+        !target.closest(".tech-manage-requests-action-menu-wrapper") &&
+        !target.closest(".tech-manage-requests-actions-popover")
+      ) {
         setOpenActionsMenuFor(null);
+        setActionsMenuPosition(null);
       }
     };
 
     document.addEventListener("click", handleDocumentClick);
     return () => {
       document.removeEventListener("click", handleDocumentClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    const closeActionsMenu = () => {
+      setOpenActionsMenuFor(null);
+      setActionsMenuPosition(null);
+    };
+
+    window.addEventListener("resize", closeActionsMenu);
+    window.addEventListener("scroll", closeActionsMenu, true);
+
+    return () => {
+      window.removeEventListener("resize", closeActionsMenu);
+      window.removeEventListener("scroll", closeActionsMenu, true);
     };
   }, []);
 
@@ -2070,6 +2094,7 @@ const TechManageRequests: React.FC = () => {
                                           type="button"
                                           onClick={() => {
                                             setOpenActionsMenuFor(null);
+                                            setActionsMenuPosition(null);
                                             handleStatusChange(
                                               request.id,
                                               "approved",
@@ -2083,6 +2108,7 @@ const TechManageRequests: React.FC = () => {
                                           type="button"
                                           onClick={() => {
                                             setOpenActionsMenuFor(null);
+                                            setActionsMenuPosition(null);
                                             handleStatusChange(
                                               request.id,
                                               "rejected",
@@ -2099,6 +2125,7 @@ const TechManageRequests: React.FC = () => {
                                       type="button"
                                       onClick={() => {
                                         setOpenActionsMenuFor(null);
+                                        setActionsMenuPosition(null);
                                         openDeleteDialog(
                                           request.id,
                                           request.farmer_name,
@@ -2114,44 +2141,90 @@ const TechManageRequests: React.FC = () => {
                                       aria-label="More actions"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setOpenActionsMenuFor((prev) =>
-                                          prev === request.id
-                                            ? null
-                                            : request.id,
+                                        const triggerRect =
+                                          e.currentTarget.getBoundingClientRect();
+                                        const menuWidth = 190;
+                                        const estimatedMenuHeight =
+                                          request.status === "pending"
+                                            ? 106
+                                            : 62;
+                                        const viewportMargin = 12;
+                                        const safeLeft = Math.min(
+                                          Math.max(
+                                            viewportMargin,
+                                            triggerRect.right - menuWidth,
+                                          ),
+                                          window.innerWidth -
+                                            menuWidth -
+                                            viewportMargin,
                                         );
+                                        const openUpward =
+                                          triggerRect.bottom +
+                                            estimatedMenuHeight +
+                                            viewportMargin >
+                                          window.innerHeight;
+                                        const menuTop = openUpward
+                                          ? triggerRect.top - 8
+                                          : triggerRect.bottom + 8;
+
+                                        setOpenActionsMenuFor((prev) => {
+                                          if (prev === request.id) {
+                                            setActionsMenuPosition(null);
+                                            return null;
+                                          }
+                                          setActionsMenuPosition({
+                                            top: menuTop,
+                                            left: safeLeft,
+                                            openUp: openUpward,
+                                          });
+                                          return request.id;
+                                        });
                                       }}
                                       className="tech-manage-requests-btn-more"
                                     >
                                       ...
                                     </button>
 
-                                    {openActionsMenuFor === request.id && (
-                                      <div className="tech-manage-requests-actions-popover">
-                                        <button
-                                          type="button"
-                                          className="tech-manage-requests-actions-popover-item"
-                                          onClick={() => {
-                                            setOpenActionsMenuFor(null);
-                                            setViewingRequest(request);
+                                    {openActionsMenuFor === request.id &&
+                                      actionsMenuPosition && (
+                                        <div
+                                          className="tech-manage-requests-actions-popover tech-manage-requests-actions-popover-floating"
+                                          style={{
+                                            top: `${actionsMenuPosition.top}px`,
+                                            left: `${actionsMenuPosition.left}px`,
+                                            transform:
+                                              actionsMenuPosition.openUp
+                                                ? "translateY(-100%)"
+                                                : "translateY(0)",
                                           }}
                                         >
-                                          View Request
-                                        </button>
-
-                                        {request.status === "pending" && (
                                           <button
                                             type="button"
                                             className="tech-manage-requests-actions-popover-item"
                                             onClick={() => {
                                               setOpenActionsMenuFor(null);
-                                              handleEdit(request);
+                                              setActionsMenuPosition(null);
+                                              setViewingRequest(request);
                                             }}
                                           >
-                                            Edit Request
+                                            View Request
                                           </button>
-                                        )}
-                                      </div>
-                                    )}
+
+                                          {request.status === "pending" && (
+                                            <button
+                                              type="button"
+                                              className="tech-manage-requests-actions-popover-item"
+                                              onClick={() => {
+                                                setOpenActionsMenuFor(null);
+                                                setActionsMenuPosition(null);
+                                                handleEdit(request);
+                                              }}
+                                            >
+                                              Edit Request
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
                                   </div>
                                 </td>
                               </tr>

@@ -170,6 +170,9 @@ const JoLandRegistry: React.FC = () => {
   const [transferSubmitError, setTransferSubmitError] = useState("");
   const [transferSubmitSuccess, setTransferSubmitSuccess] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openActionMenuFarmerId, setOpenActionMenuFarmerId] = useState<
+    number | null
+  >(null);
 
   const {
     parcelScope,
@@ -235,8 +238,21 @@ const JoLandRegistry: React.FC = () => {
     fetchParcelHistoryForIds(parcelIds);
     console.log("fetchParcelHistoryForIds called");
 
+    setOpenActionMenuFarmerId(null);
     setShowModal(true);
     console.log("setShowModal(true) called");
+  };
+
+  const handleRowActionView = (group: FarmerGroup) => {
+    setOpenActionMenuFarmerId(null);
+    handleFarmerSelect(group);
+  };
+
+  const handleRowActionTransfer = (group: FarmerGroup) => {
+    setOpenActionMenuFarmerId(null);
+    setSelectedFarmer(group);
+    setShowModal(false);
+    openTransferModal();
   };
 
   const fetchParcelHistoryForIds = async (parcelIds: number[]) => {
@@ -1256,6 +1272,10 @@ const JoLandRegistry: React.FC = () => {
     );
   };
 
+  const toggleRowActionMenu = (farmerId: number) => {
+    setOpenActionMenuFarmerId((prev) => (prev === farmerId ? null : farmerId));
+  };
+
   return (
     <div className="jo-land-registry-page-container">
       <div className="jo-land-registry-page has-mobile-sidebar">
@@ -1448,19 +1468,54 @@ const JoLandRegistry: React.FC = () => {
                         </td>
                         <td>{group.total_farm_area_ha.toFixed(2) || "0"}</td>
                         <td>{formatDate(group.last_updated)}</td>
-                        <td onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            className="jo-land-registry-row-transfer-button"
-                            onClick={() => {
-                              setSelectedFarmer(group);
-                              setShowModal(false);
-                              openTransferModal();
-                            }}
-                            title="Transfer ownership"
+                        <td
+                          className="jo-land-registry-row-action-cell"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div
+                            className="jo-land-registry-row-action-menu-wrap"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            Transfer
-                          </button>
+                            <button
+                              type="button"
+                              className="jo-land-registry-row-action-trigger"
+                              aria-label="Open row actions"
+                              aria-haspopup="menu"
+                              aria-expanded={
+                                openActionMenuFarmerId === group.farmer_id
+                              }
+                              onClick={() =>
+                                toggleRowActionMenu(group.farmer_id)
+                              }
+                              title="Actions"
+                            >
+                              ...
+                            </button>
+
+                            {openActionMenuFarmerId === group.farmer_id && (
+                              <div
+                                className="jo-land-registry-row-action-menu"
+                                role="menu"
+                              >
+                                <button
+                                  type="button"
+                                  className="jo-land-registry-row-action-menu-item"
+                                  role="menuitem"
+                                  onClick={() => handleRowActionView(group)}
+                                >
+                                  View
+                                </button>
+                                <button
+                                  type="button"
+                                  className="jo-land-registry-row-action-menu-item"
+                                  role="menuitem"
+                                  onClick={() => handleRowActionTransfer(group)}
+                                >
+                                  Transfer
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))

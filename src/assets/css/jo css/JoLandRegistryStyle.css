@@ -329,6 +329,82 @@
   min-width: 0;
 }
 
+.jo-land-registry-row-action-cell {
+  position: relative;
+  overflow: visible;
+}
+
+.jo-land-registry-row-action-menu-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.jo-land-registry-row-action-trigger {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.jo-land-registry-row-action-trigger:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.jo-land-registry-row-action-trigger:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.jo-land-registry-row-action-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 124px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jo-land-registry-row-action-menu-item {
+  border: 0;
+  border-radius: 7px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.jo-land-registry-row-action-menu-item:hover {
+  background: #f1f5f9;
+}
+
+.jo-land-registry-row-action-menu-item:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -1px;
+}
+
 .jo-land-registry-transfer-button:hover,
 .jo-land-registry-row-transfer-button:hover {
   transform: translateY(-1px);

@@ -2246,6 +2246,11 @@
   gap: 6px;
   flex-wrap: nowrap;
   position: relative;
+  overflow: visible;
+}
+
+.tech-manage-requests-action-menu-wrapper {
+  position: relative;
 }
 
 .tech-manage-requests-btn-view {
@@ -2286,19 +2291,35 @@
 }
 
 .tech-manage-requests-actions-popover {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  min-width: 150px;
-  background: #ffffff;
+  position: fixed;
+  min-width: 168px;
+  background: rgba(255, 255, 255, 0.96);
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.2);
   padding: 6px;
-  z-index: 30;
+  z-index: 1200;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  backdrop-filter: blur(6px);
+  animation: tech-manage-requests-popover-in 0.18s ease-out;
+}
+
+.tech-manage-requests-actions-popover-floating {
+  transform-origin: top right;
+}
+
+@keyframes tech-manage-requests-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .tech-manage-requests-actions-popover-item {
@@ -2391,12 +2412,11 @@
 
 @media (max-width: 768px) {
   .tech-manage-requests-action-buttons {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .tech-manage-requests-actions-popover {
-    right: auto;
-    left: 0;
+    min-width: 156px;
   }
 
   .tech-manage-requests-view-request-sections {
