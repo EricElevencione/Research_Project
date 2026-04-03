@@ -61,7 +61,7 @@ interface RSBSARecord {
   };
 }
 
-type SortKey = "dateSubmitted" | "status" | "parcelArea";
+type SortKey = "farmerName" | "dateSubmitted" | "status" | "parcelArea";
 type SortDirection = "asc" | "desc";
 
 const Masterlist: React.FC = () => {
@@ -72,6 +72,7 @@ const Masterlist: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [barangayFilter, setBarangayFilter] = useState<string>("all");
   const [selectedFarmer, setSelectedFarmer] =
     useState<FarmerDetailModal | null>(null);
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
@@ -330,19 +331,65 @@ const Masterlist: React.FC = () => {
     }
   };
 
+  const getRecordBarangay = (record: RSBSARecord) => {
+    const farmerAddress = String(record.farmerAddress || "").trim();
+    if (!farmerAddress || farmerAddress === "—") return "";
+
+    const segment = farmerAddress.split(",")[0]?.trim() || "";
+    const normalized = segment;
+    if (
+      !normalized ||
+      normalized === "—" ||
+      normalized === "n/a" ||
+      normalized === "na" ||
+      normalized === "unknown"
+    ) {
+      return "";
+    }
+
+    return normalized;
+  };
+
+  const barangayOptions = useMemo(() => {
+    return Array.from(
+      new Set(rsbsaRecords.map((record) => getRecordBarangay(record))),
+    )
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [rsbsaRecords]);
+
   const filteredRecords = rsbsaRecords
     .filter((record) => {
       const q = searchQuery.toLowerCase();
+
+      if (barangayFilter !== "all") {
+        const recordBarangay = getRecordBarangay(record);
+        if (
+          recordBarangay.localeCompare(barangayFilter, undefined, {
+            sensitivity: "base",
+          }) !== 0
+        ) {
+          return false;
+        }
+      }
+
       const matchesSearch =
         record.farmerName.toLowerCase().includes(q) ||
         record.referenceNumber.toLowerCase().includes(q) ||
-        record.farmerAddress.toLowerCase().includes(q) ||
-        record.farmLocation.toLowerCase().includes(q);
+        record.farmerAddress.toLowerCase().includes(q);
 
       return matchesSearch;
     })
     .sort((a, b) => {
       const factor = sortConfig.direction === "asc" ? 1 : -1;
+
+      if (sortConfig.key === "farmerName") {
+        return (
+          a.farmerName.localeCompare(b.farmerName, undefined, {
+            sensitivity: "base",
+          }) * factor
+        );
+      }
 
       if (sortConfig.key === "dateSubmitted") {
         return (
@@ -404,7 +451,7 @@ const Masterlist: React.FC = () => {
           direction: previous.direction === "asc" ? "desc" : "asc",
         };
       }
-      return { key, direction: "desc" };
+      return { key, direction: key === "farmerName" ? "asc" : "desc" };
     });
   };
 
@@ -675,6 +722,20 @@ const Masterlist: React.FC = () => {
                     className="masterlist-admin-search-input"
                   />
                 </div>
+                <div className="masterlist-admin-status-filter">
+                  <select
+                    className="masterlist-admin-status-select"
+                    value={barangayFilter}
+                    onChange={(e) => setBarangayFilter(e.target.value)}
+                  >
+                    <option value="all">All Barangays</option>
+                    {barangayOptions.map((barangay) => (
+                      <option key={barangay} value={barangay}>
+                        {barangay}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {!loading && !error && (
@@ -746,7 +807,19 @@ const Masterlist: React.FC = () => {
                           aria-label="Select all visible farmers"
                         />
                       </th>
-                      <th>Farmer</th>
+                      <th>
+                        <button
+                          className={`masterlist-admin-sort-btn ${
+                            sortConfig.key === "farmerName" ? "is-active" : ""
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSortChange("farmerName");
+                          }}
+                        >
+                          Farmer <span>{getSortIndicator("farmerName")}</span>
+                        </button>
+                      </th>
                       <th>Address</th>
                       <th>
                         <button
@@ -855,9 +928,6 @@ const Masterlist: React.FC = () => {
                               <div className="masterlist-admin-address-cell">
                                 <span className="masterlist-admin-address-primary">
                                   {record.farmerAddress}
-                                </span>
-                                <span className="masterlist-admin-address-secondary">
-                                  Parcel: {record.farmLocation}
                                 </span>
                               </div>
                             </td>

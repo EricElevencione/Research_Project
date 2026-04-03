@@ -1048,6 +1048,173 @@ const JoManageRequests: React.FC = () => {
     (item) => Number(editingRequestData?.[item.requestField]) > 0,
   );
 
+  const editableRequestFields: RequestField[] = Array.from(
+    new Set([
+      ...ALL_ITEM_MAPPINGS.map((item) => item.requestField),
+      ...EXTRA_FERTILIZER_FIELDS.map((item) => item.requestField),
+    ]),
+  );
+
+  const getAllocationForRequestField = (field: RequestField): number | null => {
+    if (!allocation) return null;
+
+    const mappedItem = ALL_ITEM_MAPPINGS.find(
+      (entry) => entry.requestField === field,
+    );
+
+    if (!mappedItem) return null;
+    return Number(allocation[mappedItem.allocationField] || 0);
+  };
+
+  const getUnitForRequestField = (field: RequestField): string => {
+    if (String(field).includes("liters")) {
+      return "liters";
+    }
+    if (String(field).includes("_kg")) {
+      return "kg";
+    }
+    return "bags";
+  };
+
+  const getEditFieldRiskData = (field: RequestField) => {
+    if (!editingRequestData) return null;
+
+    const allocationValue = getAllocationForRequestField(field);
+    if (allocationValue === null) return null;
+
+    const currentRequestValue = Number(editingRequestData[field] || 0);
+    const editedValue = Number(editFormData[field] ?? currentRequestValue);
+
+    const committedByOthers = requests
+      .filter(
+        (request) =>
+          (request.status === "approved" || request.status === "pending") &&
+          request.id !== editingRequestData.id,
+      )
+      .reduce((sum, request) => sum + Number(request[field] || 0), 0);
+
+    const remainingBeforeEdit = allocationValue - committedByOthers;
+    const availableForThisRequest = Math.max(0, remainingBeforeEdit);
+    const remainingAfterEdit = remainingBeforeEdit - editedValue;
+    const exceedsBy = Math.max(0, -remainingAfterEdit);
+    const hasRisk = exceedsBy > 0;
+
+    return {
+      currentRequestValue,
+      editedValue,
+      committedByOthers,
+      availableForThisRequest,
+      remainingAfterEdit,
+      exceedsBy,
+      hasRisk,
+    };
+  };
+
+  const renderEditFieldMeta = (field: RequestField) => {
+    const riskData = getEditFieldRiskData(field);
+    if (!riskData) {
+      return (
+        <div className="jo-manage-requests-modal-meta-panel jo-manage-requests-modal-meta-panel-unmapped">
+          <span className="jo-manage-requests-modal-meta-footnote">
+            No allocation mapping available for this item.
+          </span>
+        </div>
+      );
+    }
+
+    const {
+      availableForThisRequest,
+      remainingAfterEdit,
+      currentRequestValue,
+      editedValue,
+      committedByOthers,
+      exceedsBy,
+      hasRisk,
+    } = riskData;
+
+    const unit = getUnitForRequestField(field);
+    const usagePercent =
+      availableForThisRequest > 0
+        ? Math.min((editedValue / availableForThisRequest) * 100, 100)
+        : editedValue > 0
+          ? 100
+          : 0;
+
+    const remainingSafe = Math.max(0, remainingAfterEdit);
+
+    return (
+      <div className="jo-manage-requests-modal-meta-panel">
+        <div className="jo-manage-requests-modal-meta-top">
+          <span
+            className={`jo-manage-requests-modal-meta-status ${
+              hasRisk ? "is-danger" : "is-safe"
+            }`}
+          >
+            {hasRisk ? "Exceeded" : "Within limit"}
+          </span>
+          <span className="jo-manage-requests-modal-meta-caption">
+            Allocation check for this item
+          </span>
+        </div>
+
+        <div className="jo-manage-requests-modal-meta-stats-grid">
+          <span className="jo-manage-requests-modal-meta-stat">
+            <small>Available now</small>
+            <strong>
+              {availableForThisRequest.toFixed(2)} {unit}
+            </strong>
+          </span>
+          <span className="jo-manage-requests-modal-meta-stat">
+            <small>Reserved by others</small>
+            <strong>
+              {committedByOthers.toFixed(2)} {unit}
+            </strong>
+          </span>
+          <span className="jo-manage-requests-modal-meta-stat">
+            <small>Original request</small>
+            <strong>
+              {currentRequestValue.toFixed(2)} {unit}
+            </strong>
+          </span>
+          <span className="jo-manage-requests-modal-meta-stat">
+            <small>Edited request</small>
+            <strong>
+              {editedValue.toFixed(2)} {unit}
+            </strong>
+          </span>
+        </div>
+
+        <div className="jo-manage-requests-modal-meta-bar-row">
+          <span>Usage</span>
+          <strong>{usagePercent.toFixed(0)}%</strong>
+        </div>
+        <div className="jo-manage-requests-modal-meta-bar-track">
+          <div
+            className={`jo-manage-requests-modal-meta-bar-fill ${
+              hasRisk ? "is-danger" : "is-safe"
+            }`}
+            style={{ width: `${usagePercent}%` }}
+          />
+        </div>
+
+        {hasRisk ? (
+          <span className="jo-manage-requests-modal-risk jo-manage-requests-modal-risk-danger">
+            Exceeded by {exceedsBy.toFixed(2)} {unit}. Reduce the edited value
+            to continue safely.
+          </span>
+        ) : (
+          <span className="jo-manage-requests-modal-meta-footnote">
+            Remaining after edit: {remainingSafe.toFixed(2)} {unit}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  const hasAnyEditRisk =
+    !!editingRequestData &&
+    editableRequestFields.some((field) => getEditFieldRiskData(field)?.hasRisk);
+
   return (
     <div className="page-container">
       {/* Notification Toast */}
@@ -1721,72 +1888,107 @@ const JoManageRequests: React.FC = () => {
 
       {/* Edit Request Modal */}
       {editingRequest && (
-        <div className="jo-manage-requests-modal-overlay">
-          <div className="jo-manage-requests-modal-content">
-            {/* Modal Header */}
-            <div className="jo-manage-requests-modal-header">
-              <h2>Edit Farmer Request</h2>
-              <button
-                style={{ cursor: "pointer" }}
-                onClick={handleCancelEdit}
-                className="jo-manage-requests-modal-close"
-              >
-                ×
-              </button>
-            </div>
+        <div className="jo-manage-requests-modal-overlay jo-manage-requests-edit-modal-overlay">
+          <div className="jo-manage-requests-modal-content jo-manage-requests-edit-modal">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="jo-manage-requests-edit-close"
+            >
+              ×
+            </button>
 
-            {/* Modal Body */}
+            <h3 className="jo-manage-requests-modal-title">
+              Edit Farmer Request
+            </h3>
+
+            {editingRequestData && (
+              <div className="jo-manage-requests-edit-request-info">
+                <span>
+                  <strong>Farmer:</strong> {editingRequestData.farmer_name}
+                </span>
+                <span>
+                  <strong>Barangay:</strong> {editingRequestData.barangay}
+                </span>
+              </div>
+            )}
+
+            {hasAnyEditRisk && (
+              <div className="jo-manage-requests-modal-risk jo-manage-requests-modal-risk-danger">
+                Warning: one or more edited quantities exceed current available
+                allocation. Adjust the highlighted fields before saving.
+              </div>
+            )}
+
             <div className="jo-manage-requests-modal-body">
               {/* Fertilizers Section */}
               <div className="jo-manage-requests-modal-section">
                 <h4 className="jo-manage-requests-modal-section-title">
-                  🌱 Fertilizers (bags)
+                  Fertilizers (bags)
                 </h4>
                 <div className="jo-manage-requests-modal-grid">
-                  {visibleExtraFertilizerFields.map((item) => (
-                    <div
-                      key={item.requestField}
-                      className="jo-manage-requests-modal-field"
-                    >
-                      <label>{item.label}</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={Number(editFormData[item.requestField]) || 0}
-                        onChange={(e) =>
-                          updateEditQuantity(
-                            item.requestField,
-                            e.target.value,
-                            false,
-                          )
-                        }
-                        className="jo-manage-requests-modal-input"
-                      />
-                    </div>
-                  ))}
-                  {visibleFertilizerFields.map((item) => (
-                    <div
-                      key={item.requestField}
-                      className="jo-manage-requests-modal-field"
-                    >
-                      <label>{item.label}</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={Number(editFormData[item.requestField]) || 0}
-                        onChange={(e) =>
-                          updateEditQuantity(
-                            item.requestField,
-                            e.target.value,
-                            false,
-                          )
-                        }
-                        className="jo-manage-requests-modal-input"
-                      />
-                    </div>
-                  ))}
+                  {visibleExtraFertilizerFields.map((item) => {
+                    const hasRisk =
+                      getEditFieldRiskData(item.requestField)?.hasRisk || false;
+                    return (
+                      <div
+                        key={item.requestField}
+                        className={`jo-manage-requests-modal-field ${
+                          hasRisk ? "jo-manage-requests-modal-field-danger" : ""
+                        }`}
+                      >
+                        <label className="jo-manage-requests-modal-label">
+                          {item.label}
+                        </label>
+                        {renderEditFieldMeta(item.requestField)}
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={Number(editFormData[item.requestField]) || 0}
+                          onChange={(e) =>
+                            updateEditQuantity(
+                              item.requestField,
+                              e.target.value,
+                              false,
+                            )
+                          }
+                          className="jo-manage-requests-modal-input"
+                        />
+                      </div>
+                    );
+                  })}
+                  {visibleFertilizerFields.map((item) => {
+                    const hasRisk =
+                      getEditFieldRiskData(item.requestField)?.hasRisk || false;
+                    return (
+                      <div
+                        key={item.requestField}
+                        className={`jo-manage-requests-modal-field ${
+                          hasRisk ? "jo-manage-requests-modal-field-danger" : ""
+                        }`}
+                      >
+                        <label className="jo-manage-requests-modal-label">
+                          {item.label}
+                        </label>
+                        {renderEditFieldMeta(item.requestField)}
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={Number(editFormData[item.requestField]) || 0}
+                          onChange={(e) =>
+                            updateEditQuantity(
+                              item.requestField,
+                              e.target.value,
+                              false,
+                            )
+                          }
+                          className="jo-manage-requests-modal-input"
+                        />
+                      </div>
+                    );
+                  })}
                   {visibleExtraFertilizerFields.length === 0 &&
                     visibleFertilizerFields.length === 0 && (
                       <p className="jo-manage-requests-modal-empty-message">
@@ -1799,32 +2001,41 @@ const JoManageRequests: React.FC = () => {
               {/* Seeds Section */}
               <div className="jo-manage-requests-modal-section">
                 <h4 className="jo-manage-requests-modal-section-title">
-                  🌾 Seeds (kg)
+                  Seeds (kg)
                 </h4>
                 <div className="jo-manage-requests-modal-grid">
-                  {visibleSeedFields.map((item) => (
-                    <div
-                      key={item.requestField}
-                      className="jo-manage-requests-modal-field"
-                    >
-                      <label>{item.label}</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        inputMode="decimal"
-                        value={Number(editFormData[item.requestField]) || 0}
-                        onChange={(e) =>
-                          updateEditQuantity(
-                            item.requestField,
-                            e.target.value,
-                            true,
-                          )
-                        }
-                        className="jo-manage-requests-modal-input"
-                      />
-                    </div>
-                  ))}
+                  {visibleSeedFields.map((item) => {
+                    const hasRisk =
+                      getEditFieldRiskData(item.requestField)?.hasRisk || false;
+                    return (
+                      <div
+                        key={item.requestField}
+                        className={`jo-manage-requests-modal-field ${
+                          hasRisk ? "jo-manage-requests-modal-field-danger" : ""
+                        }`}
+                      >
+                        <label className="jo-manage-requests-modal-label">
+                          {item.label}
+                        </label>
+                        {renderEditFieldMeta(item.requestField)}
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          inputMode="decimal"
+                          value={Number(editFormData[item.requestField]) || 0}
+                          onChange={(e) =>
+                            updateEditQuantity(
+                              item.requestField,
+                              e.target.value,
+                              true,
+                            )
+                          }
+                          className="jo-manage-requests-modal-input"
+                        />
+                      </div>
+                    );
+                  })}
                   {visibleSeedFields.length === 0 && (
                     <p className="jo-manage-requests-modal-empty-message">
                       No seed request values were submitted.
@@ -1834,10 +2045,9 @@ const JoManageRequests: React.FC = () => {
               </div>
 
               {/* Notes Section */}
-              {/* COMMENT: Changed from 'notes' to 'request_notes' to match database column */}
               <div className="jo-manage-requests-modal-section">
                 <h4 className="jo-manage-requests-modal-section-title">
-                  📝 Request Notes (Optional)
+                  Notes
                 </h4>
                 <textarea
                   value={editFormData.request_notes || ""}
@@ -1849,17 +2059,23 @@ const JoManageRequests: React.FC = () => {
                   }
                   rows={3}
                   className="jo-manage-requests-modal-textarea"
-                  placeholder="Add any notes about this request..."
+                  placeholder="Add any notes about this request"
                 />
               </div>
 
               {/* Action Buttons */}
               <div className="jo-manage-requests-modal-actions">
                 <button
+                  onClick={handleCancelEdit}
+                  className="jo-manage-requests-modal-btn cancel"
+                >
+                  Cancel
+                </button>
+                <button
                   onClick={handleSaveEdit}
                   className="jo-manage-requests-modal-btn save"
                 >
-                  💾 Save Changes
+                  Save Changes
                 </button>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   getFarmParcels,
@@ -66,16 +66,15 @@ interface RSBSARecord {
   };
 }
 
-const JoRsbsa: React.FC = () => {
+const RsbsaAdminPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activePage, setActivePage] = useState<"farmers" | "demo-analytics">(
+  const [activePage, setActivePage] = useState<"farmers" | "analytics">(
     "farmers",
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
-  const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
@@ -84,6 +83,9 @@ const JoRsbsa: React.FC = () => {
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isModalPrinting, setIsModalPrinting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [barangayFilter, setBarangayFilter] = useState<string>("all");
+  const [printingRecordId, setPrintingRecordId] = useState<string | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -92,6 +94,94 @@ const JoRsbsa: React.FC = () => {
       (record) => record.ownershipType?.registeredOwner === true,
     );
   };
+
+  const getRecordBarangay = (record: RSBSARecord) => {
+    const rawLocation = String(record.farmLocation || "").trim();
+    if (!rawLocation) return "N/A";
+    const [firstSegment] = rawLocation.split(",");
+    return firstSegment?.trim() || "N/A";
+  };
+
+  const getNumericFarmArea = (record: RSBSARecord) => {
+    const totalArea =
+      typeof record.totalFarmArea === "number"
+        ? record.totalFarmArea
+        : parseFloat(String(record.totalFarmArea || 0));
+
+    if (!isNaN(totalArea) && totalArea > 0) return totalArea;
+
+    const parcelArea = parseFloat(String(record.parcelArea || 0));
+    return !isNaN(parcelArea) && parcelArea > 0 ? parcelArea : 0;
+  };
+
+  const ownershipFilteredRecords = useMemo(
+    () => filterRegisteredOwners(rsbsaRecords),
+    [rsbsaRecords],
+  );
+
+  const barangayOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        ownershipFilteredRecords.map((record) => getRecordBarangay(record)),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+  }, [ownershipFilteredRecords]);
+
+  const visibleRecords = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    const filtered = ownershipFilteredRecords.filter((record) => {
+      if (barangayFilter !== "all") {
+        const recordBarangay = getRecordBarangay(record);
+        if (recordBarangay !== barangayFilter) return false;
+      }
+
+      if (!query) return true;
+
+      const haystack = [
+        record.farmerName,
+        record.referenceNumber,
+        record.farmerAddress,
+        record.farmLocation,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(query);
+    });
+
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.dateSubmitted || 0).getTime();
+      const dateB = new Date(b.dateSubmitted || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [barangayFilter, ownershipFilteredRecords, searchQuery]);
+
+  const summaryStats = useMemo(() => {
+    const totalParcels = visibleRecords.reduce((sum, record) => {
+      return sum + (Number(record.parcelCount) || 0);
+    }, 0);
+
+    const totalFarmArea = visibleRecords.reduce(
+      (sum, record) => sum + getNumericFarmArea(record),
+      0,
+    );
+
+    const latestSubmissionDate = visibleRecords.reduce<number>(
+      (latest, record) => {
+        const submitted = new Date(record.dateSubmitted || 0).getTime();
+        return submitted > latest ? submitted : latest;
+      },
+      0,
+    );
+
+    return {
+      totalFarmers: visibleRecords.length,
+      totalParcels,
+      totalFarmArea,
+      latestSubmissionDate,
+    };
+  }, [visibleRecords]);
 
   const fetchRSBSARecords = async () => {
     try {
@@ -102,17 +192,10 @@ const JoRsbsa: React.FC = () => {
       const data = (response.data || []) as RSBSARecord[];
       setRsbsaRecords(data);
 
-      const registeredOwnersData = filterRegisteredOwners(data).sort((a, b) => {
-        const dateA = new Date(a.dateSubmitted ?? 0).getTime();
-        const dateB = new Date(b.dateSubmitted ?? 0).getTime();
-        return dateB - dateA;
-      });
-
-      setRegisteredOwners(registeredOwnersData);
       setError(null);
     } catch (err: any) {
       console.error("Error fetching RSBSA records:", err);
-      setError("Failed to load registered land owners data");
+      setError("Failed to load RSBSA farmer submissions");
     } finally {
       setLoading(false);
     }
@@ -354,6 +437,22 @@ const JoRsbsa: React.FC = () => {
     }
   };
 
+  const handleRowPrint = async (record: RSBSARecord) => {
+    setPrintingRecordId(record.id);
+
+    const result = await printRsbsaFormById({
+      farmerId: record.id,
+      fallbackReferenceNumber: record.referenceNumber,
+      fallbackFarmerName: record.farmerName,
+    });
+
+    setPrintingRecordId(null);
+
+    if (!result.success && !result.cancelled) {
+      alert(result.error || "Failed to print the RSBSA form.");
+    }
+  };
+
   return (
     <div className="rsbsa-admin-page-container">
       <div className="rsbsa-admin-page">
@@ -436,12 +535,12 @@ const JoRsbsa: React.FC = () => {
             >
               ☰
             </button>
-            <div className="tech-incent-mobile-title">Admin RSBSA</div>
+            <div className="tech-incent-mobile-title">RSBSA Admin</div>
           </div>
 
-          <h2 className="rsbsa-admin-page-title">RSBSA Management</h2>
+          <h2 className="rsbsa-admin-page-title">RSBSA Admin</h2>
           <div className="rsbsa-admin-page-subtitle">
-            View and manage registered land owners from RSBSA submissions
+            Monitor and manage farmer RSBSA submissions
           </div>
 
           <div className="rsbsa-tab-toggle">
@@ -452,18 +551,84 @@ const JoRsbsa: React.FC = () => {
               Farmers
             </button>
             <button
-              className={`rsbsa-tab-btn ${activePage === "demo-analytics" ? "active" : ""}`}
-              onClick={() => setActivePage("demo-analytics")}
+              className={`rsbsa-tab-btn ${activePage === "analytics" ? "active" : ""}`}
+              onClick={() => setActivePage("analytics")}
             >
-              Demo Analytics
+              Analytics
             </button>
           </div>
 
           {activePage === "farmers" && (
             <div className="rsbsa-admin-content-card">
+              {!loading && !error && (
+                <>
+                  <div className="rsbsa-admin-kpi-grid">
+                    <div className="rsbsa-admin-kpi-card">
+                      <span className="rsbsa-admin-kpi-label">Farmers</span>
+                      <span className="rsbsa-admin-kpi-value">
+                        {summaryStats.totalFarmers}
+                      </span>
+                    </div>
+                    <div className="rsbsa-admin-kpi-card">
+                      <span className="rsbsa-admin-kpi-label">Parcels</span>
+                      <span className="rsbsa-admin-kpi-value">
+                        {summaryStats.totalParcels}
+                      </span>
+                    </div>
+                    <div className="rsbsa-admin-kpi-card">
+                      <span className="rsbsa-admin-kpi-label">Farm Area</span>
+                      <span className="rsbsa-admin-kpi-value">
+                        {summaryStats.totalFarmArea.toFixed(2)} ha
+                      </span>
+                    </div>
+                    <div className="rsbsa-admin-kpi-card">
+                      <span className="rsbsa-admin-kpi-label">Last Submit</span>
+                      <span className="rsbsa-admin-kpi-value rsbsa-admin-kpi-date">
+                        {summaryStats.latestSubmissionDate
+                          ? new Date(
+                              summaryStats.latestSubmissionDate,
+                            ).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rsbsa-admin-filters-row">
+                    <input
+                      type="text"
+                      placeholder="Search name, reference, address, or location..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="rsbsa-admin-filter-input"
+                    />
+                    <select
+                      value={barangayFilter}
+                      onChange={(e) => setBarangayFilter(e.target.value)}
+                      className="rsbsa-admin-filter-input"
+                    >
+                      <option value="all">All Barangays</option>
+                      {barangayOptions.map((barangay) => (
+                        <option key={barangay} value={barangay}>
+                          {barangay}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="rsbsa-admin-table-meta">
+                    Showing {visibleRecords.length} of{" "}
+                    {ownershipFilteredRecords.length} records
+                  </div>
+                </>
+              )}
+
               {loading ? (
                 <div className="rsbsa-admin-loading-container">
-                  <p>Loading registered land owners...</p>
+                  <p>Loading farmer submissions...</p>
                 </div>
               ) : error ? (
                 <div className="rsbsa-admin-error-container">
@@ -489,23 +654,21 @@ const JoRsbsa: React.FC = () => {
                         <th>Farmer Address</th>
                         <th>Number of Parcels</th>
                         <th>Total Farm Area</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {registeredOwners.length === 0 ? (
+                      {visibleRecords.length === 0 ? (
                         <tr>
-                          <td colSpan={9} className="rsbsa-admin-no-data">
-                            No registered owners found
+                          <td colSpan={10} className="rsbsa-admin-no-data">
+                            No farmer submissions found for the selected filters
                           </td>
                         </tr>
                       ) : (
-                        registeredOwners.map((record) => {
+                        visibleRecords.map((record) => {
                           const { lastName, firstName, middleName, extName } =
                             getNameParts(record);
-                          const area =
-                            typeof record.totalFarmArea === "number"
-                              ? record.totalFarmArea
-                              : parseFloat(String(record.totalFarmArea || 0));
+                          const area = getNumericFarmArea(record);
 
                           return (
                             <tr
@@ -529,6 +692,31 @@ const JoRsbsa: React.FC = () => {
                                   ? `${area.toFixed(2)} ha`
                                   : "N/A"}
                               </td>
+                              <td>
+                                <div className="rsbsa-admin-row-actions">
+                                  <button
+                                    className="rsbsa-admin-row-action-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      fetchFarmerDetails(record.id);
+                                    }}
+                                  >
+                                    View
+                                  </button>
+                                  <button
+                                    className="rsbsa-admin-row-action-btn print"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRowPrint(record);
+                                    }}
+                                    disabled={printingRecordId === record.id}
+                                  >
+                                    {printingRecordId === record.id
+                                      ? "Printing..."
+                                      : "Print"}
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           );
                         })
@@ -540,7 +728,7 @@ const JoRsbsa: React.FC = () => {
             </div>
           )}
 
-          {activePage === "demo-analytics" && (
+          {activePage === "analytics" && (
             <Analytics
               rsbsaRecords={rsbsaRecords}
               loading={loading}
@@ -728,4 +916,4 @@ const JoRsbsa: React.FC = () => {
   );
 };
 
-export default JoRsbsa;
+export default RsbsaAdminPage;

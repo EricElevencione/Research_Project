@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getAllocations, getFarmerRequests } from "../../api";
 import {
   UsageGauges,
@@ -7,16 +7,10 @@ import {
   SeasonComparisonTable,
 } from "../../components/Incentives/AllocationVisuals";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+  FERTILIZER_FIELD_MAPS,
+  SEED_FIELD_MAPS,
+} from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminViewAllocation.css";
-import "../../components/Incentives/RequestAnalytics.css";
 import "../../components/layout/sidebarStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
 import HomeIcon from "../../assets/images/home.png";
@@ -25,425 +19,12 @@ import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
 
-// ─── Analytics Components ──────────────────────────────────────
-
-interface ShortageItem {
-  name: string;
-  allocated: number;
-  requested: number;
-  remaining: number;
-  pctUsed: number;
-  unit: string;
-  severity: "critical" | "warning" | "ok";
-}
-
-const BarangayVolumeChart: React.FC<{ requests: any[] }> = ({ requests }) => {
-  const data = useMemo(() => {
-    const map = new Map<
-      string,
-      { fert: number; seed: number; count: number }
-    >();
-
-    requests.forEach((r: any) => {
-      const brgy = r.barangay || "Unknown";
-      const existing = map.get(brgy) || { fert: 0, seed: 0, count: 0 };
-
-      const fert =
-        (Number(r.requested_urea_bags) || 0) +
-        (Number(r.requested_complete_14_bags) || 0) +
-        (Number(r.requested_ammonium_sulfate_bags) || 0) +
-        (Number(r.requested_muriate_potash_bags) || 0);
-
-      const seed =
-        (Number(r.requested_jackpot_kg) || 0) +
-        (Number(r.requested_us88_kg) || 0) +
-        (Number(r.requested_th82_kg) || 0) +
-        (Number(r.requested_rh9000_kg) || 0) +
-        (Number(r.requested_lumping143_kg) || 0) +
-        (Number(r.requested_lp296_kg) || 0);
-
-      map.set(brgy, {
-        fert: existing.fert + fert,
-        seed: existing.seed + seed,
-        count: existing.count + 1,
-      });
-    });
-
-    const result: {
-      barangay: string;
-      fertilizer: number;
-      seeds: number;
-      count: number;
-    }[] = [];
-    map.forEach((v, k) => {
-      result.push({
-        barangay: k,
-        fertilizer: v.fert,
-        seeds: v.seed,
-        count: v.count,
-      });
-    });
-
-    result.sort((a, b) => b.fertilizer + b.seeds - (a.fertilizer + a.seeds));
-    return result;
-  }, [requests]);
-
-  if (data.length === 0) return null;
-
-  return (
-    <div className="req-analytics-card">
-      <div className="req-analytics-card-header">
-        <h3>Request Volume by Barangay</h3>
-        <span className="req-analytics-subtitle">
-          Ranked by total amount requested
-        </span>
-      </div>
-      <div className="req-analytics-card-body">
-        <ResponsiveContainer
-          width="100%"
-          height={Math.max(200, data.length * 44 + 40)}
-        >
-          <BarChart
-            data={data}
-            layout="vertical"
-            margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#e5e7eb"
-              horizontal={false}
-            />
-            <XAxis type="number" tick={{ fill: "#6b7280", fontSize: 12 }} />
-            <YAxis
-              dataKey="barangay"
-              type="category"
-              tick={{ fill: "#374151", fontSize: 13, fontWeight: 500 }}
-              width={100}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "#fff",
-                border: "1px solid #e5e7eb",
-                borderRadius: 8,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-              }}
-              formatter={(value: number, name: string) => [
-                `${value.toFixed(1)} ${name === "fertilizer" ? "bags" : "kg"}`,
-                name === "fertilizer" ? "Fertilizer" : "Seeds",
-              ]}
-            />
-            <Bar
-              dataKey="fertilizer"
-              stackId="a"
-              radius={[0, 0, 0, 0]}
-              maxBarSize={28}
-              fill="#16a34a"
-              name="fertilizer"
-            />
-            <Bar
-              dataKey="seeds"
-              stackId="a"
-              radius={[0, 4, 4, 0]}
-              maxBarSize={28}
-              fill="#0ea5e9"
-              name="seeds"
-            />
-          </BarChart>
-        </ResponsiveContainer>
-        <div className="req-analytics-bar-legend">
-          <span>
-            <span
-              className="req-legend-dot"
-              style={{ background: "#16a34a" }}
-            />{" "}
-            Fertilizer (bags)
-          </span>
-          <span>
-            <span
-              className="req-legend-dot"
-              style={{ background: "#0ea5e9" }}
-            />{" "}
-            Seeds (kg)
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ApprovalRateCard: React.FC<{ requests: any[] }> = ({ requests }) => {
-  const stats = useMemo(() => {
-    const total = requests.length;
-    const approved = requests.filter(
-      (r: any) => r.status === "approved",
-    ).length;
-    const rejected = requests.filter(
-      (r: any) => r.status === "rejected",
-    ).length;
-    const pending = requests.filter((r: any) => r.status === "pending").length;
-    const decided = approved + rejected;
-    const approvalRate = decided > 0 ? (approved / decided) * 100 : 0;
-    return { total, approved, rejected, pending, approvalRate };
-  }, [requests]);
-
-  const circumference = 2 * Math.PI * 52;
-  const approvedOffset =
-    circumference - (stats.approvalRate / 100) * circumference;
-
-  return (
-    <div className="req-analytics-card req-approval-card">
-      <div className="req-analytics-card-header">
-        <h3>Approval Rate</h3>
-        <span className="req-analytics-subtitle">
-          Approved vs. rejected requests
-        </span>
-      </div>
-      <div className="req-approval-body">
-        <div className="req-approval-gauge">
-          <svg width="120" height="120" viewBox="0 0 120 120">
-            <circle
-              cx="60"
-              cy="60"
-              r="52"
-              fill="none"
-              stroke="#fee2e2"
-              strokeWidth="12"
-            />
-            <circle
-              cx="60"
-              cy="60"
-              r="52"
-              fill="none"
-              stroke="#16a34a"
-              strokeWidth="12"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={approvedOffset}
-              transform="rotate(-90 60 60)"
-              style={{ transition: "stroke-dashoffset 0.8s ease" }}
-            />
-            <text
-              x="60"
-              y="55"
-              textAnchor="middle"
-              fontSize="22"
-              fontWeight="700"
-              fill="#16a34a"
-            >
-              {stats.approvalRate.toFixed(0)}%
-            </text>
-            <text
-              x="60"
-              y="73"
-              textAnchor="middle"
-              fontSize="10"
-              fill="#9ca3af"
-            >
-              approved
-            </text>
-          </svg>
-        </div>
-        <div className="req-approval-stats">
-          <div className="req-approval-stat-row">
-            <span className="req-approval-dot approved" />
-            <span className="req-approval-label">Approved</span>
-            <span className="req-approval-value">{stats.approved}</span>
-          </div>
-          <div className="req-approval-stat-row">
-            <span className="req-approval-dot rejected" />
-            <span className="req-approval-label">Rejected</span>
-            <span className="req-approval-value">{stats.rejected}</span>
-          </div>
-          <div className="req-approval-stat-row">
-            <span className="req-approval-dot pending" />
-            <span className="req-approval-label">Pending</span>
-            <span className="req-approval-value">{stats.pending}</span>
-          </div>
-          <div className="req-approval-stat-total">
-            Total: <strong>{stats.total}</strong> requests
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ShortageAlertsPanel: React.FC<{
-  allocations: any[];
-  allRequests: Map<string, any[]>;
-}> = ({ allocations, allRequests }) => {
-  const shortages = useMemo(() => {
-    const items: ShortageItem[] = [];
-
-    const FERT_FIELDS = [
-      {
-        alloc: "urea_46_0_0_bags",
-        req: "requested_urea_bags",
-        label: "Urea (46-0-0)",
-        unit: "bags",
-      },
-      {
-        alloc: "complete_14_14_14_bags",
-        req: "requested_complete_14_bags",
-        label: "Complete (14-14-14)",
-        unit: "bags",
-      },
-      {
-        alloc: "ammonium_sulfate_21_0_0_bags",
-        req: "requested_ammonium_sulfate_bags",
-        label: "Amm. Sulfate",
-        unit: "bags",
-      },
-      {
-        alloc: "muriate_potash_0_0_60_bags",
-        req: "requested_muriate_potash_bags",
-        label: "Muriate Potash",
-        unit: "bags",
-      },
-    ];
-
-    const SEED_FIELDS = [
-      {
-        alloc: "jackpot_kg",
-        req: "requested_jackpot_kg",
-        label: "Jackpot",
-        unit: "kg",
-      },
-      { alloc: "us88_kg", req: "requested_us88_kg", label: "US88", unit: "kg" },
-      { alloc: "th82_kg", req: "requested_th82_kg", label: "TH82", unit: "kg" },
-      {
-        alloc: "rh9000_kg",
-        req: "requested_rh9000_kg",
-        label: "RH9000",
-        unit: "kg",
-      },
-      {
-        alloc: "lumping143_kg",
-        req: "requested_lumping143_kg",
-        label: "Lumping143",
-        unit: "kg",
-      },
-      {
-        alloc: "lp296_kg",
-        req: "requested_lp296_kg",
-        label: "LP296",
-        unit: "kg",
-      },
-    ];
-
-    const allFields = [...FERT_FIELDS, ...SEED_FIELDS];
-
-    allFields.forEach((field) => {
-      let totalAllocated = 0;
-      let totalRequested = 0;
-
-      allocations.forEach((alloc) => {
-        totalAllocated += Number(alloc[field.alloc]) || 0;
-        const seasonReqs = allRequests.get(alloc.season) || [];
-        seasonReqs.forEach((r) => {
-          totalRequested += Number(r[field.req]) || 0;
-        });
-      });
-
-      const remaining = totalAllocated - totalRequested;
-      const pctUsed =
-        totalAllocated > 0 ? (totalRequested / totalAllocated) * 100 : 0;
-
-      let severity: "critical" | "warning" | "ok" = "ok";
-      if (pctUsed >= 100 || remaining < 0) severity = "critical";
-      else if (pctUsed >= 75) severity = "warning";
-
-      items.push({
-        name: field.label,
-        allocated: totalAllocated,
-        requested: totalRequested,
-        remaining,
-        pctUsed,
-        unit: field.unit,
-        severity,
-      });
-    });
-
-    const order = { critical: 0, warning: 1, ok: 2 };
-    items.sort((a, b) => order[a.severity] - order[b.severity]);
-    return items;
-  }, [allocations, allRequests]);
-
-  const criticalCount = shortages.filter(
-    (s) => s.severity === "critical",
-  ).length;
-  const warningCount = shortages.filter((s) => s.severity === "warning").length;
-
-  return (
-    <div className="req-analytics-card req-shortage-card">
-      <div className="req-analytics-card-header">
-        <h3>System-Wide Shortage Alerts</h3>
-        <span className="req-analytics-subtitle">
-          Across all seasons &amp; allocations
-        </span>
-      </div>
-      <div className="req-shortage-summary">
-        {criticalCount > 0 && (
-          <span className="req-shortage-badge critical">
-            {criticalCount} Critical
-          </span>
-        )}
-        {warningCount > 0 && (
-          <span className="req-shortage-badge warning">
-            {warningCount} Warning
-          </span>
-        )}
-        {criticalCount === 0 && warningCount === 0 && (
-          <span className="req-shortage-badge ok">All items sufficient</span>
-        )}
-      </div>
-      <div className="req-shortage-list">
-        {shortages.map((item) => (
-          <div key={item.name} className={`req-shortage-row ${item.severity}`}>
-            <div className="req-shortage-icon">
-              {item.severity === "critical"
-                ? "🔴"
-                : item.severity === "warning"
-                  ? "🟡"
-                  : "🟢"}
-            </div>
-            <div className="req-shortage-info">
-              <span className="req-shortage-name">{item.name}</span>
-              <span className="req-shortage-detail">
-                {item.requested.toFixed(1)} / {item.allocated.toFixed(1)}{" "}
-                {item.unit} used
-              </span>
-            </div>
-            <div className="req-shortage-bar-wrap">
-              <div
-                className={`req-shortage-bar-fill ${item.severity}`}
-                style={{ width: `${Math.min(item.pctUsed, 100)}%` }}
-              />
-            </div>
-            <div className="req-shortage-pct">
-              <span className={`req-shortage-pct-value ${item.severity}`}>
-                {item.pctUsed.toFixed(0)}%
-              </span>
-            </div>
-            <div
-              className={`req-shortage-remaining ${item.remaining < 0 ? "over" : ""}`}
-            >
-              {item.remaining >= 0
-                ? `${item.remaining.toFixed(1)} left`
-                : `${Math.abs(item.remaining).toFixed(1)} over`}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ─── Main Component ────────────────────────────────────────────
-
-interface FarmerRequest {
+interface FarmerRequest extends Record<
+  string,
+  number | string | null | undefined
+> {
   id: number;
-  farmer_name: string;
+  status: string;
   barangay: string;
   requested_urea_bags: number;
   requested_complete_14_bags: number;
@@ -455,10 +36,12 @@ interface FarmerRequest {
   requested_rh9000_kg: number;
   requested_lumping143_kg: number;
   requested_lp296_kg: number;
-  status: string;
 }
 
-interface AllocationDetails {
+interface AllocationDetails extends Record<
+  string,
+  number | string | null | undefined
+> {
   id: number;
   season: string;
   allocation_date: string;
@@ -472,143 +55,22 @@ interface AllocationDetails {
   rh9000_kg: number;
   lumping143_kg: number;
   lp296_kg: number;
-  notes: string;
 }
 
 const ViewAllocation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { allocationId } = useParams<{ allocationId: string }>();
+
   const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
-  const [allAllocations, setAllAllocations] = useState<any[]>([]);
+  const [allAllocations, setAllAllocations] = useState<AllocationDetails[]>([]);
   const [requests, setRequests] = useState<FarmerRequest[]>([]);
-  const [allSeasonRequests, setAllSeasonRequests] = useState<
-    Map<string, any[]>
-  >(new Map());
+  const [allRequests, setAllRequests] = useState<FarmerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
-
-  // Transform allocation and requests data into gauge format
-  const gaugeData = useMemo(() => {
-    if (!allocation || !requests) {
-      return { fertilizers: [], seeds: [] };
-    }
-
-    // Calculate totals from requests
-    const totalRequested = {
-      urea: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_urea_bags) || 0),
-        0,
-      ),
-      complete14: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_complete_14_bags) || 0),
-        0,
-      ),
-      ammoniumSulfate: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_ammonium_sulfate_bags) || 0),
-        0,
-      ),
-      muriatePotash: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_muriate_potash_bags) || 0),
-        0,
-      ),
-      jackpot: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_jackpot_kg) || 0),
-        0,
-      ),
-      us88: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_us88_kg) || 0),
-        0,
-      ),
-      th82: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_th82_kg) || 0),
-        0,
-      ),
-      rh9000: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_rh9000_kg) || 0),
-        0,
-      ),
-      lumping143: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_lumping143_kg) || 0),
-        0,
-      ),
-      lp296: requests.reduce(
-        (sum, r) => sum + (Number(r.requested_lp296_kg) || 0),
-        0,
-      ),
-    };
-
-    const fertilizers = [
-      {
-        name: "Urea (46-0-0)",
-        allocated: allocation.urea_46_0_0_bags,
-        requested: totalRequested.urea,
-        unit: "bags",
-      },
-      {
-        name: "Complete (14-14-14)",
-        allocated: allocation.complete_14_14_14_bags,
-        requested: totalRequested.complete14,
-        unit: "bags",
-      },
-      {
-        name: "Ammonium Sulfate (21-0-0)",
-        allocated: allocation.ammonium_sulfate_21_0_0_bags,
-        requested: totalRequested.ammoniumSulfate,
-        unit: "bags",
-      },
-      {
-        name: "Muriate of Potash (0-0-60)",
-        allocated: allocation.muriate_potash_0_0_60_bags,
-        requested: totalRequested.muriatePotash,
-        unit: "bags",
-      },
-    ];
-
-    const seeds = [
-      {
-        name: "Jackpot",
-        allocated: allocation.jackpot_kg,
-        requested: totalRequested.jackpot,
-        unit: "kg",
-      },
-      {
-        name: "US88",
-        allocated: allocation.us88_kg,
-        requested: totalRequested.us88,
-        unit: "kg",
-      },
-      {
-        name: "TH82",
-        allocated: allocation.th82_kg,
-        requested: totalRequested.th82,
-        unit: "kg",
-      },
-      {
-        name: "RH9000",
-        allocated: allocation.rh9000_kg,
-        requested: totalRequested.rh9000,
-        unit: "kg",
-      },
-      {
-        name: "Lumping143",
-        allocated: allocation.lumping143_kg,
-        requested: totalRequested.lumping143,
-        unit: "kg",
-      },
-      {
-        name: "LP296",
-        allocated: allocation.lp296_kg,
-        requested: totalRequested.lp296,
-        unit: "kg",
-      },
-    ];
-
-    return { fertilizers, seeds };
-  }, [allocation, requests]);
 
   const formatSeasonName = (season: string) => {
     if (!season) return "Unknown Season";
@@ -617,98 +79,181 @@ const ViewAllocation: React.FC = () => {
     return `${type.charAt(0).toUpperCase() + type.slice(1)} ${year}`;
   };
 
+  const formatCount = (value: number) => value.toLocaleString("en-US");
+
+  const gaugeData = useMemo(() => {
+    if (allAllocations.length === 0) return { fertilizers: [], seeds: [] };
+
+    const fertilizers = FERTILIZER_FIELD_MAPS.map((fertilizer) => {
+      const allocated = allAllocations.reduce(
+        (sum, currentAllocation) =>
+          sum + (Number(currentAllocation[fertilizer.allocationField]) || 0),
+        0,
+      );
+      const requested = allRequests.reduce(
+        (sum, request) => sum + (Number(request[fertilizer.requestField]) || 0),
+        0,
+      );
+
+      return {
+        name: fertilizer.label,
+        allocated,
+        requested,
+        unit: fertilizer.unit,
+      };
+    }).filter(
+      (fertilizer) => fertilizer.allocated > 0 || fertilizer.requested > 0,
+    );
+
+    const seeds = SEED_FIELD_MAPS.map((seed) => {
+      const allocated = allAllocations.reduce(
+        (sum, currentAllocation) =>
+          sum + (Number(currentAllocation[seed.allocationField]) || 0),
+        0,
+      );
+      const requested = allRequests.reduce(
+        (sum, request) => sum + (Number(request[seed.requestField]) || 0),
+        0,
+      );
+
+      return {
+        name: seed.label,
+        allocated,
+        requested,
+        unit: seed.unit,
+      };
+    }).filter((seed) => seed.allocated > 0 || seed.requested > 0);
+
+    return {
+      fertilizers,
+      seeds,
+    };
+  }, [allAllocations, allRequests]);
+
+  const overallAllocationTotals = useMemo(() => {
+    return {
+      fertilizerBags: FERTILIZER_FIELD_MAPS.reduce((sum, fertilizer) => {
+        if (fertilizer.unit !== "bags") return sum;
+        return (
+          sum +
+          allAllocations.reduce(
+            (innerSum, currentAllocation) =>
+              innerSum +
+              (Number(currentAllocation[fertilizer.allocationField]) || 0),
+            0,
+          )
+        );
+      }, 0),
+      seedKg: SEED_FIELD_MAPS.reduce(
+        (sum, seed) =>
+          sum +
+          allAllocations.reduce(
+            (innerSum, currentAllocation) =>
+              innerSum + (Number(currentAllocation[seed.allocationField]) || 0),
+            0,
+          ),
+        0,
+      ),
+    };
+  }, [allAllocations]);
+
   const overviewStats = useMemo(() => {
     if (!allocation) {
       return {
+        approved: 0,
+        rejected: 0,
+        pending: 0,
         totalFertilizerAllocated: 0,
         totalSeedsAllocated: 0,
-        approvedRequests: 0,
-        pendingRequests: 0,
       };
     }
 
-    const totalFertilizerAllocated =
-      (Number(allocation.urea_46_0_0_bags) || 0) +
-      (Number(allocation.complete_14_14_14_bags) || 0) +
-      (Number(allocation.ammonium_sulfate_21_0_0_bags) || 0) +
-      (Number(allocation.muriate_potash_0_0_60_bags) || 0);
-
-    const totalSeedsAllocated =
-      (Number(allocation.jackpot_kg) || 0) +
-      (Number(allocation.us88_kg) || 0) +
-      (Number(allocation.th82_kg) || 0) +
-      (Number(allocation.rh9000_kg) || 0) +
-      (Number(allocation.lumping143_kg) || 0) +
-      (Number(allocation.lp296_kg) || 0);
-
-    const approvedRequests = requests.filter(
-      (request) => request.status === "approved",
-    ).length;
-    const pendingRequests = requests.filter(
-      (request) => request.status === "pending",
-    ).length;
-
     return {
-      totalFertilizerAllocated,
-      totalSeedsAllocated,
-      approvedRequests,
-      pendingRequests,
+      approved: requests.filter((request) => request.status === "approved")
+        .length,
+      rejected: requests.filter((request) => request.status === "rejected")
+        .length,
+      pending: requests.filter((request) => request.status === "pending")
+        .length,
+      totalFertilizerAllocated: FERTILIZER_FIELD_MAPS.reduce(
+        (sum, fertilizer) => {
+          if (fertilizer.unit !== "bags") return sum;
+          return sum + (Number(allocation[fertilizer.allocationField]) || 0);
+        },
+        0,
+      ),
+      totalSeedsAllocated: SEED_FIELD_MAPS.reduce(
+        (sum, seed) => sum + (Number(allocation[seed.allocationField]) || 0),
+        0,
+      ),
     };
   }, [allocation, requests]);
 
   useEffect(() => {
+    const fetchAllocationData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const allocationResponse = await getAllocations();
+        if (allocationResponse.error) {
+          throw new Error(
+            allocationResponse.error || "Failed to fetch allocation",
+          );
+        }
+
+        const allocations = (allocationResponse.data ||
+          []) as AllocationDetails[];
+        setAllAllocations(allocations);
+
+        const currentAllocation = allocations.find(
+          (item) => item.id === parseInt(allocationId || "0", 10),
+        );
+
+        if (!currentAllocation) {
+          throw new Error("Allocation not found");
+        }
+
+        setAllocation(currentAllocation);
+
+        const requestsResponse = await getFarmerRequests(
+          currentAllocation.id,
+          true,
+        );
+        if (requestsResponse.error) {
+          throw new Error(requestsResponse.error || "Failed to fetch requests");
+        }
+
+        const selectedRequests = (requestsResponse.data ||
+          []) as FarmerRequest[];
+        setRequests(selectedRequests);
+
+        const allRequestBuckets = await Promise.all(
+          allocations.map(async (allocationItem) => {
+            const allocationRequestsResponse = await getFarmerRequests(
+              allocationItem.id,
+              true,
+            );
+            if (allocationRequestsResponse.error) {
+              return [] as FarmerRequest[];
+            }
+            return (allocationRequestsResponse.data || []) as FarmerRequest[];
+          }),
+        );
+
+        const mergedAllRequests = allRequestBuckets.flat();
+        setAllRequests(
+          mergedAllRequests.length > 0 ? mergedAllRequests : selectedRequests,
+        );
+      } catch (fetchError: any) {
+        setError(fetchError?.message || "Failed to load allocation details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchAllocationData();
   }, [allocationId]);
-
-  const fetchAllocationData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      console.log("🔍 Fetching allocation with ID:", allocationId);
-
-      // Fetch allocation details
-      const allocationResponse = await getAllocations();
-      if (allocationResponse.error) {
-        throw new Error("Failed to fetch allocation");
-      }
-      const allocations = allocationResponse.data || [];
-      console.log("📦 All allocations:", allocations);
-      setAllAllocations(allocations);
-
-      const currentAllocation = allocations.find(
-        (a: any) => a.id === parseInt(allocationId || "0"),
-      );
-      console.log("🎯 Current allocation:", currentAllocation);
-
-      if (!currentAllocation) {
-        throw new Error("Allocation not found");
-      }
-      setAllocation(currentAllocation);
-
-      // Fetch farmer requests for this specific allocation
-      const requestsResponse = await getFarmerRequests(allocationId, true);
-      if (!requestsResponse.error) {
-        const requestsData = requestsResponse.data || [];
-        setRequests(requestsData);
-
-        // Fetch requests for ALL seasons (for shortage panel)
-        const seasonMap = new Map<string, any[]>();
-        seasonMap.set(currentAllocation.season, requestsData);
-        for (const alloc of allocations) {
-          if (alloc.id !== currentAllocation.id) {
-            const sRes = await getFarmerRequests(alloc.id, true);
-            seasonMap.set(alloc.season, sRes.data || []);
-          }
-        }
-        setAllSeasonRequests(seasonMap);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -735,7 +280,7 @@ const ViewAllocation: React.FC = () => {
               <p>{error || "Allocation not found"}</p>
               <button
                 className="app-back-button"
-                onClick={() => navigate("/Allocations")}
+                onClick={() => navigate("/incentives")}
               >
                 ← Back to Allocations
               </button>
@@ -749,7 +294,6 @@ const ViewAllocation: React.FC = () => {
   return (
     <div className="admin-viewalloc-page-container">
       <div className="admin-viewalloc-page has-mobile-sidebar">
-        {/* Sidebar starts here */}
         <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
@@ -805,7 +349,7 @@ const ViewAllocation: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive("/logout") ? "active" : ""}`}
+              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
               onClick={() => navigate("/")}
             >
               <span className="nav-icon">
@@ -815,110 +359,119 @@ const ViewAllocation: React.FC = () => {
             </button>
           </nav>
         </div>
-        {/* Sidebar ends here */}
+
         <div
           className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
           onClick={() => setSidebarOpen(false)}
         />
 
-        {/* Main Content */}
         <div className="admin-viewalloc-main-content">
           <div className="tech-incent-mobile-header">
             <button
               className="tech-incent-hamburger"
-              onClick={() => setSidebarOpen((prev) => !prev)}
+              onClick={() => setSidebarOpen((previous) => !previous)}
             >
               ☰
             </button>
             <div className="tech-incent-mobile-title">Admin Allocation</div>
           </div>
+
           <div className="admin-viewalloc-header">
             <h2 className="admin-viewalloc-title">View Allocation</h2>
             <p className="admin-viewalloc-subtitle">
-              Regional Allocation Details
+              {formatSeasonName(allocation.season)} · Regional Allocation
+              Details
             </p>
           </div>
+
           <div className="admin-viewalloc-header-actions">
             <button
               className="admin-viewalloc-btn-nav"
-              onClick={() => navigate(`/manage-requests/${allocationId}`)}
+              onClick={() => navigate(`/manage-requests/${allocation.id}`)}
             >
-              📋 View Requests
+              View Requests
             </button>
             <button
               className="app-back-button"
-              onClick={() => navigate("/Incentives")}
+              onClick={() => navigate("/incentives")}
             >
               ← Back to Allocations
             </button>
           </div>
 
-          <div className="admin-viewalloc-overview-grid">
-            <div className="admin-viewalloc-overview-card admin-viewalloc-card-date">
-              <div className="admin-viewalloc-overview-label">Season</div>
-              <div className="admin-viewalloc-overview-value">
-                {formatSeasonName(allocation.season)}
-              </div>
-              <div className="admin-viewalloc-overview-sub">
-                Allocation Date:{" "}
-                {new Date(allocation.allocation_date).toLocaleDateString()}
+          <div className="admin-viewalloc-kpi-grid">
+            <div className="admin-viewalloc-kpi-card">
+              <div className="admin-viewalloc-kpi-label">Total Requests</div>
+              <div className="admin-viewalloc-kpi-value">
+                {formatCount(requests.length)}
               </div>
             </div>
-
-            <div className="admin-viewalloc-overview-card admin-viewalloc-card-requests">
-              <div className="admin-viewalloc-overview-label">Requests</div>
-              <div className="admin-viewalloc-overview-value-lg">
-                {requests.length}
+            <div className="admin-viewalloc-kpi-card">
+              <div className="admin-viewalloc-kpi-label">Approved</div>
+              <div className="admin-viewalloc-kpi-value">
+                {formatCount(overviewStats.approved)}
               </div>
-              <div className="admin-viewalloc-overview-sub">
-                {overviewStats.approvedRequests} approved,{" "}
-                {overviewStats.pendingRequests} pending
+            </div>
+            <div className="admin-viewalloc-kpi-card">
+              <div className="admin-viewalloc-kpi-label">Pending</div>
+              <div className="admin-viewalloc-kpi-value">
+                {formatCount(overviewStats.pending)}
+              </div>
+            </div>
+            <div className="admin-viewalloc-kpi-card">
+              <div className="admin-viewalloc-kpi-label">Rejected</div>
+              <div className="admin-viewalloc-kpi-value">
+                {formatCount(overviewStats.rejected)}
               </div>
             </div>
           </div>
 
-          <div className="admin-viewalloc-content-card">
-            <UsageGauges
-              fertilizers={gaugeData.fertilizers}
-              seeds={gaugeData.seeds}
-            />
-
-            <BarangayBreakdownTable requests={requests} />
-
-            <SeasonComparisonTable allocations={[...allAllocations]} />
-
-            {!loading && !error && requests.length === 0 && (
-              <div
-                className="admin-viewalloc-loading"
-                style={{ paddingTop: 20 }}
-              >
-                No requests found for this allocation yet.
+          <div className="admin-viewalloc-content-card admin-viewalloc-section-stack">
+            <section className="admin-viewalloc-section-block">
+              <div className="admin-viewalloc-section-head">
+                <h3>Overall Resource Usage</h3>
+                <span>
+                  Combined across {allAllocations.length} allocation
+                  {allAllocations.length === 1 ? "" : "s"}
+                </span>
               </div>
-            )}
+              <UsageGauges
+                fertilizers={gaugeData.fertilizers}
+                seeds={gaugeData.seeds}
+              />
+            </section>
+
+            <section className="admin-viewalloc-section-block">
+              <div className="admin-viewalloc-section-head">
+                <h3>Barangay Breakdown</h3>
+                <span>Demand distribution per barangay</span>
+              </div>
+              {requests.length > 0 ? (
+                <BarangayBreakdownTable requests={requests} />
+              ) : (
+                <div className="admin-viewalloc-empty-state">
+                  No requests found for this allocation yet.
+                </div>
+              )}
+            </section>
+
+            <section className="admin-viewalloc-section-block">
+              <div className="admin-viewalloc-section-head">
+                <h3>Season Comparison</h3>
+                <span>Compare this season against other allocations</span>
+              </div>
+              <SeasonComparisonTable allocations={allAllocations} />
+            </section>
 
             <div className="admin-viewalloc-notes">
               <h4>Allocation Snapshot</h4>
               <p>
-                Total allocated:{" "}
-                {overviewStats.totalFertilizerAllocated.toFixed(1)} fertilizer
-                bags and {overviewStats.totalSeedsAllocated.toFixed(1)} seed kg.
+                Overall allocated:{" "}
+                {overallAllocationTotals.fertilizerBags.toFixed(1)} fertilizer
+                bags and {overallAllocationTotals.seedKg.toFixed(1)} seed kg.
               </p>
             </div>
           </div>
-
-          {/* ── Analytics Charts ── */}
-          {!loading && !error && requests.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div className="req-analytics-row">
-                <BarangayVolumeChart requests={requests} />
-                <ApprovalRateCard requests={requests} />
-              </div>
-              <ShortageAlertsPanel
-                allocations={allAllocations}
-                allRequests={allSeasonRequests}
-              />
-            </div>
-          )}
         </div>
       </div>
     </div>

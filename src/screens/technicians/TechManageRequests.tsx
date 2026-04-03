@@ -143,6 +143,8 @@ type AllocationItem = {
   requestField: RequestField;
 };
 
+type PrintScope = "filtered" | "all";
+
 const EDIT_FERTILIZER_ITEMS: AllocationItem[] = [
   {
     label: "Urea (46-0-0)",
@@ -464,6 +466,10 @@ const TechManageRequests: React.FC = () => {
     type: "success",
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printScope, setPrintScope] = useState<PrintScope>("filtered");
+  const [includePrintDetails, setIncludePrintDetails] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Show toast notification
   const showToast = (
@@ -1254,7 +1260,7 @@ const TechManageRequests: React.FC = () => {
       return;
     }
 
-    const { altData, suggestion, alternative } = details;
+    const { suggestion, alternative } = details;
 
     try {
       setApplyingAlternative((prev) => ({ ...prev, [requestId]: true }));
@@ -1564,6 +1570,560 @@ const TechManageRequests: React.FC = () => {
     return fertilizerShortage || seedShortage;
   };
 
+  const escapeHtml = (value: string): string => {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  const formatRequestDateForPrint = (request: FarmerRequest): string => {
+    const source = request.request_date || request.created_at;
+    const parsed = new Date(source);
+    if (Number.isNaN(parsed.getTime())) return "N/A";
+    return parsed.toLocaleDateString();
+  };
+
+  const getRequestTotalsForPrint = (request: FarmerRequest) => {
+    const totalFertilizer = fertilizerRequestFields.reduce(
+      (sum, field) => sum + Number(request[field] || 0),
+      0,
+    );
+    const totalSeeds = seedRequestFields.reduce(
+      (sum, field) => sum + Number(request[field] || 0),
+      0,
+    );
+
+    return {
+      totalFertilizer,
+      totalSeeds,
+    };
+  };
+
+  const buildPrintDocument = (title: string, body: string): string => {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <title>${escapeHtml(title)}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+              color: #1f2937;
+            }
+            .print-toolbar {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              background: #047857;
+              color: white;
+              padding: 14px 20px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+              z-index: 1000;
+            }
+            .print-toolbar h3 {
+              margin: 0;
+              font-size: 16px;
+            }
+            .print-toolbar button {
+              padding: 8px 16px;
+              border: none;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+              margin-left: 8px;
+            }
+            .print-btn {
+              background: #22c55e;
+              color: white;
+            }
+            .close-btn {
+              background: #ef4444;
+              color: white;
+            }
+            .content-wrapper {
+              margin-top: 78px;
+            }
+            .report-header {
+              margin-bottom: 16px;
+              border-bottom: 2px solid #d1d5db;
+              padding-bottom: 10px;
+            }
+            .report-title {
+              margin: 0;
+              font-size: 24px;
+              color: #065f46;
+            }
+            .report-meta {
+              margin: 6px 0 0;
+              color: #4b5563;
+              font-size: 13px;
+            }
+            .section-title {
+              margin: 20px 0 10px;
+              font-size: 16px;
+              color: #065f46;
+            }
+            .badge {
+              display: inline-block;
+              padding: 3px 8px;
+              border-radius: 999px;
+              font-size: 11px;
+              font-weight: 700;
+            }
+            .badge.pending {
+              background: #fef3c7;
+              color: #92400e;
+            }
+            .badge.approved {
+              background: #d1fae5;
+              color: #065f46;
+            }
+            .badge.rejected {
+              background: #fee2e2;
+              color: #991b1b;
+            }
+            .badge.shortage {
+              background: #fef3c7;
+              color: #b45309;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+            }
+            th,
+            td {
+              border: 1px solid #d1d5db;
+              padding: 8px;
+              text-align: left;
+              font-size: 12px;
+              vertical-align: top;
+            }
+            th {
+              background: #f3f4f6;
+              font-weight: 700;
+            }
+            .text-right {
+              text-align: right;
+            }
+            .text-center {
+              text-align: center;
+            }
+            .summary-grid {
+              display: grid;
+              grid-template-columns: repeat(5, minmax(120px, 1fr));
+              gap: 10px;
+              margin-top: 12px;
+            }
+            .summary-card {
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              padding: 10px;
+              background: #f9fafb;
+            }
+            .summary-card small {
+              display: block;
+              color: #6b7280;
+              margin-bottom: 3px;
+            }
+            .summary-card strong {
+              font-size: 14px;
+            }
+            .request-section {
+              margin-top: 16px;
+              border: 1px solid #d1d5db;
+              border-radius: 8px;
+              padding: 12px;
+              page-break-inside: avoid;
+            }
+            .request-head {
+              display: flex;
+              justify-content: space-between;
+              gap: 12px;
+              flex-wrap: wrap;
+              margin-bottom: 8px;
+            }
+            .notes-block {
+              margin-top: 10px;
+              border: 1px dashed #d1d5db;
+              padding: 8px;
+              border-radius: 6px;
+              background: #f9fafb;
+              white-space: pre-wrap;
+              font-size: 12px;
+            }
+            .empty-cell {
+              text-align: center;
+              color: #6b7280;
+            }
+            @media print {
+              body {
+                margin: 0;
+              }
+              .print-toolbar {
+                display: none !important;
+              }
+              .content-wrapper {
+                margin-top: 0;
+              }
+              tr {
+                page-break-inside: avoid;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-toolbar">
+            <h3>Print Preview</h3>
+            <div>
+              <button class="print-btn" onclick="window.print()">Print Now</button>
+              <button class="close-btn" onclick="window.close()">Close</button>
+            </div>
+          </div>
+          <div class="content-wrapper">${body}</div>
+        </body>
+      </html>
+    `;
+  };
+
+  const openBrowserPrintPreview = (html: string): boolean => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      return false;
+    }
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    return true;
+  };
+
+  const printHtmlContent = async (htmlContent: string): Promise<boolean> => {
+    const electronApi = (window as any).electron;
+
+    if (electronApi?.printContent) {
+      try {
+        const result = await electronApi.printContent(htmlContent);
+        if (result?.success) {
+          return true;
+        }
+        if (result?.error && result.error !== "cancelled") {
+          console.error("Print failed:", result.error);
+        }
+      } catch (error) {
+        console.error("Electron print error:", error);
+      }
+    }
+
+    return openBrowserPrintPreview(htmlContent);
+  };
+
+  const buildItemsTableRows = (
+    request: FarmerRequest,
+    items: AllocationItem[],
+    emptyLabel: string,
+  ): string => {
+    const requestedItems = getRequestedItemsForView(request, items);
+
+    if (!requestedItems.length) {
+      return `<tr><td colspan="3" class="empty-cell">${escapeHtml(emptyLabel)}</td></tr>`;
+    }
+
+    return requestedItems
+      .map(
+        (item) => `
+          <tr>
+            <td>${escapeHtml(item.label)}</td>
+            <td class="text-right">${item.value.toFixed(2)}</td>
+            <td>${escapeHtml(item.unit)}</td>
+          </tr>
+        `,
+      )
+      .join("");
+  };
+
+  const buildSingleRequestPrintHtml = (request: FarmerRequest): string => {
+    const { totalFertilizer, totalSeeds } = getRequestTotalsForPrint(request);
+    const statusClass = escapeHtml(request.status.toLowerCase());
+
+    return buildPrintDocument(
+      `Farmer Request #${request.id}`,
+      `
+        <div class="report-header">
+          <h1 class="report-title">Farmer Request Details</h1>
+          <p class="report-meta">Generated on ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
+        </div>
+
+        <table>
+          <tbody>
+            <tr>
+              <th>Request ID</th>
+              <td>${request.id}</td>
+              <th>Status</th>
+              <td><span class="badge ${statusClass}">${escapeHtml(request.status)}</span></td>
+            </tr>
+            <tr>
+              <th>Farmer</th>
+              <td>${escapeHtml(request.farmer_name || "N/A")}</td>
+              <th>Barangay</th>
+              <td>${escapeHtml(request.barangay || "N/A")}</td>
+            </tr>
+            <tr>
+              <th>Season</th>
+              <td>${escapeHtml(formatSeasonName(request.season || ""))}</td>
+              <th>Date</th>
+              <td>${escapeHtml(formatRequestDateForPrint(request))}</td>
+            </tr>
+            <tr>
+              <th>Total Fertilizers</th>
+              <td>${totalFertilizer.toFixed(2)} bags</td>
+              <th>Total Seeds</th>
+              <td>${totalSeeds.toFixed(2)} kg</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 class="section-title">Fertilizer Items</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="text-right">Quantity</th>
+              <th>Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${buildItemsTableRows(request, EDIT_FERTILIZER_ITEMS, "No fertilizer items requested.")}
+          </tbody>
+        </table>
+
+        <h2 class="section-title">Seed Items</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="text-right">Quantity</th>
+              <th>Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${buildItemsTableRows(request, EDIT_SEED_ITEMS, "No seed items requested.")}
+          </tbody>
+        </table>
+
+        <h2 class="section-title">Notes</h2>
+        <div class="notes-block">${escapeHtml(request.request_notes?.trim() || "No notes provided.")}</div>
+      `,
+    );
+  };
+
+  const buildMultipleRequestsPrintHtml = (
+    requestsToPrint: FarmerRequest[],
+    scopeLabel: string,
+    includeDetails: boolean,
+  ): string => {
+    const pendingCount = requestsToPrint.filter(
+      (request) => request.status === "pending",
+    ).length;
+    const approvedCount = requestsToPrint.filter(
+      (request) => request.status === "approved",
+    ).length;
+    const rejectedCount = requestsToPrint.filter(
+      (request) => request.status === "rejected",
+    ).length;
+
+    const totalFertilizer = requestsToPrint.reduce((sum, request) => {
+      return sum + getRequestTotalsForPrint(request).totalFertilizer;
+    }, 0);
+
+    const totalSeeds = requestsToPrint.reduce((sum, request) => {
+      return sum + getRequestTotalsForPrint(request).totalSeeds;
+    }, 0);
+
+    const rows = requestsToPrint
+      .map((request, index) => {
+        const { totalFertilizer: fertilizerTotal, totalSeeds: seedTotal } =
+          getRequestTotalsForPrint(request);
+        const hasShortage = checkPotentialShortageForRequest(request, requests);
+
+        return `
+          <tr>
+            <td class="text-center">${index + 1}</td>
+            <td>${escapeHtml(request.farmer_name || "N/A")}</td>
+            <td>${escapeHtml(request.barangay || "N/A")}</td>
+            <td class="text-center"><span class="badge ${escapeHtml(request.status.toLowerCase())}">${escapeHtml(request.status)}</span></td>
+            <td class="text-center">${escapeHtml(formatRequestDateForPrint(request))}</td>
+            <td class="text-right">${fertilizerTotal.toFixed(2)}</td>
+            <td class="text-right">${seedTotal.toFixed(2)}</td>
+            <td class="text-center">${
+              hasShortage
+                ? '<span class="badge shortage">Yes</span>'
+                : '<span class="badge approved">No</span>'
+            }</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    const detailsSection = includeDetails
+      ? requestsToPrint
+          .map((request, index) => {
+            const { totalFertilizer: fertilizerTotal, totalSeeds: seedTotal } =
+              getRequestTotalsForPrint(request);
+            return `
+              <div class="request-section">
+                <div class="request-head">
+                  <strong>${index + 1}. ${escapeHtml(request.farmer_name || "N/A")}</strong>
+                  <span>${escapeHtml(request.barangay || "N/A")}</span>
+                  <span>${escapeHtml(formatRequestDateForPrint(request))}</span>
+                </div>
+                <table>
+                  <tbody>
+                    <tr>
+                      <th style="width: 180px;">Status</th>
+                      <td><span class="badge ${escapeHtml(request.status.toLowerCase())}">${escapeHtml(request.status)}</span></td>
+                      <th style="width: 180px;">Totals</th>
+                      <td>${fertilizerTotal.toFixed(2)} bags / ${seedTotal.toFixed(2)} kg</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <h3 class="section-title">Fertilizer Items</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th class="text-right">Quantity</th>
+                      <th>Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${buildItemsTableRows(request, EDIT_FERTILIZER_ITEMS, "No fertilizer items requested.")}
+                  </tbody>
+                </table>
+
+                <h3 class="section-title">Seed Items</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th class="text-right">Quantity</th>
+                      <th>Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${buildItemsTableRows(request, EDIT_SEED_ITEMS, "No seed items requested.")}
+                  </tbody>
+                </table>
+
+                <h3 class="section-title">Notes</h3>
+                <div class="notes-block">${escapeHtml(request.request_notes?.trim() || "No notes provided.")}</div>
+              </div>
+            `;
+          })
+          .join("")
+      : "";
+
+    return buildPrintDocument(
+      "Farmer Requests Report",
+      `
+        <div class="report-header">
+          <h1 class="report-title">Farmer Requests Report</h1>
+          <p class="report-meta">Season: ${escapeHtml(allocation ? formatSeasonName(allocation.season) : "N/A")}</p>
+          <p class="report-meta">Generated on ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} | Scope: ${escapeHtml(scopeLabel)}</p>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card"><small>Total Requests</small><strong>${requestsToPrint.length}</strong></div>
+          <div class="summary-card"><small>Pending</small><strong>${pendingCount}</strong></div>
+          <div class="summary-card"><small>Approved</small><strong>${approvedCount}</strong></div>
+          <div class="summary-card"><small>Rejected</small><strong>${rejectedCount}</strong></div>
+          <div class="summary-card"><small>Total Resources</small><strong>${totalFertilizer.toFixed(2)} bags / ${totalSeeds.toFixed(2)} kg</strong></div>
+        </div>
+
+        <h2 class="section-title">Request Summary Table</h2>
+        <table>
+          <thead>
+            <tr>
+              <th class="text-center" style="width: 42px;">#</th>
+              <th>Farmer</th>
+              <th>Barangay</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Date</th>
+              <th class="text-right">Fertilizers (bags)</th>
+              <th class="text-right">Seeds (kg)</th>
+              <th class="text-center">Shortage</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+
+        ${includeDetails ? '<h2 class="section-title" style="margin-top:24px;">Per-Farmer Detailed Appendix</h2>' : ""}
+        ${detailsSection}
+      `,
+    );
+  };
+
+  const handlePrintSingleRequest = async (request: FarmerRequest) => {
+    try {
+      setIsPrinting(true);
+      const htmlContent = buildSingleRequestPrintHtml(request);
+      const started = await printHtmlContent(htmlContent);
+      if (!started) {
+        showToast("Please allow popups to open print preview", "warning");
+      }
+    } catch (error) {
+      console.error("Single request print failed:", error);
+      showToast("Failed to prepare single request print", "error");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handlePrintMultipleRequests = async () => {
+    const requestsToPrint = printScope === "all" ? requests : filteredRequests;
+
+    if (!requestsToPrint.length) {
+      showToast("No requests available for printing", "warning");
+      return;
+    }
+
+    try {
+      setIsPrinting(true);
+      const scopeLabel =
+        printScope === "all" ? "All requests" : "Currently filtered requests";
+      const htmlContent = buildMultipleRequestsPrintHtml(
+        requestsToPrint,
+        scopeLabel,
+        includePrintDetails,
+      );
+      const started = await printHtmlContent(htmlContent);
+
+      if (!started) {
+        showToast("Please allow popups to open print preview", "warning");
+        return;
+      }
+
+      setShowPrintModal(false);
+    } catch (error) {
+      console.error("Bulk print failed:", error);
+      showToast("Failed to prepare requests report", "error");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   return (
     <div className="page-container">
       <div className="page">
@@ -1601,7 +2161,7 @@ const TechManageRequests: React.FC = () => {
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
               </span>
-              <span className="nav-text">Incentives</span>
+              <span className="nav-text">Subsidy</span>
             </button>
 
             <button
@@ -1651,14 +2211,24 @@ const TechManageRequests: React.FC = () => {
               )}
             </div>
             <div className="tech-manage-requests-back-create-section">
-              <button
-                className="tech-manage-requests-add-btn"
-                onClick={() =>
-                  navigate(`/technician-add-farmer-request/${allocationId}`)
-                }
-              >
-                Add Farmer Request
-              </button>
+              <div className="tech-manage-requests-action-buttons">
+                <button
+                  className="tech-manage-requests-print-btn"
+                  onClick={() => setShowPrintModal(true)}
+                  disabled={isPrinting}
+                >
+                  {isPrinting ? "Preparing..." : "Print Requests"}
+                </button>
+                <button
+                  className="tech-manage-requests-add-btn"
+                  onClick={() =>
+                    navigate(`/technician-add-farmer-request/${allocationId}`)
+                  }
+                >
+                  Add Farmer Request
+                </button>
+              </div>
+
               <button
                 className="app-back-button"
                 onClick={() => navigate("/technician-incentives")}
@@ -2146,8 +2716,8 @@ const TechManageRequests: React.FC = () => {
                                         const menuWidth = 190;
                                         const estimatedMenuHeight =
                                           request.status === "pending"
-                                            ? 106
-                                            : 62;
+                                            ? 150
+                                            : 106;
                                         const viewportMargin = 12;
                                         const safeLeft = Math.min(
                                           Math.max(
@@ -2208,6 +2778,18 @@ const TechManageRequests: React.FC = () => {
                                             }}
                                           >
                                             View Request
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            className="tech-manage-requests-actions-popover-item"
+                                            onClick={() => {
+                                              setOpenActionsMenuFor(null);
+                                              setActionsMenuPosition(null);
+                                              handlePrintSingleRequest(request);
+                                            }}
+                                          >
+                                            Print Request
                                           </button>
 
                                           {request.status === "pending" && (
@@ -2515,6 +3097,75 @@ const TechManageRequests: React.FC = () => {
                 disabled={isDeletingRequest}
               >
                 {isDeletingRequest ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Requests Modal */}
+      {showPrintModal && (
+        <div className="tech-manage-requests-modal-overlay">
+          <div className="tech-manage-requests-print-modal-content">
+            <h3 className="tech-manage-requests-modal-title">
+              Print Farmer Requests
+            </h3>
+
+            <div className="tech-manage-requests-print-modal-body">
+              <label
+                className="tech-manage-requests-print-label"
+                htmlFor="print-scope"
+              >
+                Select report scope
+              </label>
+              <select
+                id="print-scope"
+                value={printScope}
+                onChange={(e) => setPrintScope(e.target.value as PrintScope)}
+                className="tech-manage-requests-print-select"
+                disabled={isPrinting}
+              >
+                <option value="filtered">
+                  Print currently filtered requests
+                </option>
+                <option value="all">Print all requests</option>
+              </select>
+
+              <label className="tech-manage-requests-print-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={includePrintDetails}
+                  onChange={(e) => setIncludePrintDetails(e.target.checked)}
+                  disabled={isPrinting}
+                />
+                Include itemized appendix for each farmer
+              </label>
+
+              <div className="tech-manage-requests-print-preview-count">
+                {(printScope === "all"
+                  ? requests.length
+                  : filteredRequests.length
+                ).toLocaleString()}{" "}
+                request(s) will be included.
+              </div>
+            </div>
+
+            <div className="tech-manage-requests-modal-actions">
+              <button
+                type="button"
+                onClick={() => setShowPrintModal(false)}
+                className="tech-manage-requests-modal-btn-cancel"
+                disabled={isPrinting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePrintMultipleRequests}
+                className="tech-manage-requests-print-confirm-btn"
+                disabled={isPrinting}
+              >
+                {isPrinting ? "Preparing..." : "Open Print Preview"}
               </button>
             </div>
           </div>
