@@ -387,17 +387,6 @@ const TechIncentives: React.FC = () => {
                         View
                       </button>
                       <button
-                        className="jo-incent-btn-action jo-incent-btn-add"
-                        onClick={() =>
-                          navigate(
-                            `/technician-add-farmer-request/${allocation.id}`,
-                          )
-                        }
-                        title="Add Farmer Request"
-                      >
-                        Add Farmer
-                      </button>
-                      <button
                         className="jo-incent-btn-action jo-incent-btn-manage"
                         onClick={() =>
                           navigate(

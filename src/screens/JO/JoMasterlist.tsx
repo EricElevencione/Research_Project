@@ -99,8 +99,19 @@ interface EditFormData {
   age?: string;
 }
 
-type SortKey = "dateSubmitted" | "status" | "parcelArea";
+type SortKey = "farmerName" | "dateSubmitted" | "status" | "parcelArea";
 type SortDirection = "asc" | "desc";
+
+const DEFAULT_SORT_CONFIG: { key: SortKey; direction: SortDirection } = {
+  key: "dateSubmitted",
+  direction: "desc",
+};
+const MAX_SORT_LEVELS = 2;
+
+const getDefaultSortDirection = (key: SortKey): SortDirection => {
+  if (key === "farmerName" || key === "parcelArea") return "asc";
+  return "desc";
+};
 
 const JoMasterlist: React.FC = () => {
   const navigate = useNavigate();
@@ -160,6 +171,7 @@ const JoMasterlist: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
@@ -184,10 +196,9 @@ const JoMasterlist: React.FC = () => {
     message: "",
   });
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [sortConfig, setSortConfig] = useState<{
-    key: SortKey;
-    direction: SortDirection;
-  }>({ key: "dateSubmitted", direction: "desc" });
+  const [sortConfigs, setSortConfigs] = useState<
+    Array<{ key: SortKey; direction: SortDirection }>
+  >([{ ...DEFAULT_SORT_CONFIG }]);
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
     new Set(),
   );
@@ -572,6 +583,31 @@ const JoMasterlist: React.FC = () => {
     });
   }, [rsbsaRecords]);
 
+  const getRecordBarangay = (record: RSBSARecord) => {
+    const fromAddress = String(record.farmerAddress || "")
+      .split(",")[0]
+      ?.trim();
+    const fromFarmLocation = String(record.farmLocation || "")
+      .split(",")[0]
+      ?.trim();
+    const candidate =
+      fromAddress && fromAddress !== "—" ? fromAddress : fromFarmLocation;
+
+    if (!candidate) return "";
+
+    const normalized = candidate.toLowerCase();
+    if (
+      normalized === "—" ||
+      normalized === "n/a" ||
+      normalized === "na" ||
+      normalized === "unknown"
+    ) {
+      return "";
+    }
+
+    return candidate;
+  };
+
   const filteredRecords = rsbsaRecords
     .filter((record) => {
       // Normalize status to handle casing/spacing differences and map to active groups
@@ -614,6 +650,17 @@ const JoMasterlist: React.FC = () => {
         if (!showArchived && normalizedStatus === "no parcels") return false;
       }
 
+      if (selectedBarangay !== "all") {
+        const recordBarangay = getRecordBarangay(record);
+        if (
+          recordBarangay.localeCompare(selectedBarangay, undefined, {
+            sensitivity: "base",
+          }) !== 0
+        ) {
+          return false;
+        }
+      }
+
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         record.farmerName.toLowerCase().includes(q) ||
@@ -623,28 +670,53 @@ const JoMasterlist: React.FC = () => {
       return matchesStatus && matchesSearch;
     })
     .sort((a, b) => {
-      const factor = sortConfig.direction === "asc" ? 1 : -1;
-
-      if (sortConfig.key === "dateSubmitted") {
-        const aTime = Date.parse(a.dateSubmitted);
-        const bTime = Date.parse(b.dateSubmitted);
-        const safeA = Number.isNaN(aTime) ? -Infinity : aTime;
-        const safeB = Number.isNaN(bTime) ? -Infinity : bTime;
-        return (safeA - safeB) * factor;
-      }
-
-      if (sortConfig.key === "status") {
-        return a.status.localeCompare(b.status) * factor;
-      }
-
       const parseAreaValue = (value: string) => {
-        const parsed = parseFloat(String(value).replace(/[^0-9.-]/g, ""));
-        return Number.isFinite(parsed) ? parsed : 0;
+        const numericTokens = String(value || "").match(/-?\d+(?:\.\d+)?/g);
+        if (!numericTokens || numericTokens.length === 0) return 0;
+
+        const total = numericTokens.reduce((sum, token) => {
+          const parsed = Number(token);
+          return sum + (Number.isFinite(parsed) ? parsed : 0);
+        }, 0);
+
+        return Number.isFinite(total) ? total : 0;
       };
 
-      return (
-        (parseAreaValue(a.parcelArea) - parseAreaValue(b.parcelArea)) * factor
-      );
+      for (const config of sortConfigs) {
+        const factor = config.direction === "asc" ? 1 : -1;
+
+        if (config.key === "dateSubmitted") {
+          const aTime = Date.parse(a.dateSubmitted);
+          const bTime = Date.parse(b.dateSubmitted);
+          const safeA = Number.isNaN(aTime) ? -Infinity : aTime;
+          const safeB = Number.isNaN(bTime) ? -Infinity : bTime;
+          const result = (safeA - safeB) * factor;
+          if (result !== 0) return result;
+          continue;
+        }
+
+        if (config.key === "status") {
+          const result = a.status.localeCompare(b.status) * factor;
+          if (result !== 0) return result;
+          continue;
+        }
+
+        if (config.key === "farmerName") {
+          const result =
+            a.farmerName.localeCompare(b.farmerName, undefined, {
+              sensitivity: "base",
+            }) * factor;
+          if (result !== 0) return result;
+          continue;
+        }
+
+        const result =
+          (parseAreaValue(a.parcelArea) - parseAreaValue(b.parcelArea)) *
+          factor;
+        if (result !== 0) return result;
+      }
+
+      return 0;
     });
 
   const selectedRecords = useMemo(
@@ -678,22 +750,58 @@ const JoMasterlist: React.FC = () => {
   };
 
   const handleSortChange = (key: SortKey) => {
-    setSortConfig((previous) => {
-      if (previous.key === key) {
-        return {
-          key,
-          direction: previous.direction === "asc" ? "desc" : "asc",
-        };
+    setSortConfigs((previous) => {
+      const defaultDirection = getDefaultSortDirection(key);
+      const hasOnlyDefaultSort =
+        previous.length === 1 &&
+        previous[0].key === DEFAULT_SORT_CONFIG.key &&
+        previous[0].direction === DEFAULT_SORT_CONFIG.direction;
+
+      if (hasOnlyDefaultSort && key !== "dateSubmitted") {
+        return [{ key, direction: defaultDirection }];
       }
 
-      return { key, direction: "desc" };
+      const existingIndex = previous.findIndex((config) => config.key === key);
+
+      if (existingIndex >= 0) {
+        return previous.map((config) =>
+          config.key === key
+            ? {
+                ...config,
+                direction: config.direction === "asc" ? "desc" : "asc",
+              }
+            : config,
+        );
+      }
+
+      const next = [...previous, { key, direction: defaultDirection }];
+      if (next.length <= MAX_SORT_LEVELS) return next;
+
+      // Keep only the last N criteria so sort priority is always clear and bounded.
+      return next.slice(next.length - MAX_SORT_LEVELS);
     });
   };
 
-  const getSortIndicator = (key: SortKey) => {
-    if (sortConfig.key !== key) return "↕";
-    return sortConfig.direction === "asc" ? "▲" : "▼";
+  const resetSortConfig = () => {
+    setSortConfigs([{ ...DEFAULT_SORT_CONFIG }]);
   };
+
+  const isDefaultSortConfig =
+    sortConfigs.length === 1 &&
+    sortConfigs[0].key === DEFAULT_SORT_CONFIG.key &&
+    sortConfigs[0].direction === DEFAULT_SORT_CONFIG.direction;
+
+  const getSortIndicator = (key: SortKey) => {
+    const index = sortConfigs.findIndex((config) => config.key === key);
+    if (index === -1) return "↕";
+
+    const direction = sortConfigs[index].direction;
+    const arrow = direction === "asc" ? "▲" : "▼";
+    return `${arrow}${index + 1}`;
+  };
+
+  const isSortActive = (key: SortKey) =>
+    sortConfigs.some((config) => config.key === key);
 
   const statusCounts = useMemo(() => {
     const activeStatuses = new Set([
@@ -1456,6 +1564,21 @@ const JoMasterlist: React.FC = () => {
                   <option value="noParcels">No Parcels</option>
                 </select>
               </div>
+
+              <div className="jo-masterlist-status-filter">
+                <select
+                  value={selectedBarangay}
+                  onChange={(e) => setSelectedBarangay(e.target.value)}
+                  className="jo-masterlist-status-select"
+                >
+                  <option value="all">All Barangays</option>
+                  {barangays.map((barangay) => (
+                    <option key={barangay} value={barangay}>
+                      {barangay}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {!loading && !error && (
@@ -1464,7 +1587,18 @@ const JoMasterlist: React.FC = () => {
                   Showing {filteredRecords.length} of {rsbsaRecords.length}{" "}
                   farmers
                 </span>
-                <span>Tip: Click a row or use Quick Actions.</span>
+                <span>
+                  Tip: Sort up to 2 levels (e.g. Farmer then Parcel Area).
+                </span>
+                {!isDefaultSortConfig && (
+                  <button
+                    type="button"
+                    className="jo-masterlist-sort-btn"
+                    onClick={resetSortConfig}
+                  >
+                    Reset Sort
+                  </button>
+                )}
               </div>
             )}
 
@@ -1527,12 +1661,24 @@ const JoMasterlist: React.FC = () => {
                         aria-label="Select all visible farmers"
                       />
                     </th>
-                    <th>Farmer</th>
+                    <th>
+                      <button
+                        className={`jo-masterlist-sort-btn ${
+                          isSortActive("farmerName") ? "is-active" : ""
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSortChange("farmerName");
+                        }}
+                      >
+                        Farmer <span>{getSortIndicator("farmerName")}</span>
+                      </button>
+                    </th>
                     <th>Address</th>
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${
-                          sortConfig.key === "parcelArea" ? "is-active" : ""
+                          isSortActive("parcelArea") ? "is-active" : ""
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1546,7 +1692,7 @@ const JoMasterlist: React.FC = () => {
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${
-                          sortConfig.key === "dateSubmitted" ? "is-active" : ""
+                          isSortActive("dateSubmitted") ? "is-active" : ""
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1560,7 +1706,7 @@ const JoMasterlist: React.FC = () => {
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${
-                          sortConfig.key === "status" ? "is-active" : ""
+                          isSortActive("status") ? "is-active" : ""
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1631,9 +1777,6 @@ const JoMasterlist: React.FC = () => {
                             <div className="jo-masterlist-address-cell">
                               <span className="jo-masterlist-address-primary">
                                 {record.farmerAddress}
-                              </span>
-                              <span className="jo-masterlist-address-secondary">
-                                Parcel: {record.farmLocation}
                               </span>
                             </div>
                           </td>
