@@ -1342,6 +1342,8 @@ const normalizeRsbsaSubmissionUpdateData = (raw: any): Record<string, any> => {
   // Allow direct DB column names when callers already provide them.
   const directColumnKeys = [
     "status",
+    "archived_at",
+    "archive_reason",
     "age",
     "LAST NAME",
     "FIRST NAME",
@@ -1570,6 +1572,8 @@ export const getFarmParcels = async (
         ownership_type_lessee: h.is_lessee || false,
         tenant_land_owner_name: h.is_tenant ? h.land_owner_name || "" : "",
         lessee_land_owner_name: h.is_lessee ? h.land_owner_name || "" : "",
+        tenant_land_owner_id: h.is_tenant ? h.land_owner_id || null : null,
+        lessee_land_owner_id: h.is_lessee ? h.land_owner_id || null : null,
         land_parcel_id: h.land_parcel_id || null,
         _source: "land_history",
       }));
@@ -1579,49 +1583,86 @@ export const getFarmParcels = async (
     return createResponse([], null, 200);
   }
 
-  // Now try to get the land_parcel_id from land_history for each parcel
-  // This is needed for ownership transfers to properly reference the land parcel
-  const enhancedParcels = await Promise.all(
-    parcels.map(async (parcel) => {
-      // Try to find the land_parcel_id from land_history using parcel_number
-      const { data: historyData } = await supabase
-        .from("land_history")
-        .select("land_parcel_id, parcel_number")
-        .eq("farmer_id", submissionId)
-        .eq("parcel_number", parcel.parcel_number)
-        .eq("is_current", true)
-        .single();
-
-      if (historyData && historyData.land_parcel_id) {
-        console.log(
-          `📍 Found land_parcel_id ${historyData.land_parcel_id} for parcel ${parcel.parcel_number}`,
-        );
-        return {
-          ...parcel,
-          land_parcel_id: historyData.land_parcel_id,
-        };
-      }
-
-      // Fallback: try to find by parcel_number in land_parcels directly
-      const { data: landParcelData } = await supabase
-        .from("land_parcels")
-        .select("id")
-        .eq("parcel_number", parcel.parcel_number)
-        .single();
-
-      if (landParcelData) {
-        console.log(
-          `📍 Found land_parcel_id ${landParcelData.id} from land_parcels for ${parcel.parcel_number}`,
-        );
-        return {
-          ...parcel,
-          land_parcel_id: landParcelData.id,
-        };
-      }
-
-      return parcel;
-    }),
+  // Resolve land_parcel_id in batches to avoid N+1 calls and PostgREST single-row 406 responses.
+  const parcelNumbers = Array.from(
+    new Set(
+      parcels
+        .map((parcel: any) => String(parcel.parcel_number ?? "").trim())
+        .filter(Boolean),
+    ),
   );
+
+  if (parcelNumbers.length === 0) {
+    return createResponse(parcels, null, 200);
+  }
+
+  const landParcelIdByParcelNumber: Record<string, string | number> = {};
+
+  const { data: historyRows, error: historyRowsError } = await supabase
+    .from("land_history")
+    .select("land_parcel_id, parcel_number")
+    .eq("farmer_id", submissionId)
+    .eq("is_current", true)
+    .in("parcel_number", parcelNumbers);
+
+  if (historyRowsError) {
+    console.log(
+      "land_history parcel lookup error (non-blocking):",
+      historyRowsError.message,
+    );
+  } else if (Array.isArray(historyRows)) {
+    historyRows.forEach((row: any) => {
+      const parcelNumber = String(row?.parcel_number ?? "").trim();
+      if (!parcelNumber || !row?.land_parcel_id) return;
+      if (landParcelIdByParcelNumber[parcelNumber]) return;
+
+      landParcelIdByParcelNumber[parcelNumber] = row.land_parcel_id;
+      console.log(
+        `📍 Found land_parcel_id ${row.land_parcel_id} for parcel ${parcelNumber}`,
+      );
+    });
+  }
+
+  const unresolvedParcelNumbers = parcelNumbers.filter(
+    (parcelNumber) => !landParcelIdByParcelNumber[parcelNumber],
+  );
+
+  if (unresolvedParcelNumbers.length > 0) {
+    const { data: landParcelRows, error: landParcelRowsError } = await supabase
+      .from("land_parcels")
+      .select("id, parcel_number")
+      .in("parcel_number", unresolvedParcelNumbers)
+      .order("id", { ascending: true });
+
+    if (landParcelRowsError) {
+      console.log(
+        "land_parcels fallback lookup error (non-blocking):",
+        landParcelRowsError.message,
+      );
+    } else if (Array.isArray(landParcelRows)) {
+      landParcelRows.forEach((row: any) => {
+        const parcelNumber = String(row?.parcel_number ?? "").trim();
+        if (!parcelNumber || !row?.id) return;
+        if (landParcelIdByParcelNumber[parcelNumber]) return;
+
+        landParcelIdByParcelNumber[parcelNumber] = row.id;
+        console.log(
+          `📍 Found land_parcel_id ${row.id} from land_parcels for ${parcelNumber}`,
+        );
+      });
+    }
+  }
+
+  const enhancedParcels = parcels.map((parcel: any) => {
+    const parcelNumber = String(parcel.parcel_number ?? "").trim();
+    const landParcelId = landParcelIdByParcelNumber[parcelNumber];
+    if (!landParcelId) return parcel;
+
+    return {
+      ...parcel,
+      land_parcel_id: landParcelId,
+    };
+  });
 
   return createResponse(enhancedParcels, null, 200);
 };
@@ -1666,7 +1707,68 @@ export const getLandPlots = async (): Promise<ApiResponse> => {
   const { data, error } = await supabase.from("land_plots").select("*");
 
   if (error) return createResponse(null, error.message, 500);
-  return createResponse(data, null, 200);
+
+  if (!Array.isArray(data) || data.length === 0) {
+    return createResponse(data, null, 200);
+  }
+
+  const unresolvedFfrsCodes = Array.from(
+    new Set(
+      data
+        .filter(
+          (row: any) =>
+            !row?.farmer_id &&
+            row?.ffrs_id !== undefined &&
+            row?.ffrs_id !== null &&
+            String(row.ffrs_id).trim() !== "",
+        )
+        .map((row: any) => String(row.ffrs_id).trim().toUpperCase()),
+    ),
+  );
+
+  if (unresolvedFfrsCodes.length === 0) {
+    return createResponse(data, null, 200);
+  }
+
+  const { data: submissionRows, error: submissionLookupError } = await supabase
+    .from("rsbsa_submission")
+    .select('id, "FFRS_CODE"')
+    .in("FFRS_CODE", unresolvedFfrsCodes);
+
+  if (submissionLookupError) {
+    console.log(
+      "Land plot farmer_id enrichment skipped:",
+      submissionLookupError.message,
+    );
+    return createResponse(data, null, 200);
+  }
+
+  const farmerIdByFfrs = new Map<string, string | number>();
+  (submissionRows || []).forEach((row: any) => {
+    const key = String(row?.FFRS_CODE ?? "")
+      .trim()
+      .toUpperCase();
+    if (!key || row?.id === undefined || row?.id === null) return;
+    if (!farmerIdByFfrs.has(key)) farmerIdByFfrs.set(key, row.id);
+  });
+
+  const enriched = data.map((row: any) => {
+    if (row?.farmer_id !== undefined && row?.farmer_id !== null) return row;
+    const key = String(row?.ffrs_id ?? "")
+      .trim()
+      .toUpperCase();
+    if (!key) return row;
+
+    const matchedFarmerId = farmerIdByFfrs.get(key);
+    if (!matchedFarmerId) return row;
+
+    return {
+      ...row,
+      farmer_id: matchedFarmerId,
+    };
+  });
+
+  return createResponse(enriched, null, 200);
 };
 
 export const getCropPlantingInfo = async (
@@ -1723,6 +1825,8 @@ export const getCropPlantingInfo = async (
             `;
 
     let ownerData: any[] = [];
+    let ownerMatchSource: "none" | "farmer_id" | "ffrs_code" | "name_fallback" =
+      "none";
 
     if (normalizedFarmerId) {
       const idFilterValue = /^\d+$/.test(normalizedFarmerId)
@@ -1738,6 +1842,7 @@ export const getCropPlantingInfo = async (
         console.error("Error fetching owner by farmer_id:", farmerIdOwnerError);
       } else {
         ownerData = farmerIdOwnerData || [];
+        if (ownerData.length > 0) ownerMatchSource = "farmer_id";
       }
     }
 
@@ -1751,6 +1856,7 @@ export const getCropPlantingInfo = async (
         console.error("Error fetching owner by FFRS code:", ffrsOwnerError);
       } else {
         ownerData = ffrsOwnerData || [];
+        if (ownerData.length > 0) ownerMatchSource = "ffrs_code";
       }
     }
 
@@ -1772,6 +1878,7 @@ export const getCropPlantingInfo = async (
       }
 
       ownerData = fallbackOwnerData || [];
+      if (ownerData.length > 0) ownerMatchSource = "name_fallback";
     }
 
     // Filter client-side: match if BARANGAY or FARM LOCATION contains the search barangay
@@ -1890,21 +1997,98 @@ export const getCropPlantingInfo = async (
 
     // Find tenants/lessees on this land
     let tenants: any[] = [];
+    let tenantMatchSource: "none" | "owner_id" | "name_fallback" = "none";
     const ownerSurname = owner?.last_name || "";
     const ownerFirstName = owner?.first_name || "";
     const lookupSurname = (surname || ownerSurname || "").trim();
     const lookupFirstName = (firstName || ownerFirstName || "").trim();
+    const trimmedBarangay = (barangay || "").trim();
+    let tenantParcels: any[] = [];
 
-    if ((lookupSurname || lookupFirstName) && barangay) {
-      // Build OR conditions for tenant/lessee land owner name matching
+    if (owner?.id) {
+      // Prefer explicit owner-id linkage when available to avoid fragile name matching.
+      const idSelect = `
+                    submission_id,
+                    ownership_type_tenant,
+                    ownership_type_lessee,
+                    tenant_land_owner_name,
+                    lessee_land_owner_name,
+                    tenant_land_owner_id,
+                    lessee_land_owner_id,
+                    farm_location_barangay
+                `;
+      const idOrClause = `tenant_land_owner_id.eq.${owner.id},lessee_land_owner_id.eq.${owner.id}`;
+
+      const runIdLinkedQuery = async (useBarangayFilter: boolean) => {
+        let query = supabase
+          .from("rsbsa_farm_parcels")
+          .select(idSelect)
+          .or(idOrClause);
+
+        if (useBarangayFilter && trimmedBarangay) {
+          query = query.ilike("farm_location_barangay", `%${trimmedBarangay}%`);
+        }
+
+        const { data, error } = await query;
+        return { data: Array.isArray(data) ? data : [], error };
+      };
+
+      const { data: idLinkedTenantParcels, error: idLinkedTenantError } =
+        await runIdLinkedQuery(Boolean(trimmedBarangay));
+
+      if (idLinkedTenantError) {
+        console.log(
+          "ID-linked tenant lookup failed (falling back to name matching):",
+          idLinkedTenantError.message,
+        );
+      } else {
+        tenantParcels = idLinkedTenantParcels;
+      }
+
+      // If barangay-filtered id lookup returned no rows, retry without barangay.
+      if (tenantParcels.length === 0 && trimmedBarangay) {
+        const {
+          data: idLinkedTenantParcelsNoBarangay,
+          error: idLinkedTenantNoBarangayError,
+        } = await runIdLinkedQuery(false);
+
+        if (idLinkedTenantNoBarangayError) {
+          console.log(
+            "ID-linked tenant retry without barangay failed:",
+            idLinkedTenantNoBarangayError.message,
+          );
+        } else {
+          tenantParcels = idLinkedTenantParcelsNoBarangay;
+        }
+      }
+
+      if (tenantParcels.length > 0) tenantMatchSource = "owner_id";
+    }
+
+    if (tenantParcels.length === 0 && (lookupSurname || lookupFirstName)) {
+      // Legacy fallback: name-based match for older rows without owner IDs.
       const nameParts = [lookupSurname, lookupFirstName].filter(Boolean);
       const namePattern = `%${nameParts.join("%")}%`;
+      const reverseNamePattern =
+        nameParts.length > 1
+          ? `%${[...nameParts].reverse().join("%")}%`
+          : namePattern;
+      const nameOrConditions = [
+        `tenant_land_owner_name.ilike.${namePattern}`,
+        `lessee_land_owner_name.ilike.${namePattern}`,
+      ];
+      if (reverseNamePattern !== namePattern) {
+        nameOrConditions.push(
+          `tenant_land_owner_name.ilike.${reverseNamePattern}`,
+          `lessee_land_owner_name.ilike.${reverseNamePattern}`,
+        );
+      }
 
-      // Query rsbsa_farm_parcels for tenants/lessees whose land owner name matches
-      const { data: tenantParcels } = await supabase
-        .from("rsbsa_farm_parcels")
-        .select(
-          `
+      const runLegacyNameQuery = async (useBarangayFilter: boolean) => {
+        let query = supabase
+          .from("rsbsa_farm_parcels")
+          .select(
+            `
                     submission_id,
                     ownership_type_tenant,
                     ownership_type_lessee,
@@ -1912,16 +2096,54 @@ export const getCropPlantingInfo = async (
                     lessee_land_owner_name,
                     farm_location_barangay
                 `,
-        )
-        .ilike("farm_location_barangay", `%${barangay.trim()}%`)
-        .or(
-          `tenant_land_owner_name.ilike.${namePattern},lessee_land_owner_name.ilike.${namePattern}`,
-        );
+          )
+          .or(nameOrConditions.join(","));
 
-      if (tenantParcels && tenantParcels.length > 0) {
-        const tenantIds = [
-          ...new Set(tenantParcels.map((p: any) => p.submission_id)),
-        ];
+        if (useBarangayFilter && trimmedBarangay) {
+          query = query.ilike("farm_location_barangay", `%${trimmedBarangay}%`);
+        }
+
+        const { data, error } = await query;
+        return { data: Array.isArray(data) ? data : [], error };
+      };
+
+      const { data: legacyTenantParcels, error: legacyTenantError } =
+        await runLegacyNameQuery(Boolean(trimmedBarangay));
+
+      if (legacyTenantError) {
+        console.log(
+          "Legacy name-based tenant lookup failed:",
+          legacyTenantError.message,
+        );
+      } else {
+        tenantParcels = legacyTenantParcels;
+      }
+
+      if (tenantParcels.length === 0 && trimmedBarangay) {
+        const {
+          data: legacyTenantParcelsNoBarangay,
+          error: legacyNoBarangayError,
+        } = await runLegacyNameQuery(false);
+
+        if (legacyNoBarangayError) {
+          console.log(
+            "Legacy tenant retry without barangay failed:",
+            legacyNoBarangayError.message,
+          );
+        } else {
+          tenantParcels = legacyTenantParcelsNoBarangay;
+        }
+      }
+
+      if (tenantParcels.length > 0) tenantMatchSource = "name_fallback";
+    }
+
+    if (tenantParcels && tenantParcels.length > 0) {
+      const tenantIds = [
+        ...new Set(tenantParcels.map((p: any) => p.submission_id)),
+      ].filter((id) => String(id ?? "") !== String(owner?.id ?? ""));
+
+      if (tenantIds.length > 0) {
         const { data: tenantSubmissions } = await supabase
           .from("rsbsa_submission")
           .select(
@@ -1963,9 +2185,12 @@ export const getCropPlantingInfo = async (
               farmer_name: farmerName,
               barangay: row.BARANGAY,
               registration_date: row.created_at,
-              ownership_status: parcel?.ownership_type_tenant
-                ? "Tenant"
-                : "Lessee",
+              ownership_status:
+                parcel?.ownership_type_tenant && parcel?.ownership_type_lessee
+                  ? "Tenant/Lessee"
+                  : parcel?.ownership_type_tenant
+                    ? "Tenant"
+                    : "Lessee",
               farmer_status: row.status,
               crops: buildCropsList(row),
             };
@@ -1993,7 +2218,16 @@ export const getCropPlantingInfo = async (
     if (historyData && historyData.length > 0) {
       // If we have the owner, filter to parcels matching this owner
       if (owner) {
+        const normalizedOwnerId = String(owner.id ?? "").trim();
         const ownerParcelHistory = historyData.filter((h: any) => {
+          const farmerIdMatch =
+            normalizedOwnerId &&
+            String(h.farmer_id ?? "").trim() === normalizedOwnerId;
+          const landOwnerIdMatch =
+            normalizedOwnerId &&
+            String(h.land_owner_id ?? "").trim() === normalizedOwnerId;
+          if (farmerIdMatch || landOwnerIdMatch) return true;
+
           const nameMatch =
             (h.farmer_name || "")
               .toLowerCase()
@@ -2010,7 +2244,13 @@ export const getCropPlantingInfo = async (
       }
     }
 
-    return { owner, tenants, landHistory };
+    return {
+      owner,
+      tenants,
+      landHistory,
+      owner_match_source: ownerMatchSource,
+      tenant_match_source: tenantMatchSource,
+    };
   } catch (err) {
     console.error("Error in getCropPlantingInfo:", err);
     return { owner: null, tenants: [], landHistory: [] };
@@ -2684,6 +2924,206 @@ export const getLandHistory = async (
   return createResponse(data, null, 200);
 };
 
+type LandHistoryRelationshipFilter = "all" | "owner" | "tenant" | "lessee";
+
+interface LandHistoryReportQueryOptions {
+  searchTerm?: string;
+  farmerName?: string;
+  barangay?: string;
+  relationship?: LandHistoryRelationshipFilter;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export const getLandHistoryReportRows = async (
+  options: number | LandHistoryReportQueryOptions = 5000,
+): Promise<ApiResponse> => {
+  const fallbackPageSize =
+    typeof options === "number" ? Number(options) || 5000 : 50;
+
+  const queryOptions: LandHistoryReportQueryOptions =
+    typeof options === "number"
+      ? { page: 1, pageSize: fallbackPageSize }
+      : options;
+
+  const searchTerm = String(queryOptions.searchTerm || "").trim();
+  const farmerName = String(queryOptions.farmerName || "all").trim();
+  const barangay = String(queryOptions.barangay || "all").trim();
+  const relationship =
+    (queryOptions.relationship as LandHistoryRelationshipFilter) || "all";
+  const dateFrom = String(queryOptions.dateFrom || "").trim();
+  const dateTo = String(queryOptions.dateTo || "").trim();
+  const page = Math.max(1, Number(queryOptions.page || 1));
+  const pageSize = Math.min(
+    5000,
+    Math.max(1, Number(queryOptions.pageSize || fallbackPageSize || 50)),
+  );
+
+  let query = supabase
+    .from("land_history")
+    .select(
+      "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
+      { count: "exact" },
+    );
+
+  if (barangay && barangay.toLowerCase() !== "all") {
+    query = query.ilike("farm_location_barangay", barangay);
+  }
+
+  if (farmerName && farmerName.toLowerCase() !== "all") {
+    query = query.ilike("farmer_name", farmerName);
+  }
+
+  if (relationship === "owner") {
+    query = query.eq("is_registered_owner", true);
+  } else if (relationship === "tenant") {
+    query = query.eq("is_tenant", true);
+  } else if (relationship === "lessee") {
+    query = query.eq("is_lessee", true);
+  }
+
+  if (dateFrom) {
+    query = query.gte("period_start_date", dateFrom);
+  }
+  if (dateTo) {
+    query = query.lte("period_start_date", dateTo);
+  }
+
+  if (searchTerm.length > 0) {
+    const escaped = searchTerm.replace(/,/g, " ");
+    const likeTerm = `%${escaped}%`;
+    query = query.or(
+      [
+        `parcel_number.ilike.${likeTerm}`,
+        `land_owner_name.ilike.${likeTerm}`,
+        `farmer_name.ilike.${likeTerm}`,
+        `farm_location_barangay.ilike.${likeTerm}`,
+        `change_type.ilike.${likeTerm}`,
+        `change_reason.ilike.${likeTerm}`,
+      ].join(","),
+    );
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  query = query.order("created_at", { ascending: false }).range(from, to);
+
+  const { data, error, count } = await query;
+  if (error) return createResponse(null, error.message, 500);
+
+  return createResponse(
+    {
+      rows: data || [],
+      totalCount: Number(count || 0),
+      page,
+      pageSize,
+    },
+    null,
+    200,
+  );
+};
+
+export const getLandHistoryBarangays = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("land_history")
+    .select("farm_location_barangay")
+    .not("farm_location_barangay", "is", null)
+    .order("farm_location_barangay", { ascending: true })
+    .limit(5000);
+
+  if (error) return createResponse(null, error.message, 500);
+
+  const uniqueBarangays = Array.from(
+    new Set(
+      (data || [])
+        .map((row: any) => String(row?.farm_location_barangay || "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  return createResponse(uniqueBarangays, null, 200);
+};
+
+export const getLandHistoryFarmers = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("land_history")
+    .select("farmer_name")
+    .not("farmer_name", "is", null)
+    .order("farmer_name", { ascending: true })
+    .limit(5000);
+
+  if (error) return createResponse(null, error.message, 500);
+
+  const uniqueFarmers = Array.from(
+    new Set(
+      (data || [])
+        .map((row: any) => String(row?.farmer_name || "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  return createResponse(uniqueFarmers, null, 200);
+};
+
+interface LandHistoryAssociationQueryOptions {
+  farmerName: string;
+  barangay?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+}
+
+export const getLandHistoryAssociationRows = async (
+  options: LandHistoryAssociationQueryOptions,
+): Promise<ApiResponse> => {
+  const farmerName = String(options?.farmerName || "").trim();
+  if (!farmerName) {
+    return createResponse([], null, 200);
+  }
+
+  const barangay = String(options?.barangay || "all").trim();
+  const dateFrom = String(options?.dateFrom || "").trim();
+  const dateTo = String(options?.dateTo || "").trim();
+  const limit = Math.min(5000, Math.max(1, Number(options?.limit || 1000)));
+
+  let query = supabase
+    .from("land_history")
+    .select(
+      "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
+    );
+
+  if (barangay && barangay.toLowerCase() !== "all") {
+    query = query.ilike("farm_location_barangay", barangay);
+  }
+
+  if (dateFrom) {
+    query = query.gte("period_start_date", dateFrom);
+  }
+  if (dateTo) {
+    query = query.lte("period_start_date", dateTo);
+  }
+
+  const escaped = farmerName.replace(/,/g, " ");
+  const likeTerm = `%${escaped}%`;
+  query = query.or(
+    [
+      `farmer_name.ilike.${likeTerm}`,
+      `land_owner_name.ilike.${likeTerm}`,
+      `change_reason.ilike.${likeTerm}`,
+    ].join(","),
+  );
+
+  query = query.order("created_at", { ascending: false }).limit(limit);
+
+  const { data, error } = await query;
+  if (error) return createResponse(null, error.message, 500);
+
+  return createResponse(data || [], null, 200);
+};
+
 // ==================== USERS ====================
 
 export const getUsers = async (): Promise<ApiResponse> => {
@@ -2885,6 +3325,10 @@ export default {
 
   // Land History
   getLandHistory,
+  getLandHistoryReportRows,
+  getLandHistoryBarangays,
+  getLandHistoryFarmers,
+  getLandHistoryAssociationRows,
 
   // Users
   getUsers,

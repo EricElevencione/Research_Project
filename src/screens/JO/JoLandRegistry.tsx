@@ -100,8 +100,8 @@ interface FarmerGroup {
 }
 
 type TransferMode = "voluntary" | "inheritance";
-type VoluntaryRole = "registered_owner" | "tenant" | "lessee";
 type InheritanceAreaMode = "take_all" | "partial";
+type OwnershipFilter = "all" | "tenant" | "lessee" | "owner";
 const TRANSFER_PROOF_BUCKET = "ownership-transfer-proofs";
 
 const JoLandRegistry: React.FC = () => {
@@ -113,8 +113,7 @@ const JoLandRegistry: React.FC = () => {
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerGroup | null>(
     null,
   );
-  const [landParcels, setLandParcels] = useState<LandParcel[]>([]);
-  const [selectedParcel, setSelectedParcel] = useState<LandParcel | null>(null);
+  const [landParcels] = useState<LandParcel[]>([]);
   const [parcelHistory, setParcelHistory] = useState<LandHistoryRecord[]>([]);
   const [farmerNameMap, setFarmerNameMap] = useState<Map<number, string>>(
     new Map(),
@@ -123,6 +122,8 @@ const JoLandRegistry: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBarangay, setFilterBarangay] = useState("");
+  const [filterOwnership, setFilterOwnership] =
+    useState<OwnershipFilter>("all");
   const [showModal, setShowModal] = useState(false);
 
   // Proof viewer state
@@ -145,10 +146,6 @@ const JoLandRegistry: React.FC = () => {
   const [sourceRegisteredOwnerId, setSourceRegisteredOwnerId] = useState<
     number | ""
   >("");
-  const [sourceLinkedLandOwnerName, setSourceLinkedLandOwnerName] =
-    useState("");
-  const [sourceTenantId, setSourceTenantId] = useState<number | "">("");
-  const [sourceLesseeId, setSourceLesseeId] = useState<number | "">("");
   const [beneficairyOwnerId, setBeneficairyOwnerId] = useState<number | "">("");
   const [confirmBenefaciary, setConfirmBenefaciary] = useState(false);
   const [inheritanceAreaMode, setInheritanceAreaMode] =
@@ -161,9 +158,6 @@ const JoLandRegistry: React.FC = () => {
   const [voluntaryPartialAreaHa, setVoluntaryPartialAreaHa] = useState<
     number | ""
   >("");
-  const [selectedTransferParcelIds, setSelectedTransferParcelIds] = useState<
-    number[]
-  >([]);
   const [supportingDocs, setSupportingDocs] = useState<File[]>([]);
   const [transferReason, setTransferReason] = useState("");
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
@@ -397,6 +391,14 @@ const JoLandRegistry: React.FC = () => {
     return [...new Set(barangays)].sort((a, b) => a.localeCompare(b));
   }, [aggregatedFarmers]);
 
+  const getGroupOwnershipType = (
+    group: FarmerGroup,
+  ): Exclude<OwnershipFilter, "all"> => {
+    if (group.has_tenant) return "tenant";
+    if (group.has_lessee) return "lessee";
+    return "owner";
+  };
+
   // Filter parcels
 
   // Build transfer actor options (for dropdowns) from aggregated farmers
@@ -439,6 +441,13 @@ const JoLandRegistry: React.FC = () => {
         if (group.parcels.length === 0) return false;
         if (group.total_farm_area_ha <= 0) return false;
 
+        if (
+          filterOwnership !== "all" &&
+          getGroupOwnershipType(group) !== filterOwnership
+        ) {
+          return false;
+        }
+
         if (filterBarangay) {
           const hasBarangayMatch = group.parcels.some(
             (p) =>
@@ -463,7 +472,7 @@ const JoLandRegistry: React.FC = () => {
         if (dateDiff !== 0) return dateDiff;
         return a.farmer_name.localeCompare(b.farmer_name);
       });
-  }, [aggregatedFarmers, searchTerm, filterBarangay]);
+  }, [aggregatedFarmers, searchTerm, filterBarangay, filterOwnership]);
 
   const registeredOwnerParcels = landParcels.filter(
     (p) => p.is_registered_owner,
@@ -515,22 +524,12 @@ const JoLandRegistry: React.FC = () => {
         : 0),
     0,
   );
-  const voluntaryHectareOptions = Array.from(
-    { length: Math.max(0, Math.floor(voluntaryDonorTotalAreaHa)) },
-    (_, index) => index + 1,
-  );
   const voluntarySelectedAreaHa =
     voluntaryAreaMode === "take_all"
       ? voluntaryDonorTotalAreaHa
       : typeof voluntaryPartialAreaHa === "number"
         ? voluntaryPartialAreaHa
         : 0;
-  const voluntaryAreaSelectionValid =
-    voluntaryAreaMode === "take_all"
-      ? voluntaryDonorTotalAreaHa > 0
-      : typeof voluntaryPartialAreaHa === "number" &&
-        voluntaryPartialAreaHa > 0 &&
-        voluntaryPartialAreaHa <= voluntaryDonorTotalAreaHa;
   const inheritanceDonorTotalAreaHa = inheritanceTransferParcels.reduce(
     (sum, parcel) =>
       sum +
@@ -539,10 +538,6 @@ const JoLandRegistry: React.FC = () => {
         : 0),
     0,
   );
-  const inheritanceHectareOptions = Array.from(
-    { length: Math.max(0, Math.floor(inheritanceDonorTotalAreaHa)) },
-    (_, index) => index + 1,
-  );
 
   const inheritanceSelectedAreaHa =
     inheritanceAreaMode === "take_all"
@@ -550,19 +545,6 @@ const JoLandRegistry: React.FC = () => {
       : typeof inheritancePartialAreaHa === "number"
         ? inheritancePartialAreaHa
         : 0;
-
-  const inheritanceAreaSelectionValid =
-    inheritanceAreaMode === "take_all"
-      ? inheritanceDonorTotalAreaHa > 0
-      : typeof inheritancePartialAreaHa === "number" &&
-        inheritancePartialAreaHa > 0 &&
-        inheritancePartialAreaHa <= inheritanceDonorTotalAreaHa;
-
-  const effectiveTransferParcels = (() => {
-    if (transferMode === "inheritance") return inheritanceTransferParcels;
-    if (transferMode === "voluntary") return voluntaryTransferParcels;
-    return [];
-  })();
 
   const donorFarmerId =
     transferMode === "voluntary"
@@ -607,12 +589,6 @@ const JoLandRegistry: React.FC = () => {
         ? "Voluntary Transfer"
         : "";
   const finalReasonPreview = transferReason.trim() || defaultReason;
-  const transferModeLabel =
-    transferMode === "inheritance"
-      ? "Inheritance"
-      : transferMode === "voluntary"
-        ? "Voluntary Transfer"
-        : "Not selected";
   const transferBlockingReason = (() => {
     if (!transferMode) return "Select a transfer type.";
     if (selectedContextFarmerId === null) {
@@ -647,16 +623,12 @@ const JoLandRegistry: React.FC = () => {
   const resetTransferWorkflow = () => {
     setTransferMode("");
     setSourceRegisteredOwnerId("");
-    setSourceLinkedLandOwnerName("");
-    setSourceTenantId("");
-    setSourceLesseeId("");
     setBeneficairyOwnerId("");
     setConfirmBenefaciary(false);
     setInheritanceAreaMode("take_all");
     setInheritancePartialAreaHa("");
     setVoluntaryAreaMode("take_all");
     setVoluntaryPartialAreaHa("");
-    setSelectedTransferParcelIds([]);
     setSupportingDocs([]);
     setTransferReason("");
     setTransferSubmitError("");
@@ -1079,67 +1051,15 @@ const JoLandRegistry: React.FC = () => {
     }
   };
 
-  const applyVoluntarySourceFromSelectedParcel = () => {
-    if (!selectedParcel) return;
-
-    const parsedFarmerId = Number(selectedParcel.farmer_id);
-    const selectedFarmerId: number | "" =
-      Number.isFinite(parsedFarmerId) && parsedFarmerId > 0
-        ? parsedFarmerId
-        : "";
-
-    if (selectedParcel.is_tenant) {
-      setSourceRegisteredOwnerId("");
-      setSourceLinkedLandOwnerName(
-        (selectedParcel.land_owner_name || "").trim(),
-      );
-      setSourceTenantId(selectedFarmerId);
-      setSourceLesseeId("");
-      setSelectedTransferParcelIds([]);
-      return;
-    }
-
-    if (selectedParcel.is_lessee) {
-      setSourceRegisteredOwnerId("");
-      setSourceLinkedLandOwnerName(
-        (selectedParcel.land_owner_name || "").trim(),
-      );
-      setSourceTenantId("");
-      setSourceLesseeId(selectedFarmerId);
-      setSelectedTransferParcelIds([]);
-      return;
-    }
-
-    setSourceLinkedLandOwnerName("");
-    setSourceTenantId("");
-    setSourceLesseeId("");
-
-    if (selectedFarmerId === "") {
-      setSourceRegisteredOwnerId("");
-      setSelectedTransferParcelIds([]);
-      return;
-    }
-
-    setSourceRegisteredOwnerId(selectedFarmerId);
-    const owner = registeredOwnerOptions.find(
-      (option) => option.farmerId === selectedFarmerId,
-    );
-    setSelectedTransferParcelIds(owner ? [...owner.parcelIds] : []);
-  };
-
   const handleTransferModeChange = (mode: TransferMode) => {
     setTransferMode(mode);
     setSourceRegisteredOwnerId("");
-    setSourceLinkedLandOwnerName("");
-    setSourceTenantId("");
-    setSourceLesseeId("");
     setBeneficairyOwnerId("");
     setConfirmBenefaciary(mode === "inheritance");
     setInheritanceAreaMode("take_all");
     setInheritancePartialAreaHa("");
     setVoluntaryAreaMode("take_all");
     setVoluntaryPartialAreaHa("");
-    setSelectedTransferParcelIds([]);
   };
 
   const handleBeneficairyOwnerSelect = (value: string) => {
@@ -1170,32 +1090,6 @@ const JoLandRegistry: React.FC = () => {
     setInheritancePartialAreaHa("");
   };
 
-  const handleInheritanceAreaModeChange = (mode: InheritanceAreaMode) => {
-    setInheritanceAreaMode(mode);
-    if (mode === "take_all") {
-      setInheritancePartialAreaHa("");
-      return;
-    }
-
-    const firstOption = inheritanceHectareOptions[0];
-    setInheritancePartialAreaHa(
-      typeof firstOption === "number" ? firstOption : "",
-    );
-  };
-
-  const handleVoluntaryAreaModeChange = (mode: InheritanceAreaMode) => {
-    setVoluntaryAreaMode(mode);
-    if (mode === "take_all") {
-      setVoluntaryPartialAreaHa("");
-      return;
-    }
-
-    const firstOption = voluntaryHectareOptions[0];
-    setVoluntaryPartialAreaHa(
-      typeof firstOption === "number" ? firstOption : "",
-    );
-  };
-
   const handleRegisteredOwnerSelect = (value: string) => {
     const parsedId = Number(value);
     if (
@@ -1203,24 +1097,18 @@ const JoLandRegistry: React.FC = () => {
       parsedId === selectedContextFarmerId
     ) {
       setSourceRegisteredOwnerId("");
-      setSelectedTransferParcelIds([]);
       setVoluntaryAreaMode("take_all");
       setVoluntaryPartialAreaHa("");
       return;
     }
     if (!Number.isFinite(parsedId) || parsedId <= 0) {
       setSourceRegisteredOwnerId("");
-      setSelectedTransferParcelIds([]);
       setVoluntaryAreaMode("take_all");
       setVoluntaryPartialAreaHa("");
       return;
     }
 
     setSourceRegisteredOwnerId(parsedId);
-    const owner = voluntaryDonorOptions.find(
-      (option) => option.farmerId === parsedId,
-    );
-    setSelectedTransferParcelIds(owner ? [...owner.parcelIds] : []);
     setVoluntaryAreaMode("take_all");
     setVoluntaryPartialAreaHa("");
   };
@@ -1334,6 +1222,14 @@ const JoLandRegistry: React.FC = () => {
               <span className="nav-text">Land Registry</span>
             </div>
 
+            <div
+              className={`sidebar-nav-item ${isActive("/jo-land-history-report") ? "active" : ""}`}
+              onClick={() => navigate("/jo-land-history-report")}
+            >
+              <div className="nav-icon">📜</div>
+              <span className="nav-text">Land History Report</span>
+            </div>
+
             <button
               className="sidebar-nav-item logout"
               onClick={() => navigate("/")}
@@ -1396,6 +1292,20 @@ const JoLandRegistry: React.FC = () => {
                   ))}
                 </select>
               </div>
+              <div className="jo-land-registry-ownership-filter">
+                <select
+                  className="jo-land-registry-ownership-select"
+                  value={filterOwnership}
+                  onChange={(e) =>
+                    setFilterOwnership(e.target.value as OwnershipFilter)
+                  }
+                >
+                  <option value="all">All Ownership Types</option>
+                  <option value="owner">Land Owner</option>
+                  <option value="tenant">Tenant</option>
+                  <option value="lessee">Lessee</option>
+                </select>
+              </div>
             </div>
 
             {/* Table */}
@@ -1422,7 +1332,9 @@ const JoLandRegistry: React.FC = () => {
                   ) : filteredFarmers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="jo-land-registry-empty-cell">
-                        {searchTerm || filterBarangay
+                        {searchTerm ||
+                        filterBarangay ||
+                        filterOwnership !== "all"
                           ? "No parcels match your search criteria"
                           : "No land parcels registered yet"}
                       </td>

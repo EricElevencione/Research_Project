@@ -33,6 +33,8 @@ interface RSBSARecord {
   dateSubmitted: string;
   status: string;
   landParcel: string;
+  archivedAt?: string | null;
+  archiveReason?: string | null;
   ownershipType?: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -208,7 +210,10 @@ const JoMasterlist: React.FC = () => {
   const [printingRecordIds, setPrintingRecordIds] = useState<Set<string>>(
     new Set(),
   );
-  const showArchived = false;
+  const [restoringRecordIds, setRestoringRecordIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [showArchived, setShowArchived] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const isActive = (path: string) => location.pathname === path;
@@ -532,6 +537,16 @@ const JoMasterlist: React.FC = () => {
               item["DATE OF BIRTH"] ??
               null,
           );
+          const archivedAt =
+            item.archivedAt ??
+            item.archived_at ??
+            item._raw?.archived_at ??
+            null;
+          const archiveReason =
+            item.archiveReason ??
+            item.archive_reason ??
+            item._raw?.archive_reason ??
+            null;
 
           // Reflect database status semantics: Submitted / Not Submitted
           const status = String(item.status ?? "Not Submitted");
@@ -549,6 +564,8 @@ const JoMasterlist: React.FC = () => {
             dateSubmitted,
             status,
             landParcel,
+            archivedAt,
+            archiveReason,
             ownershipType: item.ownershipType,
           };
         },
@@ -608,6 +625,17 @@ const JoMasterlist: React.FC = () => {
     return candidate;
   };
 
+  const getOwnershipFlags = (record: RSBSARecord) => ({
+    owner: record.ownershipType?.registeredOwner === true,
+    tenant: record.ownershipType?.tenant === true,
+    lessee: record.ownershipType?.lessee === true,
+  });
+
+  const getOwnershipRoleCount = (record: RSBSARecord) => {
+    const flags = getOwnershipFlags(record);
+    return Number(flags.owner) + Number(flags.tenant) + Number(flags.lessee);
+  };
+
   const filteredRecords = rsbsaRecords
     .filter((record) => {
       // Normalize status to handle casing/spacing differences and map to active groups
@@ -633,12 +661,32 @@ const JoMasterlist: React.FC = () => {
       ]);
 
       let matchesStatus = true;
+      const ownershipFlags = getOwnershipFlags(record);
+      const ownershipRoleCount = getOwnershipRoleCount(record);
+
       if (selectedStatus === "owner") {
-        matchesStatus = record.ownershipType?.registeredOwner === true;
+        matchesStatus = ownershipFlags.owner;
+      } else if (selectedStatus === "ownerOnly") {
+        matchesStatus =
+          ownershipFlags.owner &&
+          !ownershipFlags.tenant &&
+          !ownershipFlags.lessee;
       } else if (selectedStatus === "tenant") {
-        matchesStatus = record.ownershipType?.tenant === true;
+        matchesStatus = ownershipFlags.tenant;
+      } else if (selectedStatus === "tenantOnly") {
+        matchesStatus =
+          ownershipFlags.tenant &&
+          !ownershipFlags.owner &&
+          !ownershipFlags.lessee;
       } else if (selectedStatus === "lessee") {
-        matchesStatus = record.ownershipType?.lessee === true;
+        matchesStatus = ownershipFlags.lessee;
+      } else if (selectedStatus === "lesseeOnly") {
+        matchesStatus =
+          ownershipFlags.lessee &&
+          !ownershipFlags.owner &&
+          !ownershipFlags.tenant;
+      } else if (selectedStatus === "mixedOwnership") {
+        matchesStatus = ownershipRoleCount > 1;
       } else if (selectedStatus === "active") {
         matchesStatus = activeStatuses.has(normalizedStatus);
       } else if (selectedStatus === "notActive") {
@@ -723,6 +771,20 @@ const JoMasterlist: React.FC = () => {
     () => rsbsaRecords.filter((record) => selectedRecordIds.has(record.id)),
     [rsbsaRecords, selectedRecordIds],
   );
+
+  const selectedNoParcelsRecords = useMemo(
+    () =>
+      selectedRecords.filter(
+        (record) =>
+          String(record.status || "")
+            .toLowerCase()
+            .trim() === "no parcels",
+      ),
+    [selectedRecords],
+  );
+
+  const isNoParcelsQueueView = selectedStatus === "noParcels";
+  const visibleColumnCount = isNoParcelsQueueView ? 8 : 7;
 
   const allFilteredSelected =
     filteredRecords.length > 0 &&
@@ -827,10 +889,14 @@ const JoMasterlist: React.FC = () => {
     const inactive = rsbsaRecords.filter((r) =>
       notActiveStatuses.has((r.status || "").toLowerCase().trim()),
     ).length;
+    const noParcels = rsbsaRecords.filter(
+      (r) => (r.status || "").toLowerCase().trim() === "no parcels",
+    ).length;
 
     return {
       active,
       inactive,
+      noParcels,
       total: rsbsaRecords.length,
     };
   }, [rsbsaRecords]);
@@ -842,6 +908,13 @@ const JoMasterlist: React.FC = () => {
     } catch {
       return "—";
     }
+  };
+
+  const formatDateTime = (iso?: string | null) => {
+    if (!iso) return "";
+    const parsed = new Date(iso);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toLocaleString();
   };
 
   const formatParcelArea = (parcelArea: string) => {
@@ -938,6 +1011,159 @@ const JoMasterlist: React.FC = () => {
     }
   };
 
+  const handleRestoreNoParcelsRecord = async (record: RSBSARecord) => {
+    const normalizedStatus = String(record.status || "")
+      .toLowerCase()
+      .trim();
+    if (normalizedStatus !== "no parcels") return;
+
+    const confirmed = window.confirm(
+      `Restore ${record.farmerName} as Active Farmer?`,
+    );
+    if (!confirmed) return;
+
+    setRestoringRecordIds((previous) => {
+      const next = new Set(previous);
+      next.add(record.id);
+      return next;
+    });
+
+    try {
+      const response = await updateRsbsaSubmission(record.id, {
+        status: "Active Farmer",
+        archived_at: null,
+        archive_reason: null,
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      setRsbsaRecords((previous) =>
+        previous.map((current) =>
+          current.id === record.id
+            ? {
+                ...current,
+                status: "Active Farmer",
+                archivedAt: null,
+                archiveReason: null,
+              }
+            : current,
+        ),
+      );
+
+      showUpdateNotification(
+        `${record.farmerName} was restored to Active Farmer.`,
+        "success",
+      );
+      setOpenMenuId(null);
+    } catch (err: any) {
+      showUpdateNotification(
+        err?.message || "Failed to restore farmer status.",
+        "error",
+      );
+    } finally {
+      setRestoringRecordIds((previous) => {
+        const next = new Set(previous);
+        next.delete(record.id);
+        return next;
+      });
+    }
+  };
+
+  const handleBulkRestoreNoParcels = async () => {
+    if (selectedNoParcelsRecords.length === 0) {
+      showUpdateNotification("No No-Parcels farmers selected.", "error");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Restore ${selectedNoParcelsRecords.length} farmer${selectedNoParcelsRecords.length === 1 ? "" : "s"} as Active Farmer?`,
+    );
+    if (!confirmed) return;
+
+    const idsToRestore = selectedNoParcelsRecords.map((record) => record.id);
+
+    setRestoringRecordIds((previous) => {
+      const next = new Set(previous);
+      idsToRestore.forEach((id) => next.add(id));
+      return next;
+    });
+
+    try {
+      const settled = await Promise.allSettled(
+        selectedNoParcelsRecords.map(async (record) => {
+          const response = await updateRsbsaSubmission(record.id, {
+            status: "Active Farmer",
+            archived_at: null,
+            archive_reason: null,
+          });
+
+          if (response.error) {
+            throw new Error(response.error);
+          }
+
+          return record.id;
+        }),
+      );
+
+      const restoredIds = new Set<string>();
+      let failedCount = 0;
+
+      settled.forEach((result) => {
+        if (result.status === "fulfilled") {
+          restoredIds.add(result.value);
+        } else {
+          failedCount += 1;
+        }
+      });
+
+      if (restoredIds.size > 0) {
+        setRsbsaRecords((previous) =>
+          previous.map((record) =>
+            restoredIds.has(record.id)
+              ? {
+                  ...record,
+                  status: "Active Farmer",
+                  archivedAt: null,
+                  archiveReason: null,
+                }
+              : record,
+          ),
+        );
+
+        setSelectedRecordIds((previous) => {
+          const next = new Set(previous);
+          restoredIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+
+      if (failedCount > 0) {
+        showUpdateNotification(
+          `Restored ${restoredIds.size} farmer${restoredIds.size === 1 ? "" : "s"}; ${failedCount} failed.`,
+          "error",
+        );
+      } else {
+        showUpdateNotification(
+          `Restored ${restoredIds.size} farmer${restoredIds.size === 1 ? "" : "s"} to Active Farmer.`,
+          "success",
+        );
+      }
+    } catch (err: any) {
+      showUpdateNotification(
+        err?.message || "Failed to restore selected farmers.",
+        "error",
+      );
+    } finally {
+      setRestoringRecordIds((previous) => {
+        const next = new Set(previous);
+        idsToRestore.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+  };
+
   const getStatusClass = (status: string) => {
     switch (status) {
       case "Submitted":
@@ -953,17 +1179,25 @@ const JoMasterlist: React.FC = () => {
   };
 
   const getOwnershipLabel = (record: RSBSARecord) => {
-    if (record.ownershipType?.registeredOwner) return "Owner";
-    if (record.ownershipType?.tenant) return "Tenant";
-    if (record.ownershipType?.lessee) return "Lessee";
-    return "—";
+    const flags = getOwnershipFlags(record);
+    const labels = [
+      flags.owner ? "Owner" : null,
+      flags.tenant ? "Tenant" : null,
+      flags.lessee ? "Lessee" : null,
+    ].filter(Boolean) as string[];
+
+    if (labels.length === 0) return "—";
+    return labels.join(" + ");
   };
 
   const getOwnershipClass = (record: RSBSARecord) => {
-    if (record.ownershipType?.registeredOwner)
-      return "jo-masterlist-ownership-owner";
-    if (record.ownershipType?.tenant) return "jo-masterlist-ownership-tenant";
-    if (record.ownershipType?.lessee) return "jo-masterlist-ownership-lessee";
+    const flags = getOwnershipFlags(record);
+    const roleCount = getOwnershipRoleCount(record);
+
+    if (roleCount > 1) return "jo-masterlist-ownership-mixed";
+    if (flags.owner) return "jo-masterlist-ownership-owner";
+    if (flags.tenant) return "jo-masterlist-ownership-tenant";
+    if (flags.lessee) return "jo-masterlist-ownership-lessee";
     return "jo-masterlist-ownership-unknown";
   };
 
@@ -1466,6 +1700,14 @@ const JoMasterlist: React.FC = () => {
               <span className="nav-text">Land Registry</span>
             </div>
 
+            <div
+              className={`sidebar-nav-item ${isActive("/jo-land-history-report") ? "active" : ""}`}
+              onClick={() => navigate("/jo-land-history-report")}
+            >
+              <div className="nav-icon">📜</div>
+              <span className="nav-text">Land History Report</span>
+            </div>
+
             <button
               className="sidebar-nav-item logout"
               onClick={() => navigate("/")}
@@ -1556,9 +1798,13 @@ const JoMasterlist: React.FC = () => {
                   className="jo-masterlist-status-select"
                 >
                   <option value="all">All</option>
-                  <option value="owner">Owner</option>
-                  <option value="tenant">Tenant</option>
-                  <option value="lessee">Lessee</option>
+                  <option value="owner">Owner (includes mixed)</option>
+                  <option value="ownerOnly">Owner Only</option>
+                  <option value="tenant">Tenant (includes mixed)</option>
+                  <option value="tenantOnly">Tenant Only</option>
+                  <option value="lessee">Lessee (includes mixed)</option>
+                  <option value="lesseeOnly">Lessee Only</option>
+                  <option value="mixedOwnership">Mixed Roles</option>
                   <option value="active">Active</option>
                   <option value="notActive">Not Active</option>
                   <option value="noParcels">No Parcels</option>
@@ -1579,6 +1825,15 @@ const JoMasterlist: React.FC = () => {
                   ))}
                 </select>
               </div>
+
+              <label className="jo-masterlist-archived-toggle">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                />
+                Include Archived ({statusCounts.noParcels})
+              </label>
             </div>
 
             {!loading && !error && (
@@ -1590,6 +1845,13 @@ const JoMasterlist: React.FC = () => {
                 <span>
                   Tip: Sort up to 2 levels (e.g. Farmer then Parcel Area).
                 </span>
+                {!showArchived && statusCounts.noParcels > 0 && (
+                  <span>
+                    {statusCounts.noParcels} farmer
+                    {statusCounts.noParcels === 1 ? "" : "s"} with No Parcels
+                    are hidden.
+                  </span>
+                )}
                 {!isDefaultSortConfig && (
                   <button
                     type="button"
@@ -1636,6 +1898,22 @@ const JoMasterlist: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                  {selectedNoParcelsRecords.length > 0 && (
+                    <button
+                      className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-restore"
+                      onClick={handleBulkRestoreNoParcels}
+                      disabled={selectedNoParcelsRecords.every((record) =>
+                        restoringRecordIds.has(record.id),
+                      )}
+                    >
+                      {selectedNoParcelsRecords.every((record) =>
+                        restoringRecordIds.has(record.id),
+                      )
+                        ? "Restoring..."
+                        : `Restore No Parcels (${selectedNoParcelsRecords.length})`}
+                    </button>
+                  )}
 
                   <button
                     className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-clear"
@@ -1716,13 +1994,17 @@ const JoMasterlist: React.FC = () => {
                         Status <span>{getSortIndicator("status")}</span>
                       </button>
                     </th>
+                    {isNoParcelsQueueView && <th>Archive Details</th>}
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={7} className="jo-masterlist-loading-cell">
+                      <td
+                        colSpan={visibleColumnCount}
+                        className="jo-masterlist-loading-cell"
+                      >
                         Loading...
                       </td>
                     </tr>
@@ -1730,7 +2012,10 @@ const JoMasterlist: React.FC = () => {
 
                   {error && !loading && (
                     <tr>
-                      <td colSpan={7} className="jo-masterlist-error-cell">
+                      <td
+                        colSpan={visibleColumnCount}
+                        className="jo-masterlist-error-cell"
+                      >
                         Error: {error}
                       </td>
                     </tr>
@@ -1741,6 +2026,17 @@ const JoMasterlist: React.FC = () => {
                     filteredRecords.length > 0 &&
                     filteredRecords.map((record) => {
                       const statusText = record.status || "Not Submitted";
+                      const normalizedStatus = statusText.toLowerCase().trim();
+                      const isNoParcelsStatus =
+                        normalizedStatus === "no parcels";
+                      const archiveMeta = [
+                        record.archiveReason || "",
+                        record.archivedAt
+                          ? `Archived: ${formatDateTime(record.archivedAt)}`
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" • ");
 
                       return (
                         <tr
@@ -1802,12 +2098,34 @@ const JoMasterlist: React.FC = () => {
                             </span>
                           </td>
                           <td>
-                            <span
-                              className={`jo-masterlist-status-pill ${getStatusClass(statusText)}`}
-                            >
-                              {statusText}
-                            </span>
+                            <div className="jo-masterlist-status-cell">
+                              <span
+                                className={`jo-masterlist-status-pill ${getStatusClass(statusText)}`}
+                              >
+                                {statusText}
+                              </span>
+                              {isNoParcelsStatus && archiveMeta && (
+                                <span className="jo-masterlist-archive-meta">
+                                  {archiveMeta}
+                                </span>
+                              )}
+                            </div>
                           </td>
+                          {isNoParcelsQueueView && (
+                            <td>
+                              <div className="jo-masterlist-queue-archive-cell">
+                                <strong>
+                                  {record.archiveReason ||
+                                    "All parcels transferred"}
+                                </strong>
+                                <span>
+                                  {record.archivedAt
+                                    ? `Archived ${formatDateTime(record.archivedAt)}`
+                                    : "Archive date not set"}
+                                </span>
+                              </div>
+                            </td>
+                          )}
                           <td className="jo-masterlist-actions-cell">
                             <div
                               className="jo-masterlist-quick-actions"
@@ -1856,6 +2174,23 @@ const JoMasterlist: React.FC = () => {
                                       ? "Preparing form..."
                                       : "Print RSBSA Form"}
                                   </button>
+                                  {isNoParcelsStatus && (
+                                    <button
+                                      className="jo-masterlist-quick-item jo-masterlist-quick-item-restore"
+                                      onClick={async () => {
+                                        await handleRestoreNoParcelsRecord(
+                                          record,
+                                        );
+                                      }}
+                                      disabled={restoringRecordIds.has(
+                                        record.id,
+                                      )}
+                                    >
+                                      {restoringRecordIds.has(record.id)
+                                        ? "Restoring..."
+                                        : "Restore as Active Farmer"}
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1866,7 +2201,10 @@ const JoMasterlist: React.FC = () => {
 
                   {!loading && !error && filteredRecords.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="jo-masterlist-empty-cell">
+                      <td
+                        colSpan={visibleColumnCount}
+                        className="jo-masterlist-empty-cell"
+                      >
                         No farmers found for the selected filters.
                       </td>
                     </tr>

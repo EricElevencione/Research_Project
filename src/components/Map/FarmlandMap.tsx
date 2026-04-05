@@ -110,11 +110,12 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
         ffrsId,
         farmerId,
       });
-      const identityHint = ffrsId
-        ? String(ffrsId)
-        : farmerId !== undefined && farmerId !== null && String(farmerId).trim()
+      const identityHint =
+        farmerId !== undefined && farmerId !== null && String(farmerId).trim()
           ? `farmer_id:${String(farmerId).trim()}`
-          : undefined;
+          : ffrsId
+            ? String(ffrsId)
+            : undefined;
       const result = await getCropPlantingInfo(
         surname,
         firstName,
@@ -675,6 +676,21 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   : cropInfo.owner.ownership_status === "Tenant"
                                     ? "#f59e0b"
                                     : "#6366f1";
+                              const tenantCount = Array.isArray(
+                                cropInfo.tenants,
+                              )
+                                ? cropInfo.tenants.length
+                                : 0;
+                              const tenantNames =
+                                tenantCount > 0
+                                  ? cropInfo.tenants
+                                      .map((tenant: any) =>
+                                        escapeHtml(
+                                          tenant?.farmer_name || "Unknown",
+                                        ),
+                                      )
+                                      .join(", ")
+                                  : "";
                               const ownerRegDate = cropInfo.owner
                                 .registration_date
                                 ? new Date(
@@ -694,6 +710,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               html += `</div>`;
                               html += `<div class="farmland-popup-farmer-barangay" style="font-size: 0.75em; color: #166534; margin-bottom: 4px;">📍 Barangay: <strong>${location || cropInfo.owner.barangay || "N/A"}</strong></div>`;
                               html += `<div class="farmland-popup-farmer-date" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;">📅 Registered: ${ownerRegDate}</div>`;
+                              html += `<div class="farmland-popup-owner-tenant-link" style="font-size: 0.75em; color: #92400e; margin-bottom: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 8px;">👥 Tenant Link: <strong>${tenantCount > 0 ? `${tenantCount} tenant${tenantCount === 1 ? "" : "s"} on this land` : "No tenant currently linked"}</strong>${tenantCount > 0 ? `<div style="margin-top: 4px; color: #78350f;">${tenantNames}</div>` : ""}</div>`;
                               html += `<div class="farmland-popup-crops-label" style="font-size: 0.8em; color: #4b5563; margin-bottom: 4px;">Crops planted:</div>`;
                               html += `<div class="farmland-popup-crops-tags" style="display: flex; flex-wrap: wrap; gap: 6px;">`;
                               cropInfo.owner.crops.forEach((crop: string) => {

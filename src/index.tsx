@@ -29,6 +29,7 @@ import JoViewAllocation from "./screens/JO/JoViewAllocation";
 import JoRsbsaPage from "./screens/JO/JoRsbsaPage";
 import JoDistribution from "./screens/JO/JoDistribution";
 import JoLandRegistry from "./screens/JO/JoLandRegistry";
+import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
 import AuditTrail from "./screens/admin/AuditTrail";
 import ShortagesSuggestions from "./pages/ShortagesSuggestions.jsx";
 import "../src/assets/css/admin css/index.css";
@@ -288,6 +289,14 @@ function App() {
           element={
             <ProtectedRoute>
               <JoLandRegistry />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jo-land-history-report"
+          element={
+            <ProtectedRoute>
+              <JoLandHistoryReport />
             </ProtectedRoute>
           }
         />

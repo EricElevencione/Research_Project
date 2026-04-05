@@ -955,18 +955,64 @@ const buildFormsDocument = (forms: NormalizedFarmerForm[]): string => {
   `;
 };
 
-const openBrowserPrintPreview = (html: string): boolean => {
-  const printWindow = window.open("", "_blank");
+const canUseElectronPrint = (): boolean => {
+  const electronApi = (window as Window & { electron?: ElectronPrintApi })
+    .electron;
+  return Boolean(electronApi?.printContent);
+};
+
+const reserveBrowserPrintPreview = (): Window | null => {
+  try {
+    const reservedWindow = window.open("", "_blank");
+    if (!reservedWindow) return null;
+
+    reservedWindow.document.write(`
+      <html>
+        <head><title>Preparing RSBSA print preview...</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 24px;">
+          <h3>Preparing RSBSA print preview...</h3>
+          <p>Please wait while your forms are being prepared.</p>
+        </body>
+      </html>
+    `);
+    reservedWindow.document.close();
+    return reservedWindow;
+  } catch {
+    return null;
+  }
+};
+
+const closeReservedWindow = (reservedWindow: Window | null | undefined) => {
+  if (!reservedWindow || reservedWindow.closed) return;
+  try {
+    reservedWindow.close();
+  } catch {
+    // Ignore close errors from browser policies/extensions.
+  }
+};
+
+const openBrowserPrintPreview = (
+  html: string,
+  reservedWindow?: Window | null,
+): boolean => {
+  const printWindow =
+    reservedWindow && !reservedWindow.closed
+      ? reservedWindow
+      : window.open("", "_blank");
   if (!printWindow) {
     return false;
   }
+  printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
   printWindow.focus();
   return true;
 };
 
-const printHtmlDocument = async (html: string): Promise<PrintRsbsaResult> => {
+const printHtmlDocument = async (
+  html: string,
+  reservedWindow?: Window | null,
+): Promise<PrintRsbsaResult> => {
   const electronApi = (window as Window & { electron?: ElectronPrintApi })
     .electron;
 
@@ -988,8 +1034,9 @@ const printHtmlDocument = async (html: string): Promise<PrintRsbsaResult> => {
     }
   }
 
-  const opened = openBrowserPrintPreview(html);
+  const opened = openBrowserPrintPreview(html, reservedWindow);
   if (!opened) {
+    closeReservedWindow(reservedWindow);
     return {
       success: false,
       error: "Please allow popups to print the RSBSA form preview.",
@@ -1034,17 +1081,22 @@ const fetchNormalizedForm = async (
 export const printRsbsaFormById = async (
   request: PrintRsbsaRequest,
 ): Promise<PrintRsbsaResult> => {
+  const reservedWindow = canUseElectronPrint()
+    ? null
+    : reserveBrowserPrintPreview();
+
   try {
     const landPlots = await fetchLandPlotCandidates();
     const form = await fetchNormalizedForm(request, landPlots);
     const html = buildFormsDocument([form]);
-    const printResult = await printHtmlDocument(html);
+    const printResult = await printHtmlDocument(html, reservedWindow);
     return {
       ...printResult,
       printedCount: printResult.success ? 1 : 0,
       failedCount: printResult.success ? 0 : 1,
     };
   } catch (error) {
+    closeReservedWindow(reservedWindow);
     return {
       success: false,
       error:
@@ -1060,7 +1112,12 @@ export const printRsbsaFormById = async (
 export const printRsbsaFormsByIds = async (
   requests: PrintRsbsaRequest[],
 ): Promise<PrintRsbsaResult> => {
+  const reservedWindow = canUseElectronPrint()
+    ? null
+    : reserveBrowserPrintPreview();
+
   if (requests.length === 0) {
+    closeReservedWindow(reservedWindow);
     return {
       success: false,
       error: "No records selected for printing.",
@@ -1074,22 +1131,34 @@ export const printRsbsaFormsByIds = async (
   let firstError: string | undefined;
   const landPlots = await fetchLandPlotCandidates();
 
-  for (const request of requests) {
-    try {
-      const form = await fetchNormalizedForm(request, landPlots);
-      forms.push(form);
-    } catch (error) {
-      failedCount += 1;
-      if (!firstError) {
-        firstError =
-          error instanceof Error
-            ? error.message
-            : `Failed to fetch record ${request.farmerId}.`;
+  const results = await Promise.all(
+    requests.map(async (request) => {
+      try {
+        const form = await fetchNormalizedForm(request, landPlots);
+        return { form };
+      } catch (error) {
+        return { error, farmerId: request.farmerId };
       }
+    }),
+  );
+
+  for (const result of results) {
+    if (result.form) {
+      forms.push(result.form);
+      continue;
+    }
+
+    failedCount += 1;
+    if (!firstError) {
+      firstError =
+        result.error instanceof Error
+          ? result.error.message
+          : `Failed to fetch record ${result.farmerId}.`;
     }
   }
 
   if (forms.length === 0) {
+    closeReservedWindow(reservedWindow);
     return {
       success: false,
       error: firstError || "No printable records were found.",
@@ -1099,7 +1168,7 @@ export const printRsbsaFormsByIds = async (
   }
 
   const html = buildFormsDocument(forms);
-  const printResult = await printHtmlDocument(html);
+  const printResult = await printHtmlDocument(html, reservedWindow);
 
   if (!printResult.success) {
     return {

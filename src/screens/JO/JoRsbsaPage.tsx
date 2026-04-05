@@ -88,9 +88,20 @@ const JoRsbsaPage: React.FC = () => {
     key: SortKey;
     direction: SortDirection;
   }>({ key: "dateSubmitted", direction: "desc" });
-  const showArchived = false;
+  const [showArchived, setShowArchived] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const isActive = (path: string) => location.pathname === path;
+
+  const noParcelsCount = React.useMemo(
+    () =>
+      _rsbsaRecords.filter(
+        (record: any) =>
+          String(record.status ?? "")
+            .toLowerCase()
+            .trim() === "no parcels",
+      ).length,
+    [_rsbsaRecords],
+  );
 
   // Fetch RSBSA records from API
   const fetchRSBSARecords = async () => {
@@ -654,6 +665,14 @@ const JoRsbsaPage: React.FC = () => {
               <span className="nav-text">Land Registry</span>
             </div>
 
+            <div
+              className={`sidebar-nav-item ${isActive("/jo-land-history-report") ? "active" : ""}`}
+              onClick={() => navigate("/jo-land-history-report")}
+            >
+              <div className="nav-icon">📜</div>
+              <span className="nav-text">Land History Report</span>
+            </div>
+
             <button
               className="sidebar-nav-item logout"
               onClick={() => navigate("/")}
@@ -721,6 +740,16 @@ const JoRsbsaPage: React.FC = () => {
                   ))}
                 </select>
               </div>
+
+              <label className="jo-rsbsa-archived-toggle">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                />
+                Include Archived ({noParcelsCount})
+              </label>
+
               <button
                 className="jo-rsbsa-register-button"
                 onClick={() => navigate("/jo-rsbsa")}
@@ -728,6 +757,12 @@ const JoRsbsaPage: React.FC = () => {
                 Register Farmer
               </button>
             </div>
+            {!showArchived && noParcelsCount > 0 && (
+              <div className="jo-rsbsa-no-parcels-warning">
+                {noParcelsCount} farmer{noParcelsCount === 1 ? "" : "s"} with No
+                Parcels are hidden. Enable Include Archived to review them.
+              </div>
+            )}
             {loading ? (
               <div className="jo-rsbsa-loading-container">
                 <p>Loading registered land owners...</p>
