@@ -399,7 +399,11 @@ const AutoFitMapData: React.FC<{
 
       if (typeof layer.getLatLng === "function") {
         const latLng = layer.getLatLng();
-        if (latLng && Number.isFinite(latLng.lat) && Number.isFinite(latLng.lng)) {
+        if (
+          latLng &&
+          Number.isFinite(latLng.lat) &&
+          Number.isFinite(latLng.lng)
+        ) {
           const pointBounds = L.latLngBounds(latLng, latLng);
           mergedBounds = mergedBounds
             ? mergedBounds.extend(pointBounds)
@@ -1562,7 +1566,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
           <AutoFitMapData
             shapes={drawnShapes}
-            referencePolygonFeatureCollection={referencePolygonFeatureCollection}
+            referencePolygonFeatureCollection={
+              referencePolygonFeatureCollection
+            }
             referencePointFeatureCollection={referencePointFeatureCollection}
             geometryPreview={geometryPreview}
             fitKey={`${String(currentParcelNumber || "")}:${String(

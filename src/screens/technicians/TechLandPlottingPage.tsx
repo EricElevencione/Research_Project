@@ -1011,7 +1011,9 @@ const LandPlottingPage: React.FC = () => {
               ...splitAddressParts(parcelAddr),
             ]);
             const currentMunicipality =
-              currentMunicipalityCandidates.find((value) => value !== currentBarangay) ||
+              currentMunicipalityCandidates.find(
+                (value) => value !== currentBarangay,
+              ) ||
               currentMunicipalityCandidates[0] ||
               "";
 
@@ -1996,9 +1998,7 @@ const LandPlottingPage: React.FC = () => {
                   reference=
                   {referenceLoadSummary.usedReferenceFallback ? "yes" : "no"},
                   municipality=
-                  {referenceLoadSummary.usedMunicipalityFallback
-                    ? "yes"
-                    : "no"}
+                  {referenceLoadSummary.usedMunicipalityFallback ? "yes" : "no"}
                 </div>
                 {referenceLoadSummary.errorMessage && (
                   <div
