@@ -39,6 +39,8 @@ interface RSBSARecord {
     registeredOwner: boolean;
     tenant: boolean;
     lessee: boolean;
+    tenantLessee?: boolean;
+    category?: "registeredOwner" | "tenantLessee" | "unknown";
   };
 }
 
@@ -625,15 +627,23 @@ const JoMasterlist: React.FC = () => {
     return candidate;
   };
 
-  const getOwnershipFlags = (record: RSBSARecord) => ({
-    owner: record.ownershipType?.registeredOwner === true,
-    tenant: record.ownershipType?.tenant === true,
-    lessee: record.ownershipType?.lessee === true,
-  });
+  const getOwnershipFlags = (record: RSBSARecord) => {
+    const owner = record.ownershipType?.registeredOwner === true;
+    const tenant = record.ownershipType?.tenant === true;
+    const lessee = record.ownershipType?.lessee === true;
+    const tenantLessee =
+      record.ownershipType?.tenantLessee === true || tenant || lessee;
+    const category =
+      record.ownershipType?.category ||
+      (owner ? "registeredOwner" : tenantLessee ? "tenantLessee" : "unknown");
 
-  const getOwnershipRoleCount = (record: RSBSARecord) => {
-    const flags = getOwnershipFlags(record);
-    return Number(flags.owner) + Number(flags.tenant) + Number(flags.lessee);
+    return {
+      owner,
+      tenant,
+      lessee,
+      tenantLessee,
+      category,
+    };
   };
 
   const filteredRecords = rsbsaRecords
@@ -662,31 +672,22 @@ const JoMasterlist: React.FC = () => {
 
       let matchesStatus = true;
       const ownershipFlags = getOwnershipFlags(record);
-      const ownershipRoleCount = getOwnershipRoleCount(record);
 
       if (selectedStatus === "owner") {
-        matchesStatus = ownershipFlags.owner;
-      } else if (selectedStatus === "ownerOnly") {
         matchesStatus =
-          ownershipFlags.owner &&
-          !ownershipFlags.tenant &&
-          !ownershipFlags.lessee;
+          ownershipFlags.category === "registeredOwner" || ownershipFlags.owner;
       } else if (selectedStatus === "tenant") {
-        matchesStatus = ownershipFlags.tenant;
-      } else if (selectedStatus === "tenantOnly") {
         matchesStatus =
-          ownershipFlags.tenant &&
-          !ownershipFlags.owner &&
-          !ownershipFlags.lessee;
+          ownershipFlags.tenant ||
+          (ownershipFlags.category === "tenantLessee" &&
+            ownershipFlags.tenantLessee &&
+            !ownershipFlags.lessee);
       } else if (selectedStatus === "lessee") {
-        matchesStatus = ownershipFlags.lessee;
-      } else if (selectedStatus === "lesseeOnly") {
         matchesStatus =
-          ownershipFlags.lessee &&
-          !ownershipFlags.owner &&
-          !ownershipFlags.tenant;
-      } else if (selectedStatus === "mixedOwnership") {
-        matchesStatus = ownershipRoleCount > 1;
+          ownershipFlags.lessee ||
+          (ownershipFlags.category === "tenantLessee" &&
+            ownershipFlags.tenantLessee &&
+            !ownershipFlags.tenant);
       } else if (selectedStatus === "active") {
         matchesStatus = activeStatuses.has(normalizedStatus);
       } else if (selectedStatus === "notActive") {
@@ -1180,24 +1181,53 @@ const JoMasterlist: React.FC = () => {
 
   const getOwnershipLabel = (record: RSBSARecord) => {
     const flags = getOwnershipFlags(record);
-    const labels = [
-      flags.owner ? "Owner" : null,
-      flags.tenant ? "Tenant" : null,
-      flags.lessee ? "Lessee" : null,
-    ].filter(Boolean) as string[];
 
-    if (labels.length === 0) return "—";
-    return labels.join(" + ");
+    if (flags.category === "registeredOwner" || flags.owner) {
+      return "Registered Owner";
+    }
+
+    if (flags.tenant && flags.lessee) {
+      return "Tenant + Lessee";
+    }
+
+    if (flags.tenant) {
+      return "Tenant";
+    }
+
+    if (flags.lessee) {
+      return "Lessee";
+    }
+
+    if (flags.category === "tenantLessee" || flags.tenantLessee) {
+      return "Tenant or Lessee";
+    }
+
+    return "—";
   };
 
   const getOwnershipClass = (record: RSBSARecord) => {
     const flags = getOwnershipFlags(record);
-    const roleCount = getOwnershipRoleCount(record);
 
-    if (roleCount > 1) return "jo-masterlist-ownership-mixed";
-    if (flags.owner) return "jo-masterlist-ownership-owner";
-    if (flags.tenant) return "jo-masterlist-ownership-tenant";
-    if (flags.lessee) return "jo-masterlist-ownership-lessee";
+    if (flags.category === "registeredOwner" || flags.owner) {
+      return "jo-masterlist-ownership-owner";
+    }
+
+    if (flags.tenant && flags.lessee) {
+      return "jo-masterlist-ownership-mixed";
+    }
+
+    if (flags.tenant) {
+      return "jo-masterlist-ownership-tenant";
+    }
+
+    if (flags.lessee) {
+      return "jo-masterlist-ownership-lessee";
+    }
+
+    if (flags.category === "tenantLessee" || flags.tenantLessee) {
+      return "jo-masterlist-ownership-tenant";
+    }
+
     return "jo-masterlist-ownership-unknown";
   };
 
@@ -1798,13 +1828,9 @@ const JoMasterlist: React.FC = () => {
                   className="jo-masterlist-status-select"
                 >
                   <option value="all">All</option>
-                  <option value="owner">Owner (includes mixed)</option>
-                  <option value="ownerOnly">Owner Only</option>
-                  <option value="tenant">Tenant (includes mixed)</option>
-                  <option value="tenantOnly">Tenant Only</option>
-                  <option value="lessee">Lessee (includes mixed)</option>
-                  <option value="lesseeOnly">Lessee Only</option>
-                  <option value="mixedOwnership">Mixed Roles</option>
+                  <option value="owner">Registered Owner</option>
+                  <option value="tenant">Tenant</option>
+                  <option value="lessee">Lessee</option>
                   <option value="active">Active</option>
                   <option value="notActive">Not Active</option>
                   <option value="noParcels">No Parcels</option>
@@ -2566,32 +2592,28 @@ const JoMasterlist: React.FC = () => {
                                     Land Ownership:
                                   </span>
                                   <span className="farmer-modal-value">
-                                    {parcel.ownershipTypeRegisteredOwner &&
-                                      "Registered Owner"}
-                                    {parcel.ownershipTypeTenant && (
-                                      <>
-                                        Tenant
-                                        {parcel.tenantLandOwnerName && (
-                                          <span className="farmer-modal-owner-name">
-                                            {" "}
-                                            (Owner: {parcel.tenantLandOwnerName}
-                                            )
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
-                                    {parcel.ownershipTypeLessee && (
-                                      <>
-                                        Lessee
-                                        {parcel.lesseeLandOwnerName && (
-                                          <span className="farmer-modal-owner-name">
-                                            {" "}
-                                            (Owner: {parcel.lesseeLandOwnerName}
-                                            )
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
+                                    {parcel.ownershipTypeRegisteredOwner
+                                      ? "Registered Owner"
+                                      : parcel.ownershipTypeTenant &&
+                                          parcel.ownershipTypeLessee
+                                        ? "Tenant + Lessee"
+                                        : parcel.ownershipTypeTenant
+                                          ? "Tenant"
+                                          : parcel.ownershipTypeLessee
+                                            ? "Lessee"
+                                            : "—"}
+                                    {(parcel.ownershipTypeTenant ||
+                                      parcel.ownershipTypeLessee) &&
+                                      (parcel.tenantLandOwnerName ||
+                                        parcel.lesseeLandOwnerName) && (
+                                        <span className="farmer-modal-owner-name">
+                                          {" "}
+                                          (Owner:{" "}
+                                          {parcel.tenantLandOwnerName ||
+                                            parcel.lesseeLandOwnerName}
+                                          )
+                                        </span>
+                                      )}
                                   </span>
                                 </div>
                                 <div className="farmer-modal-parcel-item">

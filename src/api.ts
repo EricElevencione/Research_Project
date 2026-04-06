@@ -26,6 +26,80 @@ const createResponse = <T>(
   status,
 });
 
+type OwnershipCategory = "registeredOwner" | "tenantLessee" | "unknown";
+
+const normalizeOwnershipCategory = (value: unknown): OwnershipCategory => {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) return "unknown";
+
+  if (
+    normalized === "registeredowner" ||
+    normalized === "registered_owner" ||
+    normalized === "registered owner" ||
+    normalized === "owner"
+  ) {
+    return "registeredOwner";
+  }
+
+  if (
+    normalized === "tenantlessee" ||
+    normalized === "tenant_lessee" ||
+    normalized === "tenant/lessee" ||
+    normalized === "tenant-lessee" ||
+    normalized === "tenant" ||
+    normalized === "lessee"
+  ) {
+    return "tenantLessee";
+  }
+
+  return "unknown";
+};
+
+const deriveOwnershipCategoryFromFlags = (flags: {
+  registeredOwner: boolean;
+  tenantLessee: boolean;
+}): OwnershipCategory => {
+  if (flags.registeredOwner) return "registeredOwner";
+  if (flags.tenantLessee) return "tenantLessee";
+  return "unknown";
+};
+
+const buildOwnershipTypeFromRecord = (item: any) => {
+  const registeredOwner =
+    item["OWNERSHIP_TYPE_REGISTERED_OWNER"] === true ||
+    item.ownership_type_registered_owner === true;
+  const tenant =
+    item["OWNERSHIP_TYPE_TENANT"] === true ||
+    item.ownership_type_tenant === true;
+  const lessee =
+    item["OWNERSHIP_TYPE_LESSEE"] === true ||
+    item.ownership_type_lessee === true;
+  const tenantLessee = tenant || lessee;
+
+  const explicitCategory = normalizeOwnershipCategory(
+    item["OWNERSHIP_CATEGORY"] ?? item.ownership_category,
+  );
+
+  const category =
+    explicitCategory !== "unknown"
+      ? explicitCategory
+      : deriveOwnershipCategoryFromFlags({
+          registeredOwner,
+          tenantLessee,
+        });
+
+  return {
+    registeredOwner,
+    tenant,
+    lessee,
+    tenantLessee,
+    category,
+  };
+};
+
 // Helper to transform Supabase rsbsa_submission record to frontend format
 const transformRsbsaRecord = (item: any) => {
   // Get name parts from columns with spaces (Supabase format)
@@ -57,11 +131,7 @@ const transformRsbsaRecord = (item: any) => {
   const dateSubmitted = item.submitted_at || item.created_at || "";
 
   // Get ownership type
-  const ownershipType = {
-    registeredOwner: item["OWNERSHIP_TYPE_REGISTERED_OWNER"] || false,
-    tenant: item["OWNERSHIP_TYPE_TENANT"] || false,
-    lessee: item["OWNERSHIP_TYPE_LESSEE"] || false,
-  };
+  const ownershipType = buildOwnershipTypeFromRecord(item);
 
   return {
     id: item.id,
@@ -77,6 +147,7 @@ const transformRsbsaRecord = (item: any) => {
     dateSubmitted,
     status,
     landParcel: farmLocation,
+    ownershipCategory: ownershipType.category,
     ownershipType,
     gender: item["GENDER"] || "",
     birthdate: item["BIRTHDATE"] || "",
@@ -1528,12 +1599,25 @@ export const deleteRsbsaSubmission = async (
 
 export const getFarmParcels = async (
   submissionId: string | number,
+  options: {
+    currentOwnerOnly?: boolean;
+  } = {},
 ): Promise<ApiResponse> => {
+  const currentOwnerOnly = options.currentOwnerOnly === true;
+
   // First get the farm parcels
-  let { data: parcels, error: parcelsError } = await supabase
+  let parcelQuery = supabase
     .from("rsbsa_farm_parcels")
     .select("*")
     .eq("submission_id", submissionId);
+
+  if (currentOwnerOnly) {
+    parcelQuery = parcelQuery
+      .eq("ownership_type_registered_owner", true)
+      .or("is_current_owner.is.null,is_current_owner.eq.true");
+  }
+
+  let { data: parcels, error: parcelsError } = await parcelQuery;
 
   if (parcelsError) {
     console.log(
@@ -1546,11 +1630,21 @@ export const getFarmParcels = async (
   if (!parcels || parcels.length === 0) {
     // Fallback: Try to build parcel data from land_history table
     // land_history may exist even when rsbsa_farm_parcels insert failed (e.g. CHECK constraint mismatch)
-    const { data: historyParcels, error: historyError } = await supabase
+    let historyFallbackQuery = supabase
       .from("land_history")
       .select("*")
       .eq("farmer_id", submissionId)
       .eq("is_current", true);
+
+    if (currentOwnerOnly) {
+      historyFallbackQuery = historyFallbackQuery.eq(
+        "is_registered_owner",
+        true,
+      );
+    }
+
+    const { data: historyParcels, error: historyError } =
+      await historyFallbackQuery;
 
     if (!historyError && historyParcels && historyParcels.length > 0) {
       console.log(
@@ -1598,12 +1692,18 @@ export const getFarmParcels = async (
 
   const landParcelIdByParcelNumber: Record<string, string | number> = {};
 
-  const { data: historyRows, error: historyRowsError } = await supabase
+  let historyRowsQuery = supabase
     .from("land_history")
     .select("land_parcel_id, parcel_number")
     .eq("farmer_id", submissionId)
     .eq("is_current", true)
     .in("parcel_number", parcelNumbers);
+
+  if (currentOwnerOnly) {
+    historyRowsQuery = historyRowsQuery.eq("is_registered_owner", true);
+  }
+
+  const { data: historyRows, error: historyRowsError } = await historyRowsQuery;
 
   if (historyRowsError) {
     console.log(
@@ -1703,7 +1803,31 @@ export const updateFarmParcel = async (
 
 // // ==================== LAND PLOTS ====================
 
-export const getLandPlots = async (): Promise<ApiResponse> => {
+export const getLandPlots = async (
+  options: {
+    currentOwnerOnly?: boolean;
+  } = {},
+): Promise<ApiResponse> => {
+  const currentOwnerOnly = options.currentOwnerOnly !== false;
+
+  const isCurrentOwnerParcel = (parcel: any) => {
+    if (!parcel) return false;
+    if (parcel.ownership_type_registered_owner !== true) return false;
+    return parcel.is_current_owner !== false;
+  };
+
+  const normalizeParcelNumber = (value: unknown): string =>
+    String(value ?? "")
+      .trim()
+      .toUpperCase();
+
+  const normalizeSubmissionId = (value: unknown): string => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? String(parsed) : "";
+  };
+
   const { data, error } = await supabase.from("land_plots").select("*");
 
   if (error) return createResponse(null, error.message, 500);
@@ -1726,49 +1850,89 @@ export const getLandPlots = async (): Promise<ApiResponse> => {
     ),
   );
 
-  if (unresolvedFfrsCodes.length === 0) {
-    return createResponse(data, null, 200);
+  let enriched = data;
+
+  if (unresolvedFfrsCodes.length > 0) {
+    const { data: submissionRows, error: submissionLookupError } =
+      await supabase
+        .from("rsbsa_submission")
+        .select('id, "FFRS_CODE"')
+        .in("FFRS_CODE", unresolvedFfrsCodes);
+
+    if (submissionLookupError) {
+      console.log(
+        "Land plot farmer_id enrichment skipped:",
+        submissionLookupError.message,
+      );
+    } else {
+      const farmerIdByFfrs = new Map<string, string | number>();
+      (submissionRows || []).forEach((row: any) => {
+        const key = String(row?.FFRS_CODE ?? "")
+          .trim()
+          .toUpperCase();
+        if (!key || row?.id === undefined || row?.id === null) return;
+        if (!farmerIdByFfrs.has(key)) farmerIdByFfrs.set(key, row.id);
+      });
+
+      enriched = data.map((row: any) => {
+        if (row?.farmer_id !== undefined && row?.farmer_id !== null) return row;
+        const key = String(row?.ffrs_id ?? "")
+          .trim()
+          .toUpperCase();
+        if (!key) return row;
+
+        const matchedFarmerId = farmerIdByFfrs.get(key);
+        if (!matchedFarmerId) return row;
+
+        return {
+          ...row,
+          farmer_id: matchedFarmerId,
+        };
+      });
+    }
   }
 
-  const { data: submissionRows, error: submissionLookupError } = await supabase
-    .from("rsbsa_submission")
-    .select('id, "FFRS_CODE"')
-    .in("FFRS_CODE", unresolvedFfrsCodes);
+  if (!currentOwnerOnly) {
+    return createResponse(enriched, null, 200);
+  }
 
-  if (submissionLookupError) {
-    console.log(
-      "Land plot farmer_id enrichment skipped:",
-      submissionLookupError.message,
+  const { data: currentOwnerParcels, error: currentOwnerParcelsError } =
+    await supabase
+      .from("rsbsa_farm_parcels")
+      .select(
+        "submission_id, parcel_number, ownership_type_registered_owner, is_current_owner",
+      )
+      .or("is_current_owner.is.null,is_current_owner.eq.true");
+
+  if (currentOwnerParcelsError) {
+    console.warn(
+      "Land plot current-owner filtering skipped:",
+      currentOwnerParcelsError.message,
     );
-    return createResponse(data, null, 200);
+    return createResponse(enriched, null, 200);
   }
 
-  const farmerIdByFfrs = new Map<string, string | number>();
-  (submissionRows || []).forEach((row: any) => {
-    const key = String(row?.FFRS_CODE ?? "")
-      .trim()
-      .toUpperCase();
-    if (!key || row?.id === undefined || row?.id === null) return;
-    if (!farmerIdByFfrs.has(key)) farmerIdByFfrs.set(key, row.id);
+  const currentOwnerKeys = new Set<string>();
+  (currentOwnerParcels || [])
+    .filter((parcel: any) => isCurrentOwnerParcel(parcel))
+    .forEach((parcel: any) => {
+      const submissionId = normalizeSubmissionId(parcel?.submission_id);
+      const parcelNumber = normalizeParcelNumber(parcel?.parcel_number);
+      if (!submissionId || !parcelNumber) return;
+      currentOwnerKeys.add(`${submissionId}::${parcelNumber}`);
+    });
+
+  const filteredPlots = enriched.filter((plot: any) => {
+    const submissionId = normalizeSubmissionId(plot?.farmer_id);
+    const parcelNumber = normalizeParcelNumber(plot?.parcel_number);
+
+    // Keep legacy rows that cannot be mapped yet; strict filtering applies only to resolvable owner+parcel rows.
+    if (!submissionId || !parcelNumber) return true;
+
+    return currentOwnerKeys.has(`${submissionId}::${parcelNumber}`);
   });
 
-  const enriched = data.map((row: any) => {
-    if (row?.farmer_id !== undefined && row?.farmer_id !== null) return row;
-    const key = String(row?.ffrs_id ?? "")
-      .trim()
-      .toUpperCase();
-    if (!key) return row;
-
-    const matchedFarmerId = farmerIdByFfrs.get(key);
-    if (!matchedFarmerId) return row;
-
-    return {
-      ...row,
-      farmer_id: matchedFarmerId,
-    };
-  });
-
-  return createResponse(enriched, null, 200);
+  return createResponse(filteredPlots, null, 200);
 };
 
 export const getCropPlantingInfo = async (
@@ -2187,7 +2351,7 @@ export const getCropPlantingInfo = async (
               registration_date: row.created_at,
               ownership_status:
                 parcel?.ownership_type_tenant && parcel?.ownership_type_lessee
-                  ? "Tenant/Lessee"
+                  ? "Tenant + Lessee"
                   : parcel?.ownership_type_tenant
                     ? "Tenant"
                     : "Lessee",
@@ -2880,29 +3044,81 @@ export const createDistributionRecord = async (
 // ==================== LAND OWNERS ====================
 
 export const getLandOwners = async (): Promise<ApiResponse> => {
-  // Get registered owners from rsbsa_submission
-  // The column name in rsbsa_submission is OWNERSHIP_TYPE_REGISTERED_OWNER
+  // Keep owner list aligned with current legal ownership by requiring at least one current owner parcel.
+  const { data: ownerParcels, error: ownerParcelsError } = await supabase
+    .from("rsbsa_farm_parcels")
+    .select(
+      "submission_id, parcel_number, ownership_type_registered_owner, is_current_owner",
+    )
+    .eq("ownership_type_registered_owner", true)
+    .or("is_current_owner.is.null,is_current_owner.eq.true");
+
+  if (ownerParcelsError) {
+    console.error(
+      "getLandOwners owner parcel lookup error:",
+      ownerParcelsError,
+    );
+    return createResponse(null, ownerParcelsError.message, 500);
+  }
+
+  const ownerIds = Array.from(
+    new Set(
+      (ownerParcels || [])
+        .map((parcel: any) => {
+          if (parcel?.ownership_type_registered_owner !== true) return null;
+          if (parcel?.is_current_owner === false) return null;
+          const parsed = Number(parcel?.submission_id);
+          return Number.isFinite(parsed) ? parsed : null;
+        })
+        .filter((value: number | null): value is number => value !== null),
+    ),
+  );
+
+  if (ownerIds.length === 0) {
+    return createResponse([], null, 200);
+  }
+
   const { data, error } = await supabase
     .from("rsbsa_submission")
     .select(
       'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY", "MUNICIPALITY"',
     )
-    .eq("OWNERSHIP_TYPE_REGISTERED_OWNER", true);
+    .in("id", ownerIds);
 
   if (error) {
     console.error("getLandOwners error:", error);
     return createResponse(null, error.message, 500);
   }
 
+  const parcelCountByOwnerId = new Map<number, number>();
+  (ownerParcels || []).forEach((parcel: any) => {
+    if (parcel?.ownership_type_registered_owner !== true) return;
+    if (parcel?.is_current_owner === false) return;
+    const ownerId = Number(parcel?.submission_id);
+    if (!Number.isFinite(ownerId)) return;
+    parcelCountByOwnerId.set(
+      ownerId,
+      (parcelCountByOwnerId.get(ownerId) || 0) + 1,
+    );
+  });
+
   // Transform to expected format with full name
-  const landOwners = (data || []).map((row: any) => ({
-    id: row.id,
-    name: `${row["FIRST NAME"] || ""} ${row["MIDDLE NAME"] || ""} ${row["LAST NAME"] || ""}`
-      .replace(/\s+/g, " ")
-      .trim(),
-    barangay: row["BARANGAY"] || "",
-    municipality: row["MUNICIPALITY"] || "Dumangas",
-  }));
+  const landOwners = (data || [])
+    .map((row: any) => {
+      const ownerId = Number(row.id);
+      return {
+        id: row.id,
+        name: `${row["FIRST NAME"] || ""} ${row["MIDDLE NAME"] || ""} ${row["LAST NAME"] || ""}`
+          .replace(/\s+/g, " ")
+          .trim(),
+        barangay: row["BARANGAY"] || "",
+        municipality: row["MUNICIPALITY"] || "Dumangas",
+        parcelCount: Number.isFinite(ownerId)
+          ? parcelCountByOwnerId.get(ownerId) || 0
+          : 0,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return createResponse(landOwners, null, 200);
 };
@@ -2924,7 +3140,12 @@ export const getLandHistory = async (
   return createResponse(data, null, 200);
 };
 
-type LandHistoryRelationshipFilter = "all" | "owner" | "tenant" | "lessee";
+type LandHistoryRelationshipFilter =
+  | "all"
+  | "owner"
+  | "tenant"
+  | "lessee"
+  | "tenantLessee";
 
 interface LandHistoryReportQueryOptions {
   searchTerm?: string;
@@ -2978,6 +3199,8 @@ export const getLandHistoryReportRows = async (
 
   if (relationship === "owner") {
     query = query.eq("is_registered_owner", true);
+  } else if (relationship === "tenantLessee") {
+    query = query.or("is_tenant.eq.true,is_lessee.eq.true");
   } else if (relationship === "tenant") {
     query = query.eq("is_tenant", true);
   } else if (relationship === "lessee") {

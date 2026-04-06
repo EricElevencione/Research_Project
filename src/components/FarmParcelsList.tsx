@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 interface FarmParcel {
   id: number;
@@ -38,12 +38,12 @@ const FarmParcelsList: React.FC = () => {
       setLoading(true);
       // Return empty data since this endpoint is not available in Supabase
       const data: any[] = [];
-      console.log('Note: farm_parcels endpoint is not available in Supabase');
+      console.log("Note: farm_parcels endpoint is not available in Supabase");
       setParcels(data);
       setError(null);
     } catch (err: any) {
-      console.error('Error fetching farm parcels:', err);
-      setError('Failed to load farm parcels data');
+      console.error("Error fetching farm parcels:", err);
+      setError("Failed to load farm parcels data");
     } finally {
       setLoading(false);
     }
@@ -77,24 +77,36 @@ const FarmParcelsList: React.FC = () => {
               </tr>
             ) : (
               parcels.map((parcel) => {
-                const farmerName = `${parcel["FIRST NAME"]} ${parcel["MIDDLE NAME"]} ${parcel["LAST NAME"]}`.trim();
+                const farmerName =
+                  `${parcel["FIRST NAME"]} ${parcel["MIDDLE NAME"]} ${parcel["LAST NAME"]}`.trim();
                 const location = `${parcel.farm_location_barangay}, ${parcel.farm_location_municipality}`;
 
                 const ownershipTypes = [];
-                if (parcel.ownership_type_registered_owner) ownershipTypes.push('Registered Owner');
-                if (parcel.ownership_type_tenant) ownershipTypes.push('Tenant');
-                if (parcel.ownership_type_lessee) ownershipTypes.push('Lessee');
-                if (parcel.ownership_type_others) ownershipTypes.push('Others');
+                if (parcel.ownership_type_registered_owner)
+                  ownershipTypes.push("Registered Owner");
+                if (parcel.ownership_type_tenant) ownershipTypes.push("Tenant");
+                if (parcel.ownership_type_lessee) ownershipTypes.push("Lessee");
+                if (parcel.ownership_type_others) ownershipTypes.push("Others");
 
                 return (
                   <tr key={parcel.id}>
                     <td data-label="Farmer Name">{farmerName}</td>
                     <td data-label="Parcel No.">{parcel.parcel_number}</td>
                     <td data-label="Location">{location}</td>
-                    <td data-label="Area (ha)">{parcel.total_farm_area_ha ? parcel.total_farm_area_ha.toFixed(2) : 'N/A'}</td>
-                    <td data-label="Ownership Type">{ownershipTypes.join(', ') || 'N/A'}</td>
-                    <td data-label="Ancestral Domain">{parcel.within_ancestral_domain || 'N/A'}</td>
-                    <td data-label="ARB">{parcel.agrarian_reform_beneficiary || 'N/A'}</td>
+                    <td data-label="Area (ha)">
+                      {parcel.total_farm_area_ha
+                        ? parcel.total_farm_area_ha.toFixed(2)
+                        : "N/A"}
+                    </td>
+                    <td data-label="Ownership Type">
+                      {ownershipTypes.join(", ") || "N/A"}
+                    </td>
+                    <td data-label="Ancestral Domain">
+                      {parcel.within_ancestral_domain || "N/A"}
+                    </td>
+                    <td data-label="ARB">
+                      {parcel.agrarian_reform_beneficiary || "N/A"}
+                    </td>
                   </tr>
                 );
               })
@@ -107,6 +119,3 @@ const FarmParcelsList: React.FC = () => {
 };
 
 export default FarmParcelsList;
-
-
-

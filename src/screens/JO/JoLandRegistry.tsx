@@ -89,6 +89,7 @@ interface FarmerGroup {
     is_registered_owner?: boolean; // optional if not always present
     is_tenant?: boolean;
     is_lessee?: boolean;
+    is_current_owner?: boolean | null;
     parent_parcel_id?: number | null; // references donor parcel for splits
     split_origin_area_ha?: number | null; // original area before split
   }>;
@@ -101,8 +102,67 @@ interface FarmerGroup {
 
 type TransferMode = "voluntary" | "inheritance";
 type InheritanceAreaMode = "take_all" | "partial";
-type OwnershipFilter = "all" | "tenant" | "lessee" | "owner";
+type OwnershipFilter = "all" | "owner" | "tenant" | "lessee";
 const TRANSFER_PROOF_BUCKET = "ownership-transfer-proofs";
+
+const normalizeCurrentOwnershipGroups = (
+  groups: FarmerGroup[],
+): FarmerGroup[] => {
+  const toPositiveArea = (value: unknown): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
+
+  return (groups || [])
+    .map((group) => {
+      const sourceParcels = Array.isArray(group.parcels) ? group.parcels : [];
+      const hasExplicitCurrentOwnerFlag = sourceParcels.some(
+        (parcel) =>
+          parcel?.is_current_owner === true ||
+          parcel?.is_current_owner === false,
+      );
+
+      const currentOwnerParcels = sourceParcels.filter(
+        (parcel) => parcel?.is_current_owner !== false,
+      );
+
+      const parcelsToUse = hasExplicitCurrentOwnerFlag
+        ? currentOwnerParcels
+        : sourceParcels;
+
+      const hasExplicitOwnerRoleFlag = parcelsToUse.some(
+        (parcel) => typeof parcel?.is_registered_owner === "boolean",
+      );
+      const hasExplicitTenantRoleFlag = parcelsToUse.some(
+        (parcel) => typeof parcel?.is_tenant === "boolean",
+      );
+      const hasExplicitLesseeRoleFlag = parcelsToUse.some(
+        (parcel) => typeof parcel?.is_lessee === "boolean",
+      );
+
+      const computedTotalArea = parcelsToUse.reduce(
+        (sum, parcel) => sum + toPositiveArea(parcel?.total_farm_area_ha),
+        0,
+      );
+
+      return {
+        ...group,
+        parcels: parcelsToUse,
+        total_farm_area_ha:
+          computedTotalArea > 0 ? computedTotalArea : group.total_farm_area_ha,
+        has_registered_owner: hasExplicitOwnerRoleFlag
+          ? parcelsToUse.some((parcel) => parcel?.is_registered_owner === true)
+          : group.has_registered_owner,
+        has_tenant: hasExplicitTenantRoleFlag
+          ? parcelsToUse.some((parcel) => parcel?.is_tenant === true)
+          : group.has_tenant,
+        has_lessee: hasExplicitLesseeRoleFlag
+          ? parcelsToUse.some((parcel) => parcel?.is_lessee === true)
+          : group.has_lessee,
+      };
+    })
+    .filter((group) => group.parcels.length > 0);
+};
 
 const JoLandRegistry: React.FC = () => {
   const navigate = useNavigate();
@@ -196,10 +256,11 @@ const JoLandRegistry: React.FC = () => {
       }
 
       console.log("[FETCH SUCCESS] Raw data received:", data);
-      setAggregatedFarmers(data || []);
+      const normalizedData = normalizeCurrentOwnershipGroups(data || []);
+      setAggregatedFarmers(normalizedData);
       console.log(
         "[STATE SET] Set aggregatedFarmers to length:",
-        data?.length || 0,
+        normalizedData.length || 0,
       );
     } catch (err) {
       console.error("[FETCH CRASH]", err);
@@ -391,12 +452,15 @@ const JoLandRegistry: React.FC = () => {
     return [...new Set(barangays)].sort((a, b) => a.localeCompare(b));
   }, [aggregatedFarmers]);
 
-  const getGroupOwnershipType = (
+  const matchesGroupOwnershipFilter = (
     group: FarmerGroup,
-  ): Exclude<OwnershipFilter, "all"> => {
-    if (group.has_tenant) return "tenant";
-    if (group.has_lessee) return "lessee";
-    return "owner";
+    filter: OwnershipFilter,
+  ) => {
+    if (filter === "all") return true;
+    if (filter === "owner") return group.has_registered_owner;
+    if (filter === "tenant") return group.has_tenant;
+    if (filter === "lessee") return group.has_lessee;
+    return true;
   };
 
   // Filter parcels
@@ -441,10 +505,7 @@ const JoLandRegistry: React.FC = () => {
         if (group.parcels.length === 0) return false;
         if (group.total_farm_area_ha <= 0) return false;
 
-        if (
-          filterOwnership !== "all" &&
-          getGroupOwnershipType(group) !== filterOwnership
-        ) {
+        if (!matchesGroupOwnershipFilter(group, filterOwnership)) {
           return false;
         }
 
@@ -595,10 +656,10 @@ const JoLandRegistry: React.FC = () => {
       return "Current selected holder is invalid for transfer.";
     }
     if (transferMode === "inheritance" && !selectedBeneficiaryOwner) {
-      return "Select the land owner giving the inheritance.";
+      return "Select the registered owner giving the inheritance.";
     }
     if (transferMode === "voluntary" && !selectedRegisteredOwner) {
-      return "Select the land owner donating the land.";
+      return "Select the registered owner donating the land.";
     }
     if (donorSplitParcels.length === 0) {
       return "No transferable parcels found for the selected donor.";
@@ -1028,6 +1089,12 @@ const JoLandRegistry: React.FC = () => {
         p_farmer_id: fromFarmerId,
       });
 
+      if (toFarmerId !== fromFarmerId) {
+        await supabase.rpc("sync_farmer_no_parcels_status", {
+          p_farmer_id: toFarmerId,
+        });
+      }
+
       await refreshLandParcels();
 
       const updatedDonor = aggregatedFarmers.find(
@@ -1301,7 +1368,7 @@ const JoLandRegistry: React.FC = () => {
                   }
                 >
                   <option value="all">All Ownership Types</option>
-                  <option value="owner">Land Owner</option>
+                  <option value="owner">Registered Owner</option>
                   <option value="tenant">Tenant</option>
                   <option value="lessee">Lessee</option>
                 </select>
@@ -1360,7 +1427,11 @@ const JoLandRegistry: React.FC = () => {
                         </td>
                         <td>{group.farmer_name || "—"}</td>
                         <td>
-                          {group.has_tenant ? (
+                          {group.has_tenant && group.has_lessee ? (
+                            <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-tenant">
+                              Tenant + Lessee
+                            </span>
+                          ) : group.has_tenant ? (
                             <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-tenant">
                               Tenant
                             </span>
@@ -1370,7 +1441,7 @@ const JoLandRegistry: React.FC = () => {
                             </span>
                           ) : (
                             <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-owner">
-                              Owner
+                              Registered Owner
                             </span>
                           )}
                         </td>
@@ -1653,26 +1724,32 @@ const JoLandRegistry: React.FC = () => {
 
                             // Role badge for the recipient
                             const recipientRole = record.is_registered_owner
-                              ? "Owner"
-                              : record.is_tenant
-                                ? "Tenant"
-                                : record.is_lessee
-                                  ? "Lessee"
-                                  : null;
+                              ? "Registered Owner"
+                              : record.is_tenant && record.is_lessee
+                                ? "Tenant + Lessee"
+                                : record.is_tenant
+                                  ? "Tenant"
+                                  : record.is_lessee
+                                    ? "Lessee"
+                                    : null;
                             const roleBadgeBg = record.is_registered_owner
                               ? "#dcfce7"
-                              : record.is_tenant
-                                ? "#dbeafe"
-                                : record.is_lessee
-                                  ? "#ede9fe"
-                                  : "#f3f4f6";
+                              : record.is_tenant && record.is_lessee
+                                ? "#e0e7ff"
+                                : record.is_tenant
+                                  ? "#dbeafe"
+                                  : record.is_lessee
+                                    ? "#ede9fe"
+                                    : "#f3f4f6";
                             const roleBadgeColor = record.is_registered_owner
                               ? "#166534"
-                              : record.is_tenant
-                                ? "#1e40af"
-                                : record.is_lessee
-                                  ? "#7c3aed"
-                                  : "#6b7280";
+                              : record.is_tenant && record.is_lessee
+                                ? "#4338ca"
+                                : record.is_tenant
+                                  ? "#1e40af"
+                                  : record.is_lessee
+                                    ? "#7c3aed"
+                                    : "#6b7280";
 
                             // Resolve donor ID from notes for proof lookup
                             let donorIdForProof: number | null = null;
@@ -2140,7 +2217,7 @@ const JoLandRegistry: React.FC = () => {
                       <div className="jo-land-registry-transfer-section-card">
                         <h4>Step 2: Select Voluntary Donor</h4>
                         <label className="jo-land-registry-transfer-label">
-                          Land Owner (Donor)
+                          Registered Owner (Donor)
                         </label>
                         <select
                           className="jo-land-registry-transfer-select"
@@ -2153,7 +2230,7 @@ const JoLandRegistry: React.FC = () => {
                             handleRegisteredOwnerSelect(e.target.value)
                           }
                         >
-                          <option value="">Choose land owner...</option>
+                          <option value="">Choose registered owner...</option>
                           {voluntaryDonorOptions.map((owner) => (
                             <option key={owner.farmerId} value={owner.farmerId}>
                               {owner.name} ({owner.parcelCount} parcel
@@ -2230,10 +2307,10 @@ const JoLandRegistry: React.FC = () => {
 
                     {transferMode === "inheritance" && (
                       <div className="jo-land-registry-transfer-section-card">
-                        <h4>Step 2: Select Beneficiary Land Owner</h4>
+                        <h4>Step 2: Select Beneficiary Registered Owner</h4>
 
                         <label className="jo-land-registry-transfer-label">
-                          Land Owner (Donor)
+                          Registered Owner (Donor)
                         </label>
                         <select
                           className="jo-land-registry-transfer-select"
@@ -2244,7 +2321,7 @@ const JoLandRegistry: React.FC = () => {
                             handleBeneficairyOwnerSelect(e.target.value)
                           }
                         >
-                          <option value="">Choose land owner...</option>
+                          <option value="">Choose registered owner...</option>
                           {inheritanceDonorOptions.map((owner) => (
                             <option key={owner.farmerId} value={owner.farmerId}>
                               {owner.name} ({owner.parcelCount} parcel

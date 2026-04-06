@@ -31,7 +31,7 @@ interface LandAttributes {
   municipality: string;
   province: string;
   parcel_address: string;
-  status: "Tenant" | "Land Owner" | "Farmer";
+  status: "Tenant/Lessee" | "Tenant" | "Land Owner" | "Farmer";
   street: string;
   farmType: "Irrigated" | "Rainfed Upland" | "Rainfed Lowland";
   plotSource?: "manual" | "lot_plan"; // NEW FIELD
@@ -44,6 +44,28 @@ interface Shape {
   layer: any;
   properties: LandAttributes;
   isEditing?: boolean;
+}
+
+interface ReferenceShape {
+  id: string;
+  geometry: any;
+  properties?: any;
+}
+
+interface ReferenceLoadSummary {
+  currentBarangay: string;
+  currentMunicipality: string;
+  totalPlots: number;
+  ownMatches: number;
+  referenceCandidates: number;
+  referencesLoaded: number;
+  polygonReferences: number;
+  pointReferences: number;
+  skippedNoGeometry: number;
+  usedOwnFallback: boolean;
+  usedReferenceFallback: boolean;
+  usedMunicipalityFallback: boolean;
+  errorMessage?: string;
 }
 
 const LandPlottingPage: React.FC = () => {
@@ -815,6 +837,8 @@ const LandPlottingPage: React.FC = () => {
 
       // Store all parcels for this farmer for progress calculations
       setFarmerParcels(farmParcels || []);
+      setBarangayReferenceShapes([]);
+      setReferenceLoadSummary(null);
 
       if (parcelIndex !== undefined && farmParcels) {
         const parcel = farmParcels[parcelIndex];
@@ -902,30 +926,111 @@ const LandPlottingPage: React.FC = () => {
               console.error("Failed to parse parcel geometry:", parseError);
             }
           }
-          const landPlotsRes = await getLandPlots();
+          const landPlotsRes = await getLandPlots({
+            currentOwnerOnly: false,
+          });
           if (!landPlotsRes.error) {
-            const allPlots = landPlotsRes.data;
+            const allPlots = Array.isArray(landPlotsRes.data)
+              ? landPlotsRes.data
+              : [];
             // Diagnostic logging
             console.log("≡ƒôª All plots from backend:", allPlots);
+
             // Robust matching: ignore case, trim, allow missing middle names
-            const normalize = (str: string) => (str || "").trim().toLowerCase();
+            const normalize = (value: unknown) => {
+              if (value === null || value === undefined) {
+                return "";
+              }
+
+              if (
+                typeof value === "string" ||
+                typeof value === "number" ||
+                typeof value === "boolean" ||
+                typeof value === "bigint"
+              ) {
+                return String(value).trim().toLowerCase();
+              }
+
+              return "";
+            };
+            const splitAddressParts = (value: any) =>
+              String(value || "")
+                .split(",")
+                .map((part) => part.trim())
+                .filter(Boolean);
+
+            const uniqueNormalized = (values: any[]) => {
+              const normalizedValues = values
+                .map((value) => normalize(value))
+                .filter(Boolean);
+              return Array.from(new Set(normalizedValues));
+            };
+
             const parcelAddr = normalize(
-              `${parcelBarangayLocation}, ${parcelMunicipalityLocation}`,
+              `${parcelBarangayLocation || ""}, ${parcelMunicipalityLocation || ""}`,
             );
             const surname = normalize(data.lastName || data.surname || "");
             const firstName = normalize(data.firstName);
             const ffrsId = normalize(
               data.ffrs_id || data.FFRS_CODE || data.ffrsCode || "",
             );
+            const currentSubmissionId = normalize(data.id || recordId || "");
             const targetParcelNumber = normalize(
               parcel.parcel_number || parcel.parcelNumber || "",
             );
+
+            const currentBarangayCandidates = uniqueNormalized([
+              parcelBarangayLocation,
+              finalBarangay,
+              parcel?.farm_location_barangay,
+              parcel?.farmLocation?.barangay,
+              parcel?.farmLocationBarangay,
+              parcel?.barangay,
+              data?.addressBarangay,
+              data?.barangay,
+              fallbackBarangayName,
+              ...splitAddressParts(
+                parcel?.parcel_address || parcel?.parcelAddress,
+              ),
+              ...splitAddressParts(parcelAddr),
+            ]);
+            const currentBarangay = currentBarangayCandidates[0] || "";
+
+            const currentMunicipalityCandidates = uniqueNormalized([
+              parcelMunicipalityLocation,
+              parcel?.farm_location_city_municipality,
+              parcel?.farmLocation?.cityMunicipality,
+              parcel?.farmLocationCityMunicipality,
+              parcel?.municipality,
+              data?.addressMunicipality,
+              data?.municipality,
+              data?._raw?.MUNICIPALITY,
+              ...splitAddressParts(
+                parcel?.parcel_address || parcel?.parcelAddress,
+              ),
+              ...splitAddressParts(parcelAddr),
+            ]);
+            const currentMunicipality =
+              currentMunicipalityCandidates.find((value) => value !== currentBarangay) ||
+              currentMunicipalityCandidates[0] ||
+              "";
+
+            const knownParcelAddressCandidates = uniqueNormalized([
+              parcelAddr,
+              parcel?.parcel_address,
+              parcel?.parcelAddress,
+              `${finalBarangay || ""}, ${parcelMunicipalityLocation || ""}`,
+            ]);
+
             // Log filter values and all plots for debugging
             console.log("≡ƒöì Filtering for:", {
               parcelAddr,
               surname,
               firstName,
               ffrsId,
+              currentSubmissionId,
+              currentBarangay,
+              currentMunicipality,
               targetParcelNumber,
             });
             allPlots.forEach((plot: any) => {
@@ -940,6 +1045,41 @@ const LandPlottingPage: React.FC = () => {
                 FULL_PLOT: plot, // Log the entire plot object
               });
             });
+
+            const isSameActiveParcel = (plot: any) => {
+              const plotParcelNumber = normalize(
+                plot.parcel_number || plot.parcelNumber || "",
+              );
+              const plotSubmissionId = normalize(
+                plot.farmer_id || plot.submission_id || "",
+              );
+              const plotFfrs = normalize(plot.ffrs_id || "");
+              const plotFirstName = normalize(
+                plot.firstName || plot.first_name || "",
+              );
+              const plotSurname = normalize(
+                plot.surname || plot.last_name || "",
+              );
+
+              const sameSubmission =
+                currentSubmissionId &&
+                plotSubmissionId &&
+                currentSubmissionId === plotSubmissionId;
+              const sameFfrs = ffrsId && plotFfrs && plotFfrs === ffrsId;
+              const sameName =
+                firstName &&
+                surname &&
+                plotFirstName === firstName &&
+                plotSurname === surname;
+
+              return (
+                targetParcelNumber &&
+                plotParcelNumber &&
+                plotParcelNumber === targetParcelNumber &&
+                (sameSubmission || sameFfrs || sameName)
+              );
+            };
+
             // Base filter: only require parcel_address, surname, and firstName to match
             const baseMatches = allPlots.filter((plot: any) => {
               // Check both camelCase and snake_case field names
@@ -951,8 +1091,17 @@ const LandPlottingPage: React.FC = () => {
               );
               const plotParcelAddr = normalize(plot.parcel_address || "");
 
+              const plotAddressMatches =
+                plotParcelAddr.length > 0 &&
+                knownParcelAddressCandidates.some(
+                  (candidate) =>
+                    plotParcelAddr === candidate ||
+                    plotParcelAddr.includes(candidate) ||
+                    candidate.includes(plotParcelAddr),
+                );
+
               return (
-                plotParcelAddr === parcelAddr &&
+                plotAddressMatches &&
                 plotSurname === surname &&
                 plotFirstName === firstName
               );
@@ -984,7 +1133,55 @@ const LandPlottingPage: React.FC = () => {
                 ? exactParcelMatches
                 : legacyNoParcelMatches;
 
-            const dedupedMatches = matches.filter(
+            let usedOwnFallback = false;
+            const identityFallbackMatches =
+              matches.length > 0
+                ? []
+                : allPlots.filter((plot: any) => {
+                    if (!targetParcelNumber) return false;
+
+                    const plotParcelNumber = normalize(
+                      plot.parcel_number || plot.parcelNumber || "",
+                    );
+                    if (
+                      !plotParcelNumber ||
+                      plotParcelNumber !== targetParcelNumber
+                    ) {
+                      return false;
+                    }
+
+                    const plotSubmissionId = normalize(
+                      plot.farmer_id || plot.submission_id || "",
+                    );
+                    const plotFfrs = normalize(plot.ffrs_id || "");
+                    const plotFirstName = normalize(
+                      plot.firstName || plot.first_name || "",
+                    );
+                    const plotSurname = normalize(
+                      plot.surname || plot.last_name || "",
+                    );
+
+                    const sameSubmission =
+                      currentSubmissionId &&
+                      plotSubmissionId &&
+                      currentSubmissionId === plotSubmissionId;
+                    const sameFfrs = ffrsId && plotFfrs && plotFfrs === ffrsId;
+                    const sameName =
+                      firstName &&
+                      surname &&
+                      plotFirstName === firstName &&
+                      plotSurname === surname;
+
+                    return sameSubmission || sameFfrs || sameName;
+                  });
+
+            const resolvedOwnMatches =
+              matches.length > 0 ? matches : identityFallbackMatches;
+            if (matches.length === 0 && identityFallbackMatches.length > 0) {
+              usedOwnFallback = true;
+            }
+
+            const dedupedMatches = resolvedOwnMatches.filter(
               (plot: any, idx: number, arr: any[]) =>
                 arr.findIndex((candidate: any) => candidate.id === plot.id) ===
                 idx,
@@ -1016,10 +1213,351 @@ const LandPlottingPage: React.FC = () => {
                 },
               });
             });
+
+            const ownPlotIds = new Set(
+              dedupedMatches.map((match: any) => String(match.id)),
+            );
+
+            const getPlotBarangayCandidates = (plot: any) => {
+              const directCandidates = [
+                plot?.barangay,
+                plot?.farm_location_barangay,
+                plot?.farmLocationBarangay,
+                plot?.barangay_name,
+                plot?.barangayName,
+              ]
+                .map((value) => String(value || "").trim())
+                .filter(Boolean);
+
+              const parcelAddress = String(plot?.parcel_address || "").trim();
+              const addressCandidates = parcelAddress
+                ? parcelAddress
+                    .split(",")
+                    .map((part) => part.trim())
+                    .filter(Boolean)
+                : [];
+
+              return [...directCandidates, ...addressCandidates];
+            };
+
+            const getPlotMunicipalityCandidates = (plot: any) => {
+              const directCandidates = [
+                plot?.municipality,
+                plot?.farm_location_city_municipality,
+                plot?.farmLocationCityMunicipality,
+                plot?.city_municipality,
+                plot?.cityMunicipality,
+              ]
+                .map((value) => String(value || "").trim())
+                .filter(Boolean);
+
+              const parcelAddress = String(plot?.parcel_address || "").trim();
+              const addressCandidates = parcelAddress
+                ? parcelAddress
+                    .split(",")
+                    .map((part) => part.trim())
+                    .filter(Boolean)
+                : [];
+
+              return [...directCandidates, ...addressCandidates];
+            };
+
+            let excludedNoBarangayMatch = 0;
+            let excludedOwnPlot = 0;
+            let excludedActiveParcel = 0;
+            const usingMunicipalityFallback =
+              !currentBarangay && Boolean(currentMunicipality);
+
+            const strictReferenceRows: any[] = [];
+            allPlots.forEach((plot: any) => {
+              const plotBarangayCandidates = getPlotBarangayCandidates(plot)
+                .map((value) => normalize(value))
+                .filter(Boolean);
+              const plotMunicipalityCandidates = getPlotMunicipalityCandidates(
+                plot,
+              )
+                .map((value) => normalize(value))
+                .filter(Boolean);
+              const matchesBarangay =
+                currentBarangay &&
+                plotBarangayCandidates.some(
+                  (candidate) =>
+                    candidate === currentBarangay ||
+                    candidate.includes(currentBarangay) ||
+                    currentBarangay.includes(candidate),
+                );
+              const matchesMunicipality =
+                currentMunicipality &&
+                plotMunicipalityCandidates.some(
+                  (candidate) =>
+                    candidate === currentMunicipality ||
+                    candidate.includes(currentMunicipality) ||
+                    currentMunicipality.includes(candidate),
+                );
+              const matchesLocation =
+                Boolean(matchesBarangay) ||
+                (usingMunicipalityFallback && Boolean(matchesMunicipality));
+
+              if (!matchesLocation) {
+                excludedNoBarangayMatch += 1;
+                return;
+              }
+
+              if (ownPlotIds.has(String(plot.id))) {
+                excludedOwnPlot += 1;
+                return;
+              }
+
+              if (isSameActiveParcel(plot)) {
+                excludedActiveParcel += 1;
+                return;
+              }
+
+              strictReferenceRows.push(plot);
+            });
+
+            let usedReferenceFallback = false;
+            let referenceRows = strictReferenceRows;
+
+            const looseLocationTarget = currentBarangay || currentMunicipality;
+            if (referenceRows.length === 0 && looseLocationTarget) {
+              const fallbackRows = allPlots.filter((plot: any) => {
+                if (ownPlotIds.has(String(plot.id))) {
+                  return false;
+                }
+
+                if (isSameActiveParcel(plot)) {
+                  return false;
+                }
+
+                const looseSource = normalize(
+                  [
+                    plot?.parcel_address,
+                    plot?.barangay,
+                    plot?.farm_location_barangay,
+                    plot?.farmLocationBarangay,
+                    plot?.barangay_name,
+                    plot?.barangayName,
+                    plot?.municipality,
+                    plot?.farm_location_city_municipality,
+                    plot?.farmLocationCityMunicipality,
+                    plot?.city_municipality,
+                    plot?.cityMunicipality,
+                  ]
+                    .filter(Boolean)
+                    .join(" "),
+                );
+
+                return looseSource.includes(looseLocationTarget);
+              });
+
+              if (fallbackRows.length > 0) {
+                referenceRows = fallbackRows;
+                usedReferenceFallback = true;
+              }
+            }
+
+            if (referenceRows.length === 0 && !looseLocationTarget) {
+              const globalFallbackRows = allPlots.filter((plot: any) => {
+                if (ownPlotIds.has(String(plot.id))) {
+                  return false;
+                }
+
+                if (isSameActiveParcel(plot)) {
+                  return false;
+                }
+
+                return true;
+              });
+
+              if (globalFallbackRows.length > 0) {
+                referenceRows = globalFallbackRows;
+                usedReferenceFallback = true;
+              }
+            }
+
+            const parsedReferenceShapes: ReferenceShape[] = [];
+            let skippedNoGeometry = 0;
+            let polygonReferences = 0;
+            let pointReferences = 0;
+
+            const appendReferenceGeometry = (
+              geometry: any,
+              featureProperties: any,
+              baseId: string,
+              featureIndex?: number,
+            ) => {
+              const geometryType = String(geometry?.type || "");
+              const isPolygonGeometry =
+                geometryType === "Polygon" || geometryType === "MultiPolygon";
+              const isPointGeometry =
+                geometryType === "Point" || geometryType === "MultiPoint";
+
+              if (!isPolygonGeometry && !isPointGeometry) {
+                skippedNoGeometry += 1;
+                return;
+              }
+
+              const suffix =
+                featureIndex === undefined ? "" : `-${String(featureIndex)}`;
+              parsedReferenceShapes.push({
+                id: `${baseId}${suffix}`,
+                geometry,
+                properties: featureProperties,
+              });
+
+              if (isPolygonGeometry) {
+                polygonReferences += 1;
+              } else {
+                pointReferences += 1;
+              }
+            };
+
+            referenceRows.forEach((plot: any) => {
+              if (!plot.geometry) {
+                skippedNoGeometry += 1;
+                return;
+              }
+
+              try {
+                const parsedGeometry =
+                  typeof plot.geometry === "string"
+                    ? JSON.parse(plot.geometry)
+                    : plot.geometry;
+
+                let geometry = parsedGeometry;
+                let featureProperties = plot;
+
+                if (parsedGeometry?.type === "Feature") {
+                  geometry = parsedGeometry.geometry || null;
+                  featureProperties = {
+                    ...(parsedGeometry.properties || {}),
+                    ...plot,
+                  };
+                  if (!geometry) {
+                    skippedNoGeometry += 1;
+                    return;
+                  }
+                  appendReferenceGeometry(
+                    geometry,
+                    featureProperties,
+                    `reference-${plot.id}`,
+                  );
+                  return;
+                }
+
+                if (parsedGeometry?.type === "FeatureCollection") {
+                  const features = Array.isArray(parsedGeometry.features)
+                    ? parsedGeometry.features
+                    : [];
+
+                  if (features.length === 0) {
+                    skippedNoGeometry += 1;
+                    return;
+                  }
+
+                  features.forEach((feature: any, featureIndex: number) => {
+                    const featureGeometry = feature?.geometry || null;
+                    if (!featureGeometry) {
+                      skippedNoGeometry += 1;
+                      return;
+                    }
+
+                    const mergedProperties = {
+                      ...(feature?.properties || {}),
+                      ...plot,
+                    };
+
+                    appendReferenceGeometry(
+                      featureGeometry,
+                      mergedProperties,
+                      `reference-${plot.id}`,
+                      featureIndex,
+                    );
+                  });
+                  return;
+                }
+
+                if (!geometry) {
+                  skippedNoGeometry += 1;
+                  return;
+                }
+
+                appendReferenceGeometry(
+                  geometry,
+                  featureProperties,
+                  `reference-${plot.id}`,
+                );
+              } catch (referenceParseError) {
+                console.warn(
+                  "Failed to parse reference plot geometry:",
+                  referenceParseError,
+                );
+                skippedNoGeometry += 1;
+              }
+            });
+
+            setBarangayReferenceShapes(parsedReferenceShapes);
+            setReferenceLoadSummary({
+              currentBarangay: currentBarangay || "Unknown",
+              currentMunicipality: currentMunicipality || "Unknown",
+              totalPlots: allPlots.length,
+              ownMatches: dedupedMatches.length,
+              referenceCandidates: referenceRows.length,
+              referencesLoaded: parsedReferenceShapes.length,
+              polygonReferences,
+              pointReferences,
+              skippedNoGeometry,
+              usedOwnFallback,
+              usedReferenceFallback,
+              usedMunicipalityFallback: usingMunicipalityFallback,
+            });
+            console.log(
+              "Γ£à Loaded barangay reference plots:",
+              parsedReferenceShapes.length,
+            );
+            console.log("Reference loading summary:", {
+              currentBarangay,
+              currentMunicipality,
+              totalPlots: allPlots.length,
+              ownMatches: dedupedMatches.length,
+              referenceCandidates: referenceRows.length,
+              referencesLoaded: parsedReferenceShapes.length,
+              polygonReferences,
+              pointReferences,
+              skippedNoGeometry,
+              excludedNoBarangayMatch,
+              excludedOwnPlot,
+              excludedActiveParcel,
+              usedOwnFallback,
+              usedReferenceFallback,
+              usedMunicipalityFallback: usingMunicipalityFallback,
+            });
+          } else {
+            setExistingPlotIds(new Set());
+            setBarangayReferenceShapes([]);
+            setReferenceLoadSummary({
+              currentBarangay: "Unknown",
+              currentMunicipality: "Unknown",
+              totalPlots: 0,
+              ownMatches: 0,
+              referenceCandidates: 0,
+              referencesLoaded: 0,
+              polygonReferences: 0,
+              pointReferences: 0,
+              skippedNoGeometry: 0,
+              usedOwnFallback: false,
+              usedReferenceFallback: false,
+              usedMunicipalityFallback: false,
+              errorMessage:
+                landPlotsRes.error || "Failed to load plotted parcels",
+            });
           }
+
           console.log("≡ƒöó Total shapes loaded:", shapes.length);
           console.log("≡ƒôï All shapes:", shapes);
           setShapesAndVersion(shapes);
+
           const normalizedResolvedParcelNumber =
             resolvedParcelNumber !== undefined && resolvedParcelNumber !== null
               ? String(resolvedParcelNumber)
@@ -1065,6 +1603,11 @@ const LandPlottingPage: React.FC = () => {
   console.log("currentParcel:", currentParcel);
 
   const [shapes, setShapes] = useState<Shape[]>([]);
+  const [barangayReferenceShapes, setBarangayReferenceShapes] = useState<
+    ReferenceShape[]
+  >([]);
+  const [referenceLoadSummary, setReferenceLoadSummary] =
+    useState<ReferenceLoadSummary | null>(null);
   const [deletedShapeIds, setDeletedShapeIds] = useState<string[]>([]);
   const [existingPlotIds, setExistingPlotIds] = useState<Set<string>>(
     () => new Set(),
@@ -1377,6 +1920,7 @@ const LandPlottingPage: React.FC = () => {
                 drawingDisabled={polygonExistsForCurrentParcel}
                 geometryPreview={currentParcel?.geometry || null}
                 shapes={shapes}
+                referenceShapes={barangayReferenceShapes}
                 polygonExistsForCurrentParcel={polygonExistsForCurrentParcel}
                 currentParcelNumber={
                   currentParcel?.parcel_number ?? currentParcel?.parcelNumber
@@ -1416,6 +1960,56 @@ const LandPlottingPage: React.FC = () => {
                 Sum of all mapped parcels for this farmer
               </div>
             </div>
+
+            {referenceLoadSummary && (
+              <div className="tech-landplotting-stat-card">
+                <div className="tech-landplotting-stat-label">
+                  Nearby plotted parcels (debug)
+                </div>
+                <div className="tech-landplotting-stat-sub">
+                  Barangay match: {referenceLoadSummary.currentBarangay}
+                </div>
+                <div className="tech-landplotting-stat-sub">
+                  Municipality match: {referenceLoadSummary.currentMunicipality}
+                </div>
+                <div className="tech-landplotting-stat-sub">
+                  Total plots scanned: {referenceLoadSummary.totalPlots}
+                </div>
+                <div className="tech-landplotting-stat-sub">
+                  Active parcel matches: {referenceLoadSummary.ownMatches}
+                </div>
+                <div className="tech-landplotting-stat-sub">
+                  Blue candidates: {referenceLoadSummary.referenceCandidates}
+                </div>
+                <div className="tech-landplotting-stat-sub">
+                  Blue shown: {referenceLoadSummary.referencesLoaded} (Area:{" "}
+                  {referenceLoadSummary.polygonReferences}, Pins:{" "}
+                  {referenceLoadSummary.pointReferences})
+                </div>
+                <div className="tech-landplotting-stat-sub">
+                  Skipped invalid geometry:{" "}
+                  {referenceLoadSummary.skippedNoGeometry}
+                </div>
+                <div className="tech-landplotting-stat-sub">
+                  Fallback used: own=
+                  {referenceLoadSummary.usedOwnFallback ? "yes" : "no"},
+                  reference=
+                  {referenceLoadSummary.usedReferenceFallback ? "yes" : "no"},
+                  municipality=
+                  {referenceLoadSummary.usedMunicipalityFallback
+                    ? "yes"
+                    : "no"}
+                </div>
+                {referenceLoadSummary.errorMessage && (
+                  <div
+                    className="tech-landplotting-stat-sub"
+                    style={{ color: "#b91c1c" }}
+                  >
+                    Error: {referenceLoadSummary.errorMessage}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="tech-landplotting-parcel-title">

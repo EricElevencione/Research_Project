@@ -58,6 +58,8 @@ interface RSBSARecord {
     registeredOwner: boolean;
     tenant: boolean;
     lessee: boolean;
+    tenantLessee?: boolean;
+    category?: "registeredOwner" | "tenantLessee" | "unknown";
   };
 }
 
@@ -562,6 +564,26 @@ const Masterlist: React.FC = () => {
       })} ha`;
     }
     return parcelArea && parcelArea !== "—" ? parcelArea : "—";
+  };
+
+  const getParcelOwnershipLabel = (parcel: ParcelDetail) => {
+    if (parcel.ownershipTypeRegisteredOwner) return "Registered Owner";
+
+    if (parcel.ownershipTypeTenant || parcel.ownershipTypeLessee) {
+      const ownerName =
+        String(parcel.tenantLandOwnerName || "").trim() ||
+        String(parcel.lesseeLandOwnerName || "").trim();
+      const roleLabel =
+        parcel.ownershipTypeTenant && parcel.ownershipTypeLessee
+          ? "Tenant + Lessee"
+          : parcel.ownershipTypeTenant
+            ? "Tenant"
+            : "Lessee";
+
+      return ownerName ? `${roleLabel} (Owner: ${ownerName})` : roleLabel;
+    }
+
+    return "—";
   };
 
   const handlePrintSingleRecord = async (record: RSBSARecord) => {
@@ -1198,30 +1220,7 @@ const Masterlist: React.FC = () => {
                                   Land Ownership:
                                 </span>
                                 <span className="farmer-modal-value">
-                                  {parcel.ownershipTypeRegisteredOwner &&
-                                    "Registered Owner"}
-                                  {parcel.ownershipTypeTenant && (
-                                    <>
-                                      Tenant
-                                      {parcel.tenantLandOwnerName && (
-                                        <span className="farmer-modal-owner-name">
-                                          {" "}
-                                          (Owner: {parcel.tenantLandOwnerName})
-                                        </span>
-                                      )}
-                                    </>
-                                  )}
-                                  {parcel.ownershipTypeLessee && (
-                                    <>
-                                      Lessee
-                                      {parcel.lesseeLandOwnerName && (
-                                        <span className="farmer-modal-owner-name">
-                                          {" "}
-                                          (Owner: {parcel.lesseeLandOwnerName})
-                                        </span>
-                                      )}
-                                    </>
-                                  )}
+                                  {getParcelOwnershipLabel(parcel)}
                                 </span>
                               </div>
                               <div className="farmer-modal-parcel-item">

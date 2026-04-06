@@ -670,12 +670,35 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
 
                             // Owner section
                             if (cropInfo.owner) {
+                              const ownerStatusRaw = String(
+                                cropInfo.owner.ownership_status || "",
+                              )
+                                .trim()
+                                .toLowerCase();
+                              const ownerStatusLabel =
+                                ownerStatusRaw === "owner" ||
+                                ownerStatusRaw === "registered owner"
+                                  ? "Registered Owner"
+                                  : ownerStatusRaw === "tenant"
+                                    ? "Tenant"
+                                    : ownerStatusRaw === "lessee"
+                                      ? "Lessee"
+                                      : ownerStatusRaw === "tenant/lessee"
+                                        ? "Tenant + Lessee"
+                                        : String(
+                                            cropInfo.owner.ownership_status ||
+                                              "Unknown",
+                                          );
                               const ownerStatusColor =
-                                cropInfo.owner.ownership_status === "Owner"
+                                ownerStatusLabel === "Registered Owner"
                                   ? "#16a34a"
-                                  : cropInfo.owner.ownership_status === "Tenant"
+                                  : ownerStatusLabel === "Tenant"
                                     ? "#f59e0b"
-                                    : "#6366f1";
+                                    : ownerStatusLabel === "Lessee"
+                                      ? "#7c3aed"
+                                      : ownerStatusLabel === "Tenant + Lessee"
+                                        ? "#f59e0b"
+                                        : "#6366f1";
                               const tenantCount = Array.isArray(
                                 cropInfo.tenants,
                               )
@@ -706,11 +729,11 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               html += `<div class="farmland-popup-farmer-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #86efac; border-radius: 8px; padding: 12px; margin-bottom: 10px;">`;
                               html += `<div class="farmland-popup-farmer-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
                               html += `<span class="farmland-popup-farmer-name" style="font-weight: 600; color: #166534; font-size: 0.9em;">👤 ${cropInfo.owner.farmer_name}</span>`;
-                              html += `<span class="farmland-popup-farmer-status" style="background: ${ownerStatusColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">${cropInfo.owner.ownership_status}</span>`;
+                              html += `<span class="farmland-popup-farmer-status" style="background: ${ownerStatusColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">${ownerStatusLabel}</span>`;
                               html += `</div>`;
                               html += `<div class="farmland-popup-farmer-barangay" style="font-size: 0.75em; color: #166534; margin-bottom: 4px;">📍 Barangay: <strong>${location || cropInfo.owner.barangay || "N/A"}</strong></div>`;
                               html += `<div class="farmland-popup-farmer-date" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;">📅 Registered: ${ownerRegDate}</div>`;
-                              html += `<div class="farmland-popup-owner-tenant-link" style="font-size: 0.75em; color: #92400e; margin-bottom: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 8px;">👥 Tenant Link: <strong>${tenantCount > 0 ? `${tenantCount} tenant${tenantCount === 1 ? "" : "s"} on this land` : "No tenant currently linked"}</strong>${tenantCount > 0 ? `<div style="margin-top: 4px; color: #78350f;">${tenantNames}</div>` : ""}</div>`;
+                              html += `<div class="farmland-popup-owner-tenant-link" style="font-size: 0.75em; color: #92400e; margin-bottom: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 8px;">👥 Tenant and Lessee Link: <strong>${tenantCount > 0 ? `${tenantCount} tenant or lessee association${tenantCount === 1 ? "" : "s"} on this land` : "No tenant or lessee association currently linked"}</strong>${tenantCount > 0 ? `<div style="margin-top: 4px; color: #78350f;">${tenantNames}</div>` : ""}</div>`;
                               html += `<div class="farmland-popup-crops-label" style="font-size: 0.8em; color: #4b5563; margin-bottom: 4px;">Crops planted:</div>`;
                               html += `<div class="farmland-popup-crops-tags" style="display: flex; flex-wrap: wrap; gap: 6px;">`;
                               cropInfo.owner.crops.forEach((crop: string) => {
@@ -740,8 +763,24 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                 html += `<hr style="border: none; border-top: 2px dashed #d1d5db; margin: 12px 0;">`;
                               }
                               html += `<div class="farmland-popup-tenants-section">`;
-                              html += `<div class="farmland-popup-tenants-title" style="font-size: 0.85em; color: #f59e0b; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">👥 Tenants/Lessees on this land:</div>`;
+                              html += `<div class="farmland-popup-tenants-title" style="font-size: 0.85em; color: #f59e0b; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">👥 Tenant and Lessee associations on this land:</div>`;
                               cropInfo.tenants.forEach((tenant: any) => {
+                                const tenantStatusRaw = String(
+                                  tenant.ownership_status || "",
+                                )
+                                  .trim()
+                                  .toLowerCase();
+                                const tenantStatusLabel =
+                                  tenantStatusRaw === "owner" ||
+                                  tenantStatusRaw === "registered owner"
+                                    ? "Registered Owner"
+                                    : tenantStatusRaw === "tenant"
+                                      ? "Tenant"
+                                      : tenantStatusRaw === "lessee"
+                                        ? "Lessee"
+                                        : tenantStatusRaw === "tenant/lessee"
+                                          ? "Tenant + Lessee"
+                                          : "Unknown";
                                 const tenantRegDate = tenant.registration_date
                                   ? new Date(
                                       tenant.registration_date,
@@ -754,7 +793,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                 html += `<div class="farmland-popup-tenant-card" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fcd34d; border-radius: 8px; padding: 10px; margin-bottom: 8px;">`;
                                 html += `<div class="farmland-popup-tenant-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
                                 html += `<span class="farmland-popup-tenant-name" style="font-weight: 600; color: #92400e; font-size: 0.85em;">👤 ${tenant.farmer_name}</span>`;
-                                html += `<span class="farmland-popup-tenant-status" style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7em; font-weight: 600;">Tenant</span>`;
+                                html += `<span class="farmland-popup-tenant-status" style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7em; font-weight: 600;">${tenantStatusLabel}</span>`;
                                 html += `</div>`;
                                 html += `<div class="farmland-popup-tenant-date" style="font-size: 0.7em; color: #6b7280; margin-bottom: 6px;">📅 Registered: ${tenantRegDate}</div>`;
                                 html += `<div class="farmland-popup-tenant-crops-label" style="font-size: 0.75em; color: #6b7280; margin-bottom: 4px;">Crops planted:</div>`;

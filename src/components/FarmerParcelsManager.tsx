@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 interface FarmerSummary {
   submission_id: number;
   "LAST NAME": string;
   "FIRST NAME": string;
   "MIDDLE NAME": string;
-  "BARANGAY": string;
-  "MUNICIPALITY": string;
+  BARANGAY: string;
+  MUNICIPALITY: string;
   total_parcels: number;
   total_farm_area: number;
   submitted_at: string;
@@ -31,7 +31,9 @@ interface FarmParcel {
 
 const FarmerParcelsManager: React.FC = () => {
   const [farmers, setFarmers] = useState<FarmerSummary[]>([]);
-  const [selectedFarmer, setSelectedFarmer] = useState<FarmerSummary | null>(null);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerSummary | null>(
+    null,
+  );
   const [farmerParcels, setFarmerParcels] = useState<FarmParcel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,12 +47,14 @@ const FarmerParcelsManager: React.FC = () => {
       setLoading(true);
       // Return empty data since this endpoint is not available in Supabase
       const data: any[] = [];
-      console.log('Note: farmers/summary endpoint is not available in Supabase');
+      console.log(
+        "Note: farmers/summary endpoint is not available in Supabase",
+      );
       setFarmers(data);
       setError(null);
     } catch (err: any) {
-      console.error('Error fetching farmers summary:', err);
-      setError('Failed to load farmers data');
+      console.error("Error fetching farmers summary:", err);
+      setError("Failed to load farmers data");
     } finally {
       setLoading(false);
     }
@@ -61,13 +65,15 @@ const FarmerParcelsManager: React.FC = () => {
       setLoading(true);
       // Return empty data since this endpoint is not available in Supabase
       const data: any[] = [];
-      console.log('Note: farm_parcels/by-farmer endpoint is not available in Supabase');
+      console.log(
+        "Note: farm_parcels/by-farmer endpoint is not available in Supabase",
+      );
       setFarmerParcels(data);
       setSelectedFarmer(farmer);
       setError(null);
     } catch (err: any) {
-      console.error('Error fetching farmer parcels:', err);
-      setError('Failed to load farmer parcels');
+      console.error("Error fetching farmer parcels:", err);
+      setError("Failed to load farmer parcels");
     } finally {
       setLoading(false);
     }
@@ -97,9 +103,12 @@ const FarmerParcelsManager: React.FC = () => {
             </thead>
             <tbody>
               {farmers.map((farmer) => {
-                const fullName = `${farmer["FIRST NAME"]} ${farmer["MIDDLE NAME"]} ${farmer["LAST NAME"]}`.trim();
+                const fullName =
+                  `${farmer["FIRST NAME"]} ${farmer["MIDDLE NAME"]} ${farmer["LAST NAME"]}`.trim();
                 const location = `${farmer["BARANGAY"]}, ${farmer["MUNICIPALITY"]}`;
-                const submittedDate = new Date(farmer.submitted_at).toLocaleDateString();
+                const submittedDate = new Date(
+                  farmer.submitted_at,
+                ).toLocaleDateString();
 
                 return (
                   <tr key={farmer.submission_id}>
@@ -128,8 +137,8 @@ const FarmerParcelsManager: React.FC = () => {
       {selectedFarmer && (
         <div className="farmer-parcels-detail">
           <h3>
-            Parcels for {selectedFarmer["FIRST NAME"]} {selectedFarmer["LAST NAME"]}
-            ({farmerParcels.length} parcels)
+            Parcels for {selectedFarmer["FIRST NAME"]}{" "}
+            {selectedFarmer["LAST NAME"]}({farmerParcels.length} parcels)
           </h3>
 
           {loading ? (
@@ -158,18 +167,26 @@ const FarmerParcelsManager: React.FC = () => {
                       const location = `${parcel.farm_location_barangay}, ${parcel.farm_location_municipality}`;
 
                       const ownershipTypes = [];
-                      if (parcel.ownership_type_registered_owner) ownershipTypes.push('Registered Owner');
-                      if (parcel.ownership_type_tenant) ownershipTypes.push('Tenant');
-                      if (parcel.ownership_type_lessee) ownershipTypes.push('Lessee');
-                      if (parcel.ownership_type_others) ownershipTypes.push('Others');
+                      if (parcel.ownership_type_registered_owner)
+                        ownershipTypes.push("Registered Owner");
+                      if (parcel.ownership_type_tenant)
+                        ownershipTypes.push("Tenant");
+                      if (parcel.ownership_type_lessee)
+                        ownershipTypes.push("Lessee");
+                      if (parcel.ownership_type_others)
+                        ownershipTypes.push("Others");
 
                       return (
                         <tr key={parcel.id}>
                           <td>{parcel.parcel_number}</td>
                           <td>{location}</td>
-                          <td>{parcel.total_farm_area_ha ? parcel.total_farm_area_ha.toFixed(2) : 'N/A'}</td>
-                          <td>{parcel.within_ancestral_domain || 'N/A'}</td>
-                          <td>{ownershipTypes.join(', ') || 'N/A'}</td>
+                          <td>
+                            {parcel.total_farm_area_ha
+                              ? parcel.total_farm_area_ha.toFixed(2)
+                              : "N/A"}
+                          </td>
+                          <td>{parcel.within_ancestral_domain || "N/A"}</td>
+                          <td>{ownershipTypes.join(", ") || "N/A"}</td>
                         </tr>
                       );
                     })

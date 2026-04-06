@@ -1,113 +1,23 @@
 .jo-land-history-report-page-container {
-  min-height: 100vh;
+  display: flex;
+  height: 100vh;
   background: #f4f7fb;
+  overflow: hidden;
 }
 
 .jo-land-history-report-page {
   display: flex;
-  min-height: 100vh;
-}
-
-.jo-land-history-report-page .tech-incent-sidebar {
-  background-color: #fffdf6;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.09);
-  min-width: 250px;
-  width: 250px;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.jo-land-history-report-page .sidebar-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 16px 12px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.jo-land-history-report-page .sidebar-header h2 {
-  margin: 6px 0 0;
-  font-size: 15px;
-  color: #1f2937;
-}
-
-.jo-land-history-report-page .sidebar-logo {
-  width: 76px;
-  height: 76px;
-  object-fit: contain;
-}
-
-.jo-land-history-report-page .sidebar-nav {
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  padding: 10px 12px 14px;
-  box-sizing: border-box;
-}
-
-.jo-land-history-report-page .sidebar-nav-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 14px;
-  margin: 4px 0;
-  border: none;
-  background: transparent;
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-  transition: background-color 0.2s ease;
-}
-
-.jo-land-history-report-page .sidebar-nav-item:hover {
-  background: #f3f4f6;
-}
-
-.jo-land-history-report-page .sidebar-nav-item.active {
-  background-color: #dcfce7;
-}
-
-.jo-land-history-report-page .sidebar-nav-item .nav-text {
-  color: #374151;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.jo-land-history-report-page .sidebar-nav-item.active .nav-text {
-  color: #166534;
-  font-weight: 700;
-}
-
-.jo-land-history-report-page .sidebar-nav-item .nav-icon {
-  width: 22px;
-  min-width: 22px;
-  margin-right: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.jo-land-history-report-page .sidebar-nav-item .nav-icon img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-
-.jo-land-history-report-page .sidebar-nav-item.logout {
-  margin-top: auto;
-  border-top: 1px solid #e5e7eb;
-  border-radius: 0;
-  padding-top: 14px;
+  height: 100%;
+  min-height: 0;
 }
 
 .jo-land-history-report-main-content {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   padding: 16px;
+  overflow: auto;
 }
 
 .jo-land-history-report-header {
@@ -436,7 +346,7 @@
 
 .jo-land-history-report-kpis {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -511,7 +421,7 @@
 .jo-land-history-report-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 980px;
+  min-width: 760px;
 }
 
 .jo-land-history-report-table th,
@@ -531,65 +441,148 @@
   color: #475569;
 }
 
-.jo-land-history-farmer-link {
-  border: none;
-  background: transparent;
-  color: #0f766e;
-  font-weight: 600;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
+.jo-land-history-report-row {
+  transition: background-color 0.16s ease;
 }
 
-.jo-land-history-farmer-link:hover {
-  color: #115e59;
-  text-decoration: underline;
+.jo-land-history-report-row.is-clickable {
+  cursor: pointer;
+}
+
+.jo-land-history-report-row.is-clickable:hover td,
+.jo-land-history-report-row.is-clickable:focus-visible td {
+  background: #ecfdf5;
+}
+
+.jo-land-history-report-row.is-clickable:focus-visible td {
+  outline: 1px solid rgba(15, 118, 110, 0.35);
+  outline-offset: -1px;
+}
+
+@keyframes jo-land-history-modal-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jo-land-history-modal-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .jo-land-history-modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 10010;
-  background: rgba(15, 23, 42, 0.46);
+  background:
+    radial-gradient(
+      circle at 15% 15%,
+      rgba(16, 185, 129, 0.12),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 85% 85%,
+      rgba(59, 130, 246, 0.1),
+      transparent 42%
+    ),
+    rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: 20px;
+  animation: jo-land-history-modal-fade-in 0.22s ease-out;
 }
 
 .jo-land-history-modal {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow:
+    0 24px 48px rgba(15, 23, 42, 0.24),
+    0 6px 14px rgba(15, 23, 42, 0.12);
   width: min(1320px, 100%);
-  max-height: 92vh;
-  overflow: auto;
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #dbeafe;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
-  padding: 14px;
+  max-height: min(90vh, 980px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 0 14px;
+  animation: jo-land-history-modal-slide-up 0.28s ease-out;
+}
+
+.jo-land-history-modal > :not(.jo-land-history-modal-header) {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.jo-land-history-modal-header + * {
+  margin-top: 14px;
 }
 
 .jo-land-history-modal-header {
+  background: linear-gradient(140deg, #059669 0%, #047857 55%, #065f46 100%);
+  color: #ffffff;
+  padding: 18px 22px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .jo-land-history-modal-header h2 {
   margin: 0;
-  color: #0f172a;
+  color: #ffffff;
   font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
 .jo-land-history-modal-header p {
   margin: 4px 0 0;
-  color: #475569;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 13px;
 }
 
+.jo-land-history-modal-header .jo-land-history-report-btn {
+  background: rgba(255, 255, 255, 0.14);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  border-radius: 999px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  font-size: 32px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jo-land-history-modal-header .jo-land-history-report-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.28);
+  transform: rotate(90deg);
+}
+
 .jo-land-history-modal-block {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .jo-land-history-modal-kpis {
@@ -610,10 +603,6 @@
   font-weight: 600;
 }
 
-.jo-land-history-report-page .tech-incent-mobile-header {
-  display: none;
-}
-
 @media (max-width: 1200px) {
   .jo-land-history-report-filters {
     grid-template-columns: 1fr 1fr;
@@ -628,7 +617,7 @@
   }
 
   .jo-land-history-report-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .jo-land-history-modal-kpis {
@@ -637,38 +626,15 @@
 }
 
 @media (max-width: 1024px) {
-  .jo-land-history-report-page .tech-incent-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 9999;
-    width: min(280px, 88vw);
-    max-width: 88vw;
-    height: 100vh;
-    border-radius: 0 12px 12px 0;
-    transform: translateX(-105%);
-    transition: transform 0.24s ease;
-  }
-
-  .jo-land-history-report-page .tech-incent-sidebar.active {
-    transform: translateX(0);
-  }
-
-  .jo-land-history-report-page .tech-incent-mobile-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-
-  .jo-land-history-report-page .tech-incent-mobile-title {
-    margin-left: 12px;
-    font-size: 16px;
-    font-weight: 700;
-    color: #065f46;
-  }
-
   .jo-land-history-modal {
     max-height: 94vh;
+    border-radius: 16px;
+  }
+
+  .jo-land-history-modal-header {
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    padding: 16px 18px;
   }
 }
 
@@ -694,12 +660,25 @@
   }
 
   .jo-land-history-modal {
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: 12px;
+    padding-bottom: 10px;
+  }
+
+  .jo-land-history-modal > :not(.jo-land-history-modal-header) {
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .jo-land-history-modal-header {
     flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+
+  .jo-land-history-modal-header .jo-land-history-report-btn {
+    align-self: flex-start;
   }
 
   .jo-land-history-modal-kpis {

@@ -302,10 +302,10 @@ const AuditTrail: React.FC = () => {
 
   // Filters
   const [timeRangeMonths, setTimeRangeMonths] = useState<string>("1");
-  const [userNameFilter, setUserNameFilter] = useState<string>("");
-  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
-  const [actionFilter, setActionFilter] = useState<string>("all");
-  const [moduleFilter, setModuleFilter] = useState<string>("all");
+  const [userNameFilter] = useState<string>("");
+  const [userRoleFilter] = useState<string>("all");
+  const [actionFilter] = useState<string>("all");
+  const [moduleFilter] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState<string>("");
 
   // Notifications
@@ -346,9 +346,6 @@ const AuditTrail: React.FC = () => {
     "#ec4899",
     "#14b8a6",
   ];
-
-  const ACTION_FILTER_OPTIONS = Object.keys(ACTION_COLORS);
-  const MODULE_FILTER_OPTIONS = Object.keys(MODULE_PAGE_FALLBACKS).sort();
 
   const showToast = (
     message: string,
@@ -537,16 +534,6 @@ const AuditTrail: React.FC = () => {
   // Handle range filter change
   const handleTimeRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setTimeRangeMonths(e.target.value);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
-
-  const clearFilters = () => {
-    setTimeRangeMonths("1");
-    setUserNameFilter("");
-    setUserRoleFilter("all");
-    setActionFilter("all");
-    setModuleFilter("all");
-    setSearchFilter("");
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
@@ -1369,13 +1356,18 @@ const AuditTrail: React.FC = () => {
                     <span className="admin-audit-farmer-value">
                       {parcel?.ownershipType?.registeredOwner
                         ? "Registered Owner"
-                        : parcel?.ownershipType?.tenant
-                          ? "Tenant"
-                          : parcel?.ownershipType?.lessee
-                            ? "Lessee"
-                            : parcel?.ownershipType?.others
-                              ? "Others"
-                              : "N/A"}
+                        : parcel?.ownershipType?.tenant &&
+                            parcel?.ownershipType?.lessee
+                          ? "Tenant + Lessee"
+                          : parcel?.ownershipType?.tenant
+                            ? "Tenant"
+                            : parcel?.ownershipType?.lessee
+                              ? "Lessee"
+                              : parcel?.ownershipType?.tenantLessee
+                                ? "Tenant or Lessee"
+                                : parcel?.ownershipType?.others
+                                  ? "Others"
+                                  : "N/A"}
                     </span>
                   </div>
                 </div>

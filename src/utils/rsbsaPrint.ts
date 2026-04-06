@@ -561,23 +561,23 @@ const normalizeFormData = (
 };
 
 const parcelOwnershipText = (parcel: NormalizedParcel): string => {
-  const labels: string[] = [];
-  if (parcel.ownershipTypeRegisteredOwner) labels.push("Registered Owner");
-  if (parcel.ownershipTypeTenant) {
-    labels.push(
-      parcel.tenantLandOwnerName
-        ? `Tenant (Owner: ${parcel.tenantLandOwnerName})`
-        : "Tenant",
-    );
+  if (parcel.ownershipTypeRegisteredOwner) return "Registered Owner";
+
+  if (parcel.ownershipTypeTenant || parcel.ownershipTypeLessee) {
+    const ownerName =
+      String(parcel.tenantLandOwnerName || "").trim() ||
+      String(parcel.lesseeLandOwnerName || "").trim();
+    const roleLabel =
+      parcel.ownershipTypeTenant && parcel.ownershipTypeLessee
+        ? "Tenant + Lessee"
+        : parcel.ownershipTypeTenant
+          ? "Tenant"
+          : "Lessee";
+
+    return ownerName ? `${roleLabel} (Owner: ${ownerName})` : roleLabel;
   }
-  if (parcel.ownershipTypeLessee) {
-    labels.push(
-      parcel.lesseeLandOwnerName
-        ? `Lessee (Owner: ${parcel.lesseeLandOwnerName})`
-        : "Lessee",
-    );
-  }
-  return labels.length > 0 ? labels.join(" | ") : "N/A";
+
+  return "N/A";
 };
 
 const renderFarmerFormSection = (

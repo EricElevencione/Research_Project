@@ -20,20 +20,14 @@
  */
 
 const express = require("express");
-const { Pool } = require("pg");
 const cors = require("cors");
 const path = require("path");
+const { createPool } = require("./config/db.cjs");
 
 // ============================================================================
 // DATABASE CONFIGURATION
 // ============================================================================
-const pool = new Pool({
-  user: process.env.DB_USER || "postgres",
-  host: process.env.DB_HOST || "localhost",
-  database: process.env.DB_NAME || "Masterlist",
-  password: process.env.DB_PASSWORD || "postgresadmin",
-  port: process.env.DB_PORT || 5432,
-});
+const pool = createPool();
 
 // Test database connection
 pool.connect((err, client, release) => {

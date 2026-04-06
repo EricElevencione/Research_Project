@@ -30,18 +30,47 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  v_current_parcel_count INT;
+  v_current_owner_parcel_count INT := 0;
+  v_current_association_count INT := 0;
+  v_current_link_count INT := 0;
+  v_has_land_history BOOLEAN := FALSE;
 BEGIN
-  -- Count parcels the farmer currently owns
+  -- Legal owner links: current owner rows in rsbsa_farm_parcels.
   -- (is_current_owner IS NULL means legacy row → treat as current)
   SELECT COUNT(*)
-    INTO v_current_parcel_count
+    INTO v_current_owner_parcel_count
     FROM public.rsbsa_farm_parcels
    WHERE submission_id = p_farmer_id
+     AND ownership_type_registered_owner = TRUE
      AND (is_current_owner IS NULL OR is_current_owner = true);
 
-  IF v_current_parcel_count = 0 THEN
-    -- Farmer has zero parcels → mark as 'No Parcels' and archive
+  -- Tenant/lessee links: use current land_history rows when available,
+  -- so association visibility follows active relationship records.
+  SELECT to_regclass('public.land_history') IS NOT NULL
+    INTO v_has_land_history;
+
+  IF v_has_land_history THEN
+    SELECT COUNT(*)
+      INTO v_current_association_count
+      FROM public.land_history lh
+     WHERE lh.farmer_id = p_farmer_id
+       AND lh.is_current = TRUE
+       AND (lh.is_tenant = TRUE OR lh.is_lessee = TRUE);
+  ELSE
+    -- Fallback for environments without land_history.
+    SELECT COUNT(*)
+      INTO v_current_association_count
+      FROM public.rsbsa_farm_parcels fp
+     WHERE fp.submission_id = p_farmer_id
+       AND (fp.ownership_type_tenant = TRUE OR fp.ownership_type_lessee = TRUE);
+  END IF;
+
+  v_current_link_count :=
+    COALESCE(v_current_owner_parcel_count, 0) +
+    COALESCE(v_current_association_count, 0);
+
+  IF v_current_link_count = 0 THEN
+    -- Farmer has zero active owner/association links → archive
     UPDATE public.rsbsa_submission
        SET status         = 'No Parcels',
            archived_at    = NOW(),
@@ -50,7 +79,7 @@ BEGIN
        AND (status IS DISTINCT FROM 'No Parcels'
             OR archived_at IS NULL);
   ELSE
-    -- Farmer still has parcels → ensure they are active and visible
+    -- Farmer has at least one active owner/association link → visible
     UPDATE public.rsbsa_submission
        SET status         = 'Active Farmer',
            archived_at    = NULL,
@@ -63,14 +92,14 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.sync_farmer_no_parcels_status(BIGINT)
-  IS 'Called after every transfer to sync farmer visibility across Land Registry, Masterlist, and RSBSA. Sets status to No Parcels + archives if 0 parcels remain, otherwise restores to Active Farmer.';
+  IS 'Called after every transfer to sync farmer visibility across Land Registry, Masterlist, and RSBSA. Counts active owner links and active tenant/lessee associations. Sets status to No Parcels + archives if no active links remain, otherwise restores to Active Farmer.';
 
 -- ── 3. Grant execute to authenticated users (Supabase RLS) ─────────────────
 
 GRANT EXECUTE ON FUNCTION public.sync_farmer_no_parcels_status(BIGINT)
   TO authenticated;
 
--- ── 4. Optional: backfill existing farmers who already have 0 parcels ──────
+-- ── 4. Optional: backfill existing farmers who already have 0 active links ──
 -- Uncomment the block below to run a one-time backfill.
 --
 -- DO $$
@@ -83,7 +112,14 @@ GRANT EXECUTE ON FUNCTION public.sync_farmer_no_parcels_status(BIGINT)
 --      WHERE NOT EXISTS (
 --              SELECT 1 FROM public.rsbsa_farm_parcels fp
 --               WHERE fp.submission_id = rs.id
+--                 AND fp.ownership_type_registered_owner = TRUE
 --                 AND (fp.is_current_owner IS NULL OR fp.is_current_owner = true)
+--            )
+--        AND NOT EXISTS (
+--              SELECT 1 FROM public.land_history lh
+--               WHERE lh.farmer_id = rs.id
+--                 AND lh.is_current = TRUE
+--                 AND (lh.is_tenant = TRUE OR lh.is_lessee = TRUE)
 --            )
 --        AND rs.status IS DISTINCT FROM 'No Parcels'
 --   LOOP

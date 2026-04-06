@@ -3,14 +3,8 @@ const router = express.Router();
 const { logCreate, AUDIT_MODULES } = require("../middleware/audit.cjs");
 
 // Import database pool
-const { Pool } = require("pg");
-const pool = new Pool({
-  user: process.env.DB_USER || "postgres",
-  host: process.env.DB_HOST || "localhost",
-  database: process.env.DB_NAME || "Masterlist",
-  password: process.env.DB_PASSWORD || "postgresadmin",
-  port: process.env.DB_PORT || 5432,
-});
+const { createPool } = require("../config/db.cjs");
+const pool = createPool();
 
 function resolveAuditUser(req, body = {}) {
   const requestUser = req.user || {};

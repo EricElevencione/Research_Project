@@ -1,6 +1,7 @@
 import {
   useEffect,
   useState,
+  useMemo,
   forwardRef,
   useRef,
   useImperativeHandle,
@@ -21,6 +22,8 @@ import {
   booleanWithin,
   centroid as turfCentroid,
   booleanOverlap,
+  booleanIntersects,
+  booleanTouches,
 } from "@turf/turf";
 
 // Fix for default marker icons in Leaflet with React
@@ -35,6 +38,38 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+const OWN_PARCEL_STYLE = {
+  color: "#16a34a",
+  weight: 2,
+  opacity: 1,
+  fillColor: "#22c55e",
+  fillOpacity: 0.22,
+};
+
+const OWN_PARCEL_SELECTED_STYLE = {
+  color: "#166534",
+  weight: 3,
+  opacity: 1,
+  fillColor: "#22c55e",
+  fillOpacity: 0.35,
+};
+
+const REFERENCE_PARCEL_STYLE = {
+  color: "#2563eb",
+  weight: 2,
+  opacity: 0.95,
+  fillColor: "#3b82f6",
+  fillOpacity: 0.2,
+};
+
+const REFERENCE_POINT_STYLE = {
+  radius: 6,
+  color: "#1d4ed8",
+  weight: 2,
+  fillColor: "#60a5fa",
+  fillOpacity: 0.9,
+};
 
 // --- Format helpers (stable, outside component) ---
 function formatDistanceLabel(meters: number) {
@@ -303,6 +338,104 @@ const DrawAreaTracker: React.FC<{ targetAreaHa?: number }> = ({
   return null;
 };
 
+const AutoFitMapData: React.FC<{
+  shapes?: any[];
+  referencePolygonFeatureCollection?: any;
+  referencePointFeatureCollection?: any;
+  geometryPreview?: any;
+  fitKey?: string;
+}> = ({
+  shapes,
+  referencePolygonFeatureCollection,
+  referencePointFeatureCollection,
+  geometryPreview,
+  fitKey,
+}) => {
+  const map = useMap();
+  const lastFitKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const normalizedFitKey = String(fitKey || "");
+    if (normalizedFitKey && lastFitKeyRef.current === normalizedFitKey) {
+      return;
+    }
+
+    const layersForBounds: L.Layer[] = [];
+
+    (shapes || []).forEach((shape: any) => {
+      if (shape?.layer) {
+        layersForBounds.push(shape.layer);
+      }
+    });
+
+    const appendCollectionLayer = (collection: any) => {
+      if (!collection) return;
+      try {
+        const layer = L.geoJSON(collection as any);
+        layersForBounds.push(layer);
+      } catch {
+        // Ignore malformed collections for fit.
+      }
+    };
+
+    appendCollectionLayer(referencePolygonFeatureCollection);
+    appendCollectionLayer(referencePointFeatureCollection);
+    appendCollectionLayer(geometryPreview);
+
+    let mergedBounds: any = null;
+
+    const extendWithLayer = (layer: any) => {
+      if (!layer) return;
+
+      if (typeof layer.getBounds === "function") {
+        const layerBounds = layer.getBounds();
+        if (layerBounds && layerBounds.isValid && layerBounds.isValid()) {
+          mergedBounds = mergedBounds
+            ? mergedBounds.extend(layerBounds)
+            : layerBounds;
+          return;
+        }
+      }
+
+      if (typeof layer.getLatLng === "function") {
+        const latLng = layer.getLatLng();
+        if (latLng && Number.isFinite(latLng.lat) && Number.isFinite(latLng.lng)) {
+          const pointBounds = L.latLngBounds(latLng, latLng);
+          mergedBounds = mergedBounds
+            ? mergedBounds.extend(pointBounds)
+            : pointBounds;
+        }
+      }
+    };
+
+    layersForBounds.forEach(extendWithLayer);
+
+    if (
+      mergedBounds &&
+      typeof mergedBounds.isValid === "function" &&
+      mergedBounds.isValid()
+    ) {
+      map.fitBounds(mergedBounds.pad(0.2), {
+        animate: true,
+        duration: 0.5,
+      });
+
+      if (normalizedFitKey) {
+        lastFitKeyRef.current = normalizedFitKey;
+      }
+    }
+  }, [
+    map,
+    fitKey,
+    shapes,
+    referencePolygonFeatureCollection,
+    referencePointFeatureCollection,
+    geometryPreview,
+  ]);
+
+  return null;
+};
+
 // Component to handle map centering
 
 interface LandPlottingMapProps {
@@ -316,6 +449,11 @@ interface LandPlottingMapProps {
   drawingDisabled?: boolean;
   geometryPreview?: any;
   shapes?: any[];
+  referenceShapes?: Array<{
+    id: string;
+    geometry: any;
+    properties?: any;
+  }>;
   polygonExistsForCurrentParcel?: boolean;
   currentParcelNumber?: string | number | null;
   targetAreaHa?: number; // Target parcel area in hectares for draw progress
@@ -338,6 +476,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       drawingDisabled,
       geometryPreview,
       shapes,
+      referenceShapes,
       polygonExistsForCurrentParcel,
       currentParcelNumber,
       targetAreaHa,
@@ -352,6 +491,103 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     const [drawnShapes, setDrawnShapes] = useState<any[]>([]);
     const [showPolygonLimitModal, setShowPolygonLimitModal] = useState(false);
     const [pendingLayerToRemove, setPendingLayerToRemove] = useState<any>(null);
+
+    const normalizedReferenceShapes = useMemo(() => {
+      if (!Array.isArray(referenceShapes)) return [];
+
+      const normalizeGeometries = (value: any) => {
+        if (!value) return [];
+
+        let geometryValue = value;
+        if (typeof geometryValue === "string") {
+          try {
+            geometryValue = JSON.parse(geometryValue);
+          } catch {
+            return [];
+          }
+        }
+
+        if (geometryValue?.type === "Feature") {
+          return geometryValue.geometry ? [geometryValue.geometry] : [];
+        }
+
+        if (geometryValue?.type === "FeatureCollection") {
+          const featureGeometries = Array.isArray(geometryValue.features)
+            ? geometryValue.features
+                .map((feature: any) => feature?.geometry)
+                .filter(Boolean)
+            : [];
+          return featureGeometries;
+        }
+
+        if (
+          geometryValue?.type === "Polygon" ||
+          geometryValue?.type === "MultiPolygon" ||
+          geometryValue?.type === "Point" ||
+          geometryValue?.type === "MultiPoint"
+        ) {
+          return [geometryValue];
+        }
+
+        return [];
+      };
+
+      return referenceShapes
+        .flatMap((shape) => {
+          const geometries = normalizeGeometries(shape?.geometry);
+          if (!geometries.length) return [];
+
+          const idBase = String(shape?.id || "reference");
+
+          return geometries.map((geometry: any, index: number) => {
+            const suffix = geometries.length === 1 ? "" : `-${index}`;
+            return {
+              id: `${idBase}${suffix}`,
+              geometry,
+              properties: shape?.properties || {},
+            };
+          });
+        })
+        .filter(Boolean) as Array<{
+        id: string;
+        geometry: any;
+        properties: any;
+      }>;
+    }, [referenceShapes]);
+
+    const referencePolygonFeatureCollection = useMemo(() => {
+      const polygonShapes = normalizedReferenceShapes.filter((shape) => {
+        const geometryType = String(shape?.geometry?.type || "");
+        return geometryType === "Polygon" || geometryType === "MultiPolygon";
+      });
+      if (!polygonShapes.length) return null;
+
+      return {
+        type: "FeatureCollection",
+        features: polygonShapes.map((shape) => ({
+          type: "Feature",
+          geometry: shape.geometry,
+          properties: shape.properties || {},
+        })),
+      } as any;
+    }, [normalizedReferenceShapes]);
+
+    const referencePointFeatureCollection = useMemo(() => {
+      const pointShapes = normalizedReferenceShapes.filter((shape) => {
+        const geometryType = String(shape?.geometry?.type || "");
+        return geometryType === "Point" || geometryType === "MultiPoint";
+      });
+      if (!pointShapes.length) return null;
+
+      return {
+        type: "FeatureCollection",
+        features: pointShapes.map((shape) => ({
+          type: "Feature",
+          geometry: shape.geometry,
+          properties: shape.properties || {},
+        })),
+      } as any;
+    }, [normalizedReferenceShapes]);
 
     // Helper to normalize barangay names for matching
     function normalizeName(name: string) {
@@ -456,12 +692,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           ) {
             // Reset style for all drawn layers
             if (layer instanceof L.Path) {
-              layer.setStyle({
-                color: "white",
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0,
-              });
+              layer.setStyle(OWN_PARCEL_STYLE);
               console.log("Resetting style for drawn layer:", layer);
             }
             // Check if the layer has editing handlers before trying to disable
@@ -503,12 +734,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             console.log("Highlighting layer:", layerToHighlight);
             // Apply highlighting style
             if (layerToHighlight instanceof L.Path) {
-              layerToHighlight.setStyle({
-                color: "blue",
-                weight: 3,
-                opacity: 1,
-                fillOpacity: 0.5,
-              });
+              layerToHighlight.setStyle(OWN_PARCEL_SELECTED_STYLE);
               console.log(
                 "Applied highlight style for layer:",
                 layerToHighlight,
@@ -631,11 +857,17 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           if (shape.layer && !featureGroupRef.current?.hasLayer(shape.layer)) {
             featureGroupRef.current?.addLayer(shape.layer);
             console.log(`   ✅ Added shape ${shape.id} to map`);
+            if (shape.layer instanceof L.Path) {
+              shape.layer.setStyle(OWN_PARCEL_STYLE);
+            }
             if (shape.properties) {
               shape.layer.bindPopup(getPopupContent(shape.properties));
             }
           } else if (shape.layer) {
             console.log(`   ⚠️ Shape ${shape.id} already on map`);
+            if (shape.layer instanceof L.Path) {
+              shape.layer.setStyle(OWN_PARCEL_STYLE);
+            }
           } else {
             console.log(`   ❌ Shape ${shape.id} has no layer!`);
           }
@@ -746,6 +978,65 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       });
     }
 
+    const getShapeGeometry = (shape: any) => {
+      if (!shape?.layer || typeof shape.layer.toGeoJSON !== "function") {
+        return null;
+      }
+      return shape.layer.toGeoJSON();
+    };
+
+    const isPolygonGeometry = (featureOrGeometry: any) => {
+      const geometryType =
+        featureOrGeometry?.geometry?.type || featureOrGeometry?.type;
+      return geometryType === "Polygon" || geometryType === "MultiPolygon";
+    };
+
+    const hasParcelOverlap = (candidate: any, existing: any) => {
+      if (!isPolygonGeometry(candidate) || !isPolygonGeometry(existing)) {
+        return false;
+      }
+
+      try {
+        if (!booleanIntersects(candidate, existing)) {
+          return false;
+        }
+        // Edge/corner touching is allowed. Only reject true area overlap.
+        return !booleanTouches(candidate, existing);
+      } catch (error) {
+        console.error("Error during overlap check:", error);
+        return false;
+      }
+    };
+
+    const findOverlappingShape = (candidate: any, excludeShapeId?: string) => {
+      if (!isPolygonGeometry(candidate)) {
+        return null;
+      }
+
+      const overlappingDrawnShape =
+        drawnShapes.find((shape) => {
+          if (excludeShapeId && String(shape?.id) === String(excludeShapeId)) {
+            return false;
+          }
+
+          const existingGeometry = getShapeGeometry(shape);
+          return (
+            existingGeometry && hasParcelOverlap(candidate, existingGeometry)
+          );
+        }) || null;
+
+      if (overlappingDrawnShape) {
+        return overlappingDrawnShape;
+      }
+
+      const overlappingReferenceShape =
+        normalizedReferenceShapes.find((shape) =>
+          hasParcelOverlap(candidate, shape.geometry),
+        ) || null;
+
+      return overlappingReferenceShape;
+    };
+
     const onCreated = (e: any) => {
       console.log("Shape created (onCreated event)", e);
       const { layer } = e;
@@ -766,6 +1057,18 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           // Do NOT remove the layer yet; wait for user to click OK
           return;
         }
+
+        const overlappingShape = findOverlappingShape(geoJson);
+        if (overlappingShape) {
+          if (featureGroupRef.current?.hasLayer(layer)) {
+            featureGroupRef.current.removeLayer(layer);
+          }
+          alert(
+            "Drawn parcel overlaps another plotted parcel. Please redraw without overlap.",
+          );
+          return;
+        }
+
         // Find the correct barangay boundary feature
         let boundaryFeature = null;
         if (!barangayName) {
@@ -877,6 +1180,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       if (featureGroupRef.current && !featureGroupRef.current.hasLayer(layer)) {
         featureGroupRef.current.addLayer(layer);
       }
+      if (layer instanceof L.Path) {
+        layer.setStyle(OWN_PARCEL_STYLE);
+      }
       // Bind popup with parcel details
       if (layer && newShape && newShape.properties) {
         layer.bindPopup(getPopupContent(newShape.properties));
@@ -893,17 +1199,31 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     const onEdited = (e: any) => {
       console.log("Shape edited (onEdited event)", e);
       const editedLayers = e.layers.getLayers();
+      const blockedEditShapeIds = new Set<string>();
 
       const updatedShapes = drawnShapes.map((shape) => {
         const editedLayer = editedLayers.find(
           (layer: any) => layer.options.id === shape.id,
         );
         if (editedLayer) {
+          const editedGeoJson = editedLayer.toGeoJSON();
+          const overlappingShape = findOverlappingShape(
+            editedGeoJson,
+            shape.id,
+          );
+          if (overlappingShape) {
+            blockedEditShapeIds.add(String(shape.id));
+            alert(
+              "Edited parcel overlaps another plotted parcel. Please adjust the boundary.",
+            );
+            return shape;
+          }
+
           console.log(
             "Updating edited shape:",
             shape.id,
             "Geometry type:",
-            editedLayer.toGeoJSON().geometry.type,
+            editedGeoJson.geometry.type,
           );
 
           const updatedShape = {
@@ -914,8 +1234,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
               // Update geometry-related properties if needed
               // Only calculate area if the layer is a Polygon and supports getArea
               area:
-                editedLayer.toGeoJSON().geometry.type === "Polygon" &&
-                editedLayer.getArea
+                editedGeoJson.geometry.type === "Polygon" && editedLayer.getArea
                   ? editedLayer.getArea()
                   : shape.properties.area,
             },
@@ -923,7 +1242,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
           // Basic boundary check for edited shapes (simplified) - only for Polygons
           if (
-            editedLayer.toGeoJSON().geometry.type === "Polygon" &&
+            editedGeoJson.geometry.type === "Polygon" &&
             boundaryData &&
             boundaryData.features &&
             boundaryData.features.length > 0
@@ -969,8 +1288,10 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
       console.log("drawnShapes updated after edit");
 
       // Find the edited shape to pass to onShapeEdited
-      const editedShape = updatedShapes.find((shape) =>
-        editedLayers.some((layer: any) => layer.options.id === shape.id),
+      const editedShape = updatedShapes.find(
+        (shape) =>
+          !blockedEditShapeIds.has(String(shape.id)) &&
+          editedLayers.some((layer: any) => layer.options.id === shape.id),
       );
 
       if (onShapeEdited && editedShape) {
@@ -1190,6 +1511,13 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
               return null;
             })()}
 
+          {referencePolygonFeatureCollection && (
+            <GeoJSON
+              data={referencePolygonFeatureCollection}
+              style={REFERENCE_PARCEL_STYLE}
+            />
+          )}
+
           <FeatureGroup ref={featureGroupRef}>
             <EditControl
               position="topright"
@@ -1222,6 +1550,25 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
               />
             )}
           </FeatureGroup>
+
+          {referencePointFeatureCollection && (
+            <GeoJSON
+              data={referencePointFeatureCollection}
+              pointToLayer={(_, latlng) =>
+                L.circleMarker(latlng, REFERENCE_POINT_STYLE)
+              }
+            />
+          )}
+
+          <AutoFitMapData
+            shapes={drawnShapes}
+            referencePolygonFeatureCollection={referencePolygonFeatureCollection}
+            referencePointFeatureCollection={referencePointFeatureCollection}
+            geometryPreview={geometryPreview}
+            fitKey={`${String(currentParcelNumber || "")}:${String(
+              barangayName || "",
+            )}`}
+          />
 
           {/* {boundaryData && <MapController data={boundaryData} />} */}
           <DrawAreaTracker targetAreaHa={targetAreaHa} />

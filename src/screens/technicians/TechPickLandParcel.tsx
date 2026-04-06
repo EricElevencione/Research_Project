@@ -205,6 +205,9 @@ const TechPickLandParcel: React.FC = () => {
     if (isLessee && !isOwner && !isTenant) {
       return { label: "Lessee", className: "lessee" };
     }
+    if (isTenant && isLessee && !isOwner) {
+      return { label: "Tenant + Lessee", className: "mixed" };
+    }
     return { label: "Mixed Ownership", className: "mixed" };
   };
 

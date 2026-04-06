@@ -32,6 +32,8 @@ interface FarmerData {
     registeredOwner: boolean;
     tenant: boolean;
     lessee: boolean;
+    tenantLessee?: boolean;
+    category?: "registeredOwner" | "tenantLessee" | "unknown";
   };
 }
 
@@ -285,9 +287,49 @@ const TechFarmerProf: React.FC = () => {
 
   const getOwnershipType = () => {
     if (!farmer?.ownershipType) return "N/A";
-    if (farmer.ownershipType.registeredOwner) return "Registered Owner";
-    if (farmer.ownershipType.tenant) return "Tenant";
-    if (farmer.ownershipType.lessee) return "Lessee";
+
+    const hasTenant = farmer.ownershipType.tenant === true;
+    const hasLessee = farmer.ownershipType.lessee === true;
+    const hasTenantLessee =
+      farmer.ownershipType.tenantLessee === true || hasTenant || hasLessee;
+
+    if (
+      farmer.ownershipType.category === "registeredOwner" ||
+      farmer.ownershipType.registeredOwner
+    ) {
+      return "Registered Owner";
+    }
+
+    if (hasTenant && hasLessee) {
+      return "Tenant + Lessee";
+    }
+
+    if (hasTenant) {
+      return "Tenant";
+    }
+
+    if (hasLessee) {
+      return "Lessee";
+    }
+
+    if (farmer.ownershipType.category === "tenantLessee" || hasTenantLessee) {
+      return "Tenant or Lessee";
+    }
+
+    return "N/A";
+  };
+
+  const getParcelOwnershipLabel = (parcel: Parcel) => {
+    if (parcel.ownership_type_registered_owner) return "Registered Owner";
+    if (parcel.ownership_type_tenant && parcel.ownership_type_lessee) {
+      return "Tenant + Lessee";
+    }
+    if (parcel.ownership_type_tenant) {
+      return "Tenant";
+    }
+    if (parcel.ownership_type_lessee) {
+      return "Lessee";
+    }
     return "N/A";
   };
 
@@ -560,15 +602,7 @@ const TechFarmerProf: React.FC = () => {
                             .join(", ") || "—"}
                         </td>
                         <td>{formatNumber(p.total_farm_area_ha, 2)}</td>
-                        <td>
-                          {p.ownership_type_registered_owner
-                            ? "Registered Owner"
-                            : p.ownership_type_tenant
-                              ? "Tenant"
-                              : p.ownership_type_lessee
-                                ? "Lessee"
-                                : "—"}
-                        </td>
+                        <td>{getParcelOwnershipLabel(p)}</td>
                         <td>{p.ownership_document_no || "—"}</td>
                       </tr>
                     ))}
@@ -906,13 +940,7 @@ const TechFarmerProf: React.FC = () => {
                                 Ownership Type:
                               </span>
                               <span className="info-value">
-                                {parcel.ownership_type_registered_owner
-                                  ? "Registered Owner"
-                                  : parcel.ownership_type_tenant
-                                    ? "Tenant"
-                                    : parcel.ownership_type_lessee
-                                      ? "Lessee"
-                                      : "N/A"}
+                                {getParcelOwnershipLabel(parcel)}
                               </span>
                             </div>
                             {(parcel.tenant_land_owner_name ||

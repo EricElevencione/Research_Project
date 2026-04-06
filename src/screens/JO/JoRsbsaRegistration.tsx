@@ -41,7 +41,7 @@ interface Parcel {
 }
 
 interface LandOwner {
-  id: string;
+  id: number;
   name: string;
   barangay?: string;
   municipality?: string;
@@ -171,6 +171,12 @@ const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  type OwnershipCategory =
+    | "registeredOwner"
+    | "tenantLessee"
+    | "tenant"
+    | "lessee";
+
   const [_activeTab] = useState("overview");
   const isActive = (path: string) => location.pathname === path;
   const [draftId, _setDraftId] = useState<string | null>(null);
@@ -178,9 +184,14 @@ const JoRsbsa: React.FC = () => {
   const [landowners, setLandowners] = useState<LandOwner[]>([]);
 
   // New state for ownership category selection
-  const [ownershipCategory, setOwnershipCategory] = useState<
-    "registeredOwner" | "tenant" | "lessee"
-  >("registeredOwner");
+  const [ownershipCategory, setOwnershipCategory] =
+    useState<OwnershipCategory>("registeredOwner");
+
+  const isTenantLesseeCategory = (category: OwnershipCategory) =>
+    category === "tenantLessee" ||
+    category === "tenant" ||
+    category === "lessee";
+
   const [selectedLandOwner, setSelectedLandOwner] = useState<any>(null);
   const [landOwnerSearchTerm, setLandOwnerSearchTerm] = useState("");
   const [showLandOwnerDropdown, setShowLandOwnerDropdown] = useState(false);
@@ -243,26 +254,39 @@ const JoRsbsa: React.FC = () => {
   useEffect(() => {
     const fetchRegisteredOwners = async () => {
       try {
-        // Fetch all registered owner submissions with their farm parcels
-        const { data: submissions, error: subError } = await supabase
-          .from("rsbsa_submission")
-          .select('id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "BARANGAY"')
-          .eq("OWNERSHIP_TYPE_REGISTERED_OWNER", true)
-          .order('"LAST NAME"', { ascending: true });
-
-        if (subError || !submissions || submissions.length === 0) {
-          console.error("Error fetching registered owners:", subError);
+        const ownersResponse = await getLandOwners();
+        if (ownersResponse.error) {
+          console.error(
+            "Error fetching registered owners:",
+            ownersResponse.error,
+          );
+          setAllRegisteredOwners([]);
           return;
         }
 
-        // Get all farm parcels for these submissions
-        const submissionIds = submissions.map((s: any) => s.id);
+        const owners = (ownersResponse.data || []) as LandOwner[];
+        if (!owners.length) {
+          setAllRegisteredOwners([]);
+          return;
+        }
+
+        const ownerIds = owners
+          .map((owner) => Number(owner.id))
+          .filter((id) => Number.isFinite(id));
+
+        if (!ownerIds.length) {
+          setAllRegisteredOwners([]);
+          return;
+        }
+
         const { data: parcels, error: parcelError } = await supabase
           .from("rsbsa_farm_parcels")
           .select(
-            "id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, submission_id",
+            "id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, submission_id, ownership_type_registered_owner, is_current_owner",
           )
-          .in("submission_id", submissionIds);
+          .in("submission_id", ownerIds)
+          .eq("ownership_type_registered_owner", true)
+          .or("is_current_owner.is.null,is_current_owner.eq.true");
 
         if (parcelError) {
           console.error("Error fetching parcels:", parcelError);
@@ -271,9 +295,10 @@ const JoRsbsa: React.FC = () => {
 
         // Build name lookup
         const nameMap: Record<number, string> = {};
-        submissions.forEach((s: any) => {
-          nameMap[s.id] =
-            `${s["FIRST NAME"] || ""} ${s["MIDDLE NAME"] || ""} ${s["LAST NAME"] || ""}`.trim();
+        owners.forEach((owner) => {
+          const ownerId = Number(owner.id);
+          if (!Number.isFinite(ownerId)) return;
+          nameMap[ownerId] = owner.name;
         });
 
         // Map parcels to ExistingParcel format
@@ -426,8 +451,8 @@ const JoRsbsa: React.FC = () => {
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
         ownershipTypeRegisteredOwner: ownershipCategory === "registeredOwner",
-        ownershipTypeTenant: ownershipCategory === "tenant",
-        ownershipTypeLessee: ownershipCategory === "lessee",
+        ownershipTypeTenant: isTenantLesseeCategory(ownershipCategory),
+        ownershipTypeLessee: false,
         ownershipTypeOthers: false,
         tenantLandOwnerName: "",
         lesseeLandOwnerName: "",
@@ -446,9 +471,7 @@ const JoRsbsa: React.FC = () => {
   };
 
   // Handle ownership category change (Registered Owner, Tenant, Lessee)
-  const handleOwnershipCategoryChange = (
-    category: "registeredOwner" | "tenant" | "lessee",
-  ) => {
+  const handleOwnershipCategoryChange = (category: OwnershipCategory) => {
     setOwnershipCategory(category);
     setSelectedLandOwner(null);
     setLandOwnerSearchTerm("");
@@ -462,15 +485,18 @@ const JoRsbsa: React.FC = () => {
       parcelSelection: "",
     }));
 
+    const isTenant = category === "tenant" || category === "tenantLessee";
+    const isLessee = category === "lessee";
+
     // Clear or set ownership type checkboxes based on selection
     setFormData((prev) => {
       const parcels = prev.farmlandParcels.map((p) => ({
         ...p,
         ownershipTypeRegisteredOwner: category === "registeredOwner",
-        ownershipTypeTenant: category === "tenant",
-        ownershipTypeLessee: category === "lessee",
-        tenantLandOwnerName: "",
-        lesseeLandOwnerName: "",
+        ownershipTypeTenant: isTenant,
+        ownershipTypeLessee: isLessee,
+        tenantLandOwnerName: isTenant ? p.tenantLandOwnerName : "",
+        lesseeLandOwnerName: isLessee ? p.lesseeLandOwnerName : "",
       }));
       return { ...prev, farmlandParcels: parcels };
     });
@@ -486,9 +512,19 @@ const JoRsbsa: React.FC = () => {
 
     // Fetch the land owner's parcels to show for selection
     try {
-      const response = await getFarmParcels(owner.id);
+      const response = await getFarmParcels(owner.id, {
+        currentOwnerOnly: true,
+      });
       if (!response.error) {
-        const parcels = response.data || [];
+        const parcels = (response.data || []).filter((parcel: any) => {
+          if (!parcel) return false;
+          const isOwnerParcel =
+            parcel.ownership_type_registered_owner === undefined
+              ? true
+              : parcel.ownership_type_registered_owner === true;
+          const isCurrent = parcel.is_current_owner !== false;
+          return isOwnerParcel && isCurrent;
+        });
         console.log("Fetched land owner parcels:", parcels);
         setOwnerParcels(parcels);
 
@@ -506,13 +542,14 @@ const JoRsbsa: React.FC = () => {
   };
 
   // Handle parcel selection toggle
-  const handleParcelSelectionToggle = (parcelId: string) => {
+  const handleParcelSelectionToggle = (parcelId: string | number) => {
+    const normalizedParcelId = String(parcelId);
     setSelectedParcelIds((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(parcelId)) {
-        newSet.delete(parcelId);
+      if (newSet.has(normalizedParcelId)) {
+        newSet.delete(normalizedParcelId);
       } else {
-        newSet.add(parcelId);
+        newSet.add(normalizedParcelId);
       }
       return newSet;
     });
@@ -522,8 +559,11 @@ const JoRsbsa: React.FC = () => {
   // Apply selected parcels to form data (called internally after confirmation)
   const applySelectedParcels = () => {
     const selectedParcels = ownerParcels.filter((p) =>
-      selectedParcelIds.has(p.id),
+      selectedParcelIds.has(String(p.id)),
     );
+    const isTenant =
+      ownershipCategory === "tenant" || ownershipCategory === "tenantLessee";
+    const isLessee = ownershipCategory === "lessee";
 
     console.log("📋 Applying selected parcels:", selectedParcels);
 
@@ -540,13 +580,11 @@ const JoRsbsa: React.FC = () => {
           agrarianReformBeneficiary:
             ownerParcel.agrarian_reform_beneficiary || "",
           ownershipTypeRegisteredOwner: false,
-          ownershipTypeTenant: ownershipCategory === "tenant",
-          ownershipTypeLessee: ownershipCategory === "lessee",
+          ownershipTypeTenant: isTenant,
+          ownershipTypeLessee: isLessee,
           ownershipTypeOthers: false,
-          tenantLandOwnerName:
-            ownershipCategory === "tenant" ? selectedLandOwner.name : "",
-          lesseeLandOwnerName:
-            ownershipCategory === "lessee" ? selectedLandOwner.name : "",
+          tenantLandOwnerName: isTenant ? selectedLandOwner.name : "",
+          lesseeLandOwnerName: isLessee ? selectedLandOwner.name : "",
           ownershipOthersSpecify: "",
           // IMPORTANT: Include existing parcel info for ownership transfer tracking
           existingParcelId: ownerParcel.land_parcel_id || ownerParcel.id,
@@ -644,7 +682,7 @@ const JoRsbsa: React.FC = () => {
       }
 
       // For Tenant/Lessee: validate land owner selection and parcel selection
-      if (ownershipCategory === "tenant" || ownershipCategory === "lessee") {
+      if (isTenantLesseeCategory(ownershipCategory)) {
         if (!selectedLandOwner) {
           newErrors.landOwner = "Please search and select the land owner";
         } else if (selectedParcelIds.size === 0) {
@@ -656,8 +694,13 @@ const JoRsbsa: React.FC = () => {
       if (Object.keys(newErrors).length > 0) return;
 
       // For Tenant/Lessee: Show confirmation dialog before proceeding
-      if (ownershipCategory === "tenant" || ownershipCategory === "lessee") {
-        const roleText = ownershipCategory === "tenant" ? "Tenant" : "Lessee";
+      if (isTenantLesseeCategory(ownershipCategory)) {
+        const roleText =
+          ownershipCategory === "tenant"
+            ? "Tenant"
+            : ownershipCategory === "lessee"
+              ? "Lessee"
+              : "Tenant or Lessee";
         setConfirmModal({
           show: true,
           roleText,
@@ -706,7 +749,7 @@ const JoRsbsa: React.FC = () => {
           "At least one parcel must include barangay and area";
     }
 
-    if (ownershipCategory === "tenant" || ownershipCategory === "lessee") {
+    if (isTenantLesseeCategory(ownershipCategory)) {
       if (!selectedLandOwner) {
         newErrors.landOwner = "Please select the land owner";
       }
@@ -1630,12 +1673,13 @@ const JoRsbsa: React.FC = () => {
                       "✓ As a Tenant, you will select your land owner. Farm details will be populated from the owner's data."}
                     {ownershipCategory === "lessee" &&
                       "✓ As a Lessee, you will select your land owner. Farm details will be populated from the owner's data."}
+                    {ownershipCategory === "tenantLessee" &&
+                      "✓ As a Tenant or Lessee, you will select your land owner. Farm details will be populated from the owner's data."}
                   </p>
                 </div>
 
                 {/* Land Owner Search for Tenant/Lessee */}
-                {(ownershipCategory === "tenant" ||
-                  ownershipCategory === "lessee") && (
+                {isTenantLesseeCategory(ownershipCategory) && (
                   <div
                     className="land-owner-search-section"
                     style={{
@@ -1760,8 +1804,7 @@ const JoRsbsa: React.FC = () => {
                 )}
 
                 {/* Parcel Selection for Tenant/Lessee */}
-                {(ownershipCategory === "tenant" ||
-                  ownershipCategory === "lessee") &&
+                {isTenantLesseeCategory(ownershipCategory) &&
                   selectedLandOwner &&
                   ownerParcels.length > 0 && (
                     <div
@@ -1818,10 +1861,12 @@ const JoRsbsa: React.FC = () => {
                               display: "flex",
                               alignItems: "flex-start",
                               padding: "1rem",
-                              backgroundColor: selectedParcelIds.has(parcel.id)
+                              backgroundColor: selectedParcelIds.has(
+                                String(parcel.id),
+                              )
                                 ? "#c8e6c9"
                                 : "white",
-                              border: selectedParcelIds.has(parcel.id)
+                              border: selectedParcelIds.has(String(parcel.id))
                                 ? "2px solid #4caf50"
                                 : "2px solid #dee2e6",
                               borderRadius: "6px",
@@ -1829,22 +1874,22 @@ const JoRsbsa: React.FC = () => {
                               transition: "all 0.3s",
                             }}
                             onMouseEnter={(e) => {
-                              if (!selectedParcelIds.has(parcel.id)) {
+                              if (!selectedParcelIds.has(String(parcel.id))) {
                                 e.currentTarget.style.backgroundColor =
                                   "#f5f5f5";
                               }
                             }}
                             onMouseLeave={(e) => {
-                              if (!selectedParcelIds.has(parcel.id)) {
+                              if (!selectedParcelIds.has(String(parcel.id))) {
                                 e.currentTarget.style.backgroundColor = "white";
                               }
                             }}
                           >
                             <input
                               type="checkbox"
-                              checked={selectedParcelIds.has(parcel.id)}
+                              checked={selectedParcelIds.has(String(parcel.id))}
                               onChange={() =>
-                                handleParcelSelectionToggle(parcel.id)
+                                handleParcelSelectionToggle(String(parcel.id))
                               }
                               style={{
                                 marginRight: "1rem",
@@ -2381,9 +2426,13 @@ const JoRsbsa: React.FC = () => {
                                 parcel.ownershipTypeRegisteredOwner &&
                                   "Registered Owner",
                                 parcel.ownershipTypeTenant &&
-                                  `Tenant (${parcel.tenantLandOwnerName})`,
+                                  (parcel.tenantLandOwnerName
+                                    ? `Tenant (${parcel.tenantLandOwnerName})`
+                                    : "Tenant"),
                                 parcel.ownershipTypeLessee &&
-                                  `Lessee (${parcel.lesseeLandOwnerName})`,
+                                  (parcel.lesseeLandOwnerName
+                                    ? `Lessee (${parcel.lesseeLandOwnerName})`
+                                    : "Lessee"),
                                 parcel.ownershipTypeOthers &&
                                   `Others: ${parcel.ownershipOthersSpecify}`,
                               ]
