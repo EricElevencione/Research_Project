@@ -16,8 +16,16 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 16px;
+  padding: 20px;
   overflow: auto;
+  background: linear-gradient(
+    135deg,
+    #e8f5e9 0%,
+    #f1f8e9 25%,
+    #ffffff 50%,
+    #e8f5e9 75%,
+    #c8e6c9 100%
+  );
 }
 
 .jo-land-history-report-header {
@@ -26,7 +34,8 @@
 
 .jo-land-history-report-header h1 {
   margin: 0;
-  font-size: 24px;
+  font-weight: 600;
+  font-size: 26px;
   color: #0f172a;
 }
 
@@ -197,6 +206,63 @@
   padding: 2px 8px;
 }
 
+.jo-land-history-association-headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.jo-land-history-association-headline .jo-land-history-association-chip {
+  font-size: 12px;
+  color: #1e3a8a;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 700;
+}
+
+.jo-land-history-association-headline .jo-land-history-association-why {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.jo-land-history-association-toggle {
+  margin-left: auto;
+  height: 30px;
+  min-width: 70px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.jo-land-history-association-toggle:hover {
+  background: #f8fafc;
+}
+
+.jo-land-history-association-help {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
 .jo-land-history-association-empty {
   margin: 0;
   font-size: 12px;
@@ -228,13 +294,95 @@
   gap: 3px;
 }
 
-.jo-land-history-association-list li strong {
+.jo-land-history-association-list > li > strong {
   font-size: 13px;
   color: #0f172a;
 }
 
-.jo-land-history-association-list li span,
-.jo-land-history-association-list li small {
+.jo-land-history-association-list li.jo-land-history-linked-owner-item {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px;
+  gap: 8px;
+}
+
+.jo-land-history-linked-owner-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jo-land-history-linked-owner-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e3a8a;
+  color: #93c5fd;
+  font-weight: 700;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.jo-land-history-linked-owner-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jo-land-history-linked-owner-identity strong {
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.jo-land-history-linked-owner-identity small {
+  color: #475569;
+  font-size: 13px;
+}
+
+.jo-land-history-linked-owner-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.jo-land-history-linked-owner-stat {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: center;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jo-land-history-linked-owner-stat strong {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.jo-land-history-linked-owner-stat span {
+  font-size: 12px;
+  color: #475569;
+}
+
+.jo-land-history-linked-owner-reason {
+  margin: 0;
+  font-size: 13px;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.jo-land-history-association-list > li > span,
+.jo-land-history-association-list > li > small {
   font-size: 11px;
   color: #334155;
 }
@@ -342,6 +490,250 @@
   margin: 8px 0 0;
   font-size: 11px;
   color: #475569;
+}
+
+.jo-land-history-transfer-timeline-card {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.jo-land-history-transfer-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.jo-land-history-transfer-timeline-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.jo-land-history-transfer-timeline-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.jo-land-history-transfer-events-chip {
+  font-size: 12px;
+  color: #e5e7eb;
+  background: #2f3430;
+  border: 1px solid #4b5563;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 700;
+}
+
+.jo-land-history-transfer-sort-label {
+  font-size: 13px;
+  color: #334155;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.jo-land-history-transfer-timeline-subtitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.jo-land-history-transfer-timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 560px;
+  overflow: auto;
+}
+
+.jo-land-history-transfer-timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.jo-land-history-transfer-timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 0;
+  bottom: -14px;
+  width: 2px;
+  background: rgba(148, 163, 184, 0.6);
+}
+
+.jo-land-history-transfer-timeline-item:last-child::before {
+  bottom: 26px;
+}
+
+.jo-land-history-transfer-rail-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  margin-top: 24px;
+  margin-left: 5px;
+  background: #374151;
+  border: 2px solid #9ca3af;
+  z-index: 1;
+}
+
+.jo-land-history-transfer-timeline-item.is-current
+  .jo-land-history-transfer-rail-dot {
+  background: #14532d;
+  border-color: #4ade80;
+}
+
+.jo-land-history-transfer-event-card {
+  border: 1px solid #4b5563;
+  background: linear-gradient(130deg, #2f2f2f 0%, #3a3a3a 100%);
+  border-radius: 16px;
+  padding: 14px;
+  color: #e5e7eb;
+}
+
+.jo-land-history-transfer-event-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.jo-land-history-transfer-event-date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.jo-land-history-transfer-event-date {
+  font-size: 24px;
+  color: #d1d5db;
+  font-weight: 500;
+}
+
+.jo-land-history-transfer-event-status {
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid #6b7280;
+  padding: 3px 14px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.jo-land-history-transfer-event-status.is-current {
+  background: #14532d;
+  border-color: #166534;
+  color: #86efac;
+}
+
+.jo-land-history-transfer-event-status.is-past {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+.jo-land-history-transfer-event-type {
+  font-size: 11px;
+  color: #e5e7eb;
+  background: rgba(31, 41, 55, 0.9);
+  border: 1px solid #4b5563;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 600;
+}
+
+.jo-land-history-transfer-event-flow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: #f3f4f6;
+  flex-wrap: wrap;
+}
+
+.jo-land-history-transfer-event-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e3a8a;
+  color: #93c5fd;
+  border: 1px solid #1d4ed8;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.jo-land-history-transfer-event-flow strong {
+  font-size: 16px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.jo-land-history-transfer-event-arrow {
+  font-size: 24px;
+  color: #9ca3af;
+  line-height: 1;
+}
+
+.jo-land-history-transfer-event-flow em {
+  font-size: 16px;
+  line-height: 1.1;
+  font-style: italic;
+  color: #d1d5db;
+}
+
+.jo-land-history-transfer-event-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.jo-land-history-transfer-event-metric {
+  border: 1px solid #3f3f46;
+  border-radius: 12px;
+  background: rgba(31, 41, 55, 0.78);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jo-land-history-transfer-event-metric span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+  color: #9ca3af;
+}
+
+.jo-land-history-transfer-event-metric strong {
+  font-size: 18px;
+  line-height: 1.2;
+  color: #f3f4f6;
+}
+
+.jo-land-history-transfer-event-reason {
+  margin: 10px 0 0;
+  border-top: 1px dashed #52525b;
+  padding-top: 8px;
+  font-size: 12px;
+  color: #d1d5db;
 }
 
 .jo-land-history-report-kpis {
@@ -562,23 +954,27 @@
 }
 
 .jo-land-history-modal-header .jo-land-history-report-btn {
-  background: rgba(255, 255, 255, 0.14);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-  border-radius: 999px;
-  width: 42px;
-  height: 42px;
+  background: #f3f4f6;
+  border: none;
+  color: #374151;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
   padding: 0;
-  font-size: 32px;
+  font-size: 22px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .jo-land-history-modal-header .jo-land-history-report-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.28);
-  transform: rotate(90deg);
+  background: #e5e7eb;
+  transform: translateY(-1px);
 }
 
 .jo-land-history-modal-block {
@@ -682,6 +1078,42 @@
   }
 
   .jo-land-history-modal-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .jo-land-history-linked-owner-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .jo-land-history-transfer-timeline-header {
+    align-items: flex-start;
+  }
+
+  .jo-land-history-transfer-event-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .jo-land-history-transfer-event-date {
+    font-size: 18px;
+  }
+
+  .jo-land-history-transfer-event-flow strong,
+  .jo-land-history-transfer-event-flow em {
+    font-size: 24px;
+  }
+
+  .jo-land-history-transfer-event-arrow {
+    font-size: 22px;
+  }
+
+  .jo-land-history-transfer-event-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .jo-land-history-transfer-event-grid {
     grid-template-columns: 1fr;
   }
 }

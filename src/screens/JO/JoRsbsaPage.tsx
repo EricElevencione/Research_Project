@@ -90,20 +90,8 @@ const JoRsbsaPage: React.FC = () => {
     key: SortKey;
     direction: SortDirection;
   }>({ key: "dateSubmitted", direction: "desc" });
-  const [showArchived, setShowArchived] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const isActive = (path: string) => location.pathname === path;
-
-  const noParcelsCount = React.useMemo(
-    () =>
-      _rsbsaRecords.filter(
-        (record: any) =>
-          String(record.status ?? "")
-            .toLowerCase()
-            .trim() === "no parcels",
-      ).length,
-    [_rsbsaRecords],
-  );
 
   // Fetch RSBSA records from API
   const fetchRSBSARecords = async () => {
@@ -167,21 +155,10 @@ const JoRsbsaPage: React.FC = () => {
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
     console.log("Total records to filter:", records.length);
     const filtered = records.filter((record: any) => {
-      // Exclude farmers with 'No Parcels' status unless showArchived is on
-      const recordStatus = String(record.status ?? "")
-        .toLowerCase()
-        .trim();
-      if (recordStatus === "no parcels" && !showArchived) {
-        console.log(
-          `Hiding ${record.farmerName}: status is No Parcels (archived)`,
-        );
-        return false;
-      }
-
-      // Exclude farmers who have transferred ALL their parcels
-      // hasCurrentParcels: true = has current parcels, false = all transferred, undefined = no parcels yet
-      if (record.hasCurrentParcels === false && recordStatus !== "no parcels") {
-        console.log(`Excluding ${record.farmerName}: all parcels transferred`);
+      // Keep only farmers with current parcels.
+      // hasCurrentParcels: true = has current parcels, false = all transferred, undefined = no parcels yet.
+      if (record.hasCurrentParcels !== true) {
+        console.log(`Excluding ${record.farmerName}: no current parcels`);
         return false;
       }
 
@@ -395,22 +372,14 @@ const JoRsbsaPage: React.FC = () => {
     fetchRSBSARecords();
   }, []);
 
-  // Re-filter registered owners when showArchived changes
+  // Re-filter registered owners when source records change.
   useEffect(() => {
     if (_rsbsaRecords.length > 0) {
-      const refiltered = _rsbsaRecords.filter((record: any) => {
-        const recordStatus = String(record.status ?? "")
-          .toLowerCase()
-          .trim();
-        if (recordStatus === "no parcels" && !showArchived) return false;
-        if (record.hasCurrentParcels === false && recordStatus !== "no parcels")
-          return false;
-        if (!record.ownershipType) return false;
-        return record.ownershipType.registeredOwner === true;
-      });
-      setRegisteredOwners(refiltered);
+      setRegisteredOwners(filterRegisteredOwners(_rsbsaRecords));
+    } else {
+      setRegisteredOwners([]);
     }
-  }, [showArchived, _rsbsaRecords]);
+  }, [_rsbsaRecords]);
 
   // Get unique barangays from registered owners
   const uniqueBarangays = React.useMemo(() => {
@@ -423,6 +392,31 @@ const JoRsbsaPage: React.FC = () => {
       }
     });
     return Array.from(barangays).sort();
+  }, [registeredOwners]);
+
+  const statusCounts = React.useMemo(() => {
+    const activeStatuses = new Set([
+      "submitted",
+      "approved",
+      "active",
+      "active farmer",
+    ]);
+
+    const active = registeredOwners.filter((record) =>
+      activeStatuses.has(
+        String(record.status || "")
+          .toLowerCase()
+          .trim(),
+      ),
+    ).length;
+    const total = registeredOwners.length;
+    const inactive = Math.max(0, total - active);
+
+    return {
+      total,
+      active,
+      inactive,
+    };
   }, [registeredOwners]);
 
   // Filter registered owners based on search query and filters
@@ -776,6 +770,42 @@ const JoRsbsaPage: React.FC = () => {
             View and manage registered land owners from RSBSA submissions
           </p>
 
+          {!loading && !error && (
+            <div className="jo-rsbsa-status-cards">
+              <div className="jo-rsbsa-status-card jo-rsbsa-card-total">
+                <div className="jo-rsbsa-card-icon">👥</div>
+                <div className="jo-rsbsa-card-info">
+                  <span className="jo-rsbsa-card-count">
+                    {statusCounts.total}
+                  </span>
+                  <span className="jo-rsbsa-card-label">Total Land Owners</span>
+                </div>
+              </div>
+              <div className="jo-rsbsa-status-card jo-rsbsa-card-active">
+                <div className="jo-rsbsa-card-icon">✅</div>
+                <div className="jo-rsbsa-card-info">
+                  <span className="jo-rsbsa-card-count">
+                    {statusCounts.active}
+                  </span>
+                  <span className="jo-rsbsa-card-label">
+                    Active Land Owners
+                  </span>
+                </div>
+              </div>
+              <div className="jo-rsbsa-status-card jo-rsbsa-card-inactive">
+                <div className="jo-rsbsa-card-icon">❌</div>
+                <div className="jo-rsbsa-card-info">
+                  <span className="jo-rsbsa-card-count">
+                    {statusCounts.inactive}
+                  </span>
+                  <span className="jo-rsbsa-card-label">
+                    Inactive Land Owners
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="jo-rsbsa-content-card">
             <div className="jo-rsbsa-actions-bar">
               <div className="jo-rsbsa-search-container">
@@ -811,15 +841,6 @@ const JoRsbsaPage: React.FC = () => {
                 </select>
               </div>
 
-              <label className="jo-rsbsa-archived-toggle">
-                <input
-                  type="checkbox"
-                  checked={showArchived}
-                  onChange={(e) => setShowArchived(e.target.checked)}
-                />
-                Include Archived ({noParcelsCount})
-              </label>
-
               <button
                 className="jo-rsbsa-register-button"
                 onClick={() => navigate("/jo-rsbsa")}
@@ -827,12 +848,6 @@ const JoRsbsaPage: React.FC = () => {
                 Register Farmer
               </button>
             </div>
-            {!showArchived && noParcelsCount > 0 && (
-              <div className="jo-rsbsa-no-parcels-warning">
-                {noParcelsCount} farmer{noParcelsCount === 1 ? "" : "s"} with No
-                Parcels are hidden. Enable Include Archived to review them.
-              </div>
-            )}
             {loading ? (
               <div className="jo-rsbsa-loading-container">
                 <p>Loading registered land owners...</p>
@@ -902,6 +917,7 @@ const JoRsbsaPage: React.FC = () => {
                           <span>{getSortIndicator("parcelArea")}</span>
                         </button>
                       </th>
+                      <th>Ownership Status</th>
                       <th>
                         <button
                           className={`jo-rsbsa-sort-btn ${
@@ -924,7 +940,7 @@ const JoRsbsaPage: React.FC = () => {
                   <tbody>
                     {filteredOwners.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="jo-rsbsa-no-data">
+                        <td colSpan={6} className="jo-rsbsa-no-data">
                           {searchQuery
                             ? "No results found for your search"
                             : "No registered owners found"}
@@ -965,12 +981,14 @@ const JoRsbsaPage: React.FC = () => {
                                 <span className="jo-rsbsa-parcel-area">
                                   {formatParcelArea(record.totalFarmArea)}
                                 </span>
-                                <span
-                                  className={`jo-rsbsa-ownership-pill ${getOwnershipClass(record)}`}
-                                >
-                                  {getOwnershipLabel(record)}
-                                </span>
                               </div>
+                            </td>
+                            <td>
+                              <span
+                                className={`jo-rsbsa-ownership-pill ${getOwnershipClass(record)}`}
+                              >
+                                {getOwnershipLabel(record)}
+                              </span>
                             </td>
                             <td>
                               <span className="jo-rsbsa-date">

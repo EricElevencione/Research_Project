@@ -96,6 +96,9 @@ const JoLandHistoryReport: React.FC = () => {
   >([]);
   const [farmerModalLoading, setFarmerModalLoading] = useState(false);
   const [farmerModalError, setFarmerModalError] = useState<string | null>(null);
+  const [showOwnerLinkDetails, setShowOwnerLinkDetails] = useState(true);
+  const [showCounterpartLinkDetails, setShowCounterpartLinkDetails] =
+    useState(true);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const isActive = (path: string) => location.pathname === path;
@@ -217,32 +220,146 @@ const JoLandHistoryReport: React.FC = () => {
   const pluralize = (count: number, singular: string, plural?: string) =>
     count === 1 ? singular : plural || `${singular}s`;
 
+  const getInitials = (value?: string | null) => {
+    const parts = String(value || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (parts.length === 0) return "NA";
+    if (parts.length === 1) {
+      return String(parts[0] || "")
+        .slice(0, 2)
+        .toUpperCase();
+    }
+
+    return `${parts[0]?.charAt(0) || ""}${parts[1]?.charAt(0) || ""}`.toUpperCase();
+  };
+
+  const getLinkedOwnerRoleLabel = (owner: {
+    asTenant: number;
+    asLessee: number;
+  }) => {
+    if (owner.asTenant > 0 && owner.asLessee > 0) return "Tenant + Lessee";
+    if (owner.asTenant > 0) return "Tenant";
+    if (owner.asLessee > 0) return "Lessee";
+    return "Linked Role";
+  };
+
+  const getLinkedCounterpartRoleLabel = (counterpart: {
+    tenantRows: number;
+    lesseeRows: number;
+  }) => {
+    if (counterpart.tenantRows > 0 && counterpart.lesseeRows > 0) {
+      return "Tenant + Lessee";
+    }
+    if (counterpart.tenantRows > 0) return "Tenant";
+    if (counterpart.lesseeRows > 0) return "Lessee";
+    return "Linked Role";
+  };
+
+  const getAssociationLinkStatusLabel = (currentRows: number) =>
+    currentRows > 0 ? "Current Link" : "Past Link";
+
+  const buildAssociationLinkActivityText = (
+    currentRows: number,
+    relationshipRows: number,
+  ) => {
+    const safeRelationshipRows = Math.max(0, relationshipRows);
+    const safeCurrentRows = Math.max(0, currentRows);
+    const pastRows = Math.max(0, safeRelationshipRows - safeCurrentRows);
+
+    if (safeCurrentRows > 0 && pastRows > 0) {
+      return `Status: Current (${safeCurrentRows} active, ${pastRows} past).`;
+    }
+
+    if (safeCurrentRows > 0) {
+      return `Status: Current (${safeCurrentRows} active).`;
+    }
+
+    if (pastRows > 0) {
+      return `Status: Past (${pastRows} ${pluralize(pastRows, "record")}).`;
+    }
+
+    return "Status: No record.";
+  };
+
   const buildOwnerLinkExplanation = (
     owner: {
       ownerName: string;
       asTenant: number;
       asLessee: number;
+      relationshipRows: number;
+      currentRows: number;
       parcels: Set<string>;
     },
     scopedFarmerName?: string,
   ) => {
     const farmerName = String(scopedFarmerName || "This farmer").trim();
-    const parcelCount = owner.parcels.size;
+    const activityText = buildAssociationLinkActivityText(
+      owner.currentRows,
+      owner.relationshipRows,
+    );
 
     if (owner.asTenant > 0 && owner.asLessee > 0) {
-      const totalAssociationRows = owner.asTenant + owner.asLessee;
-      return `${farmerName} is linked to ${owner.ownerName} as Tenant + Lessee (${totalAssociationRows} ${pluralize(totalAssociationRows, "row")}; tenant records: ${owner.asTenant}, lessee records: ${owner.asLessee}) across ${parcelCount} ${pluralize(parcelCount, "parcel")}.`;
+      return `${farmerName} uses land from ${owner.ownerName} as Tenant and Lessee. ${activityText}`;
     }
 
     if (owner.asTenant > 0) {
-      return `${farmerName} is linked to ${owner.ownerName} as Tenant in ${owner.asTenant} ${pluralize(owner.asTenant, "row")} across ${parcelCount} ${pluralize(parcelCount, "parcel")}.`;
+      return `${farmerName} uses land from ${owner.ownerName} as Tenant. ${activityText}`;
     }
 
     if (owner.asLessee > 0) {
-      return `${farmerName} is linked to ${owner.ownerName} as Lessee in ${owner.asLessee} ${pluralize(owner.asLessee, "row")} across ${parcelCount} ${pluralize(parcelCount, "parcel")}.`;
+      return `${farmerName} uses land from ${owner.ownerName} as Lessee. ${activityText}`;
     }
 
-    return `${farmerName} has linked history records under ${owner.ownerName}.`;
+    return `${farmerName} has a land-use link with ${owner.ownerName}. ${activityText}`;
+  };
+
+  const buildCounterpartLinkExplanation = (
+    counterpart: {
+      farmerName: string;
+      tenantRows: number;
+      lesseeRows: number;
+      relationshipRows: number;
+      currentRows: number;
+      parcels: Set<string>;
+    },
+    scopedFarmerName?: string,
+  ) => {
+    const ownerName = String(scopedFarmerName || "this farmer").trim();
+    const counterpartName = String(
+      counterpart.farmerName || "This farmer",
+    ).trim();
+    const activityText = buildAssociationLinkActivityText(
+      counterpart.currentRows,
+      counterpart.relationshipRows,
+    );
+
+    if (counterpart.tenantRows > 0 && counterpart.lesseeRows > 0) {
+      return `${counterpartName} uses land from ${ownerName} as Tenant and Lessee. ${activityText}`;
+    }
+
+    if (counterpart.tenantRows > 0) {
+      return `${counterpartName} uses land from ${ownerName} as Tenant. ${activityText}`;
+    }
+
+    if (counterpart.lesseeRows > 0) {
+      return `${counterpartName} uses land from ${ownerName} as Lessee. ${activityText}`;
+    }
+
+    return `${counterpartName} has a land-use link with ${ownerName}. ${activityText}`;
+  };
+
+  const getTimelineTypeBadgeLabel = (changeType?: string | null) => {
+    const value = String(changeType || "").trim();
+    const normalized = value.toLowerCase();
+
+    if (!value) return "Status";
+    if (normalized.includes("inheritance")) return "Inheritance";
+    if (normalized.includes("partial")) return "Partial Transfer";
+    if (normalized.includes("transfer")) return "Transfer";
+    return value;
   };
 
   const parseOwnershipTransferParties = (reason?: string | null) => {
@@ -280,6 +397,20 @@ const JoLandHistoryReport: React.FC = () => {
     }
 
     return cleanedReason;
+  };
+
+  const isAssociationTimelineRow = (row: LandHistoryReportRow) => {
+    if (isAssociationRoleRow(row)) return true;
+    if (!row.is_tenant && !row.is_lessee) return false;
+
+    const changeType = String(row.change_type || "").toLowerCase();
+    const hasOwnershipReason =
+      parseOwnershipTransferParties(row.change_reason) !== null;
+
+    // Keep this rule aligned with association timeline semantics.
+    if (changeType.includes("transfer") || hasOwnershipReason) return false;
+
+    return true;
   };
 
   const parseReportPayload = (payload: any) => {
@@ -371,7 +502,78 @@ const JoLandHistoryReport: React.FC = () => {
     const a = normalizeName(left);
     const b = normalizeName(right);
     if (!a || !b) return false;
-    return a === b || a.includes(b) || b.includes(a);
+    return a === b;
+  };
+
+  const toSortableTimestamp = (value?: string | null) => {
+    if (!value) return 0;
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const getAssociationCurrentGroupingKey = (row: LandHistoryReportRow) => {
+    const parcel = String(row.parcel_number || "")
+      .trim()
+      .toLowerCase();
+    const barangay = String(row.farm_location_barangay || "")
+      .trim()
+      .toLowerCase();
+
+    if (!parcel) return `row:${row.id}`;
+    return `parcel:${parcel}|barangay:${barangay}`;
+  };
+
+  const buildLatestAssociationCurrentRowIdSet = (
+    associationRows: LandHistoryReportRow[],
+  ) => {
+    const latestByKey = new Map<
+      string,
+      {
+        id: number;
+        eventTimestamp: number;
+        createdTimestamp: number;
+      }
+    >();
+
+    associationRows.forEach((row) => {
+      if (!row.is_tenant && !row.is_lessee) return;
+
+      const groupingKey = getAssociationCurrentGroupingKey(row);
+      const eventTimestamp = toSortableTimestamp(
+        row.period_start_date || row.created_at || row.period_end_date || null,
+      );
+      const createdTimestamp = toSortableTimestamp(row.created_at);
+
+      const existing = latestByKey.get(groupingKey);
+      if (!existing) {
+        latestByKey.set(groupingKey, {
+          id: row.id,
+          eventTimestamp,
+          createdTimestamp,
+        });
+        return;
+      }
+
+      const isNewerRow =
+        eventTimestamp > existing.eventTimestamp ||
+        (eventTimestamp === existing.eventTimestamp &&
+          createdTimestamp > existing.createdTimestamp) ||
+        (eventTimestamp === existing.eventTimestamp &&
+          createdTimestamp === existing.createdTimestamp &&
+          row.id > existing.id);
+
+      if (isNewerRow) {
+        latestByKey.set(groupingKey, {
+          id: row.id,
+          eventTimestamp,
+          createdTimestamp,
+        });
+      }
+    });
+
+    return new Set<number>(
+      Array.from(latestByKey.values()).map((entry) => entry.id),
+    );
   };
 
   const buildFarmerAssociations = (
@@ -392,21 +594,36 @@ const JoLandHistoryReport: React.FC = () => {
         ownerName: string;
         asTenant: number;
         asLessee: number;
+        relationshipRows: number;
+        currentRows: number;
         parcels: Set<string>;
       }
     >();
 
-    scopedRows.forEach((row) => {
+    const ownerRows = scopedRows.filter((row) => {
+      const farmerName = String(row.farmer_name || "").trim();
       const ownerName = String(row.land_owner_name || "").trim();
-      if (!ownerName || namesLikelyMatch(ownerName, scopedFarmerName)) return;
-      if (!row.is_tenant && !row.is_lessee) return;
+      if (!farmerName || !namesLikelyMatch(farmerName, scopedFarmerName)) {
+        return false;
+      }
+      if (!ownerName || namesLikelyMatch(ownerName, scopedFarmerName)) {
+        return false;
+      }
+      return row.is_tenant || row.is_lessee;
+    });
 
+    const ownerCurrentRowIds = buildLatestAssociationCurrentRowIdSet(ownerRows);
+
+    ownerRows.forEach((row) => {
+      const ownerName = String(row.land_owner_name || "").trim();
       const key = normalizeName(ownerName);
       if (!ownerMap.has(key)) {
         ownerMap.set(key, {
           ownerName,
           asTenant: 0,
           asLessee: 0,
+          relationshipRows: 0,
+          currentRows: 0,
           parcels: new Set<string>(),
         });
       }
@@ -414,6 +631,8 @@ const JoLandHistoryReport: React.FC = () => {
       const existing = ownerMap.get(key)!;
       if (row.is_tenant) existing.asTenant += 1;
       if (row.is_lessee) existing.asLessee += 1;
+      existing.relationshipRows += 1;
+      if (ownerCurrentRowIds.has(row.id)) existing.currentRows += 1;
       if (row.parcel_number) existing.parcels.add(String(row.parcel_number));
     });
 
@@ -423,25 +642,33 @@ const JoLandHistoryReport: React.FC = () => {
         farmerName: string;
         tenantRows: number;
         lesseeRows: number;
+        relationshipRows: number;
         currentRows: number;
         parcels: Set<string>;
       }
     >();
 
-    scopedAssociationRows.forEach((row) => {
+    const counterpartRows = scopedAssociationRows.filter((row) => {
       const ownerName = String(row.land_owner_name || "").trim();
       const farmerName = String(row.farmer_name || "").trim();
-      if (!ownerName || !farmerName) return;
-      if (!namesLikelyMatch(ownerName, scopedFarmerName)) return;
-      if (namesLikelyMatch(farmerName, scopedFarmerName)) return;
-      if (!row.is_tenant && !row.is_lessee) return;
+      if (!ownerName || !farmerName) return false;
+      if (!namesLikelyMatch(ownerName, scopedFarmerName)) return false;
+      if (namesLikelyMatch(farmerName, scopedFarmerName)) return false;
+      return row.is_tenant || row.is_lessee;
+    });
 
+    const counterpartCurrentRowIds =
+      buildLatestAssociationCurrentRowIdSet(counterpartRows);
+
+    counterpartRows.forEach((row) => {
+      const farmerName = String(row.farmer_name || "").trim();
       const key = normalizeName(farmerName);
       if (!counterpartMap.has(key)) {
         counterpartMap.set(key, {
           farmerName,
           tenantRows: 0,
           lesseeRows: 0,
+          relationshipRows: 0,
           currentRows: 0,
           parcels: new Set<string>(),
         });
@@ -450,7 +677,8 @@ const JoLandHistoryReport: React.FC = () => {
       const existing = counterpartMap.get(key)!;
       if (row.is_tenant) existing.tenantRows += 1;
       if (row.is_lessee) existing.lesseeRows += 1;
-      if (row.is_current) existing.currentRows += 1;
+      existing.relationshipRows += 1;
+      if (counterpartCurrentRowIds.has(row.id)) existing.currentRows += 1;
       if (row.parcel_number) existing.parcels.add(String(row.parcel_number));
     });
 
@@ -568,19 +796,12 @@ const JoLandHistoryReport: React.FC = () => {
       return Number.isFinite(parsed) ? parsed : 0;
     };
 
-    const relationRows = scopedAssociationRows.filter((row) => {
-      if (isAssociationRoleRow(row)) return true;
-      if (!row.is_tenant && !row.is_lessee) return false;
+    const relationRows = scopedAssociationRows.filter((row) =>
+      isAssociationTimelineRow(row),
+    );
 
-      const changeType = String(row.change_type || "").toLowerCase();
-      const hasOwnershipReason =
-        parseOwnershipTransferParties(row.change_reason) !== null;
-
-      // Keep this timeline strictly for relationship association updates.
-      if (changeType.includes("transfer") || hasOwnershipReason) return false;
-
-      return true;
-    });
+    const effectiveCurrentRowIds =
+      buildLatestAssociationCurrentRowIdSet(relationRows);
 
     const events: FarmerTimelineEvent[] = relationRows.map((row, index) => {
       const ownerName = String(row.land_owner_name || "").trim();
@@ -616,7 +837,7 @@ const JoLandHistoryReport: React.FC = () => {
         parcelNumber: String(row.parcel_number || "").trim(),
         barangay: String(row.farm_location_barangay || "").trim(),
         relationship,
-        status: row.is_current ? "Current" : "Past",
+        status: effectiveCurrentRowIds.has(row.id) ? "Current" : "Past",
         changeType: isTenantOrLesseeRelationship
           ? `${relationship} Association`
           : "Association Update",
@@ -642,6 +863,8 @@ const JoLandHistoryReport: React.FC = () => {
     setFarmerModalAssociationRows([]);
     setFarmerModalError(null);
     setFarmerModalLoading(true);
+    setShowOwnerLinkDetails(true);
+    setShowCounterpartLinkDetails(true);
 
     const [reportResponse, associationResponse] = await Promise.all([
       getLandHistoryReportRows({
@@ -782,6 +1005,43 @@ const JoLandHistoryReport: React.FC = () => {
       ),
     [farmerModalAssociationRows, farmerModalFarmerName],
   );
+
+  const farmerModalDetailedRows = useMemo(() => {
+    const mergedById = new Map<number, LandHistoryReportRow>();
+
+    farmerModalRows.forEach((row) => {
+      mergedById.set(row.id, row);
+    });
+
+    farmerModalAssociationRows.forEach((row) => {
+      if (!mergedById.has(row.id)) {
+        mergedById.set(row.id, row);
+      }
+    });
+
+    const mergedRows = Array.from(mergedById.values());
+
+    mergedRows.sort((a, b) => {
+      const aTimestamp = toSortableTimestamp(
+        a.period_start_date || a.created_at || a.period_end_date || null,
+      );
+      const bTimestamp = toSortableTimestamp(
+        b.period_start_date || b.created_at || b.period_end_date || null,
+      );
+
+      if (bTimestamp !== aTimestamp) return bTimestamp - aTimestamp;
+      return b.id - a.id;
+    });
+
+    return mergedRows;
+  }, [farmerModalAssociationRows, farmerModalRows]);
+
+  const farmerModalTableAssociationCurrentRowIds = useMemo(() => {
+    const relationRows = farmerModalDetailedRows.filter((row) =>
+      isAssociationTimelineRow(row),
+    );
+    return buildLatestAssociationCurrentRowIdSet(relationRows);
+  }, [farmerModalDetailedRows]);
 
   const farmerDefaultRows = useMemo<FarmerDefaultRow[]>(() => {
     const toTimestamp = (value?: string | null) => {
@@ -1369,43 +1629,114 @@ const JoLandHistoryReport: React.FC = () => {
 
                     <div className="jo-land-history-association-grid jo-land-history-modal-block">
                       <section className="jo-land-history-association-card">
-                        <header>
-                          <h3>Linked Land Owners</h3>
-                          <span>
-                            {farmerModalAssociations.linkedOwners.length} linked
+                        <header className="jo-land-history-association-headline">
+                          <span className="jo-land-history-association-chip">
+                            {farmerModalAssociations.linkedOwners.length}{" "}
+                            {pluralize(
+                              farmerModalAssociations.linkedOwners.length,
+                              "linked owner",
+                              "linked owners",
+                            )}
                           </span>
+                          <span className="jo-land-history-association-why">
+                            Why are they linked?
+                          </span>
+                          <button
+                            type="button"
+                            className="jo-land-history-association-toggle"
+                            onClick={() =>
+                              setShowOwnerLinkDetails((prev) => !prev)
+                            }
+                          >
+                            {showOwnerLinkDetails ? "Hide" : "Show"}
+                          </button>
                         </header>
 
                         <p className="jo-land-history-association-help">
-                          These owners are linked because{" "}
-                          {farmerModalFarmerName || "this farmer"} appears as a
-                          Tenant or Lessee under one or more parcels owned by
-                          these people.
+                          Linked owners show land-use relationship context
+                          (tenant/lessee).
                         </p>
 
                         {farmerModalAssociations.linkedOwners.length === 0 ? (
                           <p className="jo-land-history-association-empty">
                             No owner links found for this farmer.
                           </p>
+                        ) : !showOwnerLinkDetails ? (
+                          <p className="jo-land-history-association-empty">
+                            Click Show to view linked owner details.
+                          </p>
                         ) : (
                           <ul className="jo-land-history-association-list">
                             {farmerModalAssociations.linkedOwners.map(
                               (owner) => (
-                                <li key={owner.ownerName}>
-                                  <strong>{owner.ownerName}</strong>
-                                  <small className="jo-land-history-association-explainer">
+                                <li
+                                  key={owner.ownerName}
+                                  className="jo-land-history-linked-owner-item"
+                                >
+                                  <div className="jo-land-history-linked-owner-top">
+                                    <div className="jo-land-history-linked-owner-avatar">
+                                      {getInitials(owner.ownerName)}
+                                    </div>
+                                    <div className="jo-land-history-linked-owner-identity">
+                                      <strong>{owner.ownerName}</strong>
+                                      <small>
+                                        {getLinkedOwnerRoleLabel(owner)} •{" "}
+                                        {getAssociationLinkStatusLabel(
+                                          owner.currentRows,
+                                        )}
+                                      </small>
+                                    </div>
+                                  </div>
+
+                                  <div className="jo-land-history-linked-owner-stats">
+                                    <div className="jo-land-history-linked-owner-stat">
+                                      <strong>{owner.parcels.size}</strong>
+                                      <span>
+                                        {pluralize(
+                                          owner.parcels.size,
+                                          "Parcel linked",
+                                          "Parcels linked",
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="jo-land-history-linked-owner-stat">
+                                      <strong>{owner.currentRows}</strong>
+                                      <span>
+                                        {pluralize(
+                                          owner.currentRows,
+                                          "Current row",
+                                          "Current rows",
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="jo-land-history-linked-owner-stat">
+                                      <strong>{owner.asLessee}</strong>
+                                      <span>
+                                        {pluralize(
+                                          owner.asLessee,
+                                          "Lessee row",
+                                          "Lessee rows",
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="jo-land-history-linked-owner-stat">
+                                      <strong>{owner.asTenant}</strong>
+                                      <span>
+                                        {pluralize(
+                                          owner.asTenant,
+                                          "Tenant row",
+                                          "Tenant rows",
+                                        )}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <p className="jo-land-history-linked-owner-reason">
                                     {buildOwnerLinkExplanation(
                                       owner,
                                       farmerModalFarmerName,
                                     )}
-                                  </small>
-                                  <span>
-                                    Tenant rows: {owner.asTenant} | Lessee rows:{" "}
-                                    {owner.asLessee}
-                                  </span>
-                                  <small>
-                                    Parcels linked: {owner.parcels.size}
-                                  </small>
+                                  </p>
                                 </li>
                               ),
                             )}
@@ -1414,16 +1745,37 @@ const JoLandHistoryReport: React.FC = () => {
                       </section>
 
                       <section className="jo-land-history-association-card">
-                        <header>
-                          <h3>Tenants / Lessees Under This Farmer</h3>
-                          <span>
+                        <header className="jo-land-history-association-headline">
+                          <span className="jo-land-history-association-chip">
                             {
                               farmerModalAssociations.linkedTenantsLessees
                                 .length
                             }{" "}
-                            linked
+                            {pluralize(
+                              farmerModalAssociations.linkedTenantsLessees
+                                .length,
+                              "linked tenant/lessee",
+                              "linked tenants/lessees",
+                            )}
                           </span>
+                          <span className="jo-land-history-association-why">
+                            Why are they linked?
+                          </span>
+                          <button
+                            type="button"
+                            className="jo-land-history-association-toggle"
+                            onClick={() =>
+                              setShowCounterpartLinkDetails((prev) => !prev)
+                            }
+                          >
+                            {showCounterpartLinkDetails ? "Hide" : "Show"}
+                          </button>
                         </header>
+
+                        <p className="jo-land-history-association-help">
+                          Linked tenants/lessees show land users associated with
+                          this farmer as owner.
+                        </p>
 
                         {farmerModalAssociations.linkedTenantsLessees.length ===
                         0 ? (
@@ -1431,20 +1783,87 @@ const JoLandHistoryReport: React.FC = () => {
                             No tenant or lessee links where this farmer appears
                             as owner.
                           </p>
+                        ) : !showCounterpartLinkDetails ? (
+                          <p className="jo-land-history-association-empty">
+                            Click Show to view linked tenant and lessee details.
+                          </p>
                         ) : (
                           <ul className="jo-land-history-association-list">
                             {farmerModalAssociations.linkedTenantsLessees.map(
                               (counterpart) => (
-                                <li key={counterpart.farmerName}>
-                                  <strong>{counterpart.farmerName}</strong>
-                                  <span>
-                                    Tenant rows: {counterpart.tenantRows} |
-                                    Lessee rows: {counterpart.lesseeRows}
-                                  </span>
-                                  <small>
-                                    Current rows: {counterpart.currentRows} |
-                                    Parcels linked: {counterpart.parcels.size}
-                                  </small>
+                                <li
+                                  key={counterpart.farmerName}
+                                  className="jo-land-history-linked-owner-item"
+                                >
+                                  <div className="jo-land-history-linked-owner-top">
+                                    <div className="jo-land-history-linked-owner-avatar">
+                                      {getInitials(counterpart.farmerName)}
+                                    </div>
+                                    <div className="jo-land-history-linked-owner-identity">
+                                      <strong>{counterpart.farmerName}</strong>
+                                      <small>
+                                        {getLinkedCounterpartRoleLabel(
+                                          counterpart,
+                                        )}{" "}
+                                        •{" "}
+                                        {getAssociationLinkStatusLabel(
+                                          counterpart.currentRows,
+                                        )}
+                                      </small>
+                                    </div>
+                                  </div>
+
+                                  <div className="jo-land-history-linked-owner-stats">
+                                    <div className="jo-land-history-linked-owner-stat">
+                                      <strong>
+                                        {counterpart.parcels.size}
+                                      </strong>
+                                      <span>
+                                        {pluralize(
+                                          counterpart.parcels.size,
+                                          "Parcel linked",
+                                          "Parcels linked",
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="jo-land-history-linked-owner-stat">
+                                      <strong>{counterpart.currentRows}</strong>
+                                      <span>
+                                        {pluralize(
+                                          counterpart.currentRows,
+                                          "Current row",
+                                          "Current rows",
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="jo-land-history-linked-owner-stat">
+                                      <strong>{counterpart.lesseeRows}</strong>
+                                      <span>
+                                        {pluralize(
+                                          counterpart.lesseeRows,
+                                          "Lessee row",
+                                          "Lessee rows",
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="jo-land-history-linked-owner-stat">
+                                      <strong>{counterpart.tenantRows}</strong>
+                                      <span>
+                                        {pluralize(
+                                          counterpart.tenantRows,
+                                          "Tenant row",
+                                          "Tenant rows",
+                                        )}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <p className="jo-land-history-linked-owner-reason">
+                                    {buildCounterpartLinkExplanation(
+                                      counterpart,
+                                      farmerModalFarmerName,
+                                    )}
+                                  </p>
                                 </li>
                               ),
                             )}
@@ -1453,51 +1872,106 @@ const JoLandHistoryReport: React.FC = () => {
                       </section>
                     </div>
 
-                    <section className="jo-land-history-timeline-card jo-land-history-modal-block">
-                      <header>
-                        <h3>Ownership Transfer Timeline</h3>
-                        <span>{farmerModalTransferTimeline.length} events</span>
+                    <section className="jo-land-history-timeline-card jo-land-history-modal-block jo-land-history-transfer-timeline-card">
+                      <header className="jo-land-history-transfer-timeline-header">
+                        <h3>Transfer Timeline</h3>
+                        <div className="jo-land-history-transfer-timeline-summary">
+                          <span className="jo-land-history-transfer-events-chip">
+                            {farmerModalTransferTimeline.length} events
+                          </span>
+                          <span className="jo-land-history-transfer-sort-label">
+                            Sorted by most recent
+                          </span>
+                        </div>
                       </header>
+
+                      <p className="jo-land-history-transfer-timeline-subtitle">
+                        Shows ownership transfer events only.
+                      </p>
 
                       {farmerModalTransferTimeline.length === 0 ? (
                         <p className="jo-land-history-association-empty">
                           No ownership transfer events found for this farmer.
                         </p>
                       ) : (
-                        <ol className="jo-land-history-timeline-list">
+                        <ol className="jo-land-history-transfer-timeline-list">
                           {farmerModalTransferTimeline
                             .slice(0, farmerModalTimelineLimit)
                             .map((event) => (
-                              <li key={event.id}>
-                                <div className="jo-land-history-timeline-head">
-                                  <span>{formatDate(event.eventDate)}</span>
-                                  <small>
-                                    {event.changeType || "Status update"}
-                                  </small>
-                                </div>
+                              <li
+                                key={event.id}
+                                className={`jo-land-history-transfer-timeline-item ${
+                                  event.status === "Current"
+                                    ? "is-current"
+                                    : "is-past"
+                                }`}
+                              >
+                                <div
+                                  className="jo-land-history-transfer-rail-dot"
+                                  aria-hidden="true"
+                                />
 
-                                <div className="jo-land-history-timeline-flow">
-                                  <strong>{event.fromName || "Unknown"}</strong>
-                                  <span>→</span>
-                                  <strong>{event.toName || "Unknown"}</strong>
-                                </div>
+                                <article className="jo-land-history-transfer-event-card">
+                                  <div className="jo-land-history-transfer-event-head">
+                                    <div className="jo-land-history-transfer-event-date-row">
+                                      <span className="jo-land-history-transfer-event-date">
+                                        {formatDate(event.eventDate)}
+                                      </span>
+                                      <span
+                                        className={`jo-land-history-transfer-event-status ${
+                                          event.status === "Current"
+                                            ? "is-current"
+                                            : "is-past"
+                                        }`}
+                                      >
+                                        {event.status}
+                                      </span>
+                                    </div>
+                                    <span className="jo-land-history-transfer-event-type">
+                                      {getTimelineTypeBadgeLabel(
+                                        event.changeType,
+                                      )}
+                                    </span>
+                                  </div>
 
-                                <div className="jo-land-history-timeline-meta">
-                                  <span>
-                                    Role: {event.relationship} | Status:{" "}
-                                    {event.status}
-                                  </span>
-                                  <span>
-                                    Parcel: {event.parcelNumber || "-"} |
-                                    Barangay: {event.barangay || "-"}
-                                  </span>
-                                </div>
+                                  <div className="jo-land-history-transfer-event-flow">
+                                    <span className="jo-land-history-transfer-event-avatar">
+                                      {getInitials(event.fromName || "Unknown")}
+                                    </span>
+                                    <strong>
+                                      {event.fromName || "Unknown"}
+                                    </strong>
+                                    <span className="jo-land-history-transfer-event-arrow">
+                                      →
+                                    </span>
+                                    <em>{event.toName || "Unknown"}</em>
+                                  </div>
 
-                                {event.changeReason && (
-                                  <p className="jo-land-history-timeline-reason">
-                                    Reason: {event.changeReason}
-                                  </p>
-                                )}
+                                  <div className="jo-land-history-transfer-event-grid">
+                                    <div className="jo-land-history-transfer-event-metric">
+                                      <span>Role</span>
+                                      <strong>
+                                        {event.relationship || "-"}
+                                      </strong>
+                                    </div>
+                                    <div className="jo-land-history-transfer-event-metric">
+                                      <span>Parcel</span>
+                                      <strong>
+                                        {event.parcelNumber || "-"}
+                                      </strong>
+                                    </div>
+                                    <div className="jo-land-history-transfer-event-metric">
+                                      <span>Barangay</span>
+                                      <strong>{event.barangay || "-"}</strong>
+                                    </div>
+                                  </div>
+
+                                  {event.changeReason && (
+                                    <p className="jo-land-history-transfer-event-reason">
+                                      Reason: {event.changeReason}
+                                    </p>
+                                  )}
+                                </article>
                               </li>
                             ))}
                         </ol>
@@ -1512,53 +1986,106 @@ const JoLandHistoryReport: React.FC = () => {
                       )}
                     </section>
 
-                    <section className="jo-land-history-timeline-card jo-land-history-modal-block">
-                      <header>
+                    <section className="jo-land-history-timeline-card jo-land-history-modal-block jo-land-history-transfer-timeline-card">
+                      <header className="jo-land-history-transfer-timeline-header">
                         <h3>Tenant / Lessee Association Timeline</h3>
-                        <span>
-                          {farmerModalAssociationTimeline.length} events
-                        </span>
+                        <div className="jo-land-history-transfer-timeline-summary">
+                          <span className="jo-land-history-transfer-events-chip">
+                            {farmerModalAssociationTimeline.length} events
+                          </span>
+                          <span className="jo-land-history-transfer-sort-label">
+                            Sorted by most recent
+                          </span>
+                        </div>
                       </header>
+
+                      <p className="jo-land-history-transfer-timeline-subtitle">
+                        Shows tenant and lessee relationship events only.
+                      </p>
 
                       {farmerModalAssociationTimeline.length === 0 ? (
                         <p className="jo-land-history-association-empty">
                           No tenant or lessee association events found.
                         </p>
                       ) : (
-                        <ol className="jo-land-history-timeline-list">
+                        <ol className="jo-land-history-transfer-timeline-list">
                           {farmerModalAssociationTimeline
                             .slice(0, farmerModalTimelineLimit)
                             .map((event) => (
-                              <li key={event.id}>
-                                <div className="jo-land-history-timeline-head">
-                                  <span>{formatDate(event.eventDate)}</span>
-                                  <small>
-                                    {event.changeType || "Status update"}
-                                  </small>
-                                </div>
+                              <li
+                                key={event.id}
+                                className={`jo-land-history-transfer-timeline-item ${
+                                  event.status === "Current"
+                                    ? "is-current"
+                                    : "is-past"
+                                }`}
+                              >
+                                <div
+                                  className="jo-land-history-transfer-rail-dot"
+                                  aria-hidden="true"
+                                />
 
-                                <div className="jo-land-history-timeline-flow">
-                                  <strong>{event.fromName || "Unknown"}</strong>
-                                  <span>→</span>
-                                  <strong>{event.toName || "Unknown"}</strong>
-                                </div>
+                                <article className="jo-land-history-transfer-event-card">
+                                  <div className="jo-land-history-transfer-event-head">
+                                    <div className="jo-land-history-transfer-event-date-row">
+                                      <span className="jo-land-history-transfer-event-date">
+                                        {formatDate(event.eventDate)}
+                                      </span>
+                                      <span
+                                        className={`jo-land-history-transfer-event-status ${
+                                          event.status === "Current"
+                                            ? "is-current"
+                                            : "is-past"
+                                        }`}
+                                      >
+                                        {event.status}
+                                      </span>
+                                    </div>
+                                    <span className="jo-land-history-transfer-event-type">
+                                      {getTimelineTypeBadgeLabel(
+                                        event.changeType,
+                                      )}
+                                    </span>
+                                  </div>
 
-                                <div className="jo-land-history-timeline-meta">
-                                  <span>
-                                    Role: {event.relationship} | Status:{" "}
-                                    {event.status}
-                                  </span>
-                                  <span>
-                                    Parcel: {event.parcelNumber || "-"} |
-                                    Barangay: {event.barangay || "-"}
-                                  </span>
-                                </div>
+                                  <div className="jo-land-history-transfer-event-flow">
+                                    <span className="jo-land-history-transfer-event-avatar">
+                                      {getInitials(event.fromName || "Unknown")}
+                                    </span>
+                                    <strong>
+                                      {event.fromName || "Unknown"}
+                                    </strong>
+                                    <span className="jo-land-history-transfer-event-arrow">
+                                      →
+                                    </span>
+                                    <em>{event.toName || "Unknown"}</em>
+                                  </div>
 
-                                {event.changeReason && (
-                                  <p className="jo-land-history-timeline-reason">
-                                    Reason: {event.changeReason}
-                                  </p>
-                                )}
+                                  <div className="jo-land-history-transfer-event-grid">
+                                    <div className="jo-land-history-transfer-event-metric">
+                                      <span>Role</span>
+                                      <strong>
+                                        {event.relationship || "-"}
+                                      </strong>
+                                    </div>
+                                    <div className="jo-land-history-transfer-event-metric">
+                                      <span>Parcel</span>
+                                      <strong>
+                                        {event.parcelNumber || "-"}
+                                      </strong>
+                                    </div>
+                                    <div className="jo-land-history-transfer-event-metric">
+                                      <span>Barangay</span>
+                                      <strong>{event.barangay || "-"}</strong>
+                                    </div>
+                                  </div>
+
+                                  {event.changeReason && (
+                                    <p className="jo-land-history-transfer-event-reason">
+                                      Reason: {event.changeReason}
+                                    </p>
+                                  )}
+                                </article>
                               </li>
                             ))}
                         </ol>
@@ -1575,6 +2102,22 @@ const JoLandHistoryReport: React.FC = () => {
                     </section>
 
                     <div className="jo-land-history-report-table-wrap jo-land-history-modal-block">
+                      <header className="jo-land-history-transfer-timeline-header">
+                        <h3>Detailed History Rows</h3>
+                        <div className="jo-land-history-transfer-timeline-summary">
+                          <span className="jo-land-history-transfer-events-chip">
+                            {farmerModalDetailedRows.length} rows
+                          </span>
+                        </div>
+                      </header>
+
+                      <p className="jo-land-history-transfer-timeline-subtitle">
+                        Full row-by-row history where this person appears as
+                        farmer or land owner. Association rows follow the same
+                        latest-link Current/Past logic used in the Tenant /
+                        Lessee Association Timeline.
+                      </p>
+
                       <table className="jo-land-history-report-table">
                         <thead>
                           <tr>
@@ -1585,21 +2128,20 @@ const JoLandHistoryReport: React.FC = () => {
                             <th>Relationship</th>
                             <th>Area (ha)</th>
                             <th>Start</th>
-                            <th>End</th>
                             <th>Status</th>
                             <th>Change Type</th>
                             <th>Reason</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {farmerModalRows.length === 0 ? (
+                          {farmerModalDetailedRows.length === 0 ? (
                             <tr>
-                              <td colSpan={11}>
+                              <td colSpan={10}>
                                 No history rows found for this farmer.
                               </td>
                             </tr>
                           ) : (
-                            farmerModalRows.map((row) => (
+                            farmerModalDetailedRows.map((row) => (
                               <tr
                                 key={`modal-${row.id}-${row.period_start_date || ""}`}
                               >
@@ -1614,8 +2156,17 @@ const JoLandHistoryReport: React.FC = () => {
                                   )}
                                 </td>
                                 <td>{formatDate(row.period_start_date)}</td>
-                                <td>{formatDate(row.period_end_date)}</td>
-                                <td>{row.is_current ? "Current" : "Past"}</td>
+                                <td>
+                                  {isAssociationTimelineRow(row)
+                                    ? farmerModalTableAssociationCurrentRowIds.has(
+                                        row.id,
+                                      )
+                                      ? "Current"
+                                      : "Past"
+                                    : row.is_current
+                                      ? "Current"
+                                      : "Past"}
+                                </td>
                                 <td>
                                   {formatChangeTypeLabel(
                                     row.change_type,

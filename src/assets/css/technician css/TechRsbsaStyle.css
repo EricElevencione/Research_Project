@@ -552,23 +552,24 @@
 }
 
 .tech-rsbsa-close-button {
-  background: none;
+  width: 34px;
+  height: 34px;
   border: none;
-  font-size: 24px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 22px;
   cursor: pointer;
-  color: #6b7280;
   padding: 0;
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .tech-rsbsa-close-button:hover {
-  background-color: #f3f4f6;
-  color: #374151;
+  background: #e5e7eb;
+  transform: translateY(-1px);
 }
 
 .tech-rsbsa-edit-modal-body {

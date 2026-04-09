@@ -91,7 +91,9 @@ const TechPickLandParcel: React.FC = () => {
   const fetchLandParcels = async (submissionId: string) => {
     try {
       console.log("Fetching parcels for submissionId:", submissionId);
-      const response = await getFarmParcels(submissionId);
+      const response = await getFarmParcels(submissionId, {
+        currentOwnerOnly: true,
+      });
       console.log("Response status:", response.status);
 
       if (response.error) {
@@ -346,8 +348,8 @@ const TechPickLandParcel: React.FC = () => {
                     <div className="parcel-list-heading-block">
                       <h3>Available Land Parcels</h3>
                       <p className="parcel-list-subtitle">
-                        Select a parcel to proceed with plotting and boundary
-                        mapping.
+                        Only parcels where this farmer is the registered owner
+                        can be plotted.
                       </p>
                     </div>
                     <div className="parcel-list-stats">
@@ -368,7 +370,7 @@ const TechPickLandParcel: React.FC = () => {
 
                   {landParcels.length === 0 ? (
                     <div className="no-parcels">
-                      <p>No land parcels found for this land owner.</p>
+                      <p>No owner-eligible parcels found for this farmer.</p>
                     </div>
                   ) : (
                     <div className="parcel-grid">

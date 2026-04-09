@@ -773,25 +773,25 @@
 }
 
 .jo-masterlist-close-button {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  font-size: 32px;
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 22px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   padding: 0;
   line-height: 1;
 }
 
 .jo-masterlist-close-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: rotate(90deg);
+  background: #e5e7eb;
+  transform: translateY(-1px);
 }
 
 .jo-masterlist-edit-modal-body {

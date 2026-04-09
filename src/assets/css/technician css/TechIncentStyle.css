@@ -1048,20 +1048,20 @@
 }
 
 .tech-incent-modal-close {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border: 2px solid rgba(255, 255, 255, 0.3) !important;
-  color: white !important;
-  font-size: 32px !important;
-  width: 45px !important;
-  height: 45px !important;
-  min-width: 45px !important;
-  min-height: 45px !important;
-  border-radius: 50% !important;
+  background: #f3f4f6 !important;
+  border: none !important;
+  color: #374151 !important;
+  font-size: 22px !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  border-radius: 8px !important;
   cursor: pointer;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   padding: 0 !important;
   line-height: 1 !important;
   font-weight: 400 !important;
@@ -1069,8 +1069,8 @@
 }
 
 .tech-incent-modal-close:hover {
-  background: rgba(255, 255, 255, 0.3) !important;
-  transform: rotate(90deg);
+  background: #e5e7eb !important;
+  transform: translateY(-1px);
 }
 
 .tech-incent-modal-body {
@@ -1230,11 +1230,11 @@
   }
 
   .tech-incent-modal-close {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
-    font-size: 26px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    font-size: 22px !important;
   }
 
   .tech-incent-modal-body {

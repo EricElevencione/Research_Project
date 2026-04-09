@@ -1,3 +1,3 @@
 The system problem -
 
-- - - It doubles in the land registry, it should just 1, the land parcel area should add up (if you're area is 4 and you add 4 it should 8 not 4)
+Ma add kang new farmer or existing farmer para d mag doble ang data kay indi pede ka erase but in tenant/lessee lang

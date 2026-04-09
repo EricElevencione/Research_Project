@@ -495,6 +495,9 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
     const [drawnShapes, setDrawnShapes] = useState<any[]>([]);
     const [showPolygonLimitModal, setShowPolygonLimitModal] = useState(false);
     const [pendingLayerToRemove, setPendingLayerToRemove] = useState<any>(null);
+    const [validationErrorMessage, setValidationErrorMessage] = useState<
+      string | null
+    >(null);
 
     const normalizedReferenceShapes = useMemo(() => {
       if (!Array.isArray(referenceShapes)) return [];
@@ -1067,7 +1070,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           if (featureGroupRef.current?.hasLayer(layer)) {
             featureGroupRef.current.removeLayer(layer);
           }
-          alert(
+          setValidationErrorMessage(
             "Drawn parcel overlaps another plotted parcel. Please redraw without overlap.",
           );
           return;
@@ -1121,7 +1124,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
               if (featureGroupRef.current) {
                 featureGroupRef.current.removeLayer(layer);
               }
-              alert(
+              setValidationErrorMessage(
                 `Drawn shape is outside the ${barangayName || "selected barangay"} boundary. Please draw within the designated area.`,
               );
               return; // Stop processing if outside boundary
@@ -1217,7 +1220,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           );
           if (overlappingShape) {
             blockedEditShapeIds.add(String(shape.id));
-            alert(
+            setValidationErrorMessage(
               "Edited parcel overlaps another plotted parcel. Please adjust the boundary.",
             );
             return shape;
@@ -1265,7 +1268,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
               try {
                 const geoJson = editedLayer.toGeoJSON();
                 if (!booleanWithin(geoJson, boundary)) {
-                  alert(
+                  setValidationErrorMessage(
                     "Edited shape moved outside the boundary. The edit may be reverted on save.",
                   );
                   // Note: Actual reversion might need more complex state management
@@ -1430,6 +1433,71 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         </div>
       ) : null;
 
+    const ValidationErrorModal = () =>
+      validationErrorMessage ? (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: "2rem",
+              borderRadius: "10px",
+              boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              minWidth: 320,
+              maxWidth: "min(90vw, 540px)",
+              textAlign: "center",
+              border: "1px solid #fecaca",
+            }}
+          >
+            <div
+              style={{
+                fontWeight: "bold",
+                fontSize: "1.1rem",
+                marginBottom: "0.75rem",
+                color: "#b91c1c",
+              }}
+            >
+              Validation Error
+            </div>
+            <div
+              style={{
+                marginBottom: "1rem",
+                color: "#7f1d1d",
+                lineHeight: 1.5,
+              }}
+            >
+              {validationErrorMessage}
+            </div>
+            <button
+              onClick={() => setValidationErrorMessage(null)}
+              style={{
+                padding: "0.5rem 2rem",
+                borderRadius: "8px",
+                border: "1px solid #991b1b",
+                background: "#fff",
+                color: "#991b1b",
+                fontWeight: "bold",
+                cursor: "pointer",
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      ) : null;
+
     if (loading) {
       return <div>Loading map data...</div>;
     }
@@ -1447,6 +1515,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         }}
       >
         <PolygonLimitModal />
+        <ValidationErrorModal />
         <MapContainer
           key={barangayName} // <- Add this line
           center={getMapView().center as [number, number]}

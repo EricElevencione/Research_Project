@@ -235,6 +235,61 @@ const LandPlottingPage: React.FC = () => {
     return null;
   }, [currentParcel, rsbsaRecord]);
 
+  const canPlotParcel = (parcel: any): boolean => {
+    if (!parcel) return false;
+
+    const ownerSignals = [
+      parcel.ownership_type_registered_owner,
+      parcel.ownershipTypeRegisteredOwner,
+      parcel.OWNERSHIP_TYPE_REGISTERED_OWNER,
+      parcel.is_registered_owner,
+      parcel.isRegisteredOwner,
+      parcel.is_current_owner,
+      parcel.isCurrentOwner,
+    ].filter((value): value is boolean => typeof value === "boolean");
+
+    if (ownerSignals.includes(true)) return true;
+    if (ownerSignals.length > 0) return false;
+
+    const normalizedStatus = String(
+      parcel.status ||
+        parcel.ownership_status ||
+        parcel.ownership_category ||
+        "",
+    )
+      .trim()
+      .toLowerCase();
+
+    if (normalizedStatus.includes("owner")) return true;
+    if (
+      normalizedStatus.includes("tenant") ||
+      normalizedStatus.includes("lessee")
+    ) {
+      return false;
+    }
+
+    // Legacy records may not include ownership fields.
+    return true;
+  };
+
+  const ownerPlotGuardMessage =
+    "Plotting is allowed only for parcels where the farmer is the registered owner.";
+
+  const currentParcelCanPlot = useMemo(
+    () => canPlotParcel(currentParcel),
+    [currentParcel],
+  );
+
+  const ensureCurrentParcelCanPlot = () => {
+    if (currentParcelCanPlot) return true;
+    setToast({
+      message: ownerPlotGuardMessage,
+      type: "error",
+    });
+    setTimeout(() => setToast(null), 4500);
+    return false;
+  };
+
   const getShapeAreaLimitMessage = (shape: Shape): string | null => {
     if (!targetParcelAreaHa || targetParcelAreaHa <= 0) return null;
 
@@ -291,6 +346,10 @@ const LandPlottingPage: React.FC = () => {
   };
 
   const saveShapeAttributes = async (shapeToSave: Shape) => {
+    if (!ensureCurrentParcelCanPlot()) {
+      return false;
+    }
+
     if (!validateForm()) {
       return false;
     }
@@ -416,6 +475,10 @@ const LandPlottingPage: React.FC = () => {
   };
 
   const handleSaveAttributes = async () => {
+    if (!ensureCurrentParcelCanPlot()) {
+      return;
+    }
+
     setIsSaving(true);
     try {
       for (const shape of shapes) {
@@ -507,6 +570,10 @@ const LandPlottingPage: React.FC = () => {
   };
 
   const handleShapeCreated = (shape: Shape) => {
+    if (!ensureCurrentParcelCanPlot()) {
+      return;
+    }
+
     // Ensure a unique id for every new shape
     if (!shape.id) {
       shape.id = `shape-${Date.now()}-${uuidv4()}`;
@@ -585,6 +652,10 @@ const LandPlottingPage: React.FC = () => {
 
   // Called when a shape is edited and "Save" is clicked
   const handleShapeEdited = async (shape: Shape) => {
+    if (!ensureCurrentParcelCanPlot()) {
+      return;
+    }
+
     setSelectedShape(shape);
     setLandAttributes((prevAttributes) => ({
       ...prevAttributes,
@@ -633,6 +704,10 @@ const LandPlottingPage: React.FC = () => {
 
   // Called when shapes are deleted and "Save" is clicked
   const handleMapShapeDeleted = async (e: any) => {
+    if (!ensureCurrentParcelCanPlot()) {
+      return;
+    }
+
     // e.shapes is an array of deleted shapes
     const deletedIds = e.shapes.map((s: any) => s.id);
     setDeletedShapeIds((prev) => [...prev, ...deletedIds]);
@@ -765,7 +840,9 @@ const LandPlottingPage: React.FC = () => {
   // Helper function to fetch farm parcel data from the database
   const fetchFarmParcelData = async (recordId: string) => {
     try {
-      const response = await getFarmParcels(recordId);
+      const response = await getFarmParcels(recordId, {
+        currentOwnerOnly: true,
+      });
       if (response.error || !response.data || response.data.length === 0) {
         console.log("≡ƒôì No farm parcels found for submission:", recordId);
         return null;
@@ -835,13 +912,37 @@ const LandPlottingPage: React.FC = () => {
         }
       }
 
+      if (Array.isArray(farmParcels) && farmParcels.length > 0) {
+        farmParcels = farmParcels.filter((parcel: any) =>
+          canPlotParcel(parcel),
+        );
+      }
+
       // Store all parcels for this farmer for progress calculations
       setFarmerParcels(farmParcels || []);
       setBarangayReferenceShapes([]);
       setReferenceLoadSummary(null);
 
       if (parcelIndex !== undefined && farmParcels) {
-        const parcel = farmParcels[parcelIndex];
+        const ownerParcels = Array.isArray(farmParcels) ? farmParcels : [];
+        if (ownerParcels.length === 0) {
+          setCurrentParcel(null);
+          setSelectedShape(null);
+          setShapesAndVersion([]);
+          setIsEditingAttributes(false);
+          setToast({
+            message: ownerPlotGuardMessage,
+            type: "error",
+          });
+          setTimeout(() => setToast(null), 4500);
+          return;
+        }
+
+        const safeParcelIndex =
+          parcelIndex >= 0 && parcelIndex < ownerParcels.length
+            ? parcelIndex
+            : 0;
+        const parcel = ownerParcels[safeParcelIndex];
         console.log("Selected parcel:", parcel);
         if (parcel) {
           setCurrentParcel(parcel);
@@ -1608,8 +1709,9 @@ const LandPlottingPage: React.FC = () => {
   const [barangayReferenceShapes, setBarangayReferenceShapes] = useState<
     ReferenceShape[]
   >([]);
-  const [referenceLoadSummary, setReferenceLoadSummary] =
-    useState<ReferenceLoadSummary | null>(null);
+  const [, setReferenceLoadSummary] = useState<ReferenceLoadSummary | null>(
+    null,
+  );
   const [deletedShapeIds, setDeletedShapeIds] = useState<string[]>([]);
   const [existingPlotIds, setExistingPlotIds] = useState<Set<string>>(
     () => new Set(),
@@ -1899,12 +2001,16 @@ const LandPlottingPage: React.FC = () => {
             </div>
             <div
               className={`tech-landplotting-map-status ${
-                polygonExistsForCurrentParcel ? "locked" : "ready"
+                !currentParcelCanPlot || polygonExistsForCurrentParcel
+                  ? "locked"
+                  : "ready"
               }`}
             >
-              {polygonExistsForCurrentParcel
-                ? "Polygon completed for this parcel"
-                : "Ready to draw parcel polygon"}
+              {!currentParcelCanPlot
+                ? "Plotting locked: parcel is not owner-eligible"
+                : polygonExistsForCurrentParcel
+                  ? "Polygon completed for this parcel"
+                  : "Ready to draw parcel polygon"}
             </div>
           </div>
           <div className="tech-landplotting-map-container">
@@ -1919,7 +2025,9 @@ const LandPlottingPage: React.FC = () => {
                 onShapeDeleted={handleMapShapeDeleted}
                 barangayName={barangayForMap}
                 onShapeFinalized={handleShapeFinalized}
-                drawingDisabled={polygonExistsForCurrentParcel}
+                drawingDisabled={
+                  polygonExistsForCurrentParcel || !currentParcelCanPlot
+                }
                 geometryPreview={currentParcel?.geometry || null}
                 shapes={shapes}
                 referenceShapes={barangayReferenceShapes}
@@ -1962,54 +2070,6 @@ const LandPlottingPage: React.FC = () => {
                 Sum of all mapped parcels for this farmer
               </div>
             </div>
-
-            {referenceLoadSummary && (
-              <div className="tech-landplotting-stat-card">
-                <div className="tech-landplotting-stat-label">
-                  Nearby plotted parcels (debug)
-                </div>
-                <div className="tech-landplotting-stat-sub">
-                  Barangay match: {referenceLoadSummary.currentBarangay}
-                </div>
-                <div className="tech-landplotting-stat-sub">
-                  Municipality match: {referenceLoadSummary.currentMunicipality}
-                </div>
-                <div className="tech-landplotting-stat-sub">
-                  Total plots scanned: {referenceLoadSummary.totalPlots}
-                </div>
-                <div className="tech-landplotting-stat-sub">
-                  Active parcel matches: {referenceLoadSummary.ownMatches}
-                </div>
-                <div className="tech-landplotting-stat-sub">
-                  Blue candidates: {referenceLoadSummary.referenceCandidates}
-                </div>
-                <div className="tech-landplotting-stat-sub">
-                  Blue shown: {referenceLoadSummary.referencesLoaded} (Area:{" "}
-                  {referenceLoadSummary.polygonReferences}, Pins:{" "}
-                  {referenceLoadSummary.pointReferences})
-                </div>
-                <div className="tech-landplotting-stat-sub">
-                  Skipped invalid geometry:{" "}
-                  {referenceLoadSummary.skippedNoGeometry}
-                </div>
-                <div className="tech-landplotting-stat-sub">
-                  Fallback used: own=
-                  {referenceLoadSummary.usedOwnFallback ? "yes" : "no"},
-                  reference=
-                  {referenceLoadSummary.usedReferenceFallback ? "yes" : "no"},
-                  municipality=
-                  {referenceLoadSummary.usedMunicipalityFallback ? "yes" : "no"}
-                </div>
-                {referenceLoadSummary.errorMessage && (
-                  <div
-                    className="tech-landplotting-stat-sub"
-                    style={{ color: "#b91c1c" }}
-                  >
-                    Error: {referenceLoadSummary.errorMessage}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="tech-landplotting-parcel-title">
@@ -2023,6 +2083,11 @@ const LandPlottingPage: React.FC = () => {
                 ? `Farm Parcel #${(selectedShape.properties as any).parcelNumber}`
                 : "Farm Parcel #1"}
           </div>
+          {!currentParcelCanPlot && (
+            <div className="tech-landplotting-owner-guard-note">
+              {ownerPlotGuardMessage}
+            </div>
+          )}
           <div className="tech-landplotting-section-label">Details:</div>
           <div className="tech-landplotting-details-container">
             <div className="tech-landplotting-detail-row">
@@ -2054,7 +2119,9 @@ const LandPlottingPage: React.FC = () => {
           <div className="tech-landplotting-actions-container">
             <button
               onClick={handleSaveAttributes}
-              disabled={!isEditingAttributes || isSaving}
+              disabled={
+                !isEditingAttributes || isSaving || !currentParcelCanPlot
+              }
               className="tech-landplotting-save-button"
             >
               {isSaving ? "Saving..." : "SAVE"}

@@ -514,7 +514,32 @@ const JoMasterlist: React.FC = () => {
           const farmLocation = String(item.farmLocation ?? "—");
           const landParcel = String(item.landParcel ?? "—");
           const parcelArea = (() => {
+            const parseAreaTotal = (value: unknown): number | null => {
+              if (value === undefined || value === null) return null;
+              const numericTokens = String(value).match(/-?\d+(?:\.\d+)?/g);
+              if (!numericTokens || numericTokens.length === 0) return null;
+
+              const total = numericTokens.reduce((sum, token) => {
+                const parsed = Number(token);
+                return sum + (Number.isFinite(parsed) ? parsed : 0);
+              }, 0);
+
+              return Number.isFinite(total) && total > 0 ? total : null;
+            };
+
+            const fromTotalFarmArea = parseAreaTotal(
+              item.totalFarmArea ?? item["TOTAL FARM AREA"],
+            );
+            if (fromTotalFarmArea !== null) {
+              return String(fromTotalFarmArea);
+            }
+
             const direct = item.parcelArea ?? item["PARCEL AREA"];
+            const fromDirectArea = parseAreaTotal(direct);
+            if (fromDirectArea !== null) {
+              return String(fromDirectArea);
+            }
+
             if (
               direct !== undefined &&
               direct !== null &&
@@ -785,7 +810,7 @@ const JoMasterlist: React.FC = () => {
   );
 
   const isNoParcelsQueueView = selectedStatus === "noParcels";
-  const visibleColumnCount = isNoParcelsQueueView ? 8 : 7;
+  const visibleColumnCount = isNoParcelsQueueView ? 9 : 8;
 
   const allFilteredSelected =
     filteredRecords.length > 0 &&
@@ -919,13 +944,21 @@ const JoMasterlist: React.FC = () => {
   };
 
   const formatParcelArea = (parcelArea: string) => {
-    const parsed = parseFloat(parcelArea);
-    if (Number.isFinite(parsed)) {
-      return `${parsed.toLocaleString(undefined, {
-        minimumFractionDigits: parsed % 1 === 0 ? 0 : 2,
-        maximumFractionDigits: 2,
-      })} ha`;
+    const numericTokens = String(parcelArea || "").match(/-?\d+(?:\.\d+)?/g);
+    if (numericTokens && numericTokens.length > 0) {
+      const total = numericTokens.reduce((sum, token) => {
+        const parsed = Number(token);
+        return sum + (Number.isFinite(parsed) ? parsed : 0);
+      }, 0);
+
+      if (Number.isFinite(total) && total > 0) {
+        return `${total.toLocaleString(undefined, {
+          minimumFractionDigits: total % 1 === 0 ? 0 : 2,
+          maximumFractionDigits: 2,
+        })} ha`;
+      }
     }
+
     return parcelArea && parcelArea !== "—" ? parcelArea : "—";
   };
 
@@ -1381,6 +1414,23 @@ const JoMasterlist: React.FC = () => {
     }
     setOpenMenuId(null);
   };
+
+  useEffect(() => {
+    const navigationState = location.state as { editRecordId?: string } | null;
+    const editRecordId = String(navigationState?.editRecordId || "").trim();
+
+    if (!editRecordId || rsbsaRecords.length === 0) return;
+
+    const targetRecordExists = rsbsaRecords.some(
+      (record) => record.id === editRecordId,
+    );
+
+    if (targetRecordExists) {
+      void handleEdit(editRecordId);
+    }
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, rsbsaRecords, navigate]);
 
   const extractParcelAreaNumber = (value: string): string => {
     if (!value) return "";
@@ -1993,6 +2043,7 @@ const JoMasterlist: React.FC = () => {
                         <span>{getSortIndicator("parcelArea")}</span>
                       </button>
                     </th>
+                    <th>Ownership Status</th>
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${
@@ -2111,6 +2162,10 @@ const JoMasterlist: React.FC = () => {
                               <span className="jo-masterlist-parcel-area">
                                 {formatParcelArea(record.parcelArea)}
                               </span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="jo-masterlist-status-cell">
                               <span
                                 className={`jo-masterlist-ownership-pill ${getOwnershipClass(record)}`}
                               >

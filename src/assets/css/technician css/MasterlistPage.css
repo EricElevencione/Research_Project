@@ -5,7 +5,14 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+  background: linear-gradient(
+    135deg,
+    #e8f5e9 0%,
+    #f1f8e9 25%,
+    #ffffff 50%,
+    #e8f5e9 75%,
+    #c8e6c9 100%
+  );
 }
 
 .dashboard-header {
@@ -33,7 +40,6 @@
   font-family: var(--font-family);
 }
 
-
 /* Main content Ends */
 
 /* RSBSA Form Styles */
@@ -57,7 +63,6 @@
   .form-group input[type="date"] {
     align-items: center;
   }
-
 }
 
 .form-section h3 {
@@ -73,7 +78,6 @@
     background: #fff;
   }
 }
-
 
 /* Make all part headings consistent size */
 .form-section h2,
@@ -138,7 +142,9 @@
   border-radius: 12px;
   background: #f9fafb;
   font-size: 14px;
-  transition: box-shadow .2s ease, border-color .2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .form-group input:focus,
@@ -205,12 +211,15 @@
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
-  transition: background-color .2s ease, box-shadow .2s ease, transform .05s ease;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.05s ease;
   border: 1px solid black;
 }
 
 .register-button:hover {
-  background: #A0C878;
+  background: #a0c878;
   box-shadow: 0 8px 18px rgba(29, 78, 216, 0.3);
 }
 
@@ -271,7 +280,6 @@
 
 /* Farmland Photo Upload Section */
 
-
 /* Responsive adjustments for photo upload */
 @media (max-width: 768px) {
   .photo-upload-grid {
@@ -296,7 +304,6 @@
     font-size: 11px;
   }
 }
-
 
 /* Responsive adjustments for verification section */
 @media (max-width: 768px) {
@@ -390,7 +397,7 @@
   border-top: 1px dashed var(--gray-200);
 }
 
-.ownership-group>label {
+.ownership-group > label {
   display: block;
   font-weight: 700;
   color: var(--gray-800);
@@ -523,7 +530,6 @@
   padding-bottom: 8px;
 }
 
-
 /* Table Container */
 .table-container {
   overflow-x: auto;
@@ -539,7 +545,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-right: 1px solid rgba(255, 255, 255, 0.2);
-  background-color: #A0C878;
+  background-color: #a0c878;
 }
 
 .owners-table {
@@ -553,7 +559,6 @@
   background: #dee2e6;
   color: rgb(0, 0, 0);
 }
-
 
 .owners-table th:last-child {
   border-right: none;
@@ -676,7 +681,7 @@
 }
 
 /* Menu container positioning */
-.owners-table td>div {
+.owners-table td > div {
   position: relative;
   display: inline-block;
 }
@@ -697,7 +702,6 @@
 .actions-menu {
   z-index: 10000 !important;
 }
-
 
 /* Loading, Error, and No Data States */
 .loading-container,
@@ -780,23 +784,24 @@
 }
 
 .close-button {
-  background: none;
+  width: 34px;
+  height: 34px;
   border: none;
-  font-size: 24px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 22px;
   cursor: pointer;
-  color: #6b7280;
   padding: 0;
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .close-button:hover {
-  background-color: #f3f4f6;
-  color: #374151;
+  background: #e5e7eb;
+  transform: translateY(-1px);
 }
 
 .edit-modal-body {
@@ -903,7 +908,14 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+  background: linear-gradient(
+    135deg,
+    #e8f5e9 0%,
+    #f1f8e9 25%,
+    #ffffff 50%,
+    #e8f5e9 75%,
+    #c8e6c9 100%
+  );
 }
 
 .dashboard-header {
@@ -949,7 +961,7 @@
 }
 
 .print-button {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -1035,7 +1047,7 @@
 .print-filter-select:focus,
 .print-value-select:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #4caf50;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
@@ -1084,8 +1096,8 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  background: #4CAF50;
-  border: 1px solid #4CAF50;
+  background: #4caf50;
+  border: 1px solid #4caf50;
   color: white;
 }
 
@@ -1140,7 +1152,9 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .clear-search-button {
@@ -1177,12 +1191,14 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #4caf50;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
@@ -1203,7 +1219,7 @@
 
 .status-select:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #4caf50;
 }
 
 .refresh-filter {
@@ -1216,7 +1232,7 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
-  background: #4CAF50;
+  background: #4caf50;
   color: white;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -1243,7 +1259,7 @@
 }
 
 .farmers-table thead th {
-  background: #A0C878;
+  background: #a0c878;
   color: #333;
   font-weight: 600;
   text-align: left;
@@ -1488,7 +1504,6 @@
   color: var(--gray-600);
 }
 
-
 /* Enrollment metadata card */
 .enrollment-type {
   background: var(--green-50);
@@ -1572,7 +1587,9 @@
   border-radius: 12px;
   background: #f9fafb;
   font-size: 14px;
-  transition: box-shadow .2s ease, border-color .2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .form-group input:focus {

@@ -3329,13 +3329,14 @@ export const getLandHistoryAssociationRows = async (
     query = query.lte("period_start_date", dateTo);
   }
 
-  const escaped = farmerName.replace(/,/g, " ");
-  const likeTerm = `%${escaped}%`;
+  const normalizedFarmerName = farmerName
+    .replace(/,/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   query = query.or(
     [
-      `farmer_name.ilike.${likeTerm}`,
-      `land_owner_name.ilike.${likeTerm}`,
-      `change_reason.ilike.${likeTerm}`,
+      `farmer_name.ilike.${normalizedFarmerName}`,
+      `land_owner_name.ilike.${normalizedFarmerName}`,
     ].join(","),
   );
 
