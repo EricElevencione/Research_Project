@@ -1704,30 +1704,18 @@ const JoLandHistoryReport: React.FC = () => {
                                       <span>
                                         {pluralize(
                                           owner.currentRows,
-                                          "Current row",
-                                          "Current rows",
+                                          "Current link",
+                                          "Current links",
                                         )}
                                       </span>
                                     </div>
                                     <div className="jo-land-history-linked-owner-stat">
                                       <strong>{owner.asLessee}</strong>
-                                      <span>
-                                        {pluralize(
-                                          owner.asLessee,
-                                          "Lessee row",
-                                          "Lessee rows",
-                                        )}
-                                      </span>
+                                      <span>Lessee history</span>
                                     </div>
                                     <div className="jo-land-history-linked-owner-stat">
                                       <strong>{owner.asTenant}</strong>
-                                      <span>
-                                        {pluralize(
-                                          owner.asTenant,
-                                          "Tenant row",
-                                          "Tenant rows",
-                                        )}
-                                      </span>
+                                      <span>Tenant history</span>
                                     </div>
                                   </div>
 
@@ -1831,30 +1819,18 @@ const JoLandHistoryReport: React.FC = () => {
                                       <span>
                                         {pluralize(
                                           counterpart.currentRows,
-                                          "Current row",
-                                          "Current rows",
+                                          "Current link",
+                                          "Current links",
                                         )}
                                       </span>
                                     </div>
                                     <div className="jo-land-history-linked-owner-stat">
                                       <strong>{counterpart.lesseeRows}</strong>
-                                      <span>
-                                        {pluralize(
-                                          counterpart.lesseeRows,
-                                          "Lessee row",
-                                          "Lessee rows",
-                                        )}
-                                      </span>
+                                      <span>Lessee history</span>
                                     </div>
                                     <div className="jo-land-history-linked-owner-stat">
                                       <strong>{counterpart.tenantRows}</strong>
-                                      <span>
-                                        {pluralize(
-                                          counterpart.tenantRows,
-                                          "Tenant row",
-                                          "Tenant rows",
-                                        )}
-                                      </span>
+                                      <span>Tenant history</span>
                                     </div>
                                   </div>
 
