@@ -835,16 +835,19 @@ const ManageRequests: React.FC = () => {
                         </div>
 
                         {/* Allocation vs Requests Comparison */}
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: '16px',
-                            marginBottom: '24px',
-                            padding: '20px',
-                            background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                            borderRadius: '12px',
-                            border: '2px solid #0ea5e9'
-                        }}>
+                        <div
+                            className="admin-alloc-requests-comparison"
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '16px',
+                                marginBottom: '24px',
+                                padding: '20px',
+                                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                                borderRadius: '12px',
+                                border: '2px solid #0ea5e9'
+                            }}
+                        >
                             {/* Regional Allocation Card */}
                             <div style={{
                                 background: 'white',

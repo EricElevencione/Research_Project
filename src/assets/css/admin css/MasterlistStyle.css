@@ -241,6 +241,25 @@
     .masterlist-export-btn {
         flex: 1;
     }
+
+    /* Make status cards smaller on mobile */
+    .masterlist-status-card {
+        padding: 10px !important;
+        gap: 4px !important;
+    }
+    .masterlist-card-icon {
+        font-size: 18px !important;
+    }
+    .masterlist-card-count {
+        font-size: 18px !important;
+    }
+    .masterlist-card-label {
+        font-size: 10px !important;
+    }
+    .masterlist-card-bar {
+        height: 4px !important;
+        margin-top: 2px !important;
+    }
 }
 
 /* ============================================

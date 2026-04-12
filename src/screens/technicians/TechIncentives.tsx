@@ -519,11 +519,11 @@ const TechIncentives: React.FC = () => {
                                             <div className="tech-incent-stat-row">
                                                 <div className="tech-incent-stat-item">
                                                     <span className="tech-incent-stat-label">Total Fertilizer</span>
-                                                    <span className="tech-incent-stat-value">{getTotalFertilizer(allocation).toLocaleString()} bags</span>
+                                                    <span className="tech-incent-stat-value">{getTotalFertilizer(allocation).toLocaleString()}&nbsp;bags</span>
                                                 </div>
                                                 <div className="tech-incent-stat-item">
                                                     <span className="tech-incent-stat-label">Total Seeds</span>
-                                                    <span className="tech-incent-stat-value">{getTotalSeeds(allocation).toFixed(2)} kg</span>
+                                                    <span className="tech-incent-stat-value">{getTotalSeeds(allocation).toFixed(2)}&nbsp;kg</span>
                                                 </div>
                                             </div>
                                             <div className="tech-incent-stat-row">

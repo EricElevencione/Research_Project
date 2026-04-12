@@ -1,4 +1,7 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+
+// Expandable row component for farmer list
+
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getRsbsaSubmissions } from '../../api';
 import jsPDF from 'jspdf';
@@ -122,6 +125,49 @@ const Masterlist: React.FC = () => {
   });
 
   // ── Status Counts ──
+
+
+  // Responsive: detect mobile
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Expandable row component for farmer list (only used on mobile)
+  function ExpandableFarmerRow({ record }) {
+    const [expanded, setExpanded] = useState(false);
+    return (
+      <>
+        <tr
+          className="masterlist-expandable-row"
+          style={{ cursor: 'pointer', background: expanded ? '#f3f4f6' : undefined }}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          <td colSpan={7} style={{ fontWeight: 600 }}>
+            {record.farmerName}
+            <span style={{ float: 'right', fontWeight: 400, fontSize: 18 }}>{expanded ? '▲' : '▼'}</span>
+          </td>
+        </tr>
+        {expanded && (
+          <tr className="masterlist-expandable-details">
+            <td data-label="FFRS System Generated">{record.referenceNumber}</td>
+            <td data-label="Farmer Name">{record.farmerName}</td>
+            <td data-label="Farmer Address">{record.farmerAddress}</td>
+            <td data-label="Parcel Address">{record.farmLocation}</td>
+            <td data-label="Parcel Area">{record.parcelArea}</td>
+            <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
+            <td data-label="Farmer Status">
+              <span className={`masterlist-admin-status-pill ${record.status === 'Active Farmer' ? 'masterlist-admin-status-approved' : 'masterlist-admin-status-not-approved'}`}>
+                {record.status || 'Not Active'}
+              </span>
+            </td>
+          </tr>
+        )}
+      </>
+    );
+  }
   const statusCounts = useMemo(() => {
     const active = rsbsaRecords.filter(r => r.status === 'Active Farmer').length;
     const inactive = rsbsaRecords.filter(r => r.status === 'Not Active').length;
@@ -293,7 +339,7 @@ const Masterlist: React.FC = () => {
 
           {/* Status Count Cards */}
           {!loading && !error && (
-            <div className="masterlist-status-cards">
+            <div className="masterlist-status-cards" style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: 16}}>
               <div className="masterlist-status-card masterlist-card-total">
                 <div className="masterlist-card-icon">👥</div>
                 <div className="masterlist-card-info">
@@ -311,16 +357,6 @@ const Masterlist: React.FC = () => {
                   <div className="masterlist-card-bar-fill masterlist-bar-active" style={{ width: `${statusCounts.total ? (statusCounts.active / statusCounts.total * 100) : 0}%` }} />
                 </div>
               </div>
-              <div className="masterlist-status-card masterlist-card-inactive">
-                <div className="masterlist-card-icon">❌</div>
-                <div className="masterlist-card-info">
-                  <span className="masterlist-card-count">{statusCounts.inactive}</span>
-                  <span className="masterlist-card-label">Inactive</span>
-                </div>
-                <div className="masterlist-card-bar">
-                  <div className="masterlist-card-bar-fill masterlist-bar-inactive" style={{ width: `${statusCounts.total ? (statusCounts.inactive / statusCounts.total * 100) : 0}%` }} />
-                </div>
-              </div>
               <div className="masterlist-status-card masterlist-card-submitted">
                 <div className="masterlist-card-icon">📋</div>
                 <div className="masterlist-card-info">
@@ -329,6 +365,16 @@ const Masterlist: React.FC = () => {
                 </div>
                 <div className="masterlist-card-bar">
                   <div className="masterlist-card-bar-fill masterlist-bar-submitted" style={{ width: `${statusCounts.total ? (statusCounts.submitted / statusCounts.total * 100) : 0}%` }} />
+                </div>
+              </div>
+              <div className="masterlist-status-card masterlist-card-inactive">
+                <div className="masterlist-card-icon">❌</div>
+                <div className="masterlist-card-info">
+                  <span className="masterlist-card-count">{statusCounts.inactive}</span>
+                  <span className="masterlist-card-label">Inactive</span>
+                </div>
+                <div className="masterlist-card-bar">
+                  <div className="masterlist-card-bar-fill masterlist-bar-inactive" style={{ width: `${statusCounts.total ? (statusCounts.inactive / statusCounts.total * 100) : 0}%` }} />
                 </div>
               </div>
             </div>
@@ -397,33 +443,33 @@ const Masterlist: React.FC = () => {
                     <tr><td colSpan={7} className="masterlist-admin-error-cell">Error: {error}</td></tr>
                   )}
 
-                  {!loading && !error && filteredRecords.length > 0 && (
-                    filteredRecords.map((record) => {
-                      return (
-                        <tr key={record.id}>
-                          <td data-label="FFRS System Generated">{record.referenceNumber}</td>
-                          <td data-label="Farmer Name">{record.farmerName}</td>
-                          <td data-label="Farmer Address">{record.farmerAddress}</td>
-                          <td data-label="Parcel Address">{record.farmLocation}</td>
-                          <td data-label="Parcel Area">{record.parcelArea}</td>
-                          <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
-                          <td data-label="Farmer Status">
-                            <span className={`masterlist-admin-status-pill ${record.status === 'Active Farmer' ? 'masterlist-admin-status-approved' : 'masterlist-admin-status-not-approved'}`}>
-                              {record.status || 'Not Active'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
 
-                  {!loading && !error && filteredRecords.length === 0 && (
-                    Array.from({ length: 16 }).map((_, i) => (
-                      <tr key={`empty-${i}`}>
-                        <td colSpan={7}>&nbsp;</td>
-                      </tr>
-                    ))
-                  )}
+                  {!loading && !error && filteredRecords.length > 0 && (
+                    isMobile
+                      ? filteredRecords.map((record) => (
+                          <ExpandableFarmerRow key={record.id} record={record} />
+                        ))
+                      : filteredRecords.map((record) => (
+                          <tr key={record.id}>
+                            <td data-label="FFRS System Generated">{record.referenceNumber}</td>
+                            <td data-label="Farmer Name">{record.farmerName}</td>
+                            <td data-label="Farmer Address">{record.farmerAddress}</td>
+                            <td data-label="Parcel Address">{record.farmLocation}</td>
+                            <td data-label="Parcel Area">{record.parcelArea}</td>
+                            <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
+                            <td data-label="Farmer Status">
+                              <span className={`masterlist-admin-status-pill ${record.status === 'Active Farmer' ? 'masterlist-admin-status-approved' : 'masterlist-admin-status-not-approved'}`}>{record.status || 'Not Active'}</span>
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                    {!loading && !error && filteredRecords.length === 0 && (
+                      Array.from({ length: 16 }).map((_, i) => (
+                        <tr key={`empty-${i}`}>
+                          <td colSpan={7}>&nbsp;</td>
+                        </tr>
+                      ))
+                    )}
                 </tbody>
               </table>
             </div>

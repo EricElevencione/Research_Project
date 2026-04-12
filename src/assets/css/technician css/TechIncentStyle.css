@@ -1,3 +1,49 @@
+@media (max-width: 600px) {
+    .tech-incent-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    .tech-incent-card {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        margin: 0 0 12px 0 !important;
+        box-sizing: border-box;
+    }
+}
+@media (max-width: 600px) {
+    .tech-incent-card {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        margin: 0 0 12px 0 !important;
+        box-sizing: border-box;
+    }
+}
+@media (max-width: 600px) {
+    .tech-incent-stat-group {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    .tech-incent-stat-item {
+        width: 100%;
+        margin-bottom: 0 !important;
+    }
+}
+@media (max-width: 600px) {
+    .tech-incent-stat-item {
+        padding: 6px 4px;
+        font-size: 0.95rem;
+        max-width: 100%;
+    }
+    .tech-incent-stat-item .stat-value {
+        font-size: 1.1rem;
+    }
+    .tech-incent-stat-item .stat-unit {
+        font-size: 0.95rem;
+    }
+}
 /* ============================================
    TECHNICIAN INCENTIVES - UNIQUE STYLING
    ============================================ */
@@ -474,10 +520,12 @@
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
-    padding: 12px;
+    padding: 10px 8px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .tech-incent-stat-label {

@@ -1,3 +1,10 @@
+@media (max-width: 700px) {
+    .admin-alloc-requests-comparison {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+}
 /* ============================================
    ADMIN MANAGE REQUESTS - UNIQUE STYLING
    All class names prefixed with admin-req-

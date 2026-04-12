@@ -1,51 +1,17 @@
+import LogoutIcon from '../../assets/images/logout.png';
+import ApproveIcon from '../../assets/images/approve.png';
+import IncentivesIcon from '../../assets/images/incentives.png';
+import RSBSAIcon from '../../assets/images/rsbsa.png';
+import HomeIcon from '../../assets/images/home.png';
+import LogoImage from '../../assets/images/Logo.png';
+import { getFarmerRequests } from '../../api';
+import { getAllocations } from '../../api';
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getAllocations, getFarmerRequests } from '../../api';
-import '../../assets/css/jo css/JoIncentStyle.css';
-import '../../components/layout/sidebarStyle.css';
-import LogoImage from '../../assets/images/Logo.png';
-import HomeIcon from '../../assets/images/home.png';
-import RSBSAIcon from '../../assets/images/rsbsa.png';
-import ApproveIcon from '../../assets/images/approve.png';
-import FarmerIcon from '../../assets/images/farmer (1).png';
-import LogoutIcon from '../../assets/images/logout.png';
-import IncentivesIcon from '../../assets/images/incentives.png';
-
-interface FarmerRequest {
-    id: number;
-    farmer_name: string;
-    barangay: string;
-    requested_urea_bags: number;
-    requested_complete_14_bags: number;
-    requested_ammonium_sulfate_bags: number;
-    requested_muriate_potash_bags: number;
-    requested_jackpot_kg: number;
-    requested_us88_kg: number;
-    requested_th82_kg: number;
-    requested_rh9000_kg: number;
-    requested_lumping143_kg: number;
-    requested_lp296_kg: number;
-    status: string;
-}
-
-interface AllocationDetails {
-    id: number;
-    season: string;
-    allocation_date: string;
-    urea_46_0_0_bags: number;
-    complete_14_14_14_bags: number;
-    ammonium_sulfate_21_0_0_bags: number;
-    muriate_potash_0_0_60_bags: number;
-    jackpot_kg: number;
-    us88_kg: number;
-    th82_kg: number;
-    rh9000_kg: number;
-    lumping143_kg: number;
-    lp296_kg: number;
-    notes: string;
-}
 
 const TechViewAllocation: React.FC = () => {
+
     const navigate = useNavigate();
     const { allocationId } = useParams<{ allocationId: string }>();
     const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
@@ -53,6 +19,17 @@ const TechViewAllocation: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Responsive check for mobile
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // For expandable farmer list
+    const [expandedFarmer, setExpandedFarmer] = useState<number | null>(null);
 
     const isActive = (path: string) => location.pathname === path;
 
@@ -298,159 +275,157 @@ const TechViewAllocation: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Fertilizers Section */}
+                        {/* Fertilizers Section as Expandable List */}
                         <div style={{ marginBottom: '32px' }}>
                             <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 🌱 Fertilizers Allocation
                             </h3>
                             <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '2px solid #d1d5db' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Type</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Allocated</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Requested</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Remaining</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Usage</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {[
-                                            { name: 'Urea (46-0-0)', allocated: 'urea_46_0_0_bags', requested: 'requested_urea_bags' },
-                                            { name: 'Complete (14-14-14)', allocated: 'complete_14_14_14_bags', requested: 'requested_complete_14_bags' },
-                                            { name: 'Ammonium Sulfate (21-0-0)', allocated: 'ammonium_sulfate_21_0_0_bags', requested: 'requested_ammonium_sulfate_bags' },
-                                            { name: 'Muriate of Potash (0-0-60)', allocated: 'muriate_potash_0_0_60_bags', requested: 'requested_muriate_potash_bags' }
-                                        ].map(fertilizer => {
-                                            const allocated = getTotalAllocated(fertilizer.allocated as keyof AllocationDetails);
-                                            const requested = getTotalRequested(fertilizer.requested as keyof FarmerRequest);
-                                            const remaining = allocated - requested;
-                                            const percentage = getPercentageUsed(allocated, requested);
-                                            const statusColor = getStatusColor(allocated, requested);
-
-                                            return (
-                                                <tr key={fertilizer.name} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                                    <td style={{ padding: '12px', color: '#1f2937' }}>{fertilizer.name}</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>{allocated.toFixed(2)} bags</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>{requested.toFixed(2)} bags</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', color: remaining < 0 ? '#ef4444' : '#059669' }}>
-                                                        {remaining.toFixed(2)} bags
-                                                    </td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                        <span style={{
-                                                            padding: '4px 12px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            color: 'white',
-                                                            background: statusColor
-                                                        }}>
-                                                            {percentage}%
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                        <tr style={{ borderTop: '2px solid #d1d5db', background: '#f3f4f6', fontWeight: '700' }}>
-                                            <td style={{ padding: '12px' }}>TOTAL</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalAllocatedFertilizer.toFixed(2)} bags</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalRequestedFertilizer.toFixed(2)} bags</td>
-                                            <td style={{ padding: '12px', textAlign: 'right', color: (totalAllocatedFertilizer - totalRequestedFertilizer) < 0 ? '#ef4444' : '#059669' }}>
-                                                {(totalAllocatedFertilizer - totalRequestedFertilizer).toFixed(2)} bags
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    background: getStatusColor(totalAllocatedFertilizer, totalRequestedFertilizer)
-                                                }}>
-                                                    {getPercentageUsed(totalAllocatedFertilizer, totalRequestedFertilizer)}%
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                {[
+                                    { name: 'Urea (46-0-0)', allocated: 'urea_46_0_0_bags', requested: 'requested_urea_bags' },
+                                    { name: 'Complete (14-14-14)', allocated: 'complete_14_14_14_bags', requested: 'requested_complete_14_bags' },
+                                    { name: 'Ammonium Sulfate (21-0-0)', allocated: 'ammonium_sulfate_21_0_0_bags', requested: 'requested_ammonium_sulfate_bags' },
+                                    { name: 'Muriate of Potash (0-0-60)', allocated: 'muriate_potash_0_0_60_bags', requested: 'requested_muriate_potash_bags' }
+                                ].map((fertilizer, idx) => {
+                                    const allocated = getTotalAllocated(fertilizer.allocated as keyof AllocationDetails);
+                                    const requested = getTotalRequested(fertilizer.requested as keyof FarmerRequest);
+                                    const remaining = allocated - requested;
+                                    const percentage = getPercentageUsed(allocated, requested);
+                                    const statusColor = getStatusColor(allocated, requested);
+                                    const isExpanded = expandedFarmer === idx;
+                                    return (
+                                        <div key={fertilizer.name} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: '14px 16px',
+                                                    cursor: 'pointer',
+                                                    background: isExpanded ? '#f0fdf4' : 'transparent',
+                                                    fontWeight: 500,
+                                                    color: '#1e293b',
+                                                }}
+                                                onClick={() => setExpandedFarmer(isExpanded ? null : idx)}
+                                            >
+                                                <span>{fertilizer.name}</span>
+                                                <span style={{ fontSize: 18 }}>{isExpanded ? '▲' : '▼'}</span>
+                                            </div>
+                                            {isExpanded && (
+                                                <div style={{ padding: '12px 20px', background: '#f0fdf4', color: '#334155', fontSize: 14 }}>
+                                                    <div><strong>Allocated:</strong> {allocated.toFixed(2)} bags</div>
+                                                    <div><strong>Requested:</strong> {requested.toFixed(2)} bags</div>
+                                                    <div><strong>Remaining:</strong> <span style={{ color: remaining < 0 ? '#ef4444' : '#059669' }}>{remaining.toFixed(2)} bags</span></div>
+                                                    <div><strong>Usage:</strong> <span style={{
+                                                        padding: '4px 12px',
+                                                        borderRadius: '12px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
+                                                        color: 'white',
+                                                        background: statusColor
+                                                    }}>{percentage}%</span></div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                {/* TOTAL row */}
+                                <div style={{ padding: '14px 16px', background: '#f3f4f6', fontWeight: 700, borderTop: '2px solid #d1d5db' }}>
+                                    <span style={{ marginRight: 16 }}>TOTAL</span>
+                                    <span style={{ marginRight: 16 }}>Allocated: {totalAllocatedFertilizer.toFixed(2)} bags</span>
+                                    <span style={{ marginRight: 16 }}>Requested: {totalRequestedFertilizer.toFixed(2)} bags</span>
+                                    <span style={{ marginRight: 16, color: (totalAllocatedFertilizer - totalRequestedFertilizer) < 0 ? '#ef4444' : '#059669' }}>
+                                        Remaining: {(totalAllocatedFertilizer - totalRequestedFertilizer).toFixed(2)} bags
+                                    </span>
+                                    <span>
+                                        Usage: <span style={{
+                                            padding: '4px 12px',
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: 'white',
+                                            background: getStatusColor(totalAllocatedFertilizer, totalRequestedFertilizer)
+                                        }}>{getPercentageUsed(totalAllocatedFertilizer, totalRequestedFertilizer)}%</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Seeds Section */}
+                        {/* Seeds Section as Expandable List */}
                         <div style={{ marginBottom: '32px' }}>
                             <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 🌾 Seeds Allocation
                             </h3>
                             <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '2px solid #d1d5db' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Variety</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Allocated</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Requested</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Remaining</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>Usage</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {[
-                                            { name: 'Jackpot', allocated: 'jackpot_kg', requested: 'requested_jackpot_kg' },
-                                            { name: 'US88', allocated: 'us88_kg', requested: 'requested_us88_kg' },
-                                            { name: 'TH82', allocated: 'th82_kg', requested: 'requested_th82_kg' },
-                                            { name: 'RH9000', allocated: 'rh9000_kg', requested: 'requested_rh9000_kg' },
-                                            { name: 'Lumping143', allocated: 'lumping143_kg', requested: 'requested_lumping143_kg' },
-                                            { name: 'LP296', allocated: 'lp296_kg', requested: 'requested_lp296_kg' }
-                                        ].map(seed => {
-                                            const allocated = getTotalAllocated(seed.allocated as keyof AllocationDetails);
-                                            const requested = getTotalRequested(seed.requested as keyof FarmerRequest);
-                                            const remaining = allocated - requested;
-                                            const percentage = getPercentageUsed(allocated, requested);
-                                            const statusColor = getStatusColor(allocated, requested);
-
-                                            return (
-                                                <tr key={seed.name} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                                    <td style={{ padding: '12px', color: '#1f2937' }}>{seed.name}</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600' }}>{allocated.toFixed(2)} kg</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>{requested.toFixed(2)} kg</td>
-                                                    <td style={{ padding: '12px', textAlign: 'right', color: remaining < 0 ? '#ef4444' : '#059669' }}>
-                                                        {remaining.toFixed(2)} kg
-                                                    </td>
-                                                    <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                        <span style={{
-                                                            padding: '4px 12px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            color: 'white',
-                                                            background: statusColor
-                                                        }}>
-                                                            {percentage}%
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                        <tr style={{ borderTop: '2px solid #d1d5db', background: '#f3f4f6', fontWeight: '700' }}>
-                                            <td style={{ padding: '12px' }}>TOTAL</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalAllocatedSeeds.toFixed(2)} kg</td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>{totalRequestedSeeds.toFixed(2)} kg</td>
-                                            <td style={{ padding: '12px', textAlign: 'right', color: (totalAllocatedSeeds - totalRequestedSeeds) < 0 ? '#ef4444' : '#059669' }}>
-                                                {(totalAllocatedSeeds - totalRequestedSeeds).toFixed(2)} kg
-                                            </td>
-                                            <td style={{ padding: '12px', textAlign: 'right' }}>
-                                                <span style={{
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    background: getStatusColor(totalAllocatedSeeds, totalRequestedSeeds)
-                                                }}>
-                                                    {getPercentageUsed(totalAllocatedSeeds, totalRequestedSeeds)}%
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                {[
+                                    { name: 'Jackpot', allocated: 'jackpot_kg', requested: 'requested_jackpot_kg' },
+                                    { name: 'US88', allocated: 'us88_kg', requested: 'requested_us88_kg' },
+                                    { name: 'TH82', allocated: 'th82_kg', requested: 'requested_th82_kg' },
+                                    { name: 'RH9000', allocated: 'rh9000_kg', requested: 'requested_rh9000_kg' },
+                                    { name: 'Lumping143', allocated: 'lumping143_kg', requested: 'requested_lumping143_kg' },
+                                    { name: 'LP296', allocated: 'lp296_kg', requested: 'requested_lp296_kg' }
+                                ].map((seed, idx) => {
+                                    const allocated = getTotalAllocated(seed.allocated as keyof AllocationDetails);
+                                    const requested = getTotalRequested(seed.requested as keyof FarmerRequest);
+                                    const remaining = allocated - requested;
+                                    const percentage = getPercentageUsed(allocated, requested);
+                                    const statusColor = getStatusColor(allocated, requested);
+                                    const isExpanded = expandedFarmer === (100 + idx); // offset to avoid clash with fertilizer idx
+                                    return (
+                                        <div key={seed.name} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: '14px 16px',
+                                                    cursor: 'pointer',
+                                                    background: isExpanded ? '#f0fdf4' : 'transparent',
+                                                    fontWeight: 500,
+                                                    color: '#1e293b',
+                                                }}
+                                                onClick={() => setExpandedFarmer(isExpanded ? null : (100 + idx))}
+                                            >
+                                                <span>{seed.name}</span>
+                                                <span style={{ fontSize: 18 }}>{isExpanded ? '▲' : '▼'}</span>
+                                            </div>
+                                            {isExpanded && (
+                                                <div style={{ padding: '12px 20px', background: '#f0fdf4', color: '#334155', fontSize: 14 }}>
+                                                    <div><strong>Allocated:</strong> {allocated.toFixed(2)} kg</div>
+                                                    <div><strong>Requested:</strong> {requested.toFixed(2)} kg</div>
+                                                    <div><strong>Remaining:</strong> <span style={{ color: remaining < 0 ? '#ef4444' : '#059669' }}>{remaining.toFixed(2)} kg</span></div>
+                                                    <div><strong>Usage:</strong> <span style={{
+                                                        padding: '4px 12px',
+                                                        borderRadius: '12px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
+                                                        color: 'white',
+                                                        background: statusColor
+                                                    }}>{percentage}%</span></div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                {/* TOTAL row */}
+                                <div style={{ padding: '14px 16px', background: '#f3f4f6', fontWeight: 700, borderTop: '2px solid #d1d5db' }}>
+                                    <span style={{ marginRight: 16 }}>TOTAL</span>
+                                    <span style={{ marginRight: 16 }}>Allocated: {totalAllocatedSeeds.toFixed(2)} kg</span>
+                                    <span style={{ marginRight: 16 }}>Requested: {totalRequestedSeeds.toFixed(2)} kg</span>
+                                    <span style={{ marginRight: 16, color: (totalAllocatedSeeds - totalRequestedSeeds) < 0 ? '#ef4444' : '#059669' }}>
+                                        Remaining: {(totalAllocatedSeeds - totalRequestedSeeds).toFixed(2)} kg
+                                    </span>
+                                    <span>
+                                        Usage: <span style={{
+                                            padding: '4px 12px',
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: 'white',
+                                            background: getStatusColor(totalAllocatedSeeds, totalRequestedSeeds)
+                                        }}>{getPercentageUsed(totalAllocatedSeeds, totalRequestedSeeds)}%</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
