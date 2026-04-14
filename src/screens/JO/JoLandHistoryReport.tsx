@@ -99,6 +99,8 @@ const JoLandHistoryReport: React.FC = () => {
   const [showOwnerLinkDetails, setShowOwnerLinkDetails] = useState(true);
   const [showCounterpartLinkDetails, setShowCounterpartLinkDetails] =
     useState(true);
+  const [showAdvancedRelationshipSummary, setShowAdvancedRelationshipSummary] =
+    useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const isActive = (path: string) => location.pathname === path;
@@ -260,6 +262,57 @@ const JoLandHistoryReport: React.FC = () => {
 
   const getAssociationLinkStatusLabel = (currentRows: number) =>
     currentRows > 0 ? "Current Link" : "Past Link";
+
+  const buildLinkRoleMixText = (tenantRows: number, lesseeRows: number) => {
+    const safeTenantRows = Math.max(0, tenantRows);
+    const safeLesseeRows = Math.max(0, lesseeRows);
+    const parts: string[] = [];
+
+    if (safeTenantRows > 0) {
+      parts.push(
+        `${safeTenantRows} tenant ${pluralize(safeTenantRows, "record")}`,
+      );
+    }
+
+    if (safeLesseeRows > 0) {
+      parts.push(
+        `${safeLesseeRows} lessee ${pluralize(safeLesseeRows, "record")}`,
+      );
+    }
+
+    if (parts.length === 0) return "no tenant or lessee records";
+    return parts.join(", ");
+  };
+
+  const buildAssociationSnapshotText = ({
+    currentRows,
+    relationshipRows,
+    parcelCount,
+    tenantRows,
+    lesseeRows,
+  }: {
+    currentRows: number;
+    relationshipRows: number;
+    parcelCount: number;
+    tenantRows: number;
+    lesseeRows: number;
+  }) => {
+    const safeCurrentRows = Math.max(0, currentRows);
+    const safeRelationshipRows = Math.max(0, relationshipRows);
+    const safeParcelCount = Math.max(0, parcelCount);
+    const parcelText = `${safeParcelCount} ${pluralize(safeParcelCount, "parcel")}`;
+    const roleMixText = buildLinkRoleMixText(tenantRows, lesseeRows);
+
+    if (safeCurrentRows > 0) {
+      return `Active now on ${parcelText}. Role mix: ${roleMixText}.`;
+    }
+
+    if (safeRelationshipRows > 0) {
+      return `No active link now. Historical records found on ${parcelText}. Role mix: ${roleMixText}.`;
+    }
+
+    return "No relationship records found.";
+  };
 
   const buildAssociationLinkActivityText = (
     currentRows: number,
@@ -865,6 +918,7 @@ const JoLandHistoryReport: React.FC = () => {
     setFarmerModalLoading(true);
     setShowOwnerLinkDetails(true);
     setShowCounterpartLinkDetails(true);
+    setShowAdvancedRelationshipSummary(false);
 
     const [reportResponse, associationResponse] = await Promise.all([
       getLandHistoryReportRows({
@@ -1096,7 +1150,7 @@ const JoLandHistoryReport: React.FC = () => {
         (row) => getOwnershipCategory(row) === "tenantLessee",
       );
 
-      let currentRole = "Past";
+      let currentRole = "No Active Role";
       if (hasCurrentOwner) {
         currentRole = "Registered Owner";
       } else if (hasCurrentTenant && hasCurrentLessee) {
@@ -1530,7 +1584,7 @@ const JoLandHistoryReport: React.FC = () => {
                         <td>{row.barangay}</td>
                         <td>{row.currentAreaHa.toFixed(2)}</td>
                         <td>{formatDate(row.lastChangeDate)}</td>
-                        <td>{row.isCurrent ? "Current" : "Past"}</td>
+                        <td>{row.isCurrent ? "Active" : "Inactive"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1625,227 +1679,6 @@ const JoLandHistoryReport: React.FC = () => {
                       {farmerModalSummary.roleLabels.length > 0
                         ? farmerModalSummary.roleLabels.join(", ")
                         : "No current role tagged."}
-                    </div>
-
-                    <div className="jo-land-history-association-grid jo-land-history-modal-block">
-                      <section className="jo-land-history-association-card">
-                        <header className="jo-land-history-association-headline">
-                          <span className="jo-land-history-association-chip">
-                            {farmerModalAssociations.linkedOwners.length}{" "}
-                            {pluralize(
-                              farmerModalAssociations.linkedOwners.length,
-                              "linked owner",
-                              "linked owners",
-                            )}
-                          </span>
-                          <span className="jo-land-history-association-why">
-                            Why are they linked?
-                          </span>
-                          <button
-                            type="button"
-                            className="jo-land-history-association-toggle"
-                            onClick={() =>
-                              setShowOwnerLinkDetails((prev) => !prev)
-                            }
-                          >
-                            {showOwnerLinkDetails ? "Hide" : "Show"}
-                          </button>
-                        </header>
-
-                        <p className="jo-land-history-association-help">
-                          Linked owners show land-use relationship context
-                          (tenant/lessee).
-                        </p>
-
-                        {farmerModalAssociations.linkedOwners.length === 0 ? (
-                          <p className="jo-land-history-association-empty">
-                            No owner links found for this farmer.
-                          </p>
-                        ) : !showOwnerLinkDetails ? (
-                          <p className="jo-land-history-association-empty">
-                            Click Show to view linked owner details.
-                          </p>
-                        ) : (
-                          <ul className="jo-land-history-association-list">
-                            {farmerModalAssociations.linkedOwners.map(
-                              (owner) => (
-                                <li
-                                  key={owner.ownerName}
-                                  className="jo-land-history-linked-owner-item"
-                                >
-                                  <div className="jo-land-history-linked-owner-top">
-                                    <div className="jo-land-history-linked-owner-avatar">
-                                      {getInitials(owner.ownerName)}
-                                    </div>
-                                    <div className="jo-land-history-linked-owner-identity">
-                                      <strong>{owner.ownerName}</strong>
-                                      <small>
-                                        {getLinkedOwnerRoleLabel(owner)} •{" "}
-                                        {getAssociationLinkStatusLabel(
-                                          owner.currentRows,
-                                        )}
-                                      </small>
-                                    </div>
-                                  </div>
-
-                                  <div className="jo-land-history-linked-owner-stats">
-                                    <div className="jo-land-history-linked-owner-stat">
-                                      <strong>{owner.parcels.size}</strong>
-                                      <span>
-                                        {pluralize(
-                                          owner.parcels.size,
-                                          "Parcel linked",
-                                          "Parcels linked",
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="jo-land-history-linked-owner-stat">
-                                      <strong>{owner.currentRows}</strong>
-                                      <span>
-                                        {pluralize(
-                                          owner.currentRows,
-                                          "Current link",
-                                          "Current links",
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="jo-land-history-linked-owner-stat">
-                                      <strong>{owner.asLessee}</strong>
-                                      <span>Lessee history</span>
-                                    </div>
-                                    <div className="jo-land-history-linked-owner-stat">
-                                      <strong>{owner.asTenant}</strong>
-                                      <span>Tenant history</span>
-                                    </div>
-                                  </div>
-
-                                  <p className="jo-land-history-linked-owner-reason">
-                                    {buildOwnerLinkExplanation(
-                                      owner,
-                                      farmerModalFarmerName,
-                                    )}
-                                  </p>
-                                </li>
-                              ),
-                            )}
-                          </ul>
-                        )}
-                      </section>
-
-                      <section className="jo-land-history-association-card">
-                        <header className="jo-land-history-association-headline">
-                          <span className="jo-land-history-association-chip">
-                            {
-                              farmerModalAssociations.linkedTenantsLessees
-                                .length
-                            }{" "}
-                            {pluralize(
-                              farmerModalAssociations.linkedTenantsLessees
-                                .length,
-                              "linked tenant/lessee",
-                              "linked tenants/lessees",
-                            )}
-                          </span>
-                          <span className="jo-land-history-association-why">
-                            Why are they linked?
-                          </span>
-                          <button
-                            type="button"
-                            className="jo-land-history-association-toggle"
-                            onClick={() =>
-                              setShowCounterpartLinkDetails((prev) => !prev)
-                            }
-                          >
-                            {showCounterpartLinkDetails ? "Hide" : "Show"}
-                          </button>
-                        </header>
-
-                        <p className="jo-land-history-association-help">
-                          Linked tenants/lessees show land users associated with
-                          this farmer as owner.
-                        </p>
-
-                        {farmerModalAssociations.linkedTenantsLessees.length ===
-                        0 ? (
-                          <p className="jo-land-history-association-empty">
-                            No tenant or lessee links where this farmer appears
-                            as owner.
-                          </p>
-                        ) : !showCounterpartLinkDetails ? (
-                          <p className="jo-land-history-association-empty">
-                            Click Show to view linked tenant and lessee details.
-                          </p>
-                        ) : (
-                          <ul className="jo-land-history-association-list">
-                            {farmerModalAssociations.linkedTenantsLessees.map(
-                              (counterpart) => (
-                                <li
-                                  key={counterpart.farmerName}
-                                  className="jo-land-history-linked-owner-item"
-                                >
-                                  <div className="jo-land-history-linked-owner-top">
-                                    <div className="jo-land-history-linked-owner-avatar">
-                                      {getInitials(counterpart.farmerName)}
-                                    </div>
-                                    <div className="jo-land-history-linked-owner-identity">
-                                      <strong>{counterpart.farmerName}</strong>
-                                      <small>
-                                        {getLinkedCounterpartRoleLabel(
-                                          counterpart,
-                                        )}{" "}
-                                        •{" "}
-                                        {getAssociationLinkStatusLabel(
-                                          counterpart.currentRows,
-                                        )}
-                                      </small>
-                                    </div>
-                                  </div>
-
-                                  <div className="jo-land-history-linked-owner-stats">
-                                    <div className="jo-land-history-linked-owner-stat">
-                                      <strong>
-                                        {counterpart.parcels.size}
-                                      </strong>
-                                      <span>
-                                        {pluralize(
-                                          counterpart.parcels.size,
-                                          "Parcel linked",
-                                          "Parcels linked",
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="jo-land-history-linked-owner-stat">
-                                      <strong>{counterpart.currentRows}</strong>
-                                      <span>
-                                        {pluralize(
-                                          counterpart.currentRows,
-                                          "Current link",
-                                          "Current links",
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="jo-land-history-linked-owner-stat">
-                                      <strong>{counterpart.lesseeRows}</strong>
-                                      <span>Lessee history</span>
-                                    </div>
-                                    <div className="jo-land-history-linked-owner-stat">
-                                      <strong>{counterpart.tenantRows}</strong>
-                                      <span>Tenant history</span>
-                                    </div>
-                                  </div>
-
-                                  <p className="jo-land-history-linked-owner-reason">
-                                    {buildCounterpartLinkExplanation(
-                                      counterpart,
-                                      farmerModalFarmerName,
-                                    )}
-                                  </p>
-                                </li>
-                              ),
-                            )}
-                          </ul>
-                        )}
-                      </section>
                     </div>
 
                     <section className="jo-land-history-timeline-card jo-land-history-modal-block jo-land-history-transfer-timeline-card">
@@ -2170,6 +2003,315 @@ const JoLandHistoryReport: React.FC = () => {
                         </tbody>
                       </table>
                     </div>
+
+                    <section className="jo-land-history-modal-block jo-land-history-advanced-summary">
+                      <header className="jo-land-history-advanced-summary-header">
+                        <div className="jo-land-history-advanced-summary-copy">
+                          <h3>Advanced Relationship Summary</h3>
+                          <p>
+                            Optional deep relationship context for linked
+                            owners, tenants, and lessees.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="jo-land-history-association-toggle jo-land-history-advanced-toggle"
+                          aria-label={`${
+                            showAdvancedRelationshipSummary ? "Hide" : "Show"
+                          } advanced relationship summary`}
+                          onClick={() =>
+                            setShowAdvancedRelationshipSummary((prev) => !prev)
+                          }
+                        >
+                          {showAdvancedRelationshipSummary ? "Hide" : "Show"}
+                        </button>
+                      </header>
+
+                      {showAdvancedRelationshipSummary && (
+                        <div className="jo-land-history-association-grid">
+                          <section className="jo-land-history-association-card">
+                            <header className="jo-land-history-association-headline">
+                              <span className="jo-land-history-association-chip">
+                                {farmerModalAssociations.linkedOwners.length}{" "}
+                                {pluralize(
+                                  farmerModalAssociations.linkedOwners.length,
+                                  "linked owner",
+                                  "linked owners",
+                                )}
+                              </span>
+                              <span className="jo-land-history-association-why">
+                                Why are they linked?
+                              </span>
+                              <button
+                                type="button"
+                                className="jo-land-history-association-toggle"
+                                onClick={() =>
+                                  setShowOwnerLinkDetails((prev) => !prev)
+                                }
+                              >
+                                {showOwnerLinkDetails ? "Hide" : "Show"}
+                              </button>
+                            </header>
+
+                            <p className="jo-land-history-association-help">
+                              Each card explains if the link is active now, how
+                              many parcels are involved, and the tenant/lessee
+                              record mix.
+                            </p>
+
+                            {farmerModalAssociations.linkedOwners.length ===
+                            0 ? (
+                              <p className="jo-land-history-association-empty">
+                                No owner links found for this farmer.
+                              </p>
+                            ) : !showOwnerLinkDetails ? (
+                              <p className="jo-land-history-association-empty">
+                                Click Show to view linked owner details.
+                              </p>
+                            ) : (
+                              <ul className="jo-land-history-association-list">
+                                {farmerModalAssociations.linkedOwners.map(
+                                  (owner) => (
+                                    <li
+                                      key={owner.ownerName}
+                                      className="jo-land-history-linked-owner-item"
+                                    >
+                                      <div className="jo-land-history-linked-owner-top">
+                                        <div className="jo-land-history-linked-owner-avatar">
+                                          {getInitials(owner.ownerName)}
+                                        </div>
+                                        <div className="jo-land-history-linked-owner-identity">
+                                          <strong>{owner.ownerName}</strong>
+                                          <small>
+                                            {getLinkedOwnerRoleLabel(owner)} •{" "}
+                                            {getAssociationLinkStatusLabel(
+                                              owner.currentRows,
+                                            )}
+                                          </small>
+                                        </div>
+                                      </div>
+
+                                      <div className="jo-land-history-linked-owner-summary">
+                                        <span
+                                          className={`jo-land-history-linked-owner-status-chip ${
+                                            owner.currentRows > 0
+                                              ? "is-current"
+                                              : "is-past"
+                                          }`}
+                                        >
+                                          {owner.currentRows > 0
+                                            ? "Active right now"
+                                            : "History only"}
+                                        </span>
+                                        <p className="jo-land-history-linked-owner-summary-text">
+                                          {buildAssociationSnapshotText({
+                                            currentRows: owner.currentRows,
+                                            relationshipRows:
+                                              owner.relationshipRows,
+                                            parcelCount: owner.parcels.size,
+                                            tenantRows: owner.asTenant,
+                                            lesseeRows: owner.asLessee,
+                                          })}
+                                        </p>
+                                      </div>
+
+                                      <div className="jo-land-history-linked-owner-stats">
+                                        <div className="jo-land-history-linked-owner-stat">
+                                          <strong>{owner.parcels.size}</strong>
+                                          <span>
+                                            {pluralize(
+                                              owner.parcels.size,
+                                              "Parcel involved",
+                                              "Parcels involved",
+                                            )}
+                                          </span>
+                                        </div>
+                                        <div className="jo-land-history-linked-owner-stat">
+                                          <strong>{owner.currentRows}</strong>
+                                          <span>
+                                            {pluralize(
+                                              owner.currentRows,
+                                              "Active link now",
+                                              "Active links now",
+                                            )}
+                                          </span>
+                                        </div>
+                                        <div className="jo-land-history-linked-owner-stat">
+                                          <strong>{owner.asLessee}</strong>
+                                          <span>Lessee records</span>
+                                        </div>
+                                        <div className="jo-land-history-linked-owner-stat">
+                                          <strong>{owner.asTenant}</strong>
+                                          <span>Tenant records</span>
+                                        </div>
+                                      </div>
+
+                                      <p className="jo-land-history-linked-owner-reason">
+                                        {buildOwnerLinkExplanation(
+                                          owner,
+                                          farmerModalFarmerName,
+                                        )}
+                                      </p>
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            )}
+                          </section>
+
+                          <section className="jo-land-history-association-card">
+                            <header className="jo-land-history-association-headline">
+                              <span className="jo-land-history-association-chip">
+                                {
+                                  farmerModalAssociations.linkedTenantsLessees
+                                    .length
+                                }{" "}
+                                {pluralize(
+                                  farmerModalAssociations.linkedTenantsLessees
+                                    .length,
+                                  "linked tenant/lessee",
+                                  "linked tenants/lessees",
+                                )}
+                              </span>
+                              <span className="jo-land-history-association-why">
+                                Why are they linked?
+                              </span>
+                              <button
+                                type="button"
+                                className="jo-land-history-association-toggle"
+                                onClick={() =>
+                                  setShowCounterpartLinkDetails((prev) => !prev)
+                                }
+                              >
+                                {showCounterpartLinkDetails ? "Hide" : "Show"}
+                              </button>
+                            </header>
+
+                            <p className="jo-land-history-association-help">
+                              Each card explains if the assignment is active
+                              now, how many parcels are involved, and whether
+                              records are tenant or lessee.
+                            </p>
+
+                            {farmerModalAssociations.linkedTenantsLessees
+                              .length === 0 ? (
+                              <p className="jo-land-history-association-empty">
+                                No tenant or lessee links where this farmer
+                                appears as owner.
+                              </p>
+                            ) : !showCounterpartLinkDetails ? (
+                              <p className="jo-land-history-association-empty">
+                                Click Show to view linked tenant and lessee
+                                details.
+                              </p>
+                            ) : (
+                              <ul className="jo-land-history-association-list">
+                                {farmerModalAssociations.linkedTenantsLessees.map(
+                                  (counterpart) => (
+                                    <li
+                                      key={counterpart.farmerName}
+                                      className="jo-land-history-linked-owner-item"
+                                    >
+                                      <div className="jo-land-history-linked-owner-top">
+                                        <div className="jo-land-history-linked-owner-avatar">
+                                          {getInitials(counterpart.farmerName)}
+                                        </div>
+                                        <div className="jo-land-history-linked-owner-identity">
+                                          <strong>
+                                            {counterpart.farmerName}
+                                          </strong>
+                                          <small>
+                                            {getLinkedCounterpartRoleLabel(
+                                              counterpart,
+                                            )}{" "}
+                                            •{" "}
+                                            {getAssociationLinkStatusLabel(
+                                              counterpart.currentRows,
+                                            )}
+                                          </small>
+                                        </div>
+                                      </div>
+
+                                      <div className="jo-land-history-linked-owner-summary">
+                                        <span
+                                          className={`jo-land-history-linked-owner-status-chip ${
+                                            counterpart.currentRows > 0
+                                              ? "is-current"
+                                              : "is-past"
+                                          }`}
+                                        >
+                                          {counterpart.currentRows > 0
+                                            ? "Active right now"
+                                            : "History only"}
+                                        </span>
+                                        <p className="jo-land-history-linked-owner-summary-text">
+                                          {buildAssociationSnapshotText({
+                                            currentRows:
+                                              counterpart.currentRows,
+                                            relationshipRows:
+                                              counterpart.relationshipRows,
+                                            parcelCount:
+                                              counterpart.parcels.size,
+                                            tenantRows: counterpart.tenantRows,
+                                            lesseeRows: counterpart.lesseeRows,
+                                          })}
+                                        </p>
+                                      </div>
+
+                                      <div className="jo-land-history-linked-owner-stats">
+                                        <div className="jo-land-history-linked-owner-stat">
+                                          <strong>
+                                            {counterpart.parcels.size}
+                                          </strong>
+                                          <span>
+                                            {pluralize(
+                                              counterpart.parcels.size,
+                                              "Parcel involved",
+                                              "Parcels involved",
+                                            )}
+                                          </span>
+                                        </div>
+                                        <div className="jo-land-history-linked-owner-stat">
+                                          <strong>
+                                            {counterpart.currentRows}
+                                          </strong>
+                                          <span>
+                                            {pluralize(
+                                              counterpart.currentRows,
+                                              "Active link now",
+                                              "Active links now",
+                                            )}
+                                          </span>
+                                        </div>
+                                        <div className="jo-land-history-linked-owner-stat">
+                                          <strong>
+                                            {counterpart.lesseeRows}
+                                          </strong>
+                                          <span>Lessee records</span>
+                                        </div>
+                                        <div className="jo-land-history-linked-owner-stat">
+                                          <strong>
+                                            {counterpart.tenantRows}
+                                          </strong>
+                                          <span>Tenant records</span>
+                                        </div>
+                                      </div>
+
+                                      <p className="jo-land-history-linked-owner-reason">
+                                        {buildCounterpartLinkExplanation(
+                                          counterpart,
+                                          farmerModalFarmerName,
+                                        )}
+                                      </p>
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            )}
+                          </section>
+                        </div>
+                      )}
+                    </section>
                   </>
                 )}
               </div>

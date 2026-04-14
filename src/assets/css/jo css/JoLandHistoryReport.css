@@ -177,6 +177,42 @@
   margin-bottom: 12px;
 }
 
+.jo-land-history-advanced-summary {
+  border: 1px solid #dbeafe;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.jo-land-history-advanced-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.jo-land-history-advanced-summary-copy h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.jo-land-history-advanced-summary-copy p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.jo-land-history-advanced-toggle {
+  min-width: 84px;
+}
+
+.jo-land-history-advanced-summary .jo-land-history-association-grid {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
 .jo-land-history-association-card {
   border: 1px solid #dbeafe;
   background: #ffffff;
@@ -348,6 +384,48 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+}
+
+.jo-land-history-linked-owner-summary {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jo-land-history-linked-owner-status-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid #4b5563;
+  background: #f8fafc;
+  color: #1f2937;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+}
+
+.jo-land-history-linked-owner-status-chip.is-current {
+  border-color: #166534;
+  background: #ecfdf5;
+  color: #166534;
+}
+
+.jo-land-history-linked-owner-status-chip.is-past {
+  border-color: #64748b;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.jo-land-history-linked-owner-summary-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #334155;
 }
 
 .jo-land-history-linked-owner-stat {
@@ -1096,6 +1174,16 @@
 
   .jo-land-history-modal-kpis {
     grid-template-columns: 1fr;
+  }
+
+  .jo-land-history-advanced-summary-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jo-land-history-advanced-summary .jo-land-history-association-toggle {
+    margin-left: 0;
+    align-self: flex-start;
   }
 
   .jo-land-history-linked-owner-stats {
