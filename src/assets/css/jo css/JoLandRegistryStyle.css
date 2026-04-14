@@ -342,6 +342,40 @@
   padding: 8px 12px;
 }
 
+.jo-land-registry-replacement-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.jo-land-registry-replacement-button {
+  border: 1px solid #0284c7;
+  border-radius: 8px;
+  background: #f0f9ff;
+  color: #075985;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.jo-land-registry-replacement-button:hover {
+  background: #e0f2fe;
+  box-shadow: 0 6px 14px rgba(2, 132, 199, 0.18);
+  transform: translateY(-1px);
+}
+
+.jo-land-registry-replacement-button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .jo-land-registry-row-transfer-button {
   width: 100%;
   max-width: 100%;
@@ -393,7 +427,7 @@
   top: calc(100% + 6px);
   right: 0;
   z-index: 20;
-  min-width: 124px;
+  min-width: 250px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: #fff;
@@ -423,6 +457,28 @@
 .jo-land-registry-row-action-menu-item:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: -1px;
+}
+
+.jo-land-registry-row-action-menu-item-owner {
+  color: #065f46;
+}
+
+.jo-land-registry-row-action-menu-item-replace {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.jo-land-registry-row-action-menu-item-replace:hover {
+  background: #ecfeff;
+}
+
+.jo-land-registry-row-action-menu-caption {
+  padding: 6px 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: #64748b;
 }
 
 .jo-land-registry-transfer-button:hover,
@@ -764,14 +820,48 @@
   max-width: 920px;
 }
 
+.jo-land-registry-replacement-modal {
+  max-width: 760px;
+}
+
 .jo-land-registry-transfer-header {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.jo-land-registry-replacement-header {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
 }
 
 .jo-land-registry-transfer-flow {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.jo-land-registry-replacement-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.jo-land-registry-replacement-note {
+  padding: 12px 14px;
+  border: 1px solid #bae6fd;
+  border-left: 4px solid #0284c7;
+  border-radius: 8px;
+  background: #f0f9ff;
+  color: #0c4a6e;
+  font-size: 13px;
+}
+
+.jo-land-registry-replacement-preview-success {
+  padding: 12px 14px;
+  border: 1px solid #bbf7d0;
+  border-left: 4px solid #16a34a;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 13px;
 }
 
 .jo-land-registry-transfer-note {
