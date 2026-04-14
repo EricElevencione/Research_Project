@@ -2,47 +2,48 @@
 @import "./assets/css/responsiveTables.css";
 
 @font-face {
-    font-family: 'Poppins Light';
-    src: url('../assets/components/common/font-family/Poppins/Poppins-Light.ttf') format('truetype');
+  font-family: "Poppins Light";
+  src: url("../assets/components/common/font-family/Poppins/Poppins-Light.ttf")
+    format("truetype");
 }
 
 /* Your custom CSS variables and base styles */
 :root {
-    --primary-color: #4bc1c5;
-    --secondary-color: #a2a1e0;
-    --background-color: #f5f5f5;
-    --text-color: #333;
-    --text-light: #666;
-    --border-radius: 5px;
-    --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  --primary-color: #4bc1c5;
+  --secondary-color: #a2a1e0;
+  --background-color: #f5f5f5;
+  --text-color: #333;
+  --text-light: #666;
+  --border-radius: 5px;
+  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 
-    /* Global Font Family - Change this one variable to update all fonts */
-    --font-family: 'Poppins Light', Arial, sans-serif;
+  /* Global Font Family - Change this one variable to update all fonts */
+  --font-family: "Poppins Light", Arial, sans-serif;
 }
 
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: var(--font-family) !important;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-family) !important;
 }
 
 body {
-    font-family: var(--font-family);
-    line-height: 1.6;
-    color: var(--text-color);
-    background-color: var(--background-color);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-family);
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html,
 body,
 #root {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow-y: auto !important;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto !important;
 }
 
 /* ===========================
@@ -51,65 +52,116 @@ body,
 
 /* Desktop and Tablet layout (768px and up) */
 @media (min-width: 768px) {
-    .page-container {
-        display: flex;
-        flex-direction: row;
-        height: 100vh;
-    }
+  .page-container {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+  }
 
-    .page {
-        flex-direction: row;
-        width: 100%;
-        height: 100%;
-    }
+  .page {
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+  }
 }
 
 /* Mobile layout (< 768px) */
 @media (max-width: 767px) {
-    .page-container {
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        height: auto;
-    }
+  .page-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    height: auto;
+  }
 
-    .page {
-        flex-direction: column;
-        width: 100%;
-        height: auto;
-    }
+  .page {
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+  }
 
-    body {
-        overflow-x: hidden;
-    }
+  body {
+    overflow-x: hidden;
+  }
 
-    html,
-    body,
-    #root {
-        height: auto;
-        overflow-y: auto;
-    }
+  html,
+  body,
+  #root {
+    height: auto;
+    overflow-y: auto;
+  }
 }
 
 /* Prevent layout shifts on mobile */
 @media (max-width: 639px) {
-    * {
-        -webkit-tap-highlight-color: transparent;
-    }
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
 
-    button {
-        min-height: 44px;
-        min-width: 44px;
-    }
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Prevent double tap zoom issues */
 @media (hover: none) and (pointer: coarse) {
-    button,
-    a,
-    input[type="button"],
-    input[type="submit"] {
-        -webkit-user-select: none;
-        user-select: none;
-    }
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Global utility: reusable back button style */
+.app-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  border-radius: 12px;
+  color: #194b2f;
+  background: linear-gradient(135deg, #f5fff6 0%, #eaf8ef 100%);
+  border: 1px solid #b9deca;
+  box-shadow: 0 6px 14px rgba(30, 88, 54, 0.14);
+  padding: 8px 12px 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    background 0.22s ease;
+  white-space: nowrap;
+}
+
+.app-back-button:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #edfff1 0%, #def4e5 100%);
+  box-shadow: 0 10px 18px rgba(30, 88, 54, 0.2);
+}
+
+.app-back-button:active {
+  transform: translateY(0);
+}
+
+.app-back-button:focus-visible {
+  outline: 2px solid #2f77bb;
+  outline-offset: 2px;
+}
+
+.app-back-button-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #d8f0e1;
+  color: #0f5a31;
+  font-size: 13px;
+  font-weight: 700;
 }

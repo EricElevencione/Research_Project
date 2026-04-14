@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on TH82
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Stimulates early vigor and canopy cover; improves competitive ability against weeds.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Accelerates early growth for hybrid vigor; potassium improves stalk strength from seedling stage.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Boosts culm strength through improved N-S balance; reduces lodging risk at high yield levels.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Enhances disease resistance; potassium activates defense enzymes against blast and sheath blight.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on TH82
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Brassinosteroid improves stress signaling; apply at reproductive stage to reduce sterility under fluctuating temperatures.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Beneficial fungi improve root surface area; nano-NPK ensures rapid replenishment of nutrients during peak demand.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Root exudate mix stimulates phosphate-solubilizing bacteria; improves P uptake without additional P fertilizer input.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Biological N from Azolla supplements inorganic fertilizer; improves N use efficiency and reduces environmental N losses.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Water-soluble foliar application improves disease resistance; potassium component strengthens cell walls against pathogen entry.

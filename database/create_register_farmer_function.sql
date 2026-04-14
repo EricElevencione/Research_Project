@@ -26,11 +26,13 @@ DECLARE
     v_is_registered_owner BOOLEAN;
     v_is_tenant BOOLEAN;
     v_is_lessee BOOLEAN;
+    v_is_ownership_transfer BOOLEAN;
     v_barangay TEXT;
     v_municipality TEXT;
     v_area DECIMAL;
     v_selected_land_owner JSONB;
     v_remaining_count INT;
+    v_has_existing_parcel_ref BOOLEAN;
 BEGIN
     -- CRITICAL: Disable the auto-insert trigger on rsbsa_farm_parcels
     -- This trigger (create_land_history_from_farm_parcel) auto-creates a land_history record
@@ -38,11 +40,34 @@ BEGIN
     -- Without disabling, we get DUPLICATE land_history entries.
     ALTER TABLE rsbsa_farm_parcels DISABLE TRIGGER trigger_create_land_history_on_parcel_insert;
 
-    -- Extract ownership category
-    v_ownership_category := COALESCE(p_data->>'ownershipCategory', 'registeredOwner');
-    v_is_registered_owner := v_ownership_category = 'registeredOwner';
-    v_is_tenant := v_ownership_category = 'tenant';
-    v_is_lessee := v_ownership_category = 'lessee';
+    -- Extract ownership category (supports legacy and new values).
+    v_ownership_category := LOWER(COALESCE(p_data->>'ownershipCategory', 'registeredOwner'));
+
+    IF v_ownership_category IN ('registeredowner', 'registered_owner', 'registered owner', 'owner') THEN
+        v_is_registered_owner := TRUE;
+        v_is_tenant := FALSE;
+        v_is_lessee := FALSE;
+    ELSIF v_ownership_category IN ('tenantlessee', 'tenant_lessee', 'tenant/lessee', 'tenant-lessee') THEN
+        -- Canonical non-owner category during transition.
+        v_is_registered_owner := FALSE;
+        v_is_tenant := TRUE;
+        v_is_lessee := FALSE;
+    ELSIF v_ownership_category = 'tenant' THEN
+        v_is_registered_owner := FALSE;
+        v_is_tenant := TRUE;
+        v_is_lessee := FALSE;
+    ELSIF v_ownership_category = 'lessee' THEN
+        v_is_registered_owner := FALSE;
+        v_is_tenant := FALSE;
+        v_is_lessee := TRUE;
+    ELSE
+        -- Default to owner for unknown category values.
+        v_is_registered_owner := TRUE;
+        v_is_tenant := FALSE;
+        v_is_lessee := FALSE;
+    END IF;
+
+    v_is_ownership_transfer := v_is_registered_owner AND NOT v_is_tenant AND NOT v_is_lessee;
     v_selected_land_owner := p_data->'selectedLandOwner';
 
     -- Step 1: Insert rsbsa_submission
@@ -102,6 +127,7 @@ BEGIN
         v_parcel_number := COALESCE(v_parcel->>'existingParcelNumber', '');
         v_previous_history_id := NULL;
         v_land_parcel_id := NULL;
+        v_has_existing_parcel_ref := (v_parcel->>'existingParcelId') IS NOT NULL AND (v_parcel->>'existingParcelId') != '';
 
         -- Skip parcels with no location or area
         IF v_barangay = '' OR v_area = 0 THEN
@@ -113,7 +139,7 @@ BEGIN
         -- OWNERSHIP TRANSFER: existingParcelId set
         -- existingParcelId = rsbsa_farm_parcels.id
         -- ========================================
-        IF (v_parcel->>'existingParcelId') IS NOT NULL AND (v_parcel->>'existingParcelId') != '' THEN
+        IF v_has_existing_parcel_ref THEN
             RAISE NOTICE 'Processing ownership transfer for farm_parcel_id: %', v_parcel->>'existingParcelId';
 
             -- Find the current land_history record by farm_parcel_id
@@ -135,26 +161,29 @@ BEGIN
                 RAISE NOTICE 'Found current holder: % (history_id=%, land_parcel_id=%)', 
                     v_prev_farmer_name, v_previous_history_id, v_land_parcel_id;
 
-                -- Close ALL current records for this land parcel
-                UPDATE land_history
-                SET is_current = FALSE,
-                    period_end_date = CURRENT_DATE,
-                    updated_at = NOW()
-                WHERE land_parcel_id = v_land_parcel_id
-                  AND is_current = TRUE;
+                IF v_is_ownership_transfer THEN
+                    -- Ownership transfers close prior current holder rows.
+                    UPDATE land_history
+                    SET is_current = FALSE,
+                        period_end_date = CURRENT_DATE,
+                        updated_at = NOW()
+                    WHERE land_parcel_id = v_land_parcel_id
+                      AND is_current = TRUE;
 
-                RAISE NOTICE 'Closed previous holder records for land_parcel_id: %', v_land_parcel_id;
+                    RAISE NOTICE 'Closed previous holder records for land_parcel_id: %', v_land_parcel_id;
+                END IF;
             ELSE
                 -- No land_history by farm_parcel_id, try by parcel_number
                 RAISE NOTICE 'No land_history found by farm_parcel_id, trying parcel_number: %', v_parcel_number;
                 
                 IF v_parcel_number != '' THEN
-                    SELECT lh.id, lh.land_parcel_id, lh.farmer_id, lh.farmer_name
-                    INTO v_history_record
-                    FROM land_history lh
-                    WHERE lh.parcel_number = v_parcel_number
-                      AND lh.is_current = TRUE
-                    LIMIT 1;
+                                        SELECT lh.id, lh.land_parcel_id, lh.farmer_id, lh.farmer_name
+                                        INTO v_history_record
+                                        FROM land_history lh
+                                        WHERE lh.parcel_number = v_parcel_number
+                                            AND lh.is_current = TRUE
+                                        ORDER BY lh.is_registered_owner DESC, lh.created_at DESC
+                                        LIMIT 1;
 
                     IF v_history_record.id IS NOT NULL THEN
                         v_land_parcel_id := v_history_record.land_parcel_id;
@@ -162,12 +191,14 @@ BEGIN
                         v_prev_farmer_id := v_history_record.farmer_id;
                         v_prev_farmer_name := v_history_record.farmer_name;
 
-                        UPDATE land_history
-                        SET is_current = FALSE,
-                            period_end_date = CURRENT_DATE,
-                            updated_at = NOW()
-                        WHERE land_parcel_id = v_land_parcel_id
-                          AND is_current = TRUE;
+                        IF v_is_ownership_transfer THEN
+                            UPDATE land_history
+                            SET is_current = FALSE,
+                                period_end_date = CURRENT_DATE,
+                                updated_at = NOW()
+                            WHERE land_parcel_id = v_land_parcel_id
+                              AND is_current = TRUE;
+                        END IF;
                     END IF;
                 END IF;
             END IF;
@@ -214,7 +245,7 @@ BEGIN
             CASE WHEN v_is_lessee AND v_selected_land_owner IS NOT NULL THEN v_selected_land_owner->>'name' ELSE '' END,
             CASE WHEN v_is_tenant AND v_selected_land_owner IS NOT NULL THEN (v_selected_land_owner->>'id')::BIGINT ELSE NULL END,
             CASE WHEN v_is_lessee AND v_selected_land_owner IS NOT NULL THEN (v_selected_land_owner->>'id')::BIGINT ELSE NULL END,
-            TRUE
+            v_is_registered_owner
         )
         RETURNING id INTO v_farm_parcel_id;
 
@@ -254,11 +285,26 @@ BEGIN
             END,
             TRUE,
             CURRENT_DATE,
-            CASE WHEN v_previous_history_id IS NOT NULL THEN 'TRANSFER' ELSE 'NEW' END,
+            CASE
+                WHEN v_is_registered_owner AND (v_previous_history_id IS NOT NULL OR v_has_existing_parcel_ref) THEN 'TRANSFER'
+                WHEN v_is_registered_owner THEN 'NEW'
+                WHEN v_is_tenant AND v_is_lessee THEN 'ASSOCIATION_CHANGE'
+                WHEN v_is_tenant THEN 'TENANT_CHANGE'
+                WHEN v_is_lessee THEN 'LESSEE_CHANGE'
+                ELSE 'NEW'
+            END,
             CASE 
-                WHEN v_previous_history_id IS NOT NULL THEN 
+                WHEN v_is_registered_owner AND (v_previous_history_id IS NOT NULL OR v_has_existing_parcel_ref) THEN
                     'Ownership transfer from ' || COALESCE(v_prev_farmer_name, 'unknown') || ' to ' || v_farmer_name
-                ELSE 'Initial RSBSA registration'
+                WHEN v_is_registered_owner THEN 'Initial RSBSA registration'
+                WHEN v_is_tenant AND v_is_lessee THEN
+                    'Tenant/Lessee association under ' || COALESCE(v_selected_land_owner->>'name', COALESCE(v_prev_farmer_name, 'land owner'))
+                WHEN v_is_tenant THEN
+                    'Tenant association under ' || COALESCE(v_selected_land_owner->>'name', COALESCE(v_prev_farmer_name, 'land owner'))
+                WHEN v_is_lessee THEN
+                    'Lessee association under ' || COALESCE(v_selected_land_owner->>'name', COALESCE(v_prev_farmer_name, 'land owner'))
+                ELSE
+                    'Initial RSBSA registration'
             END,
             v_previous_history_id,
             v_submission_id,
@@ -268,8 +314,8 @@ BEGIN
         RAISE NOTICE 'Created land_history for parcel % (transfer: %)', 
             v_parcel_number, v_previous_history_id IS NOT NULL;
 
-        -- If this was a transfer, update old owner's rsbsa_farm_parcels
-        IF v_prev_farmer_id IS NOT NULL THEN
+        -- If this was a legal ownership transfer, update old owner's rsbsa_farm_parcels
+        IF v_is_ownership_transfer AND v_prev_farmer_id IS NOT NULL THEN
             -- Mark old owner's matching parcel as not current
             UPDATE rsbsa_farm_parcels
             SET is_current_owner = FALSE

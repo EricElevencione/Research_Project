@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on RH9000
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Increases filled grains per panicle; nitrogen timing at heading is critical for grain plumpness.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Stimulates early root development; balanced NPK ensures vigorous establishment in irrigated fields.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Improves grain filling efficiency; sulfur promotes enzyme systems involved in starch synthesis.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Boosts filled grain ratio; K improves sink strength and assimilate remobilization to grains.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on RH9000
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Enhances grain filling rate; biostimulant compounds improve assimilate mobilization from leaves to developing grains.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Bacteria component provides growth-promoting substances; combined with nano-K improves grain plumpness and weight.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic materials feed earthworms and soil fauna; improves soil physical structure for better root penetration.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla biomass improves soil organic carbon; slow-release N from decomposition supports consistent hybrid growth.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar K at reproductive stage maximizes grain filling; rapid absorption supports assimilate movement to developing grains.

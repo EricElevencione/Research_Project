@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 222
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Promotes uniform tillering and high plant stand; apply at transplanting and 21 DAT for best response.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Provides complete basal nutrition; phosphorus promotes tillering and root proliferation.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Effective in slightly alkaline lowland soils; S component improves sulfur-deficient paddy fields.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Reduces lodging in high-yield conditions; improves milling quality through better grain development.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 222
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Promotes uniform crop stand through improved root activity; iron supports chlorophyll and reduces mid-season yellowing.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Nano-NPK supports sustained release to match crop demand; sea kelp and humic acid improve soil biology.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Boosts beneficial rhizobacteria population; improves nutrient cycling and reduces dependence on synthetic inputs.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Reduces N fertilizer cost for widely planted inbred; Azolla organic N supports yield without excess mineral N input.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK corrects mid-season deficiency without flooding disruption; improves yield consistency in widely planted variety.

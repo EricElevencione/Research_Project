@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 218
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Promotes early canopy closure; apply basal N at transplanting plus top-dress at tillering.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Enables fast early growth; complete fertilizer reduces need for multiple basal applications.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Enhances vegetative vigor with S support; reduces mid-season yellowing in sulfur-deficient soils.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Enhances grain filling and reduces chalky grains; K improves translucency of milled rice.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 218
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Vitamin B1 improves root growth and carbohydrate metabolism; foliar spray reduces transplanting shock effectively.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Bacterial component improves N fixation in rhizosphere; reduces total synthetic fertilizer requirement by 10–15%.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Root exudate mix enhances soil microbial biomass; improves long-term soil fertility and reduces fertilizer inputs.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Green manure incorporation improves soil biology; Azolla N release timing aligns with inbred's early vegetative demand.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Water-soluble nutrients rapidly absorbed to support tillering and heading; improves crop uniformity and yield stability.

@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels, updateRsbsaSubmission } from '../../api';
-import '../../assets/css/technician css/TechMasterlistStyle.css';
-import '../../assets/css/jo css/FarmerDetailModal.css';
-import '../../components/layout/sidebarStyle.css';
-import LogoImage from '../../assets/images/Logo.png';
-import HomeIcon from '../../assets/images/home.png';
-import RSBSAIcon from '../../assets/images/rsbsa.png';
-import ApproveIcon from '../../assets/images/approve.png';
-import LogoutIcon from '../../assets/images/logout.png';
-import IncentivesIcon from '../../assets/images/incentives.png';
+import {
+  getRsbsaSubmissions,
+  getRsbsaSubmissionById,
+  getFarmParcels,
+  getTechDashboardData,
+  updateRsbsaSubmission,
+} from "../../api";
+import { printRsbsaFormById } from "../../utils/rsbsaPrint";
+import "../../assets/css/technician css/TechMasterlistStyle.css";
+import "../../assets/css/jo css/FarmerDetailModal.css";
+import "../../components/layout/sidebarStyle.css";
+import LogoImage from "../../assets/images/Logo.png";
+import HomeIcon from "../../assets/images/home.png";
+import RSBSAIcon from "../../assets/images/rsbsa.png";
+import ApproveIcon from "../../assets/images/approve.png";
+import LogoutIcon from "../../assets/images/logout.png";
+import IncentivesIcon from "../../assets/images/incentives.png";
 
 interface RSBSARecord {
   id: string;
@@ -27,12 +34,17 @@ interface RSBSARecord {
     registeredOwner: boolean;
     tenant: boolean;
     lessee: boolean;
+    tenantLessee?: boolean;
+    category?: "registeredOwner" | "tenantLessee" | "unknown";
   };
 }
 
 interface FarmerDetail {
   id: string;
   farmerName: string;
+  referenceNumber: string;
+  dateSubmitted: string;
+  recordStatus: string;
   farmerAddress: string;
   age: number | string;
   gender: string;
@@ -54,14 +66,29 @@ interface ParcelDetail {
   lesseeLandOwnerName: string;
 }
 
+interface UnplottedFarmerItem {
+  id: string;
+  farmerName: string;
+  referenceNumber: string;
+  barangay: string;
+  totalParcels: number;
+  plottedParcels: number;
+  unplottedParcels: number;
+}
+
 // Type declaration for Electron API exposed via preload
 declare global {
   interface Window {
     electron?: {
       platform: string;
       print: (options?: any) => Promise<{ success: boolean; error?: string }>;
-      printToPDF: (options?: any) => Promise<{ success: boolean; data?: string; error?: string }>;
-      printContent: (htmlContent: string, options?: any) => Promise<{ success: boolean; error?: string }>;
+      printToPDF: (
+        options?: any,
+      ) => Promise<{ success: boolean; data?: string; error?: string }>;
+      printContent: (
+        htmlContent: string,
+        options?: any,
+      ) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
@@ -70,42 +97,71 @@ const TechMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab] = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printFilter, setPrintFilter] = useState({
-    type: 'all', // 'all', 'lastname', 'barangay', 'date'
-    value: ''
+    type: "all", // 'all', 'lastname', 'barangay', 'date'
+    value: "",
   });
-  const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(null);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
+    null,
+  );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [selectedOwnershipType, setSelectedOwnershipType] = useState<string>('all');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isModalPrinting, setIsModalPrinting] = useState(false);
+  const [selectedOwnershipType, setSelectedOwnershipType] =
+    useState<string>("all");
+  const [updateNotification, setUpdateNotification] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({
+    show: false,
+    type: "success",
+    message: "",
+  });
+  const [unplottedFarmers, setUnplottedFarmers] = useState<
+    UnplottedFarmerItem[]
+  >([]);
 
   const isActive = (path: string) => location.pathname === path;
+
+  const showUpdateNotification = (
+    message: string,
+    type: "success" | "error",
+  ) => {
+    setUpdateNotification({ show: true, type, message });
+    setTimeout(() => {
+      setUpdateNotification((prev) => ({ ...prev, show: false }));
+    }, 3200);
+  };
 
   useEffect(() => {
     fetchRSBSARecords();
   }, []);
 
   // Fetch farmer details when row is clicked
-  const fetchFarmerDetails = async (farmerId: string) => {
+  const fetchFarmerDetails = async (
+    farmerId: string,
+    summaryRecord?: RSBSARecord,
+  ) => {
     try {
       setLoadingFarmerDetail(true);
 
       // Fetch basic farmer info
       const farmerResponse = await getRsbsaSubmissionById(farmerId);
-      if (farmerResponse.error) throw new Error('Failed to fetch farmer details');
+      if (farmerResponse.error)
+        throw new Error("Failed to fetch farmer details");
       const farmerData = farmerResponse.data;
 
       // Fetch parcels
       const parcelsResponse = await getFarmParcels(farmerId);
-      if (parcelsResponse.error) throw new Error('Failed to fetch parcels');
+      if (parcelsResponse.error) throw new Error("Failed to fetch parcels");
       const parcelsData = parcelsResponse.data;
 
       // Handle both JSONB (data property) and structured column formats
@@ -115,16 +171,32 @@ const TechMasterlist: React.FC = () => {
       const activities: string[] = [];
 
       // Check for farming activities in various possible field names
-      if (data.farmerRice || data.FARMER_RICE || data.farmer_rice) activities.push('Rice');
-      if (data.farmerCorn || data.FARMER_CORN || data.farmer_corn) activities.push('Corn');
-      if (data.farmerOtherCrops || data.FARMER_OTHER_CROPS || data.farmer_other_crops) {
-        activities.push(`Other Crops: ${data.farmerOtherCropsText || data.FARMER_OTHER_CROPS_TEXT || data.farmer_other_crops_text || ''}`);
+      if (data.farmerRice || data.FARMER_RICE || data.farmer_rice)
+        activities.push("Rice");
+      if (data.farmerCorn || data.FARMER_CORN || data.farmer_corn)
+        activities.push("Corn");
+      if (
+        data.farmerOtherCrops ||
+        data.FARMER_OTHER_CROPS ||
+        data.farmer_other_crops
+      ) {
+        activities.push(
+          `Other Crops: ${data.farmerOtherCropsText || data.FARMER_OTHER_CROPS_TEXT || data.farmer_other_crops_text || ""}`,
+        );
       }
-      if (data.farmerLivestock || data.FARMER_LIVESTOCK || data.farmer_livestock) {
-        activities.push(`Livestock: ${data.farmerLivestockText || data.FARMER_LIVESTOCK_TEXT || data.farmer_livestock_text || ''}`);
+      if (
+        data.farmerLivestock ||
+        data.FARMER_LIVESTOCK ||
+        data.farmer_livestock
+      ) {
+        activities.push(
+          `Livestock: ${data.farmerLivestockText || data.FARMER_LIVESTOCK_TEXT || data.farmer_livestock_text || ""}`,
+        );
       }
       if (data.farmerPoultry || data.FARMER_POULTRY || data.farmer_poultry) {
-        activities.push(`Poultry: ${data.farmerPoultryText || data.FARMER_POULTRY_TEXT || data.farmer_poultry_text || ''}`);
+        activities.push(
+          `Poultry: ${data.farmerPoultryText || data.FARMER_POULTRY_TEXT || data.farmer_poultry_text || ""}`,
+        );
       }
 
       // If no activities found, check if mainLivelihood indicates farming type
@@ -133,86 +205,129 @@ const TechMasterlist: React.FC = () => {
       }
 
       const calculateAge = (birthdate: string): number | string => {
-        if (!birthdate || birthdate === 'N/A') return 'N/A';
+        if (!birthdate || birthdate === "N/A") return "N/A";
         const today = new Date();
         const birthDate = new Date(birthdate);
         let age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        if (
+          monthDiff < 0 ||
+          (monthDiff === 0 && today.getDate() < birthDate.getDate())
+        ) {
           age--;
         }
         return age;
       };
 
       // Reformat the farmer name
-      const backendName = farmerData.farmerName || '';
+      const backendName = farmerData.farmerName || "";
       const reformattedFarmerName = (() => {
-        if (!backendName || backendName === 'N/A') return 'N/A';
-        const parts = backendName.split(',').map((p: string) => p.trim()).filter(Boolean);
-        if (parts.length === 0) return 'N/A';
+        if (!backendName || backendName === "N/A") return "N/A";
+        const parts = backendName
+          .split(",")
+          .map((p: string) => p.trim())
+          .filter(Boolean);
+        if (parts.length === 0) return "N/A";
         if (parts.length === 1) return parts[0];
         const lastName = parts[0];
-        const restOfName = parts.slice(1).join(' ');
+        const restOfName = parts.slice(1).join(" ");
         return `${lastName}, ${restOfName}`;
       })();
+
+      const selectedRecord =
+        summaryRecord ||
+        rsbsaRecords.find((record) => String(record.id) === String(farmerId));
+
+      const submittedDateLabel = selectedRecord?.dateSubmitted
+        ? formatDate(selectedRecord.dateSubmitted)
+        : "N/A";
 
       // Build parcels array from rsbsa_farm_parcels; if empty, fall back to submission-level farm data
       let mappedParcels = parcelsData.map((p: any) => ({
         id: p.id,
-        parcelNumber: p.parcel_number || 'N/A',
-        farmLocationBarangay: p.farm_location_barangay || 'N/A',
-        farmLocationMunicipality: p.farm_location_municipality || 'N/A',
+        parcelNumber: p.parcel_number || "N/A",
+        farmLocationBarangay: p.farm_location_barangay || "N/A",
+        farmLocationMunicipality: p.farm_location_municipality || "N/A",
         totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
-        ownershipTypeRegisteredOwner: p.ownership_type_registered_owner || false,
+        ownershipTypeRegisteredOwner:
+          p.ownership_type_registered_owner || false,
         ownershipTypeTenant: p.ownership_type_tenant || false,
         ownershipTypeLessee: p.ownership_type_lessee || false,
-        tenantLandOwnerName: p.tenant_land_owner_name || '',
-        lesseeLandOwnerName: p.lessee_land_owner_name || ''
+        tenantLandOwnerName: p.tenant_land_owner_name || "",
+        lesseeLandOwnerName: p.lessee_land_owner_name || "",
       }));
 
       // Fallback: if no parcels in rsbsa_farm_parcels, build from submission-level data
       if (mappedParcels.length === 0) {
-        const submissionFarmLocation = data.farmLocation || data['FARM LOCATION'] || '';
-        const submissionParcelArea = parseFloat(data.totalFarmArea || data['TOTAL FARM AREA'] || data.parcelArea || data['PARCEL AREA'] || '0');
+        const submissionFarmLocation =
+          data.farmLocation || data["FARM LOCATION"] || "";
+        const submissionParcelArea = parseFloat(
+          data.totalFarmArea ||
+            data["TOTAL FARM AREA"] ||
+            data.parcelArea ||
+            data["PARCEL AREA"] ||
+            "0",
+        );
         const submissionOwnership = data.ownershipType || {};
 
         if (submissionFarmLocation || submissionParcelArea > 0) {
           // Extract barangay and municipality from farmLocation (format: "Barangay, Municipality")
-          const locationParts = submissionFarmLocation.split(',').map((s: string) => s.trim());
-          const fallbackBarangay = locationParts[0] || data.barangay || data['BARANGAY'] || 'N/A';
-          const fallbackMunicipality = locationParts[1] || data.municipality || data['MUNICIPALITY'] || 'Dumangas';
+          const locationParts = submissionFarmLocation
+            .split(",")
+            .map((s: string) => s.trim());
+          const fallbackBarangay =
+            locationParts[0] || data.barangay || data["BARANGAY"] || "N/A";
+          const fallbackMunicipality =
+            locationParts[1] ||
+            data.municipality ||
+            data["MUNICIPALITY"] ||
+            "Dumangas";
 
-          mappedParcels = [{
-            id: `submission-${farmerId}`,
-            parcelNumber: 'N/A',
-            farmLocationBarangay: fallbackBarangay,
-            farmLocationMunicipality: fallbackMunicipality,
-            totalFarmAreaHa: submissionParcelArea,
-            ownershipTypeRegisteredOwner: submissionOwnership.registeredOwner || data['OWNERSHIP_TYPE_REGISTERED_OWNER'] || false,
-            ownershipTypeTenant: submissionOwnership.tenant || data['OWNERSHIP_TYPE_TENANT'] || false,
-            ownershipTypeLessee: submissionOwnership.lessee || data['OWNERSHIP_TYPE_LESSEE'] || false,
-            tenantLandOwnerName: '',
-            lesseeLandOwnerName: ''
-          }];
+          mappedParcels = [
+            {
+              id: `submission-${farmerId}`,
+              parcelNumber: "N/A",
+              farmLocationBarangay: fallbackBarangay,
+              farmLocationMunicipality: fallbackMunicipality,
+              totalFarmAreaHa: submissionParcelArea,
+              ownershipTypeRegisteredOwner:
+                submissionOwnership.registeredOwner ||
+                data["OWNERSHIP_TYPE_REGISTERED_OWNER"] ||
+                false,
+              ownershipTypeTenant:
+                submissionOwnership.tenant ||
+                data["OWNERSHIP_TYPE_TENANT"] ||
+                false,
+              ownershipTypeLessee:
+                submissionOwnership.lessee ||
+                data["OWNERSHIP_TYPE_LESSEE"] ||
+                false,
+              tenantLandOwnerName: "",
+              lesseeLandOwnerName: "",
+            },
+          ];
         }
       }
 
       const farmerDetail: FarmerDetail = {
         id: farmerId,
         farmerName: reformattedFarmerName,
-        farmerAddress: farmerData.farmerAddress || 'N/A',
-        age: calculateAge(data.dateOfBirth || data.birthdate || 'N/A'),
-        gender: data.gender || 'N/A',
-        mainLivelihood: data.mainLivelihood || 'N/A',
+        referenceNumber: selectedRecord?.referenceNumber || "N/A",
+        dateSubmitted: submittedDateLabel,
+        recordStatus: selectedRecord?.status || farmerData.status || "N/A",
+        farmerAddress: farmerData.farmerAddress || "N/A",
+        age: calculateAge(data.dateOfBirth || data.birthdate || "N/A"),
+        gender: data.gender || "N/A",
+        mainLivelihood: data.mainLivelihood || "N/A",
         farmingActivities: activities,
-        parcels: mappedParcels
+        parcels: mappedParcels,
       };
 
       setSelectedFarmer(farmerDetail);
       setShowModal(true);
     } catch (err: any) {
-      console.error('Error fetching farmer details:', err);
-      alert('Failed to load farmer details');
+      console.error("Error fetching farmer details:", err);
+      alert("Failed to load farmer details");
     } finally {
       setLoadingFarmerDetail(false);
     }
@@ -220,7 +335,10 @@ const TechMasterlist: React.FC = () => {
 
   const fetchRSBSARecords = async () => {
     try {
-      const response = await getRsbsaSubmissions();
+      const [response, techDashboardResponse] = await Promise.all([
+        getRsbsaSubmissions(),
+        getTechDashboardData(),
+      ]);
       if (response.error) throw new Error(response.error);
       const data = response.data;
 
@@ -247,31 +365,35 @@ const TechMasterlist: React.FC = () => {
         if (total === 0) return 0;
 
         const completed = fields.filter((value) => {
-          const v = String(value ?? '').trim();
-          return v !== '' && v !== '—';
+          const v = String(value ?? "").trim();
+          return v !== "" && v !== "—";
         }).length;
 
         return Math.round((completed / total) * 100);
       };
 
       // Filter out farmers with 'No Parcels' status
-      const filteredData = (Array.isArray(data) ? data : []).filter((item: any) => {
-        const status = String(item.status ?? '').toLowerCase().trim();
-        return status !== 'no parcels';
-      });
+      const filteredData = (Array.isArray(data) ? data : []).filter(
+        (item: any) => {
+          const status = String(item.status ?? "")
+            .toLowerCase()
+            .trim();
+          return status !== "no parcels";
+        },
+      );
 
       const formattedRecords: RSBSARecord[] = filteredData.map((item: any) => {
-        const farmLocation = String(item.farmLocation ?? '—');
+        const farmLocation = String(item.farmLocation ?? "—");
         // Use the FFRS code from database, fallback to RSBSA-{id} if not present
         const referenceNumber = item.referenceNumber || `RSBSA-${item.id}`;
-        const farmerName = String(item.farmerName || '—');
-        const farmerAddress = String(item.farmerAddress ?? '—');
-        const landParcel = String(item.landParcel ?? item.farmLocation ?? '—');
-        const parcelArea = String(item.parcelArea ?? '—');
+        const farmerName = String(item.farmerName || "—");
+        const farmerAddress = String(item.farmerAddress ?? "—");
+        const landParcel = String(item.landParcel ?? item.farmLocation ?? "—");
+        const parcelArea = String(item.parcelArea ?? "—");
         const dateSubmitted = item.dateSubmitted
           ? new Date(item.dateSubmitted).toISOString()
-          : '';
-        const status = String(item.status ?? 'Not Active');
+          : "";
+        const status = String(item.status ?? "Not Active");
 
         const baseRecord = {
           id: String(item.id),
@@ -293,40 +415,74 @@ const TechMasterlist: React.FC = () => {
           ownershipType: item.ownershipType || {
             registeredOwner: false,
             tenant: false,
-            lessee: false
-          }
+            lessee: false,
+          },
         };
       });
 
       setRsbsaRecords(formattedRecords);
+
+      if (!techDashboardResponse.error) {
+        const queue = Array.isArray(
+          techDashboardResponse.data?.unplottedFarmers,
+        )
+          ? techDashboardResponse.data.unplottedFarmers
+          : [];
+        setUnplottedFarmers(
+          queue.map((item: any) => ({
+            id: String(item.id),
+            farmerName: String(item.farmerName || "N/A"),
+            referenceNumber: String(item.referenceNumber || "N/A"),
+            barangay: String(item.barangay || "N/A"),
+            totalParcels: Number(item.totalParcels || 0),
+            plottedParcels: Number(item.plottedParcels || 0),
+            unplottedParcels: Number(item.unplottedParcels || 0),
+          })),
+        );
+      } else {
+        setUnplottedFarmers([]);
+      }
+
       setLoading(false);
     } catch (err: any) {
-      setError(err.message ?? 'Failed to load RSBSA records');
+      setError(err.message ?? "Failed to load RSBSA records");
+      setUnplottedFarmers([]);
       setLoading(false);
     }
   };
 
   // Filter records by status, search, and ownership type
-  const filteredRecords = rsbsaRecords.filter(record => {
-    const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
+  const filteredRecords = rsbsaRecords.filter((record) => {
+    const matchesStatus =
+      selectedStatus === "all" || record.status === selectedStatus;
     const q = searchQuery.toLowerCase();
-    const matchesSearch = record.farmerName.toLowerCase().includes(q) ||
+    const matchesSearch =
+      record.farmerName.toLowerCase().includes(q) ||
       record.referenceNumber.toLowerCase().includes(q) ||
       record.farmerAddress.toLowerCase().includes(q) ||
       record.farmLocation.toLowerCase().includes(q);
 
     // Ownership type filter
     let matchesOwnership = true;
-    if (selectedOwnershipType !== 'all' && record.ownershipType) {
+    if (selectedOwnershipType !== "all" && record.ownershipType) {
+      const hasTenantOwnership =
+        record.ownershipType.tenant === true ||
+        (record.ownershipType.tenantLessee === true &&
+          record.ownershipType.lessee !== true);
+      const hasLesseeOwnership =
+        record.ownershipType.lessee === true ||
+        (record.ownershipType.tenantLessee === true &&
+          record.ownershipType.tenant !== true);
+
       switch (selectedOwnershipType) {
-        case 'registeredOwner':
+        case "registeredOwner":
           matchesOwnership = record.ownershipType.registeredOwner === true;
           break;
-        case 'tenant':
-          matchesOwnership = record.ownershipType.tenant === true;
+        case "tenant":
+          matchesOwnership = hasTenantOwnership;
           break;
-        case 'lessee':
-          matchesOwnership = record.ownershipType.lessee === true;
+        case "lessee":
+          matchesOwnership = hasLesseeOwnership;
           break;
         default:
           matchesOwnership = true;
@@ -336,21 +492,40 @@ const TechMasterlist: React.FC = () => {
     return matchesStatus && matchesSearch && matchesOwnership;
   });
 
+  const sortedFilteredRecords = [...filteredRecords].sort((a, b) => {
+    const timeA = a.dateSubmitted ? new Date(a.dateSubmitted).getTime() : 0;
+    const timeB = b.dateSubmitted ? new Date(b.dateSubmitted).getTime() : 0;
+    return timeB - timeA; // newest first
+  });
+
   const formatDate = (iso: string) => {
-    if (!iso) return '—';
+    if (!iso) return "—";
     try {
       return new Date(iso).toLocaleDateString();
     } catch {
-      return '—';
+      return "—";
     }
   };
 
   const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'Active Farmer': return 'status-approved';
-      case 'Not Active': return 'status-not-approved';
-      default: return 'status-pending';
+    const normalizedStatus = String(status || "")
+      .toLowerCase()
+      .trim();
+
+    if (normalizedStatus === "active farmer" || normalizedStatus === "active") {
+      return "status-approved";
     }
+
+    if (
+      normalizedStatus === "not active" ||
+      normalizedStatus === "not active farmer" ||
+      normalizedStatus === "inactive farmer" ||
+      normalizedStatus === "inactive"
+    ) {
+      return "status-not-approved";
+    }
+
+    return "status-pending";
   };
 
   const toggleStatus = async (id: string) => {
@@ -358,55 +533,62 @@ const TechMasterlist: React.FC = () => {
       // Find the current record
       const record = rsbsaRecords.find((r) => r.id === id);
       if (!record) {
-        throw new Error('Record not found');
+        throw new Error("Record not found");
       }
 
       // Determine the new status
-      const newStatus = record.status === 'Active Farmer' ? 'Not Active' : 'Active Farmer';
+      const newStatus =
+        record.status === "Active Farmer" ? "Not Active" : "Active Farmer";
 
       // Prepare the update data
       const updateData = {
-        status: newStatus
+        status: newStatus,
       };
 
       // Make the API call
       const response = await updateRsbsaSubmission(id, updateData);
 
       if (response.error) {
-        throw new Error(response.error || 'Failed to update status');
+        throw new Error(response.error || "Failed to update status");
       }
 
       // Success! Update the local state
-      setRsbsaRecords(prevRecords =>
-        prevRecords.map(record =>
-          record.id === id
-            ? { ...record, status: newStatus }
-            : record
-        )
+      setRsbsaRecords((prevRecords) =>
+        prevRecords.map((record) =>
+          record.id === id ? { ...record, status: newStatus } : record,
+        ),
       );
 
       // Clear any existing errors
       setError(null);
-
+      showUpdateNotification("Farmer status updated successfully.", "success");
     } catch (err: any) {
-      setError(`Failed to update farmer status: ${err.message}`);
+      const errorMessage = `Failed to update farmer status: ${err.message}`;
+      setError(errorMessage);
+      showUpdateNotification(errorMessage, "error");
     }
   };
 
   const getFilteredPrintRecords = () => {
-    let filtered = rsbsaRecords.filter(record => record.status === 'Active Farmer');
+    const shouldIncludeAllFarmers = printFilter.type === "all_farmers";
+    let filtered = shouldIncludeAllFarmers
+      ? [...rsbsaRecords]
+      : rsbsaRecords.filter((record) => record.status === "Active Farmer");
 
-    if (printFilter.type === 'lastname' && printFilter.value) {
-      filtered = filtered.filter(record => {
-        const lastName = record.farmerName.split(' ').pop()?.toLowerCase() || '';
+    if (printFilter.type === "lastname" && printFilter.value) {
+      filtered = filtered.filter((record) => {
+        const lastName =
+          record.farmerName.split(" ").pop()?.toLowerCase() || "";
         return lastName === printFilter.value.toLowerCase();
       });
-    } else if (printFilter.type === 'barangay' && printFilter.value) {
-      filtered = filtered.filter(record =>
-        record.farmLocation.toLowerCase().includes(printFilter.value.toLowerCase())
+    } else if (printFilter.type === "barangay" && printFilter.value) {
+      filtered = filtered.filter((record) =>
+        record.farmLocation
+          .toLowerCase()
+          .includes(printFilter.value.toLowerCase()),
       );
-    } else if (printFilter.type === 'date' && printFilter.value) {
-      filtered = filtered.filter(record => {
+    } else if (printFilter.type === "date" && printFilter.value) {
+      filtered = filtered.filter((record) => {
         const recordDate = formatDate(record.dateSubmitted);
         const filterDate = formatDate(printFilter.value);
         return recordDate === filterDate;
@@ -416,12 +598,25 @@ const TechMasterlist: React.FC = () => {
     return filtered;
   };
 
+  const openBrowserPrintPreview = (html: string): boolean => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to print the farmers list.");
+      return false;
+    }
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    return true;
+  };
+
   const getUniqueLastNames = () => {
     const lastNames = new Set<string>();
     rsbsaRecords
-      .filter(record => record.status === 'Active Farmer')
-      .forEach(record => {
-        const lastName = record.farmerName.split(' ').pop();
+      .filter((record) => record.status === "Active Farmer")
+      .forEach((record) => {
+        const lastName = record.farmerName.split(" ").pop();
         if (lastName) lastNames.add(lastName);
       });
     return Array.from(lastNames).sort();
@@ -430,8 +625,8 @@ const TechMasterlist: React.FC = () => {
   const getUniqueBarangays = () => {
     const barangays = new Set<string>();
     rsbsaRecords
-      .filter(record => record.status === 'Active Farmer')
-      .forEach(record => {
+      .filter((record) => record.status === "Active Farmer")
+      .forEach((record) => {
         if (record.farmLocation) barangays.add(record.farmLocation);
       });
     return Array.from(barangays).sort();
@@ -440,10 +635,10 @@ const TechMasterlist: React.FC = () => {
   const getUniqueDates = () => {
     const dates = new Set<string>();
     rsbsaRecords
-      .filter(record => record.status === 'Active Farmer')
-      .forEach(record => {
+      .filter((record) => record.status === "Active Farmer")
+      .forEach((record) => {
         const date = formatDate(record.dateSubmitted);
-        if (date !== '—') dates.add(date);
+        if (date !== "—") dates.add(date);
       });
     return Array.from(dates).sort();
   };
@@ -452,18 +647,26 @@ const TechMasterlist: React.FC = () => {
     const activeFarmers = getFilteredPrintRecords();
 
     if (activeFarmers.length === 0) {
-      alert('No active farmers found with the selected filter.');
+      alert("No active farmers found with the selected filter.");
       return;
     }
 
-    let filterDescription = 'All Active Farmers';
-    if (printFilter.type === 'lastname' && printFilter.value) {
+    const printingAllFarmers = printFilter.type === "all_farmers";
+
+    let filterDescription = printingAllFarmers
+      ? "All Farmers"
+      : "All Active Farmers";
+    if (printFilter.type === "lastname" && printFilter.value) {
       filterDescription = `Family Name: ${printFilter.value}`;
-    } else if (printFilter.type === 'barangay' && printFilter.value) {
+    } else if (printFilter.type === "barangay" && printFilter.value) {
       filterDescription = `Barangay: ${printFilter.value}`;
-    } else if (printFilter.type === 'date' && printFilter.value) {
+    } else if (printFilter.type === "date" && printFilter.value) {
       filterDescription = `Date Submitted: ${formatDate(printFilter.value)}`;
     }
+
+    const reportTitle = printingAllFarmers
+      ? "ALL FARMERS LIST"
+      : "ACTIVE FARMERS LIST";
 
     const printContent = `
       <!DOCTYPE html>
@@ -580,7 +783,7 @@ const TechMasterlist: React.FC = () => {
           
           <div class="content-wrapper">
             <div class="header">
-              <h1>ACTIVE FARMERS LIST</h1>
+              <h1>${reportTitle}</h1>
               <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
             </div>
             
@@ -601,7 +804,9 @@ const TechMasterlist: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                ${activeFarmers.map((farmer, index) => `
+                ${activeFarmers
+                  .map(
+                    (farmer, index) => `
                   <tr>
                     <td>${index + 1}</td>
                     <td>${farmer.referenceNumber}</td>
@@ -611,7 +816,9 @@ const TechMasterlist: React.FC = () => {
                     <td>${farmer.parcelArea}</td>
                     <td>${formatDate(farmer.dateSubmitted)}</td>
                   </tr>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
               </tbody>
             </table>
             
@@ -625,56 +832,69 @@ const TechMasterlist: React.FC = () => {
     `;
 
     // Check if running in Electron with print API available
+    let printStarted = false;
     if (window.electron?.printContent) {
       try {
         const result = await window.electron.printContent(printContent);
-        if (!result.success && result.error) {
-          console.error('Print failed:', result.error);
-          // User cancelled the print dialog - this is normal, don't show error
-          if (result.error !== 'cancelled') {
-            alert('Print failed: ' + result.error);
+        if (result.success) {
+          printStarted = true;
+        } else if (result.error) {
+          console.error("Print failed:", result.error);
+          // User cancelled the print dialog - this is normal.
+          if (result.error !== "cancelled") {
+            printStarted = openBrowserPrintPreview(printContent);
           }
         }
       } catch (err: any) {
-        console.error('Print error:', err);
-        alert('Failed to print: ' + err.message);
+        console.error("Print error:", err);
+        printStarted = openBrowserPrintPreview(printContent);
       }
     } else {
-      // Fallback for browser environment
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        alert('Please allow popups to print the active farmers list.');
-        return;
-      }
+      // Browser fallback: open preview window with explicit Print button.
+      printStarted = openBrowserPrintPreview(printContent);
+    }
 
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
-      };
+    if (!printStarted && !window.electron?.printContent) {
+      return;
     }
 
     // Close the modal and reset filter
     setShowPrintModal(false);
-    setPrintFilter({ type: 'all', value: '' });
+    setPrintFilter({ type: "all", value: "" });
+  };
+
+  const handleModalPrint = async () => {
+    if (!selectedFarmer) return;
+
+    setIsModalPrinting(true);
+    const result = await printRsbsaFormById({
+      farmerId: selectedFarmer.id,
+      fallbackReferenceNumber: selectedFarmer.referenceNumber,
+      fallbackFarmerName: selectedFarmer.farmerName,
+    });
+    setIsModalPrinting(false);
+
+    if (!result.success && !result.cancelled) {
+      showUpdateNotification(
+        result.error || "Failed to print RSBSA form.",
+        "error",
+      );
+    }
   };
 
   return (
     <div className="tech-masterlist-page-container">
       <div className="tech-masterlist-page">
-
         {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
-            <div className='sidebar-logo'>
+            <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
             </div>
 
             <button
-              className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
-              onClick={() => navigate('/technician-dashboard')}
+              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
+              onClick={() => navigate("/technician-dashboard")}
             >
               <span className="nav-icon">
                 <img src={HomeIcon} alt="Home" />
@@ -683,8 +903,8 @@ const TechMasterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/technician-rsbsapage') ? 'active' : ''}`}
-              onClick={() => navigate('/technician-rsbsa')}
+              className={`sidebar-nav-item ${isActive("/technician-rsbsapage") ? "active" : ""}`}
+              onClick={() => navigate("/technician-rsbsa")}
             >
               <span className="nav-icon">
                 <img src={RSBSAIcon} alt="RSBSA" />
@@ -693,18 +913,18 @@ const TechMasterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
-              onClick={() => navigate('/technician-incentives')}
+              className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
+              onClick={() => navigate("/technician-incentives")}
             >
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
               </span>
-              <span className="nav-text">Incentives</span>
+              <span className="nav-text">Subsidy</span>
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
-              onClick={() => navigate('/technician-masterlist')}
+              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
+              onClick={() => navigate("/technician-masterlist")}
             >
               <span className="nav-icon">
                 <img src={ApproveIcon} alt="Masterlist" />
@@ -713,30 +933,39 @@ const TechMasterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
-              onClick={() => navigate('/')}
+              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
+              onClick={() => navigate("/")}
             >
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
           </nav>
         </div>
         {/* Sidebar ends here */}
 
-        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
 
         <div className="tech-masterlist-main-content">
           <div className="tech-incent-mobile-header">
-            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
             <div className="tech-incent-mobile-title">Masterlist</div>
           </div>
           <div className="tech-masterlist-dashboard-header">
             <div>
               <h2 className="tech-masterlist-page-title">Masterlist</h2>
-              <p className="tech-masterlist-page-subtitle">Browse all RSBSA farmers, filter by status, and generate reports</p>
+              <p className="tech-masterlist-page-subtitle">
+                Browse all RSBSA farmers, filter by status, and generate reports
+              </p>
             </div>
           </div>
           <div className="tech-masterlist-print-section">
@@ -748,6 +977,22 @@ const TechMasterlist: React.FC = () => {
             </button>
           </div>
           <div className="tech-masterlist-content-card">
+            <div
+              className={`tech-masterlist-unplotted-reminder ${unplottedFarmers.length > 0 ? "has-items" : "all-clear"}`}
+            >
+              <div className="tech-masterlist-unplotted-reminder-head">
+                {unplottedFarmers.length > 0 ? (
+                  <>
+                    <strong>{unplottedFarmers.length}</strong> parcel
+                    {unplottedFarmers.length !== 1 ? "s" : ""} still need
+                    plotting.
+                  </>
+                ) : (
+                  <>All plotting queue items are cleared.</>
+                )}
+              </div>
+            </div>
+
             <div className="tech-masterlist-filters-section">
               <div className="tech-masterlist-search-filter">
                 <input
@@ -783,18 +1028,20 @@ const TechMasterlist: React.FC = () => {
               </div>
             </div>
             <div className="tech-masterlist-table-container">
-              <table className="tech-masterlist-farmers-table" data-responsive="stack">
+              <table
+                className="tech-masterlist-farmers-table"
+                data-responsive="stack"
+              >
                 <thead>
                   <tr>
                     {[
-                      'FFRS System Generated',
-                      'Farmer Name',
-                      'Farmer Address',
-                      'Parcel Address',
-                      'Parcel Area',
-                      'Date Submitted',
-                      'Data Quality',
-                      'Status'
+                      "FFRS ID",
+                      "Farmer Name",
+                      "Farmer Address",
+                      "Parcel Address",
+                      "Parcel Area",
+                      "Date Submitted",
+                      "Status",
                     ].map((header) => (
                       <th key={header}>{header}</th>
                     ))}
@@ -802,26 +1049,42 @@ const TechMasterlist: React.FC = () => {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={8} className="tech-masterlist-loading-cell">Loading...</td></tr>
+                    <tr>
+                      <td colSpan={7} className="tech-masterlist-loading-cell">
+                        Loading...
+                      </td>
+                    </tr>
                   )}
                   {error && !loading && (
-                    <tr><td colSpan={8} className="tech-masterlist-error-cell">Error: {error}</td></tr>
+                    <tr>
+                      <td colSpan={7} className="tech-masterlist-error-cell">
+                        Error: {error}
+                      </td>
+                    </tr>
                   )}
-                  {!loading && !error && filteredRecords.length > 0 && (
-                    filteredRecords.map((record) => (
+                  {!loading &&
+                    !error &&
+                    sortedFilteredRecords.length > 0 &&
+                    sortedFilteredRecords.map((record) => (
                       <tr
                         key={record.id}
-                        onClick={() => fetchFarmerDetails(record.id)}
-                        style={{ cursor: 'pointer', }}
+                        onClick={() => fetchFarmerDetails(record.id, record)}
+                        style={{ cursor: "pointer" }}
                       >
-                        <td data-label="FFRS System Generated">{record.referenceNumber}</td>
-                        <td data-label="Farmer Name">{record.farmerName}</td>
-                        <td data-label="Farmer Address">{record.farmerAddress}</td>
-                        <td data-label="Parcel Address">{record.farmLocation}</td>
-                        <td data-label="Parcel Area">{record.parcelArea}</td>
-                        <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
-                        <td data-label="Data Quality">{record.completeness}%</td>
-                        <td data-label="Status">
+                        <td
+                          className="tech-masterlist-ffrs-id"
+                          title={record.referenceNumber || "N/A"}
+                        >
+                          <span className="tech-masterlist-ffrs-id-value">
+                            {record.referenceNumber || "N/A"}
+                          </span>
+                        </td>
+                        <td>{record.farmerName}</td>
+                        <td>{record.farmerAddress}</td>
+                        <td>{record.farmLocation}</td>
+                        <td>{record.parcelArea}</td>
+                        <td>{formatDate(record.dateSubmitted)}</td>
+                        <td>
                           <button
                             className={`tech-masterlist-status-button tech-masterlist-${getStatusClass(record.status)}`}
                             onClick={(e) => {
@@ -833,20 +1096,41 @@ const TechMasterlist: React.FC = () => {
                           </button>
                         </td>
                       </tr>
-                    ))
-                  )}
-                  {!loading && !error && filteredRecords.length === 0 && (
+                    ))}
+                  {!loading &&
+                    !error &&
+                    sortedFilteredRecords.length === 0 &&
                     Array.from({ length: 16 }).map((_, i) => (
                       <tr key={`empty-${i}`}>
-                        <td colSpan={8}>&nbsp;</td>
+                        <td colSpan={7}>&nbsp;</td>
                       </tr>
-                    ))
-                  )}
+                    ))}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
+
+        {updateNotification.show && (
+          <div
+            className={`tech-masterlist-update-toast ${updateNotification.type}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="tech-masterlist-update-toast-message">
+              {updateNotification.message}
+            </span>
+            <button
+              className="tech-masterlist-update-toast-close"
+              onClick={() =>
+                setUpdateNotification((prev) => ({ ...prev, show: false }))
+              }
+              aria-label="Close notification"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Print Filter Modal */}
         {showPrintModal && (
@@ -858,7 +1142,7 @@ const TechMasterlist: React.FC = () => {
                   className="tech-masterlist-close-button"
                   onClick={() => {
                     setShowPrintModal(false);
-                    setPrintFilter({ type: 'all', value: '' });
+                    setPrintFilter({ type: "all", value: "" });
                   }}
                 >
                   ×
@@ -869,9 +1153,12 @@ const TechMasterlist: React.FC = () => {
                   <label>Filter Type</label>
                   <select
                     value={printFilter.type}
-                    onChange={(e) => setPrintFilter({ type: e.target.value, value: '' })}
+                    onChange={(e) =>
+                      setPrintFilter({ type: e.target.value, value: "" })
+                    }
                     className="tech-masterlist-print-filter-select"
                   >
+                    <option value="all_farmers">Print All Farmers</option>
                     <option value="all">Print All Active Farmers</option>
                     <option value="lastname">Filter by Family Name</option>
                     <option value="barangay">Filter by Barangay</option>
@@ -879,57 +1166,82 @@ const TechMasterlist: React.FC = () => {
                   </select>
                 </div>
 
-                {printFilter.type === 'lastname' && (
+                {printFilter.type === "lastname" && (
                   <div className="tech-masterlist-print-filter-group">
                     <label>Select Family Name</label>
                     <select
                       value={printFilter.value}
-                      onChange={(e) => setPrintFilter({ ...printFilter, value: e.target.value })}
+                      onChange={(e) =>
+                        setPrintFilter({
+                          ...printFilter,
+                          value: e.target.value,
+                        })
+                      }
                       className="tech-masterlist-print-value-select"
                     >
                       <option value="">Choose a family name...</option>
                       {getUniqueLastNames().map((name) => (
-                        <option key={name} value={name}>{name}</option>
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
                       ))}
                     </select>
                   </div>
                 )}
 
-                {printFilter.type === 'barangay' && (
+                {printFilter.type === "barangay" && (
                   <div className="tech-masterlist-print-filter-group">
                     <label>Select Barangay</label>
                     <select
                       value={printFilter.value}
-                      onChange={(e) => setPrintFilter({ ...printFilter, value: e.target.value })}
+                      onChange={(e) =>
+                        setPrintFilter({
+                          ...printFilter,
+                          value: e.target.value,
+                        })
+                      }
                       className="tech-masterlist-print-value-select"
                     >
                       <option value="">Choose a barangay...</option>
                       {getUniqueBarangays().map((barangay) => (
-                        <option key={barangay} value={barangay}>{barangay}</option>
+                        <option key={barangay} value={barangay}>
+                          {barangay}
+                        </option>
                       ))}
                     </select>
                   </div>
                 )}
 
-                {printFilter.type === 'date' && (
+                {printFilter.type === "date" && (
                   <div className="tech-masterlist-print-filter-group">
                     <label>Select Date Submitted</label>
                     <select
                       value={printFilter.value}
-                      onChange={(e) => setPrintFilter({ ...printFilter, value: e.target.value })}
+                      onChange={(e) =>
+                        setPrintFilter({
+                          ...printFilter,
+                          value: e.target.value,
+                        })
+                      }
                       className="tech-masterlist-print-value-select"
                     >
                       <option value="">Choose a date...</option>
                       {getUniqueDates().map((date) => (
-                        <option key={date} value={date}>{date}</option>
+                        <option key={date} value={date}>
+                          {date}
+                        </option>
                       ))}
                     </select>
                   </div>
                 )}
 
-                {(printFilter.type === 'all' || printFilter.value) && (
+                {(printFilter.type === "all" ||
+                  printFilter.type === "all_farmers" ||
+                  printFilter.value) && (
                   <div className="tech-masterlist-print-match-count">
-                    📊 {getFilteredPrintRecords().length} active farmer{getFilteredPrintRecords().length !== 1 ? 's' : ''} will be printed
+                    📊 {getFilteredPrintRecords().length} farmer
+                    {getFilteredPrintRecords().length !== 1 ? "s" : ""} will be
+                    printed
                   </div>
                 )}
               </div>
@@ -938,7 +1250,7 @@ const TechMasterlist: React.FC = () => {
                   className="tech-masterlist-print-modal-cancel-button"
                   onClick={() => {
                     setShowPrintModal(false);
-                    setPrintFilter({ type: 'all', value: '' });
+                    setPrintFilter({ type: "all", value: "" });
                   }}
                 >
                   Cancel
@@ -946,7 +1258,11 @@ const TechMasterlist: React.FC = () => {
                 <button
                   className="tech-masterlist-print-modal-print-button"
                   onClick={printActiveFarmers}
-                  disabled={printFilter.type !== 'all' && !printFilter.value}
+                  disabled={
+                    printFilter.type !== "all" &&
+                    printFilter.type !== "all_farmers" &&
+                    !printFilter.value
+                  }
                 >
                   🖨️ Print
                 </button>
@@ -957,46 +1273,112 @@ const TechMasterlist: React.FC = () => {
 
         {/* Farmer Detail Modal */}
         {showModal && selectedFarmer && (
-          <div className="farmer-modal-overlay" onClick={() => setShowModal(false)}>
-            <div className="farmer-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="farmer-modal-overlay"
+            onClick={() => setShowModal(false)}
+          >
+            <div
+              className="farmer-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="farmer-modal-header">
                 <h2>Farmer Details</h2>
-                <button className="farmer-modal-close" onClick={() => setShowModal(false)}>×</button>
+                <div className="farmer-modal-header-actions">
+                  <button
+                    className="farmer-modal-print-btn"
+                    onClick={handleModalPrint}
+                    disabled={isModalPrinting}
+                  >
+                    {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
+                  </button>
+                  <button
+                    className="farmer-modal-close"
+                    onClick={() => setShowModal(false)}
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
 
               <div className="farmer-modal-body">
                 {loadingFarmerDetail ? (
-                  <div className="farmer-modal-loading">Loading farmer details...</div>
+                  <div className="farmer-modal-loading">
+                    Loading farmer details...
+                  </div>
                 ) : (
                   <>
-                    {/* Personal Information */}
                     <div className="farmer-modal-section">
-                      <h3 className="farmer-modal-section-title">👤 Personal Information</h3>
+                      <h3 className="farmer-modal-section-title">
+                        📌 Record Overview
+                      </h3>
                       <div className="farmer-modal-info-grid">
                         <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Farmer Name:</span>
-                          <span className="farmer-modal-value">{selectedFarmer.farmerName}</span>
+                          <span className="farmer-modal-label">FFRS ID:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.referenceNumber}
+                          </span>
                         </div>
                         <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Farmer Address:</span>
-                          <span className="farmer-modal-value">{selectedFarmer.farmerAddress}</span>
+                          <span className="farmer-modal-label">
+                            Date Submitted:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.dateSubmitted}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Status:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.recordStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Personal Information */}
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">
+                        👤 Personal Information
+                      </h3>
+                      <div className="farmer-modal-info-grid">
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">
+                            Farmer Name:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.farmerName}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">
+                            Farmer Address:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.farmerAddress}
+                          </span>
                         </div>
                         <div className="farmer-modal-info-item">
                           <span className="farmer-modal-label">Age:</span>
                           <span className="farmer-modal-value">
-                            {typeof selectedFarmer.age === 'number' ? `${selectedFarmer.age} years old` : selectedFarmer.age}
+                            {typeof selectedFarmer.age === "number"
+                              ? `${selectedFarmer.age} years old`
+                              : selectedFarmer.age}
                           </span>
                         </div>
                         <div className="farmer-modal-info-item">
                           <span className="farmer-modal-label">Gender:</span>
-                          <span className="farmer-modal-value">{selectedFarmer.gender}</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.gender}
+                          </span>
                         </div>
                         <div className="farmer-modal-info-item farmer-modal-full-width">
-                          <span className="farmer-modal-label">Main Livelihood:</span>
+                          <span className="farmer-modal-label">
+                            Main Livelihood:
+                          </span>
                           <span className="farmer-modal-value">
                             {selectedFarmer.farmingActivities.length > 0
-                              ? selectedFarmer.farmingActivities.join(', ')
-                              : 'Not Available'}
+                              ? selectedFarmer.farmingActivities.join(", ")
+                              : "Not Available"}
                           </span>
                         </div>
                       </div>
@@ -1004,55 +1386,76 @@ const TechMasterlist: React.FC = () => {
 
                     {/* Farm Information */}
                     <div className="farmer-modal-section">
-                      <h3 className="farmer-modal-section-title">🌾 Farm Information</h3>
+                      <h3 className="farmer-modal-section-title">
+                        🌾 Farm Information
+                      </h3>
                       {selectedFarmer.parcels.length === 0 ? (
                         <p className="farmer-modal-no-data">No parcels found</p>
                       ) : (
                         <div className="farmer-modal-parcels-container">
                           {selectedFarmer.parcels.map((parcel, index) => (
-                            <div key={parcel.id} className="farmer-modal-parcel-card">
+                            <div
+                              key={parcel.id}
+                              className="farmer-modal-parcel-card"
+                            >
                               <div className="farmer-modal-parcel-header">
-                                <h4>Parcel #{parcel.parcelNumber !== 'N/A' ? parcel.parcelNumber : index + 1}</h4>
+                                <h4>
+                                  Parcel #
+                                  {parcel.parcelNumber !== "N/A"
+                                    ? parcel.parcelNumber
+                                    : index + 1}
+                                </h4>
                               </div>
                               <div className="farmer-modal-parcel-details">
                                 <div className="farmer-modal-parcel-item">
-                                  <span className="farmer-modal-label">Land Ownership:</span>
+                                  <span className="farmer-modal-label">
+                                    Land Ownership:
+                                  </span>
                                   <span className="farmer-modal-value">
-                                    {parcel.ownershipTypeRegisteredOwner && 'Registered Owner'}
-                                    {parcel.ownershipTypeTenant && (
-                                      <>
-                                        Tenant
-                                        {parcel.tenantLandOwnerName && (
-                                          <span className="farmer-modal-owner-name">
-                                            {' '}(Owner: {parcel.tenantLandOwnerName})
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
-                                    {parcel.ownershipTypeLessee && (
-                                      <>
-                                        Lessee
-                                        {parcel.lesseeLandOwnerName && (
-                                          <span className="farmer-modal-owner-name">
-                                            {' '}(Owner: {parcel.lesseeLandOwnerName})
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
+                                    {parcel.ownershipTypeRegisteredOwner
+                                      ? "Registered Owner"
+                                      : parcel.ownershipTypeTenant &&
+                                          parcel.ownershipTypeLessee
+                                        ? "Tenant + Lessee"
+                                        : parcel.ownershipTypeTenant
+                                          ? "Tenant"
+                                          : parcel.ownershipTypeLessee
+                                            ? "Lessee"
+                                            : "—"}
+                                    {(parcel.ownershipTypeTenant ||
+                                      parcel.ownershipTypeLessee) &&
+                                      (parcel.tenantLandOwnerName ||
+                                        parcel.lesseeLandOwnerName) && (
+                                        <span className="farmer-modal-owner-name">
+                                          {" "}
+                                          (Owner:{" "}
+                                          {parcel.tenantLandOwnerName ||
+                                            parcel.lesseeLandOwnerName}
+                                          )
+                                        </span>
+                                      )}
                                   </span>
                                 </div>
                                 <div className="farmer-modal-parcel-item">
-                                  <span className="farmer-modal-label">Parcel Location:</span>
+                                  <span className="farmer-modal-label">
+                                    Parcel Location:
+                                  </span>
                                   <span className="farmer-modal-value">
-                                    {parcel.farmLocationBarangay}, {parcel.farmLocationMunicipality}
+                                    {parcel.farmLocationBarangay},{" "}
+                                    {parcel.farmLocationMunicipality}
                                   </span>
                                 </div>
                                 <div className="farmer-modal-parcel-item">
-                                  <span className="farmer-modal-label">Parcel Size:</span>
+                                  <span className="farmer-modal-label">
+                                    Parcel Size:
+                                  </span>
                                   <span className="farmer-modal-value">
-                                    {typeof parcel.totalFarmAreaHa === 'number'
+                                    {typeof parcel.totalFarmAreaHa === "number"
                                       ? parcel.totalFarmAreaHa.toFixed(2)
-                                      : parseFloat(String(parcel.totalFarmAreaHa || 0)).toFixed(2)} hectares
+                                      : parseFloat(
+                                          String(parcel.totalFarmAreaHa || 0),
+                                        ).toFixed(2)}{" "}
+                                    hectares
                                   </span>
                                 </div>
                               </div>
@@ -1060,18 +1463,6 @@ const TechMasterlist: React.FC = () => {
                           ))}
                         </div>
                       )}
-                    </div>
-                    {/* link to full profile */}
-                    <div className="farmer-modal-section">
-                      <button
-                        className="btn-action"
-                        onClick={() => {
-                          navigate(`/technician-farmerprofile/${selectedFarmer.id}`);
-                          setShowModal(false);
-                        }}
-                      >
-                        View Full Profile
-                      </button>
                     </div>
                   </>
                 )}

@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
+import { AuditModule, getAuditLogger } from "./components/Audit/auditLogger";
 
 /**
  * API Wrapper - Routes all API calls to Supabase
@@ -9,420 +10,654 @@ import { supabase } from './supabase';
 
 // Types
 interface ApiResponse<T = any> {
-    data: T | null;
-    error: string | null;
-    status: number;
+  data: T | null;
+  error: string | null;
+  status: number;
 }
 
 // Helper to simulate fetch response
-const createResponse = <T>(data: T | null, error: string | null, status: number): ApiResponse<T> => ({
-    data,
-    error,
-    status
+const createResponse = <T>(
+  data: T | null,
+  error: string | null,
+  status: number,
+): ApiResponse<T> => ({
+  data,
+  error,
+  status,
 });
+
+type OwnershipCategory = "registeredOwner" | "tenantLessee" | "unknown";
+
+const normalizeOwnershipCategory = (value: unknown): OwnershipCategory => {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) return "unknown";
+
+  if (
+    normalized === "registeredowner" ||
+    normalized === "registered_owner" ||
+    normalized === "registered owner" ||
+    normalized === "owner"
+  ) {
+    return "registeredOwner";
+  }
+
+  if (
+    normalized === "tenantlessee" ||
+    normalized === "tenant_lessee" ||
+    normalized === "tenant/lessee" ||
+    normalized === "tenant-lessee" ||
+    normalized === "tenant" ||
+    normalized === "lessee"
+  ) {
+    return "tenantLessee";
+  }
+
+  return "unknown";
+};
+
+const deriveOwnershipCategoryFromFlags = (flags: {
+  registeredOwner: boolean;
+  tenantLessee: boolean;
+}): OwnershipCategory => {
+  if (flags.registeredOwner) return "registeredOwner";
+  if (flags.tenantLessee) return "tenantLessee";
+  return "unknown";
+};
+
+const buildOwnershipTypeFromRecord = (item: any) => {
+  const registeredOwner =
+    item["OWNERSHIP_TYPE_REGISTERED_OWNER"] === true ||
+    item.ownership_type_registered_owner === true;
+  const tenant =
+    item["OWNERSHIP_TYPE_TENANT"] === true ||
+    item.ownership_type_tenant === true;
+  const lessee =
+    item["OWNERSHIP_TYPE_LESSEE"] === true ||
+    item.ownership_type_lessee === true;
+  const tenantLessee = tenant || lessee;
+
+  const explicitCategory = normalizeOwnershipCategory(
+    item["OWNERSHIP_CATEGORY"] ?? item.ownership_category,
+  );
+
+  const category =
+    explicitCategory !== "unknown"
+      ? explicitCategory
+      : deriveOwnershipCategoryFromFlags({
+          registeredOwner,
+          tenantLessee,
+        });
+
+  return {
+    registeredOwner,
+    tenant,
+    lessee,
+    tenantLessee,
+    category,
+  };
+};
 
 // Helper to transform Supabase rsbsa_submission record to frontend format
 const transformRsbsaRecord = (item: any) => {
-    // Get name parts from columns with spaces (Supabase format)
-    const lastName = item['LAST NAME'] || '';
-    const firstName = item['FIRST NAME'] || '';
-    const middleName = item['MIDDLE NAME'] || '';
-    const extName = item['EXT NAME'] || '';
+  // Get name parts from columns with spaces (Supabase format)
+  const lastName = item["LAST NAME"] || "";
+  const firstName = item["FIRST NAME"] || "";
+  const middleName = item["MIDDLE NAME"] || "";
+  const extName = item["EXT NAME"] || "";
 
-    // Build farmer name in "LastName, FirstName MiddleName ExtName" format
-    let farmerName = lastName;
-    if (firstName) farmerName += `, ${firstName}`;
-    if (middleName) farmerName += ` ${middleName}`;
-    if (extName) farmerName += ` ${extName}`;
+  // Build farmer name in "LastName, FirstName MiddleName ExtName" format
+  let farmerName = lastName;
+  if (firstName) farmerName += `, ${firstName}`;
+  if (middleName) farmerName += ` ${middleName}`;
+  if (extName) farmerName += ` ${extName}`;
 
-    // Get address/location fields
-    const barangay = item['BARANGAY'] || '';
-    const municipality = item['MUNICIPALITY'] || 'Dumangas';
-    const farmLocation = item['FARM LOCATION'] || barangay || '';
+  // Get address/location fields
+  const barangay = item["BARANGAY"] || "";
+  const municipality = item["MUNICIPALITY"] || "Dumangas";
+  const farmLocation = item["FARM LOCATION"] || barangay || "";
 
-    // Build farmer address
-    const farmerAddress = [barangay, municipality, 'Iloilo'].filter(Boolean).join(', ');
+  // Build farmer address
+  const farmerAddress = [barangay, municipality, "Iloilo"]
+    .filter(Boolean)
+    .join(", ");
 
-    // Get other fields
-    const parcelArea = item['PARCEL AREA'] || item['TOTAL FARM AREA'] || '';
-    const status = item.status || 'Submitted';
-    const referenceNumber = item['FFRS_CODE'] || `RSBSA-${item.id}`;
-    const dateSubmitted = item.submitted_at || item.created_at || '';
+  // Get other fields
+  const parcelArea = item["PARCEL AREA"] || item["TOTAL FARM AREA"] || "";
+  const status = item.status || "Submitted";
+  const referenceNumber = item["FFRS_CODE"] || `RSBSA-${item.id}`;
+  const dateSubmitted = item.submitted_at || item.created_at || "";
 
-    // Get ownership type
-    const ownershipType = {
-        registeredOwner: item['OWNERSHIP_TYPE_REGISTERED_OWNER'] || false,
-        tenant: item['OWNERSHIP_TYPE_TENANT'] || false,
-        lessee: item['OWNERSHIP_TYPE_LESSEE'] || false
-    };
+  // Get ownership type
+  const ownershipType = buildOwnershipTypeFromRecord(item);
 
-    return {
-        id: item.id,
-        referenceNumber,
-        farmerName: farmerName || 'N/A',
-        firstName,
-        middleName,
-        lastName,
-        extName,
-        farmerAddress,
-        farmLocation,
-        parcelArea: String(parcelArea),
-        dateSubmitted,
-        status,
-        landParcel: farmLocation,
-        ownershipType,
-        gender: item['GENDER'] || '',
-        birthdate: item['BIRTHDATE'] || '',
-        age: item.age || null,
-        mainLivelihood: item['MAIN LIVELIHOOD'] || '',
-        totalFarmArea: item['TOTAL FARM AREA'] || 0,
-        // Farming activities
-        farmerRice: item['FARMER_RICE'] || false,
-        farmerCorn: item['FARMER_CORN'] || false,
-        farmerOtherCrops: item['FARMER_OTHER_CROPS'] || false,
-        farmerOtherCropsText: item['FARMER_OTHER_CROPS_TEXT'] || '',
-        farmerLivestock: item['FARMER_LIVESTOCK'] || false,
-        farmerLivestockText: item['FARMER_LIVESTOCK_TEXT'] || '',
-        farmerPoultry: item['FARMER_POULTRY'] || false,
-        farmerPoultryText: item['FARMER_POULTRY_TEXT'] || '',
-        // Keep raw data for debugging
-        _raw: item
-    };
+  return {
+    id: item.id,
+    referenceNumber,
+    farmerName: farmerName || "N/A",
+    firstName,
+    middleName,
+    lastName,
+    extName,
+    farmerAddress,
+    farmLocation,
+    parcelArea: String(parcelArea),
+    dateSubmitted,
+    status,
+    landParcel: farmLocation,
+    ownershipCategory: ownershipType.category,
+    ownershipType,
+    gender: item["GENDER"] || "",
+    birthdate: item["BIRTHDATE"] || "",
+    age: item.age || null,
+    mainLivelihood: item["MAIN LIVELIHOOD"] || "",
+    totalFarmArea: item["TOTAL FARM AREA"] || 0,
+    // Farming activities
+    farmerRice: item["FARMER_RICE"] || false,
+    farmerCorn: item["FARMER_CORN"] || false,
+    farmerOtherCrops: item["FARMER_OTHER_CROPS"] || false,
+    farmerOtherCropsText: item["FARMER_OTHER_CROPS_TEXT"] || "",
+    farmerLivestock: item["FARMER_LIVESTOCK"] || false,
+    farmerLivestockText: item["FARMER_LIVESTOCK_TEXT"] || "",
+    farmerPoultry: item["FARMER_POULTRY"] || false,
+    farmerPoultryText: item["FARMER_POULTRY_TEXT"] || "",
+    // Keep raw data for debugging
+    _raw: item,
+  };
 };
 
 // ==================== DASHBOARD STATS ====================
 
 // Get comprehensive dashboard statistics using Supabase
-export const getDashboardStats = async (seasonOrAllocationId?: string | number, isAllocationId: boolean = false): Promise<ApiResponse> => {
-    try {
-        const now = new Date();
-        const month = now.getMonth() + 1;
-        const year = now.getFullYear();
-        const defaultSeason = month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
+export const getDashboardStats = async (
+  seasonOrAllocationId?: string | number,
+  isAllocationId: boolean = false,
+): Promise<ApiResponse> => {
+  try {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const defaultSeason =
+      month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
 
-        let allocationFilterId: number | null = null;
-        if (isAllocationId && seasonOrAllocationId !== undefined && seasonOrAllocationId !== null) {
-            const parsedAllocationId = Number(seasonOrAllocationId);
-            if (Number.isFinite(parsedAllocationId) && parsedAllocationId > 0) {
-                allocationFilterId = parsedAllocationId;
-            }
-        }
-
-        let currentSeason = !isAllocationId && typeof seasonOrAllocationId === 'string' && seasonOrAllocationId
-            ? seasonOrAllocationId
-            : defaultSeason;
-
-        let selectedAllocation: any = null;
-        if (allocationFilterId !== null) {
-            const { data: selectedAllocationData, error: selectedAllocationError } = await supabase
-                .from('regional_allocations')
-                .select('*')
-                .eq('id', allocationFilterId);
-
-            if (selectedAllocationError) {
-                console.error('Error fetching selected allocation:', selectedAllocationError);
-            } else {
-                selectedAllocation = selectedAllocationData?.[0] || null;
-                if (selectedAllocation?.season) {
-                    currentSeason = selectedAllocation.season;
-                }
-            }
-        }
-
-        const { data: farmersData, error: farmersError } = await supabase
-            .from('rsbsa_submission')
-            .select('id, status, OWNERSHIP_TYPE_TENANT, OWNERSHIP_TYPE_LESSEE', { count: 'exact' });
-
-        if (farmersError) {
-            console.error('Error fetching farmers:', farmersError);
-        }
-
-        const totalFarmers = farmersData?.length || 0;
-        const activeFarmers = farmersData?.filter(f =>
-            f.status?.toLowerCase() === 'active farmer' ||
-            f.status?.toLowerCase() === 'active'
-        ).length || 0;
-
-        const lesseeTenantCount = farmersData?.filter(f =>
-            f.OWNERSHIP_TYPE_LESSEE === true || f.OWNERSHIP_TYPE_TENANT === true
-        ).length || 0;
-
-        let currentRequestsQuery = supabase
-            .from('farmer_requests')
-            .select('id, status, season, allocation_id, barangay');
-
-        if (allocationFilterId !== null) {
-            currentRequestsQuery = currentRequestsQuery.eq('allocation_id', allocationFilterId);
-        } else {
-            currentRequestsQuery = currentRequestsQuery.eq('season', currentSeason);
-        }
-
-        const [{ data: currentRequestsData, error: currentRequestsError }, { data: allRequestsData, error: allRequestsError }] = await Promise.all([
-            currentRequestsQuery,
-            supabase.from('farmer_requests').select('id, status')
-        ]);
-
-        if (currentRequestsError) {
-            console.error('Error fetching filtered requests:', currentRequestsError);
-        }
-        if (allRequestsError) {
-            console.error('Error fetching all requests:', allRequestsError);
-        }
-
-        const seasonRequests = currentRequestsData || [];
-        const allRequests = allRequestsData || [];
-
-        const currentSeasonStats = {
-            total: seasonRequests.length,
-            pending: seasonRequests.filter(r => r.status === 'pending').length,
-            approved: seasonRequests.filter(r => r.status === 'approved').length,
-            rejected: seasonRequests.filter(r => r.status === 'rejected').length,
-            distributed: seasonRequests.filter(r => r.status === 'distributed').length
-        };
-
-        const allTimeStats = {
-            total: allRequests.length,
-            pending: allRequests.filter(r => r.status === 'pending').length,
-            approved: allRequests.filter(r => r.status === 'approved').length,
-            distributed: allRequests.filter(r => r.status === 'distributed').length
-        };
-
-        const totalRequests = currentSeasonStats.total || 1;
-        const statusBreakdown = {
-            approved: Math.round((currentSeasonStats.approved / totalRequests) * 100),
-            pending: Math.round((currentSeasonStats.pending / totalRequests) * 100),
-            rejected: Math.round((currentSeasonStats.rejected / totalRequests) * 100),
-            distributed: Math.round((currentSeasonStats.distributed / totalRequests) * 100)
-        };
-
-        let allocationRows: any[] = [];
-        if (allocationFilterId !== null) {
-            allocationRows = selectedAllocation ? [selectedAllocation] : [];
-        } else {
-            const { data: seasonAllocations, error: seasonAllocationsError } = await supabase
-                .from('regional_allocations')
-                .select('*')
-                .eq('season', currentSeason);
-
-            if (seasonAllocationsError) {
-                console.error('Error fetching season allocations:', seasonAllocationsError);
-            }
-
-            allocationRows = seasonAllocations || [];
-        }
-
-        const fertilizerAllocated = allocationRows.reduce((sum, allocation) =>
-            sum +
-            (allocation.urea_46_0_0_bags || 0) +
-            (allocation.complete_14_14_14_bags || 0) +
-            (allocation.ammonium_sulfate_21_0_0_bags || 0) +
-            (allocation.muriate_potash_0_0_60_bags || 0), 0);
-
-        const seedsAllocated = allocationRows.reduce((sum, allocation) =>
-            sum +
-            (allocation.jackpot_kg || 0) +
-            (allocation.us88_kg || 0) +
-            (allocation.th82_kg || 0) +
-            (allocation.rh9000_kg || 0) +
-            (allocation.lumping143_kg || 0) +
-            (allocation.lp296_kg || 0), 0);
-
-        const seasonRequestIds = seasonRequests.map(r => r.id);
-
-        let totalFertilizerDistributed = 0;
-        let totalSeedsDistributed = 0;
-
-        if (seasonRequestIds.length > 0) {
-            const { data: distributionData, error: distributionError } = await supabase
-                .from('distribution_records')
-                .select('fertilizer_bags_given, seed_kg_given, request_id')
-                .in('request_id', seasonRequestIds);
-
-            if (distributionError) {
-                console.error('Error fetching distribution records:', distributionError);
-            } else {
-                totalFertilizerDistributed = distributionData?.reduce((sum, d) => sum + (d.fertilizer_bags_given || 0), 0) || 0;
-                totalSeedsDistributed = distributionData?.reduce((sum, d) => sum + (d.seed_kg_given || 0), 0) || 0;
-            }
-        }
-
-        const fertilizerProgress = fertilizerAllocated > 0 ? Math.round((totalFertilizerDistributed / fertilizerAllocated) * 100) : 0;
-        const seedsProgress = seedsAllocated > 0 ? Math.round((totalSeedsDistributed / seedsAllocated) * 100) : 0;
-        const totalAllocated = fertilizerAllocated + seedsAllocated;
-        const totalDistributed = totalFertilizerDistributed + totalSeedsDistributed;
-        const overallProgress = totalAllocated > 0 ? Math.round((totalDistributed / totalAllocated) * 100) : 0;
-
-        const { data: barangayData } = await supabase
-            .from('rsbsa_submission')
-            .select('BARANGAY');
-
-        const uniqueBarangays = new Set(barangayData?.map(b => b.BARANGAY).filter(Boolean));
-        const requestBarangays = new Set(seasonRequests.map(r => r.barangay).filter(Boolean));
-
-        const seasonEndDateFromAllocation = selectedAllocation?.season_end_date ||
-            allocationRows.find(a => a?.season_end_date)?.season_end_date;
-        const fallbackSeasonEndDate = month >= 5 && month <= 10
-            ? `October 31, ${year}`
-            : `April 30, ${year + (month <= 4 ? 0 : 1)}`;
-
-        const dashboardStats = {
-            currentSeason,
-            seasonEndDate: seasonEndDateFromAllocation || fallbackSeasonEndDate,
-            farmers: {
-                total: totalFarmers,
-                active: activeFarmers,
-                lessee: lesseeTenantCount
-            },
-            requests: {
-                currentSeason: currentSeasonStats,
-                allTime: allTimeStats,
-                statusBreakdown
-            },
-            distribution: {
-                fertilizer: {
-                    allocated: fertilizerAllocated,
-                    distributed: totalFertilizerDistributed,
-                    remaining: Math.max(0, fertilizerAllocated - totalFertilizerDistributed),
-                    progress: fertilizerProgress
-                },
-                seeds: {
-                    allocated: seedsAllocated,
-                    distributed: totalSeedsDistributed,
-                    remaining: Math.max(0, seedsAllocated - totalSeedsDistributed),
-                    progress: seedsProgress
-                },
-                overall: {
-                    progress: overallProgress,
-                    totalAllocated,
-                    totalDistributed
-                }
-            },
-            coverage: {
-                totalBarangays: uniqueBarangays.size,
-                barangaysWithRequests: requestBarangays.size
-            },
-            processingTime: {
-                averageDays: 'N/A'
-            }
-        };
-
-        console.log('Dashboard stats from Supabase:', dashboardStats);
-        return createResponse(dashboardStats, null, 200);
-    } catch (error: any) {
-        console.error('Error fetching dashboard stats:', error);
-        return createResponse(null, error.message, 500);
+    let allocationFilterId: number | null = null;
+    if (
+      isAllocationId &&
+      seasonOrAllocationId !== undefined &&
+      seasonOrAllocationId !== null
+    ) {
+      const parsedAllocationId = Number(seasonOrAllocationId);
+      if (Number.isFinite(parsedAllocationId) && parsedAllocationId > 0) {
+        allocationFilterId = parsedAllocationId;
+      }
     }
+
+    let currentSeason =
+      !isAllocationId &&
+      typeof seasonOrAllocationId === "string" &&
+      seasonOrAllocationId
+        ? seasonOrAllocationId
+        : defaultSeason;
+
+    let selectedAllocation: any = null;
+    if (allocationFilterId !== null) {
+      const { data: selectedAllocationData, error: selectedAllocationError } =
+        await supabase
+          .from("regional_allocations")
+          .select("*")
+          .eq("id", allocationFilterId);
+
+      if (selectedAllocationError) {
+        console.error(
+          "Error fetching selected allocation:",
+          selectedAllocationError,
+        );
+      } else {
+        selectedAllocation = selectedAllocationData?.[0] || null;
+        if (selectedAllocation?.season) {
+          currentSeason = selectedAllocation.season;
+        }
+      }
+    }
+
+    const { data: farmersData, error: farmersError } = await supabase
+      .from("rsbsa_submission")
+      .select("id, status, OWNERSHIP_TYPE_TENANT, OWNERSHIP_TYPE_LESSEE", {
+        count: "exact",
+      });
+
+    if (farmersError) {
+      console.error("Error fetching farmers:", farmersError);
+    }
+
+    const totalFarmers = farmersData?.length || 0;
+    const activeFarmers =
+      farmersData?.filter(
+        (f) =>
+          f.status?.toLowerCase() === "active farmer" ||
+          f.status?.toLowerCase() === "active",
+      ).length || 0;
+
+    const lesseeTenantCount =
+      farmersData?.filter(
+        (f) =>
+          f.OWNERSHIP_TYPE_LESSEE === true || f.OWNERSHIP_TYPE_TENANT === true,
+      ).length || 0;
+
+    let currentRequestsQuery = supabase
+      .from("farmer_requests")
+      .select("id, status, season, allocation_id, barangay");
+
+    if (allocationFilterId !== null) {
+      currentRequestsQuery = currentRequestsQuery.eq(
+        "allocation_id",
+        allocationFilterId,
+      );
+    } else {
+      currentRequestsQuery = currentRequestsQuery.eq("season", currentSeason);
+    }
+
+    const [
+      { data: currentRequestsData, error: currentRequestsError },
+      { data: allRequestsData, error: allRequestsError },
+    ] = await Promise.all([
+      currentRequestsQuery,
+      supabase.from("farmer_requests").select("id, status"),
+    ]);
+
+    if (currentRequestsError) {
+      console.error("Error fetching filtered requests:", currentRequestsError);
+    }
+    if (allRequestsError) {
+      console.error("Error fetching all requests:", allRequestsError);
+    }
+
+    const seasonRequests = currentRequestsData || [];
+    const allRequests = allRequestsData || [];
+
+    const currentSeasonStats = {
+      total: seasonRequests.length,
+      pending: seasonRequests.filter((r) => r.status === "pending").length,
+      approved: seasonRequests.filter((r) => r.status === "approved").length,
+      rejected: seasonRequests.filter((r) => r.status === "rejected").length,
+      distributed: seasonRequests.filter((r) => r.status === "distributed")
+        .length,
+    };
+
+    const allTimeStats = {
+      total: allRequests.length,
+      pending: allRequests.filter((r) => r.status === "pending").length,
+      approved: allRequests.filter((r) => r.status === "approved").length,
+      distributed: allRequests.filter((r) => r.status === "distributed").length,
+    };
+
+    const totalRequests = currentSeasonStats.total || 1;
+    const statusBreakdown = {
+      approved: Math.round((currentSeasonStats.approved / totalRequests) * 100),
+      pending: Math.round((currentSeasonStats.pending / totalRequests) * 100),
+      rejected: Math.round((currentSeasonStats.rejected / totalRequests) * 100),
+      distributed: Math.round(
+        (currentSeasonStats.distributed / totalRequests) * 100,
+      ),
+    };
+
+    let allocationRows: any[] = [];
+    if (allocationFilterId !== null) {
+      allocationRows = selectedAllocation ? [selectedAllocation] : [];
+    } else {
+      const { data: seasonAllocations, error: seasonAllocationsError } =
+        await supabase
+          .from("regional_allocations")
+          .select("*")
+          .eq("season", currentSeason);
+
+      if (seasonAllocationsError) {
+        console.error(
+          "Error fetching season allocations:",
+          seasonAllocationsError,
+        );
+      }
+
+      allocationRows = seasonAllocations || [];
+    }
+
+    const fertilizerAllocationFields = [
+      "urea_46_0_0_bags",
+      "complete_14_14_14_bags",
+      "complete_16_16_16_bags",
+      "np_16_20_0_bags",
+      "ammonium_phosphate_16_20_0_bags",
+      "ammonium_sulfate_21_0_0_bags",
+      "muriate_potash_0_0_60_bags",
+      "zinc_sulfate_bags",
+      "vermicompost_bags",
+      "chicken_manure_bags",
+      "rice_straw_kg",
+      "carbonized_rice_hull_bags",
+      "biofertilizer_liters",
+      "nanobiofertilizer_liters",
+      "organic_root_exudate_mix_liters",
+      "azolla_microphylla_kg",
+      "foliar_liquid_fertilizer_npk_liters",
+    ] as const;
+
+    const seedAllocationFields = [
+      "rice_seeds_nsic_rc160_kg",
+      "rice_seeds_nsic_rc222_kg",
+      "jackpot_kg",
+      "us88_kg",
+      "th82_kg",
+      "rh9000_kg",
+      "lumping143_kg",
+      "lp296_kg",
+      "mestiso_1_kg",
+      "mestiso_20_kg",
+      "mestiso_29_kg",
+      "mestiso_55_kg",
+      "mestiso_73_kg",
+      "mestiso_99_kg",
+      "mestiso_103_kg",
+      "nsic_rc402_kg",
+      "nsic_rc480_kg",
+      "nsic_rc216_kg",
+      "nsic_rc218_kg",
+      "nsic_rc506_kg",
+      "nsic_rc508_kg",
+      "nsic_rc512_kg",
+      "nsic_rc534_kg",
+      "tubigan_28_kg",
+      "tubigan_30_kg",
+      "tubigan_22_kg",
+      "sahod_ulan_2_kg",
+      "sahod_ulan_10_kg",
+      "salinas_6_kg",
+      "salinas_7_kg",
+      "salinas_8_kg",
+      "malagkit_5_kg",
+    ] as const;
+
+    const sumAllocationFields = (
+      rows: any[],
+      fields: readonly string[],
+    ): number => {
+      return rows.reduce(
+        (total, row) =>
+          total +
+          fields.reduce(
+            (fieldSum, field) => fieldSum + (Number(row?.[field]) || 0),
+            0,
+          ),
+        0,
+      );
+    };
+
+    const fertilizerAllocated = sumAllocationFields(
+      allocationRows,
+      fertilizerAllocationFields,
+    );
+    const seedsAllocated = sumAllocationFields(
+      allocationRows,
+      seedAllocationFields,
+    );
+
+    const seasonRequestIds = seasonRequests.map((r) => r.id);
+
+    let totalFertilizerDistributed = 0;
+    let totalSeedsDistributed = 0;
+
+    if (seasonRequestIds.length > 0) {
+      const { data: distributionData, error: distributionError } =
+        await supabase
+          .from("distribution_records")
+          .select("fertilizer_bags_given, seed_kg_given, request_id")
+          .in("request_id", seasonRequestIds);
+
+      if (distributionError) {
+        console.error(
+          "Error fetching distribution records:",
+          distributionError,
+        );
+      } else {
+        totalFertilizerDistributed =
+          distributionData?.reduce(
+            (sum, d) => sum + (d.fertilizer_bags_given || 0),
+            0,
+          ) || 0;
+        totalSeedsDistributed =
+          distributionData?.reduce(
+            (sum, d) => sum + (d.seed_kg_given || 0),
+            0,
+          ) || 0;
+      }
+    }
+
+    const fertilizerProgress =
+      fertilizerAllocated > 0
+        ? Math.round((totalFertilizerDistributed / fertilizerAllocated) * 100)
+        : 0;
+    const seedsProgress =
+      seedsAllocated > 0
+        ? Math.round((totalSeedsDistributed / seedsAllocated) * 100)
+        : 0;
+    const totalAllocated = fertilizerAllocated + seedsAllocated;
+    const totalDistributed = totalFertilizerDistributed + totalSeedsDistributed;
+    const overallProgress =
+      totalAllocated > 0
+        ? Math.round((totalDistributed / totalAllocated) * 100)
+        : 0;
+
+    const { data: barangayData } = await supabase
+      .from("rsbsa_submission")
+      .select("BARANGAY");
+
+    const uniqueBarangays = new Set(
+      barangayData?.map((b) => b.BARANGAY).filter(Boolean),
+    );
+    const requestBarangays = new Set(
+      seasonRequests.map((r) => r.barangay).filter(Boolean),
+    );
+
+    const seasonEndDateFromAllocation =
+      selectedAllocation?.season_end_date ||
+      allocationRows.find((a) => a?.season_end_date)?.season_end_date;
+    const fallbackSeasonEndDate =
+      month >= 5 && month <= 10
+        ? `October 31, ${year}`
+        : `April 30, ${year + (month <= 4 ? 0 : 1)}`;
+
+    const dashboardStats = {
+      currentSeason,
+      seasonEndDate: seasonEndDateFromAllocation || fallbackSeasonEndDate,
+      farmers: {
+        total: totalFarmers,
+        active: activeFarmers,
+        lessee: lesseeTenantCount,
+      },
+      requests: {
+        currentSeason: currentSeasonStats,
+        allTime: allTimeStats,
+        statusBreakdown,
+      },
+      distribution: {
+        fertilizer: {
+          allocated: fertilizerAllocated,
+          distributed: totalFertilizerDistributed,
+          remaining: Math.max(
+            0,
+            fertilizerAllocated - totalFertilizerDistributed,
+          ),
+          progress: fertilizerProgress,
+        },
+        seeds: {
+          allocated: seedsAllocated,
+          distributed: totalSeedsDistributed,
+          remaining: Math.max(0, seedsAllocated - totalSeedsDistributed),
+          progress: seedsProgress,
+        },
+        overall: {
+          progress: overallProgress,
+          totalAllocated,
+          totalDistributed,
+        },
+      },
+      coverage: {
+        totalBarangays: uniqueBarangays.size,
+        barangaysWithRequests: requestBarangays.size,
+      },
+      processingTime: {
+        averageDays: "N/A",
+      },
+    };
+
+    console.log("Dashboard stats from Supabase:", dashboardStats);
+    return createResponse(dashboardStats, null, 200);
+  } catch (error: any) {
+    console.error("Error fetching dashboard stats:", error);
+    return createResponse(null, error.message, 500);
+  }
 };
 
 // Get monthly distribution trends using Supabase
-export const getMonthlyTrends = async (seasonOrAllocationId?: string | number, isAllocationId: boolean = false): Promise<ApiResponse> => {
-    try {
-        let requestsQuery = supabase.from('farmer_requests').select('id');
+export const getMonthlyTrends = async (
+  seasonOrAllocationId?: string | number,
+  isAllocationId: boolean = false,
+): Promise<ApiResponse> => {
+  try {
+    let requestsQuery = supabase.from("farmer_requests").select("id");
 
-        if (seasonOrAllocationId !== undefined && seasonOrAllocationId !== null) {
-            if (isAllocationId) {
-                requestsQuery = requestsQuery.eq('allocation_id', seasonOrAllocationId);
-            } else {
-                requestsQuery = requestsQuery.eq('season', seasonOrAllocationId);
-            }
-        } else {
-            const now = new Date();
-            const month = now.getMonth() + 1;
-            const year = now.getFullYear();
-            const defaultSeason = month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
-            requestsQuery = requestsQuery.eq('season', defaultSeason);
-        }
-
-        const { data: filteredRequests, error: filteredRequestsError } = await requestsQuery;
-        if (filteredRequestsError) {
-            console.error('Error fetching filtered requests for trends:', filteredRequestsError);
-            return createResponse([], null, 200);
-        }
-
-        const requestIds = (filteredRequests || []).map(r => r.id);
-        if (requestIds.length === 0) {
-            return createResponse([], null, 200);
-        }
-
-        const { data: distributionData, error } = await supabase
-            .from('distribution_records')
-            .select('distribution_date, fertilizer_bags_given, seed_kg_given, request_id')
-            .in('request_id', requestIds)
-            .order('distribution_date', { ascending: true });
-
-        if (error) {
-            console.error('Error fetching distribution records:', error);
-            return createResponse([], null, 200);
-        }
-
-        const monthlyData: { [key: string]: { fertilizer: number; seeds: number; count: number } } = {};
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-        (distributionData || []).forEach(record => {
-            if (record.distribution_date) {
-                const date = new Date(record.distribution_date);
-                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-
-                if (!monthlyData[monthKey]) {
-                    monthlyData[monthKey] = { fertilizer: 0, seeds: 0, count: 0 };
-                }
-
-                monthlyData[monthKey].fertilizer += record.fertilizer_bags_given || 0;
-                monthlyData[monthKey].seeds += record.seed_kg_given || 0;
-                monthlyData[monthKey].count += 1;
-            }
-        });
-
-        const trends = Object.entries(monthlyData)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .slice(-12)
-            .map(([month, data]) => {
-                const [_year, monthNum] = month.split('-');
-                return {
-                    month,
-                    monthName: monthNames[parseInt(monthNum) - 1],
-                    fertilizer: data.fertilizer,
-                    seeds: data.seeds,
-                    count: data.count
-                };
-            });
-
-        return createResponse(trends, null, 200);
-    } catch (error: any) {
-        console.error('Error fetching monthly trends:', error);
-        return createResponse([], null, 200);
+    if (seasonOrAllocationId !== undefined && seasonOrAllocationId !== null) {
+      if (isAllocationId) {
+        requestsQuery = requestsQuery.eq("allocation_id", seasonOrAllocationId);
+      } else {
+        requestsQuery = requestsQuery.eq("season", seasonOrAllocationId);
+      }
+    } else {
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const defaultSeason =
+        month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
+      requestsQuery = requestsQuery.eq("season", defaultSeason);
     }
+
+    const { data: filteredRequests, error: filteredRequestsError } =
+      await requestsQuery;
+    if (filteredRequestsError) {
+      console.error(
+        "Error fetching filtered requests for trends:",
+        filteredRequestsError,
+      );
+      return createResponse([], null, 200);
+    }
+
+    const requestIds = (filteredRequests || []).map((r) => r.id);
+    if (requestIds.length === 0) {
+      return createResponse([], null, 200);
+    }
+
+    const { data: distributionData, error } = await supabase
+      .from("distribution_records")
+      .select(
+        "distribution_date, fertilizer_bags_given, seed_kg_given, request_id",
+      )
+      .in("request_id", requestIds)
+      .order("distribution_date", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching distribution records:", error);
+      return createResponse([], null, 200);
+    }
+
+    const monthlyData: {
+      [key: string]: { fertilizer: number; seeds: number; count: number };
+    } = {};
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    (distributionData || []).forEach((record) => {
+      if (record.distribution_date) {
+        const date = new Date(record.distribution_date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { fertilizer: 0, seeds: 0, count: 0 };
+        }
+
+        monthlyData[monthKey].fertilizer += record.fertilizer_bags_given || 0;
+        monthlyData[monthKey].seeds += record.seed_kg_given || 0;
+        monthlyData[monthKey].count += 1;
+      }
+    });
+
+    const trends = Object.entries(monthlyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, data]) => {
+        const [_year, monthNum] = month.split("-");
+        return {
+          month,
+          monthName: monthNames[parseInt(monthNum) - 1],
+          fertilizer: data.fertilizer,
+          seeds: data.seeds,
+          count: data.count,
+        };
+      });
+
+    return createResponse(trends, null, 200);
+  } catch (error: any) {
+    console.error("Error fetching monthly trends:", error);
+    return createResponse([], null, 200);
+  }
 };
 
 // Get recent activity using Supabase
-export const getRecentActivity = async (limit: number = 5, seasonOrAllocationId?: string | number, isAllocationId: boolean = false): Promise<ApiResponse> => {
-    try {
-        let filteredRequestIds: (string | number)[] | null = null;
+export const getRecentActivity = async (
+  limit: number = 5,
+  seasonOrAllocationId?: string | number,
+  isAllocationId: boolean = false,
+): Promise<ApiResponse> => {
+  try {
+    let filteredRequestIds: (string | number)[] | null = null;
 
-        if (seasonOrAllocationId !== undefined && seasonOrAllocationId !== null) {
-            let requestsQuery = supabase.from('farmer_requests').select('id');
+    if (seasonOrAllocationId !== undefined && seasonOrAllocationId !== null) {
+      let requestsQuery = supabase.from("farmer_requests").select("id");
 
-            if (isAllocationId) {
-                requestsQuery = requestsQuery.eq('allocation_id', seasonOrAllocationId);
-            } else {
-                requestsQuery = requestsQuery.eq('season', seasonOrAllocationId);
-            }
+      if (isAllocationId) {
+        requestsQuery = requestsQuery.eq("allocation_id", seasonOrAllocationId);
+      } else {
+        requestsQuery = requestsQuery.eq("season", seasonOrAllocationId);
+      }
 
-            const { data: requestsData, error: requestsError } = await requestsQuery;
-            if (requestsError) {
-                console.error('Error fetching filtered requests for recent activity:', requestsError);
-                return createResponse([], null, 200);
-            }
+      const { data: requestsData, error: requestsError } = await requestsQuery;
+      if (requestsError) {
+        console.error(
+          "Error fetching filtered requests for recent activity:",
+          requestsError,
+        );
+        return createResponse([], null, 200);
+      }
 
-            filteredRequestIds = (requestsData || []).map(r => r.id);
-            if (filteredRequestIds.length === 0) {
-                return createResponse([], null, 200);
-            }
-        }
+      filteredRequestIds = (requestsData || []).map((r) => r.id);
+      if (filteredRequestIds.length === 0) {
+        return createResponse([], null, 200);
+      }
+    }
 
-        let query = supabase
-            .from('distribution_records')
-            .select(`
+    let query = supabase.from("distribution_records").select(`
                 id,
                 request_id,
                 fertilizer_type,
@@ -438,645 +673,1126 @@ export const getRecentActivity = async (limit: number = 5, seasonOrAllocationId?
                 )
             `);
 
-        if (filteredRequestIds) {
-            query = query.in('request_id', filteredRequestIds);
-        }
-
-        const { data, error } = await query
-            .order('created_at', { ascending: false })
-            .limit(limit);
-
-        if (error) {
-            console.error('Error fetching recent activity:', error);
-            return createResponse([], null, 200);
-        }
-
-        const flattenedData = (data || []).map((record: any) => {
-            const farmerRequest = record.farmer_requests;
-            return {
-                id: record.id,
-                farmer_name: farmerRequest?.farmer_name || 'Unknown',
-                barangay: farmerRequest?.barangay || 'Unknown',
-                fertilizer_type: record.fertilizer_type,
-                fertilizer_bags_given: record.fertilizer_bags_given,
-                seed_type: record.seed_type,
-                seed_kg_given: record.seed_kg_given,
-                distribution_date: record.distribution_date,
-                verified_by: record.verified_by,
-                created_at: record.created_at
-            };
-        });
-
-        return createResponse(flattenedData, null, 200);
-    } catch (error: any) {
-        console.error('Error fetching recent activity:', error);
-        return createResponse([], null, 200);
+    if (filteredRequestIds) {
+      query = query.in("request_id", filteredRequestIds);
     }
+
+    const { data, error } = await query
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("Error fetching recent activity:", error);
+      return createResponse([], null, 200);
+    }
+
+    const flattenedData = (data || []).map((record: any) => {
+      const farmerRequest = record.farmer_requests;
+      return {
+        id: record.id,
+        farmer_name: farmerRequest?.farmer_name || "Unknown",
+        barangay: farmerRequest?.barangay || "Unknown",
+        fertilizer_type: record.fertilizer_type,
+        fertilizer_bags_given: record.fertilizer_bags_given,
+        seed_type: record.seed_type,
+        seed_kg_given: record.seed_kg_given,
+        distribution_date: record.distribution_date,
+        verified_by: record.verified_by,
+        created_at: record.created_at,
+      };
+    });
+
+    return createResponse(flattenedData, null, 200);
+  } catch (error: any) {
+    console.error("Error fetching recent activity:", error);
+    return createResponse([], null, 200);
+  }
 };
 
 // Get available seasons using Supabase
 export const getAvailableSeasons = async (): Promise<ApiResponse> => {
-    try {
-        const { data, error } = await supabase
-            .from('regional_allocations')
-            .select('id, season, allocation_date, season_start_date, season_end_date, status, notes')
-            .order('allocation_date', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("regional_allocations")
+      .select(
+        "id, season, allocation_date, season_start_date, season_end_date, status, notes",
+      )
+      .order("allocation_date", { ascending: false });
 
-        if (error) {
-            console.error('Error fetching seasons:', error);
-            // Return default season on error
-            const now = new Date();
-            const month = now.getMonth() + 1;
-            const year = now.getFullYear();
-            const defaultSeason = month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
-            return createResponse([{
-                id: 0,
-                season: defaultSeason,
-                allocation_date: new Date().toISOString().split('T')[0],
-                season_start_date: '',
-                season_end_date: '',
-                status: 'active'
-            }], null, 200);
-        }
-
-        // If no allocations exist, return current season
-        if (!data || data.length === 0) {
-            const now = new Date();
-            const month = now.getMonth() + 1;
-            const year = now.getFullYear();
-            const defaultSeason = month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
-            return createResponse([{
-                id: 0,
-                season: defaultSeason,
-                allocation_date: new Date().toISOString().split('T')[0],
-                season_start_date: '',
-                season_end_date: '',
-                status: 'active'
-            }], null, 200);
-        }
-
-        return createResponse(data, null, 200);
-    } catch (error: any) {
-        console.error('Error fetching available seasons:', error);
-        return createResponse(null, error.message, 500);
+    if (error) {
+      console.error("Error fetching seasons:", error);
+      // Return default season on error
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const defaultSeason =
+        month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
+      return createResponse(
+        [
+          {
+            id: 0,
+            season: defaultSeason,
+            allocation_date: new Date().toISOString().split("T")[0],
+            season_start_date: "",
+            season_end_date: "",
+            status: "active",
+          },
+        ],
+        null,
+        200,
+      );
     }
+
+    // If no allocations exist, return current season
+    if (!data || data.length === 0) {
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const defaultSeason =
+        month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
+      return createResponse(
+        [
+          {
+            id: 0,
+            season: defaultSeason,
+            allocation_date: new Date().toISOString().split("T")[0],
+            season_start_date: "",
+            season_end_date: "",
+            status: "active",
+          },
+        ],
+        null,
+        200,
+      );
+    }
+
+    return createResponse(data, null, 200);
+  } catch (error: any) {
+    console.error("Error fetching available seasons:", error);
+    return createResponse(null, error.message, 500);
+  }
 };
 
 // ==================== TECHNICIAN DASHBOARD ====================
 
 export const getTechDashboardData = async (): Promise<ApiResponse> => {
-    try {
-        const [farmersResult, plotsResult, barangayResult] = await Promise.all([
-            supabase.from('rsbsa_submission').select('id, "FIRST NAME", "LAST NAME", "BARANGAY", "FFRS_CODE"'),
-            supabase.from('land_plots').select('id, farmer_id, ffrs_id, barangay'),
-            supabase.from('barangay_codes').select('barangay_name')
-        ]);
+  try {
+    const [farmersResult, plotsResult, barangayResult, parcelsResult] =
+      await Promise.all([
+        supabase
+          .from("rsbsa_submission")
+          .select('id, "FIRST NAME", "LAST NAME", "BARANGAY", "FFRS_CODE"'),
+        supabase
+          .from("land_plots")
+          .select("id, ffrs_id, barangay, parcel_number, first_name, surname"),
+        supabase.from("barangay_codes").select("barangay_name"),
+        supabase
+          .from("rsbsa_farm_parcels")
+          .select("id, submission_id, parcel_number, farm_location_barangay"),
+      ]);
 
-        if (farmersResult.error) throw farmersResult.error;
+    if (farmersResult.error) throw farmersResult.error;
 
-        const farmers = farmersResult.data || [];
-        const plots = plotsResult.data || [];
-        const barangayCodes = barangayResult.data || [];
+    const farmers = farmersResult.data || [];
+    const plots = plotsResult.data || [];
+    const barangayCodes = barangayResult.data || [];
+    const farmParcels = parcelsResult.data || [];
 
-        const plottedFarmerIds = new Set<number>();
-        const plottedFfrs = new Set<string>();
+    const farmerInfoById = new Map<
+      number,
+      { farmerName: string; referenceNumber: string; barangay: string }
+    >();
+    farmers.forEach((f: any) => {
+      const firstName = String(f["FIRST NAME"] || "").trim();
+      const lastName = String(f["LAST NAME"] || "").trim();
+      const farmerName = [lastName, firstName].filter(Boolean).join(", ");
+      farmerInfoById.set(Number(f.id), {
+        farmerName: farmerName || `Farmer ${f.id}`,
+        referenceNumber: String(f.FFRS_CODE || `RSBSA-${f.id}`),
+        barangay: String(f.BARANGAY || "").trim(),
+      });
+    });
 
-        plots.forEach((p: any) => {
-            if (p.farmer_id) plottedFarmerIds.add(p.farmer_id);
-            if (p.ffrs_id) plottedFfrs.add(p.ffrs_id.toUpperCase());
-        });
+    // Normalise a string for case-insensitive, whitespace-insensitive comparison
+    const normalize = (s: string) => (s || "").toLowerCase().trim();
 
-        const farmerPlotStatus = farmers.map((f: any) => ({
-            ...f,
-            isPlotted: plottedFarmerIds.has(f.id) ||
-                (f.FFRS_CODE && plottedFfrs.has(f.FFRS_CODE.toUpperCase()))
-        }));
+    // Build a lookup: farmer id -> { ffrs, firstName, lastName }
+    const farmerFfrsMap = new Map<
+      number,
+      { ffrs: string; firstName: string; lastName: string }
+    >();
+    farmers.forEach((f: any) => {
+      farmerFfrsMap.set(f.id, {
+        ffrs: (f.FFRS_CODE || "").toUpperCase(),
+        firstName: normalize(f["FIRST NAME"]),
+        lastName: normalize(f["LAST NAME"]),
+      });
+    });
 
-        const plottedCount = farmerPlotStatus.filter((f: any) => f.isPlotted).length;
-        const unplottedCount = farmerPlotStatus.filter((f: any) => !f.isPlotted).length;
+    const toParcelToken = (value: any) => {
+      const normalized = normalize(String(value ?? ""));
+      return normalized || "*";
+    };
+    const getPlotParcelToken = (plot: any) =>
+      toParcelToken(plot?.parcel_number ?? plot?.parcelNumber);
 
-        const barangayNames: string[] = barangayCodes.length > 0
-            ? barangayCodes.map((b: any) => b.barangay_name)
-            : [...new Set(farmers.map((f: any) => f.BARANGAY).filter(Boolean) as string[])].sort();
+    // Build a lookup: ffrs_id (uppercase) -> set of plotted parcel keys
+    // Key format: "barangay::parcel_number" (parcel_number = "*" for legacy rows)
+    const plottedByFfrs = new Map<string, Set<string>>();
+    plots.forEach((p: any) => {
+      if (!p.ffrs_id) return;
+      const key = p.ffrs_id.toUpperCase();
+      const barangay = normalize(p.barangay);
+      if (!barangay) return;
+      const parcelKey = `${barangay}::${getPlotParcelToken(p)}`;
+      if (!plottedByFfrs.has(key)) plottedByFfrs.set(key, new Set());
+      plottedByFfrs.get(key)!.add(parcelKey);
+    });
 
-        const barangayChecklist = barangayNames.map(brgy => {
-            const bLower = brgy.toLowerCase().trim();
-            const farmersInBrgy = farmerPlotStatus.filter((f: any) =>
-                (f.BARANGAY || '').toLowerCase().trim() === bLower
-            );
-            const plottedInBrgy = farmersInBrgy.filter((f: any) => f.isPlotted);
-            const plotsInBrgy = plots.filter((p: any) =>
-                (p.barangay || '').toLowerCase().trim() === bLower
-            );
-            return {
-                barangay: brgy,
-                farmerCount: farmersInBrgy.length,
-                plottedParcels: plotsInBrgy.length,
-                plottedFarmers: plottedInBrgy.length,
-                isComplete: farmersInBrgy.length > 0 && plottedInBrgy.length >= farmersInBrgy.length
-            };
-        });
+    // Fallback lookup for plots that were saved without ffrs_id (legacy data).
+    // Key: "firstname|surname|barangay|parcel_number" (all normalised)
+    const plottedByNameBrgy = new Set<string>();
+    plots.forEach((p: any) => {
+      if (p.ffrs_id) return; // already handled by ffrs path
+      if (p.first_name && p.surname && p.barangay) {
+        plottedByNameBrgy.add(
+          `${normalize(p.first_name)}|${normalize(p.surname)}|${normalize(p.barangay)}|${getPlotParcelToken(p)}`,
+        );
+      }
+    });
 
-        const unplottedByBarangay: Record<string, number> = {};
-        farmerPlotStatus.filter((f: any) => !f.isPlotted).forEach((f: any) => {
-            const brgy = (f.BARANGAY || 'Unknown').trim();
-            unplottedByBarangay[brgy] = (unplottedByBarangay[brgy] || 0) + 1;
-        });
+    // Build enriched parcel list: each rsbsa_farm_parcels row + isPlotted flag.
+    // A parcel is "plotted" if land_plots has an entry with:
+    //   (a) matching ffrs_id AND matching barangay  [primary]
+    //   (b) OR matching first_name + surname + barangay when ffrs_id is absent [fallback]
+    const enrichedParcels = farmParcels.map((parcel: any) => {
+      const info = farmerFfrsMap.get(parcel.submission_id);
+      const ffrs = info?.ffrs || "";
+      const parcelBrgy = normalize(parcel.farm_location_barangay || "");
+      const parcelToken = toParcelToken(parcel.parcel_number);
+      const parcelKey = `${parcelBrgy}::${parcelToken}`;
+      const parcelWildcardKey = `${parcelBrgy}::*`;
 
-        return createResponse({
-            totalFarmers: farmers.length,
-            totalPlotted: plottedCount,
-            totalUnplotted: unplottedCount,
-            barangayChecklist,
-            unplottedByBarangay
-        }, null, 200);
-    } catch (error: any) {
-        console.error('Error fetching tech dashboard data:', error);
-        return createResponse(null, error.message, 500);
-    }
+      // Primary: ffrs + barangay + parcel_number match
+      const plottedBrgys = ffrs ? plottedByFfrs.get(ffrs) : undefined;
+      let isPlotted = plottedBrgys
+        ? plottedBrgys.has(parcelKey) || plottedBrgys.has(parcelWildcardKey)
+        : false;
+
+      // Fallback: name + barangay + parcel_number (covers legacy plots with empty ffrs_id)
+      if (!isPlotted && info && parcelBrgy) {
+        const nameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}|${parcelToken}`;
+        const wildcardNameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}|*`;
+        isPlotted =
+          plottedByNameBrgy.has(nameKey) ||
+          plottedByNameBrgy.has(wildcardNameKey);
+      }
+
+      return {
+        ...parcel,
+        ffrs,
+        parcelBrgy,
+        parcelToken,
+        isPlotted,
+      };
+    });
+
+    // For farmers WITHOUT any rsbsa_farm_parcels entries, create a synthetic
+    // single-parcel entry using rsbsa_submission.BARANGAY (backward compat)
+    const farmerIdsWithParcels = new Set(
+      farmParcels.map((p: any) => p.submission_id),
+    );
+    const syntheticParcels = farmers
+      .filter((f: any) => !farmerIdsWithParcels.has(f.id))
+      .map((f: any) => {
+        const info = farmerFfrsMap.get(f.id);
+        const ffrs = info?.ffrs || "";
+        const parcelBrgy = normalize(f.BARANGAY || "");
+        const parcelWildcardKey = `${parcelBrgy}::*`;
+
+        // Primary: ffrs + barangay fallback for synthetic rows
+        const plottedBrgys = ffrs ? plottedByFfrs.get(ffrs) : undefined;
+        let isPlotted = plottedBrgys
+          ? plottedBrgys.has(parcelWildcardKey)
+          : false;
+
+        // Fallback: name + barangay match
+        if (!isPlotted && info && parcelBrgy) {
+          const nameKey = `${info.firstName}|${info.lastName}|${parcelBrgy}|*`;
+          isPlotted = plottedByNameBrgy.has(nameKey);
+        }
+
+        return {
+          submission_id: f.id,
+          farm_location_barangay: f.BARANGAY || "",
+          ffrs,
+          parcelBrgy,
+          parcelToken: "*",
+          isPlotted,
+          synthetic: true,
+        };
+      });
+
+    const allParcels = [...enrichedParcels, ...syntheticParcels];
+
+    // Summary counts
+    const totalParcels = allParcels.length;
+    const plottedParcelCount = allParcels.filter(
+      (p: any) => p.isPlotted,
+    ).length;
+    const unplottedParcelCount = totalParcels - plottedParcelCount;
+
+    const allFarmerIds = new Set(
+      allParcels
+        .map((p: any) => p.submission_id)
+        .filter((id: any) => id !== null && id !== undefined),
+    );
+    const plottedFarmerIds = new Set(
+      allParcels
+        .filter((p: any) => p.isPlotted)
+        .map((p: any) => p.submission_id)
+        .filter((id: any) => id !== null && id !== undefined),
+    );
+
+    const plottedFarmerCount = plottedFarmerIds.size;
+    const unplottedFarmerCount = Math.max(
+      0,
+      allFarmerIds.size - plottedFarmerCount,
+    );
+
+    // Barangay checklist — group by farm_location_barangay (where the parcel is)
+    const barangayNames: string[] =
+      barangayCodes.length > 0
+        ? barangayCodes.map((b: any) => b.barangay_name)
+        : [
+            ...new Set(
+              allParcels
+                .map((p: any) => p.farm_location_barangay)
+                .filter(Boolean) as string[],
+            ),
+          ].sort();
+
+    const barangayChecklist = barangayNames
+      .map((brgy) => {
+        const bLower = brgy.toLowerCase().trim();
+        const parcelsInBrgy = allParcels.filter(
+          (p: any) => p.parcelBrgy === bLower,
+        );
+        const plottedInBrgy = parcelsInBrgy.filter((p: any) => p.isPlotted);
+        const uniqueFarmers = new Set(
+          parcelsInBrgy
+            .map((p: any) => p.submission_id)
+            .filter((id: any) => id !== null && id !== undefined),
+        );
+        const plottedFarmers = new Set(
+          plottedInBrgy
+            .map((p: any) => p.submission_id)
+            .filter((id: any) => id !== null && id !== undefined),
+        );
+
+        return {
+          barangay: brgy,
+          farmerCount: uniqueFarmers.size,
+          plottedFarmers: plottedFarmers.size,
+          parcelCount: parcelsInBrgy.length,
+          plottedParcels: plottedInBrgy.length,
+          isComplete:
+            parcelsInBrgy.length > 0 &&
+            plottedInBrgy.length >= parcelsInBrgy.length,
+        };
+      })
+      .filter((row) => row.parcelCount > 0);
+
+    // Unplotted farmers by barangay
+    const unplottedByBarangay: Record<string, number> = {};
+    barangayChecklist.forEach((row: any) => {
+      const unplottedCount = Math.max(
+        0,
+        Number(row.farmerCount || 0) - Number(row.plottedFarmers || 0),
+      );
+      if (unplottedCount > 0) {
+        unplottedByBarangay[row.barangay] = unplottedCount;
+      }
+    });
+
+    // Farmer-specific queue for actionable notifications.
+    const farmerProgressMap = new Map<
+      number,
+      { totalParcels: number; plottedParcels: number; barangay: string }
+    >();
+
+    allParcels.forEach((parcel: any) => {
+      const farmerId = Number(parcel.submission_id);
+      if (!Number.isFinite(farmerId)) return;
+
+      const progress = farmerProgressMap.get(farmerId) || {
+        totalParcels: 0,
+        plottedParcels: 0,
+        barangay:
+          String(parcel.farm_location_barangay || "").trim() ||
+          farmerInfoById.get(farmerId)?.barangay ||
+          "",
+      };
+
+      progress.totalParcels += 1;
+      if (parcel.isPlotted) {
+        progress.plottedParcels += 1;
+      }
+
+      if (!progress.barangay) {
+        progress.barangay =
+          String(parcel.farm_location_barangay || "").trim() ||
+          farmerInfoById.get(farmerId)?.barangay ||
+          "";
+      }
+
+      farmerProgressMap.set(farmerId, progress);
+    });
+
+    const unplottedFarmers = Array.from(farmerProgressMap.entries())
+      .map(([farmerId, progress]) => {
+        const info = farmerInfoById.get(farmerId);
+        const unplottedParcels = Math.max(
+          0,
+          Number(progress.totalParcels || 0) -
+            Number(progress.plottedParcels || 0),
+        );
+
+        return {
+          id: String(farmerId),
+          farmerName: info?.farmerName || `Farmer ${farmerId}`,
+          referenceNumber: info?.referenceNumber || `RSBSA-${farmerId}`,
+          barangay: progress.barangay || info?.barangay || "N/A",
+          totalParcels: Number(progress.totalParcels || 0),
+          plottedParcels: Number(progress.plottedParcels || 0),
+          unplottedParcels,
+        };
+      })
+      .filter((farmer) => farmer.unplottedParcels > 0)
+      .sort((a, b) => {
+        if (b.unplottedParcels !== a.unplottedParcels) {
+          return b.unplottedParcels - a.unplottedParcels;
+        }
+        if (b.totalParcels !== a.totalParcels) {
+          return b.totalParcels - a.totalParcels;
+        }
+        return a.farmerName.localeCompare(b.farmerName);
+      });
+
+    return createResponse(
+      {
+        totalFarmers: farmers.length,
+        totalParcels,
+        totalPlotted: plottedFarmerCount,
+        totalUnplotted: unplottedFarmerCount,
+        totalPlottedParcels: plottedParcelCount,
+        totalUnplottedParcels: unplottedParcelCount,
+        barangayChecklist,
+        unplottedByBarangay,
+        unplottedFarmers,
+      },
+      null,
+      200,
+    );
+  } catch (error: any) {
+    console.error("Error fetching tech dashboard data:", error);
+    return createResponse(null, error.message, 500);
+  }
 };
 
 // ==================== RSBSA SUBMISSION ====================
 
 export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
-    // Get all submissions
-    const { data, error } = await supabase
-        .from('rsbsa_submission')
-        .select('*');
+  const toPositiveInt = (value: unknown): number => {
+    const parsed = parseInt(String(value ?? ""), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
 
-    if (error) return createResponse(null, error.message, 500);
+  const toPositiveNumber = (value: unknown): number => {
+    const parsed = parseFloat(String(value ?? "").replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
 
-    // Get all farm parcels with current ownership status
-    const { data: parcelsData } = await supabase
-        .from('rsbsa_farm_parcels')
-        .select('submission_id, is_current_owner');
+  const deriveLegacyParcelFallbackCount = (item: any): number => {
+    const directCountHints = [
+      item?.totalParcels,
+      item?.total_parcels,
+      item?.["TOTAL PARCELS"],
+      item?.num_parcels,
+      item?.["NO OF PARCELS"],
+      item?.["NO. OF PARCELS"],
+    ];
 
-    // Create a map of submission_id -> has any current parcels
-    const currentOwnershipMap = new Map<number, boolean>();
-    (parcelsData || []).forEach((parcel: any) => {
-        const subId = parcel.submission_id;
-        // If any parcel has is_current_owner = true (or null/undefined which defaults to true), mark as current
-        const isCurrent = parcel.is_current_owner !== false;
-        if (isCurrent) {
-            currentOwnershipMap.set(subId, true);
-        } else if (!currentOwnershipMap.has(subId)) {
-            currentOwnershipMap.set(subId, false);
-        }
-    });
-
-    // Show ALL farmers (Masterlist needs everyone). Attach parcel ownership info
-    // so individual pages can filter as needed (e.g. RSBSA pages hide transferred owners).
-    const filteredData = data || [];
-
-    // Count current parcels per submission
-    const parcelCountMap = new Map<number, number>();
-    (parcelsData || []).forEach((parcel: any) => {
-        const subId = parcel.submission_id;
-        const isCurrent = parcel.is_current_owner !== false;
-        if (isCurrent) {
-            parcelCountMap.set(subId, (parcelCountMap.get(subId) || 0) + 1);
-        }
-    });
-
-    // Transform all records and attach ownership info
-    const transformedData = filteredData.map((item: any) => {
-        const record = transformRsbsaRecord(item);
-        const hasCurrentParcels = currentOwnershipMap.get(item.id);
-        return {
-            ...record,
-            // true = has current parcels, false = all transferred, undefined = no parcels at all
-            hasCurrentParcels: hasCurrentParcels,
-            parcelCount: parcelCountMap.get(item.id) || 0,
-        };
-    });
-
-    console.log('📊 Transformed RSBSA data:', transformedData.length, 'records (filtered from', data?.length, ')');
-    if (transformedData.length > 0) {
-        console.log('📝 Sample transformed record:', transformedData[0]);
+    for (const hint of directCountHints) {
+      const hintCount = toPositiveInt(hint);
+      if (hintCount > 0) return hintCount;
     }
 
-    return createResponse(transformedData, null, 200);
-};
+    const farmlandParcels = item?.farmlandParcels;
+    if (Array.isArray(farmlandParcels) && farmlandParcels.length > 0) {
+      return farmlandParcels.length;
+    }
 
-export const getRsbsaSubmissionById = async (id: string | number): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('rsbsa_submission')
-        .select('*')
-        .eq('id', id)
-        .single();
+    const nestedFarmlandParcels = item?.data?.farmlandParcels;
+    if (
+      Array.isArray(nestedFarmlandParcels) &&
+      nestedFarmlandParcels.length > 0
+    ) {
+      return nestedFarmlandParcels.length;
+    }
 
-    if (error) return createResponse(null, error.message, 404);
+    const areaHints = [
+      item?.["TOTAL FARM AREA"],
+      item?.total_farm_area,
+      item?.totalFarmArea,
+      item?.["PARCEL AREA"],
+      item?.parcelArea,
+    ];
 
-    // Transform the single record
-    const transformedData = transformRsbsaRecord(data);
+    const hasPositiveArea = areaHints.some((areaValue) => {
+      return toPositiveNumber(areaValue) > 0;
+    });
 
-    return createResponse(transformedData, null, 200);
-};
+    // Legacy submissions may keep only total area with no normalized parcel rows yet.
+    return hasPositiveArea ? 1 : 0;
+  };
 
-export const createRsbsaSubmission = async (submissionData: any): Promise<ApiResponse> => {
-    const formData = submissionData.data || submissionData;
+  // Get all submissions
+  const { data, error } = await supabase.from("rsbsa_submission").select("*");
 
-    // Calculate total farm area from parcels
-    const parcels = formData.farmlandParcels || [];
-    const totalFarmArea = parcels.reduce((sum: number, p: any) => {
-        const area = parseFloat(p.totalFarmAreaHa) || 0;
-        return sum + area;
-    }, 0);
+  if (error) return createResponse(null, error.message, 500);
 
-    // Build the payload for the database function
-    const rpcPayload = {
-        // Farmer details
-        surname: formData.lastName || formData.surname || '',
-        firstName: formData.firstName || '',
-        middleName: formData.middleName || '',
-        extensionName: formData.extName || formData.extensionName || '',
-        gender: formData.gender || formData.sex || '',
-        dateOfBirth: formData.dateOfBirth || formData.birthdate || null,
-        barangay: formData.barangay || formData.address?.barangay || '',
-        municipality: formData.municipality || formData.address?.municipality || 'Dumangas',
-        mainLivelihood: formData.mainLivelihood || '',
-        totalFarmArea: totalFarmArea,
-        // Ownership category
-        ownershipCategory: formData.ownershipCategory || 'registeredOwner',
-        selectedLandOwner: formData.selectedLandOwner || null,
-        // Farming activities
-        farmerRice: formData.farmerRice || false,
-        farmerCorn: formData.farmerCorn || false,
-        farmerOtherCrops: formData.farmerOtherCrops || false,
-        farmerOtherCropsText: formData.farmerOtherCropsText || '',
-        farmerLivestock: formData.farmerLivestock || false,
-        farmerLivestockText: formData.farmerLivestockText || '',
-        farmerPoultry: formData.farmerPoultry || false,
-        farmerPoultryText: formData.farmerPoultryText || '',
-        // Parcels with transfer info
-        farmlandParcels: parcels.map((p: any) => ({
-            farmLocationBarangay: p.farmLocationBarangay || '',
-            farmLocationMunicipality: p.farmLocationMunicipality || 'Dumangas',
-            totalFarmAreaHa: parseFloat(p.totalFarmAreaHa) || 0,
-            parcelNo: p.parcelNo || '',
-            existingParcelId: p.existingParcelId || null,
-            existingParcelNumber: p.existingParcelNumber || null,
-            withinAncestralDomain: p.withinAncestralDomain === 'Yes' || p.withinAncestralDomain === true ? 'Yes' : 'No',
-            agrarianReformBeneficiary: p.agrarianReformBeneficiary === 'Yes' || p.agrarianReformBeneficiary === true ? 'Yes' : 'No',
-            ownershipDocumentNo: p.ownershipDocumentNo || '',
-        })),
+  // Get all farm parcels with current ownership status
+  const { data: parcelsData } = await supabase
+    .from("rsbsa_farm_parcels")
+    .select("submission_id, is_current_owner");
+
+  // Create a map of submission_id -> has any current parcels
+  const currentOwnershipMap = new Map<number, boolean>();
+  (parcelsData || []).forEach((parcel: any) => {
+    const subId = parcel.submission_id;
+    // If any parcel has is_current_owner = true (or null/undefined which defaults to true), mark as current
+    const isCurrent = parcel.is_current_owner !== false;
+    if (isCurrent) {
+      currentOwnershipMap.set(subId, true);
+    } else if (!currentOwnershipMap.has(subId)) {
+      currentOwnershipMap.set(subId, false);
+    }
+  });
+
+  // Show ALL farmers (Masterlist needs everyone). Attach parcel ownership info
+  // so individual pages can filter as needed (e.g. RSBSA pages hide transferred owners).
+  const filteredData = data || [];
+
+  // Count ALL parcels per submission (including transferred ones)
+  // "Number of Parcels" = how many parcels the farmer has ever registered,
+  // regardless of whether any were later transferred to another farmer.
+  const parcelCountMap = new Map<number, number>();
+  (parcelsData || []).forEach((parcel: any) => {
+    const subId = parcel.submission_id;
+    parcelCountMap.set(subId, (parcelCountMap.get(subId) || 0) + 1);
+  });
+
+  // Transform all records and attach ownership info
+  const transformedData = filteredData.map((item: any) => {
+    const record = transformRsbsaRecord(item);
+    const hasCurrentParcels = currentOwnershipMap.get(item.id);
+    const normalizedParcelCount = parcelCountMap.get(item.id) || 0;
+    const fallbackParcelCount =
+      normalizedParcelCount > 0
+        ? normalizedParcelCount
+        : deriveLegacyParcelFallbackCount(item);
+
+    return {
+      ...record,
+      // true = has current parcels, false = all transferred, undefined = no parcels at all
+      hasCurrentParcels: hasCurrentParcels,
+      parcelCount: fallbackParcelCount,
+      legacyParcelCountEstimated:
+        normalizedParcelCount === 0 && fallbackParcelCount > 0,
+      archived_at: item.archived_at ?? null,
+      archive_reason: item.archive_reason ?? null,
     };
+  });
 
-    console.log('📤 Calling register_farmer_with_parcels RPC:', JSON.stringify(rpcPayload.farmlandParcels, null, 2));
+  console.log(
+    "📊 Transformed RSBSA data:",
+    transformedData.length,
+    "records (filtered from",
+    data?.length,
+    ")",
+  );
+  if (transformedData.length > 0) {
+    console.log("📝 Sample transformed record:", transformedData[0]);
+  }
 
-    // Call the database function — runs as a single atomic transaction
-    const { data, error } = await supabase.rpc('register_farmer_with_parcels', {
-        p_data: rpcPayload
-    });
+  return createResponse(transformedData, null, 200);
+};
 
-    if (error) {
-        console.error('❌ Registration RPC error:', error);
-        return createResponse(null, error.message, 500);
-    }
+export const getRsbsaSubmissionById = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("rsbsa_submission")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-    console.log('✅ Registration RPC result:', data);
+  if (error) return createResponse(null, error.message, 404);
 
-    // Return in the format the frontend expects
-    return createResponse({
-        message: data?.message || 'Submission successful',
-        submissionId: data?.submissionId,
-        submittedAt: data?.submittedAt || new Date().toISOString(),
-    }, null, 201);
+  // Transform the single record
+  const transformedData = transformRsbsaRecord(data);
+
+  return createResponse(transformedData, null, 200);
+};
+
+export const createRsbsaSubmission = async (
+  submissionData: any,
+): Promise<ApiResponse> => {
+  const formData = submissionData.data || submissionData;
+
+  // Calculate total farm area from parcels
+  const parcels = formData.farmlandParcels || [];
+  const totalFarmArea = parcels.reduce((sum: number, p: any) => {
+    const area = parseFloat(p.totalFarmAreaHa) || 0;
+    return sum + area;
+  }, 0);
+
+  // Build the payload for the database function
+  const rpcPayload = {
+    // Farmer details
+    surname: formData.lastName || formData.surname || "",
+    firstName: formData.firstName || "",
+    middleName: formData.middleName || "",
+    extensionName: formData.extName || formData.extensionName || "",
+    gender: formData.gender || formData.sex || "",
+    dateOfBirth: formData.dateOfBirth || formData.birthdate || null,
+    barangay: formData.barangay || formData.address?.barangay || "",
+    municipality:
+      formData.municipality || formData.address?.municipality || "Dumangas",
+    mainLivelihood: formData.mainLivelihood || "",
+    totalFarmArea: totalFarmArea,
+    // Ownership category
+    ownershipCategory: formData.ownershipCategory || "registeredOwner",
+    selectedLandOwner: formData.selectedLandOwner || null,
+    // Farming activities
+    farmerRice: formData.farmerRice || false,
+    farmerCorn: formData.farmerCorn || false,
+    farmerOtherCrops: formData.farmerOtherCrops || false,
+    farmerOtherCropsText: formData.farmerOtherCropsText || "",
+    farmerLivestock: formData.farmerLivestock || false,
+    farmerLivestockText: formData.farmerLivestockText || "",
+    farmerPoultry: formData.farmerPoultry || false,
+    farmerPoultryText: formData.farmerPoultryText || "",
+    // Parcels with transfer info
+    farmlandParcels: parcels.map((p: any) => ({
+      farmLocationBarangay: p.farmLocationBarangay || "",
+      farmLocationMunicipality: p.farmLocationMunicipality || "Dumangas",
+      totalFarmAreaHa: parseFloat(p.totalFarmAreaHa) || 0,
+      parcelNo: p.parcelNo || "",
+      existingParcelId: p.existingParcelId || null,
+      existingParcelNumber: p.existingParcelNumber || null,
+      withinAncestralDomain:
+        p.withinAncestralDomain === "Yes" || p.withinAncestralDomain === true
+          ? "Yes"
+          : "No",
+      agrarianReformBeneficiary:
+        p.agrarianReformBeneficiary === "Yes" ||
+        p.agrarianReformBeneficiary === true
+          ? "Yes"
+          : "No",
+      ownershipDocumentNo: p.ownershipDocumentNo || "",
+    })),
+  };
+
+  console.log(
+    "📤 Calling register_farmer_with_parcels RPC:",
+    JSON.stringify(rpcPayload.farmlandParcels, null, 2),
+  );
+
+  // Call the database function — runs as a single atomic transaction
+  const { data, error } = await supabase.rpc("register_farmer_with_parcels", {
+    p_data: rpcPayload,
+  });
+
+  if (error) {
+    console.error("❌ Registration RPC error:", error);
+    return createResponse(null, error.message, 500);
+  }
+
+  console.log("✅ Registration RPC result:", data);
+
+  // Return in the format the frontend expects
+  return createResponse(
+    {
+      message: data?.message || "Submission successful",
+      submissionId: data?.submissionId,
+      submittedAt: data?.submittedAt || new Date().toISOString(),
+    },
+    null,
+    201,
+  );
 };
 
 const hasMeaningfulValue = (value: any): boolean => {
-    if (value === undefined) return false;
-    if (typeof value === 'string') return value.trim() !== '';
-    return true;
+  if (value === undefined) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  return true;
 };
 
-const parseFarmerNameParts = (farmerName: string): { lastName?: string; firstName?: string; middleName?: string } => {
-    const normalized = (farmerName || '').trim();
-    if (!normalized) return {};
+const parseFarmerNameParts = (
+  farmerName: string,
+): { lastName?: string; firstName?: string; middleName?: string } => {
+  const normalized = (farmerName || "").trim();
+  if (!normalized) return {};
 
-    const commaParts = normalized.split(',').map((p) => p.trim()).filter(Boolean);
-    if (commaParts.length === 0) return {};
-    if (commaParts.length === 1) {
-        return { lastName: commaParts[0] };
-    }
+  const commaParts = normalized
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (commaParts.length === 0) return {};
+  if (commaParts.length === 1) {
+    return { lastName: commaParts[0] };
+  }
 
-    const lastName = commaParts[0];
-    const firstMiddle = commaParts.slice(1).join(' ');
-    const firstMiddleParts = firstMiddle.split(' ').map((p) => p.trim()).filter(Boolean);
+  const lastName = commaParts[0];
+  const firstMiddle = commaParts.slice(1).join(" ");
+  const firstMiddleParts = firstMiddle
+    .split(" ")
+    .map((p) => p.trim())
+    .filter(Boolean);
 
-    return {
-        lastName,
-        firstName: firstMiddleParts[0],
-        middleName: firstMiddleParts.slice(1).join(' ') || undefined
-    };
+  return {
+    lastName,
+    firstName: firstMiddleParts[0],
+    middleName: firstMiddleParts.slice(1).join(" ") || undefined,
+  };
 };
 
-const parseAddressParts = (address: string): { barangay?: string; municipality?: string } => {
-    const normalized = (address || '').trim();
-    if (!normalized) return {};
+const parseAddressParts = (
+  address: string,
+): { barangay?: string; municipality?: string } => {
+  const normalized = (address || "").trim();
+  if (!normalized) return {};
 
-    const parts = normalized.split(',').map((p) => p.trim()).filter(Boolean);
-    if (parts.length === 0) return {};
-    if (parts.length === 1) return { barangay: parts[0] };
-    return { barangay: parts[0], municipality: parts[1] };
+  const parts = normalized
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return {};
+  if (parts.length === 1) return { barangay: parts[0] };
+  return { barangay: parts[0], municipality: parts[1] };
 };
 
 const parseAreaToNumber = (value: any): number | undefined => {
-    if (typeof value === 'number') {
-        return Number.isFinite(value) ? value : undefined;
-    }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
 
-    if (typeof value !== 'string') return undefined;
-    const cleaned = value.replace(/\s*hectares\s*$/i, '').trim();
-    if (!cleaned) return undefined;
+  if (typeof value !== "string") return undefined;
+  const cleaned = value.replace(/\s*hectares\s*$/i, "").trim();
+  if (!cleaned) return undefined;
 
-    // Support inputs like "1.2, 0.8" (sum of parcel areas).
-    const parts = cleaned.split(',').map((p) => p.trim()).filter(Boolean);
-    const parsed = parts
-        .map((p) => Number(p))
-        .filter((n) => Number.isFinite(n));
+  // Support inputs like "1.2, 0.8" (sum of parcel areas).
+  const parts = cleaned
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const parsed = parts.map((p) => Number(p)).filter((n) => Number.isFinite(n));
 
-    if (parsed.length === 0) return undefined;
-    if (parsed.length === 1) return parsed[0];
-    return parsed.reduce((sum, n) => sum + n, 0);
+  if (parsed.length === 0) return undefined;
+  if (parsed.length === 1) return parsed[0];
+  return parsed.reduce((sum, n) => sum + n, 0);
 };
 
 const normalizeRsbsaSubmissionUpdateData = (raw: any): Record<string, any> => {
-    if (!raw || typeof raw !== 'object') return {};
+  if (!raw || typeof raw !== "object") return {};
 
-    const normalized: Record<string, any> = {};
+  const normalized: Record<string, any> = {};
 
-    // Allow direct DB column names when callers already provide them.
-    const directColumnKeys = [
-        'status',
-        'age',
-        'LAST NAME',
-        'FIRST NAME',
-        'MIDDLE NAME',
-        'EXT NAME',
-        'GENDER',
-        'BIRTHDATE',
-        'BARANGAY',
-        'MUNICIPALITY',
-        'FARM LOCATION',
-        'PARCEL AREA',
-        'TOTAL FARM AREA',
-        'MAIN LIVELIHOOD',
-        'OWNERSHIP_TYPE_REGISTERED_OWNER',
-        'OWNERSHIP_TYPE_TENANT',
-        'OWNERSHIP_TYPE_LESSEE',
-        'FARMER_RICE',
-        'FARMER_CORN',
-        'FARMER_OTHER_CROPS',
-        'FARMER_OTHER_CROPS_TEXT',
-        'FARMER_LIVESTOCK',
-        'FARMER_LIVESTOCK_TEXT',
-        'FARMER_POULTRY',
-        'FARMER_POULTRY_TEXT'
-    ];
+  // Allow direct DB column names when callers already provide them.
+  const directColumnKeys = [
+    "status",
+    "archived_at",
+    "archive_reason",
+    "age",
+    "LAST NAME",
+    "FIRST NAME",
+    "MIDDLE NAME",
+    "EXT NAME",
+    "GENDER",
+    "BIRTHDATE",
+    "BARANGAY",
+    "MUNICIPALITY",
+    "FARM LOCATION",
+    "PARCEL AREA",
+    "TOTAL FARM AREA",
+    "MAIN LIVELIHOOD",
+    "OWNERSHIP_TYPE_REGISTERED_OWNER",
+    "OWNERSHIP_TYPE_TENANT",
+    "OWNERSHIP_TYPE_LESSEE",
+    "FARMER_RICE",
+    "FARMER_CORN",
+    "FARMER_OTHER_CROPS",
+    "FARMER_OTHER_CROPS_TEXT",
+    "FARMER_LIVESTOCK",
+    "FARMER_LIVESTOCK_TEXT",
+    "FARMER_POULTRY",
+    "FARMER_POULTRY_TEXT",
+  ];
 
-    directColumnKeys.forEach((key) => {
-        if (!Object.prototype.hasOwnProperty.call(raw, key)) return;
-        const value = raw[key];
-        if (value === null || hasMeaningfulValue(value)) {
-            normalized[key] = value;
-        }
-    });
-
-    // age may arrive as a string from edit forms.
-    if (Object.prototype.hasOwnProperty.call(raw, 'age')) {
-        if (raw.age === null) {
-            normalized.age = null;
-        } else if (hasMeaningfulValue(raw.age)) {
-            const parsedAge = Number(raw.age);
-            if (Number.isFinite(parsedAge) && parsedAge >= 18) {
-                normalized.age = parsedAge;
-            }
-        }
+  directColumnKeys.forEach((key) => {
+    if (!Object.prototype.hasOwnProperty.call(raw, key)) return;
+    const value = raw[key];
+    if (value === null || hasMeaningfulValue(value)) {
+      normalized[key] = value;
     }
+  });
 
-    const lastName = hasMeaningfulValue(raw.surname)
-        ? String(raw.surname).trim()
-        : hasMeaningfulValue(raw.lastName)
-            ? String(raw.lastName).trim()
-            : undefined;
-    const firstName = hasMeaningfulValue(raw.firstName) ? String(raw.firstName).trim() : undefined;
-    const middleName = hasMeaningfulValue(raw.middleName) ? String(raw.middleName).trim() : undefined;
-    const extName = hasMeaningfulValue(raw.extName)
-        ? String(raw.extName).trim()
-        : hasMeaningfulValue(raw.extensionName)
-            ? String(raw.extensionName).trim()
-            : undefined;
-
-    if (lastName) normalized['LAST NAME'] = lastName;
-    if (firstName) normalized['FIRST NAME'] = firstName;
-    if (middleName) normalized['MIDDLE NAME'] = middleName;
-    if (extName) normalized['EXT NAME'] = extName;
-
-    if (hasMeaningfulValue(raw.farmerName)) {
-        const parsed = parseFarmerNameParts(String(raw.farmerName));
-        if (!normalized['LAST NAME'] && parsed.lastName) normalized['LAST NAME'] = parsed.lastName;
-        if (!normalized['FIRST NAME'] && parsed.firstName) normalized['FIRST NAME'] = parsed.firstName;
-        if (!normalized['MIDDLE NAME'] && parsed.middleName) normalized['MIDDLE NAME'] = parsed.middleName;
+  // age may arrive as a string from edit forms.
+  if (Object.prototype.hasOwnProperty.call(raw, "age")) {
+    if (raw.age === null) {
+      normalized.age = null;
+    } else if (hasMeaningfulValue(raw.age)) {
+      const parsedAge = Number(raw.age);
+      if (Number.isFinite(parsedAge) && parsedAge >= 18) {
+        normalized.age = parsedAge;
+      }
     }
+  }
 
-    const barangay = hasMeaningfulValue(raw.addressBarangay)
-        ? String(raw.addressBarangay).trim()
-        : hasMeaningfulValue(raw.barangay)
-            ? String(raw.barangay).trim()
-            : undefined;
-    const municipality = hasMeaningfulValue(raw.addressMunicipality)
-        ? String(raw.addressMunicipality).trim()
-        : hasMeaningfulValue(raw.municipality)
-            ? String(raw.municipality).trim()
-            : undefined;
+  const lastName = hasMeaningfulValue(raw.surname)
+    ? String(raw.surname).trim()
+    : hasMeaningfulValue(raw.lastName)
+      ? String(raw.lastName).trim()
+      : undefined;
+  const firstName = hasMeaningfulValue(raw.firstName)
+    ? String(raw.firstName).trim()
+    : undefined;
+  const middleName = hasMeaningfulValue(raw.middleName)
+    ? String(raw.middleName).trim()
+    : undefined;
+  const extName = hasMeaningfulValue(raw.extName)
+    ? String(raw.extName).trim()
+    : hasMeaningfulValue(raw.extensionName)
+      ? String(raw.extensionName).trim()
+      : undefined;
 
-    if (barangay) normalized['BARANGAY'] = barangay;
-    if (municipality) normalized['MUNICIPALITY'] = municipality;
+  if (lastName) normalized["LAST NAME"] = lastName;
+  if (firstName) normalized["FIRST NAME"] = firstName;
+  if (middleName) normalized["MIDDLE NAME"] = middleName;
+  if (extName) normalized["EXT NAME"] = extName;
 
-    if (hasMeaningfulValue(raw.farmerAddress)) {
-        const parsed = parseAddressParts(String(raw.farmerAddress));
-        if (!normalized['BARANGAY'] && parsed.barangay) normalized['BARANGAY'] = parsed.barangay;
-        if (!normalized['MUNICIPALITY'] && parsed.municipality) normalized['MUNICIPALITY'] = parsed.municipality;
+  if (hasMeaningfulValue(raw.farmerName)) {
+    const parsed = parseFarmerNameParts(String(raw.farmerName));
+    if (!normalized["LAST NAME"] && parsed.lastName)
+      normalized["LAST NAME"] = parsed.lastName;
+    if (!normalized["FIRST NAME"] && parsed.firstName)
+      normalized["FIRST NAME"] = parsed.firstName;
+    if (!normalized["MIDDLE NAME"] && parsed.middleName)
+      normalized["MIDDLE NAME"] = parsed.middleName;
+  }
+
+  const barangay = hasMeaningfulValue(raw.addressBarangay)
+    ? String(raw.addressBarangay).trim()
+    : hasMeaningfulValue(raw.barangay)
+      ? String(raw.barangay).trim()
+      : undefined;
+  const municipality = hasMeaningfulValue(raw.addressMunicipality)
+    ? String(raw.addressMunicipality).trim()
+    : hasMeaningfulValue(raw.municipality)
+      ? String(raw.municipality).trim()
+      : undefined;
+
+  if (barangay) normalized["BARANGAY"] = barangay;
+  if (municipality) normalized["MUNICIPALITY"] = municipality;
+
+  if (hasMeaningfulValue(raw.farmerAddress)) {
+    const parsed = parseAddressParts(String(raw.farmerAddress));
+    if (!normalized["BARANGAY"] && parsed.barangay)
+      normalized["BARANGAY"] = parsed.barangay;
+    if (!normalized["MUNICIPALITY"] && parsed.municipality)
+      normalized["MUNICIPALITY"] = parsed.municipality;
+  }
+
+  if (hasMeaningfulValue(raw.gender))
+    normalized["GENDER"] = String(raw.gender).trim();
+  if (hasMeaningfulValue(raw.birthdate))
+    normalized["BIRTHDATE"] = raw.birthdate;
+  if (hasMeaningfulValue(raw.dateOfBirth))
+    normalized["BIRTHDATE"] = raw.dateOfBirth;
+  if (hasMeaningfulValue(raw.farmLocation))
+    normalized["FARM LOCATION"] = String(raw.farmLocation).trim();
+  if (hasMeaningfulValue(raw.mainLivelihood))
+    normalized["MAIN LIVELIHOOD"] = String(raw.mainLivelihood).trim();
+
+  const totalArea = parseAreaToNumber(raw.parcelArea ?? raw.totalFarmArea);
+  if (totalArea !== undefined) {
+    normalized["TOTAL FARM AREA"] = totalArea;
+  }
+
+  if (raw.ownershipType && typeof raw.ownershipType === "object") {
+    if (typeof raw.ownershipType.registeredOwner === "boolean") {
+      normalized["OWNERSHIP_TYPE_REGISTERED_OWNER"] =
+        raw.ownershipType.registeredOwner;
     }
-
-    if (hasMeaningfulValue(raw.gender)) normalized['GENDER'] = String(raw.gender).trim();
-    if (hasMeaningfulValue(raw.birthdate)) normalized['BIRTHDATE'] = raw.birthdate;
-    if (hasMeaningfulValue(raw.dateOfBirth)) normalized['BIRTHDATE'] = raw.dateOfBirth;
-    if (hasMeaningfulValue(raw.farmLocation)) normalized['FARM LOCATION'] = String(raw.farmLocation).trim();
-    if (hasMeaningfulValue(raw.mainLivelihood)) normalized['MAIN LIVELIHOOD'] = String(raw.mainLivelihood).trim();
-
-    const totalArea = parseAreaToNumber(raw.parcelArea ?? raw.totalFarmArea);
-    if (totalArea !== undefined) {
-        normalized['TOTAL FARM AREA'] = totalArea;
+    if (typeof raw.ownershipType.tenant === "boolean") {
+      normalized["OWNERSHIP_TYPE_TENANT"] = raw.ownershipType.tenant;
     }
-
-    if (raw.ownershipType && typeof raw.ownershipType === 'object') {
-        if (typeof raw.ownershipType.registeredOwner === 'boolean') {
-            normalized['OWNERSHIP_TYPE_REGISTERED_OWNER'] = raw.ownershipType.registeredOwner;
-        }
-        if (typeof raw.ownershipType.tenant === 'boolean') {
-            normalized['OWNERSHIP_TYPE_TENANT'] = raw.ownershipType.tenant;
-        }
-        if (typeof raw.ownershipType.lessee === 'boolean') {
-            normalized['OWNERSHIP_TYPE_LESSEE'] = raw.ownershipType.lessee;
-        }
+    if (typeof raw.ownershipType.lessee === "boolean") {
+      normalized["OWNERSHIP_TYPE_LESSEE"] = raw.ownershipType.lessee;
     }
+  }
 
-    return normalized;
+  return normalized;
 };
 
-export const updateRsbsaSubmission = async (id: string | number, updateData: any): Promise<ApiResponse> => {
-    // Defensive validation: if age is provided during update, it must be numeric and >= 18.
-    if (Object.prototype.hasOwnProperty.call(updateData ?? {}, 'age')) {
-        const rawAge = updateData?.age;
-        if (rawAge !== null && hasMeaningfulValue(rawAge)) {
-            const parsedAge = Number(rawAge);
-            if (!Number.isFinite(parsedAge) || parsedAge < 18) {
-                return createResponse(null, 'Age must be a valid number and at least 18 years old', 400);
-            }
-        }
+export const updateRsbsaSubmission = async (
+  id: string | number,
+  updateData: any,
+): Promise<ApiResponse> => {
+  // Defensive validation: if age is provided during update, it must be numeric and >= 18.
+  if (Object.prototype.hasOwnProperty.call(updateData ?? {}, "age")) {
+    const rawAge = updateData?.age;
+    if (rawAge !== null && hasMeaningfulValue(rawAge)) {
+      const parsedAge = Number(rawAge);
+      if (!Number.isFinite(parsedAge) || parsedAge < 18) {
+        return createResponse(
+          null,
+          "Age must be a valid number and at least 18 years old",
+          400,
+        );
+      }
     }
+  }
 
-    const normalizedUpdateData = normalizeRsbsaSubmissionUpdateData(updateData);
+  const normalizedUpdateData = normalizeRsbsaSubmissionUpdateData(updateData);
 
-    if (Object.keys(normalizedUpdateData).length === 0) {
-        return createResponse(null, 'No valid fields to update', 400);
-    }
+  if (Object.keys(normalizedUpdateData).length === 0) {
+    return createResponse(null, "No valid fields to update", 400);
+  }
 
-    const { data, error } = await supabase
-        .from('rsbsa_submission')
-        .update(normalizedUpdateData)
-        .eq('id', id)
-        .select()
-        .single();
+  const { data, error } = await supabase
+    .from("rsbsa_submission")
+    .update(normalizedUpdateData)
+    .eq("id", id)
+    .select()
+    .single();
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
 };
 
-export const deleteRsbsaSubmission = async (id: string | number): Promise<ApiResponse> => {
-    const { error } = await supabase
-        .from('rsbsa_submission')
-        .delete()
-        .eq('id', id);
+export const deleteRsbsaSubmission = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { error } = await supabase
+    .from("rsbsa_submission")
+    .delete()
+    .eq("id", id);
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse({ success: true }, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse({ success: true }, null, 200);
 };
 
 // ==================== FARM PARCELS ====================
 
-export const getFarmParcels = async (submissionId: string | number): Promise<ApiResponse> => {
-    // First get the farm parcels
-    let { data: parcels, error: parcelsError } = await supabase
-        .from('rsbsa_farm_parcels')
-        .select('*')
-        .eq('submission_id', submissionId);
+export const getFarmParcels = async (
+  submissionId: string | number,
+  options: {
+    currentOwnerOnly?: boolean;
+  } = {},
+): Promise<ApiResponse> => {
+  const currentOwnerOnly = options.currentOwnerOnly === true;
 
-    if (parcelsError) {
-        console.log('Farm parcels query error (non-blocking):', parcelsError.message);
-        return createResponse([], null, 200);
-    }
+  // First get the farm parcels
+  let parcelQuery = supabase
+    .from("rsbsa_farm_parcels")
+    .select("*")
+    .eq("submission_id", submissionId);
 
-    if (!parcels || parcels.length === 0) {
-        // Fallback: Try to build parcel data from land_history table
-        // land_history may exist even when rsbsa_farm_parcels insert failed (e.g. CHECK constraint mismatch)
-        const { data: historyParcels, error: historyError } = await supabase
-            .from('land_history')
-            .select('*')
-            .eq('farmer_id', submissionId)
-            .eq('is_current', true);
+  if (currentOwnerOnly) {
+    parcelQuery = parcelQuery
+      .eq("ownership_type_registered_owner", true)
+      .or("is_current_owner.is.null,is_current_owner.eq.true");
+  }
 
-        if (!historyError && historyParcels && historyParcels.length > 0) {
-            console.log(`📍 No rsbsa_farm_parcels found, but found ${historyParcels.length} land_history record(s) for farmer ${submissionId}`);
-            const fallbackParcels = historyParcels.map((h: any) => ({
-                id: h.id,
-                submission_id: submissionId,
-                parcel_number: h.parcel_number || 'N/A',
-                farm_location_barangay: h.farm_location_barangay || 'N/A',
-                farm_location_municipality: h.farm_location_municipality || 'N/A',
-                total_farm_area_ha: h.total_farm_area_ha || 0,
-                within_ancestral_domain: h.within_ancestral_domain ? 'Yes' : 'No',
-                agrarian_reform_beneficiary: h.agrarian_reform_beneficiary ? 'Yes' : 'No',
-                ownership_type_registered_owner: h.is_registered_owner || false,
-                ownership_type_tenant: h.is_tenant || false,
-                ownership_type_lessee: h.is_lessee || false,
-                tenant_land_owner_name: h.is_tenant ? (h.land_owner_name || '') : '',
-                lessee_land_owner_name: h.is_lessee ? (h.land_owner_name || '') : '',
-                land_parcel_id: h.land_parcel_id || null,
-                _source: 'land_history'
-            }));
-            return createResponse(fallbackParcels, null, 200);
-        }
+  let { data: parcels, error: parcelsError } = await parcelQuery;
 
-        return createResponse([], null, 200);
-    }
-
-    // Now try to get the land_parcel_id from land_history for each parcel
-    // This is needed for ownership transfers to properly reference the land parcel
-    const enhancedParcels = await Promise.all(
-        parcels.map(async (parcel) => {
-            // Try to find the land_parcel_id from land_history using parcel_number
-            const { data: historyData } = await supabase
-                .from('land_history')
-                .select('land_parcel_id, parcel_number')
-                .eq('farmer_id', submissionId)
-                .eq('parcel_number', parcel.parcel_number)
-                .eq('is_current', true)
-                .single();
-
-            if (historyData && historyData.land_parcel_id) {
-                console.log(`📍 Found land_parcel_id ${historyData.land_parcel_id} for parcel ${parcel.parcel_number}`);
-                return {
-                    ...parcel,
-                    land_parcel_id: historyData.land_parcel_id
-                };
-            }
-
-            // Fallback: try to find by parcel_number in land_parcels directly
-            const { data: landParcelData } = await supabase
-                .from('land_parcels')
-                .select('id')
-                .eq('parcel_number', parcel.parcel_number)
-                .single();
-
-            if (landParcelData) {
-                console.log(`📍 Found land_parcel_id ${landParcelData.id} from land_parcels for ${parcel.parcel_number}`);
-                return {
-                    ...parcel,
-                    land_parcel_id: landParcelData.id
-                };
-            }
-
-            return parcel;
-        })
+  if (parcelsError) {
+    console.log(
+      "Farm parcels query error (non-blocking):",
+      parcelsError.message,
     );
+    return createResponse([], null, 200);
+  }
 
-    return createResponse(enhancedParcels, null, 200);
+  if (!parcels || parcels.length === 0) {
+    // Fallback: Try to build parcel data from land_history table
+    // land_history may exist even when rsbsa_farm_parcels insert failed (e.g. CHECK constraint mismatch)
+    let historyFallbackQuery = supabase
+      .from("land_history")
+      .select("*")
+      .eq("farmer_id", submissionId)
+      .eq("is_current", true);
+
+    if (currentOwnerOnly) {
+      historyFallbackQuery = historyFallbackQuery.eq(
+        "is_registered_owner",
+        true,
+      );
+    }
+
+    const { data: historyParcels, error: historyError } =
+      await historyFallbackQuery;
+
+    if (!historyError && historyParcels && historyParcels.length > 0) {
+      console.log(
+        `📍 No rsbsa_farm_parcels found, but found ${historyParcels.length} land_history record(s) for farmer ${submissionId}`,
+      );
+      const fallbackParcels = historyParcels.map((h: any) => ({
+        id: h.id,
+        submission_id: submissionId,
+        parcel_number: h.parcel_number || "N/A",
+        farm_location_barangay: h.farm_location_barangay || "N/A",
+        farm_location_municipality: h.farm_location_municipality || "N/A",
+        total_farm_area_ha: h.total_farm_area_ha || 0,
+        within_ancestral_domain: h.within_ancestral_domain ? "Yes" : "No",
+        agrarian_reform_beneficiary: h.agrarian_reform_beneficiary
+          ? "Yes"
+          : "No",
+        ownership_type_registered_owner: h.is_registered_owner || false,
+        ownership_type_tenant: h.is_tenant || false,
+        ownership_type_lessee: h.is_lessee || false,
+        tenant_land_owner_name: h.is_tenant ? h.land_owner_name || "" : "",
+        lessee_land_owner_name: h.is_lessee ? h.land_owner_name || "" : "",
+        tenant_land_owner_id: h.is_tenant ? h.land_owner_id || null : null,
+        lessee_land_owner_id: h.is_lessee ? h.land_owner_id || null : null,
+        land_parcel_id: h.land_parcel_id || null,
+        _source: "land_history",
+      }));
+      return createResponse(fallbackParcels, null, 200);
+    }
+
+    return createResponse([], null, 200);
+  }
+
+  // Resolve land_parcel_id in batches to avoid N+1 calls and PostgREST single-row 406 responses.
+  const parcelNumbers = Array.from(
+    new Set(
+      parcels
+        .map((parcel: any) => String(parcel.parcel_number ?? "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  if (parcelNumbers.length === 0) {
+    return createResponse(parcels, null, 200);
+  }
+
+  const landParcelIdByParcelNumber: Record<string, string | number> = {};
+
+  let historyRowsQuery = supabase
+    .from("land_history")
+    .select("land_parcel_id, parcel_number")
+    .eq("farmer_id", submissionId)
+    .eq("is_current", true)
+    .in("parcel_number", parcelNumbers);
+
+  if (currentOwnerOnly) {
+    historyRowsQuery = historyRowsQuery.eq("is_registered_owner", true);
+  }
+
+  const { data: historyRows, error: historyRowsError } = await historyRowsQuery;
+
+  if (historyRowsError) {
+    console.log(
+      "land_history parcel lookup error (non-blocking):",
+      historyRowsError.message,
+    );
+  } else if (Array.isArray(historyRows)) {
+    historyRows.forEach((row: any) => {
+      const parcelNumber = String(row?.parcel_number ?? "").trim();
+      if (!parcelNumber || !row?.land_parcel_id) return;
+      if (landParcelIdByParcelNumber[parcelNumber]) return;
+
+      landParcelIdByParcelNumber[parcelNumber] = row.land_parcel_id;
+      console.log(
+        `📍 Found land_parcel_id ${row.land_parcel_id} for parcel ${parcelNumber}`,
+      );
+    });
+  }
+
+  const unresolvedParcelNumbers = parcelNumbers.filter(
+    (parcelNumber) => !landParcelIdByParcelNumber[parcelNumber],
+  );
+
+  if (unresolvedParcelNumbers.length > 0) {
+    const { data: landParcelRows, error: landParcelRowsError } = await supabase
+      .from("land_parcels")
+      .select("id, parcel_number")
+      .in("parcel_number", unresolvedParcelNumbers)
+      .order("id", { ascending: true });
+
+    if (landParcelRowsError) {
+      console.log(
+        "land_parcels fallback lookup error (non-blocking):",
+        landParcelRowsError.message,
+      );
+    } else if (Array.isArray(landParcelRows)) {
+      landParcelRows.forEach((row: any) => {
+        const parcelNumber = String(row?.parcel_number ?? "").trim();
+        if (!parcelNumber || !row?.id) return;
+        if (landParcelIdByParcelNumber[parcelNumber]) return;
+
+        landParcelIdByParcelNumber[parcelNumber] = row.id;
+        console.log(
+          `📍 Found land_parcel_id ${row.id} from land_parcels for ${parcelNumber}`,
+        );
+      });
+    }
+  }
+
+  const enhancedParcels = parcels.map((parcel: any) => {
+    const parcelNumber = String(parcel.parcel_number ?? "").trim();
+    const landParcelId = landParcelIdByParcelNumber[parcelNumber];
+    if (!landParcelId) return parcel;
+
+    return {
+      ...parcel,
+      land_parcel_id: landParcelId,
+    };
+  });
+
+  return createResponse(enhancedParcels, null, 200);
 };
 
-export const createFarmParcel = async (parcelData: any): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('rsbsa_farm_parcels')
-        .insert(parcelData)
-        .select()
-        .single();
+export const createFarmParcel = async (
+  parcelData: any,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("rsbsa_farm_parcels")
+    .insert(parcelData)
+    .select()
+    .single();
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 201);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 201);
 };
 
-export const updateFarmParcel = async (id: string | number, updateData: any): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('rsbsa_farm_parcels')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+export const updateFarmParcel = async (
+  id: string | number,
+  updateData: any,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("rsbsa_farm_parcels")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
 };
 
 // // ==================== LAND TRANSFER ====================
@@ -1085,36 +1801,172 @@ export const updateFarmParcel = async (id: string | number, updateData: any): Pr
 //         p_data: transferData
 //     });
 
-
-
-
-
-
 // // ==================== LAND PLOTS ====================
 
-export const getLandPlots = async (): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('land_plots')
-        .select('*');
+export const getLandPlots = async (
+  options: {
+    currentOwnerOnly?: boolean;
+  } = {},
+): Promise<ApiResponse> => {
+  const currentOwnerOnly = options.currentOwnerOnly !== false;
 
-    if (error) return createResponse(null, error.message, 500);
+  const isCurrentOwnerParcel = (parcel: any) => {
+    if (!parcel) return false;
+    if (parcel.ownership_type_registered_owner !== true) return false;
+    return parcel.is_current_owner !== false;
+  };
+
+  const normalizeParcelNumber = (value: unknown): string =>
+    String(value ?? "")
+      .trim()
+      .toUpperCase();
+
+  const normalizeSubmissionId = (value: unknown): string => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? String(parsed) : "";
+  };
+
+  const { data, error } = await supabase.from("land_plots").select("*");
+
+  if (error) return createResponse(null, error.message, 500);
+
+  if (!Array.isArray(data) || data.length === 0) {
     return createResponse(data, null, 200);
+  }
+
+  const unresolvedFfrsCodes = Array.from(
+    new Set(
+      data
+        .filter(
+          (row: any) =>
+            !row?.farmer_id &&
+            row?.ffrs_id !== undefined &&
+            row?.ffrs_id !== null &&
+            String(row.ffrs_id).trim() !== "",
+        )
+        .map((row: any) => String(row.ffrs_id).trim().toUpperCase()),
+    ),
+  );
+
+  let enriched = data;
+
+  if (unresolvedFfrsCodes.length > 0) {
+    const { data: submissionRows, error: submissionLookupError } =
+      await supabase
+        .from("rsbsa_submission")
+        .select('id, "FFRS_CODE"')
+        .in("FFRS_CODE", unresolvedFfrsCodes);
+
+    if (submissionLookupError) {
+      console.log(
+        "Land plot farmer_id enrichment skipped:",
+        submissionLookupError.message,
+      );
+    } else {
+      const farmerIdByFfrs = new Map<string, string | number>();
+      (submissionRows || []).forEach((row: any) => {
+        const key = String(row?.FFRS_CODE ?? "")
+          .trim()
+          .toUpperCase();
+        if (!key || row?.id === undefined || row?.id === null) return;
+        if (!farmerIdByFfrs.has(key)) farmerIdByFfrs.set(key, row.id);
+      });
+
+      enriched = data.map((row: any) => {
+        if (row?.farmer_id !== undefined && row?.farmer_id !== null) return row;
+        const key = String(row?.ffrs_id ?? "")
+          .trim()
+          .toUpperCase();
+        if (!key) return row;
+
+        const matchedFarmerId = farmerIdByFfrs.get(key);
+        if (!matchedFarmerId) return row;
+
+        return {
+          ...row,
+          farmer_id: matchedFarmerId,
+        };
+      });
+    }
+  }
+
+  if (!currentOwnerOnly) {
+    return createResponse(enriched, null, 200);
+  }
+
+  const { data: currentOwnerParcels, error: currentOwnerParcelsError } =
+    await supabase
+      .from("rsbsa_farm_parcels")
+      .select(
+        "submission_id, parcel_number, ownership_type_registered_owner, is_current_owner",
+      )
+      .or("is_current_owner.is.null,is_current_owner.eq.true");
+
+  if (currentOwnerParcelsError) {
+    console.warn(
+      "Land plot current-owner filtering skipped:",
+      currentOwnerParcelsError.message,
+    );
+    return createResponse(enriched, null, 200);
+  }
+
+  const currentOwnerKeys = new Set<string>();
+  (currentOwnerParcels || [])
+    .filter((parcel: any) => isCurrentOwnerParcel(parcel))
+    .forEach((parcel: any) => {
+      const submissionId = normalizeSubmissionId(parcel?.submission_id);
+      const parcelNumber = normalizeParcelNumber(parcel?.parcel_number);
+      if (!submissionId || !parcelNumber) return;
+      currentOwnerKeys.add(`${submissionId}::${parcelNumber}`);
+    });
+
+  const filteredPlots = enriched.filter((plot: any) => {
+    const submissionId = normalizeSubmissionId(plot?.farmer_id);
+    const parcelNumber = normalizeParcelNumber(plot?.parcel_number);
+
+    // Keep legacy rows that cannot be mapped yet; strict filtering applies only to resolvable owner+parcel rows.
+    if (!submissionId || !parcelNumber) return true;
+
+    return currentOwnerKeys.has(`${submissionId}::${parcelNumber}`);
+  });
+
+  return createResponse(filteredPlots, null, 200);
 };
 
-export const getCropPlantingInfo = async (surname: string, firstName: string, middleName: string, barangay: string): Promise<any> => {
-    try {
-        if ((!surname && !firstName) || !barangay) {
-            return { owner: null, tenants: [] };
-        }
+export const getCropPlantingInfo = async (
+  surname: string,
+  firstName: string,
+  middleName: string,
+  barangay: string,
+  ffrsId?: string,
+): Promise<any> => {
+  try {
+    const rawIdentityHint = String(ffrsId ?? "").trim();
+    const isFarmerIdHint = rawIdentityHint
+      .toLowerCase()
+      .startsWith("farmer_id:");
+    const normalizedFarmerId = isFarmerIdHint
+      ? rawIdentityHint.slice("farmer_id:".length).trim()
+      : "";
+    const normalizedFfrsId = isFarmerIdHint
+      ? ""
+      : rawIdentityHint.toUpperCase();
+    if (
+      (!surname && !firstName && !normalizedFfrsId && !normalizedFarmerId) ||
+      (!barangay && !normalizedFfrsId && !normalizedFarmerId)
+    ) {
+      return { owner: null, tenants: [] };
+    }
 
-        // Build query for matching the owner in rsbsa_submission
-        // Don't filter by barangay in the query since BARANGAY column stores
-        // the farmer's HOME address, but we're searching by FARM location.
-        // We'll filter results client-side to match either column.
-        let query = supabase
-            .from('rsbsa_submission')
-            .select(`
+    // Build query for matching the owner in rsbsa_submission
+    // Don't filter by barangay in the query since BARANGAY column stores
+    // the farmer's HOME address, but we're searching by FARM location.
+    // We'll filter results client-side to match either column.
+    const baseSelect = `
                 id,
+          "FFRS_CODE",
                 "FIRST NAME",
                 "MIDDLE NAME",
                 "LAST NAME",
@@ -1134,120 +1986,332 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
                 "OWNERSHIP_TYPE_LESSEE",
                 status,
                 created_at
-            `);
+            `;
 
-        if (surname) {
-            query = query.ilike('LAST NAME', surname.trim());
+    let ownerData: any[] = [];
+    let ownerMatchSource: "none" | "farmer_id" | "ffrs_code" | "name_fallback" =
+      "none";
+
+    if (normalizedFarmerId) {
+      const idFilterValue = /^\d+$/.test(normalizedFarmerId)
+        ? Number(normalizedFarmerId)
+        : normalizedFarmerId;
+      const { data: farmerIdOwnerData, error: farmerIdOwnerError } =
+        await supabase
+          .from("rsbsa_submission")
+          .select(baseSelect)
+          .eq("id", idFilterValue);
+
+      if (farmerIdOwnerError) {
+        console.error("Error fetching owner by farmer_id:", farmerIdOwnerError);
+      } else {
+        ownerData = farmerIdOwnerData || [];
+        if (ownerData.length > 0) ownerMatchSource = "farmer_id";
+      }
+    }
+
+    if (ownerData.length === 0 && normalizedFfrsId) {
+      const { data: ffrsOwnerData, error: ffrsOwnerError } = await supabase
+        .from("rsbsa_submission")
+        .select(baseSelect)
+        .eq("FFRS_CODE", normalizedFfrsId);
+
+      if (ffrsOwnerError) {
+        console.error("Error fetching owner by FFRS code:", ffrsOwnerError);
+      } else {
+        ownerData = ffrsOwnerData || [];
+        if (ownerData.length > 0) ownerMatchSource = "ffrs_code";
+      }
+    }
+
+    if (ownerData.length === 0) {
+      let query = supabase.from("rsbsa_submission").select(baseSelect);
+
+      if (surname) {
+        query = query.ilike("LAST NAME", surname.trim());
+      }
+      if (firstName) {
+        query = query.ilike("FIRST NAME", `${firstName.trim()}%`);
+      }
+
+      const { data: fallbackOwnerData, error: ownerError } = await query;
+
+      if (ownerError) {
+        console.error("Error fetching crop planting info:", ownerError);
+        return { owner: null, tenants: [] };
+      }
+
+      ownerData = fallbackOwnerData || [];
+      if (ownerData.length > 0) ownerMatchSource = "name_fallback";
+    }
+
+    // Filter client-side: match if BARANGAY or FARM LOCATION contains the search barangay
+    const barangayLower = (barangay || "").trim().toLowerCase();
+    const filteredOwnerData = (() => {
+      if (!barangayLower) return ownerData || [];
+
+      const matches = (ownerData || []).filter((row: any) => {
+        const homeBarangay = (row["BARANGAY"] || "").toLowerCase();
+        const farmLocation = (row["FARM LOCATION"] || "").toLowerCase();
+        return (
+          homeBarangay.includes(barangayLower) ||
+          farmLocation.includes(barangayLower)
+        );
+      });
+
+      // Trust strong identity matches and avoid dropping them due to
+      // inconsistent barangay strings in legacy records.
+      const hasStrongIdentity =
+        !!normalizedFarmerId ||
+        !!normalizedFfrsId ||
+        (ownerData.length === 1 && !!surname && !!firstName);
+
+      if (matches.length === 0 && hasStrongIdentity) {
+        return ownerData || [];
+      }
+
+      return matches;
+    })();
+    console.log(
+      "getCropPlantingInfo: filtered from",
+      ownerData?.length,
+      "to",
+      filteredOwnerData.length,
+      "results for barangay:",
+      barangay,
+    );
+
+    // Build crops list helper
+    const buildCropsList = (row: any): string[] => {
+      if (!row) return [];
+      const crops: string[] = [];
+      if (row.FARMER_RICE) crops.push("Rice");
+      if (row.FARMER_CORN) crops.push("Corn");
+      if (row.FARMER_OTHER_CROPS && row.FARMER_OTHER_CROPS_TEXT) {
+        crops.push(row.FARMER_OTHER_CROPS_TEXT);
+      } else if (row.FARMER_OTHER_CROPS) {
+        crops.push("Other Crops");
+      }
+      if (row.FARMER_LIVESTOCK && row.FARMER_LIVESTOCK_TEXT) {
+        crops.push(`Livestock: ${row.FARMER_LIVESTOCK_TEXT}`);
+      } else if (row.FARMER_LIVESTOCK) {
+        crops.push("Livestock");
+      }
+      if (row.FARMER_POULTRY && row.FARMER_POULTRY_TEXT) {
+        crops.push(`Poultry: ${row.FARMER_POULTRY_TEXT}`);
+      } else if (row.FARMER_POULTRY) {
+        crops.push("Poultry");
+      }
+      // Fallback to MAIN LIVELIHOOD
+      if (crops.length === 0 && row["MAIN LIVELIHOOD"]) {
+        const parts = row["MAIN LIVELIHOOD"]
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+        crops.push(...parts);
+      }
+      return crops.length > 0 ? crops : ["Not specified"];
+    };
+
+    // Format owner data
+    let owner = null;
+    if (filteredOwnerData && filteredOwnerData.length > 0) {
+      // Find best match - if middleName provided, prefer exact match
+      let bestMatch = filteredOwnerData[0];
+      if (middleName && filteredOwnerData.length > 1) {
+        const exactMiddle = filteredOwnerData.find(
+          (r: any) =>
+            (r["MIDDLE NAME"] || "").toLowerCase().trim() ===
+            middleName.toLowerCase().trim(),
+        );
+        if (exactMiddle) bestMatch = exactMiddle;
+      }
+
+      const row = bestMatch;
+      const farmerName = [
+        row["FIRST NAME"],
+        row["MIDDLE NAME"],
+        row["LAST NAME"],
+      ]
+        .filter(Boolean)
+        .join(" ");
+      owner = {
+        id: row.id,
+        farmer_name: farmerName,
+        first_name: row["FIRST NAME"],
+        middle_name: row["MIDDLE NAME"],
+        last_name: row["LAST NAME"],
+        barangay: row.BARANGAY,
+        main_livelihood: row["MAIN LIVELIHOOD"],
+        registration_date: row.created_at,
+        ownership_status: row.OWNERSHIP_TYPE_REGISTERED_OWNER
+          ? "Owner"
+          : row.OWNERSHIP_TYPE_TENANT
+            ? "Tenant"
+            : row.OWNERSHIP_TYPE_LESSEE
+              ? "Lessee"
+              : "Other",
+        is_owner: row.OWNERSHIP_TYPE_REGISTERED_OWNER,
+        is_tenant: row.OWNERSHIP_TYPE_TENANT,
+        is_lessee: row.OWNERSHIP_TYPE_LESSEE,
+        farmer_status: row.status,
+        crops: buildCropsList(row),
+      };
+    }
+
+    // Find tenants/lessees on this land
+    let tenants: any[] = [];
+    let tenantMatchSource: "none" | "owner_id" | "name_fallback" = "none";
+    const ownerSurname = owner?.last_name || "";
+    const ownerFirstName = owner?.first_name || "";
+    const lookupSurname = (surname || ownerSurname || "").trim();
+    const lookupFirstName = (firstName || ownerFirstName || "").trim();
+    const trimmedBarangay = (barangay || "").trim();
+    let tenantParcels: any[] = [];
+
+    if (owner?.id) {
+      // Prefer explicit owner-id linkage when available to avoid fragile name matching.
+      const idSelect = `
+                    submission_id,
+                    ownership_type_tenant,
+                    ownership_type_lessee,
+                    tenant_land_owner_name,
+                    lessee_land_owner_name,
+                    tenant_land_owner_id,
+                    lessee_land_owner_id,
+                    farm_location_barangay
+                `;
+      const idOrClause = `tenant_land_owner_id.eq.${owner.id},lessee_land_owner_id.eq.${owner.id}`;
+
+      const runIdLinkedQuery = async (useBarangayFilter: boolean) => {
+        let query = supabase
+          .from("rsbsa_farm_parcels")
+          .select(idSelect)
+          .or(idOrClause);
+
+        if (useBarangayFilter && trimmedBarangay) {
+          query = query.ilike("farm_location_barangay", `%${trimmedBarangay}%`);
         }
-        if (firstName) {
-            query = query.ilike('FIRST NAME', `${firstName.trim()}%`);
+
+        const { data, error } = await query;
+        return { data: Array.isArray(data) ? data : [], error };
+      };
+
+      const { data: idLinkedTenantParcels, error: idLinkedTenantError } =
+        await runIdLinkedQuery(Boolean(trimmedBarangay));
+
+      if (idLinkedTenantError) {
+        console.log(
+          "ID-linked tenant lookup failed (falling back to name matching):",
+          idLinkedTenantError.message,
+        );
+      } else {
+        tenantParcels = idLinkedTenantParcels;
+      }
+
+      // If barangay-filtered id lookup returned no rows, retry without barangay.
+      if (tenantParcels.length === 0 && trimmedBarangay) {
+        const {
+          data: idLinkedTenantParcelsNoBarangay,
+          error: idLinkedTenantNoBarangayError,
+        } = await runIdLinkedQuery(false);
+
+        if (idLinkedTenantNoBarangayError) {
+          console.log(
+            "ID-linked tenant retry without barangay failed:",
+            idLinkedTenantNoBarangayError.message,
+          );
+        } else {
+          tenantParcels = idLinkedTenantParcelsNoBarangay;
         }
+      }
 
-        const { data: ownerData, error: ownerError } = await query;
+      if (tenantParcels.length > 0) tenantMatchSource = "owner_id";
+    }
 
-        if (ownerError) {
-            console.error('Error fetching crop planting info:', ownerError);
-            return { owner: null, tenants: [] };
-        }
+    if (tenantParcels.length === 0 && (lookupSurname || lookupFirstName)) {
+      // Legacy fallback: name-based match for older rows without owner IDs.
+      const nameParts = [lookupSurname, lookupFirstName].filter(Boolean);
+      const namePattern = `%${nameParts.join("%")}%`;
+      const reverseNamePattern =
+        nameParts.length > 1
+          ? `%${[...nameParts].reverse().join("%")}%`
+          : namePattern;
+      const nameOrConditions = [
+        `tenant_land_owner_name.ilike.${namePattern}`,
+        `lessee_land_owner_name.ilike.${namePattern}`,
+      ];
+      if (reverseNamePattern !== namePattern) {
+        nameOrConditions.push(
+          `tenant_land_owner_name.ilike.${reverseNamePattern}`,
+          `lessee_land_owner_name.ilike.${reverseNamePattern}`,
+        );
+      }
 
-        // Filter client-side: match if BARANGAY or FARM LOCATION contains the search barangay
-        const barangayLower = barangay.trim().toLowerCase();
-        const filteredOwnerData = (ownerData || []).filter((row: any) => {
-            const homeBarangay = (row['BARANGAY'] || '').toLowerCase();
-            const farmLocation = (row['FARM LOCATION'] || '').toLowerCase();
-            return homeBarangay.includes(barangayLower) || farmLocation.includes(barangayLower);
-        });
-        console.log('getCropPlantingInfo: filtered from', ownerData?.length, 'to', filteredOwnerData.length, 'results for barangay:', barangay);
-
-        // Build crops list helper
-        const buildCropsList = (row: any): string[] => {
-            if (!row) return [];
-            const crops: string[] = [];
-            if (row.FARMER_RICE) crops.push('Rice');
-            if (row.FARMER_CORN) crops.push('Corn');
-            if (row.FARMER_OTHER_CROPS && row.FARMER_OTHER_CROPS_TEXT) {
-                crops.push(row.FARMER_OTHER_CROPS_TEXT);
-            } else if (row.FARMER_OTHER_CROPS) {
-                crops.push('Other Crops');
-            }
-            if (row.FARMER_LIVESTOCK && row.FARMER_LIVESTOCK_TEXT) {
-                crops.push(`Livestock: ${row.FARMER_LIVESTOCK_TEXT}`);
-            } else if (row.FARMER_LIVESTOCK) {
-                crops.push('Livestock');
-            }
-            if (row.FARMER_POULTRY && row.FARMER_POULTRY_TEXT) {
-                crops.push(`Poultry: ${row.FARMER_POULTRY_TEXT}`);
-            } else if (row.FARMER_POULTRY) {
-                crops.push('Poultry');
-            }
-            // Fallback to MAIN LIVELIHOOD
-            if (crops.length === 0 && row['MAIN LIVELIHOOD']) {
-                const parts = row['MAIN LIVELIHOOD'].split(',').map((s: string) => s.trim()).filter(Boolean);
-                crops.push(...parts);
-            }
-            return crops.length > 0 ? crops : ['Not specified'];
-        };
-
-        // Format owner data
-        let owner = null;
-        if (filteredOwnerData && filteredOwnerData.length > 0) {
-            // Find best match - if middleName provided, prefer exact match
-            let bestMatch = filteredOwnerData[0];
-            if (middleName && filteredOwnerData.length > 1) {
-                const exactMiddle = filteredOwnerData.find((r: any) =>
-                    (r['MIDDLE NAME'] || '').toLowerCase().trim() === middleName.toLowerCase().trim()
-                );
-                if (exactMiddle) bestMatch = exactMiddle;
-            }
-
-            const row = bestMatch;
-            const farmerName = [row['FIRST NAME'], row['MIDDLE NAME'], row['LAST NAME']].filter(Boolean).join(' ');
-            owner = {
-                id: row.id,
-                farmer_name: farmerName,
-                first_name: row['FIRST NAME'],
-                middle_name: row['MIDDLE NAME'],
-                last_name: row['LAST NAME'],
-                barangay: row.BARANGAY,
-                main_livelihood: row['MAIN LIVELIHOOD'],
-                registration_date: row.created_at,
-                ownership_status: row.OWNERSHIP_TYPE_REGISTERED_OWNER ? 'Owner' :
-                    row.OWNERSHIP_TYPE_TENANT ? 'Tenant' :
-                        row.OWNERSHIP_TYPE_LESSEE ? 'Lessee' : 'Other',
-                is_owner: row.OWNERSHIP_TYPE_REGISTERED_OWNER,
-                is_tenant: row.OWNERSHIP_TYPE_TENANT,
-                is_lessee: row.OWNERSHIP_TYPE_LESSEE,
-                farmer_status: row.status,
-                crops: buildCropsList(row)
-            };
-        }
-
-        // Find tenants/lessees on this land
-        let tenants: any[] = [];
-        if (surname || firstName) {
-            // Build OR conditions for tenant/lessee land owner name matching
-            const nameParts = [surname, firstName].filter(Boolean);
-            const namePattern = `%${nameParts.join('%')}%`;
-
-            // Query rsbsa_farm_parcels for tenants/lessees whose land owner name matches
-            const { data: tenantParcels } = await supabase
-                .from('rsbsa_farm_parcels')
-                .select(`
+      const runLegacyNameQuery = async (useBarangayFilter: boolean) => {
+        let query = supabase
+          .from("rsbsa_farm_parcels")
+          .select(
+            `
                     submission_id,
                     ownership_type_tenant,
                     ownership_type_lessee,
                     tenant_land_owner_name,
                     lessee_land_owner_name,
                     farm_location_barangay
-                `)
-                .ilike('farm_location_barangay', barangay.trim())
-                .or(`tenant_land_owner_name.ilike.${namePattern},lessee_land_owner_name.ilike.${namePattern}`);
+                `,
+          )
+          .or(nameOrConditions.join(","));
 
-            if (tenantParcels && tenantParcels.length > 0) {
-                const tenantIds = [...new Set(tenantParcels.map((p: any) => p.submission_id))];
-                const { data: tenantSubmissions } = await supabase
-                    .from('rsbsa_submission')
-                    .select(`
+        if (useBarangayFilter && trimmedBarangay) {
+          query = query.ilike("farm_location_barangay", `%${trimmedBarangay}%`);
+        }
+
+        const { data, error } = await query;
+        return { data: Array.isArray(data) ? data : [], error };
+      };
+
+      const { data: legacyTenantParcels, error: legacyTenantError } =
+        await runLegacyNameQuery(Boolean(trimmedBarangay));
+
+      if (legacyTenantError) {
+        console.log(
+          "Legacy name-based tenant lookup failed:",
+          legacyTenantError.message,
+        );
+      } else {
+        tenantParcels = legacyTenantParcels;
+      }
+
+      if (tenantParcels.length === 0 && trimmedBarangay) {
+        const {
+          data: legacyTenantParcelsNoBarangay,
+          error: legacyNoBarangayError,
+        } = await runLegacyNameQuery(false);
+
+        if (legacyNoBarangayError) {
+          console.log(
+            "Legacy tenant retry without barangay failed:",
+            legacyNoBarangayError.message,
+          );
+        } else {
+          tenantParcels = legacyTenantParcelsNoBarangay;
+        }
+      }
+
+      if (tenantParcels.length > 0) tenantMatchSource = "name_fallback";
+    }
+
+    if (tenantParcels && tenantParcels.length > 0) {
+      const tenantIds = [
+        ...new Set(tenantParcels.map((p: any) => p.submission_id)),
+      ].filter((id) => String(id ?? "") !== String(owner?.id ?? ""));
+
+      if (tenantIds.length > 0) {
+        const { data: tenantSubmissions } = await supabase
+          .from("rsbsa_submission")
+          .select(
+            `
                         id,
                         "FIRST NAME",
                         "MIDDLE NAME",
@@ -1264,338 +2328,1046 @@ export const getCropPlantingInfo = async (surname: string, firstName: string, mi
                         "FARMER_POULTRY_TEXT",
                         status,
                         created_at
-                    `)
-                    .in('id', tenantIds);
+                    `,
+          )
+          .in("id", tenantIds);
 
-                if (tenantSubmissions) {
-                    tenants = tenantSubmissions.map((row: any) => {
-                        const parcel = tenantParcels.find((p: any) => p.submission_id === row.id);
-                        const farmerName = [row['FIRST NAME'], row['MIDDLE NAME'], row['LAST NAME']].filter(Boolean).join(' ');
-                        return {
-                            id: row.id,
-                            farmer_name: farmerName,
-                            barangay: row.BARANGAY,
-                            registration_date: row.created_at,
-                            ownership_status: parcel?.ownership_type_tenant ? 'Tenant' : 'Lessee',
-                            farmer_status: row.status,
-                            crops: buildCropsList(row)
-                        };
-                    });
-                }
-            }
+        if (tenantSubmissions) {
+          tenants = tenantSubmissions.map((row: any) => {
+            const parcel = tenantParcels.find(
+              (p: any) => p.submission_id === row.id,
+            );
+            const farmerName = [
+              row["FIRST NAME"],
+              row["MIDDLE NAME"],
+              row["LAST NAME"],
+            ]
+              .filter(Boolean)
+              .join(" ");
+            return {
+              id: row.id,
+              farmer_name: farmerName,
+              barangay: row.BARANGAY,
+              registration_date: row.created_at,
+              ownership_status:
+                parcel?.ownership_type_tenant && parcel?.ownership_type_lessee
+                  ? "Tenant + Lessee"
+                  : parcel?.ownership_type_tenant
+                    ? "Tenant"
+                    : "Lessee",
+              farmer_status: row.status,
+              crops: buildCropsList(row),
+            };
+          });
         }
-
-        // Fetch land history for this barangay
-        let landHistory: any[] = [];
-        const { data: historyData } = await supabase
-            .from('land_history')
-            .select('*')
-            .ilike('farm_location_barangay', barangay.trim())
-            .order('created_at', { ascending: true });
-
-        if (historyData && historyData.length > 0) {
-            // If we have the owner, filter to parcels matching this owner
-            if (owner) {
-                const ownerParcelHistory = historyData.filter((h: any) => {
-                    const nameMatch = (h.farmer_name || '').toLowerCase().includes(surname.toLowerCase()) ||
-                        (h.land_owner_name || '').toLowerCase().includes(surname.toLowerCase());
-                    return nameMatch;
-                });
-                landHistory = ownerParcelHistory.length > 0 ? ownerParcelHistory : historyData;
-            } else {
-                landHistory = historyData;
-            }
-        }
-
-        return { owner, tenants, landHistory };
-    } catch (err) {
-        console.error('Error in getCropPlantingInfo:', err);
-        return { owner: null, tenants: [], landHistory: [] };
+      }
     }
+
+    // Fetch land history for this barangay
+    let landHistory: any[] = [];
+    let historyQuery = supabase
+      .from("land_history")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (barangay) {
+      historyQuery = historyQuery.ilike(
+        "farm_location_barangay",
+        `%${barangay.trim()}%`,
+      );
+    }
+
+    const { data: historyData } = await historyQuery;
+
+    if (historyData && historyData.length > 0) {
+      // If we have the owner, filter to parcels matching this owner
+      if (owner) {
+        const normalizedOwnerId = String(owner.id ?? "").trim();
+        const ownerParcelHistory = historyData.filter((h: any) => {
+          const farmerIdMatch =
+            normalizedOwnerId &&
+            String(h.farmer_id ?? "").trim() === normalizedOwnerId;
+          const landOwnerIdMatch =
+            normalizedOwnerId &&
+            String(h.land_owner_id ?? "").trim() === normalizedOwnerId;
+          if (farmerIdMatch || landOwnerIdMatch) return true;
+
+          const nameMatch =
+            (h.farmer_name || "")
+              .toLowerCase()
+              .includes((lookupSurname || ownerSurname).toLowerCase()) ||
+            (h.land_owner_name || "")
+              .toLowerCase()
+              .includes((lookupSurname || ownerSurname).toLowerCase());
+          return nameMatch;
+        });
+        landHistory =
+          ownerParcelHistory.length > 0 ? ownerParcelHistory : historyData;
+      } else {
+        landHistory = historyData;
+      }
+    }
+
+    return {
+      owner,
+      tenants,
+      landHistory,
+      owner_match_source: ownerMatchSource,
+      tenant_match_source: tenantMatchSource,
+    };
+  } catch (err) {
+    console.error("Error in getCropPlantingInfo:", err);
+    return { owner: null, tenants: [], landHistory: [] };
+  }
 };
 
-export const getLandPlotById = async (id: string | number): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('land_plots')
-        .select('*')
-        .eq('id', id)
-        .single();
+export const getLandPlotById = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("land_plots")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-    if (error) return createResponse(null, error.message, 404);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 404);
+  return createResponse(data, null, 200);
+};
+
+const normalizeLandPlotPayloadForSupabase = (payload: any) => {
+  if (!payload || typeof payload !== "object") return payload;
+
+  return {
+    id: payload.id,
+    name: payload.name,
+    ffrs_id: payload.ffrs_id,
+    area: payload.area,
+    coordinate_accuracy:
+      payload.coordinate_accuracy ?? payload.coordinateAccuracy,
+    barangay: payload.barangay,
+    first_name: payload.first_name ?? payload.firstName,
+    middle_name: payload.middle_name ?? payload.middleName,
+    surname: payload.surname,
+    ext_name: payload.ext_name,
+    gender: payload.gender,
+    municipality: payload.municipality,
+    province: payload.province,
+    parcel_address: payload.parcel_address,
+    status: payload.status,
+    street: payload.street,
+    farm_type: payload.farm_type ?? payload.farmType,
+    plot_source: payload.plot_source ?? payload.plotSource,
+    parcel_number: payload.parcel_number ?? payload.parcelNumber,
+    geometry: payload.geometry,
+    created_at: payload.created_at ?? payload.createdAt,
+    updated_at: payload.updated_at ?? payload.updatedAt,
+  };
+};
+
+const getCurrentAuditUser = () => {
+  try {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    return {
+      id: currentUser.id,
+      name: currentUser.name || currentUser.username || "Anonymous",
+      role:
+        currentUser.role || localStorage.getItem("userRole") || "technician",
+    };
+  } catch {
+    return {
+      id: null,
+      name: "Anonymous",
+      role: localStorage.getItem("userRole") || "technician",
+    };
+  }
+};
+
+const buildLandPlotAuditSummary = (plot: any) => ({
+  geometry_type:
+    plot?.geometry && typeof plot.geometry === "object"
+      ? plot.geometry.type
+      : null,
+  area: plot?.area ?? null,
+  barangay: plot?.barangay ?? null,
+  coordinate_accuracy:
+    plot?.coordinate_accuracy ?? plot?.coordinateAccuracy ?? null,
+});
+
+const logLandPlotCreateAudit = async (createdPlot: any) => {
+  try {
+    const user = getCurrentAuditUser();
+    const auditLogger = getAuditLogger();
+
+    await auditLogger.logCRUD(
+      {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+      },
+      "CREATE",
+      AuditModule.LAND_PLOTS,
+      "land_plots",
+      createdPlot?.id || "unknown",
+      `Technician created land geometry on Land Registry page (plot ${createdPlot?.id || "unknown"})`,
+      undefined,
+      buildLandPlotAuditSummary(createdPlot),
+      {
+        includeRouteContext: false,
+        metadata: null,
+      },
+    );
+  } catch (auditError) {
+    console.error("Land plot audit log failed (non-blocking):", auditError);
+  }
 };
 
 export const createLandPlot = async (plotData: any): Promise<ApiResponse> => {
+  try {
+    const payload = normalizeLandPlotPayloadForSupabase(plotData);
     const { data, error } = await supabase
-        .from('land_plots')
-        .insert(plotData)
-        .select()
-        .single();
+      .from("land_plots")
+      .insert([payload])
+      .select()
+      .single();
 
     if (error) return createResponse(null, error.message, 500);
+
+    await logLandPlotCreateAudit(data);
     return createResponse(data, null, 201);
+  } catch (error: any) {
+    return createResponse(
+      null,
+      error?.message || "Failed to create land plot",
+      500,
+    );
+  }
 };
 
-export const updateLandPlot = async (id: string | number, updateData: any): Promise<ApiResponse> => {
+export const updateLandPlot = async (
+  id: string | number,
+  updateData: any,
+): Promise<ApiResponse> => {
+  try {
+    const payload = normalizeLandPlotPayloadForSupabase(updateData);
     const { data, error } = await supabase
-        .from('land_plots')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+      .from("land_plots")
+      .update(payload)
+      .eq("id", id)
+      .select()
+      .single();
 
     if (error) return createResponse(null, error.message, 500);
     return createResponse(data, null, 200);
+  } catch (error: any) {
+    return createResponse(
+      null,
+      error?.message || "Failed to update land plot",
+      500,
+    );
+  }
 };
 
-export const deleteLandPlot = async (id: string | number): Promise<ApiResponse> => {
-    const { error } = await supabase
-        .from('land_plots')
-        .delete()
-        .eq('id', id);
-
+export const deleteLandPlot = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  try {
+    const { error } = await supabase.from("land_plots").delete().eq("id", id);
     if (error) return createResponse(null, error.message, 500);
+
     return createResponse({ success: true }, null, 200);
+  } catch (error: any) {
+    return createResponse(
+      null,
+      error?.message || "Failed to delete land plot",
+      500,
+    );
+  }
 };
 
 // ==================== DISTRIBUTION ALLOCATIONS ====================
 
-export const getAllocations = async (): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('regional_allocations')
-        .select('*');
+export interface FertilizerCatalogItem {
+  id: number;
+  code: string;
+  name: string;
+  n_pk: string | null;
+  default_unit: string;
+  is_active: boolean;
+  display_order: number;
+}
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+export interface SeedCatalogItem {
+  id: number;
+  variety_code: string;
+  name: string;
+  default_unit: string;
+  is_active: boolean;
+  display_order: number;
+}
+
+export const getFertilizerCatalog = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("fertilizer_catalog")
+    .select("id, code, name, n_pk, default_unit, is_active, display_order")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data || [], null, 200);
 };
 
-export const getAllocationById = async (id: string | number): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('regional_allocations')
-        .select('*')
-        .eq('id', id)
-        .single();
+export const getSeedCatalog = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("seed_catalog")
+    .select("id, variety_code, name, default_unit, is_active, display_order")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true });
 
-    if (error) return createResponse(null, error.message, 404);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data || [], null, 200);
 };
 
-export const getAllocationBySeason = async (season: string): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('regional_allocations')
-        .select('*')
-        .eq('season', season)
-        .single();
+// ==================== SHORTAGES SUGGESTIONS ====================
 
-    if (error) return createResponse(null, error.message, 404);
-    return createResponse(data, null, 200);
+type FertilizerShortagePayload = {
+  seedId: string | null;
+  shortageFertId: string;
+  unavailableIds?: string[];
 };
 
-export const createAllocation = async (allocationData: any): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('regional_allocations')
-        .insert(allocationData)
-        .select()
-        .single();
+type SeedShortagePayload = {
+  seedId: string;
+  unavailableIds?: string[];
+};
 
-    if (error) {
-        // Handle unique constraint violation (shouldn't happen after removing constraint)
-        if (error.code === '23505') {
-            return createResponse(
-                null,
-                `Duplicate allocation detected. Please check existing allocations.`,
-                409
-            );
-        }
-        return createResponse(null, error.message, 500);
+const SHORTAGES_API_COOLDOWN_MS = 30_000;
+let shortagesApiCooldownUntil = 0;
+
+const USE_SUPABASE_SHORTAGES =
+  String(import.meta.env.VITE_USE_SUPABASE_SHORTAGES || "").toLowerCase() ===
+  "true";
+
+const SUPABASE_SHORTAGES_RPC = {
+  listSeeds: "list_shortages_seeds",
+  listFertilizers: "list_shortages_fertilizers",
+  resolveFertilizer: "resolve_fertilizer_shortage",
+  resolveSeed: "resolve_seed_shortage",
+} as const;
+
+const mapSupabaseShortagesError = (error: any): string => {
+  const message =
+    error?.message ||
+    error?.details ||
+    error?.hint ||
+    "Supabase shortages request failed.";
+  return String(message);
+};
+
+const callShortagesSupabase = async (
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<ApiResponse> => {
+  try {
+    if (path === "/seeds") {
+      const { data, error } = await supabase.rpc(
+        SUPABASE_SHORTAGES_RPC.listSeeds,
+      );
+      if (error)
+        return createResponse(null, mapSupabaseShortagesError(error), 500);
+      return createResponse(data ?? [], null, 200);
     }
-    return createResponse(data, null, 201);
+
+    if (path === "/fertilizers") {
+      const { data, error } = await supabase.rpc(
+        SUPABASE_SHORTAGES_RPC.listFertilizers,
+      );
+      if (error)
+        return createResponse(null, mapSupabaseShortagesError(error), 500);
+      return createResponse(data ?? [], null, 200);
+    }
+
+    if (path === "/fertilizer") {
+      const { data, error } = await supabase.rpc(
+        SUPABASE_SHORTAGES_RPC.resolveFertilizer,
+        {
+          seed_id: body?.seedId ?? null,
+          shortage_fert_id: body?.shortageFertId,
+          unavailable_ids: Array.isArray(body?.unavailableIds)
+            ? body?.unavailableIds
+            : [],
+        },
+      );
+      if (error)
+        return createResponse(null, mapSupabaseShortagesError(error), 500);
+      return createResponse(data, null, 200);
+    }
+
+    if (path === "/seed") {
+      const { data, error } = await supabase.rpc(
+        SUPABASE_SHORTAGES_RPC.resolveSeed,
+        {
+          seed_id: body?.seedId,
+          unavailable_ids: Array.isArray(body?.unavailableIds)
+            ? body?.unavailableIds
+            : [],
+        },
+      );
+      if (error)
+        return createResponse(null, mapSupabaseShortagesError(error), 500);
+      return createResponse(data, null, 200);
+    }
+
+    return createResponse(null, `Unsupported shortages path: ${path}`, 400);
+  } catch (error: any) {
+    return createResponse(
+      null,
+      error?.message || "Unable to connect to Supabase shortages RPC.",
+      500,
+    );
+  }
 };
 
-export const updateAllocation = async (id: string | number, updateData: any): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('regional_allocations')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+const callShortagesApiViaNode = async (
+  path: string,
+  body?: Record<string, unknown>,
+): Promise<ApiResponse> => {
+  const now = Date.now();
+  if (now < shortagesApiCooldownUntil) {
+    const secondsLeft = Math.ceil((shortagesApiCooldownUntil - now) / 1000);
+    return createResponse(
+      null,
+      `Shortages API is temporarily unavailable. Retrying automatically in ${secondsLeft}s.`,
+      503,
+    );
+  }
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  try {
+    const response = await fetch(`/api/shortages${path}`, {
+      method: body ? "POST" : "GET",
+      headers: body
+        ? {
+            "Content-Type": "application/json",
+          }
+        : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const payload = await response
+      .json()
+      .catch(() => ({ error: "Invalid JSON response from shortages API." }));
+
+    if (!response.ok) {
+      const errorMessage =
+        payload?.error || payload?.message || "Shortages API request failed.";
+
+      if (
+        response.status >= 500 &&
+        typeof payload?.error === "string" &&
+        /invalid json response from shortages api|proxy|econnrefused/i.test(
+          payload.error,
+        )
+      ) {
+        shortagesApiCooldownUntil = Date.now() + SHORTAGES_API_COOLDOWN_MS;
+      }
+
+      return createResponse(null, errorMessage, response.status);
+    }
+
+    shortagesApiCooldownUntil = 0;
+    return createResponse(payload, null, response.status || 200);
+  } catch (error: any) {
+    shortagesApiCooldownUntil = Date.now() + SHORTAGES_API_COOLDOWN_MS;
+    return createResponse(
+      null,
+      error?.message || "Unable to connect to shortages API.",
+      500,
+    );
+  }
 };
 
-export const deleteAllocation = async (id: string | number): Promise<ApiResponse> => {
-    const { error } = await supabase
-        .from('regional_allocations')
-        .delete()
-        .eq('id', id);
+export const getShortagesSeeds = async (): Promise<ApiResponse> => {
+  if (!USE_SUPABASE_SHORTAGES) {
+    return callShortagesApiViaNode("/seeds");
+  }
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse({ success: true }, null, 200);
+  const supabaseResponse = await callShortagesSupabase("/seeds");
+  if (!supabaseResponse.error) {
+    return supabaseResponse;
+  }
+
+  return callShortagesApiViaNode("/seeds");
+};
+
+export const getShortagesFertilizers = async (): Promise<ApiResponse> => {
+  if (!USE_SUPABASE_SHORTAGES) {
+    return callShortagesApiViaNode("/fertilizers");
+  }
+
+  const supabaseResponse = await callShortagesSupabase("/fertilizers");
+  if (!supabaseResponse.error) {
+    return supabaseResponse;
+  }
+
+  return callShortagesApiViaNode("/fertilizers");
+};
+
+export const resolveFertilizerShortageSuggestion = async (
+  payload: FertilizerShortagePayload,
+): Promise<ApiResponse> => {
+  if (!USE_SUPABASE_SHORTAGES) {
+    return callShortagesApiViaNode("/fertilizer", payload);
+  }
+
+  const supabaseResponse = await callShortagesSupabase("/fertilizer", payload);
+  if (!supabaseResponse.error) {
+    return supabaseResponse;
+  }
+
+  return callShortagesApiViaNode("/fertilizer", payload);
+};
+
+export const resolveSeedShortageSuggestion = async (
+  payload: SeedShortagePayload,
+): Promise<ApiResponse> => {
+  if (!USE_SUPABASE_SHORTAGES) {
+    return callShortagesApiViaNode("/seed", payload);
+  }
+
+  const supabaseResponse = await callShortagesSupabase("/seed", payload);
+  if (!supabaseResponse.error) {
+    return supabaseResponse;
+  }
+
+  return callShortagesApiViaNode("/seed", payload);
+};
+
+export const getAllocations = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("regional_allocations")
+    .select("*");
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
+};
+
+export const getAllocationById = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("regional_allocations")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) return createResponse(null, error.message, 404);
+  return createResponse(data, null, 200);
+};
+
+export const getAllocationBySeason = async (
+  season: string,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("regional_allocations")
+    .select("*")
+    .eq("season", season)
+    .single();
+
+  if (error) return createResponse(null, error.message, 404);
+  return createResponse(data, null, 200);
+};
+
+export const createAllocation = async (
+  allocationData: any,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("regional_allocations")
+    .insert(allocationData)
+    .select()
+    .single();
+
+  if (error) {
+    // Handle unique constraint violation (shouldn't happen after removing constraint)
+    if (error.code === "23505") {
+      return createResponse(
+        null,
+        `Duplicate allocation detected. Please check existing allocations.`,
+        409,
+      );
+    }
+    return createResponse(null, error.message, 500);
+  }
+  return createResponse(data, null, 201);
+};
+
+export const updateAllocation = async (
+  id: string | number,
+  updateData: any,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("regional_allocations")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
+};
+
+export const deleteAllocation = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { error } = await supabase
+    .from("regional_allocations")
+    .delete()
+    .eq("id", id);
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse({ success: true }, null, 200);
 };
 
 // ==================== FARMER REQUESTS ====================
 
-export const getFarmerRequests = async (seasonOrAllocationId?: string | number, isAllocationId: boolean = false, farmerId?: string | number): Promise<ApiResponse> => {
-    let query = supabase.from('farmer_requests').select('*');
+export const getFarmerRequests = async (
+  seasonOrAllocationId?: string | number,
+  isAllocationId: boolean = false,
+): Promise<ApiResponse> => {
+  let query = supabase.from("farmer_requests").select("*");
 
-    if (seasonOrAllocationId !== undefined) {
-        if (isAllocationId) {
-            // Filter by specific allocation ID
-            query = query.eq('allocation_id', seasonOrAllocationId);
-        } else {
-            // Legacy: filter by season
-            query = query.eq('season', seasonOrAllocationId);
-        }
+  if (seasonOrAllocationId !== undefined) {
+    if (isAllocationId) {
+      // Filter by specific allocation ID
+      query = query.eq("allocation_id", seasonOrAllocationId);
+    } else {
+      // Legacy: filter by season
+      query = query.eq("season", seasonOrAllocationId);
     }
+  }
 
-    if (farmerId !== undefined && farmerId !== null && farmerId !== '') {
-        query = query.eq('farmer_id', farmerId);
-    }
+  const { data, error } = await query;
 
-    const { data, error } = await query;
-
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
 };
 
-export const getFarmerRequestsByAllocationId = async (allocationId: string | number): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('farmer_requests')
-        .select('*')
-        .eq('allocation_id', allocationId);
+export const getFarmerRequestsByAllocationId = async (
+  allocationId: string | number,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("farmer_requests")
+    .select("*")
+    .eq("allocation_id", allocationId);
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
 };
 
-export const getFarmerRequestById = async (id: string | number): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('farmer_requests')
-        .select('*')
-        .eq('id', id)
-        .single();
+export const getFarmerRequestById = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("farmer_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-    if (error) return createResponse(null, error.message, 404);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 404);
+  return createResponse(data, null, 200);
 };
 
-export const createFarmerRequest = async (requestData: any): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('farmer_requests')
-        .insert(requestData)
-        .select()
-        .single();
+export const createFarmerRequest = async (
+  requestData: any,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("farmer_requests")
+    .insert(requestData)
+    .select()
+    .single();
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 201);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 201);
 };
 
-export const updateFarmerRequest = async (id: string | number, updateData: any): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('farmer_requests')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+export const updateFarmerRequest = async (
+  id: string | number,
+  updateData: any,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("farmer_requests")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
 };
 
-export const deleteFarmerRequest = async (id: string | number): Promise<ApiResponse> => {
-    const { error } = await supabase
-        .from('farmer_requests')
-        .delete()
-        .eq('id', id);
+export const deleteFarmerRequest = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { error } = await supabase
+    .from("farmer_requests")
+    .delete()
+    .eq("id", id);
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse({ success: true }, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse({ success: true }, null, 200);
 };
 
 // ==================== DISTRIBUTION RECORDS ====================
 
 export const getDistributionRecords = async (): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('distribution_records')
-        .select('*');
+  const { data, error } = await supabase
+    .from("distribution_records")
+    .select("*");
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
 };
 
-export const createDistributionRecord = async (recordData: any): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('distribution_records')
-        .insert(recordData)
-        .select()
-        .single();
+export const createDistributionRecord = async (
+  recordData: any,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("distribution_records")
+    .insert(recordData)
+    .select()
+    .single();
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 201);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 201);
 };
 
 // ==================== LAND OWNERS ====================
 
 export const getLandOwners = async (): Promise<ApiResponse> => {
-    // Get registered owners from rsbsa_submission
-    // The column name in rsbsa_submission is OWNERSHIP_TYPE_REGISTERED_OWNER
-    const { data, error } = await supabase
-        .from('rsbsa_submission')
-        .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY", "MUNICIPALITY"')
-        .eq('OWNERSHIP_TYPE_REGISTERED_OWNER', true);
+  // Keep owner list aligned with current legal ownership by requiring at least one current owner parcel.
+  const { data: ownerParcels, error: ownerParcelsError } = await supabase
+    .from("rsbsa_farm_parcels")
+    .select(
+      "submission_id, parcel_number, ownership_type_registered_owner, is_current_owner",
+    )
+    .eq("ownership_type_registered_owner", true)
+    .or("is_current_owner.is.null,is_current_owner.eq.true");
 
-    if (error) {
-        console.error('getLandOwners error:', error);
-        return createResponse(null, error.message, 500);
-    }
+  if (ownerParcelsError) {
+    console.error(
+      "getLandOwners owner parcel lookup error:",
+      ownerParcelsError,
+    );
+    return createResponse(null, ownerParcelsError.message, 500);
+  }
 
-    // Transform to expected format with full name
-    const landOwners = (data || []).map((row: any) => ({
+  const ownerIds = Array.from(
+    new Set(
+      (ownerParcels || [])
+        .map((parcel: any) => {
+          if (parcel?.ownership_type_registered_owner !== true) return null;
+          if (parcel?.is_current_owner === false) return null;
+          const parsed = Number(parcel?.submission_id);
+          return Number.isFinite(parsed) ? parsed : null;
+        })
+        .filter((value: number | null): value is number => value !== null),
+    ),
+  );
+
+  if (ownerIds.length === 0) {
+    return createResponse([], null, 200);
+  }
+
+  const { data, error } = await supabase
+    .from("rsbsa_submission")
+    .select(
+      'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY", "MUNICIPALITY"',
+    )
+    .in("id", ownerIds);
+
+  if (error) {
+    console.error("getLandOwners error:", error);
+    return createResponse(null, error.message, 500);
+  }
+
+  const parcelCountByOwnerId = new Map<number, number>();
+  (ownerParcels || []).forEach((parcel: any) => {
+    if (parcel?.ownership_type_registered_owner !== true) return;
+    if (parcel?.is_current_owner === false) return;
+    const ownerId = Number(parcel?.submission_id);
+    if (!Number.isFinite(ownerId)) return;
+    parcelCountByOwnerId.set(
+      ownerId,
+      (parcelCountByOwnerId.get(ownerId) || 0) + 1,
+    );
+  });
+
+  // Transform to expected format with full name
+  const landOwners = (data || [])
+    .map((row: any) => {
+      const ownerId = Number(row.id);
+      return {
         id: row.id,
-        name: `${row['FIRST NAME'] || ''} ${row['MIDDLE NAME'] || ''} ${row['LAST NAME'] || ''}`.replace(/\s+/g, ' ').trim(),
-        barangay: row['BARANGAY'] || '',
-        municipality: row['MUNICIPALITY'] || 'Dumangas'
-    }));
+        name: `${row["FIRST NAME"] || ""} ${row["MIDDLE NAME"] || ""} ${row["LAST NAME"] || ""}`
+          .replace(/\s+/g, " ")
+          .trim(),
+        barangay: row["BARANGAY"] || "",
+        municipality: row["MUNICIPALITY"] || "Dumangas",
+        parcelCount: Number.isFinite(ownerId)
+          ? parcelCountByOwnerId.get(ownerId) || 0
+          : 0,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-    return createResponse(landOwners, null, 200);
+  return createResponse(landOwners, null, 200);
 };
 
 // ==================== LAND HISTORY ====================
 
-export const getLandHistory = async (landPlotId?: string | number): Promise<ApiResponse> => {
-    let query = supabase.from('land_history').select('*');
+export const getLandHistory = async (
+  landPlotId?: string | number,
+): Promise<ApiResponse> => {
+  let query = supabase.from("land_history").select("*");
 
-    if (landPlotId) {
-        query = query.eq('land_plot_id', landPlotId);
-    }
+  if (landPlotId) {
+    query = query.eq("land_plot_id", landPlotId);
+  }
 
-    const { data, error } = await query;
+  const { data, error } = await query;
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
+};
+
+type LandHistoryRelationshipFilter =
+  | "all"
+  | "owner"
+  | "tenant"
+  | "lessee"
+  | "tenantLessee";
+
+interface LandHistoryReportQueryOptions {
+  searchTerm?: string;
+  farmerName?: string;
+  barangay?: string;
+  relationship?: LandHistoryRelationshipFilter;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export const getLandHistoryReportRows = async (
+  options: number | LandHistoryReportQueryOptions = 5000,
+): Promise<ApiResponse> => {
+  const fallbackPageSize =
+    typeof options === "number" ? Number(options) || 5000 : 50;
+
+  const queryOptions: LandHistoryReportQueryOptions =
+    typeof options === "number"
+      ? { page: 1, pageSize: fallbackPageSize }
+      : options;
+
+  const searchTerm = String(queryOptions.searchTerm || "").trim();
+  const farmerName = String(queryOptions.farmerName || "all").trim();
+  const barangay = String(queryOptions.barangay || "all").trim();
+  const relationship =
+    (queryOptions.relationship as LandHistoryRelationshipFilter) || "all";
+  const dateFrom = String(queryOptions.dateFrom || "").trim();
+  const dateTo = String(queryOptions.dateTo || "").trim();
+  const page = Math.max(1, Number(queryOptions.page || 1));
+  const pageSize = Math.min(
+    5000,
+    Math.max(1, Number(queryOptions.pageSize || fallbackPageSize || 50)),
+  );
+
+  let query = supabase
+    .from("land_history")
+    .select(
+      "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
+      { count: "exact" },
+    );
+
+  if (barangay && barangay.toLowerCase() !== "all") {
+    query = query.ilike("farm_location_barangay", barangay);
+  }
+
+  if (farmerName && farmerName.toLowerCase() !== "all") {
+    query = query.ilike("farmer_name", farmerName);
+  }
+
+  if (relationship === "owner") {
+    query = query.eq("is_registered_owner", true);
+  } else if (relationship === "tenantLessee") {
+    query = query.or("is_tenant.eq.true,is_lessee.eq.true");
+  } else if (relationship === "tenant") {
+    query = query.eq("is_tenant", true);
+  } else if (relationship === "lessee") {
+    query = query.eq("is_lessee", true);
+  }
+
+  if (dateFrom) {
+    query = query.gte("period_start_date", dateFrom);
+  }
+  if (dateTo) {
+    query = query.lte("period_start_date", dateTo);
+  }
+
+  if (searchTerm.length > 0) {
+    const escaped = searchTerm.replace(/,/g, " ");
+    const likeTerm = `%${escaped}%`;
+    query = query.or(
+      [
+        `parcel_number.ilike.${likeTerm}`,
+        `land_owner_name.ilike.${likeTerm}`,
+        `farmer_name.ilike.${likeTerm}`,
+        `farm_location_barangay.ilike.${likeTerm}`,
+        `change_type.ilike.${likeTerm}`,
+        `change_reason.ilike.${likeTerm}`,
+      ].join(","),
+    );
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  query = query.order("created_at", { ascending: false }).range(from, to);
+
+  const { data, error, count } = await query;
+  if (error) return createResponse(null, error.message, 500);
+
+  return createResponse(
+    {
+      rows: data || [],
+      totalCount: Number(count || 0),
+      page,
+      pageSize,
+    },
+    null,
+    200,
+  );
+};
+
+export const getLandHistoryBarangays = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("land_history")
+    .select("farm_location_barangay")
+    .not("farm_location_barangay", "is", null)
+    .order("farm_location_barangay", { ascending: true })
+    .limit(5000);
+
+  if (error) return createResponse(null, error.message, 500);
+
+  const uniqueBarangays = Array.from(
+    new Set(
+      (data || [])
+        .map((row: any) => String(row?.farm_location_barangay || "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  return createResponse(uniqueBarangays, null, 200);
+};
+
+export const getLandHistoryFarmers = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("land_history")
+    .select("farmer_name")
+    .not("farmer_name", "is", null)
+    .order("farmer_name", { ascending: true })
+    .limit(5000);
+
+  if (error) return createResponse(null, error.message, 500);
+
+  const uniqueFarmers = Array.from(
+    new Set(
+      (data || [])
+        .map((row: any) => String(row?.farmer_name || "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  return createResponse(uniqueFarmers, null, 200);
+};
+
+interface LandHistoryAssociationQueryOptions {
+  farmerName: string;
+  barangay?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+}
+
+export const getLandHistoryAssociationRows = async (
+  options: LandHistoryAssociationQueryOptions,
+): Promise<ApiResponse> => {
+  const farmerName = String(options?.farmerName || "").trim();
+  if (!farmerName) {
+    return createResponse([], null, 200);
+  }
+
+  const barangay = String(options?.barangay || "all").trim();
+  const dateFrom = String(options?.dateFrom || "").trim();
+  const dateTo = String(options?.dateTo || "").trim();
+  const limit = Math.min(5000, Math.max(1, Number(options?.limit || 1000)));
+
+  let query = supabase
+    .from("land_history")
+    .select(
+      "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
+    );
+
+  if (barangay && barangay.toLowerCase() !== "all") {
+    query = query.ilike("farm_location_barangay", barangay);
+  }
+
+  if (dateFrom) {
+    query = query.gte("period_start_date", dateFrom);
+  }
+  if (dateTo) {
+    query = query.lte("period_start_date", dateTo);
+  }
+
+  const normalizedFarmerName = farmerName
+    .replace(/,/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  query = query.or(
+    [
+      `farmer_name.ilike.${normalizedFarmerName}`,
+      `land_owner_name.ilike.${normalizedFarmerName}`,
+    ].join(","),
+  );
+
+  query = query.order("created_at", { ascending: false }).limit(limit);
+
+  const { data, error } = await query;
+  if (error) return createResponse(null, error.message, 500);
+
+  return createResponse(data || [], null, 200);
 };
 
 // ==================== USERS ====================
 
 export const getUsers = async (): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('users')
-        .select('*');
+  const { data, error } = await supabase.from("users").select("*");
 
-    if (error) return createResponse(null, error.message, 500);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
 };
 
-export const getUserById = async (id: string | number): Promise<ApiResponse> => {
-    const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', id)
-        .single();
+export const getUserById = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-    if (error) return createResponse(null, error.message, 404);
-    return createResponse(data, null, 200);
+  if (error) return createResponse(null, error.message, 404);
+  return createResponse(data, null, 200);
 };
 
 // ==================== UNIVERSAL API FETCH ====================
@@ -1604,176 +3376,197 @@ export const getUserById = async (id: string | number): Promise<ApiResponse> => 
  * Universal fetch replacement - automatically routes to Supabase
  * Use this as a drop-in replacement for fetch('http://localhost:5000/api/...')
  */
-export const apiFetch = async (url: string, options?: RequestInit): Promise<any> => {
-    const method = options?.method || 'GET';
-    const body = options?.body ? JSON.parse(options.body as string) : null;
+export const apiFetch = async (
+  url: string,
+  options?: RequestInit,
+): Promise<any> => {
+  const method = options?.method || "GET";
+  const body = options?.body ? JSON.parse(options.body as string) : null;
 
-    // Parse the URL to extract endpoint and params
-    const urlPath = url.replace('http://localhost:5000', '').replace(/^\/api\//, '');
-    const parts = urlPath.split('/');
+  // Parse the URL to extract endpoint and params
+  const urlPath = url
+    .replace("http://localhost:5000", "")
+    .replace(/^\/api\//, "");
+  const parts = urlPath.split("/");
 
-    console.log('🔄 API Fetch intercepted:', { url, method, parts });
+  console.log("🔄 API Fetch intercepted:", { url, method, parts });
 
-    // Route to appropriate Supabase function
-    try {
-        // RSBSA Submission routes
-        if (parts[0] === 'rsbsa_submission') {
-            if (parts.length === 1) {
-                if (method === 'GET') return getRsbsaSubmissions();
-                if (method === 'POST') return createRsbsaSubmission(body);
-            }
-            if (parts.length === 2) {
-                const id = parts[1];
-                if (method === 'GET') return getRsbsaSubmissionById(id);
-                if (method === 'PUT') return updateRsbsaSubmission(id, body);
-                if (method === 'DELETE') return deleteRsbsaSubmission(id);
-            }
-            if (parts.length === 3 && parts[2] === 'parcels') {
-                return getFarmParcels(parts[1]);
-            }
-        }
-
-        // Land plots routes
-        if (parts[0] === 'land-plots') {
-            if (parts.length === 1) {
-                if (method === 'GET') return getLandPlots();
-                if (method === 'POST') return createLandPlot(body);
-            }
-            if (parts.length === 2) {
-                const id = parts[1];
-                if (method === 'GET') return getLandPlotById(id);
-                if (method === 'PUT') return updateLandPlot(id, body);
-                if (method === 'DELETE') return deleteLandPlot(id);
-            }
-        }
-
-        // Distribution routes
-        if (parts[0] === 'distribution') {
-            if (parts[1] === 'allocations') {
-                if (parts.length === 2) {
-                    if (method === 'GET') return getAllocations();
-                    if (method === 'POST') return createAllocation(body);
-                }
-                if (parts.length === 3) {
-                    const id = parts[2];
-                    if (method === 'GET') return getAllocationById(id);
-                    if (method === 'PUT') return updateAllocation(id, body);
-                }
-            }
-            if (parts[1] === 'requests') {
-                if (parts.length === 2) {
-                    if (method === 'GET') return getFarmerRequests();
-                    if (method === 'POST') return createFarmerRequest(body);
-                }
-                if (parts.length === 3) {
-                    const idOrSeason = parts[2];
-                    if (method === 'GET') {
-                        // Check if it's a season or ID
-                        if (isNaN(Number(idOrSeason))) {
-                            return getFarmerRequests(idOrSeason);
-                        }
-                        return getFarmerRequestById(idOrSeason);
-                    }
-                    if (method === 'PUT') return updateFarmerRequest(idOrSeason, body);
-                    if (method === 'DELETE') return deleteFarmerRequest(idOrSeason);
-                }
-            }
-            if (parts[1] === 'records') {
-                if (method === 'GET') return getDistributionRecords();
-                if (method === 'POST') return createDistributionRecord(body);
-            }
-        }
-
-        // Landowners route
-        if (parts[0] === 'landowners') {
-            return getLandOwners();
-        }
-
-        // Land history route
-        if (parts[0] === 'land-history') {
-            if (parts.length === 2) {
-                return getLandHistory(parts[1]);
-            }
-            return getLandHistory();
-        }
-
-        // Users route
-        if (parts[0] === 'users') {
-            if (parts.length === 1) return getUsers();
-            if (parts.length === 2) return getUserById(parts[1]);
-        }
-
-        console.warn('⚠️ Unhandled API route:', url);
-        return createResponse(null, `Unhandled route: ${url}`, 404);
-
-    } catch (error: any) {
-        console.error('❌ API Fetch error:', error);
-        return createResponse(null, error.message, 500);
+  // Route to appropriate Supabase function
+  try {
+    // RSBSA Submission routes
+    if (parts[0] === "rsbsa_submission") {
+      if (parts.length === 1) {
+        if (method === "GET") return getRsbsaSubmissions();
+        if (method === "POST") return createRsbsaSubmission(body);
+      }
+      if (parts.length === 2) {
+        const id = parts[1];
+        if (method === "GET") return getRsbsaSubmissionById(id);
+        if (method === "PUT") return updateRsbsaSubmission(id, body);
+        if (method === "DELETE") return deleteRsbsaSubmission(id);
+      }
+      if (parts.length === 3 && parts[2] === "parcels") {
+        return getFarmParcels(parts[1]);
+      }
     }
+
+    // Land plots routes
+    if (parts[0] === "land-plots") {
+      if (parts.length === 1) {
+        if (method === "GET") return getLandPlots();
+        if (method === "POST") return createLandPlot(body);
+      }
+      if (parts.length === 2) {
+        const id = parts[1];
+        if (method === "GET") return getLandPlotById(id);
+        if (method === "PUT") return updateLandPlot(id, body);
+        if (method === "DELETE") return deleteLandPlot(id);
+      }
+    }
+
+    // Distribution routes
+    if (parts[0] === "distribution") {
+      if (parts[1] === "allocations") {
+        if (parts.length === 2) {
+          if (method === "GET") return getAllocations();
+          if (method === "POST") return createAllocation(body);
+        }
+        if (parts.length === 3) {
+          const id = parts[2];
+          if (method === "GET") return getAllocationById(id);
+          if (method === "PUT") return updateAllocation(id, body);
+        }
+      }
+      if (parts[1] === "requests") {
+        if (parts.length === 2) {
+          if (method === "GET") return getFarmerRequests();
+          if (method === "POST") return createFarmerRequest(body);
+        }
+        if (parts.length === 3) {
+          const idOrSeason = parts[2];
+          if (method === "GET") {
+            // Check if it's a season or ID
+            if (isNaN(Number(idOrSeason))) {
+              return getFarmerRequests(idOrSeason);
+            }
+            return getFarmerRequestById(idOrSeason);
+          }
+          if (method === "PUT") return updateFarmerRequest(idOrSeason, body);
+          if (method === "DELETE") return deleteFarmerRequest(idOrSeason);
+        }
+      }
+      if (parts[1] === "records") {
+        if (method === "GET") return getDistributionRecords();
+        if (method === "POST") return createDistributionRecord(body);
+      }
+      if (parts[1] === "catalog") {
+        if (parts[2] === "fertilizers" && method === "GET") {
+          return getFertilizerCatalog();
+        }
+        if (parts[2] === "seeds" && method === "GET") {
+          return getSeedCatalog();
+        }
+      }
+    }
+
+    // Landowners route
+    if (parts[0] === "landowners") {
+      return getLandOwners();
+    }
+
+    // Land history route
+    if (parts[0] === "land-history") {
+      if (parts.length === 2) {
+        return getLandHistory(parts[1]);
+      }
+      return getLandHistory();
+    }
+
+    // Users route
+    if (parts[0] === "users") {
+      if (parts.length === 1) return getUsers();
+      if (parts.length === 2) return getUserById(parts[1]);
+    }
+
+    console.warn("⚠️ Unhandled API route:", url);
+    return createResponse(null, `Unhandled route: ${url}`, 404);
+  } catch (error: any) {
+    console.error("❌ API Fetch error:", error);
+    return createResponse(null, error.message, 500);
+  }
 };
 
 // Export default for easy importing
 export default {
-    // RSBSA
-    getRsbsaSubmissions,
-    getRsbsaSubmissionById,
-    createRsbsaSubmission,
-    updateRsbsaSubmission,
-    deleteRsbsaSubmission,
+  // RSBSA
+  getRsbsaSubmissions,
+  getRsbsaSubmissionById,
+  createRsbsaSubmission,
+  updateRsbsaSubmission,
+  deleteRsbsaSubmission,
 
-    // Farm Parcels
-    getFarmParcels,
-    createFarmParcel,
-    updateFarmParcel,
+  // Farm Parcels
+  getFarmParcels,
+  createFarmParcel,
+  updateFarmParcel,
 
-    // Land Plots
-    getLandPlots,
-    getLandPlotById,
-    createLandPlot,
-    updateLandPlot,
-    deleteLandPlot,
-    getCropPlantingInfo,
+  // Land Plots
+  getLandPlots,
+  getLandPlotById,
+  createLandPlot,
+  updateLandPlot,
+  deleteLandPlot,
+  getCropPlantingInfo,
 
-    // Allocations
-    getAllocations,
-    getAllocationById,
-    getAllocationBySeason,
-    createAllocation,
-    updateAllocation,
-    deleteAllocation,
+  // Allocations
+  getFertilizerCatalog,
+  getSeedCatalog,
+  getShortagesSeeds,
+  getShortagesFertilizers,
+  resolveFertilizerShortageSuggestion,
+  resolveSeedShortageSuggestion,
+  getAllocations,
+  getAllocationById,
+  getAllocationBySeason,
+  createAllocation,
+  updateAllocation,
+  deleteAllocation,
 
-    // Farmer Requests
-    getFarmerRequests,
-    getFarmerRequestsByAllocationId,
-    getFarmerRequestById,
-    createFarmerRequest,
-    updateFarmerRequest,
-    deleteFarmerRequest,
+  // Farmer Requests
+  getFarmerRequests,
+  getFarmerRequestsByAllocationId,
+  getFarmerRequestById,
+  createFarmerRequest,
+  updateFarmerRequest,
+  deleteFarmerRequest,
 
-    // Distribution Records
-    getDistributionRecords,
-    createDistributionRecord,
+  // Distribution Records
+  getDistributionRecords,
+  createDistributionRecord,
 
-    // Land Owners
-    getLandOwners,
+  // Land Owners
+  getLandOwners,
 
-    // Land History
-    getLandHistory,
+  // Land History
+  getLandHistory,
+  getLandHistoryReportRows,
+  getLandHistoryBarangays,
+  getLandHistoryFarmers,
+  getLandHistoryAssociationRows,
 
-    // Users
-    getUsers,
-    getUserById,
+  // Users
+  getUsers,
+  getUserById,
 
-    // Dashboard
-    getDashboardStats,
-    getMonthlyTrends,
-    getRecentActivity,
-    getAvailableSeasons,
+  // Dashboard
+  getDashboardStats,
+  getMonthlyTrends,
+  getRecentActivity,
+  getAvailableSeasons,
 
-    // Technician Dashboard
-    getTechDashboardData,
+  // Technician Dashboard
+  getTechDashboardData,
 
-    // Universal fetch
-    apiFetch
+  // Universal fetch
+  apiFetch,
 };
-

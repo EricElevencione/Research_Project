@@ -1,774 +1,540 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from "react";
 import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    Tooltip,
-    CartesianGrid,
-    ResponsiveContainer,
-} from 'recharts';
-import { getAllocations, getFarmerRequests, updateAllocation, createAllocation, deleteAllocation, getDistributionRecords } from '../../api';
+  getAllocations,
+  getFarmerRequests,
+  updateAllocation,
+  deleteAllocation,
+} from "../../api";
 import { useNavigate, useLocation } from "react-router-dom";
-import '../../assets/css/technician css/TechIncentStyle.css';
-import '../../components/layout/sidebarStyle.css';
-import LogoImage from '../../assets/images/Logo.png';
-import HomeIcon from '../../assets/images/home.png';
-import RSBSAIcon from '../../assets/images/rsbsa.png';
-import ApproveIcon from '../../assets/images/approve.png';
-import FarmerIcon from '../../assets/images/farmer (1).png';
-import LogoutIcon from '../../assets/images/logout.png';
-import IncentivesIcon from '../../assets/images/incentives.png';
-
-
-interface SparklinePoint {
-    date: string;
-    remaining: number;
-    distributed: number;
-}
+import "../../assets/css/jo css/JoIncentStyle.css";
+import "../../assets/css/technician css/TechIncentStyle.css";
+import "../../components/layout/sidebarStyle.css";
+import LogoImage from "../../assets/images/Logo.png";
+import HomeIcon from "../../assets/images/home.png";
+import RSBSAIcon from "../../assets/images/rsbsa.png";
+import ApproveIcon from "../../assets/images/approve.png";
+import LogoutIcon from "../../assets/images/logout.png";
+import IncentivesIcon from "../../assets/images/incentives.png";
 
 interface RegionalAllocation {
-    id: number;
-    season: string;
-    allocation_date: string;
-    urea_46_0_0_bags: number;
-    complete_14_14_14_bags: number;
-    ammonium_sulfate_21_0_0_bags: number;
-    muriate_potash_0_0_60_bags: number;
-    rice_seeds_nsic_rc160_kg: number;
-    rice_seeds_nsic_rc222_kg: number;
-    rice_seeds_nsic_rc440_kg: number;
-    corn_seeds_hybrid_kg: number;
-    corn_seeds_opm_kg: number;
-    vegetable_seeds_kg: number;
-    farmer_count?: number;
-    totalAllocated?: number;
-    totalDistributed?: number;
-    remainingStock?: number;
-    usageProgress?: number; // 0-1
-    sparklineData?: SparklinePoint[]; // small inline chart data
+  id: number;
+  season: string;
+  allocation_date: string;
+  urea_46_0_0_bags: number;
+  complete_14_14_14_bags: number;
+  ammonium_sulfate_21_0_0_bags: number;
+  muriate_potash_0_0_60_bags: number;
+  rice_seeds_nsic_rc160_kg: number;
+  rice_seeds_nsic_rc222_kg: number;
+  rice_seeds_nsic_rc440_kg: number;
+  corn_seeds_hybrid_kg: number;
+  corn_seeds_opm_kg: number;
+  vegetable_seeds_kg: number;
+  farmer_count?: number;
 }
 
 const TechIncentives: React.FC = () => {
-    const navigate = useNavigate();
-    const location = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    const isActive = (path: string) => location.pathname === path;
+  const [allocations, setAllocations] = useState<RegionalAllocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editAllocationModal, setEditAllocationModal] =
+    useState<RegionalAllocation | null>(null);
+  const [editFormData, setEditFormData] = useState<RegionalAllocation | null>(
+    null,
+  );
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [requestCount, setRequestCount] = useState<number>(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    const [allocations, setAllocations] = useState<RegionalAllocation[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [editAllocationModal, setEditAllocationModal] = useState<RegionalAllocation | null>(null);
-    const [editFormData, setEditFormData] = useState<RegionalAllocation | null>(null);
-    const [savingEdit, setSavingEdit] = useState(false);
-    const [requestCount, setRequestCount] = useState<number>(0);
-    const [selectedSeason, setSelectedSeason] = useState<string | null>(null);
-    const [seasonRequestsMap, setSeasonRequestsMap] = useState<Record<string, any[]>>({});
-    const [seasonDistributionsMap, setSeasonDistributionsMap] = useState<Record<string, any[]>>({});
-    const [burndownData, setBurndownData] = useState<{ date: string; remaining: number; distributed: number }[]>([]);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isActive = (path: string) => location.pathname === path;
 
-    useEffect(() => {
+  useEffect(() => {
+    fetchAllocations();
+  }, []);
+
+  const fetchAllocations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await getAllocations();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const data = response.data || [];
+      const allocationsWithCounts = await Promise.all(
+        data.map(async (allocation: RegionalAllocation) => {
+          try {
+            const requestsResponse = await getFarmerRequests(
+              allocation.id,
+              true,
+            );
+            if (!requestsResponse.error) {
+              const requests = requestsResponse.data || [];
+              return { ...allocation, farmer_count: requests.length };
+            }
+            return { ...allocation, farmer_count: 0 };
+          } catch {
+            return { ...allocation, farmer_count: 0 };
+          }
+        }),
+      );
+
+      setAllocations(allocationsWithCounts);
+    } catch (err: any) {
+      console.error("Error fetching allocations:", err);
+      setError(err.message || "Failed to connect to server");
+      setAllocations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number, season: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete ${season}? This will also delete all associated farmer requests.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await deleteAllocation(id);
+      if (!response.error) {
+        alert("Allocation deleted successfully");
         fetchAllocations();
-    }, []);
+      } else {
+        alert("Failed to delete allocation");
+      }
+    } catch (err) {
+      console.error("Error deleting allocation:", err);
+      alert("Error deleting allocation");
+    }
+  };
 
-    const fetchAllocations = async () => {
-        try {
-            setLoading(true);
-            setError(null);
+  const handleEditAllocation = async (allocation: RegionalAllocation) => {
+    try {
+      const response = await getFarmerRequests(allocation.id, true);
+      if (!response.error) {
+        const requests = response.data || [];
+        setRequestCount(requests.length);
+      } else {
+        setRequestCount(0);
+      }
+    } catch (err) {
+      console.error("Error fetching requests:", err);
+      setRequestCount(0);
+    }
 
-            const [allocationsResponse, requestsResponse, distributionsResponse] = await Promise.all([
-                getAllocations(),
-                getFarmerRequests(),
-                getDistributionRecords()
-            ]);
+    setEditAllocationModal(allocation);
+    setEditFormData(allocation);
+  };
 
-            if (allocationsResponse.error) {
-                throw new Error(allocationsResponse.error);
-            }
+  const handleEditInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = e.target;
+    if (!editFormData) return;
 
-            const allocationData: RegionalAllocation[] = allocationsResponse.data || [];
-            const allRequests: any[] = requestsResponse.error ? [] : (requestsResponse.data || []);
-            const allDistributions: any[] = distributionsResponse.error ? [] : (distributionsResponse.data || []);
+    let parsedValue: string | number = value;
+    if (name.includes("bags")) {
+      parsedValue = parseInt(value, 10) || 0;
+    } else if (name.includes("kg")) {
+      parsedValue = parseFloat(value) || 0;
+    }
 
-            // Fetch farmer count for each allocation
-            const allocationsWithCounts = await Promise.all(
-                allocationData.map(async (allocation: RegionalAllocation) => {
-                    try {
-                        const requestsResponse = await getFarmerRequests(allocation.id, true);
-                        if (!requestsResponse.error) {
-                            const requests = requestsResponse.data || [];
-                            return { ...allocation, farmer_count: requests.length };
-                        }
-                        return { ...allocation, farmer_count: 0 };
-                    } catch {
-                        return { ...allocation, farmer_count: 0 };
-                    }
-                })
-            );
+    setEditFormData({
+      ...editFormData,
+      [name]: parsedValue,
+    });
+  };
 
-            setAllocations(allocationsWithCounts);
+  const handleSaveEdit = async () => {
+    if (!editFormData) return;
 
-            if (!selectedSeason && allocationsWithCounts.length > 0) {
-                setSelectedSeason(allocationsWithCounts[0].season);
-            }
-        } catch (error: any) {
-            console.error('Error fetching allocations:', error);
-            setError(error.message || 'Failed to connect to server');
-            setAllocations([]);
-            setSeasonRequestsMap({});
-            setSeasonDistributionsMap({});
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (requestCount > 0) {
+      const confirmed = window.confirm(
+        `Warning: This allocation has ${requestCount} existing farmer request(s).\n\nEditing this allocation may affect these requests.\n\nDo you want to proceed?`,
+      );
+      if (!confirmed) return;
+    }
 
-    const handleDelete = async (id: number, season: string) => {
-        if (!confirm(`Are you sure you want to delete ${season}? This will also delete all associated farmer requests.`)) {
-            return;
-        }
+    setSavingEdit(true);
+    try {
+      const { id, ...updateData } = editFormData;
+      const response = await updateAllocation(id, updateData);
 
-        try {
-            const response = await deleteAllocation(id);
+      if (!response.error) {
+        alert("Allocation updated successfully");
+        setEditAllocationModal(null);
+        setEditFormData(null);
+        fetchAllocations();
+      } else {
+        alert("Failed to update allocation");
+      }
+    } catch (err) {
+      console.error("Error updating allocation:", err);
+      alert("Error updating allocation");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
-            if (!response.error) {
-                alert('✅ Allocation deleted successfully');
-                fetchAllocations();
-            } else {
-                alert('❌ Failed to delete allocation');
-            }
-        } catch (error) {
-            console.error('Error deleting allocation:', error);
-            alert('❌ Error deleting allocation');
-        }
-    };
+  const formatSeasonName = (season: string) => {
+    const [type, year] = season.split("_");
+    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+  };
 
-    const formatSeasonName = (season: string) => {
-        const [type, year] = season.split('_');
-        return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
-    };
+  const getTotalFertilizer = (allocation: RegionalAllocation) => {
+    const total =
+      (Number(allocation.urea_46_0_0_bags) || 0) +
+      (Number(allocation.complete_14_14_14_bags) || 0) +
+      (Number(allocation.ammonium_sulfate_21_0_0_bags) || 0) +
+      (Number(allocation.muriate_potash_0_0_60_bags) || 0);
+    return isNaN(total) ? 0 : total;
+  };
 
-    const getTotalFertilizer = (allocation: RegionalAllocation) => {
-        const total = (Number(allocation.urea_46_0_0_bags) || 0) +
-            (Number(allocation.complete_14_14_14_bags) || 0) +
-            (Number(allocation.ammonium_sulfate_21_0_0_bags) || 0) +
-            (Number(allocation.muriate_potash_0_0_60_bags) || 0);
-        return isNaN(total) ? 0 : total;
-    };
+  const getTotalSeeds = (allocation: RegionalAllocation) => {
+    const a = allocation as RegionalAllocation & Record<string, unknown>;
+    const jackpot = a.jackpot_kg;
+    const us88 = a.us88_kg;
+    const th82 = a.th82_kg;
+    const rh9000 = a.rh9000_kg;
+    const lumping143 = a.lumping143_kg;
+    const lp296 = a.lp296_kg;
 
-    const getTotalSeeds = (allocation: RegionalAllocation) => {
-        // Prefer detailed allocation fields (jackpot_kg, us88_kg, etc.) if present
-        const jackpot = (allocation as any).jackpot_kg;
-        const us88 = (allocation as any).us88_kg;
-        const th82 = (allocation as any).th82_kg;
-        const rh9000 = (allocation as any).rh9000_kg;
-        const lumping143 = (allocation as any).lumping143_kg;
-        const lp296 = (allocation as any).lp296_kg;
+    if (
+      jackpot !== undefined ||
+      us88 !== undefined ||
+      th82 !== undefined ||
+      rh9000 !== undefined ||
+      lumping143 !== undefined ||
+      lp296 !== undefined
+    ) {
+      const total =
+        (Number(jackpot) || 0) +
+        (Number(us88) || 0) +
+        (Number(th82) || 0) +
+        (Number(rh9000) || 0) +
+        (Number(lumping143) || 0) +
+        (Number(lp296) || 0);
+      return isNaN(total) ? 0 : total;
+    }
 
-        if (jackpot !== undefined || us88 !== undefined || th82 !== undefined || rh9000 !== undefined || lumping143 !== undefined || lp296 !== undefined) {
-            const total = (Number(jackpot) || 0) +
-                (Number(us88) || 0) +
-                (Number(th82) || 0) +
-                (Number(rh9000) || 0) +
-                (Number(lumping143) || 0) +
-                (Number(lp296) || 0);
-            return isNaN(total) ? 0 : total;
-        }
+    const total =
+      (Number(allocation.rice_seeds_nsic_rc160_kg) || 0) +
+      (Number(allocation.rice_seeds_nsic_rc222_kg) || 0) +
+      (Number(allocation.rice_seeds_nsic_rc440_kg) || 0) +
+      (Number(allocation.corn_seeds_hybrid_kg) || 0) +
+      (Number(allocation.corn_seeds_opm_kg) || 0) +
+      (Number(allocation.vegetable_seeds_kg) || 0);
+    return isNaN(total) ? 0 : total;
+  };
 
-        // Fallback to legacy rice/corn/vegetable seed fields
-        const total = (Number(allocation.rice_seeds_nsic_rc160_kg) || 0) +
-            (Number(allocation.rice_seeds_nsic_rc222_kg) || 0) +
-            (Number(allocation.rice_seeds_nsic_rc440_kg) || 0) +
-            (Number(allocation.corn_seeds_hybrid_kg) || 0) +
-            (Number(allocation.corn_seeds_opm_kg) || 0) +
-            (Number(allocation.vegetable_seeds_kg) || 0);
-        return isNaN(total) ? 0 : total;
-    };
-
-    const getUsagePercent = (allocation: RegionalAllocation) => {
-        const progress = allocation.usageProgress ?? 0;
-        if (!isFinite(progress) || progress <= 0) return 0;
-        return Math.min(100, Math.round(progress * 100));
-    };
-
-    useEffect(() => {
-        // pull precomputed sparkline/burndown from allocation object
-        if (!selectedSeason) {
-            setBurndownData([]);
-            return;
-        }
-        const allocation = allocations.find(a => a.season === selectedSeason);
-        if (!allocation || !allocation.sparklineData) {
-            setBurndownData([]);
-            return;
-        }
-        setBurndownData(allocation.sparklineData);
-    }, [selectedSeason, allocations]);
-
-    const handleEditAllocation = async (allocation: RegionalAllocation) => {
-        try {
-            // Fetch request count for this allocation
-            const response = await getFarmerRequests(allocation.id, true);
-            if (!response.error) {
-                const requests = response.data || [];
-                setRequestCount(requests.length);
-            } else {
-                setRequestCount(0);
-            }
-        } catch (error) {
-            console.error('Error fetching requests:', error);
-            setRequestCount(0);
-        }
-
-        setEditAllocationModal(allocation);
-        setEditFormData(allocation);
-    };
-
-    const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        if (!editFormData) return;
-
-        let parsedValue: any = value;
-        if (name.includes('bags')) {
-            // Bags should be integers
-            parsedValue = parseInt(value) || 0;
-        } else if (name.includes('kg')) {
-            // Seeds can have decimals
-            parsedValue = parseFloat(value) || 0;
-        }
-
-        setEditFormData({
-            ...editFormData,
-            [name]: parsedValue
-        });
-    };
-
-    const handleSaveEdit = async () => {
-        if (!editFormData) return;
-
-        // Confirm if there are existing requests
-        if (requestCount > 0) {
-            const confirmed = window.confirm(
-                `⚠️ Warning: This allocation has ${requestCount} existing farmer request(s).\n\n` +
-                `Editing this allocation may affect these requests.\n\n` +
-                `Do you want to proceed?`
-            );
-            if (!confirmed) return;
-        }
-
-        setSavingEdit(true);
-        try {
-            const response = await createAllocation(editFormData);
-
-            if (!response.error) {
-                alert('✅ Allocation updated successfully');
-                setEditAllocationModal(null);
-                setEditFormData(null);
-                fetchAllocations();
-            } else {
-                alert('❌ Failed to update allocation');
-            }
-        } catch (error) {
-            console.error('Error updating allocation:', error);
-            alert('❌ Error updating allocation');
-        } finally {
-            setSavingEdit(false);
-        }
-    };
-
-    const selectedAllocation = selectedSeason ? allocations.find(a => a.season === selectedSeason) || null : null;
-
-    return (
-        <div className="tech-incent-page-container">
-
-            <div className="tech-incent-page">
-
-                {/* Sidebar starts here */}
-                <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-                    <nav className="sidebar-nav">
-                        <div className='sidebar-logo'>
-                            <img src={LogoImage} alt="Logo" />
-                        </div>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-dashboard')}
-                        >
-                            <span className="nav-icon">
-                                <img src={HomeIcon} alt="Home" />
-                            </span>
-                            <span className="nav-text">Home</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-rsbsapage') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-rsbsa')}
-                        >
-                            <span className="nav-icon">
-                                <img src={RSBSAIcon} alt="RSBSA" />
-                            </span>
-                            <span className="nav-text">RSBSA</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-incentives')}
-                        >
-                            <span className="nav-icon">
-                                <img src={IncentivesIcon} alt="Incentives" />
-                            </span>
-                            <span className="nav-text">Incentives</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
-                            onClick={() => navigate('/technician-masterlist')}
-                        >
-                            <span className="nav-icon">
-                                <img src={ApproveIcon} alt="Masterlist" />
-                            </span>
-                            <span className="nav-text">Masterlist</span>
-                        </button>
-
-                        <button
-                            className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
-                            onClick={() => navigate('/')}
-                        >
-                            <span className="nav-icon">
-                                <img src={LogoutIcon} alt="Logout" />
-                            </span>
-                            <span className="nav-text">Logout</span>
-                        </button>
-                    </nav>
-                </div>
-                {/* Sidebar ends here */}
-
-                <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
-
-                {/* Main content starts here */}
-                <div className="tech-incent-main-content">
-                    <div className="tech-incent-mobile-header">
-                        <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>
-                            ☰
-                        </button>
-                        <div className="tech-incent-mobile-title">Technician Incentives</div>
-                    </div>
-
-                    <div className="tech-incent-dashboard-header">
-                        <div>
-                            <h2 className="tech-incent-page-header">Farmer Incentive Requests</h2>
-                            <p className="tech-incent-page-subtitle">Add farmer requests to available regional allocations</p>
-                        </div>
-                    </div>
-                    <button
-                        className="tech-incent-btn-create"
-                        onClick={() => navigate('/technician-create-allocation')}
-                    >
-                        ➕ Create New Allocation
-                    </button>
-
-                    <div className="tech-incent-content-card">
-                        {allocations.length > 0 && selectedAllocation && (
-                            <div className="tech-incent-progress-section">
-                                <div className="tech-incent-progress-header">
-                                    <div>
-                                        <h3 className="tech-incent-progress-title">Operational Progress</h3>
-                                        <p className="tech-incent-progress-subtitle">
-                                            Burn-down of remaining stock as incentives are distributed
-                                        </p>
-                                    </div>
-                                    <div className="tech-incent-progress-season-select">
-                                        <label htmlFor="tech-incent-season-select">Season</label>
-                                        <select
-                                            id="tech-incent-season-select"
-                                            value={selectedSeason || ''}
-                                            onChange={(e) => setSelectedSeason(e.target.value)}
-                                        >
-                                            {allocations.map((allocation) => (
-                                                <option key={allocation.id} value={allocation.season}>
-                                                    {formatSeasonName(allocation.season)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div className="tech-incent-progress-summary">
-                                    <div className="tech-incent-progress-stat">
-                                        <span className="tech-incent-progress-stat-label">Allocated (bags + kg)</span>
-                                        <span className="tech-incent-progress-stat-value">
-                                            {(
-                                                selectedAllocation.totalAllocated ??
-                                                (getTotalFertilizer(selectedAllocation) + getTotalSeeds(selectedAllocation))
-                                            ).toLocaleString()}
-                                        </span>
-                                    </div>
-                                    <div className="tech-incent-progress-stat">
-                                        <span className="tech-incent-progress-stat-label">Distributed</span>
-                                        <span className="tech-incent-progress-stat-value">
-                                            {(selectedAllocation.totalDistributed ?? 0).toLocaleString()}
-                                        </span>
-                                    </div>
-                                    <div className="tech-incent-progress-stat">
-                                        <span className="tech-incent-progress-stat-label">Remaining</span>
-                                        <span className="tech-incent-progress-stat-value">
-                                            {(
-                                                selectedAllocation.remainingStock ??
-                                                Math.max(
-                                                    0,
-                                                    (selectedAllocation.totalAllocated ??
-                                                        (getTotalFertilizer(selectedAllocation) + getTotalSeeds(selectedAllocation))) -
-                                                    (selectedAllocation.totalDistributed ?? 0)
-                                                )
-                                            ).toLocaleString()}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="tech-incent-burndown-wrapper">
-                                    {burndownData.length === 0 ? (
-                                        <div className="tech-incent-burndown-empty">
-                                            No distribution/approval records yet for this season.
-                                        </div>
-                                    ) : (
-                                        <ResponsiveContainer width="100%" height={180}>
-                                            <LineChart data={burndownData}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis dataKey="date" />
-                                                <YAxis />
-                                                <Tooltip />
-                                                <Line
-                                                    type="monotone"
-                                                    dataKey="remaining"
-                                                    name="Remaining"
-                                                    stroke="#10b981"
-                                                    strokeWidth={2}
-                                                    dot={{ r: 3 }}
-                                                />
-                                                <Line
-                                                    type="monotone"
-                                                    dataKey="distributed"
-                                                    name="Distributed"
-                                                    stroke="#3b82f6"
-                                                    strokeWidth={2}
-                                                    dot={{ r: 3 }}
-                                                />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                        {loading ? (
-                            <div className="tech-incent-loading">Loading allocations...</div>
-                        ) : error ? (
-                            <div className="tech-incent-error-state">
-                                <div className="tech-incent-error-icon">⚠️</div>
-                                <h3>Unable to Connect to Server</h3>
-                                <p>{error}</p>
-                                <div className="tech-incent-error-help">
-                                    <p><strong>Please ensure:</strong></p>
-                                    <ul>
-                                        <li>Backend server is running on port 5000</li>
-                                        <li>Database table 'regional_allocations' exists</li>
-                                        <li>Run: <code>cd backend && node server.cjs</code></li>
-                                    </ul>
-                                </div>
-                                <button className="tech-incent-btn-retry" onClick={fetchAllocations}>
-                                    🔄 Retry Connection
-                                </button>
-                            </div>
-                        ) : allocations.length === 0 ? (
-                            <div className="tech-incent-empty-state">
-                                <div className="tech-incent-empty-icon">📦</div>
-                                <h3>No Allocations Available</h3>
-                                <p>Contact the JO officer to create regional allocations</p>
-                            </div>
-                                ) : (
-                            <div className="tech-incent-grid">
-                                {allocations.map((allocation) => (
-                                    <div key={allocation.id} className="tech-incent-card">
-                                        <div className="tech-incent-card-header">
-                                            <div className="tech-incent-season-info">
-                                                <h3>{formatSeasonName(allocation.season)}</h3>
-                                                <span className="tech-incent-date">
-                                                    {new Date(allocation.allocation_date).toLocaleDateString('en-US', {
-                                                        year: 'numeric',
-                                                        month: 'long',
-                                                        day: 'numeric'
-                                                    })}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="tech-incent-card-body">
-                                            {/* sparkline chart inline */}
-                                            {allocation.sparklineData && (
-                                                <div className="tech-incent-card-sparkline">
-                                                    <ResponsiveContainer width="100%" height={40}>
-                                                        <LineChart data={allocation.sparklineData}>
-                                                            <Line
-                                                                type="monotone"
-                                                                dataKey="remaining"
-                                                                stroke="#10b981"
-                                                                strokeWidth={1}
-                                                                dot={false}
-                                                            />
-                                                        </LineChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            )}
-                                            <div className="tech-incent-stat-row">
-                                                <div className="tech-incent-stat-item">
-                                                    <span className="tech-incent-stat-label">Total Fertilizer</span>
-                                                    <span className="tech-incent-stat-value">{getTotalFertilizer(allocation).toLocaleString()}&nbsp;bags</span>
-                                                </div>
-                                                <div className="tech-incent-stat-item">
-                                                    <span className="tech-incent-stat-label">Total Seeds</span>
-                                                    <span className="tech-incent-stat-value">{getTotalSeeds(allocation).toFixed(2)}&nbsp;kg</span>
-                                                </div>
-                                            </div>
-                                            <div className="tech-incent-stat-row">
-                                                <div className="tech-incent-stat-item">
-                                                    <span className="tech-incent-stat-label">Farmer Requests</span>
-                                                    <span className="tech-incent-stat-value">{allocation.farmer_count || 0} farmers</span>
-                                                </div>
-                                            </div>
-                                            <div className="tech-incent-usage-row">
-                                                <span className="tech-incent-usage-label">Usage progress</span>
-                                                <div className="tech-incent-usage-bar-container">
-                                                    <div className="tech-incent-usage-bar-track">
-                                                        <div
-                                                            className="tech-incent-usage-bar-fill"
-                                                            style={{ width: `${getUsagePercent(allocation)}%` }}
-                                                        />
-                                                    </div>
-                                                    <span className="tech-incent-usage-percentage">
-                                                        {getUsagePercent(allocation)}%
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="tech-incent-card-actions">
-                                            <button
-                                                className="tech-incent-btn-action tech-incent-btn-view"
-                                                onClick={() => navigate(`/technician-view-allocation/${allocation.id}`)}
-                                                title="View Details"
-                                            >
-                                                👁️ View
-                                            </button>
-                                            <button
-                                                className="tech-incent-btn-action tech-incent-btn-edit"
-                                                onClick={() => handleEditAllocation(allocation)}
-                                                title="Edit Allocation"
-                                            >
-                                                ✏️ Edit
-                                            </button>
-                                            <button
-                                                className="tech-incent-btn-action tech-incent-btn-add"
-                                                onClick={() => navigate(`/technician-add-farmer-request/${allocation.id}`)}
-                                                title="Add Farmer Request"
-                                            >
-                                                ➕ Add Farmer
-
-                                            </button>
-                                            <button
-                                                className="tech-incent-btn-action tech-incent-btn-manage"
-                                                onClick={() => navigate(`/technician-manage-requests/${allocation.id}`)}
-                                                title="Manage Request"
-                                            >
-                                                📋 Manage
-                                            </button>
-                                            <button
-                                                className="tech-incent-btn-action tech-incent-btn-delete"
-                                                onClick={() => handleDelete(allocation.id, allocation.season)}
-                                                title="Delete"
-                                            >
-                                                🗑️
-                                            </button>
-
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Edit Allocation Modal */}
-                    {editAllocationModal && editFormData && (
-                        <div className="tech-incent-modal-overlay" onClick={() => setEditAllocationModal(null)}>
-                            <div className="tech-incent-modal-content" onClick={(e) => e.stopPropagation()}>
-                                <div className="tech-incent-modal-header">
-                                    <h2>✏️ Edit Regional Allocation</h2>
-                                    <button className="tech-incent-modal-close" onClick={() => setEditAllocationModal(null)}>
-                                        ×
-                                    </button>
-                                </div>
-                                <div className="tech-incent-modal-body">
-                                    {requestCount > 0 && (
-                                        <div className="tech-incent-modal-warning">
-                                            <span>⚠️</span>
-                                            <span>
-                                                This allocation has <strong>{requestCount} existing farmer request(s)</strong>. Editing may affect these requests.
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    <div className="tech-incent-modal-form-grid">
-                                        <div className="tech-incent-modal-form-group full-width">
-                                            <label>Season</label>
-                                            <input
-                                                type="text"
-                                                value={formatSeasonName(editFormData.season)}
-                                                disabled
-                                            />
-                                        </div>
-
-                                        <h3 className="tech-incent-modal-section-title" style={{ gridColumn: '1 / -1' }}>Fertilizers (Bags)</h3>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Urea (46-0-0)</label>
-                                            <input
-                                                type="number"
-                                                name="urea_46_0_0_bags"
-                                                value={editFormData.urea_46_0_0_bags}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                            />
-                                        </div>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Complete (14-14-14)</label>
-                                            <input
-                                                type="number"
-                                                name="complete_14_14_14_bags"
-                                                value={editFormData.complete_14_14_14_bags}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                            />
-                                        </div>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Ammonium Sulfate (21-0-0)</label>
-                                            <input
-                                                type="number"
-                                                name="ammonium_sulfate_21_0_0_bags"
-                                                value={editFormData.ammonium_sulfate_21_0_0_bags}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                            />
-                                        </div>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Muriate of Potash (0-0-60)</label>
-                                            <input
-                                                type="number"
-                                                name="muriate_potash_0_0_60_bags"
-                                                value={editFormData.muriate_potash_0_0_60_bags}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                            />
-                                        </div>
-
-                                        <h3 className="tech-incent-modal-section-title" style={{ gridColumn: '1 / -1' }}>Seeds (kg)</h3>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Rice Seeds NSIC RC160</label>
-                                            <input
-                                                type="number"
-                                                name="rice_seeds_nsic_rc160_kg"
-                                                value={editFormData.rice_seeds_nsic_rc160_kg}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                                step="0.01"
-                                            />
-                                        </div>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Rice Seeds NSIC RC222</label>
-                                            <input
-                                                type="number"
-                                                name="rice_seeds_nsic_rc222_kg"
-                                                value={editFormData.rice_seeds_nsic_rc222_kg}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                                step="0.01"
-                                            />
-                                        </div>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Rice Seeds NSIC RC440</label>
-                                            <input
-                                                type="number"
-                                                name="rice_seeds_nsic_rc440_kg"
-                                                value={editFormData.rice_seeds_nsic_rc440_kg}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                                step="0.01"
-                                            />
-                                        </div>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Corn Seeds (Hybrid)</label>
-                                            <input
-                                                type="number"
-                                                name="corn_seeds_hybrid_kg"
-                                                value={editFormData.corn_seeds_hybrid_kg}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                                step="0.01"
-                                            />
-                                        </div>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Corn Seeds (OPM)</label>
-                                            <input
-                                                type="number"
-                                                name="corn_seeds_opm_kg"
-                                                value={editFormData.corn_seeds_opm_kg}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                                step="0.01"
-                                            />
-                                        </div>
-
-                                        <div className="tech-incent-modal-form-group">
-                                            <label>Vegetable Seeds</label>
-                                            <input
-                                                type="number"
-                                                name="vegetable_seeds_kg"
-                                                value={editFormData.vegetable_seeds_kg}
-                                                onChange={handleEditInputChange}
-                                                min="0"
-                                                step="0.01"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="tech-incent-modal-actions">
-                                        <button
-                                            className="tech-incent-modal-btn-cancel"
-                                            onClick={() => setEditAllocationModal(null)}
-                                            disabled={savingEdit}
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            className="tech-incent-modal-btn-save"
-                                            onClick={handleSaveEdit}
-                                            disabled={savingEdit}
-                                        >
-                                            {savingEdit ? 'Saving...' : 'Save Changes'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+  return (
+    <div className="jo-incent-page-container">
+      <div className="jo-incent-page">
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+          <nav className="sidebar-nav">
+            <div className="sidebar-logo">
+              <img src={LogoImage} alt="Logo" />
             </div>
+
+            <button
+              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
+              onClick={() => navigate("/technician-dashboard")}
+            >
+              <span className="nav-icon">
+                <img src={HomeIcon} alt="Home" />
+              </span>
+              <span className="nav-text">Home</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive("/technician-rsbsapage") ? "active" : ""}`}
+              onClick={() => navigate("/technician-rsbsa")}
+            >
+              <span className="nav-icon">
+                <img src={RSBSAIcon} alt="RSBSA" />
+              </span>
+              <span className="nav-text">RSBSA</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
+              onClick={() => navigate("/technician-incentives")}
+            >
+              <span className="nav-icon">
+                <img src={IncentivesIcon} alt="Incentives" />
+              </span>
+              <span className="nav-text">Subsidy</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
+              onClick={() => navigate("/technician-masterlist")}
+            >
+              <span className="nav-icon">
+                <img src={ApproveIcon} alt="Masterlist" />
+              </span>
+              <span className="nav-text">Masterlist</span>
+            </button>
+
+            <button
+              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
+              onClick={() => navigate("/")}
+            >
+              <span className="nav-icon">
+                <img src={LogoutIcon} alt="Logout" />
+              </span>
+              <span className="nav-text">Logout</span>
+            </button>
+          </nav>
         </div>
 
-    );
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+
+        <div className="jo-incent-main-content">
+          <div className="tech-incent-mobile-header">
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
+            <div className="tech-incent-mobile-title">
+              Technician Incentives
+            </div>
+          </div>
+
+          <div className="jo-incent-dashboard-header">
+            <div>
+              <h2 className="jo-incent-page-header">
+                Farmer Incentive Requests
+              </h2>
+              <p className="jo-incent-page-subtitle">
+                Add farmer requests to available regional allocations
+              </p>
+            </div>
+          </div>
+
+          <div className="jo-incent-content-card">
+            {loading ? (
+              <div className="jo-incent-loading">Loading allocations...</div>
+            ) : error ? (
+              <div className="jo-incent-error-state">
+                <div className="jo-incent-error-icon">⚠️</div>
+                <h3>Unable to Connect to Server</h3>
+                <p>{error}</p>
+                <button
+                  className="jo-incent-btn-retry"
+                  onClick={fetchAllocations}
+                >
+                  Retry Connection
+                </button>
+              </div>
+            ) : allocations.length === 0 ? (
+              <div className="jo-incent-empty-state">
+                <div className="jo-incent-empty-icon">📦</div>
+                <h3>No Allocations Available</h3>
+                <p>Contact the JO officer to create regional allocations</p>
+              </div>
+            ) : (
+              <div className="jo-incent-grid">
+                {allocations.map((allocation) => (
+                  <div key={allocation.id} className="jo-incent-card">
+                    <div className="jo-incent-card-header">
+                      <div className="jo-incent-season-info">
+                        <h3>{formatSeasonName(allocation.season)}</h3>
+                        <span className="jo-incent-date">
+                          {new Date(
+                            allocation.allocation_date,
+                          ).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="jo-incent-card-body">
+                      <div className="jo-incent-stat-row">
+                        <div className="jo-incent-stat-item">
+                          <span className="jo-incent-stat-label">
+                            Total Fertilizer
+                          </span>
+                          <span className="jo-incent-stat-value">
+                            {getTotalFertilizer(allocation).toLocaleString()}{" "}
+                            bags
+                          </span>
+                        </div>
+                        <div className="jo-incent-stat-item">
+                          <span className="jo-incent-stat-label">
+                            Total Seeds
+                          </span>
+                          <span className="jo-incent-stat-value">
+                            {getTotalSeeds(allocation).toFixed(2)} kg
+                          </span>
+                        </div>
+                      </div>
+                      <div className="jo-incent-stat-row">
+                        <div className="jo-incent-stat-item">
+                          <span className="jo-incent-stat-label">
+                            Farmer Requests
+                          </span>
+                          <span className="jo-incent-stat-value">
+                            {allocation.farmer_count || 0} farmers
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="jo-incent-card-actions">
+                      <button
+                        className="jo-incent-btn-action jo-incent-btn-view"
+                        onClick={() =>
+                          navigate(
+                            `/technician-view-allocation/${allocation.id}`,
+                          )
+                        }
+                        title="View Details"
+                      >
+                        View
+                      </button>
+                      <button
+                        className="jo-incent-btn-action jo-incent-btn-manage"
+                        onClick={() =>
+                          navigate(
+                            `/technician-manage-requests/${allocation.id}`,
+                          )
+                        }
+                        title="Manage Request"
+                      >
+                        Manage
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {editAllocationModal && editFormData && (
+            <div
+              className="jo-incent-modal-overlay"
+              onClick={() => setEditAllocationModal(null)}
+            >
+              <div
+                className="jo-incent-modal-content"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="jo-incent-modal-header">
+                  <h2>Edit Regional Allocation</h2>
+                  <button
+                    className="jo-incent-modal-close"
+                    onClick={() => setEditAllocationModal(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="jo-incent-modal-body">
+                  {requestCount > 0 && (
+                    <div className="jo-incent-modal-warning">
+                      This allocation has {requestCount} existing farmer
+                      request(s).
+                    </div>
+                  )}
+
+                  <div className="tech-incent-modal-form-grid">
+                    <div className="tech-incent-modal-form-group full-width">
+                      <label>Season</label>
+                      <input
+                        type="text"
+                        value={formatSeasonName(editFormData.season)}
+                        disabled
+                      />
+                    </div>
+
+                    <div className="tech-incent-modal-form-group">
+                      <label>Urea (46-0-0)</label>
+                      <input
+                        type="number"
+                        name="urea_46_0_0_bags"
+                        value={editFormData.urea_46_0_0_bags}
+                        onChange={handleEditInputChange}
+                        min="0"
+                      />
+                    </div>
+
+                    <div className="tech-incent-modal-form-group">
+                      <label>Complete (14-14-14)</label>
+                      <input
+                        type="number"
+                        name="complete_14_14_14_bags"
+                        value={editFormData.complete_14_14_14_bags}
+                        onChange={handleEditInputChange}
+                        min="0"
+                      />
+                    </div>
+
+                    <div className="tech-incent-modal-form-group">
+                      <label>Ammonium Sulfate (21-0-0)</label>
+                      <input
+                        type="number"
+                        name="ammonium_sulfate_21_0_0_bags"
+                        value={editFormData.ammonium_sulfate_21_0_0_bags}
+                        onChange={handleEditInputChange}
+                        min="0"
+                      />
+                    </div>
+
+                    <div className="tech-incent-modal-form-group">
+                      <label>Muriate of Potash (0-0-60)</label>
+                      <input
+                        type="number"
+                        name="muriate_potash_0_0_60_bags"
+                        value={editFormData.muriate_potash_0_0_60_bags}
+                        onChange={handleEditInputChange}
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="jo-incent-modal-actions">
+                    <button
+                      className="jo-incent-modal-btn-cancel"
+                      onClick={() => setEditAllocationModal(null)}
+                      disabled={savingEdit}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="jo-incent-modal-btn-save"
+                      onClick={handleSaveEdit}
+                      disabled={savingEdit}
+                    >
+                      {savingEdit ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default TechIncentives;

@@ -1,0 +1,17 @@
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Description & Key Effect
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Granular,"Primary nitrogen source; promotes tillering, leaf area, and grain protein content"
+2,Complete (14-14-14),Solid,NPK,Basal,Granular,Balanced complete fertilizer for early establishment and uniform tillering
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen+Sulfur,Top-dress,Granular,N + S source; effective in alkaline soils; boosts grain protein and enzyme activity
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Granular,"Strengthens stalks, improves disease resistance, milling quality and grain filling"
+5,16-20-0,Solid,NP,Basal,Granular,Phosphorus-rich basal fertilizer for root development and early establishment
+6,Zinc Sulfate,Solid,Micronutrient,Seedbed/Basal,Granular,Corrects zinc deficiency; applied in seedbed or as basal; improves plant metabolism
+7,Vermicompost,Solid,Organic NPK,Basal,Solid/Bulk,"Organic soil amendment; improves soil structure, microbial activity and water retention"
+8,Chicken Manure,Solid,Organic NPK,Basal,Solid/Bulk,"Organic N-P-K source; improves soil fertility, biology and water retention"
+9,Rice Straw (incorporated),Solid,Organic-K,Basal (post-harvest),Bulk,Potassium source; incorporated after harvest for slow decomposition and K recycling
+10,Carbonized Rice Hull (CRH),Solid,Organic/Biochar,Basal,Granular,"PhilRice CtRH Carbonizer biochar; improves drainage, soil pH buffer and water retention"
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Description & Key Effect
+1,Biofertilizer (Liquid Conc.),Liquid,Biostimulant,Foliar / Soil drench,Liquid,"Brassinosteroid, triacontanol, Fe, K₂O, Cu, Zn, Vitamins B1/B2/B6; promotes root growth, stress tolerance and grain set"
+2,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,"N, phosphate, soluble K, algae, bacteria, fungi, sea kelp, humic & fulvic acids; nano-scale delivery for enhanced uptake"
+3,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic materials + root fluids; activates beneficial soil microbes and improves rhizosphere nutrient availability
+4,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood paddy,Liquid/Organic,Water fern that fixes 20–30 kg N/ha; used as green manure in flooded paddies to reduce synthetic N needs
+5,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray (critical stages),Liquid,Water-soluble NPK for direct leaf absorption; corrects mid-season deficiency within 48–72 hrs; bypasses soil fixation

@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Malagkit 5
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Increases starch accumulation; moderate N rates maintain glutinous grain quality.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Promotes healthy vegetative growth for specialty rice; balanced NPK maintains grain quality.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Moderate application improves protein content; S component important for glutinous starch quality.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Improves glutinous grain quality; K supports starch synthesis and waxy starch accumulation.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Malagkit 5
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Micronutrients support waxy starch enzyme activity; biostimulant improves glutinous grain quality and stickiness.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Nano-nutrient delivery supports starch synthesis enzymes; sea kelp promotes uniform grain filling in glutinous rice.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Organic compounds support healthy root development for specialty rice; improves soil conditions for glutinous grain quality.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Organic N from Azolla suits glutinous rice moderate N needs; prevents over-application that reduces waxy grain quality.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK at moderate rates supports glutinous grain quality; K spray at heading improves waxy starch accumulation.

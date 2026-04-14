@@ -28,7 +28,16 @@
 
 .login-left {
   width: 50%;
-  background: url(../../images/Logo.png), linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+  background:
+    url(../../images/Logo.png),
+    linear-gradient(
+      135deg,
+      #e8f5e9 0%,
+      #f1f8e9 25%,
+      #ffffff 50%,
+      #e8f5e9 75%,
+      #c8e6c9 100%
+    );
   background-size: 60%, cover;
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
@@ -43,7 +52,7 @@
 .login-left h1 {
   font-size: 36px;
   margin-bottom: 10px;
-  color: #FFFDF6;
+  color: #fffdf6;
 }
 
 .login-left p {
@@ -61,6 +70,7 @@
 }
 
 .login-da-icon {
+  display: none;
   width: 74px;
   height: 74px;
   object-fit: contain;
@@ -88,7 +98,6 @@
   flex-direction: column;
   align-items: flex-start;
 }
-
 
 input[type="email"],
 input[type="password"],
@@ -139,6 +148,9 @@ input[type="password"]:focus {
     max-width: min(420px, 100%);
     height: auto;
     border-radius: 14px;
+  }
+  .login-da-icon {
+    display: block; /* show logo only on mobile */
   }
 
   .login-left {

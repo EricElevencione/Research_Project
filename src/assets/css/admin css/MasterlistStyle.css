@@ -4,410 +4,681 @@
    ============================================ */
 /* Global Font */
 * {
-    font-family: var(--font-family) !important;
+  font-family: var(--font-family) !important;
 }
-
-
 
 /* Main Layout */
 .masterlist-admin-page-container {
-    display: flex;
-    min-height: 100vh;
-    background-color: #f0f0f0;
+  display: flex;
+  height: 100vh;
+  background-color: #f0f0f0;
+  overflow: hidden;
 }
 
 .masterlist-admin-page {
-    display: flex;
-    width: 100%;
+  display: flex;
+  width: 100%;
+  min-height: 0;
 }
 
 /* Main Content Area */
 .masterlist-admin-main-content {
-    width: 100%;
-    flex-grow: 1;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-}
-
-.masterlist-admin-dashboard-header {
-    background-color: #f0f0f0;
-    margin-bottom: 10px;
-    width: 600px;
-    display: flex;
-    border-radius: 40px 0 40px 0;
+  width: 100%;
+  flex-grow: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    #e8f5e9 0%,
+    #f1f8e9 25%,
+    #ffffff 50%,
+    #e8f5e9 75%,
+    #c8e6c9 100%
+  );
 }
 
 .masterlist-admin-page-header {
-    font-weight: 600;
-    font-size: 28px;
-    color: #111827;
-    margin: 0 0 10px 0;
+  display: flex;
+  text-align: center;
+  font-weight: 600;
+  font-size: 28px;
+  color: #111827;
+}
+.masterlist-admin-page-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin-top: 0;
+  margin-bottom: 12px;
 }
 
 /* Content Card */
 .masterlist-admin-content-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    padding: 24px;
-    margin-top: 20px;
-    flex: 1;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 18px;
+  margin-top: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Filters Section */
 .masterlist-admin-filters-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    gap: 20px;
-    flex-wrap: wrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 20px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .masterlist-admin-search-filter {
-    flex: 1;
-    min-width: 300px;
+  flex: 1;
+  min-width: 300px;
 }
 
 .masterlist-admin-search-input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .masterlist-admin-search-input:focus {
-    outline: none;
-    border-color: #4CAF50;
-    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
 .masterlist-admin-status-filter {
-    min-width: 150px;
+  min-width: 150px;
 }
 
 .masterlist-admin-status-select {
-    width: 100%;
-    padding: 12px 16px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    background: white;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
 }
 
 .masterlist-admin-status-select:focus {
-    outline: none;
-    border-color: #4CAF50;
+  outline: none;
+  border-color: #4caf50;
 }
 
 /* Table Container */
+.masterlist-admin-table-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -2px 2px 10px;
+  flex-wrap: wrap;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.masterlist-admin-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 2px 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cde8cf;
+  background: #f4fbf3;
+}
+
+.masterlist-admin-bulk-count {
+  color: #14532d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.masterlist-admin-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.masterlist-admin-bulk-export-wrap {
+  position: relative;
+}
+
+.masterlist-admin-bulk-btn {
+  border: 1px solid #6aa661;
+  background: #ffffff;
+  color: #1f4f2e;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.masterlist-admin-bulk-btn:hover {
+  background: #edf9ea;
+}
+
+.masterlist-admin-bulk-btn-clear {
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.masterlist-admin-bulk-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 20;
+}
+
 .masterlist-admin-table-container {
-    overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  flex: 1;
+  min-height: 0;
 }
 
 /* Table Styles */
 .masterlist-admin-farmers-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    font-size: 14px;
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 14px;
+  min-width: 1040px;
 }
 
 .masterlist-admin-farmers-table thead th {
-    background: #A0C878;
-    color: #333;
-    font-weight: 550;
-    text-align: left;
-    padding: 12px 7px;
-    border-bottom: 1px solid #dee2e6;
-    white-space: nowrap;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-weight: 700;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #b6d08f;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.masterlist-admin-checkbox-col {
+  width: 44px;
+  min-width: 44px;
+  text-align: center;
+}
+
+.masterlist-admin-header-checkbox,
+.masterlist-admin-row-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #059669;
+  cursor: pointer;
+}
+
+.masterlist-admin-sort-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+}
+
+.masterlist-admin-sort-btn.is-active {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .masterlist-admin-farmers-table tbody td {
-    padding: 12px;
-    border-bottom: 1px solid #f0f0f0;
-    vertical-align: middle;
+  padding: 14px 12px;
+  border-bottom: 1px solid #edf2e8;
+  vertical-align: middle;
 }
 
-.masterlist-admin-farmers-table tbody tr:hover {
-    background-color: #f8f9fa;
-    transition: background-color 0.2s ease;
+.masterlist-admin-table-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.masterlist-admin-table-row:hover {
+  background-color: #f8fbf4;
 }
 
 .masterlist-admin-farmers-table tbody tr:last-child td {
-    border-bottom: none;
+  border-bottom: none;
+}
+
+.masterlist-admin-farmer-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 240px;
+}
+
+.masterlist-admin-farmer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #e4f3d8 0%, #b8d98d 100%);
+  color: #2f4a1d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.masterlist-admin-farmer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.masterlist-admin-farmer-name {
+  color: #111827;
+  font-weight: 650;
+  font-size: 14.5px;
+}
+
+.masterlist-admin-farmer-ref {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.masterlist-admin-address-cell,
+.masterlist-admin-parcel-cell,
+.masterlist-admin-submission-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.masterlist-admin-address-primary {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.masterlist-admin-address-secondary {
+  color: #6b7280;
+  font-size: 12px;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.masterlist-admin-parcel-count {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.masterlist-admin-parcel-area {
+  color: #14532d;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.masterlist-admin-date {
+  color: #334155;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.masterlist-admin-view-btn {
+  border: 1px solid #9fc06e;
+  background: #f6fde9;
+  color: #35511a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.masterlist-admin-view-btn:hover {
+  background: #ebf8d6;
+  border-color: #84ac53;
+}
+
+.masterlist-admin-view-btn:focus-visible {
+  outline: 2px solid #6ca22f;
+  outline-offset: 2px;
+}
+
+.masterlist-admin-actions-cell {
+  width: 175px;
+}
+
+.masterlist-admin-quick-actions {
+  position: relative;
+  display: inline-flex;
+}
+
+.masterlist-admin-quick-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 210px;
+  background: #ffffff;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 25;
+}
+
+.masterlist-admin-quick-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  text-align: left;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.masterlist-admin-quick-item:hover {
+  background: #f3f9eb;
 }
 
 /* Status Pills */
 .masterlist-admin-status-pill {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-    text-align: center;
-    min-width: 100px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  min-width: 70px;
+  text-transform: none;
+  letter-spacing: 0.2px;
 }
 
 .masterlist-admin-status-approved {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
 }
 
 .masterlist-admin-status-not-approved {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }
 
 .masterlist-admin-status-pending {
-    background-color: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeaa7;
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.masterlist-admin-status-submitted {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .masterlist-admin-status-draft {
-    background-color: #e2e3e5;
-    color: #383d41;
-    border: 1px solid #d6d8db;
+  background-color: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
 }
 
 /* Loading and Error States */
 .masterlist-admin-loading-cell,
 .masterlist-admin-error-cell {
-    text-align: center;
-    padding: 40px 20px;
-    color: #666;
-    font-style: italic;
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-style: italic;
 }
 
 .masterlist-admin-error-cell {
-    color: #dc3545;
+  color: #dc3545;
+}
+
+.masterlist-admin-empty-cell {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .masterlist-admin-filters-section {
-        flex-direction: column;
-        align-items: stretch;
-    }
+  .masterlist-admin-page-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
 
-    .masterlist-admin-search-filter,
-    .masterlist-admin-status-filter {
-        min-width: auto;
-    }
+  .masterlist-admin-filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-    .masterlist-admin-table-container {
-        font-size: 12px;
-    }
+  .masterlist-admin-search-filter,
+  .masterlist-admin-status-filter {
+    min-width: auto;
+  }
 
-    .masterlist-admin-farmers-table thead th,
-    .masterlist-admin-farmers-table tbody td {
-        padding: 8px 6px;
-    }
+  .masterlist-admin-table-container {
+    font-size: 12px;
+  }
 
-    .masterlist-admin-main-content {
-        padding: 10px;
-    }
+  .masterlist-admin-table-meta {
+    font-size: 12px;
+  }
 
-    .masterlist-admin-content-card {
-        padding: 16px;
-    }
+  .masterlist-admin-bulk-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-    .masterlist-admin-dashboard-header {
-        width: 100%;
-    }
+  .masterlist-admin-bulk-actions {
+    justify-content: space-between;
+  }
 
-    .masterlist-status-cards {
-        grid-template-columns: 1fr 1fr;
-    }
+  .masterlist-admin-farmers-table thead th,
+  .masterlist-admin-farmers-table tbody td {
+    padding: 8px 6px;
+  }
 
-    .masterlist-export-buttons {
-        width: 100%;
-        justify-content: stretch;
-    }
+  .masterlist-admin-farmers-table {
+    min-width: 980px;
+  }
 
-    .masterlist-export-btn {
-        flex: 1;
-    }
+  .masterlist-admin-farmer-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
 
-    /* Make status cards smaller on mobile */
-    .masterlist-status-card {
-        padding: 10px !important;
-        gap: 4px !important;
-    }
-    .masterlist-card-icon {
-        font-size: 18px !important;
-    }
-    .masterlist-card-count {
-        font-size: 18px !important;
-    }
-    .masterlist-card-label {
-        font-size: 10px !important;
-    }
-    .masterlist-card-bar {
-        height: 4px !important;
-        margin-top: 2px !important;
-    }
+  .masterlist-admin-view-btn {
+    width: 100%;
+    padding: 8px 10px;
+  }
+
+  .masterlist-admin-quick-menu,
+  .masterlist-admin-bulk-menu {
+    right: auto;
+    left: 0;
+  }
+
+  .masterlist-admin-main-content {
+    padding: 10px;
+  }
+
+  .masterlist-admin-content-card {
+    padding: 16px;
+    margin-top: 10px;
+  }
+
+  .masterlist-admin-dashboard-header {
+    width: 100%;
+  }
+
+  .masterlist-status-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
 }
 
 /* ============================================
    Status Count Cards
    ============================================ */
 .masterlist-status-cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 .masterlist-status-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    position: relative;
-    overflow: hidden;
-    border-left: 4px solid transparent;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: white;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  border-left: 3px solid transparent;
+  min-height: 64px;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
 }
 
 .masterlist-status-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
 .masterlist-card-total {
-    border-left-color: #6366f1;
-    background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+  border-left-color: #6366f1;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
 }
 
 .masterlist-card-active {
-    border-left-color: #22c55e;
-    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+  border-left-color: #22c55e;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
 }
 
 .masterlist-card-inactive {
-    border-left-color: #ef4444;
-    background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+  border-left-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
 }
 
 .masterlist-card-submitted {
-    border-left-color: #f59e0b;
-    background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+  border-left-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
 }
 
 .masterlist-card-icon {
-    font-size: 24px;
-    line-height: 1;
+  font-size: 18px;
+  width: 20px;
+  text-align: center;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .masterlist-card-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .masterlist-card-count {
-    font-size: 28px;
-    font-weight: 700;
-    color: #111827;
-    line-height: 1.1;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
 }
 
 .masterlist-card-label {
-    font-size: 13px;
-    color: #6b7280;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
 }
 
 .masterlist-card-bar {
-    height: 6px;
-    background: #e5e7eb;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-top: 4px;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
 }
 
 .masterlist-card-bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.6s ease;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
 }
 
 .masterlist-bar-active {
-    background: linear-gradient(90deg, #22c55e, #4ade80);
+  background: linear-gradient(90deg, #22c55e, #4ade80);
 }
 
 .masterlist-bar-inactive {
-    background: linear-gradient(90deg, #ef4444, #f87171);
+  background: linear-gradient(90deg, #ef4444, #f87171);
 }
 
 .masterlist-bar-submitted {
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
 }
-
-/* ============================================
-   Export Buttons
-   ============================================ */
-.masterlist-export-buttons {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.masterlist-export-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 18px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.masterlist-export-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.masterlist-export-pdf {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-}
-
-.masterlist-export-pdf:hover:not(:disabled) {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-}
-
-.masterlist-export-excel {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    color: white;
-}
-
-.masterlist-export-excel:hover:not(:disabled) {
-    background: linear-gradient(135deg, #16a34a, #15803d);
-    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
-}
-

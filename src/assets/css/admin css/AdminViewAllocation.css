@@ -1,394 +1,289 @@
-/* ============================================
-   ADMIN VIEW ALLOCATION - UNIQUE STYLING
-   All class names prefixed with admin-viewalloc-
-   ============================================ */
+/* Admin View Allocation - Redesigned layout */
 
-/* Page Layout */
 .admin-viewalloc-page-container {
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-    background-color: #f0f0f0;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #edf2f7;
 }
 
 .admin-viewalloc-page {
-    display: flex;
-    width: 100%;
-    height: 100%;
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
-/* Main Content */
 .admin-viewalloc-main-content {
-    flex: 1;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: linear-gradient(180deg, #f6faf6 0%, #f1f5f9 100%);
 }
 
-/* Dashboard Header */
 .admin-viewalloc-header {
-    align-items: center;
-    margin-bottom: 24px;
+  margin-bottom: 10px;
 }
 
 .admin-viewalloc-title {
-   font-weight: 600;
-    font-size: 28px;
-    color: #111827;
-    margin: 0;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .admin-viewalloc-subtitle {
-   font-size: 14px;
-    color: #6b7280;
-    margin: 4px 0 0 0;
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #475569;
 }
 
 .admin-viewalloc-header-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 14px 0 16px;
 }
 
 .admin-viewalloc-btn-nav {
-    background: linear-gradient(135deg, #667eea 0%, #4ba260 100%);
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0f766e 0%, #16a34a 100%);
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.24);
+  cursor: pointer;
+  transition: transform 0.2s ease;
 }
 
 .admin-viewalloc-btn-nav:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
 }
 
-/* Content Card */
+.admin-viewalloc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-viewalloc-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.admin-viewalloc-kpi-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-viewalloc-kpi-value {
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  color: #0f172a;
+}
+
 .admin-viewalloc-content-card {
-    background-color: white;
-    border-radius: 12px;
-    padding: 24px;
-    margin-top: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    min-height: 400px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
 }
 
-/* ============================================
-   Loading State
-   ============================================ */
-.admin-viewalloc-loading {
-    text-align: center;
-    padding: 60px 20px;
-    color: #6b7280;
-    font-size: 16px;
-    font-style: italic;
+.admin-viewalloc-section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-/* ============================================
-   Error State
-   ============================================ */
-.admin-viewalloc-error-state {
-    text-align: center;
-    padding: 60px 40px;
-    background: #fef2f2;
-    border: 2px dashed #ef4444;
-    border-radius: 12px;
-    margin: 20px 0;
+.admin-viewalloc-section-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 14px;
 }
 
-.admin-viewalloc-error-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
+.admin-viewalloc-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.admin-viewalloc-error-state h3 {
-    font-size: 22px;
-    font-weight: 700;
-    color: #991b1b;
-    margin: 0 0 12px 0;
+.admin-viewalloc-section-head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
-.admin-viewalloc-error-state > p {
-    color: #dc2626;
-    font-size: 15px;
-    margin: 0 0 20px 0;
-    font-weight: 500;
+.admin-viewalloc-section-head span {
+  font-size: 12px;
+  color: #64748b;
 }
 
-.admin-viewalloc-btn-back {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-    padding: 12px 32px;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 16px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+.admin-viewalloc-empty-state {
+  border: 1px dashed #94a3b8;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #64748b;
+  text-align: center;
+  padding: 20px;
+  font-size: 14px;
 }
 
-.admin-viewalloc-btn-back:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(239, 68, 68, 0.3);
+/* Upscale Barangay Breakdown visuals for this page only */
+.admin-viewalloc-section-block .alloc-brgy-section {
+  padding: 22px;
 }
 
-/* ============================================
-   Overview Cards
-   ============================================ */
-.admin-viewalloc-overview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
+.admin-viewalloc-section-block .alloc-brgy-header h3 {
+  font-size: 18px;
 }
 
-.admin-viewalloc-overview-card {
-    padding: 20px;
-    border-radius: 12px;
-    color: white;
-    position: relative;
-    overflow: auto;
+.admin-viewalloc-section-block .alloc-brgy-subtitle {
+  font-size: 13px;
 }
 
-.admin-viewalloc-overview-card::after {
-    content: '';
-    position: absolute;
-    top: -30px;
-    right: -30px;
-    width: 80px;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
+.admin-viewalloc-section-block .alloc-brgy-table {
+  font-size: 14px;
 }
 
-.admin-viewalloc-card-date {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.admin-viewalloc-section-block .alloc-brgy-table th {
+  padding: 12px 14px;
+  font-size: 12px;
 }
 
-.admin-viewalloc-card-requests {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+.admin-viewalloc-section-block .alloc-brgy-table td {
+  padding: 12px 14px;
 }
 
-.admin-viewalloc-overview-label {
-    font-size: 14px;
-    opacity: 0.9;
-    margin-bottom: 8px;
+.admin-viewalloc-section-block .alloc-brgy-bar-wrap {
+  gap: 10px;
 }
 
-.admin-viewalloc-overview-value {
-    font-size: 24px;
-    font-weight: 700;
+.admin-viewalloc-section-block .alloc-brgy-bar {
+  height: 24px;
+  min-width: 12px;
+  border-radius: 6px;
 }
 
-.admin-viewalloc-overview-value-lg {
-    font-size: 36px;
-    font-weight: 700;
+.admin-viewalloc-section-block .alloc-brgy-bar-value {
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.admin-viewalloc-overview-sub {
-    font-size: 12px;
-    opacity: 0.8;
-    margin-top: 4px;
-}
-
-/* ============================================
-   Allocation Sections (Fertilizers / Seeds)
-   ============================================ */
-.admin-viewalloc-section {
-    margin-bottom: 32px;
-}
-
-.admin-viewalloc-section-title {
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    color: #1f2937;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.admin-viewalloc-table-wrap {
-    background: #f9fafb;
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    overflow-x: auto;
-}
-
-/* ============================================
-   Data Table
-   ============================================ */
-.admin-viewalloc-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.admin-viewalloc-table thead tr {
-    border-bottom: 2px solid #d1d5db;
-}
-
-.admin-viewalloc-table th {
-    padding: 12px;
-    font-weight: 600;
-    color: #374151;
-    text-align: left;
-}
-
-.admin-viewalloc-table th.text-right {
-    text-align: right;
-}
-
-.admin-viewalloc-table tbody tr {
-    border-bottom: 1px solid #e5e7eb;
-    transition: background 0.15s ease;
-}
-
-.admin-viewalloc-table tbody tr:hover {
-    background: #f3f4f6;
-}
-
-.admin-viewalloc-table td {
-    padding: 12px;
-    color: #1f2937;
-}
-
-.admin-viewalloc-table td.text-right {
-    text-align: right;
-}
-
-.admin-viewalloc-table td.bold {
-    font-weight: 600;
-}
-
-.admin-viewalloc-table tr.admin-viewalloc-total-row {
-    border-top: 2px solid #d1d5db;
-    background: #f3f4f6;
-    font-weight: 700;
-}
-
-/* Remaining value colors */
-.admin-viewalloc-positive {
-    color: #059669;
-}
-
-.admin-viewalloc-negative {
-    color: #ef4444;
-}
-
-/* Usage badge */
-.admin-viewalloc-badge {
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: white;
-    display: inline-block;
-}
-
-.admin-viewalloc-badge-green {
-    background: #10b981;
-}
-
-.admin-viewalloc-badge-orange {
-    background: #f59e0b;
-}
-
-.admin-viewalloc-badge-red {
-    background: #ef4444;
-}
-
-/* ============================================
-   Notes Section
-   ============================================ */
 .admin-viewalloc-notes {
-    margin-top: 24px;
-    padding: 16px;
-    background: #fffbeb;
-    border: 1px solid #fbbf24;
-    border-radius: 8px;
+  margin-top: 2px;
+  border-radius: 10px;
+  border: 1px solid #bae6fd;
+  background: #f0f9ff;
+  padding: 12px 14px;
 }
 
 .admin-viewalloc-notes h4 {
-    font-size: 14px;
-    font-weight: 600;
-    color: #92400e;
-    margin: 0 0 8px 0;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0c4a6e;
 }
 
 .admin-viewalloc-notes p {
-    font-size: 14px;
-    color: #78350f;
-    margin: 0;
+  margin: 0;
+  font-size: 13px;
+  color: #0f172a;
 }
 
-/* ============================================
-   Responsive Design
-   ============================================ */
+.admin-viewalloc-loading {
+  text-align: center;
+  font-size: 16px;
+  color: #64748b;
+  padding: 60px 20px;
+}
+
+.admin-viewalloc-error-state {
+  text-align: center;
+  border: 2px dashed #fecaca;
+  border-radius: 12px;
+  background: #fff1f2;
+  padding: 50px 24px;
+  margin-top: 20px;
+}
+
+.admin-viewalloc-error-icon {
+  font-size: 54px;
+  margin-bottom: 10px;
+}
+
+.admin-viewalloc-error-state h3 {
+  margin: 0 0 6px;
+  color: #b91c1c;
+  font-size: 22px;
+}
+
+.admin-viewalloc-error-state p {
+  margin: 0 0 16px;
+  color: #7f1d1d;
+}
+
+@media (max-width: 1024px) {
+  .admin-viewalloc-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
-    .admin-viewalloc-main-content {
-        padding: 15px;
-    }
+  .admin-viewalloc-main-content {
+    padding: 14px;
+  }
 
-    .admin-viewalloc-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
+  .admin-viewalloc-title {
+    font-size: 24px;
+  }
 
-    .admin-viewalloc-title {
-        font-size: 24px;
-    }
+  .admin-viewalloc-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 
-    .admin-viewalloc-header-actions {
-        width: 100%;
-    }
+  .admin-viewalloc-header-actions {
+    flex-direction: column;
+  }
 
-    .admin-viewalloc-btn-nav {
-        flex: 1;
-        justify-content: center;
-    }
+  .admin-viewalloc-btn-nav {
+    width: 100%;
+  }
 
-    .admin-viewalloc-content-card {
-        padding: 16px;
-    }
+  .admin-viewalloc-section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 
-    .admin-viewalloc-overview-grid {
-        grid-template-columns: 1fr;
-    }
+  .admin-viewalloc-section-block .alloc-brgy-section {
+    padding: 16px;
+  }
 
-    .admin-viewalloc-table th,
-    .admin-viewalloc-table td {
-        padding: 8px 6px;
-        font-size: 13px;
-    }
-}
+  .admin-viewalloc-section-block .alloc-brgy-table {
+    font-size: 13px;
+  }
 
-@media (max-width: 480px) {
-    .admin-viewalloc-title {
-        font-size: 22px;
-    }
+  .admin-viewalloc-section-block .alloc-brgy-table th,
+  .admin-viewalloc-section-block .alloc-brgy-table td {
+    padding: 10px 12px;
+  }
 
-    .admin-viewalloc-header-actions {
-        flex-direction: column;
-    }
-
-    .admin-viewalloc-btn-nav {
-        width: 100%;
-    }
+  .admin-viewalloc-section-block .alloc-brgy-bar {
+    height: 22px;
+  }
 }

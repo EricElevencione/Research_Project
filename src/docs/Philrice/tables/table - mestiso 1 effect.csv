@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Mestiso 1 (M1)
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Boosts tiller count and leaf area index; increases grain protein; apply at transplanting and 40 DAT.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Provides balanced NPK at establishment; promotes strong root system and early canopy development.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Provides N + S for grain protein; slight soil acidification improves nutrient availability in alkaline fields.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Strengthens culm and reduces lodging; improves blast and BLB disease resistance significantly.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Mestiso 1 (M1)
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Brassinosteroids boost hybrid's stem elongation and pollen viability; foliar application at tillering and PI improves filled spikelet ratio.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Nano-scale nutrients penetrate leaf cuticle rapidly; algae and bacteria components enrich rhizosphere for improved hybrid rooting.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Root exudate compounds activate beneficial rhizobacteria; improves nutrient solubilization near hybrid roots for better N and P uptake.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,"Fixes 20–30 kg N/ha when flooded; organic N released slowly matches hybrid's vegetative growth demand, reducing urea requirement."
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Water-soluble NPK absorbed directly through leaves; foliar application at PI stage rapidly corrects mid-season nutrient deficiency in hybrid.

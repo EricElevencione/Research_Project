@@ -1,24 +1,53 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const { logCreate, AUDIT_MODULES } = require("../middleware/audit.cjs");
 
 // Import database pool
-const { Pool } = require('pg');
-const pool = new Pool({
-    user: process.env.DB_USER || 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME || 'Masterlist',
-    password: process.env.DB_PASSWORD || 'postgresadmin',
-    port: process.env.DB_PORT || 5432,
-});
+const { createPool } = require("../config/db.cjs");
+const pool = createPool();
+
+function resolveAuditUser(req, body = {}) {
+  const requestUser = req.user || {};
+  const headerUserName =
+    req.headers["x-user-name"] || req.headers["x-username"];
+  const headerUserRole = req.headers["x-user-role"];
+  const headerUserId = Number(req.headers["x-user-id"]);
+  const bodyUserName =
+    body.updatedBy || body.createdBy || body.updated_by || body.created_by;
+
+  return {
+    id: Number.isFinite(headerUserId) ? headerUserId : requestUser.id || null,
+    username:
+      requestUser.username || bodyUserName || headerUserName || "technician",
+    role: requestUser.role || body.role || headerUserRole || "technician",
+  };
+}
+
+function buildGeometryCreateSummary(plot = {}) {
+  const geometryType =
+    plot.geometry &&
+    typeof plot.geometry === "object" &&
+    !Array.isArray(plot.geometry)
+      ? plot.geometry.type || null
+      : null;
+
+  return {
+    geometry_type: geometryType,
+    area: plot.area ?? null,
+    barangay: plot.barangay || null,
+    coordinate_accuracy:
+      plot.coordinate_accuracy || plot.coordinateAccuracy || null,
+  };
+}
 
 // ============================================================================
 // GET /api/land-plots - Fetch all land plots
 // ============================================================================
-router.get('/', async (req, res) => {
-    try {
-        console.log('📋 GET /api/land-plots - Fetching all land plots');
+router.get("/", async (req, res) => {
+  try {
+    console.log("📋 GET /api/land-plots - Fetching all land plots");
 
-        const result = await pool.query(`
+    const result = await pool.query(`
             SELECT 
                 id,
                 name,
@@ -47,49 +76,48 @@ router.get('/', async (req, res) => {
             ORDER BY created_at DESC
         `);
 
-        console.log(`✅ Found ${result.rows.length} land plots`);
-        res.json(result.rows);
-
-    } catch (error) {
-        console.error('❌ Error fetching land plots:', error.message);
-        res.status(500).json({
-            message: 'Failed to load land plots',
-            error: error.message
-        });
-    }
+    console.log(`✅ Found ${result.rows.length} land plots`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("❌ Error fetching land plots:", error.message);
+    res.status(500).json({
+      message: "Failed to load land plots",
+      error: error.message,
+    });
+  }
 });
 
 // ============================================================================
 // POST /api/land-plots - Create a new land plot
 // ============================================================================
-router.post('/', async (req, res) => {
-    try {
-        const body = req.body || {};
+router.post("/", async (req, res) => {
+  try {
+    const body = req.body || {};
 
-        console.log('📝 POST /api/land-plots - Creating new land plot');
+    console.log("📝 POST /api/land-plots - Creating new land plot");
 
-        // Validate required fields
-        if (!body.geometry) {
-            return res.status(400).json({ message: 'Missing geometry' });
-        }
+    // Validate required fields
+    if (!body.geometry) {
+      return res.status(400).json({ message: "Missing geometry" });
+    }
 
-        // Generate ID if not provided
-        if (!body.id) {
-            body.id = `plot-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        }
+    // Generate ID if not provided
+    if (!body.id) {
+      body.id = `plot-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
 
-        // Check if ID already exists
-        const existsResult = await pool.query(
-            'SELECT id FROM land_plots WHERE id = $1',
-            [body.id]
-        );
+    // Check if ID already exists
+    const existsResult = await pool.query(
+      "SELECT id FROM land_plots WHERE id = $1",
+      [body.id],
+    );
 
-        if (existsResult.rowCount > 0) {
-            return res.status(409).json({ message: 'Plot with id already exists' });
-        }
+    if (existsResult.rowCount > 0) {
+      return res.status(409).json({ message: "Plot with id already exists" });
+    }
 
-        // Insert new land plot with PostGIS geometry
-        const insertQuery = `
+    // Insert new land plot with PostGIS geometry
+    const insertQuery = `
             INSERT INTO land_plots (
                 id, name, ffrs_id, area, coordinate_accuracy,
                 barangay, first_name, middle_name, surname, ext_name,
@@ -113,128 +141,158 @@ router.post('/', async (req, res) => {
                 created_at, updated_at
         `;
 
-        const now = new Date();
-        const values = [
-            body.id,
-            body.name || '',
-            body.ffrs_id || '',
-            body.area || 0,
-            body.coordinateAccuracy || 'approximate',
-            body.barangay || '',
-            body.firstName || '',
-            body.middleName || '',
-            body.surname || '',
-            body.ext_name || '',
-            body.gender || '',
-            body.municipality || '',
-            body.province || '',
-            body.parcel_address || '',
-            body.status || '',
-            body.street || '',
-            body.farmType || '',
-            body.plotSource || 'manual',
-            body.parcelNumber || '',
-            JSON.stringify(body.geometry), // Keep JSONB for backward compatibility
-            JSON.stringify(body.geometry), // Convert to PostGIS
-            body.createdAt || now,
-            body.updatedAt || now
-        ];
+    const now = new Date();
+    const values = [
+      body.id,
+      body.name || "",
+      body.ffrs_id || "",
+      body.area || 0,
+      body.coordinateAccuracy || "approximate",
+      body.barangay || "",
+      body.firstName || "",
+      body.middleName || "",
+      body.surname || "",
+      body.ext_name || "",
+      body.gender || "",
+      body.municipality || "",
+      body.province || "",
+      body.parcel_address || "",
+      body.status || "",
+      body.street || "",
+      body.farmType || "",
+      body.plotSource || "manual",
+      body.parcelNumber || "",
+      JSON.stringify(body.geometry), // Keep JSONB for backward compatibility
+      JSON.stringify(body.geometry), // Convert to PostGIS
+      body.createdAt || now,
+      body.updatedAt || now,
+    ];
 
-        const result = await pool.query(insertQuery, values);
+    const result = await pool.query(insertQuery, values);
+    const createdPlot = result.rows[0];
 
-        console.log(`✅ Created land plot with ID: ${body.id}`);
-        res.status(201).json(result.rows[0]);
+    await logCreate(
+      resolveAuditUser(req, body),
+      AUDIT_MODULES.LAND_PLOTS,
+      createdPlot.id,
+      "land_plots",
+      `Technician created land geometry on Land Registry page (plot ${createdPlot.id})`,
+      buildGeometryCreateSummary(createdPlot),
+      req,
+    );
 
-    } catch (error) {
-        console.error('❌ Error creating land plot:', error.message);
-        res.status(500).json({
-            message: 'Failed to save land plot',
-            error: error.message
-        });
-    }
+    console.log(`✅ Created land plot with ID: ${body.id}`);
+    res.status(201).json(createdPlot);
+  } catch (error) {
+    console.error("❌ Error creating land plot:", error.message);
+    res.status(500).json({
+      message: "Failed to save land plot",
+      error: error.message,
+    });
+  }
 });
 
 // ============================================================================
 // PUT /api/land-plots/:id - Update an existing land plot
 // ============================================================================
-router.put('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const body = req.body || {};
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
 
-        console.log(`📝 PUT /api/land-plots/${id} - Updating land plot`);
+    console.log(`📝 PUT /api/land-plots/${id} - Updating land plot`);
 
-        // Check if land plot exists
-        const existsResult = await pool.query(
-            'SELECT id FROM land_plots WHERE id = $1',
-            [id]
-        );
+    // Check if land plot exists
+    const existsResult = await pool.query(
+      "SELECT id FROM land_plots WHERE id = $1",
+      [id],
+    );
 
-        if (existsResult.rowCount === 0) {
-            return res.status(404).json({ message: 'Plot not found' });
+    if (existsResult.rowCount === 0) {
+      return res.status(404).json({ message: "Plot not found" });
+    }
+
+    // Build dynamic UPDATE query
+    const allowedFields = {
+      name: "name",
+      ffrs_id: "ffrs_id",
+      area: "area",
+      coordinateAccuracy: "coordinate_accuracy",
+      barangay: "barangay",
+      firstName: "first_name",
+      middleName: "middle_name",
+      surname: "surname",
+      ext_name: "ext_name",
+      gender: "gender",
+      municipality: "municipality",
+      province: "province",
+      parcel_address: "parcel_address",
+      status: "status",
+      street: "street",
+      farmType: "farm_type",
+      plotSource: "plot_source",
+      parcelNumber: "parcel_number",
+      geometry: "geometry",
+    };
+
+    const updateFields = [];
+    const values = [];
+    let paramCounter = 1;
+
+    for (const [bodyKey, dbColumn] of Object.entries(allowedFields)) {
+      if (body[bodyKey] !== undefined) {
+        // Special handling for geometry
+        if (bodyKey === "geometry") {
+          updateFields.push(`${dbColumn} = $${paramCounter}`);
+          values.push(JSON.stringify(body[bodyKey]));
+          paramCounter++;
+          // Also update PostGIS geometry as text
+          updateFields.push(`geometry_postgis = $${paramCounter}`);
+          values.push(JSON.stringify(body[bodyKey]));
+          paramCounter++;
+        } else {
+          updateFields.push(`${dbColumn} = $${paramCounter}`);
+          values.push(body[bodyKey]);
+          paramCounter++;
         }
-
-        // Build dynamic UPDATE query
-        const allowedFields = {
-            name: 'name',
-            ffrs_id: 'ffrs_id',
-            area: 'area',
-            coordinateAccuracy: 'coordinate_accuracy',
-            barangay: 'barangay',
-            firstName: 'first_name',
-            middleName: 'middle_name',
-            surname: 'surname',
-            ext_name: 'ext_name',
-            gender: 'gender',
-            municipality: 'municipality',
-            province: 'province',
-            parcel_address: 'parcel_address',
-            status: 'status',
-            street: 'street',
-            farmType: 'farm_type',
-            plotSource: 'plot_source',
-            parcelNumber: 'parcel_number',
-            geometry: 'geometry'
-        };
-
-        const updateFields = [];
-        const values = [];
-        let paramCounter = 1;
-
-        for (const [bodyKey, dbColumn] of Object.entries(allowedFields)) {
-            if (body[bodyKey] !== undefined) {
-                // Special handling for geometry
-                if (bodyKey === 'geometry') {
-                    updateFields.push(`${dbColumn} = $${paramCounter}`);
-                    values.push(JSON.stringify(body[bodyKey]));
-                    paramCounter++;
-                    // Also update PostGIS geometry as text
-                    updateFields.push(`geometry_postgis = $${paramCounter}`);
-                    values.push(JSON.stringify(body[bodyKey]));
-                    paramCounter++;
-                } else {
-                    updateFields.push(`${dbColumn} = $${paramCounter}`);
-                    values.push(body[bodyKey]);
-                    paramCounter++;
-                }
-            }
+      }
+    }
+    for (const [bodyKey, dbColumn] of Object.entries(allowedFields)) {
+      if (body[bodyKey] !== undefined) {
+        // Special handling for geometry (update both JSONB and PostGIS)
+        if (bodyKey === "geometry") {
+          updateFields.push(`${dbColumn} = $${paramCounter}`);
+          values.push(JSON.stringify(body[bodyKey]));
+          paramCounter++;
+          // Also update PostGIS geometry
+          updateFields.push(
+            `geometry_postgis = ST_SetSRID(ST_GeomFromGeoJSON($${paramCounter}), 4326)`,
+          );
+          values.push(JSON.stringify(body[bodyKey]));
+          paramCounter++;
+        } else {
+          updateFields.push(`${dbColumn} = $${paramCounter}`);
+          values.push(body[bodyKey]);
+          paramCounter++;
         }
+      }
+    }
 
-        if (updateFields.length === 0) {
-            return res.status(400).json({ message: 'No valid fields to update' });
-        }
+    if (updateFields.length === 0) {
+      return res.status(400).json({ message: "No valid fields to update" });
+    }
 
-        // Add updated_at timestamp
-        updateFields.push(`updated_at = $${paramCounter}`);
-        values.push(new Date());
-        paramCounter++;
+    // Add updated_at timestamp
+    updateFields.push(`updated_at = $${paramCounter}`);
+    values.push(new Date());
+    paramCounter++;
 
-        // Add ID as last parameter
-        values.push(id);
+    // Add ID as last parameter
+    values.push(id);
 
-        const updateQuery = `
+    const updateQuery = `
             UPDATE land_plots
-            SET ${updateFields.join(', ')}
+            SET ${updateFields.join(", ")}
             WHERE id = $${paramCounter}
             RETURNING 
                 id, name, ffrs_id, area, coordinate_accuracy,
@@ -246,51 +304,49 @@ router.put('/:id', async (req, res) => {
                 created_at, updated_at
         `;
 
-        const result = await pool.query(updateQuery, values);
+    const result = await pool.query(updateQuery, values);
 
-        console.log(`✅ Updated land plot: ${id}`);
-        res.json(result.rows[0]);
-
-    } catch (error) {
-        console.error('❌ Error updating land plot:', error.message);
-        res.status(500).json({
-            message: 'Failed to update land plot',
-            error: error.message
-        });
-    }
+    console.log(`✅ Updated land plot: ${id}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("❌ Error updating land plot:", error.message);
+    res.status(500).json({
+      message: "Failed to update land plot",
+      error: error.message,
+    });
+  }
 });
 
 // ============================================================================
 // DELETE /api/land-plots/:id - Delete a land plot
 // ============================================================================
-router.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        console.log(`🗑️ DELETE /api/land-plots/${id} - Deleting land plot`);
+    console.log(`🗑️ DELETE /api/land-plots/${id} - Deleting land plot`);
 
-        const result = await pool.query(
-            'DELETE FROM land_plots WHERE id = $1 RETURNING id',
-            [id]
-        );
+    const result = await pool.query(
+      "DELETE FROM land_plots WHERE id = $1 RETURNING id",
+      [id],
+    );
 
-        console.log(`🔍 Delete result - rowCount: ${result.rowCount}`);
+    console.log(`🔍 Delete result - rowCount: ${result.rowCount}`);
 
-        if (result.rowCount === 0) {
-            console.log(`⚠️ Plot not found: ${id}`);
-            return res.status(404).json({ message: 'Plot not found' });
-        }
-
-        console.log(`✅ Deleted land plot: ${id}`);
-        res.json({ success: true, deletedId: id });
-
-    } catch (error) {
-        console.error('❌ Error deleting land plot:', error.message);
-        res.status(500).json({
-            message: 'Failed to delete land plot',
-            error: error.message
-        });
+    if (result.rowCount === 0) {
+      console.log(`⚠️ Plot not found: ${id}`);
+      return res.status(404).json({ message: "Plot not found" });
     }
+
+    console.log(`✅ Deleted land plot: ${id}`);
+    res.json({ success: true, deletedId: id });
+  } catch (error) {
+    console.error("❌ Error deleting land plot:", error.message);
+    res.status(500).json({
+      message: "Failed to delete land plot",
+      error: error.message,
+    });
+  }
 });
 
 module.exports = router;

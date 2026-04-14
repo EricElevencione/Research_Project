@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 534
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Supports high yield potential; nitrogen management at PI and heading stages key for grain filling.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Supports high-yield potential from establishment; balanced NPK improves crop uniformity.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Promotes high grain N content; sulfur prevents protein deficiency at heading stage.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Supports high yield stability; potassium improves resilience against end-of-season moisture stress.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 534
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Enhances stress resilience during reproductive stage; biostimulant supports uniform heading and grain maturation.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Sea kelp promotes uniform heading; nano-scale nutrients correct hidden deficiencies for improved yield stability.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Promotes soil biological activity; organic mix supports nitrogen mineralization from soil organic matter reserves.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Pre-plant Azolla incorporation builds soil N; improves long-term soil fertility for high-yield inbred varieties.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK at critical stages supports yield stability; water-soluble nutrients correct deficiencies under variable field conditions.

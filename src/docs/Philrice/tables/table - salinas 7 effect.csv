@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Salinas 7
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Supports saline-stress recovery; N promotes new tiller production after salt damage.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Provides nutritional buffer against salinity at establishment; potassium improves salt tolerance mechanisms.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Improves N availability in saline conditions; sulfur supports ion balance in salt-stressed plants.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Reduces salt toxicity through K-Na antagonism; critical fertilizer for saline-tolerant varieties.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Salinas 7
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Potassium oxide component helps maintain K:Na ratio in salt-stressed plants; reduces ion toxicity effects.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Algae-derived osmolytes help plants tolerate salt stress; nano-nutrients support ion homeostasis in saline soil.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Root exudate compounds improve Na displacement from exchange sites; organic matter reduces Na toxicity near roots.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Organic matter from Azolla decomposition improves saline soil structure; helps desalinize soil surface gradually.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Water-soluble foliar application effective when roots are salt-stressed; K foliar spray maintains K:Na ratio in leaves.

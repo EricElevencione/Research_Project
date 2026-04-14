@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 160
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Increases head rice recovery; excess N may reduce milling quality — apply at recommended rate only.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Supports premium variety establishment; balanced nutrition promotes uniform crop stand.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Sulfur improves protein fractions favorable to cooking quality; apply at tillering stage.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Boosts head rice percentage; potassium critical for premium grain quality development.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 160
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Enhances premium quality grain development; copper supports oxidative enzyme activity improving grain translucency.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Sea kelp cytokinins improve grain development; nano-scale nutrients support premium grain quality expression.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Promotes healthy root environment for premium quality grain development; organic acids improve micronutrient uptake.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla provides slow-release N ideal for premium varieties; reduces risk of over-fertilization that lowers milling quality.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK supports premium grain development; water-soluble application avoids soil luxury consumption issues.

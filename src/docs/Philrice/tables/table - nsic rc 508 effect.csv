@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on NSIC Rc 508
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Boosts spikelet number per panicle; N at PI stage is critical for yield expression.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Stimulates early root and shoot development; supports high spikelet number potential.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Boosts spikelet grain weight through improved N-S nutrition; apply at active tillering.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Reduces spikelet sterility; potassium improves pollen viability and fertilization success.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on NSIC Rc 508
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Supports large panicle development; micronutrient package addresses hidden hunger in high-yield paddy soils.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Algae and bacterial consortia improve soil health; nano-NPK supports spikelet development and grain filling.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Root exudate compounds improve P and K mobilization; reduces nutrient stratification in flooded paddy soils.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Biological N reduces mineral fertilizer dependence; Azolla organic matter improves soil health for high-yield production.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Rapid foliar uptake supports large panicle development; NPK spray at heading reduces spikelet sterility percentage.

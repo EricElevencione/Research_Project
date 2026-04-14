@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Jackpot
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,"Increases tiller number and panicle density; apply 1/3 at transplanting, 1/3 at tillering, 1/3 at PI."
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Promotes fast establishment after transplanting; reduces transplanting shock through balanced nutrition.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Provides sustained N release with S bonus; reduces ammonia volatilization compared to urea.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Critical for maintaining stem integrity; apply at PI stage for maximum lodging prevention.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Jackpot
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Boosts early rooting and stand establishment; triacontanol improves cell division rate in young seedlings after transplanting.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Nano-scale delivery maximizes nutrient uptake per unit applied; algae extract improves early seedling establishment.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Enhances root exudate signaling; promotes beneficial microbial colonization that produces growth-promoting substances.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Dual cropping of Azolla with rice provides continuous N; flooded paddy conditions support Azolla growth alongside crop.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar spray at tillering and PI supports hybrid vigor; water-soluble nutrients boost canopy greenness and photosynthesis.

@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on US88
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Boosts biomass accumulation during vegetative stage; key for expressing hybrid yield advantage.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Supports uniform stand and early canopy closure; phosphorus enhances root mass development.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Enhances panicle N content; sulfur improves chlorophyll stability and prolongs green leaf area.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Improves grain filling duration; K regulates stomatal function and water loss during grain fill.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on US88
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Zinc and copper micronutrients support enzyme systems; foliar spray at heading improves grain nutrition and weight.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Humic acid improves soil structure and water retention; reduces nutrient leaching in sandy or degraded soils.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Improves rhizosphere microbiome diversity; organic compounds promote soil aggregation and improve water infiltration.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Reduces urea requirement by 25–30%; Azolla organic matter improves soil physical properties in intensive hybrid paddies.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Foliar NPK at heading corrects late-season deficiency; improves grain plumpness and reduces chalkiness at maturity.

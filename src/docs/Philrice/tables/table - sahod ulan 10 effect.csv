@@ -1,0 +1,11 @@
+#,Fertilizer Name,Category,Nutrient,Application Timing,Form,Effect on Sahod Ulan 10
+1,Urea (46-0-0),Solid,Nitrogen,Basal + Top-dress,Solid,Enhances rainfed performance; timing N with onset of rain maximizes uptake efficiency.
+2,Complete (14-14-14),Solid,NPK,Basal,Solid,Supports rainfed lowland establishment; complete nutrition reduces risk of mid-season nutrient stress.
+3,Ammonium Sulfate (21-0-0),Solid,Nitrogen + Sulfur,Top-dress,Solid,Provides sustained N for rainfed lowland; sulfur improves uptake in intermittently flooded soils.
+4,Muriate of Potash (0-0-60),Solid,Potassium,Top-dress at PI,Solid,Enhances rainfed drought recovery; potassium supports cell turgor maintenance under water stress.
+#,Fertilizer Name,Category,Nutrient Type,Application Timing / Method,Form,Effect on Sahod Ulan 10
+5,Biofertilizer (Liquid Concentrate),Liquid,Biostimulant,Foliar / Soil drench,Liquid,Iron and micronutrients support plant health in rainfed conditions; biostimulant reduces stress during intermittent drought.
+6,Nanobiofertilizer,Liquid,Nano NPK + Bio,Foliar spray,Liquid,Beneficial bacteria improve soil structure in rainfed fields; nano-NPK supports crop nutrition during unpredictable rainfall.
+7,Organic Root Exudate Mix,Liquid,Organic-Bio,Soil drench,Liquid,Promotes beneficial soil organisms that improve soil structure; organic mix helps retain moisture between rain events.
+8,Azolla microphylla,Liquid,Bio-N Fixer,Incorporate / Flood,Liquid,Azolla incorporation in pre-season flooding builds N; supports rainfed variety with organic N when rainfall is uncertain.
+9,Foliar Liquid Fertilizer (NPK),Liquid,NPK Foliar,Foliar spray at critical stages,Liquid,Water-soluble foliar NPK supports rainfed crop during dry spells; rapid absorption reduces dependence on soil moisture.

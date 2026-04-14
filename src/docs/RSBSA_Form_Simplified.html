@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RSBSA Enrollment Form</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@600&display=swap");
+
+      :root {
+        --ink: #111111;
+        --muted: #4a4a4a;
+        --line: #222222;
+        --soft-line: #bdbdbd;
+        --panel: #ffffff;
+        --accent: #214a37;
+        --accent-soft: #e8f0eb;
+        --page-bg: #d4d6d8;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Source Sans 3", Arial, sans-serif;
+        font-size: 10px;
+        color: var(--ink);
+        background: radial-gradient(
+          circle at top right,
+          #e3e5e7 0%,
+          var(--page-bg) 45%,
+          #c5c8cb 100%
+        );
+        padding: 18px;
+      }
+
+      .page {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto 24px;
+        background: var(--panel);
+        padding: 8mm;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+        position: relative;
+      }
+
+      .review-tag {
+        background: var(--accent-soft);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 4px 8px;
+        margin-bottom: 6px;
+      }
+
+      .header {
+        border: 2px solid var(--line);
+        display: grid;
+        grid-template-columns: 56px 1fr 88px;
+        gap: 8px;
+        align-items: center;
+        padding: 6px 8px;
+        margin-bottom: 8px;
+      }
+
+      .seal {
+        width: 52px;
+        height: 52px;
+        border: 2px solid var(--line);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 6.5px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .title .ani {
+        font-size: 17px;
+        line-height: 1;
+        font-weight: 700;
+      }
+
+      .title .main {
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.12;
+      }
+
+      .title .sub {
+        font-size: 8px;
+        margin-top: 2px;
+        color: var(--muted);
+        letter-spacing: 0.25px;
+      }
+
+      .photo {
+        border: 2px solid var(--line);
+        min-height: 86px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-weight: 700;
+        font-size: 9px;
+      }
+
+      .photo .big {
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .section-title {
+        margin-top: 8px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        font-size: 10px;
+        letter-spacing: 0.45px;
+        padding: 3px 8px;
+        text-transform: uppercase;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-top: none;
+        padding: 6px 8px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 6px;
+      }
+
+      .g-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .g-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .g-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .field label {
+        font-size: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.25px;
+      }
+
+      .field input[type="text"],
+      .field input[type="date"] {
+        border: none;
+        border-bottom: 1px solid var(--line);
+        font-size: 10px;
+        padding: 1px 2px;
+        outline: none;
+        background: transparent;
+        font-family: inherit;
+      }
+
+      .options {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: 9px;
+        margin-top: 1px;
+      }
+
+      .options label {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-weight: 600;
+      }
+
+      .options input[type="checkbox"],
+      .options input[type="radio"] {
+        width: 10px;
+        height: 10px;
+      }
+
+      .hint {
+        font-size: 7.5px;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+
+      .parcel {
+        border: 1px solid var(--line);
+        padding: 6px;
+        margin-bottom: 8px;
+        break-inside: avoid;
+      }
+
+      .parcel-title {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.35px;
+      }
+
+      .declaration {
+        border: 1px solid var(--line);
+        border-top: none;
+        padding: 6px 8px;
+        font-size: 8px;
+        line-height: 1.45;
+        font-style: italic;
+      }
+
+      .sig-grid {
+        border: 1px solid var(--line);
+        border-top: none;
+        display: grid;
+        grid-template-columns: 0.8fr 1.2fr 1.2fr;
+      }
+
+      .sig-cell {
+        min-height: 52px;
+        border-right: 1px solid var(--line);
+        padding: 5px;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        text-align: center;
+        font-size: 8px;
+        font-weight: 700;
+      }
+
+      .sig-cell:last-child {
+        border-right: none;
+      }
+
+      .sig-line {
+        border-top: 1px solid var(--line);
+        width: 100%;
+        padding-top: 2px;
+      }
+
+      .verify-bar {
+        border: 1px solid var(--line);
+        border-top: none;
+        background: var(--accent);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        padding: 3px 8px;
+      }
+
+      .verify-grid {
+        border: 1px solid var(--line);
+        border-top: none;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .verify-cell {
+        min-height: 48px;
+        border-right: 1px solid var(--line);
+        padding: 5px;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        text-align: center;
+        font-size: 7px;
+        font-weight: 700;
+      }
+
+      .verify-cell:last-child {
+        border-right: none;
+      }
+
+      .privacy {
+        border: 1px solid var(--line);
+        border-top: none;
+        padding: 6px 8px;
+        font-size: 7.7px;
+        line-height: 1.45;
+      }
+
+      .privacy strong {
+        display: block;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+      }
+
+      .foot {
+        border: 1px solid var(--line);
+        border-top: none;
+        text-align: center;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px;
+      }
+
+      .page-note {
+        position: absolute;
+        right: 8mm;
+        bottom: 5mm;
+        font-size: 7px;
+        color: var(--muted);
+      }
+
+      @media print {
+        body {
+          padding: 0;
+          background: #fff;
+        }
+
+        .page {
+          margin: 0;
+          width: 100%;
+          min-height: auto;
+          box-shadow: none;
+          page-break-after: always;
+        }
+
+        .review-tag {
+          border-color: #000;
+          color: #000;
+          background: #fff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="header">
+        <div class="seal">DEPARTMENT<br />OF<br />AGRICULTURE</div>
+        <div class="title">
+          <div class="ani">ANI AT KITA</div>
+          <div class="main">RSBSA ENROLLMENT FORM</div>
+          <div class="sub">
+            Registry System for Basic Sectors in Agriculture
+          </div>
+        </div>
+        <div class="photo">
+          <div class="big">2x2</div>
+          <div>PHOTO</div>
+        </div>
+      </div>
+
+      <div class="section-title">Part I: Personal Information (Core)</div>
+      <div class="card">
+        <div class="grid g-4">
+          <div class="field">
+            <label>Surname</label>
+            <input type="text" />
+          </div>
+          <div class="field">
+            <label>First Name</label>
+            <input type="text" />
+          </div>
+          <div class="field">
+            <label>Middle Name</label>
+            <input type="text" />
+          </div>
+          <div class="field">
+            <label>Extension Name</label>
+            <input type="text" />
+          </div>
+        </div>
+
+        <div class="grid g-3" style="margin-top: 6px">
+          <div class="field">
+            <label>Sex</label>
+            <div class="options">
+              <label><input type="radio" name="sex" /> Male</label>
+              <label><input type="radio" name="sex" /> Female</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Date of Birth</label>
+            <input type="date" />
+          </div>
+          <div class="field">
+            <label>Mobile Number</label>
+            <input type="text" />
+          </div>
+        </div>
+
+        <div class="grid g-3" style="margin-top: 6px">
+          <div class="field">
+            <label>Barangay</label>
+            <input type="text" />
+          </div>
+          <div class="field">
+            <label>Municipality / City</label>
+            <input type="text" />
+          </div>
+          <div class="field">
+            <label>Province (Optional)</label>
+            <input type="text" />
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Part II: Livelihood (Core)</div>
+      <div class="card">
+        <div class="field">
+          <label>Main Livelihood</label>
+          <div class="options">
+            <label><input type="checkbox" /> Farmer</label>
+            <label><input type="checkbox" /> Farmworker / Laborer</label>
+            <label><input type="checkbox" /> Fisherfolk</label>
+            <label><input type="checkbox" /> Agri Youth</label>
+          </div>
+          <div class="hint">
+            Keep only the selections needed by your office workflow.
+          </div>
+        </div>
+
+        <div class="field" style="margin-top: 6px">
+          <label>Farmer Activity (if Main Livelihood is Farmer)</label>
+          <div class="options">
+            <label><input type="checkbox" /> Rice</label>
+            <label><input type="checkbox" /> Corn</label>
+            <label><input type="checkbox" /> Other Crops</label>
+            <label><input type="checkbox" /> Livestock</label>
+            <label><input type="checkbox" /> Poultry</label>
+          </div>
+        </div>
+
+        <div class="grid g-2" style="margin-top: 6px">
+          <div class="field">
+            <label>Other Crops / Livestock / Poultry - Specify</label>
+            <input type="text" />
+          </div>
+          <div class="field">
+            <label>Notes (Optional)</label>
+            <input type="text" />
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Farm Parcel 1 (Required)</div>
+      <div class="card">
+        <div class="parcel" style="margin-bottom: 0">
+          <div class="parcel-title">Parcel 1</div>
+          <div class="grid g-3">
+            <div class="field">
+              <label>Farm Location Barangay</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Farm Location Municipality</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Total Farm Area (ha)</label>
+              <input type="text" />
+            </div>
+          </div>
+
+          <div class="grid g-2" style="margin-top: 6px">
+            <div class="field">
+              <label>Within Ancestral Domain</label>
+              <div class="options">
+                <label><input type="radio" name="ad-1" /> Yes</label>
+                <label><input type="radio" name="ad-1" /> No</label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Agrarian Reform Beneficiary</label>
+              <div class="options">
+                <label><input type="radio" name="arb-1" /> Yes</label>
+                <label><input type="radio" name="arb-1" /> No</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid g-2" style="margin-top: 6px">
+            <div class="field">
+              <label>Ownership Document No.</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Ownership Type</label>
+              <div class="options">
+                <label><input type="checkbox" /> Registered Owner</label>
+                <label><input type="checkbox" /> Tenant</label>
+                <label><input type="checkbox" /> Lessee</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid g-2" style="margin-top: 6px">
+            <div class="field">
+              <label>Tenant Land Owner Name (if applicable)</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Lessee Land Owner Name (if applicable)</label>
+              <input type="text" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-note">Page 1 of 2</div>
+    </div>
+
+    <div class="page">
+      <div class="section-title" style="margin-top: 0">
+        Additional Farm Parcels (Optional)
+      </div>
+      <div class="card">
+        <div class="parcel">
+          <div class="parcel-title">Parcel 2</div>
+          <div class="grid g-3">
+            <div class="field">
+              <label>Farm Location Barangay</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Farm Location Municipality</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Total Farm Area (ha)</label>
+              <input type="text" />
+            </div>
+          </div>
+
+          <div class="grid g-2" style="margin-top: 6px">
+            <div class="field">
+              <label>Ownership Document No.</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Ownership Type</label>
+              <div class="options">
+                <label><input type="checkbox" /> Registered Owner</label>
+                <label><input type="checkbox" /> Tenant</label>
+                <label><input type="checkbox" /> Lessee</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="parcel" style="margin-bottom: 0">
+          <div class="parcel-title">Parcel 3</div>
+          <div class="grid g-3">
+            <div class="field">
+              <label>Farm Location Barangay</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Farm Location Municipality</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Total Farm Area (ha)</label>
+              <input type="text" />
+            </div>
+          </div>
+
+          <div class="grid g-2" style="margin-top: 6px">
+            <div class="field">
+              <label>Ownership Document No.</label>
+              <input type="text" />
+            </div>
+            <div class="field">
+              <label>Ownership Type</label>
+              <div class="options">
+                <label><input type="checkbox" /> Registered Owner</label>
+                <label><input type="checkbox" /> Tenant</label>
+                <label><input type="checkbox" /> Lessee</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Declaration and Signatures</div>
+      <div class="declaration">
+        I hereby declare that all information indicated above are true and
+        correct, and that these may be used by the Department of Agriculture for
+        registration to the Registry System for Basic Sectors in Agriculture
+        (RSBSA), and for other lawful agency purposes.
+      </div>
+
+      <div class="sig-grid">
+        <div class="sig-cell"><div class="sig-line">Date</div></div>
+        <div class="sig-cell">
+          <div class="sig-line">Printed Name of Applicant</div>
+        </div>
+        <div class="sig-cell">
+          <div class="sig-line">Signature of Applicant</div>
+        </div>
+      </div>
+
+      <div class="verify-bar">Verified True and Correct By</div>
+      <div class="verify-grid">
+        <div class="verify-cell">
+          <div class="sig-line">City/Municipal Agriculture Office</div>
+        </div>
+        <div class="verify-cell">
+          <div class="sig-line">Barangay Representative / CAFC-MAFC</div>
+        </div>
+      </div>
+
+      <div class="privacy">
+        <strong>Data Privacy Policy</strong>
+        The collection of personal information is for documentation, planning,
+        reporting, and processing purposes related to agricultural
+        interventions. Processed data may be shared with authorized partner
+        agencies according to applicable data sharing and privacy policies.
+      </div>
+
+      <div class="foot">THIS FORM IS NOT FOR SALE</div>
+
+      <div class="page-note">Page 2 of 2</div>
+    </div>
+  </body>
+</html>

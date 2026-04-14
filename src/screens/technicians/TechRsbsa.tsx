@@ -1,24 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-} from 'recharts';
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getRsbsaSubmissions, getRsbsaSubmissionById, getFarmParcels } from '../../api';
-import '../../assets/css/technician css/TechRsbsaStyle.css';
-import '../../assets/css/jo css/FarmerDetailModal.css';
-import '../../components/layout/sidebarStyle.css';
-import LogoImage from '../../assets/images/Logo.png';
-import HomeIcon from '../../assets/images/home.png';
-import RSBSAIcon from '../../assets/images/rsbsa.png';
-import ApproveIcon from '../../assets/images/approve.png';
-import LogoutIcon from '../../assets/images/logout.png';
-import IncentivesIcon from '../../assets/images/incentives.png';
+import {
+  getRsbsaSubmissions,
+  getRsbsaSubmissionById,
+  getFarmParcels,
+  getTechDashboardData,
+} from "../../api";
+import "../../assets/css/technician css/TechRsbsaStyle.css";
+import "../../assets/css/jo css/FarmerDetailModal.css";
+import "../../components/layout/sidebarStyle.css";
+import LogoImage from "../../assets/images/Logo.png";
+import HomeIcon from "../../assets/images/home.png";
+import RSBSAIcon from "../../assets/images/rsbsa.png";
+import ApproveIcon from "../../assets/images/approve.png";
+import LogoutIcon from "../../assets/images/logout.png";
+import IncentivesIcon from "../../assets/images/incentives.png";
 
 interface RSBSARecord {
   id: string;
@@ -48,6 +44,9 @@ interface RSBSARecord {
 interface FarmerDetail {
   id: string;
   farmerName: string;
+  referenceNumber: string;
+  dateSubmitted: string;
+  recordStatus: string;
   farmerAddress: string;
   age: number | string;
   gender: string;
@@ -69,25 +68,63 @@ interface ParcelDetail {
   lesseeLandOwnerName: string;
 }
 
+interface UnplottedFarmerItem {
+  id: string;
+  farmerName: string;
+  referenceNumber: string;
+  barangay: string;
+  totalParcels: number;
+  plottedParcels: number;
+  unplottedParcels: number;
+}
+
 const TechRsbsa: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [filteredOwners, setFilteredOwners] = useState<RSBSARecord[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedBarangay, setSelectedBarangay] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
+    null,
+  );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [unplottedFarmers, setUnplottedFarmers] = useState<
+    UnplottedFarmerItem[]
+  >([]);
+  const [showUnplottedOnly, setShowUnplottedOnly] = useState<boolean>(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("unplotted") === "1";
+  });
 
-  const toggleMenu = (id: string, event: React.MouseEvent<HTMLButtonElement>) => {
+  const unplottedFarmerIdSet = React.useMemo(
+    () => new Set(unplottedFarmers.map((farmer) => String(farmer.id))),
+    [unplottedFarmers],
+  );
+
+  const unplottedProgressMap = React.useMemo(() => {
+    const map = new Map<string, UnplottedFarmerItem>();
+    unplottedFarmers.forEach((farmer) => {
+      map.set(String(farmer.id), farmer);
+    });
+    return map;
+  }, [unplottedFarmers]);
+
+  const toggleMenu = (
+    id: string,
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
     if (openMenuId === id) {
       setOpenMenuId(null);
       setMenuPosition(null);
@@ -95,7 +132,7 @@ const TechRsbsa: React.FC = () => {
       const rect = event.currentTarget.getBoundingClientRect();
       setMenuPosition({
         top: rect.bottom + window.scrollY + 4,
-        left: rect.right + window.scrollX - 160 // 160px is min-width of menu
+        left: rect.right + window.scrollX - 160, // 160px is min-width of menu
       });
       setOpenMenuId(id);
     }
@@ -106,19 +143,43 @@ const TechRsbsa: React.FC = () => {
     setMenuPosition(null);
   };
 
+  const getParcelOwnershipLabel = (parcel: ParcelDetail) => {
+    if (parcel.ownershipTypeRegisteredOwner) return "Registered Owner";
+
+    if (parcel.ownershipTypeTenant || parcel.ownershipTypeLessee) {
+      const ownerName =
+        String(parcel.tenantLandOwnerName || "").trim() ||
+        String(parcel.lesseeLandOwnerName || "").trim();
+      const roleLabel =
+        parcel.ownershipTypeTenant && parcel.ownershipTypeLessee
+          ? "Tenant + Lessee"
+          : parcel.ownershipTypeTenant
+            ? "Tenant"
+            : "Lessee";
+
+      return ownerName ? `${roleLabel} (Owner: ${ownerName})` : roleLabel;
+    }
+
+    return "—";
+  };
+
   // Fetch farmer details when row is clicked
-  const fetchFarmerDetails = async (farmerId: string) => {
+  const fetchFarmerDetails = async (
+    farmerId: string,
+    summaryRecord?: RSBSARecord,
+  ) => {
     try {
       setLoadingFarmerDetail(true);
 
       // Fetch basic farmer info
       const farmerResponse = await getRsbsaSubmissionById(farmerId);
-      if (farmerResponse.error) throw new Error('Failed to fetch farmer details');
+      if (farmerResponse.error)
+        throw new Error("Failed to fetch farmer details");
       const farmerData = farmerResponse.data;
 
       // Fetch parcels
       const parcelsResponse = await getFarmParcels(farmerId);
-      if (parcelsResponse.error) throw new Error('Failed to fetch parcels');
+      if (parcelsResponse.error) throw new Error("Failed to fetch parcels");
       const parcelsData = parcelsResponse.data;
 
       // Handle both JSONB (data property) and structured column formats
@@ -128,16 +189,32 @@ const TechRsbsa: React.FC = () => {
       const activities: string[] = [];
 
       // Check for farming activities in various possible field names
-      if (data.farmerRice || data.FARMER_RICE || data.farmer_rice) activities.push('Rice');
-      if (data.farmerCorn || data.FARMER_CORN || data.farmer_corn) activities.push('Corn');
-      if (data.farmerOtherCrops || data.FARMER_OTHER_CROPS || data.farmer_other_crops) {
-        activities.push(`Other Crops: ${data.farmerOtherCropsText || data.FARMER_OTHER_CROPS_TEXT || data.farmer_other_crops_text || ''}`);
+      if (data.farmerRice || data.FARMER_RICE || data.farmer_rice)
+        activities.push("Rice");
+      if (data.farmerCorn || data.FARMER_CORN || data.farmer_corn)
+        activities.push("Corn");
+      if (
+        data.farmerOtherCrops ||
+        data.FARMER_OTHER_CROPS ||
+        data.farmer_other_crops
+      ) {
+        activities.push(
+          `Other Crops: ${data.farmerOtherCropsText || data.FARMER_OTHER_CROPS_TEXT || data.farmer_other_crops_text || ""}`,
+        );
       }
-      if (data.farmerLivestock || data.FARMER_LIVESTOCK || data.farmer_livestock) {
-        activities.push(`Livestock: ${data.farmerLivestockText || data.FARMER_LIVESTOCK_TEXT || data.farmer_livestock_text || ''}`);
+      if (
+        data.farmerLivestock ||
+        data.FARMER_LIVESTOCK ||
+        data.farmer_livestock
+      ) {
+        activities.push(
+          `Livestock: ${data.farmerLivestockText || data.FARMER_LIVESTOCK_TEXT || data.farmer_livestock_text || ""}`,
+        );
       }
       if (data.farmerPoultry || data.FARMER_POULTRY || data.farmer_poultry) {
-        activities.push(`Poultry: ${data.farmerPoultryText || data.FARMER_POULTRY_TEXT || data.farmer_poultry_text || ''}`);
+        activities.push(
+          `Poultry: ${data.farmerPoultryText || data.FARMER_POULTRY_TEXT || data.farmer_poultry_text || ""}`,
+        );
       }
 
       // If no activities found, check if mainLivelihood indicates farming type
@@ -146,56 +223,114 @@ const TechRsbsa: React.FC = () => {
       }
 
       const calculateAge = (birthdate: string): number | string => {
-        if (!birthdate || birthdate === 'N/A') return 'N/A';
+        if (!birthdate || birthdate === "N/A") return "N/A";
         const today = new Date();
         const birthDate = new Date(birthdate);
         let age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        if (
+          monthDiff < 0 ||
+          (monthDiff === 0 && today.getDate() < birthDate.getDate())
+        ) {
           age--;
         }
         return age;
       };
 
       // Reformat the farmer name from "Last, First, Middle, Ext" to "Last, First Middle Ext"
-      const backendName = farmerData.farmerName || '';
+      const backendName = farmerData.farmerName || "";
       const reformattedFarmerName = (() => {
-        if (!backendName || backendName === 'N/A') return 'N/A';
-        const parts = backendName.split(',').map((p: string) => p.trim()).filter(Boolean);
-        if (parts.length === 0) return 'N/A';
+        if (!backendName || backendName === "N/A") return "N/A";
+        const parts = backendName
+          .split(",")
+          .map((p: string) => p.trim())
+          .filter(Boolean);
+        if (parts.length === 0) return "N/A";
         if (parts.length === 1) return parts[0];
         const lastName = parts[0];
-        const restOfName = parts.slice(1).join(' ');
+        const restOfName = parts.slice(1).join(" ");
         return `${lastName}, ${restOfName}`;
       })();
+
+      const getValue = (...values: any[]): string => {
+        for (const value of values) {
+          if (value === null || value === undefined) continue;
+          const text = String(value).trim();
+          if (text) return text;
+        }
+        return "N/A";
+      };
+
+      const selectedRecord =
+        summaryRecord ||
+        registeredOwners.find((rec) => String(rec.id) === String(farmerId));
+
+      const mappedParcels: ParcelDetail[] = parcelsData.map((p: any) => ({
+        id: p.id,
+        parcelNumber: p.parcel_number || "N/A",
+        farmLocationBarangay: p.farm_location_barangay || "N/A",
+        farmLocationMunicipality: p.farm_location_municipality || "N/A",
+        totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
+        ownershipTypeRegisteredOwner:
+          p.ownership_type_registered_owner || false,
+        ownershipTypeTenant: p.ownership_type_tenant || false,
+        ownershipTypeLessee: p.ownership_type_lessee || false,
+        tenantLandOwnerName: p.tenant_land_owner_name || "",
+        lesseeLandOwnerName: p.lessee_land_owner_name || "",
+      }));
+
+      const parsedSubmissionDate = selectedRecord
+        ? getSubmissionDate(selectedRecord)
+        : null;
+
+      const submittedDateLabel = parsedSubmissionDate
+        ? parsedSubmissionDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : getValue(
+            farmerData.dateSubmitted,
+            (farmerData as any).date_submitted,
+            (farmerData as any).submitted_at,
+            (farmerData as any).created_at,
+          );
 
       const farmerDetail: FarmerDetail = {
         id: farmerId,
         farmerName: reformattedFarmerName,
-        farmerAddress: farmerData.farmerAddress || 'N/A',
-        age: calculateAge(data.dateOfBirth || data.birthdate || 'N/A'),
-        gender: data.gender || 'N/A',
-        mainLivelihood: data.mainLivelihood || 'N/A',
+        referenceNumber: getValue(
+          selectedRecord?.referenceNumber,
+          farmerData.referenceNumber,
+          data.referenceNumber,
+          data.ffrsId,
+          data.ffrs_id,
+        ),
+        dateSubmitted: submittedDateLabel,
+        recordStatus: getValue(
+          selectedRecord?.status,
+          farmerData.status,
+          data.status,
+        ),
+        farmerAddress: getValue(
+          farmerData.farmerAddress,
+          selectedRecord?.farmerAddress,
+        ),
+        age: calculateAge(data.dateOfBirth || data.birthdate || "N/A"),
+        gender: getValue(data.gender, farmerData.gender),
+        mainLivelihood: getValue(
+          data.mainLivelihood,
+          farmerData.mainLivelihood,
+        ),
         farmingActivities: activities,
-        parcels: parcelsData.map((p: any) => ({
-          id: p.id,
-          parcelNumber: p.parcel_number || 'N/A',
-          farmLocationBarangay: p.farm_location_barangay || 'N/A',
-          farmLocationMunicipality: p.farm_location_municipality || 'N/A',
-          totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
-          ownershipTypeRegisteredOwner: p.ownership_type_registered_owner || false,
-          ownershipTypeTenant: p.ownership_type_tenant || false,
-          ownershipTypeLessee: p.ownership_type_lessee || false,
-          tenantLandOwnerName: p.tenant_land_owner_name || '',
-          lesseeLandOwnerName: p.lessee_land_owner_name || ''
-        }))
+        parcels: mappedParcels,
       };
 
       setSelectedFarmer(farmerDetail);
       setShowModal(true);
     } catch (err: any) {
-      console.error('Error fetching farmer details:', err);
-      alert('Failed to load farmer details');
+      console.error("Error fetching farmer details:", err);
+      alert("Failed to load farmer details");
     } finally {
       setLoadingFarmerDetail(false);
     }
@@ -205,26 +340,56 @@ const TechRsbsa: React.FC = () => {
   const fetchRSBSARecords = async () => {
     try {
       setLoading(true);
-      const response = await getRsbsaSubmissions();
+      const [response, techDashboardResponse] = await Promise.all([
+        getRsbsaSubmissions(),
+        getTechDashboardData(),
+      ]);
 
       if (response.error) {
-        console.error('Error fetching RSBSA records:', response.error);
-        setError('Failed to load registered land owners data');
+        console.error("Error fetching RSBSA records:", response.error);
+        setError("Failed to load registered land owners data");
         return;
       }
 
       const data = response.data || [];
 
-      console.log('Received RSBSA data from Supabase:', data?.length || 0, 'records');
-      console.log('Sample record:', data?.[0]);
+      console.log(
+        "Received RSBSA data from Supabase:",
+        data?.length || 0,
+        "records",
+      );
+      console.log("Sample record:", data?.[0]);
 
       // Automatically filter for registered owners only
       const registeredOwnersData = filterRegisteredOwners(data || []);
       setRegisteredOwners(registeredOwnersData);
+
+      if (!techDashboardResponse.error) {
+        const queue = Array.isArray(
+          techDashboardResponse.data?.unplottedFarmers,
+        )
+          ? techDashboardResponse.data.unplottedFarmers
+          : [];
+        setUnplottedFarmers(
+          queue.map((item: any) => ({
+            id: String(item.id),
+            farmerName: String(item.farmerName || "N/A"),
+            referenceNumber: String(item.referenceNumber || "N/A"),
+            barangay: String(item.barangay || "N/A"),
+            totalParcels: Number(item.totalParcels || 0),
+            plottedParcels: Number(item.plottedParcels || 0),
+            unplottedParcels: Number(item.unplottedParcels || 0),
+          })),
+        );
+      } else {
+        setUnplottedFarmers([]);
+      }
+
       setError(null);
     } catch (err: any) {
-      console.error('Error fetching RSBSA records:', err);
-      setError('Failed to load registered land owners data');
+      console.error("Error fetching RSBSA records:", err);
+      setError("Failed to load registered land owners data");
+      setUnplottedFarmers([]);
     } finally {
       setLoading(false);
     }
@@ -232,7 +397,7 @@ const TechRsbsa: React.FC = () => {
 
   // Function to filter registered owners only
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
-    console.log('Filtering records:', records.length);
+    console.log("Filtering records:", records.length);
 
     const filtered = records.filter((record: any) => {
       // Exclude farmers who have transferred ALL their parcels (no current ownership)
@@ -249,68 +414,70 @@ const TechRsbsa: React.FC = () => {
       return false;
     });
 
-    console.log('Filtered results:', filtered.length, 'out of', records.length);
+    console.log("Filtered results:", filtered.length, "out of", records.length);
     return filtered;
   };
 
   // Get unique barangays from registered owners
   const uniqueBarangays = React.useMemo(() => {
     const barangays = new Set<string>();
-    registeredOwners.forEach(record => {
+    registeredOwners.forEach((record) => {
       if (record.farmerAddress) {
         // Extract barangay (first part before comma)
-        const barangay = record.farmerAddress.split(',')[0]?.trim();
+        const barangay = record.farmerAddress.split(",")[0]?.trim();
         if (barangay) barangays.add(barangay);
       }
     });
     return Array.from(barangays).sort();
   }, [registeredOwners]);
 
-  // Registration trend: count farmers per month-year
-  const registrationTrend = React.useMemo(() => {
-    const map = new Map<string, number>();
-    registeredOwners.forEach((rec) => {
-      const date = rec.dateSubmitted ? new Date(rec.dateSubmitted) : null;
-      if (!date || Number.isNaN(date.getTime())) return;
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      map.set(key, (map.get(key) || 0) + 1);
-    });
-    // sort keys
-    const entries = Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    return entries.map(([month, count]) => ({ month, count }));
-  }, [registeredOwners]);
+  const getSubmissionDate = (record: RSBSARecord): Date | null => {
+    const candidates = [
+      record.dateSubmitted,
+      (record as any).date_submitted,
+      (record as any).submitted_at,
+      (record as any).created_at,
+      (record as any).createdAt,
+    ];
 
-  // Duplicate detection (same last name + first name + barangay)
-  const duplicateMap = React.useMemo(() => {
-    const m = new Map<string, number>();
-    registeredOwners.forEach((rec) => {
-      const nameParts = (rec.farmerName || '').split(',').map(s => s.trim());
-      const last = (nameParts[0] || '').toLowerCase();
-      const first = (nameParts[1] || '').toLowerCase();
-      const barangay = (rec.farmerAddress || '').split(',')[0]?.trim().toLowerCase() || '';
-      const key = `${last}|${first}|${barangay}`;
-      m.set(key, (m.get(key) || 0) + 1);
-    });
-    return m;
-  }, [registeredOwners]);
+    for (const rawValue of candidates) {
+      if (!rawValue) continue;
+      const parsedDate = new Date(rawValue);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    }
 
-  // Helper to compute missing fields for a record
-  const getMissingFields = (rec: RSBSARecord) => {
-    const missing: string[] = [];
-    if (!rec.gender) missing.push('Gender');
-    if (!rec.birthdate) missing.push('Birthdate');
-    if (!rec.farmerAddress) missing.push('Address');
-    if (!rec.farmLocation) missing.push('Farm Location');
-    if (!rec.parcelArea) missing.push('Parcel Area');
-    return missing;
+    return null;
   };
+
+  const sortedFilteredOwners = React.useMemo(() => {
+    return [...filteredOwners].sort((a, b) => {
+      const dateA = getSubmissionDate(a);
+      const dateB = getSubmissionDate(b);
+
+      // Keep records with missing dates at the bottom.
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+
+      // Newest first.
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [filteredOwners]);
 
   // Filter records based on search term and barangay
   useEffect(() => {
-    const filtered = registeredOwners.filter(record => {
+    const filtered = registeredOwners.filter((record) => {
+      const isUnplotted = unplottedFarmerIdSet.has(String(record.id));
+
+      if (showUnplottedOnly && !isUnplotted) {
+        return false;
+      }
+
       // Barangay filter
-      if (selectedBarangay !== 'all') {
-        const barangay = record.farmerAddress?.split(',')[0]?.trim();
+      if (selectedBarangay !== "all") {
+        const barangay = record.farmerAddress?.split(",")[0]?.trim();
         if (barangay !== selectedBarangay) return false;
       }
 
@@ -318,22 +485,40 @@ const TechRsbsa: React.FC = () => {
       if (searchTerm.trim()) {
         const searchLower = searchTerm.toLowerCase();
         // Search in FFRS ID (both with and without dashes)
-        const ffrsMatch = record.referenceNumber?.toLowerCase().includes(searchLower) ||
-          record.referenceNumber?.replace(/-/g, '').toLowerCase().includes(searchLower);
+        const ffrsMatch =
+          record.referenceNumber?.toLowerCase().includes(searchLower) ||
+          record.referenceNumber
+            ?.replace(/-/g, "")
+            .toLowerCase()
+            .includes(searchLower);
 
         // Search in farmer name
-        const nameMatch = record.farmerName?.toLowerCase().includes(searchLower);
+        const nameMatch = record.farmerName
+          ?.toLowerCase()
+          .includes(searchLower);
 
         // Search in farmer address
-        const addressMatch = record.farmerAddress?.toLowerCase().includes(searchLower);
+        const addressMatch = record.farmerAddress
+          ?.toLowerCase()
+          .includes(searchLower);
 
         // Search in farm location
-        const locationMatch = record.farmLocation?.toLowerCase().includes(searchLower);
+        const locationMatch = record.farmLocation
+          ?.toLowerCase()
+          .includes(searchLower);
 
         // Search in gender
         const genderMatch = record.gender?.toLowerCase().includes(searchLower);
 
-        if (!(ffrsMatch || nameMatch || addressMatch || locationMatch || genderMatch)) {
+        if (
+          !(
+            ffrsMatch ||
+            nameMatch ||
+            addressMatch ||
+            locationMatch ||
+            genderMatch
+          )
+        ) {
           return false;
         }
       }
@@ -342,7 +527,18 @@ const TechRsbsa: React.FC = () => {
     });
 
     setFilteredOwners(filtered);
-  }, [searchTerm, selectedBarangay, registeredOwners]);
+  }, [
+    searchTerm,
+    selectedBarangay,
+    registeredOwners,
+    showUnplottedOnly,
+    unplottedFarmerIdSet,
+  ]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setShowUnplottedOnly(params.get("unplotted") === "1");
+  }, [location.search]);
 
   // Load data on component mount
   useEffect(() => {
@@ -352,14 +548,18 @@ const TechRsbsa: React.FC = () => {
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (openMenuId && !(event.target as Element).closest('.tech-rsbsa-more-button') && !(event.target as Element).closest('.tech-rsbsa-actions-menu')) {
+      if (
+        openMenuId &&
+        !(event.target as Element).closest(".tech-rsbsa-more-button") &&
+        !(event.target as Element).closest(".tech-rsbsa-actions-menu")
+      ) {
         closeMenu();
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [openMenuId]);
 
@@ -371,7 +571,10 @@ const TechRsbsa: React.FC = () => {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
 
@@ -379,29 +582,54 @@ const TechRsbsa: React.FC = () => {
   };
 
   const getDisplayAge = (record: RSBSARecord): string => {
-    if (record.age !== undefined && record.age !== null && String(record.age).trim() !== '') {
+    if (
+      record.age !== undefined &&
+      record.age !== null &&
+      String(record.age).trim() !== ""
+    ) {
       return String(record.age);
     }
 
     const computedAge = calculateAgeFromBirthdate(record.birthdate);
-    return computedAge !== null ? String(computedAge) : 'N/A';
+    return computedAge !== null ? String(computedAge) : "N/A";
+  };
+
+  const getPlottingRatio = (record: RSBSARecord): string => {
+    const progress = unplottedProgressMap.get(String(record.id));
+    if (progress) {
+      const total = Math.max(0, Number(progress.totalParcels || 0));
+      const plotted = Math.min(
+        total,
+        Math.max(0, Number(progress.plottedParcels || 0)),
+      );
+      return total > 0 ? `${plotted}/${total}` : "0/0";
+    }
+
+    const parsedParcelCount = Number(record.parcelCount || 0);
+    const totalFromRecord = Number.isFinite(parsedParcelCount)
+      ? Math.max(0, parsedParcelCount)
+      : 0;
+
+    if (totalFromRecord > 0) {
+      return `${totalFromRecord}/${totalFromRecord}`;
+    }
+
+    return "1/1";
   };
 
   return (
     <div className="tech-rsbsa-page-container">
-
       <div className="tech-rsbsa-page">
-
         {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
-            <div className='sidebar-logo'>
+            <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
             </div>
 
             <button
-              className={`sidebar-nav-item ${isActive('/technician-dashboard') ? 'active' : ''}`}
-              onClick={() => navigate('/technician-dashboard')}
+              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
+              onClick={() => navigate("/technician-dashboard")}
             >
               <span className="nav-icon">
                 <img src={HomeIcon} alt="Home" />
@@ -410,8 +638,8 @@ const TechRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/technician-rsbsa') ? 'active' : ''}`}
-              onClick={() => navigate('/technician-rsbsa')}
+              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
+              onClick={() => navigate("/technician-rsbsa")}
             >
               <span className="nav-icon">
                 <img src={RSBSAIcon} alt="RSBSA" />
@@ -420,18 +648,18 @@ const TechRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/technician-incentives') ? 'active' : ''}`}
-              onClick={() => navigate('/technician-incentives')}
+              className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
+              onClick={() => navigate("/technician-incentives")}
             >
               <span className="nav-icon">
                 <img src={IncentivesIcon} alt="Incentives" />
               </span>
-              <span className="nav-text">Incentives</span>
+              <span className="nav-text">Subsidy</span>
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/technician-masterlist') ? 'active' : ''}`}
-              onClick={() => navigate('/technician-masterlist')}
+              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
+              onClick={() => navigate("/technician-masterlist")}
             >
               <span className="nav-icon">
                 <img src={ApproveIcon} alt="Masterlist" />
@@ -440,31 +668,40 @@ const TechRsbsa: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive('/') ? 'active' : ''}`}
-              onClick={() => navigate('/')}
+              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
+              onClick={() => navigate("/")}
             >
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
           </nav>
         </div>
-        <div className={`tech-incent-sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
 
         {/* Sidebar ends here */}
 
         {/* Main content starts here */}
         <div className="tech-rsbsa-main-content">
           <div className="tech-incent-mobile-header">
-            <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>☰</button>
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
             <div className="tech-incent-mobile-title">RSBSA</div>
           </div>
           <div className="tech-rsbsa-dashboard-header">
             <div>
               <h2 className="tech-rsbsa-page-title">Registered Land Owners</h2>
-              <p className="tech-rsbsa-page-subtitle">View and manage registered land owners from RSBSA submissions</p>
+              <p className="tech-rsbsa-page-subtitle">
+                View and manage registered land owners from RSBSA submissions
+              </p>
             </div>
           </div>
 
@@ -476,12 +713,31 @@ const TechRsbsa: React.FC = () => {
             ) : error ? (
               <div className="tech-rsbsa-error-container">
                 <p>Error: {error}</p>
-                <button onClick={fetchRSBSARecords} className="tech-rsbsa-retry-button">
+                <button
+                  onClick={fetchRSBSARecords}
+                  className="tech-rsbsa-retry-button"
+                >
                   Retry
                 </button>
               </div>
             ) : (
               <>
+                <div
+                  className={`tech-rsbsa-unplotted-banner ${unplottedFarmers.length > 0 ? "has-items" : "all-clear"}`}
+                >
+                  <div className="tech-rsbsa-unplotted-banner-head">
+                    {unplottedFarmers.length > 0 ? (
+                      <>
+                        <strong>{unplottedFarmers.length}</strong> parcel
+                        {unplottedFarmers.length !== 1 ? "s" : ""} still need
+                        plotting.
+                      </>
+                    ) : (
+                      <>All farmers in queue are plotted.</>
+                    )}
+                  </div>
+                </div>
+
                 {/* Search and Filter Container */}
                 <div className="tech-rsbsa-search-filter-container">
                   <div className="tech-rsbsa-search-container">
@@ -495,7 +751,7 @@ const TechRsbsa: React.FC = () => {
                     {searchTerm && (
                       <button
                         className="tech-rsbsa-clear-search-button"
-                        onClick={() => setSearchTerm('')}
+                        onClick={() => setSearchTerm("")}
                         title="Clear search"
                       >
                         ×
@@ -509,24 +765,13 @@ const TechRsbsa: React.FC = () => {
                       className="tech-rsbsa-filter-select"
                     >
                       <option value="all">All Barangays</option>
-                      {uniqueBarangays.map(barangay => (
-                        <option key={barangay} value={barangay}>{barangay}</option>
+                      {uniqueBarangays.map((barangay) => (
+                        <option key={barangay} value={barangay}>
+                          {barangay}
+                        </option>
                       ))}
                     </select>
                   </div>
-                </div>
-
-                {/* Registration trend chart */}
-                <div style={{ width: '100%', height: 160, margin: '12px 0' }}>
-                  <ResponsiveContainer>
-                    <LineChart data={registrationTrend}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="count" stroke="#1976d2" strokeWidth={2} dot={{ r: 3 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
                 </div>
 
                 <div className="tech-rsbsa-table-container">
@@ -534,7 +779,6 @@ const TechRsbsa: React.FC = () => {
                     <thead>
                       <tr>
                         <th>FFRS ID</th>
-                        <th>Quality</th>
                         <th>Last Name</th>
                         <th>First Name</th>
                         <th>Middle Name</th>
@@ -544,49 +788,64 @@ const TechRsbsa: React.FC = () => {
                         <th>Farmer Address</th>
                         <th>Farm Location</th>
                         <th>Parcel Area</th>
+                        <th>Plotted</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredOwners.length === 0 ? (
+                      {sortedFilteredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={11} className="tech-rsbsa-no-data">
-                            {searchTerm ? 'No matching records found' : 'No registered owners found'}
+                          <td colSpan={12} className="tech-rsbsa-no-data">
+                            {searchTerm
+                              ? "No matching records found"
+                              : "No registered owners found"}
                           </td>
                         </tr>
                       ) : (
-                        filteredOwners.map((record) => {
-                          const parcelArea = record.parcelArea ?
-                            (record.parcelArea.includes('hectares') ? record.parcelArea : `${record.parcelArea} hectares`)
-                            : 'N/A';
-
-                          // Determine duplicate and missing fields for this record
-                          const namePartsForKey = (record.farmerName || '').split(',').map(s => s.trim());
-                          const dkLast = (namePartsForKey[0] || '').toLowerCase();
-                          const dkFirst = (namePartsForKey[1] || '').toLowerCase();
-                          const dkBarangay = (record.farmerAddress || '').split(',')[0]?.trim().toLowerCase() || '';
-                          const duplicateKey = `${dkLast}|${dkFirst}|${dkBarangay}`;
-                          const isDuplicate = duplicateMap.get(duplicateKey) > 1;
-                          const missing = getMissingFields(record);
+                        sortedFilteredOwners.map((record) => {
+                          const parcelArea = record.parcelArea
+                            ? record.parcelArea.includes("hectares")
+                              ? record.parcelArea
+                              : `${record.parcelArea} hectares`
+                            : "N/A";
 
                           return (
                             <tr
                               key={record.id}
-                              onClick={() => fetchFarmerDetails(record.id)}
-                              style={{ cursor: 'pointer' }}
+                              onClick={() =>
+                                fetchFarmerDetails(record.id, record)
+                              }
+                              style={{ cursor: "pointer" }}
                             >
-                              <td className="tech-rsbsa-ffrs-id">{record.referenceNumber || 'N/A'}</td>
-                              <td>{record.lastName || ''}</td>
-                              <td>{record.firstName || ''}</td>
-                              <td>{record.middleName || ''}</td>
-                              <td>{record.extName || ''}</td>
-                              <td>{record.gender || 'N/A'}</td>
+                              <td
+                                className="tech-rsbsa-ffrs-id"
+                                title={record.referenceNumber || "N/A"}
+                              >
+                                <span className="tech-rsbsa-ffrs-id-value">
+                                  {record.referenceNumber || "N/A"}
+                                </span>
+                              </td>
+                              <td>{record.lastName || ""}</td>
+                              <td>{record.firstName || ""}</td>
+                              <td>{record.middleName || ""}</td>
+                              <td>{record.extName || ""}</td>
+                              <td>{record.gender || "N/A"}</td>
                               <td>{getDisplayAge(record)}</td>
-                              <td>{record.farmerAddress || 'N/A'}</td>
-                              <td>{record.farmLocation || 'N/A'}</td>
+                              <td>{record.farmerAddress || "N/A"}</td>
+                              <td>{record.farmLocation || "N/A"}</td>
                               <td>{parcelArea}</td>
+                              <td>
+                                <span className="tech-rsbsa-plot-status-pill">
+                                  {getPlottingRatio(record)}
+                                </span>
+                              </td>
                               <td onClick={(e) => e.stopPropagation()}>
-                                <div style={{ position: 'relative', display: 'inline-block' }}>
+                                <div
+                                  style={{
+                                    position: "relative",
+                                    display: "inline-block",
+                                  }}
+                                >
                                   <button
                                     className="tech-rsbsa-more-button"
                                     onClick={(e) => {
@@ -617,57 +876,121 @@ const TechRsbsa: React.FC = () => {
           <div
             className="tech-rsbsa-actions-menu"
             style={{
-              position: 'fixed',
+              position: "fixed",
               top: menuPosition.top,
               left: menuPosition.left,
             }}
           >
-            <button onClick={() => { navigate(`/technician-pick-land-parcel/${openMenuId}`); closeMenu(); }}>Land Parcel</button>
+            <button
+              onClick={() => {
+                navigate(`/technician-pick-land-parcel/${openMenuId}`);
+                closeMenu();
+              }}
+            >
+              Land Parcel
+            </button>
           </div>
         )}
 
         {/* Farmer Detail Modal */}
         {showModal && selectedFarmer && (
-          <div className="farmer-modal-overlay" onClick={() => setShowModal(false)}>
-            <div className="farmer-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="farmer-modal-overlay"
+            onClick={() => setShowModal(false)}
+          >
+            <div
+              className="farmer-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="farmer-modal-header">
                 <h2>Farmer Details</h2>
-                <button className="farmer-modal-close" onClick={() => setShowModal(false)}>×</button>
+                <button
+                  className="farmer-modal-close"
+                  onClick={() => setShowModal(false)}
+                >
+                  ×
+                </button>
               </div>
 
               <div className="farmer-modal-body">
                 {loadingFarmerDetail ? (
-                  <div className="farmer-modal-loading">Loading farmer details...</div>
+                  <div className="farmer-modal-loading">
+                    Loading farmer details...
+                  </div>
                 ) : (
                   <>
-                    {/* Personal Information */}
                     <div className="farmer-modal-section">
-                      <h3 className="farmer-modal-section-title">👤 Personal Information</h3>
+                      <h3 className="farmer-modal-section-title">
+                        📌 Record Overview
+                      </h3>
                       <div className="farmer-modal-info-grid">
                         <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Farmer Name:</span>
-                          <span className="farmer-modal-value">{selectedFarmer.farmerName}</span>
+                          <span className="farmer-modal-label">FFRS ID:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.referenceNumber}
+                          </span>
                         </div>
                         <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Farmer Address:</span>
-                          <span className="farmer-modal-value">{selectedFarmer.farmerAddress}</span>
+                          <span className="farmer-modal-label">
+                            Date Submitted:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.dateSubmitted}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Status:</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.recordStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Personal Information */}
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">
+                        👤 Personal Information
+                      </h3>
+                      <div className="farmer-modal-info-grid">
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">
+                            Farmer Name:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.farmerName}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">
+                            Farmer Address:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.farmerAddress}
+                          </span>
                         </div>
                         <div className="farmer-modal-info-item">
                           <span className="farmer-modal-label">Age:</span>
                           <span className="farmer-modal-value">
-                            {typeof selectedFarmer.age === 'number' ? `${selectedFarmer.age} years old` : selectedFarmer.age}
+                            {typeof selectedFarmer.age === "number"
+                              ? `${selectedFarmer.age} years old`
+                              : selectedFarmer.age}
                           </span>
                         </div>
                         <div className="farmer-modal-info-item">
                           <span className="farmer-modal-label">Gender:</span>
-                          <span className="farmer-modal-value">{selectedFarmer.gender}</span>
+                          <span className="farmer-modal-value">
+                            {selectedFarmer.gender}
+                          </span>
                         </div>
                         <div className="farmer-modal-info-item farmer-modal-full-width">
-                          <span className="farmer-modal-label">Main Livelihood:</span>
+                          <span className="farmer-modal-label">
+                            Main Livelihood:
+                          </span>
                           <span className="farmer-modal-value">
                             {selectedFarmer.farmingActivities.length > 0
-                              ? selectedFarmer.farmingActivities.join(', ')
-                              : 'Not Available'}
+                              ? selectedFarmer.farmingActivities.join(", ")
+                              : "Not Available"}
                           </span>
                         </div>
                       </div>
@@ -675,55 +998,50 @@ const TechRsbsa: React.FC = () => {
 
                     {/* Farm Information */}
                     <div className="farmer-modal-section">
-                      <h3 className="farmer-modal-section-title">🌾 Farm Information</h3>
+                      <h3 className="farmer-modal-section-title">
+                        🌾 Farm Information
+                      </h3>
                       {selectedFarmer.parcels.length === 0 ? (
                         <p className="farmer-modal-no-data">No parcels found</p>
                       ) : (
                         <div className="farmer-modal-parcels-container">
-                          {selectedFarmer.parcels.map((parcel, index) => (
-                            <div key={parcel.id} className="farmer-modal-parcel-card">
+                          {selectedFarmer.parcels.map((parcel) => (
+                            <div
+                              key={parcel.id}
+                              className="farmer-modal-parcel-card"
+                            >
                               <div className="farmer-modal-parcel-header">
                                 <h4>Parcel #{parcel.parcelNumber}</h4>
                               </div>
                               <div className="farmer-modal-parcel-details">
                                 <div className="farmer-modal-parcel-item">
-                                  <span className="farmer-modal-label">Land Ownership:</span>
+                                  <span className="farmer-modal-label">
+                                    Land Ownership:
+                                  </span>
                                   <span className="farmer-modal-value">
-                                    {parcel.ownershipTypeRegisteredOwner && 'Registered Owner'}
-                                    {parcel.ownershipTypeTenant && (
-                                      <>
-                                        Tenant
-                                        {parcel.tenantLandOwnerName && (
-                                          <span className="farmer-modal-owner-name">
-                                            {' '}(Owner: {parcel.tenantLandOwnerName})
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
-                                    {parcel.ownershipTypeLessee && (
-                                      <>
-                                        Lessee
-                                        {parcel.lesseeLandOwnerName && (
-                                          <span className="farmer-modal-owner-name">
-                                            {' '}(Owner: {parcel.lesseeLandOwnerName})
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
+                                    {getParcelOwnershipLabel(parcel)}
                                   </span>
                                 </div>
                                 <div className="farmer-modal-parcel-item">
-                                  <span className="farmer-modal-label">Parcel Location:</span>
+                                  <span className="farmer-modal-label">
+                                    Parcel Location:
+                                  </span>
                                   <span className="farmer-modal-value">
-                                    {parcel.farmLocationBarangay}, {parcel.farmLocationMunicipality}
+                                    {parcel.farmLocationBarangay},{" "}
+                                    {parcel.farmLocationMunicipality}
                                   </span>
                                 </div>
                                 <div className="farmer-modal-parcel-item">
-                                  <span className="farmer-modal-label">Parcel Size:</span>
+                                  <span className="farmer-modal-label">
+                                    Parcel Size:
+                                  </span>
                                   <span className="farmer-modal-value">
-                                    {typeof parcel.totalFarmAreaHa === 'number'
+                                    {typeof parcel.totalFarmAreaHa === "number"
                                       ? parcel.totalFarmAreaHa.toFixed(2)
-                                      : parseFloat(String(parcel.totalFarmAreaHa || 0)).toFixed(2)} hectares
+                                      : parseFloat(
+                                          String(parcel.totalFarmAreaHa || 0),
+                                        ).toFixed(2)}{" "}
+                                    hectares
                                   </span>
                                 </div>
                               </div>
@@ -731,18 +1049,6 @@ const TechRsbsa: React.FC = () => {
                           ))}
                         </div>
                       )}
-                    </div>
-                    {/* link to full profile */}
-                    <div className="farmer-modal-section">
-                      <button
-                        className="btn-action"
-                        onClick={() => {
-                          navigate(`/technician-farmerprofile/${selectedFarmer.id}`);
-                          setShowModal(false);
-                        }}
-                      >
-                        View Full Profile
-                      </button>
                     </div>
                   </>
                 )}
@@ -752,9 +1058,7 @@ const TechRsbsa: React.FC = () => {
         )}
       </div>
     </div>
-
   );
 };
 
 export default TechRsbsa;
-
