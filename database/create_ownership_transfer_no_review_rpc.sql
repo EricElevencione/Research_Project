@@ -79,6 +79,9 @@ declare
   v_within_domain text;
   v_ownership_doc text;
   v_arb text;
+  v_is_registered_owner boolean;
+  v_is_tenant boolean;
+  v_is_lessee boolean;
 
   v_from_total numeric(10,2);
   v_to_total numeric(10,2);
@@ -137,14 +140,20 @@ begin
       farm_location_municipality,
       within_ancestral_domain,
       ownership_document_no,
-      agrarian_reform_beneficiary
+      agrarian_reform_beneficiary,
+      ownership_type_registered_owner,
+      ownership_type_tenant,
+      ownership_type_lessee
     into
       v_parcel_area,
       v_barangay,
       v_municipality,
       v_within_domain,
       v_ownership_doc,
-      v_arb
+      v_arb,
+      v_is_registered_owner,
+      v_is_tenant,
+      v_is_lessee
     from rsbsa_farm_parcels
     where id = v_farm_parcel_id
       and submission_id = p_from_farmer_id
@@ -152,6 +161,18 @@ begin
 
     if v_parcel_area is null then
       raise exception 'Parcel % is not owned by source farmer %.', v_farm_parcel_id, p_from_farmer_id;
+    end if;
+
+    -- Enforce legal transfer policy: donor parcel must be in registered-owner role.
+    if coalesce(v_is_tenant, false)
+       or coalesce(v_is_lessee, false)
+       or v_is_registered_owner = false then
+      raise exception using
+        errcode = 'P0005',
+        message = format(
+          'Parcel %s cannot be transferred: only registered owners can transfer legal ownership.',
+          v_farm_parcel_id
+        );
     end if;
 
     if v_transfer_area > (v_parcel_area + 0.0001) then

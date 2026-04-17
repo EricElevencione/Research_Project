@@ -213,6 +213,14 @@ export function usePartialTransfer() {
                 `Parcel ${parcel.parcel_number}: partial area must be strictly less than the full parcel area. Switch to "Full Parcel" mode if you want to transfer everything.`,
               );
             }
+            if (
+              /P0005/.test(msg) ||
+              /only registered owners can transfer legal ownership/i.test(msg)
+            ) {
+              throw new Error(
+                `Parcel ${parcel.parcel_number}: transfer blocked by policy. Only registered-owner parcels can be transferred.`,
+              );
+            }
             throw new Error(
               `Parcel ${parcel.parcel_number}: ${msg || "Unknown error from server."}`,
             );

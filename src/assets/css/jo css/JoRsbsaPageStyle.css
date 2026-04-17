@@ -667,6 +667,199 @@
   line-height: 1.5;
 }
 
+/* Edit Modal */
+.jo-rsbsa-edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.jo-rsbsa-edit-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.jo-rsbsa-edit-modal-header {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  padding: 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #047857;
+}
+
+.jo-rsbsa-edit-modal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.jo-rsbsa-close-button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.jo-rsbsa-close-button:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.jo-rsbsa-edit-modal-body {
+  padding: 24px;
+}
+
+.jo-rsbsa-edit-error-banner {
+  background: #fdecea;
+  color: #b71c1c;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.jo-rsbsa-form-group {
+  margin-bottom: 16px;
+}
+
+.jo-rsbsa-form-group label {
+  display: block;
+  margin-bottom: 6px;
+  color: #333333;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.jo-rsbsa-form-group input,
+.jo-rsbsa-form-group select {
+  width: 100% !important;
+  padding: 10px 12px !important;
+  border: 1px solid #dddddd !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease !important;
+  box-sizing: border-box !important;
+  background: #ffffff;
+}
+
+.jo-rsbsa-form-group input:focus,
+.jo-rsbsa-form-group select:focus {
+  outline: none !important;
+  border-color: #4caf50 !important;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1) !important;
+}
+
+.jo-rsbsa-parcel-section {
+  margin-top: 20px;
+  border-top: 2px solid #e0e0e0;
+  padding-top: 15px;
+}
+
+.jo-rsbsa-parcel-section h4 {
+  margin-bottom: 15px;
+  color: #2c5f2d;
+}
+
+.jo-rsbsa-parcel-item {
+  margin-bottom: 15px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.jo-rsbsa-parcel-item.error {
+  border: 2px solid #d32f2f;
+}
+
+.jo-rsbsa-parcel-error {
+  color: #d32f2f;
+  font-size: 0.85em;
+  display: block;
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+.jo-rsbsa-parcel-location {
+  color: #666666;
+  font-size: 0.85em;
+  display: block;
+  margin-top: 5px;
+}
+
+.jo-rsbsa-parcel-empty-text {
+  color: #666666;
+  font-style: italic;
+}
+
+.jo-rsbsa-edit-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.jo-rsbsa-cancel-button {
+  background: #6c757d;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.jo-rsbsa-cancel-button:hover {
+  background: #5a6268;
+}
+
+.jo-rsbsa-save-button {
+  background: #28a745;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.jo-rsbsa-save-button:hover {
+  background: #218838;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .jo-rsbsa-status-cards {

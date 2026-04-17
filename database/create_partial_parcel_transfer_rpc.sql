@@ -83,6 +83,9 @@ DECLARE
   v_within_domain     TEXT;
   v_ownership_doc     TEXT;
   v_arb               TEXT;
+  v_is_registered_owner BOOLEAN;
+  v_is_tenant         BOOLEAN;
+  v_is_lessee         BOOLEAN;
 
   -- Farmer names / ffrs
   v_donor_name        TEXT;
@@ -125,14 +128,20 @@ BEGIN
     farm_location_municipality,
     within_ancestral_domain,
     ownership_document_no,
-    agrarian_reform_beneficiary
+    agrarian_reform_beneficiary,
+    ownership_type_registered_owner,
+    ownership_type_tenant,
+    ownership_type_lessee
   INTO
     v_parcel_area,
     v_barangay,
     v_municipality,
     v_within_domain,
     v_ownership_doc,
-    v_arb
+    v_arb,
+    v_is_registered_owner,
+    v_is_tenant,
+    v_is_lessee
   FROM rsbsa_farm_parcels
   WHERE id = p_farm_parcel_id
   FOR UPDATE;
@@ -151,6 +160,18 @@ BEGIN
     RAISE EXCEPTION USING
       ERRCODE = 'P0003',
       MESSAGE = format('Parcel %s does not belong to farmer %s.', p_farm_parcel_id, p_donor_farmer_id);
+  END IF;
+
+  -- Enforce legal transfer policy: donor parcel must be in registered-owner role.
+  IF COALESCE(v_is_tenant, FALSE)
+     OR COALESCE(v_is_lessee, FALSE)
+     OR v_is_registered_owner = FALSE THEN
+    RAISE EXCEPTION USING
+      ERRCODE = 'P0005',
+      MESSAGE = format(
+        'Parcel %s cannot be transferred: only registered owners can transfer legal ownership.',
+        p_farm_parcel_id
+      );
   END IF;
 
   -- Partial must be strictly less than the full parcel
