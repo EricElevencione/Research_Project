@@ -1381,6 +1381,39 @@
   font-size: 12px;
 }
 
+.jo-land-registry-transfer-doc-list-readonly li {
+  align-items: flex-start;
+}
+
+.jo-land-registry-transfer-doc-meta {
+  font-size: 11px;
+  color: #64748b;
+  text-align: right;
+}
+
+.jo-land-registry-replacement-step-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.jo-land-registry-replacement-step-nav button {
+  border: 1px solid #0ea5e9;
+  background: #f0f9ff;
+  color: #075985;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jo-land-registry-replacement-step-nav button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .jo-land-registry-transfer-mini-note {
   margin-top: 8px;
   font-size: 12px;

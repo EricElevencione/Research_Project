@@ -4,6 +4,8 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
+  updateRsbsaSubmission,
+  updateFarmParcel,
 } from "../../api";
 import { printRsbsaFormById } from "../../utils/rsbsaPrint";
 import "../../assets/css/jo css/JoRsbsaPageStyle.css";
@@ -24,6 +26,7 @@ interface RSBSARecord {
   farmLocation: string;
   gender: string;
   birthdate: string;
+  age?: number | string | null;
   dateSubmitted: string;
   status: string;
   landParcel: string;
@@ -66,12 +69,92 @@ interface ParcelDetail {
   lesseeLandOwnerName: string;
 }
 
+interface Parcel {
+  id: string;
+  parcel_number: string;
+  farm_location_barangay: string;
+  farm_location_municipality: string;
+  total_farm_area_ha: number;
+  within_ancestral_domain: string;
+  ownership_document_no: string;
+  agrarian_reform_beneficiary: string;
+  ownership_type_registered_owner: boolean;
+  ownership_type_tenant: boolean;
+  ownership_type_lessee: boolean;
+  tenant_land_owner_name: string;
+  lessee_land_owner_name: string;
+  ownership_others_specify: string;
+}
+
+interface EditFormData {
+  farmerName?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  farmerAddress?: string;
+  barangay?: string;
+  municipality?: string;
+  farmLocation?: string;
+  landParcel?: string;
+  dateSubmitted?: string;
+  parcelArea?: string;
+  age?: string;
+}
+
 type SortKey = "farmer" | "gender" | "parcelArea" | "dateSubmitted";
 type SortDirection = "asc" | "desc";
 
 const JoRsbsaPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const barangays = [
+    "Aurora-Del Pilar",
+    "Bacay",
+    "Bacong",
+    "Balabag",
+    "Balud",
+    "Bantud",
+    "Bantud Fabrica",
+    "Baras",
+    "Barasan",
+    "Basa-Mabini Bonifacio",
+    "Bolilao",
+    "Buenaflor Embarkadero",
+    "Burgos-Regidor",
+    "Calao",
+    "Cali",
+    "Cansilayan",
+    "Capaliz",
+    "Cayos",
+    "Compayan",
+    "Dacutan",
+    "Ermita",
+    "Ilaya 1st",
+    "Ilaya 2nd",
+    "Ilaya 3rd",
+    "Jardin",
+    "Lacturan",
+    "Lopez Jaena - Rizal",
+    "Managuit",
+    "Maquina",
+    "Nanding Lopez",
+    "Pagdugue",
+    "Paloc Bigque",
+    "Paloc Sool",
+    "Patlad",
+    "Pd Monfort North",
+    "Pd Monfort South",
+    "Pulao",
+    "Rosario",
+    "Sapao",
+    "Sulangan",
+    "Tabucan",
+    "Talusan",
+    "Tambobo",
+    "Tamboilan",
+    "Victorias",
+  ].sort();
 
   const [_activeTab] = useState("overview");
   const [_rsbsaRecords, _setRsbsaRecords] = useState<RSBSARecord[]>([]);
@@ -85,6 +168,12 @@ const JoRsbsaPage: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<RSBSARecord | null>(null);
+  const [editFormData, setEditFormData] = useState<EditFormData>({});
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editingParcels, setEditingParcels] = useState<Parcel[]>([]);
+  const [loadingParcels, setLoadingParcels] = useState(false);
+  const [parcelErrors, setParcelErrors] = useState<Record<string, string>>({});
   const [isModalPrinting, setIsModalPrinting] = useState(false);
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
@@ -552,6 +641,191 @@ const JoRsbsaPage: React.FC = () => {
     return cleaned.join("") || "NA";
   };
 
+  const ageToInputValue = (ageValue: unknown): string => {
+    if (ageValue === null || ageValue === undefined) return "";
+    return String(ageValue);
+  };
+
+  const parseAgeInputToNumber = (ageValue?: string): number | null => {
+    if (!ageValue || ageValue.trim() === "") return null;
+    const parsed = Number(ageValue);
+    if (!Number.isFinite(parsed) || parsed < 0) return null;
+    return Math.floor(parsed);
+  };
+
+  const parseName = (
+    fullName: string,
+  ): { lastName: string; firstName: string; middleName: string } => {
+    if (!fullName) return { lastName: "", firstName: "", middleName: "" };
+    const parts = fullName
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length === 0) {
+      return { lastName: "", firstName: "", middleName: "" };
+    }
+    if (parts.length === 1) {
+      return { lastName: parts[0] || "", firstName: "", middleName: "" };
+    }
+
+    const [last, firstMiddle] = parts;
+    const firstMiddleParts = (firstMiddle || "")
+      .split(" ")
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    return {
+      lastName: last || "",
+      firstName: firstMiddleParts[0] || "",
+      middleName: firstMiddleParts.slice(1).join(" ") || "",
+    };
+  };
+
+  const parseAddress = (
+    address: string,
+  ): { barangay: string; municipality: string } => {
+    if (!address) return { barangay: "", municipality: "" };
+    const parts = address
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length === 0) return { barangay: "", municipality: "" };
+    if (parts.length === 1)
+      return { barangay: parts[0] || "", municipality: "" };
+
+    return { barangay: parts[0] || "", municipality: parts[1] || "" };
+  };
+
+  const normalizeText = (value: string) => value.trim().toLowerCase();
+
+  const resolveBarangayForEdit = (
+    addressBarangay: string,
+    farmLocation: string,
+  ): string => {
+    const matchBarangay = (candidate: string): string => {
+      if (!candidate) return "";
+      const normalizedCandidate = normalizeText(candidate);
+      const exact = barangays.find(
+        (barangay) => normalizeText(barangay) === normalizedCandidate,
+      );
+      return exact || "";
+    };
+
+    const fromAddress = matchBarangay(addressBarangay);
+    if (fromAddress) return fromAddress;
+
+    const parsedFarmLocation = parseAddress(farmLocation || "");
+    const fromFarmLocation = matchBarangay(
+      parsedFarmLocation.barangay || farmLocation,
+    );
+    if (fromFarmLocation) return fromFarmLocation;
+
+    return "";
+  };
+
+  const extractParcelAreaNumber = (
+    value: number | string | null | undefined,
+  ): string => {
+    if (value === null || value === undefined) return "";
+
+    const textValue = String(value).trim();
+    if (!textValue) return "";
+
+    const numericTokens = textValue.match(/-?\d+(?:\.\d+)?/g);
+    if (!numericTokens || numericTokens.length === 0) return "";
+
+    const total = numericTokens.reduce((sum, token) => {
+      const parsed = Number(token);
+      return sum + (Number.isFinite(parsed) ? parsed : 0);
+    }, 0);
+
+    if (!Number.isFinite(total) || total <= 0) return "";
+    return String(total);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRecord(null);
+    setEditFormData({});
+    setEditError(null);
+    setEditingParcels([]);
+    setParcelErrors({});
+  };
+
+  const handleInputChange = (field: keyof EditFormData, value: string) => {
+    setEditError(null);
+    setEditFormData((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const handleIndividualParcelChange = (
+    parcelId: string,
+    field: keyof Parcel,
+    value: any,
+  ) => {
+    setEditError(null);
+
+    if (field === "total_farm_area_ha") {
+      const valueStr = String(value).trim();
+
+      if (valueStr === "") {
+        setParcelErrors((previous) => ({
+          ...previous,
+          [parcelId]: "Parcel area is required",
+        }));
+        setEditingParcels((previous) =>
+          previous.map((parcel) =>
+            parcel.id === parcelId ? { ...parcel, [field]: 0 } : parcel,
+          ),
+        );
+        return;
+      }
+
+      const numValue = parseFloat(valueStr);
+      if (Number.isNaN(numValue)) {
+        setParcelErrors((previous) => ({
+          ...previous,
+          [parcelId]: "Parcel area must be a valid number",
+        }));
+        return;
+      }
+
+      if (numValue <= 0) {
+        setParcelErrors((previous) => ({
+          ...previous,
+          [parcelId]: "Parcel area must be greater than 0",
+        }));
+        setEditingParcels((previous) =>
+          previous.map((parcel) =>
+            parcel.id === parcelId ? { ...parcel, [field]: numValue } : parcel,
+          ),
+        );
+        return;
+      }
+
+      setParcelErrors((previous) => {
+        if (!previous[parcelId]) return previous;
+        const { [parcelId]: _removed, ...rest } = previous;
+        return rest;
+      });
+      setEditingParcels((previous) =>
+        previous.map((parcel) =>
+          parcel.id === parcelId ? { ...parcel, [field]: numValue } : parcel,
+        ),
+      );
+      return;
+    }
+
+    setEditingParcels((previous) =>
+      previous.map((parcel) =>
+        parcel.id === parcelId ? { ...parcel, [field]: value } : parcel,
+      ),
+    );
+  };
+
   const formatDate = (iso: string) => {
     if (!iso) return "—";
     try {
@@ -651,8 +925,209 @@ const JoRsbsaPage: React.FC = () => {
     return "—";
   };
 
-  const handleEditFromRsbsa = (recordId: string) => {
-    navigate("/jo-masterlist", { state: { editRecordId: recordId } });
+  const handleEditFromRsbsa = async (recordId: string) => {
+    const recordToEdit = registeredOwners.find(
+      (record) => record.id === recordId,
+    );
+    if (!recordToEdit) {
+      alert("Unable to find the selected land owner.");
+      return;
+    }
+
+    const { lastName, firstName, middleName } = parseName(
+      recordToEdit.farmerName || "",
+    );
+    const parsedAddress = parseAddress(recordToEdit.farmerAddress || "");
+    const parsedFarmLocation = parseAddress(recordToEdit.farmLocation || "");
+    const resolvedBarangay = resolveBarangayForEdit(
+      parsedAddress.barangay,
+      recordToEdit.farmLocation || "",
+    );
+    const resolvedMunicipality = (() => {
+      const fromAddress = (parsedAddress.municipality || "").trim();
+      if (fromAddress && normalizeText(fromAddress) !== "iloilo") {
+        return fromAddress;
+      }
+      const fromFarmLocation = (parsedFarmLocation.municipality || "").trim();
+      if (fromFarmLocation) return fromFarmLocation;
+      return "Dumangas";
+    })();
+
+    setEditingRecord(recordToEdit);
+    setEditError(null);
+    setEditFormData({
+      farmerName: recordToEdit.farmerName,
+      firstName,
+      middleName,
+      lastName,
+      age: ageToInputValue(recordToEdit.age),
+      farmerAddress: recordToEdit.farmerAddress,
+      barangay: resolvedBarangay,
+      municipality: resolvedMunicipality,
+      farmLocation: recordToEdit.farmLocation,
+      landParcel: recordToEdit.landParcel,
+      dateSubmitted: recordToEdit.dateSubmitted,
+      parcelArea: extractParcelAreaNumber(recordToEdit.totalFarmArea),
+    });
+
+    setLoadingParcels(true);
+    setParcelErrors({});
+    try {
+      const response = await getFarmParcels(recordId);
+      if (response.error) {
+        setEditingParcels([]);
+        setEditError("Failed to load parcel rows for editing.");
+      } else {
+        setEditingParcels(response.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching parcels for edit:", error);
+      setEditingParcels([]);
+      setEditError("Failed to load parcel rows for editing.");
+    } finally {
+      setLoadingParcels(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRecord) return;
+
+    try {
+      setEditError(null);
+
+      if (editingParcels.length > 0) {
+        let hasErrors = false;
+        const newErrors: Record<string, string> = {};
+
+        editingParcels.forEach((parcel) => {
+          if (!parcel.total_farm_area_ha || parcel.total_farm_area_ha <= 0) {
+            hasErrors = true;
+            newErrors[parcel.id] =
+              "Parcel area must be a valid positive number";
+          }
+        });
+
+        if (hasErrors) {
+          setParcelErrors(newErrors);
+          setEditError("Please fix all parcel area errors before saving.");
+          return;
+        }
+      }
+
+      const rawAgeInput = (editFormData.age ?? "").trim();
+      const normalizedAge = parseAgeInputToNumber(rawAgeInput);
+      if (
+        rawAgeInput !== "" &&
+        (normalizedAge === null || normalizedAge < 18)
+      ) {
+        setEditError("Age must be a valid number and at least 18 years old.");
+        return;
+      }
+
+      const composedFarmerName = (() => {
+        const last = (editFormData.lastName ?? "").trim();
+        const first = (editFormData.firstName ?? "").trim();
+        const middle = (editFormData.middleName ?? "").trim();
+        const firstMiddle = [first, middle].filter(Boolean).join(" ");
+
+        const parts: string[] = [];
+        if (last) parts.push(last);
+        if (firstMiddle) parts.push(firstMiddle);
+
+        return parts.length > 0
+          ? parts.join(", ")
+          : (editFormData.farmerName ?? editingRecord.farmerName);
+      })();
+
+      const composedAddress = (() => {
+        const barangay = (editFormData.barangay ?? "").trim();
+        const municipality = (editFormData.municipality ?? "").trim();
+        if (barangay && municipality) return `${barangay}, ${municipality}`;
+        if (barangay) return barangay;
+        if (municipality) return municipality;
+        return editFormData.farmerAddress ?? editingRecord.farmerAddress;
+      })();
+
+      const newParcelAreaString =
+        editingParcels.length > 0
+          ? editingParcels.map((parcel) => parcel.total_farm_area_ha).join(", ")
+          : (editFormData.parcelArea ??
+            String(editingRecord.totalFarmArea || ""));
+
+      const updatePayload: Record<string, any> = {
+        farmerName: composedFarmerName,
+        farmerAddress: composedAddress,
+        parcelArea: newParcelAreaString,
+        firstName: editFormData.firstName,
+        middleName: editFormData.middleName,
+        surname: editFormData.lastName,
+        addressBarangay: editFormData.barangay,
+        addressMunicipality: editFormData.municipality,
+      };
+
+      if (rawAgeInput !== "" || editingRecord.age !== undefined) {
+        updatePayload.age = normalizedAge;
+      }
+
+      const cleanedData = Object.entries(updatePayload).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined && value !== "") {
+            acc[key] = value;
+          }
+          return acc;
+        },
+        {} as Record<string, any>,
+      );
+
+      if (Object.keys(cleanedData).length > 0) {
+        const response = await updateRsbsaSubmission(
+          editingRecord.id,
+          cleanedData,
+        );
+        if (response.error) {
+          throw new Error(response.error);
+        }
+      }
+
+      if (editingParcels.length > 0) {
+        for (const parcel of editingParcels) {
+          try {
+            const parcelResponse = await updateFarmParcel(parcel.id, {
+              total_farm_area_ha: parcel.total_farm_area_ha,
+              farm_location_barangay: parcel.farm_location_barangay,
+              farm_location_municipality: parcel.farm_location_municipality,
+              within_ancestral_domain: parcel.within_ancestral_domain,
+              ownership_document_no: parcel.ownership_document_no,
+              agrarian_reform_beneficiary: parcel.agrarian_reform_beneficiary,
+              ownership_type_registered_owner:
+                parcel.ownership_type_registered_owner,
+              ownership_type_tenant: parcel.ownership_type_tenant,
+              ownership_type_lessee: parcel.ownership_type_lessee,
+              tenant_land_owner_name: parcel.tenant_land_owner_name,
+              lessee_land_owner_name: parcel.lessee_land_owner_name,
+              ownership_others_specify: parcel.ownership_others_specify,
+            });
+
+            if (parcelResponse.error) {
+              console.error(`Failed to update parcel ${parcel.id}`);
+            }
+          } catch (error) {
+            console.error(`Error updating parcel ${parcel.id}:`, error);
+          }
+        }
+      }
+
+      await fetchRSBSARecords();
+      handleCancelEdit();
+      alert("Land owner information updated successfully.");
+    } catch (error) {
+      console.error("Error updating record:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to update record. Please try again.";
+      setEditError(message);
+    }
   };
 
   const handleModalPrint = async () => {
@@ -1026,6 +1501,173 @@ const JoRsbsaPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Edit Modal */}
+        {editingRecord && (
+          <div
+            className="jo-rsbsa-edit-modal-overlay"
+            onClick={handleCancelEdit}
+          >
+            <div
+              className="jo-rsbsa-edit-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="jo-rsbsa-edit-modal-header">
+                <h2>Edit Land Owner Information</h2>
+                <button
+                  className="jo-rsbsa-close-button"
+                  onClick={handleCancelEdit}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="jo-rsbsa-edit-modal-body">
+                {editError && (
+                  <div className="jo-rsbsa-edit-error-banner" role="alert">
+                    {editError}
+                  </div>
+                )}
+
+                <div className="jo-rsbsa-form-group">
+                  <label>Last Name:</label>
+                  <input
+                    type="text"
+                    value={editFormData.lastName || ""}
+                    onChange={(e) =>
+                      handleInputChange("lastName", e.target.value)
+                    }
+                    placeholder="Last Name"
+                  />
+                </div>
+
+                <div className="jo-rsbsa-form-group">
+                  <label>First Name:</label>
+                  <input
+                    type="text"
+                    value={editFormData.firstName || ""}
+                    onChange={(e) =>
+                      handleInputChange("firstName", e.target.value)
+                    }
+                    placeholder="First Name"
+                  />
+                </div>
+
+                <div className="jo-rsbsa-form-group">
+                  <label>Middle Name:</label>
+                  <input
+                    type="text"
+                    value={editFormData.middleName || ""}
+                    onChange={(e) =>
+                      handleInputChange("middleName", e.target.value)
+                    }
+                    placeholder="Middle Name"
+                  />
+                </div>
+
+                <div className="jo-rsbsa-form-group">
+                  <label>Age:</label>
+                  <input
+                    type="text"
+                    value={editFormData.age || ""}
+                    onChange={(e) => handleInputChange("age", e.target.value)}
+                    placeholder="Age"
+                  />
+                </div>
+
+                <div className="jo-rsbsa-form-group">
+                  <label>Barangay:</label>
+                  <select
+                    value={editFormData.barangay || ""}
+                    onChange={(e) =>
+                      handleInputChange("barangay", e.target.value)
+                    }
+                  >
+                    <option value="">Select Barangay</option>
+                    {barangays.map((barangay) => (
+                      <option key={barangay} value={barangay}>
+                        {barangay}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="jo-rsbsa-form-group">
+                  <label>Municipality:</label>
+                  <input
+                    type="text"
+                    value={editFormData.municipality || ""}
+                    onChange={(e) =>
+                      handleInputChange("municipality", e.target.value)
+                    }
+                    placeholder="Municipality"
+                  />
+                </div>
+
+                <div className="jo-rsbsa-parcel-section">
+                  <h4>Parcel Areas</h4>
+                  {loadingParcels ? (
+                    <p>Loading parcels...</p>
+                  ) : editingParcels.length > 0 ? (
+                    editingParcels.map((parcel, index) => (
+                      <div
+                        key={parcel.id}
+                        className={`jo-rsbsa-parcel-item ${parcelErrors[parcel.id] ? "error" : ""}`}
+                      >
+                        <div className="jo-rsbsa-form-group">
+                          <label>
+                            Parcel Area {index + 1} (Parcel No.{" "}
+                            {parcel.parcel_number}
+                            ):
+                          </label>
+                          <input
+                            type="text"
+                            value={parcel.total_farm_area_ha || ""}
+                            onChange={(e) =>
+                              handleIndividualParcelChange(
+                                parcel.id,
+                                "total_farm_area_ha",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="e.g., 2.5"
+                          />
+                          {parcelErrors[parcel.id] && (
+                            <small className="jo-rsbsa-parcel-error">
+                              {parcelErrors[parcel.id]}
+                            </small>
+                          )}
+                          <small className="jo-rsbsa-parcel-location">
+                            Location: {parcel.farm_location_barangay || "N/A"}
+                          </small>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="jo-rsbsa-parcel-empty-text">
+                      No parcels found for this farmer.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="jo-rsbsa-edit-modal-footer">
+                <button
+                  className="jo-rsbsa-cancel-button"
+                  onClick={handleCancelEdit}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="jo-rsbsa-save-button"
+                  onClick={handleSaveEdit}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Farmer Detail Modal */}
         {showModal && selectedFarmer && (
