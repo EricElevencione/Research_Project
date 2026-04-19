@@ -94,6 +94,7 @@ DECLARE
   v_full_count integer := 0;
   v_partial_count integer := 0;
   v_proof_count integer := 0;
+  v_owner_context_extra_count integer := 0;
   v_transfer_id bigint;
 
   v_rows_affected integer := 0;
@@ -217,6 +218,7 @@ BEGIN
 
   CREATE TEMP TABLE IF NOT EXISTS tmp_role_rows_to_process (
     id bigint,
+    source_farmer_id bigint,
     land_parcel_id bigint,
     farm_parcel_id bigint,
     parcel_number text,
@@ -231,13 +233,15 @@ BEGIN
     within_ancestral_domain boolean,
     takeover_mode text,
     transfer_area_ha numeric(12,4),
-    remaining_area_ha numeric(12,4)
+    remaining_area_ha numeric(12,4),
+    from_current_holder boolean
   ) ON COMMIT DROP;
 
   TRUNCATE TABLE tmp_role_rows_to_process;
 
   INSERT INTO tmp_role_rows_to_process (
     id,
+    source_farmer_id,
     land_parcel_id,
     farm_parcel_id,
     parcel_number,
@@ -252,10 +256,12 @@ BEGIN
     within_ancestral_domain,
     takeover_mode,
     transfer_area_ha,
-    remaining_area_ha
+    remaining_area_ha,
+    from_current_holder
   )
   SELECT
     lh.id,
+    lh.farmer_id,
     lh.land_parcel_id,
     lh.farm_parcel_id,
     lh.parcel_number,
@@ -273,7 +279,8 @@ BEGIN
       WHEN i.takeover_mode = 'full' THEN round(coalesce(lh.total_farm_area_ha, 0)::numeric, 4)
       ELSE round(coalesce(i.transfer_area_ha, 0)::numeric, 4)
     END,
-    NULL
+    NULL,
+    true
   FROM land_history lh
   INNER JOIN tmp_replacement_items i
     ON i.farm_parcel_id = lh.farm_parcel_id
@@ -286,17 +293,94 @@ BEGIN
       (v_role = 'lessee' AND lh.is_lessee = true)
     );
 
+  INSERT INTO tmp_role_rows_to_process (
+    id,
+    source_farmer_id,
+    land_parcel_id,
+    farm_parcel_id,
+    parcel_number,
+    farm_location_barangay,
+    farm_location_municipality,
+    total_farm_area_ha,
+    land_owner_id,
+    land_owner_name,
+    land_owner_ffrs_code,
+    ownership_document_no,
+    agrarian_reform_beneficiary,
+    within_ancestral_domain,
+    takeover_mode,
+    transfer_area_ha,
+    remaining_area_ha,
+    from_current_holder
+  )
+  SELECT
+    lh.id,
+    lh.farmer_id,
+    lh.land_parcel_id,
+    lh.farm_parcel_id,
+    lh.parcel_number,
+    lh.farm_location_barangay,
+    lh.farm_location_municipality,
+    round(coalesce(lh.total_farm_area_ha, 0)::numeric, 4),
+    lh.land_owner_id,
+    lh.land_owner_name,
+    lh.land_owner_ffrs_code,
+    lh.ownership_document_no,
+    coalesce(lh.agrarian_reform_beneficiary, false),
+    coalesce(lh.within_ancestral_domain, false),
+    i.takeover_mode,
+    CASE
+      WHEN i.takeover_mode = 'full' THEN round(coalesce(lh.total_farm_area_ha, 0)::numeric, 4)
+      ELSE round(coalesce(i.transfer_area_ha, 0)::numeric, 4)
+    END,
+    NULL,
+    false
+  FROM tmp_replacement_items i
+  INNER JOIN LATERAL (
+    SELECT lh.*
+    FROM land_history lh
+    WHERE lh.is_current = true
+      AND lh.farm_parcel_id = i.farm_parcel_id
+      AND lh.land_owner_id = p_owner_context_id
+      AND NOT (
+        (v_role = 'tenant' AND lh.is_tenant = true)
+        OR
+        (v_role = 'lessee' AND lh.is_lessee = true)
+      )
+    ORDER BY lh.period_start_date DESC NULLS LAST, lh.id DESC
+    LIMIT 1
+  ) lh ON true
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM tmp_role_rows_to_process existing_row
+    WHERE existing_row.farm_parcel_id = i.farm_parcel_id
+  );
+
   IF NOT EXISTS (SELECT 1 FROM tmp_role_rows_to_process) THEN
-    RAISE EXCEPTION 'No active % assignments matched the selected parcel portions under owner context %.',
-      v_role, p_owner_context_id;
+    RAISE EXCEPTION 'No selected parcel portions could be processed under owner context %.',
+      p_owner_context_id;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM tmp_role_rows_to_process
+    WHERE from_current_holder = false
+      AND takeover_mode = 'specific'
+  ) THEN
+    RAISE EXCEPTION 'Specific slot is only allowed for parcels currently assigned to the selected % holder. Use full parcel takeover for owner-context-only parcels.',
+      v_role;
   END IF;
 
   IF (SELECT count(*) FROM tmp_role_rows_to_process) <> v_requested_count THEN
-    RAISE EXCEPTION 'One or more selected parcels are not active % assignments under owner context %.',
-      v_role, p_owner_context_id;
+    RAISE EXCEPTION 'One or more selected parcels are outside owner context % or already have an active % assignment under that owner.',
+      p_owner_context_id, v_role;
   END IF;
 
   FOR v_row IN SELECT * FROM tmp_role_rows_to_process LOOP
+    IF coalesce(v_row.from_current_holder, false) = false THEN
+      v_owner_context_extra_count := v_owner_context_extra_count + 1;
+    END IF;
+
     IF coalesce(v_row.transfer_area_ha, 0) <= 0 THEN
       RAISE EXCEPTION 'Invalid transfer area for parcel %: transfer area must be > 0.',
         v_row.farm_parcel_id;
@@ -336,7 +420,7 @@ BEGIN
         notes = format(
           '%s replacement (full parcel) from farmer %s to %s under owner %s',
           initcap(v_role),
-          p_current_holder_id,
+          coalesce(v_row.source_farmer_id, p_current_holder_id),
           p_replacement_holder_id,
           p_owner_context_id
         )
@@ -411,7 +495,7 @@ BEGIN
         format(
           '%s replacement (full parcel) from farmer %s to %s under owner %s',
           initcap(v_role),
-          p_current_holder_id,
+          coalesce(v_row.source_farmer_id, p_current_holder_id),
           p_replacement_holder_id,
           p_owner_context_id
         )
@@ -460,7 +544,7 @@ BEGIN
       IF v_role = 'tenant' THEN
         UPDATE rsbsa_farm_parcels
         SET
-          submission_id = p_current_holder_id,
+          submission_id = coalesce(v_row.source_farmer_id, p_current_holder_id),
           ownership_type_registered_owner = false,
           ownership_type_tenant = true,
           ownership_type_lessee = false,
@@ -476,7 +560,7 @@ BEGIN
       ELSE
         UPDATE rsbsa_farm_parcels
         SET
-          submission_id = p_current_holder_id,
+          submission_id = coalesce(v_row.source_farmer_id, p_current_holder_id),
           ownership_type_registered_owner = false,
           ownership_type_tenant = false,
           ownership_type_lessee = true,
@@ -567,7 +651,7 @@ BEGIN
           '%s replacement (partial %s ha) from farmer %s to %s under owner %s',
           initcap(v_role),
           v_row.transfer_area_ha,
-          p_current_holder_id,
+          coalesce(v_row.source_farmer_id, p_current_holder_id),
           p_replacement_holder_id,
           p_owner_context_id
         ),
@@ -641,7 +725,7 @@ BEGIN
           '%s replacement (partial %s ha) from farmer %s to %s under owner %s',
           initcap(v_role),
           v_row.transfer_area_ha,
-          p_current_holder_id,
+          coalesce(v_row.source_farmer_id, p_current_holder_id),
           p_replacement_holder_id,
           p_owner_context_id
         )
@@ -670,11 +754,13 @@ BEGIN
     v_reason,
     coalesce(p_proofs, '[]'::jsonb),
     format(
-      '%s replacement with proof docs (%s selected parcel%s, owner context %s)',
+      '%s replacement with proof docs (%s selected parcel%s, owner context %s, %s owner-context extra parcel%s)',
       initcap(v_role),
       v_selected_count,
       CASE WHEN v_selected_count = 1 THEN '' ELSE 's' END,
-      p_owner_context_id
+      p_owner_context_id,
+      v_owner_context_extra_count,
+      CASE WHEN v_owner_context_extra_count = 1 THEN '' ELSE 's' END
     ),
     now()
   )
@@ -698,6 +784,7 @@ BEGIN
     'updatedParcels', v_parcel_update_count,
     'fullCount', v_full_count,
     'partialCount', v_partial_count,
+    'ownerContextExtraParcels', v_owner_context_extra_count,
     'proofCount', v_proof_count,
     'transferId', v_transfer_id,
     'ownerContextId', p_owner_context_id,

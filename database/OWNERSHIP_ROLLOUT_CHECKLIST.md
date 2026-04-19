@@ -52,17 +52,20 @@ Run:
 
 Expected outcomes:
 
+- Query 0 summary: use as before/after comparison snapshot for q1-q6
 - Query 1: 0 rows (tenant/lessee marked as current owner)
 - Query 2: 0 rows or known legacy exceptions to manually inspect
 - Query 3: 0 rows or known legacy exceptions to manually inspect
 - Query 4: 0 rows (multiple current owners for same parcel identity)
 - Query 5: 0 rows (submission owner-flag mismatch)
 - Query 6: Review and reconcile statuses where needed
+- Query 7 and 8: person-focused validation (default filter targets Aaron Benitez; adjust filter as needed)
 
-## 4) Optional remediation if mismatches remain
+## 4) Recommended remediation order
 
 Run:
 
+- backfill_current_owner_flags_from_land_history.sql
 - fix_current_ownership_mismatches.sql
 
 Then re-run:
@@ -76,6 +79,10 @@ Goal:
 
 ## 5) Application smoke checks
 
+Precondition for UI checks:
+
+- Complete step 4 globally before validating owner-first single-row behavior in app.
+
 1. Register a tenant under an existing owner parcel:
 
 - Ownership timeline should not show a legal transfer.
@@ -86,9 +93,19 @@ Goal:
 - Previous owner current parcel count becomes 1.
 - Owner picker and plotting show 1 current parcel for that owner.
 
-3. Verify mixed-role farmer display:
+3. Verify mixed-role farmer display under owner-first table view:
 
-- Farmer with owner + tenant/lessee appears as mixed role in history/report views.
+- Farmer appears once in Land Registry table (owner-first row).
+- Ownership type shows Registered Owner and a secondary note (also tenant/also lessee) when applicable.
+- Action menu shows role-capable actions on the same row:
+  - Transfer Ownership (owner-capable)
+  - Update Tenant Landowner (tenant-capable)
+  - Update Lessee Landowner (lessee-capable)
+
+4. Verify Aaron-specific expected outcome:
+
+- If Aaron is truly owner-only after cleanup, Aaron appears as one row with Transfer Ownership only.
+- If Aaron is truly mixed-role, Aaron still appears as one row with additional update action(s).
 
 ## 6) Rollback notes
 

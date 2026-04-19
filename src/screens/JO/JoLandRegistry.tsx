@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../supabase";
 import {
@@ -93,6 +87,7 @@ interface ReplacementSourceOption {
 interface ReplacementAssignedParcel {
   historyId: number;
   farmParcelId: number;
+  landParcelId?: number | null;
   parcelNumber: string;
   barangay: string;
   municipality: string;
@@ -101,12 +96,24 @@ interface ReplacementAssignedParcel {
   ownerName: string;
 }
 
+interface OwnerAffiliationStep3Parcel extends ReplacementAssignedParcel {
+  inCurrentContract: boolean;
+}
+
+interface OwnerAffiliationOwnerOption {
+  ownerId: number;
+  ownerName: string;
+  barangay: string;
+  parcelCount: number;
+}
+
 interface FarmerGroup {
   farmer_id: number;
   farmer_name: string;
   ffrs_code: string;
   parcels: Array<{
     id: number;
+    land_parcel_id?: number | null;
     parcel_number: string;
     farm_location_barangay: string;
     farm_location_municipality: string;
@@ -149,10 +156,18 @@ interface ReplacementTakeoverPlan {
   error: string;
 }
 
+interface RegistryActionCapabilities {
+  canTransferOwnership: boolean;
+  canUpdateTenantLandowner: boolean;
+  canUpdateLesseeLandowner: boolean;
+}
+
 interface RegistryDisplayRow {
   rowId: string;
   farmer: FarmerGroup;
-  ownership: RegistryRowOwnership;
+  primaryOwnership: RegistryRowOwnership;
+  ownershipSecondaryLabels: string[];
+  capabilities: RegistryActionCapabilities;
   parcels: FarmerGroup["parcels"];
   totalAreaHa: number;
   primaryBarangay: string;
@@ -207,15 +222,20 @@ const normalizeCurrentOwnershipGroups = (
         parcels: parcelsToUse,
         total_farm_area_ha:
           computedTotalArea > 0 ? computedTotalArea : group.total_farm_area_ha,
-        has_registered_owner: hasExplicitOwnerRoleFlag
-          ? parcelsToUse.some((parcel) => parcel?.is_registered_owner === true)
-          : group.has_registered_owner,
-        has_tenant: hasExplicitTenantRoleFlag
-          ? parcelsToUse.some((parcel) => parcel?.is_tenant === true)
-          : group.has_tenant,
-        has_lessee: hasExplicitLesseeRoleFlag
-          ? parcelsToUse.some((parcel) => parcel?.is_lessee === true)
-          : group.has_lessee,
+        has_registered_owner:
+          (hasExplicitOwnerRoleFlag
+            ? parcelsToUse.some(
+                (parcel) => parcel?.is_registered_owner === true,
+              )
+            : false) || group.has_registered_owner,
+        has_tenant:
+          (hasExplicitTenantRoleFlag
+            ? parcelsToUse.some((parcel) => parcel?.is_tenant === true)
+            : false) || group.has_tenant,
+        has_lessee:
+          (hasExplicitLesseeRoleFlag
+            ? parcelsToUse.some((parcel) => parcel?.is_lessee === true)
+            : false) || group.has_lessee,
       };
     })
     .filter((group) => group.parcels.length > 0);
@@ -386,40 +406,39 @@ const JoLandRegistry: React.FC = () => {
   >(null);
   const [selectedFarmerViewRole, setSelectedFarmerViewRole] =
     useState<RegistryRowOwnership>("owner");
-  const [showHolderReplacementModal, setShowHolderReplacementModal] =
+  const [showOwnerAffiliationModal, setShowOwnerAffiliationModal] =
     useState(false);
-  const [replacementRole, setReplacementRole] =
+  const [ownerAffiliationRole, setOwnerAffiliationRole] =
     useState<ReplacementRole>("tenant");
-  const [replacementSourceFarmerId, setReplacementSourceFarmerId] = useState<
+  const [ownerAffiliationSourceOptions, setOwnerAffiliationSourceOptions] =
+    useState<ReplacementSourceOption[]>([]);
+  const [ownerAffiliationSourceOwnerId, setOwnerAffiliationSourceOwnerId] =
+    useState<number | "">("");
+  const [ownerAffiliationParcelsByOwner, setOwnerAffiliationParcelsByOwner] =
+    useState<Map<number, ReplacementAssignedParcel[]>>(new Map());
+  const [ownerAffiliationNewOwnerId, setOwnerAffiliationNewOwnerId] = useState<
     number | ""
   >("");
-  const [replacementSourceOptions, setReplacementSourceOptions] = useState<
-    ReplacementSourceOption[]
-  >([]);
   const [
-    replacementAssignedParcelsBySource,
-    setReplacementAssignedParcelsBySource,
-  ] = useState<Map<number, ReplacementAssignedParcel[]>>(new Map());
-  const [replacementCandidateId, setReplacementCandidateId] = useState<
-    number | ""
-  >("");
-  const [replacementLoading, setReplacementLoading] = useState(false);
-  const [isSubmittingReplacement, setIsSubmittingReplacement] = useState(false);
-  const [replacementSubmitError, setReplacementSubmitError] = useState("");
-  const [replacementSubmitSuccess, setReplacementSubmitSuccess] = useState("");
-  const [replacementSupportingDocs, setReplacementSupportingDocs] = useState<
-    File[]
-  >([]);
-  const [replacementReason, setReplacementReason] = useState("");
-  const [replacementTakeoverMode, setReplacementTakeoverMode] =
+    ownerAffiliationSelectedParcelIds,
+    setOwnerAffiliationSelectedParcelIds,
+  ] = useState<number[]>([]);
+  const [ownerAffiliationTakeoverMode, setOwnerAffiliationTakeoverMode] =
     useState<ReplacementTakeoverMode>("full_parcel");
-  const [replacementSelectedParcelIds, setReplacementSelectedParcelIds] =
-    useState<number[]>([]);
-  const [replacementSpecificLotInputs, setReplacementSpecificLotInputs] =
-    useState<Record<number, ReplacementSpecificLotInput>>({});
-  const replacementStep1Ref = useRef<HTMLDivElement | null>(null);
-  const replacementStep2Ref = useRef<HTMLDivElement | null>(null);
-  const replacementStep3Ref = useRef<HTMLDivElement | null>(null);
+  const [
+    ownerAffiliationSpecificLotInputs,
+    setOwnerAffiliationSpecificLotInputs,
+  ] = useState<Record<number, ReplacementSpecificLotInput>>({});
+  const [ownerAffiliationSupportingDocs, setOwnerAffiliationSupportingDocs] =
+    useState<File[]>([]);
+  const [ownerAffiliationReason, setOwnerAffiliationReason] = useState("");
+  const [ownerAffiliationLoading, setOwnerAffiliationLoading] = useState(false);
+  const [isSubmittingOwnerAffiliation, setIsSubmittingOwnerAffiliation] =
+    useState(false);
+  const [ownerAffiliationSubmitError, setOwnerAffiliationSubmitError] =
+    useState("");
+  const [ownerAffiliationSubmitSuccess, setOwnerAffiliationSubmitSuccess] =
+    useState("");
 
   const {
     parcelScope,
@@ -511,53 +530,74 @@ const JoLandRegistry: React.FC = () => {
     setOpenActionMenuRowId(null);
     handleFarmerSelect(
       row.farmer,
-      row.ownership,
+      row.primaryOwnership,
       row.parcels.map((parcel) => parcel.id),
       row.rowId,
     );
   };
 
   const handleRowActionTransfer = (row: RegistryDisplayRow) => {
-    if (row.ownership !== "owner") {
+    if (!row.capabilities.canTransferOwnership) {
       setOpenActionMenuRowId(null);
       return;
     }
 
     setOpenActionMenuRowId(null);
     setSelectedFarmer(row.farmer);
-    setSelectedFarmerViewRole(row.ownership);
+    setSelectedFarmerViewRole("owner");
     setSelectedRegistryRowId(row.rowId);
     setShowModal(false);
     openTransferModal("owner");
   };
 
-  const resetReplacementWorkflow = () => {
-    setReplacementSourceFarmerId("");
-    setReplacementSourceOptions([]);
-    setReplacementAssignedParcelsBySource(new Map());
-    setReplacementCandidateId("");
-    setReplacementLoading(false);
-    setIsSubmittingReplacement(false);
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
-    setReplacementSupportingDocs([]);
-    setReplacementReason("");
-    setReplacementTakeoverMode("full_parcel");
-    setReplacementSelectedParcelIds([]);
-    setReplacementSpecificLotInputs({});
+  const handleRowActionOwnerAffiliation = (
+    row: RegistryDisplayRow,
+    role: ReplacementRole,
+  ) => {
+    const roleAllowed =
+      role === "tenant"
+        ? row.capabilities.canUpdateTenantLandowner
+        : row.capabilities.canUpdateLesseeLandowner;
+
+    if (!roleAllowed) {
+      setOpenActionMenuRowId(null);
+      return;
+    }
+
+    setOpenActionMenuRowId(null);
+    setSelectedFarmer(row.farmer);
+    setSelectedFarmerViewRole(role);
+    setSelectedRegistryRowId(row.rowId);
+    openOwnerAffiliationModal(row.farmer, role);
   };
 
-  const loadReplacementSourceOptions = async (
+  const resetOwnerAffiliationWorkflow = () => {
+    setOwnerAffiliationSourceOptions([]);
+    setOwnerAffiliationSourceOwnerId("");
+    setOwnerAffiliationParcelsByOwner(new Map());
+    setOwnerAffiliationNewOwnerId("");
+    setOwnerAffiliationSelectedParcelIds([]);
+    setOwnerAffiliationTakeoverMode("full_parcel");
+    setOwnerAffiliationSpecificLotInputs({});
+    setOwnerAffiliationSupportingDocs([]);
+    setOwnerAffiliationReason("");
+    setOwnerAffiliationLoading(false);
+    setIsSubmittingOwnerAffiliation(false);
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
+  };
+
+  const loadOwnerAffiliationSourceOptions = async (
     group: FarmerGroup,
     role: ReplacementRole,
   ) => {
-    setReplacementLoading(true);
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
+    setOwnerAffiliationLoading(true);
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
 
     const roleColumn = role === "tenant" ? "is_tenant" : "is_lessee";
     const selectColumns =
-      "id, farmer_id, farmer_name, land_owner_id, land_owner_name, farm_parcel_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_registered_owner";
+      "id, land_parcel_id, farmer_id, farmer_name, land_owner_id, land_owner_name, farm_parcel_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_registered_owner";
 
     try {
       const { data, error } = await supabase
@@ -571,6 +611,7 @@ const JoLandRegistry: React.FC = () => {
 
       const sourceRows = (data || []) as Array<{
         id: number;
+        land_parcel_id: number | null;
         farmer_id: number | null;
         farmer_name: string | null;
         land_owner_id: number | null;
@@ -583,149 +624,208 @@ const JoLandRegistry: React.FC = () => {
         is_registered_owner: boolean | null;
       }>;
 
-      const sourceFarmerId = group.farmer_id;
-      const uniqueParcels = new Map<number, ReplacementAssignedParcel>();
-      let excludedOwnedCount = 0;
+      const ownerBuckets = new Map<
+        number,
+        {
+          option: ReplacementSourceOption;
+          parcels: Map<number, ReplacementAssignedParcel>;
+        }
+      >();
+
+      let excludedRows = 0;
 
       sourceRows.forEach((row) => {
         const farmerId = Number(row.farmer_id);
         if (!Number.isFinite(farmerId) || farmerId <= 0) return;
-        if (farmerId !== sourceFarmerId) return;
+        if (farmerId !== group.farmer_id) return;
 
         const ownerIdRaw = Number(row.land_owner_id);
         const ownerId =
           Number.isFinite(ownerIdRaw) && ownerIdRaw > 0 ? ownerIdRaw : null;
-        const ownerName =
-          (row.land_owner_name || "").trim() ||
-          (ownerId ? `Owner #${ownerId}` : "No linked owner");
 
-        const isDirectOwnedManaged = ownerId !== null && ownerId === farmerId;
-        if (isDirectOwnedManaged || row.is_registered_owner === true) {
-          excludedOwnedCount += 1;
+        if (!ownerId) {
+          excludedRows += 1;
+          return;
+        }
+
+        const isDirectOwnedManaged = ownerId === farmerId;
+        if (isDirectOwnedManaged) {
+          excludedRows += 1;
           return;
         }
 
         const farmParcelId = Number(row.farm_parcel_id);
         if (!Number.isFinite(farmParcelId) || farmParcelId <= 0) return;
-        if (uniqueParcels.has(farmParcelId)) return;
 
+        const ownerName =
+          (row.land_owner_name || "").trim() || `Owner #${ownerId}`;
         const areaHa = Number(row.total_farm_area_ha);
-        const parcelDetails: ReplacementAssignedParcel = {
-          historyId: Number(row.id) || farmParcelId,
-          farmParcelId,
-          parcelNumber: (row.parcel_number || "").trim(),
-          barangay: (row.farm_location_barangay || "").trim(),
-          municipality: (row.farm_location_municipality || "").trim(),
-          areaHa: Number.isFinite(areaHa) && areaHa > 0 ? areaHa : 0,
-          ownerId,
-          ownerName,
-        };
 
-        uniqueParcels.set(farmParcelId, parcelDetails);
+        if (!ownerBuckets.has(ownerId)) {
+          ownerBuckets.set(ownerId, {
+            option: {
+              farmerId: farmerId,
+              farmerName: group.farmer_name || `Farmer #${group.farmer_id}`,
+              ownerId,
+              ownerName,
+              parcelCount: 0,
+            },
+            parcels: new Map<number, ReplacementAssignedParcel>(),
+          });
+        }
+
+        const bucket = ownerBuckets.get(ownerId);
+        if (!bucket) return;
+
+        if (!bucket.parcels.has(farmParcelId)) {
+          const landParcelIdRaw = Number(row.land_parcel_id);
+          const landParcelId =
+            Number.isFinite(landParcelIdRaw) && landParcelIdRaw > 0
+              ? landParcelIdRaw
+              : null;
+
+          bucket.parcels.set(farmParcelId, {
+            historyId: Number(row.id) || farmParcelId,
+            farmParcelId,
+            landParcelId,
+            parcelNumber: (row.parcel_number || "").trim(),
+            barangay: (row.farm_location_barangay || "").trim(),
+            municipality: (row.farm_location_municipality || "").trim(),
+            areaHa: Number.isFinite(areaHa) && areaHa > 0 ? areaHa : 0,
+            ownerId,
+            ownerName,
+          });
+        }
       });
 
-      const sortedParcels = Array.from(uniqueParcels.values()).sort((a, b) => {
-        const numberDiff = a.parcelNumber.localeCompare(b.parcelNumber);
-        if (numberDiff !== 0) return numberDiff;
-        return a.farmParcelId - b.farmParcelId;
+      const nextSourceOptions = Array.from(ownerBuckets.values())
+        .map((bucket) => ({
+          ...bucket.option,
+          parcelCount: bucket.parcels.size,
+        }))
+        .sort((a, b) => {
+          const byName = a.ownerName.localeCompare(b.ownerName);
+          if (byName !== 0) return byName;
+          return (a.ownerId || 0) - (b.ownerId || 0);
+        });
+
+      const parcelsByOwner = new Map<number, ReplacementAssignedParcel[]>();
+      ownerBuckets.forEach((bucket, ownerId) => {
+        const sortedParcels = Array.from(bucket.parcels.values()).sort(
+          (a, b) => {
+            const parcelDiff = (a.parcelNumber || "").localeCompare(
+              b.parcelNumber || "",
+            );
+            if (parcelDiff !== 0) return parcelDiff;
+            return a.farmParcelId - b.farmParcelId;
+          },
+        );
+        parcelsByOwner.set(ownerId, sortedParcels);
       });
 
-      const firstParcel = sortedParcels[0];
-      const autoSelectedSource: ReplacementSourceOption = {
-        farmerId: sourceFarmerId,
-        farmerName: group.farmer_name || `Farmer #${sourceFarmerId}`,
-        ownerId: firstParcel?.ownerId ?? null,
-        ownerName: firstParcel?.ownerName || "No linked owner",
-        parcelCount: sortedParcels.length,
-      };
+      setOwnerAffiliationParcelsByOwner(parcelsByOwner);
+      setOwnerAffiliationSourceOptions(nextSourceOptions);
 
-      setReplacementAssignedParcelsBySource(
-        new Map<number, ReplacementAssignedParcel[]>([
-          [sourceFarmerId, sortedParcels],
-        ]),
-      );
-      setReplacementSourceOptions([autoSelectedSource]);
-      setReplacementSourceFarmerId(sourceFarmerId);
+      const defaultSource = nextSourceOptions[0] || null;
+      const defaultOwnerId = defaultSource?.ownerId;
+      if (typeof defaultOwnerId === "number" && defaultOwnerId > 0) {
+        setOwnerAffiliationSourceOwnerId(defaultOwnerId);
+        setOwnerAffiliationSelectedParcelIds(
+          (parcelsByOwner.get(defaultOwnerId) || []).map(
+            (parcel) => parcel.farmParcelId,
+          ),
+        );
+        setOwnerAffiliationTakeoverMode("full_parcel");
+        setOwnerAffiliationSpecificLotInputs({});
+      } else {
+        setOwnerAffiliationSourceOwnerId("");
+        setOwnerAffiliationSelectedParcelIds([]);
+        setOwnerAffiliationTakeoverMode("full_parcel");
+        setOwnerAffiliationSpecificLotInputs({});
+      }
 
-      if (sortedParcels.length === 0) {
-        const exclusionSuffix =
-          excludedOwnedCount > 0
-            ? ` ${excludedOwnedCount} self-owned parcel${excludedOwnedCount === 1 ? " was" : "s were"} excluded.`
+      if (nextSourceOptions.length === 0) {
+        const extraNote =
+          excludedRows > 0
+            ? ` ${excludedRows} row${excludedRows === 1 ? " was" : "s were"} excluded.`
             : "";
-        setReplacementSubmitError(
-          `No replaceable ${role} parcels found for this holder.${exclusionSuffix}`,
+        setOwnerAffiliationSubmitError(
+          `No active linked landowner found for this ${role}.` + extraNote,
         );
       }
     } catch (error: any) {
-      setReplacementSourceOptions([]);
-      setReplacementAssignedParcelsBySource(new Map());
-      setReplacementSourceFarmerId(group.farmer_id);
-      setReplacementSubmitError(
-        error?.message || `Failed to load active ${role} holder parcels.`,
+      setOwnerAffiliationSourceOptions([]);
+      setOwnerAffiliationParcelsByOwner(new Map());
+      setOwnerAffiliationSourceOwnerId("");
+      setOwnerAffiliationSelectedParcelIds([]);
+      setOwnerAffiliationSubmitError(
+        error?.message ||
+          `Failed to load linked landowner context for ${role}.`,
       );
     } finally {
-      setReplacementLoading(false);
+      setOwnerAffiliationLoading(false);
     }
   };
 
-  const openReplacementModal = (group: FarmerGroup, role: ReplacementRole) => {
+  const openOwnerAffiliationModal = (
+    group: FarmerGroup,
+    role: ReplacementRole,
+  ) => {
     setOpenActionMenuRowId(null);
     setSelectedFarmer(group);
     setSelectedFarmerViewRole(role);
     setShowModal(false);
-    setReplacementRole(role);
-    resetReplacementWorkflow();
-    setReplacementSourceFarmerId(group.farmer_id);
-    setShowHolderReplacementModal(true);
-    void loadReplacementSourceOptions(group, role);
+    setOwnerAffiliationRole(role);
+    resetOwnerAffiliationWorkflow();
+    setShowOwnerAffiliationModal(true);
+    void loadOwnerAffiliationSourceOptions(group, role);
   };
 
-  const closeReplacementModal = () => {
-    setShowHolderReplacementModal(false);
-    resetReplacementWorkflow();
+  const closeOwnerAffiliationModal = () => {
+    setShowOwnerAffiliationModal(false);
+    resetOwnerAffiliationWorkflow();
   };
 
-  const setSpecificLotInput = (
-    farmParcelId: number,
-    patch: Partial<ReplacementSpecificLotInput>,
-  ) => {
-    setReplacementSpecificLotInputs((prev) => {
-      const current = prev[farmParcelId] || { customAreaHa: "" };
-      return {
-        ...prev,
-        [farmParcelId]: {
-          ...current,
-          ...patch,
-        },
-      };
-    });
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
+  const handleOwnerAffiliationSourceOwnerChange = (value: string) => {
+    const parsedId = value ? Number(value) : "";
+    setOwnerAffiliationSourceOwnerId(parsedId);
+
+    if (typeof parsedId === "number" && parsedId > 0) {
+      setOwnerAffiliationSelectedParcelIds(
+        (ownerAffiliationParcelsByOwner.get(parsedId) || []).map(
+          (parcel) => parcel.farmParcelId,
+        ),
+      );
+      setOwnerAffiliationTakeoverMode("full_parcel");
+      setOwnerAffiliationSpecificLotInputs({});
+      setOwnerAffiliationNewOwnerId((prev) =>
+        typeof prev === "number" && prev === parsedId ? "" : prev,
+      );
+    } else {
+      setOwnerAffiliationSelectedParcelIds([]);
+      setOwnerAffiliationTakeoverMode("full_parcel");
+      setOwnerAffiliationSpecificLotInputs({});
+      setOwnerAffiliationNewOwnerId("");
+    }
+
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
   };
 
-  const handleReplacementTakeoverModeChange = (
-    mode: ReplacementTakeoverMode,
-  ) => {
-    setReplacementTakeoverMode(mode);
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
+  const handleOwnerAffiliationNewOwnerChange = (value: string) => {
+    const parsedId = value ? Number(value) : "";
+    setOwnerAffiliationNewOwnerId(parsedId);
+    setOwnerAffiliationTakeoverMode("full_parcel");
+    setOwnerAffiliationSpecificLotInputs({});
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
   };
 
-  const handleReplacementCandidateChange = (value: string) => {
-    const candidateId = value ? Number(value) : "";
-    setReplacementCandidateId(candidateId);
-    setReplacementSelectedParcelIds([]);
-    setReplacementTakeoverMode("full_parcel");
-    setReplacementSpecificLotInputs({});
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
-  };
-
-  const handleReplacementParcelToggle = (
+  const handleOwnerAffiliationParcelToggle = (
     farmParcelId: number,
     selected: boolean,
   ) => {
-    setReplacementSelectedParcelIds((prev) => {
+    setOwnerAffiliationSelectedParcelIds((prev) => {
       if (selected) {
         if (prev.includes(farmParcelId)) return prev;
         return [...prev, farmParcelId];
@@ -734,7 +834,7 @@ const JoLandRegistry: React.FC = () => {
     });
 
     if (!selected) {
-      setReplacementSpecificLotInputs((prev) => {
+      setOwnerAffiliationSpecificLotInputs((prev) => {
         if (!prev[farmParcelId]) return prev;
         const next = { ...prev };
         delete next[farmParcelId];
@@ -742,26 +842,39 @@ const JoLandRegistry: React.FC = () => {
       });
     }
 
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
   };
 
-  const handleSpecificLotCustomAreaChange = (
-    farmParcelId: number,
-    value: string,
+  const handleOwnerAffiliationTakeoverModeChange = (
+    mode: ReplacementTakeoverMode,
   ) => {
-    const trimmed = value.trim();
-    setSpecificLotInput(farmParcelId, {
-      customAreaHa: trimmed === "" ? "" : Number(trimmed),
-    });
+    setOwnerAffiliationTakeoverMode(mode);
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
   };
 
-  const handleReplacementDocsSelected = (
+  const handleOwnerAffiliationSpecificAreaChange = (
+    farmParcelId: number,
+    rawValue: string,
+  ) => {
+    const trimmed = rawValue.trim();
+    setOwnerAffiliationSpecificLotInputs((prev) => ({
+      ...prev,
+      [farmParcelId]: {
+        customAreaHa: trimmed === "" ? "" : Number(trimmed),
+      },
+    }));
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
+  };
+
+  const handleOwnerAffiliationDocsSelected = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    if (!replacementPortionReadyForProofUpload) {
-      setReplacementSubmitError(
-        "Complete Step 2 (new holder, parcel selection, and portion) before uploading proof documents.",
+    if (!ownerAffiliationReadyForProofUpload) {
+      setOwnerAffiliationSubmitError(
+        "Select linked owner, target owner, and parcel(s) before uploading proof documents.",
       );
       event.target.value = "";
       return;
@@ -794,7 +907,7 @@ const JoLandRegistry: React.FC = () => {
     });
 
     if (validFiles.length === 0) {
-      setReplacementSubmitError(
+      setOwnerAffiliationSubmitError(
         "Only PNG, JPG, JPEG, PDF, DOC, or DOCX files are allowed.",
       );
       event.target.value = "";
@@ -803,14 +916,14 @@ const JoLandRegistry: React.FC = () => {
 
     const oversized = validFiles.filter((f) => f.size > MAX_FILE_SIZE);
     if (oversized.length > 0) {
-      setReplacementSubmitError(
+      setOwnerAffiliationSubmitError(
         `File(s) too large (max 10 MB): ${oversized.map((f) => f.name).join(", ")}`,
       );
       event.target.value = "";
       return;
     }
 
-    setReplacementSupportingDocs((prev) => {
+    setOwnerAffiliationSupportingDocs((prev) => {
       const merged = [...prev];
       validFiles.forEach((file) => {
         const duplicate = merged.some(
@@ -824,118 +937,99 @@ const JoLandRegistry: React.FC = () => {
       return merged;
     });
 
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
     event.target.value = "";
   };
 
-  const removeReplacementDoc = (targetIndex: number) => {
-    setReplacementSupportingDocs((prev) =>
+  const removeOwnerAffiliationDoc = (targetIndex: number) => {
+    setOwnerAffiliationSupportingDocs((prev) =>
       prev.filter((_, index) => index !== targetIndex),
     );
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
   };
 
-  const scrollToReplacementStep = (step: 1 | 2 | 3) => {
-    const target =
-      step === 1
-        ? replacementStep1Ref.current
-        : step === 2
-          ? replacementStep2Ref.current
-          : replacementStep3Ref.current;
+  const handleOwnerAffiliationConfirm = async () => {
+    if (ownerAffiliationLoading || isSubmittingOwnerAffiliation) return;
 
-    if (!target) return;
-
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-    const firstFocusable = target.querySelector(
-      "input, select, textarea, button",
-    ) as HTMLElement | null;
-    firstFocusable?.focus();
-  };
-
-  const handleReplacementConfirm = async () => {
-    if (isSubmittingReplacement || replacementLoading) return;
-
-    setReplacementSubmitError("");
-    setReplacementSubmitSuccess("");
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
 
     if (!selectedFarmer) {
-      setReplacementSubmitError("Missing selected farmer context.");
+      setOwnerAffiliationSubmitError("Missing selected farmer context.");
       return;
     }
 
-    if (replacementSourceFarmerId === "") {
-      setReplacementSubmitError(
-        `Select the current active ${replacementRoleLabel.toLowerCase()} holder first.`,
+    const holderFarmerId = Number(selectedFarmer.farmer_id);
+    const oldOwnerId = Number(ownerAffiliationSourceOwnerId);
+    const newOwnerId = Number(ownerAffiliationNewOwnerId);
+
+    if (!Number.isFinite(holderFarmerId) || holderFarmerId <= 0) {
+      setOwnerAffiliationSubmitError("Invalid holder farmer context.");
+      return;
+    }
+
+    if (!Number.isFinite(oldOwnerId) || oldOwnerId <= 0) {
+      setOwnerAffiliationSubmitError(
+        `Select the current linked landowner for this ${ownerAffiliationRoleLabel.toLowerCase()} first.`,
       );
       return;
     }
 
-    if (replacementCandidateId === "") {
-      setReplacementSubmitError(
-        `Select the new ${replacementRoleLabel.toLowerCase()} holder first.`,
+    if (!Number.isFinite(newOwnerId) || newOwnerId <= 0) {
+      setOwnerAffiliationSubmitError("Select the new linked landowner first.");
+      return;
+    }
+
+    if (oldOwnerId === newOwnerId) {
+      setOwnerAffiliationSubmitError(
+        "Current and new linked landowner must be different.",
       );
       return;
     }
 
-    const currentHolderId = Number(replacementSourceFarmerId);
-    const replacementHolderId = Number(replacementCandidateId);
-
-    if (!Number.isFinite(currentHolderId) || currentHolderId <= 0) {
-      setReplacementSubmitError("Current holder selection is invalid.");
-      return;
-    }
-
-    if (!Number.isFinite(replacementHolderId) || replacementHolderId <= 0) {
-      setReplacementSubmitError("Replacement holder selection is invalid.");
-      return;
-    }
-
-    const selectedSourceParcels =
-      replacementAssignedParcelsBySource.get(currentHolderId) || [];
-
-    if (selectedSourceParcels.length === 0) {
-      setReplacementSubmitError(
-        `No replaceable parcels are assigned to the selected ${replacementRoleLabel.toLowerCase()} holder.`,
-      );
-      return;
-    }
-
-    const takeoverPlan = buildReplacementTakeoverPlan(
-      selectedSourceParcels,
-      replacementSelectedParcelIds,
-      replacementTakeoverMode,
-      replacementSpecificLotInputs,
+    const selectedParcelIds = Array.from(
+      new Set(
+        ownerAffiliationTakeoverPlan.items
+          .map((item) => Number(item.farm_parcel_id))
+          .filter((parcelId) => Number.isFinite(parcelId) && parcelId > 0),
+      ),
     );
 
-    if (takeoverPlan.error) {
-      setReplacementSubmitError(takeoverPlan.error);
+    if (ownerAffiliationTakeoverPlan.error) {
+      setOwnerAffiliationSubmitError(ownerAffiliationTakeoverPlan.error);
       return;
     }
 
-    if (takeoverPlan.items.length === 0) {
-      setReplacementSubmitError(
-        `No ${replacementRoleLabel.toLowerCase()} parcel portion selected for takeover.`,
+    if (selectedParcelIds.length === 0) {
+      setOwnerAffiliationSubmitError(
+        `Select at least one parcel for ${ownerAffiliationRoleLabel.toLowerCase()} landowner update.`,
       );
       return;
     }
 
-    if (replacementSupportingDocs.length === 0) {
-      setReplacementSubmitError(
+    if (ownerAffiliationSupportingDocs.length === 0) {
+      setOwnerAffiliationSubmitError(
         "Upload at least one proof/supporting document before proceeding.",
       );
       return;
     }
 
-    if (currentHolderId === replacementHolderId) {
-      setReplacementSubmitError(
-        "Current and replacement holder must be different people.",
+    const sourceParcelIdSet = new Set(
+      ownerAffiliationStep3Parcels.map((parcel) => parcel.farmParcelId),
+    );
+    const hasOutOfContextParcel = selectedParcelIds.some(
+      (parcelId) => !sourceParcelIdSet.has(parcelId),
+    );
+    if (hasOutOfContextParcel) {
+      setOwnerAffiliationSubmitError(
+        "Selected parcel list is outdated. Refresh source owner context and try again.",
       );
       return;
     }
 
-    setIsSubmittingReplacement(true);
+    setIsSubmittingOwnerAffiliation(true);
 
     let uploadedProofs: Array<{
       storage_bucket: string;
@@ -946,92 +1040,73 @@ const JoLandRegistry: React.FC = () => {
     }> = [];
 
     try {
-      const ownerContextId =
-        selectedSourceParcels.find(
-          (parcel) =>
-            Number.isFinite(parcel.ownerId) && (parcel.ownerId || 0) > 0,
-        )?.ownerId || selectedFarmer.farmer_id;
+      uploadedProofs = await uploadTransferProofs(
+        ownerAffiliationSupportingDocs,
+      );
 
-      uploadedProofs = await uploadTransferProofs(replacementSupportingDocs);
-
-      const basePayload = {
-        p_role: replacementRole,
-        p_current_holder_id: currentHolderId,
-        p_replacement_holder_id: replacementHolderId,
-        p_owner_context_id: ownerContextId,
-        p_reason: replacementReason.trim() || null,
-        p_effective_date: new Date().toISOString().slice(0, 10),
-      };
-
-      let data: any = null;
-      let error: any = null;
-
-      const portionsResult = await supabase.rpc(
-        "replace_tenant_lessee_holder_with_portions_no_review",
+      const { data, error } = await supabase.rpc(
+        "update_tenant_lessee_landowner_affiliation_no_review",
         {
-          ...basePayload,
-          p_items: takeoverPlan.items,
+          p_role: ownerAffiliationRole,
+          p_holder_farmer_id: holderFarmerId,
+          p_old_owner_id: oldOwnerId,
+          p_new_owner_id: newOwnerId,
+          p_farm_parcel_ids: selectedParcelIds,
+          p_items: ownerAffiliationTakeoverPlan.items,
+          p_reason: ownerAffiliationReason.trim() || null,
+          p_effective_date: new Date().toISOString().slice(0, 10),
           p_proofs: uploadedProofs,
         },
       );
-
-      data = portionsResult.data;
-      error = portionsResult.error;
 
       if (error) {
         const rpcMessage = String(error?.message || "");
         const rpcDetails = String((error as any)?.details || "");
 
         if (
-          /replace_tenant_lessee_holder_with_portions_no_review/i.test(
+          /update_tenant_lessee_landowner_affiliation_no_review/i.test(
             `${rpcMessage} ${rpcDetails}`,
           )
         ) {
           throw new Error(
-            "Supabase RPC replace_tenant_lessee_holder_with_portions_no_review is missing. Run database/create_replace_tenant_lessee_holder_with_portions_rpc.sql in Supabase SQL Editor, then retry.",
+            "Supabase RPC update_tenant_lessee_landowner_affiliation_no_review is missing. Run database/create_update_tenant_lessee_landowner_affiliation_rpc.sql in Supabase SQL Editor, then retry.",
           );
         }
 
         throw new Error(
           error.message ||
-            `Failed to replace active ${replacementRoleLabel.toLowerCase()} holder.`,
+            `Failed to update ${ownerAffiliationRoleLabel.toLowerCase()} linked landowner.`,
         );
       }
 
-      const affectedRows = Number(
-        (data as any)?.affectedRows ?? (data as any)?.affected_rows ?? 0,
+      const updatedParcels = Number(
+        (data as any)?.updatedParcels ??
+          (data as any)?.updated_parcels ??
+          selectedParcelIds.length,
       );
+
       const successMessage =
         typeof (data as any)?.message === "string" &&
         (data as any).message.trim() !== ""
           ? (data as any).message
-          : `Replacement complete for ${affectedRows || 1} active ${replacementRoleLabel.toLowerCase()} assignment${affectedRows === 1 ? "" : "s"}.`;
+          : `${ownerAffiliationRoleLabel} landowner update complete for ${updatedParcels} parcel${updatedParcels === 1 ? "" : "s"}.`;
 
-      setReplacementSubmitSuccess(successMessage);
+      setOwnerAffiliationSubmitSuccess(successMessage);
 
       await refreshLandParcels();
       if (selectedFarmer.parcels.length > 0) {
         await fetchParcelHistoryForIds(selectedFarmer.parcels.map((p) => p.id));
       }
-
-      await Promise.all([
-        supabase.rpc("sync_farmer_no_parcels_status", {
-          p_farmer_id: currentHolderId,
-        }),
-        supabase.rpc("sync_farmer_no_parcels_status", {
-          p_farmer_id: replacementHolderId,
-        }),
-      ]);
     } catch (error: any) {
       if (uploadedProofs.length > 0) {
         await cleanupUploadedProofs(uploadedProofs);
       }
-      setReplacementSubmitError(
+      setOwnerAffiliationSubmitError(
         error?.message ||
-          `Failed to replace active ${replacementRoleLabel.toLowerCase()} holder.`,
+          `Failed to update ${ownerAffiliationRoleLabel.toLowerCase()} linked landowner.`,
       );
     } finally {
-      setIsSubmittingReplacement(false);
+      setIsSubmittingOwnerAffiliation(false);
     }
   };
 
@@ -1192,17 +1267,62 @@ const JoLandRegistry: React.FC = () => {
     return roleParcels.length > 0 ? roleParcels : sourceParcels;
   };
 
+  const deriveRegistryActionCapabilities = (
+    group: FarmerGroup,
+  ): RegistryActionCapabilities => {
+    const sourceParcels = Array.isArray(group.parcels) ? group.parcels : [];
+    const ownerParcels = getParcelsForRegistryOwnership(group, "owner");
+    const canTransferOwnership =
+      group.has_registered_owner ||
+      ownerParcels.some((parcel) => {
+        const area = Number(parcel?.total_farm_area_ha) || 0;
+        return (
+          area > 0 && parcel?.is_tenant !== true && parcel?.is_lessee !== true
+        );
+      });
+
+    const canUpdateTenantLandowner =
+      group.has_tenant || sourceParcels.some((parcel) => parcel?.is_tenant);
+    const canUpdateLesseeLandowner =
+      group.has_lessee || sourceParcels.some((parcel) => parcel?.is_lessee);
+
+    return {
+      canTransferOwnership,
+      canUpdateTenantLandowner,
+      canUpdateLesseeLandowner,
+    };
+  };
+
   const registryRows = useMemo<RegistryDisplayRow[]>(() => {
     const toPositiveArea = (value: unknown) => {
       const parsed = Number(value);
       return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
     };
 
-    const buildRow = (
-      group: FarmerGroup,
-      ownership: RegistryRowOwnership,
-    ): RegistryDisplayRow => {
-      const parcels = getParcelsForRegistryOwnership(group, ownership);
+    const buildRow = (group: FarmerGroup): RegistryDisplayRow => {
+      const capabilities = deriveRegistryActionCapabilities(group);
+      const primaryOwnership: RegistryRowOwnership =
+        capabilities.canTransferOwnership
+          ? "owner"
+          : capabilities.canUpdateTenantLandowner
+            ? "tenant"
+            : "lessee";
+
+      const ownershipSecondaryLabels: string[] = [];
+      if (
+        primaryOwnership === "owner" &&
+        capabilities.canUpdateTenantLandowner
+      ) {
+        ownershipSecondaryLabels.push("also tenant");
+      }
+      if (
+        primaryOwnership === "owner" &&
+        capabilities.canUpdateLesseeLandowner
+      ) {
+        ownershipSecondaryLabels.push("also lessee");
+      }
+
+      const parcels = Array.isArray(group.parcels) ? group.parcels : [];
       const areaFromParcels = parcels.reduce(
         (sum, parcel) => sum + toPositiveArea(parcel?.total_farm_area_ha),
         0,
@@ -1220,9 +1340,11 @@ const JoLandRegistry: React.FC = () => {
       ).sort((a, b) => a.localeCompare(b));
 
       return {
-        rowId: `${group.farmer_id}-${ownership}`,
+        rowId: String(group.farmer_id),
         farmer: group,
-        ownership,
+        primaryOwnership,
+        ownershipSecondaryLabels,
+        capabilities,
         parcels,
         totalAreaHa,
         primaryBarangay:
@@ -1240,11 +1362,7 @@ const JoLandRegistry: React.FC = () => {
       if (!group || !Array.isArray(group.parcels) || group.parcels.length === 0)
         return;
 
-      const hasOwnerRole =
-        group.has_registered_owner || (!group.has_tenant && !group.has_lessee);
-      if (hasOwnerRole) rows.push(buildRow(group, "owner"));
-      if (group.has_tenant) rows.push(buildRow(group, "tenant"));
-      if (group.has_lessee) rows.push(buildRow(group, "lessee"));
+      rows.push(buildRow(group));
     });
 
     return rows;
@@ -1265,9 +1383,9 @@ const JoLandRegistry: React.FC = () => {
     filter: OwnershipFilter,
   ) => {
     if (filter === "all") return true;
-    if (filter === "owner") return row.ownership === "owner";
-    if (filter === "tenant") return row.ownership === "tenant";
-    if (filter === "lessee") return row.ownership === "lessee";
+    if (filter === "owner") return row.capabilities.canTransferOwnership;
+    if (filter === "tenant") return row.capabilities.canUpdateTenantLandowner;
+    if (filter === "lessee") return row.capabilities.canUpdateLesseeLandowner;
     return true;
   };
 
@@ -1381,7 +1499,10 @@ const JoLandRegistry: React.FC = () => {
           b.farmer.farmer_name,
         );
         if (nameDiff !== 0) return nameDiff;
-        return ownershipOrder[a.ownership] - ownershipOrder[b.ownership];
+        return (
+          ownershipOrder[a.primaryOwnership] -
+          ownershipOrder[b.primaryOwnership]
+        );
       });
   }, [registryRows, searchTerm, filterBarangay, filterOwnership]);
 
@@ -1391,6 +1512,9 @@ const JoLandRegistry: React.FC = () => {
 
   const selectedContextFarmerId = selectedFarmer?.farmer_id ?? null;
   const selectedContextFarmerName = selectedFarmer?.farmer_name || "Unknown";
+  const selectedFarmerCapabilities = selectedFarmer
+    ? deriveRegistryActionCapabilities(selectedFarmer)
+    : null;
   const selectedContextRoleLabel = useMemo(() => {
     if (!selectedFarmer) return "Registered Owner";
     if (selectedFarmerViewRole === "tenant") return "Tenant";
@@ -1398,154 +1522,173 @@ const JoLandRegistry: React.FC = () => {
     return "Registered Owner";
   }, [selectedFarmer, selectedFarmerViewRole]);
 
-  const replacementRoleLabel =
-    replacementRole === "tenant" ? "Tenant" : "Lessee";
+  const ownerAffiliationRoleLabel =
+    ownerAffiliationRole === "tenant" ? "Tenant" : "Lessee";
 
-  const replacementCandidates = useMemo(() => {
-    return aggregatedFarmers
-      .filter((group) => group.farmer_id !== selectedContextFarmerId)
-      .map((group) => ({
-        farmerId: group.farmer_id,
-        name: group.farmer_name || `Farmer #${group.farmer_id}`,
-        barangay: group.parcels[0]?.farm_location_barangay || "No barangay",
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [aggregatedFarmers, selectedContextFarmerId]);
-
-  const selectedReplacementCandidate =
-    replacementCandidates.find(
-      (option) => option.farmerId === replacementCandidateId,
-    ) || null;
-
-  const selectedReplacementCandidateDetails = useMemo(() => {
-    if (replacementCandidateId === "") return null;
-    const candidateId = Number(replacementCandidateId);
-    if (!Number.isFinite(candidateId) || candidateId <= 0) return null;
-
-    const match = aggregatedFarmers.find(
-      (group) => group.farmer_id === candidateId,
-    );
-    if (!match) {
-      return selectedReplacementCandidate
-        ? {
-            farmerId: selectedReplacementCandidate.farmerId,
-            name: selectedReplacementCandidate.name,
-            ffrsCode: "",
-            barangay: selectedReplacementCandidate.barangay,
-            municipality: "",
-            parcelCount: 0,
-          }
-        : null;
-    }
-
-    return {
-      farmerId: match.farmer_id,
-      name: match.farmer_name || `Farmer #${match.farmer_id}`,
-      ffrsCode: match.ffrs_code || "",
-      barangay: match.parcels[0]?.farm_location_barangay || "No barangay",
-      municipality: match.parcels[0]?.farm_location_municipality || "",
-      parcelCount: match.parcels.length,
-    };
-  }, [aggregatedFarmers, replacementCandidateId, selectedReplacementCandidate]);
-
-  const activeReplacementSourceFarmerId = (() => {
+  const activeOwnerAffiliationSourceOwnerId = (() => {
     const candidate =
-      replacementSourceFarmerId === ""
-        ? selectedContextFarmerId
-        : Number(replacementSourceFarmerId);
+      ownerAffiliationSourceOwnerId === ""
+        ? null
+        : Number(ownerAffiliationSourceOwnerId);
     return Number.isFinite(candidate) && (candidate || 0) > 0
       ? Number(candidate)
       : null;
   })();
 
-  const selectedReplacementSourceParcels =
-    activeReplacementSourceFarmerId === null
+  const selectedOwnerAffiliationSourceParcels =
+    activeOwnerAffiliationSourceOwnerId === null
       ? []
-      : (replacementAssignedParcelsBySource.get(
-          activeReplacementSourceFarmerId,
+      : (ownerAffiliationParcelsByOwner.get(
+          activeOwnerAffiliationSourceOwnerId,
         ) ?? []);
 
-  const selectedReplacementSource =
-    replacementSourceOptions.find(
-      (option) => option.farmerId === activeReplacementSourceFarmerId,
+  const selectedOwnerAffiliationSource =
+    ownerAffiliationSourceOptions.find(
+      (option) => option.ownerId === activeOwnerAffiliationSourceOwnerId,
     ) ||
-    (selectedFarmer && activeReplacementSourceFarmerId !== null
+    (selectedFarmer && activeOwnerAffiliationSourceOwnerId !== null
       ? {
-          farmerId: activeReplacementSourceFarmerId,
+          farmerId: selectedFarmer.farmer_id,
           farmerName:
-            selectedFarmer.farmer_name ||
-            `Farmer #${activeReplacementSourceFarmerId}`,
-          ownerId: selectedReplacementSourceParcels[0]?.ownerId ?? null,
+            selectedFarmer.farmer_name || `Farmer #${selectedFarmer.farmer_id}`,
+          ownerId: activeOwnerAffiliationSourceOwnerId,
           ownerName:
-            selectedReplacementSourceParcels[0]?.ownerName || "No linked owner",
-          parcelCount: selectedReplacementSourceParcels.length,
+            selectedOwnerAffiliationSourceParcels[0]?.ownerName ||
+            `Owner #${activeOwnerAffiliationSourceOwnerId}`,
+          parcelCount: selectedOwnerAffiliationSourceParcels.length,
         }
       : null);
 
-  const selectedReplacementSourceAreaHa =
-    selectedReplacementSourceParcels.reduce((sum, parcel) => {
+  const selectedOwnerAffiliationAreaHa =
+    selectedOwnerAffiliationSourceParcels.reduce((sum, parcel) => {
       const area = Number(parcel.areaHa);
       return sum + (Number.isFinite(area) ? area : 0);
     }, 0);
 
-  const replacementTakeoverPlan = useMemo(
-    () =>
-      buildReplacementTakeoverPlan(
-        selectedReplacementSourceParcels,
-        replacementSelectedParcelIds,
-        replacementTakeoverMode,
-        replacementSpecificLotInputs,
-      ),
-    [
-      selectedReplacementSourceParcels,
-      replacementSelectedParcelIds,
-      replacementTakeoverMode,
-      replacementSpecificLotInputs,
-    ],
+  const ownerAffiliationHasSingleSourceContext =
+    ownerAffiliationSourceOptions.length === 1;
+
+  const ownerAffiliationStep3Parcels = useMemo<
+    OwnerAffiliationStep3Parcel[]
+  >(() => {
+    return selectedOwnerAffiliationSourceParcels
+      .map((parcel) => ({
+        ...parcel,
+        inCurrentContract: true,
+      }))
+      .sort((a, b) => {
+        const parcelDiff = (a.parcelNumber || "").localeCompare(
+          b.parcelNumber || "",
+        );
+        if (parcelDiff !== 0) return parcelDiff;
+        return a.farmParcelId - b.farmParcelId;
+      });
+  }, [selectedOwnerAffiliationSourceParcels]);
+
+  const ownerAffiliationSelectableAreaHa = ownerAffiliationStep3Parcels.reduce(
+    (sum, parcel) => {
+      const area = Number(parcel.areaHa);
+      return sum + (Number.isFinite(area) ? area : 0);
+    },
+    0,
   );
 
-  const replacementPortionReadyForProofUpload =
-    replacementCandidateId !== "" &&
-    selectedReplacementSourceParcels.length > 0 &&
-    replacementTakeoverPlan.items.length > 0 &&
-    replacementTakeoverPlan.error === "";
+  const ownerAffiliationTakeoverPlan = useMemo(() => {
+    return buildReplacementTakeoverPlan(
+      ownerAffiliationStep3Parcels,
+      ownerAffiliationSelectedParcelIds,
+      ownerAffiliationTakeoverMode,
+      ownerAffiliationSpecificLotInputs,
+    );
+  }, [
+    ownerAffiliationStep3Parcels,
+    ownerAffiliationSelectedParcelIds,
+    ownerAffiliationTakeoverMode,
+    ownerAffiliationSpecificLotInputs,
+  ]);
 
-  const replacementTakeoverModeLabel =
-    replacementTakeoverMode === "full_parcel"
+  const ownerAffiliationTakeoverModeLabel =
+    ownerAffiliationTakeoverMode === "full_parcel"
       ? "Full parcel(s)"
       : "Specific slot of parcel";
 
-  const replacementPreviewParcels = useMemo(() => {
+  const ownerAffiliationOwnerOptions = useMemo<OwnerAffiliationOwnerOption[]>(
+    () =>
+      aggregatedFarmers
+        .map((group) => {
+          const ownerParcels = getEligibleTransferDonorParcels(group);
+          return {
+            group,
+            ownerParcels,
+          };
+        })
+        .filter(({ group, ownerParcels }) => {
+          if (ownerParcels.length === 0) return false;
+          if (
+            activeOwnerAffiliationSourceOwnerId !== null &&
+            group.farmer_id === activeOwnerAffiliationSourceOwnerId
+          ) {
+            return false;
+          }
+          if (
+            selectedContextFarmerId !== null &&
+            group.farmer_id === selectedContextFarmerId
+          ) {
+            return false;
+          }
+          return true;
+        })
+        .map(({ group, ownerParcels }) => ({
+          ownerId: group.farmer_id,
+          ownerName: group.farmer_name || `Farmer #${group.farmer_id}`,
+          barangay: ownerParcels[0]?.farm_location_barangay || "No barangay",
+          parcelCount: ownerParcels.length,
+        }))
+        .sort((a, b) => a.ownerName.localeCompare(b.ownerName)),
+    [
+      aggregatedFarmers,
+      activeOwnerAffiliationSourceOwnerId,
+      selectedContextFarmerId,
+      getEligibleTransferDonorParcels,
+    ],
+  );
+
+  const selectedOwnerAffiliationNewOwner =
+    ownerAffiliationOwnerOptions.find(
+      (option) => option.ownerId === ownerAffiliationNewOwnerId,
+    ) || null;
+
+  const ownerAffiliationPreviewParcels = useMemo(() => {
     const parcelById = new Map<number, ReplacementAssignedParcel>();
-    selectedReplacementSourceParcels.forEach((parcel) => {
+    ownerAffiliationStep3Parcels.forEach((parcel) => {
       parcelById.set(parcel.farmParcelId, parcel);
     });
 
-    return replacementTakeoverPlan.items.map((item) => {
-      const parcel = parcelById.get(item.farm_parcel_id) || null;
-      const selectedArea = Number(item.transfer_area_ha) || 0;
-      const parcelArea = Number(parcel?.areaHa) || 0;
-      const sharePct =
-        parcelArea > 0
-          ? Math.min(100, Math.max(0, (selectedArea / parcelArea) * 100))
-          : 0;
+    return ownerAffiliationTakeoverPlan.items
+      .map((item) => {
+        const parcel = parcelById.get(item.farm_parcel_id);
+        if (!parcel) return null;
+        return {
+          ...parcel,
+          selectedAreaHa: Number(item.transfer_area_ha) || 0,
+          scopeMode: item.takeover_mode,
+        };
+      })
+      .filter(
+        (
+          parcel,
+        ): parcel is ReplacementAssignedParcel & {
+          selectedAreaHa: number;
+          scopeMode: "full" | "specific";
+        } => parcel !== null,
+      );
+  }, [ownerAffiliationStep3Parcels, ownerAffiliationTakeoverPlan.items]);
 
-      return {
-        ...item,
-        parcel,
-        selectedArea,
-        parcelArea,
-        sharePct,
-      };
-    });
-  }, [replacementTakeoverPlan.items, selectedReplacementSourceParcels]);
-
-  const getSpecificLotInput = (
-    farmParcelId: number,
-  ): ReplacementSpecificLotInput =>
-    replacementSpecificLotInputs[farmParcelId] || {
-      customAreaHa: "",
-    };
+  const ownerAffiliationReadyForProofUpload =
+    ownerAffiliationSourceOwnerId !== "" &&
+    ownerAffiliationNewOwnerId !== "" &&
+    ownerAffiliationTakeoverPlan.items.length > 0 &&
+    ownerAffiliationTakeoverPlan.error === "";
 
   // Build donor options and exclude the current farmer
   const registeredOwnerOptions = useMemo(() => {
@@ -2491,7 +2634,7 @@ const JoLandRegistry: React.FC = () => {
                         onClick={() =>
                           handleFarmerSelect(
                             row.farmer,
-                            row.ownership,
+                            row.primaryOwnership,
                             row.parcels.map((parcel) => parcel.id),
                             row.rowId,
                           )
@@ -2510,11 +2653,11 @@ const JoLandRegistry: React.FC = () => {
                         </td>
                         <td>{row.farmer.farmer_name || "—"}</td>
                         <td>
-                          {row.ownership === "tenant" ? (
+                          {row.primaryOwnership === "tenant" ? (
                             <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-tenant">
                               Tenant
                             </span>
-                          ) : row.ownership === "lessee" ? (
+                          ) : row.primaryOwnership === "lessee" ? (
                             <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-lessee">
                               Lessee
                             </span>
@@ -2522,6 +2665,17 @@ const JoLandRegistry: React.FC = () => {
                             <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-owner">
                               Registered Owner
                             </span>
+                          )}
+                          {row.ownershipSecondaryLabels.length > 0 && (
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                color: "#475569",
+                                marginTop: "4px",
+                              }}
+                            >
+                              {row.ownershipSecondaryLabels.join(" • ")}
+                            </div>
                           )}
                         </td>
                         <td>{row.primaryBarangay || "Multiple"}</td>
@@ -2560,7 +2714,7 @@ const JoLandRegistry: React.FC = () => {
                                 >
                                   View
                                 </button>
-                                {row.ownership === "owner" && (
+                                {row.capabilities.canTransferOwnership && (
                                   <button
                                     type="button"
                                     className="jo-land-registry-row-action-menu-item jo-land-registry-row-action-menu-item-owner"
@@ -2571,33 +2725,41 @@ const JoLandRegistry: React.FC = () => {
                                     Transfer Ownership
                                   </button>
                                 )}
-                                {row.ownership !== "owner" && (
+                                {(row.capabilities.canUpdateTenantLandowner ||
+                                  row.capabilities
+                                    .canUpdateLesseeLandowner) && (
                                   <div className="jo-land-registry-row-action-menu-caption">
                                     Assignment
                                   </div>
                                 )}
-                                {row.ownership === "tenant" && (
+                                {row.capabilities.canUpdateTenantLandowner && (
                                   <button
                                     type="button"
-                                    className="jo-land-registry-row-action-menu-item jo-land-registry-row-action-menu-item-replace"
+                                    className="jo-land-registry-row-action-menu-item jo-land-registry-row-action-menu-item-owner"
                                     role="menuitem"
                                     onClick={() =>
-                                      openReplacementModal(row.farmer, "tenant")
+                                      handleRowActionOwnerAffiliation(
+                                        row,
+                                        "tenant",
+                                      )
                                     }
                                   >
-                                    Replace Tenant Holder
+                                    Update Tenant Landowner
                                   </button>
                                 )}
-                                {row.ownership === "lessee" && (
+                                {row.capabilities.canUpdateLesseeLandowner && (
                                   <button
                                     type="button"
-                                    className="jo-land-registry-row-action-menu-item jo-land-registry-row-action-menu-item-replace"
+                                    className="jo-land-registry-row-action-menu-item jo-land-registry-row-action-menu-item-owner"
                                     role="menuitem"
                                     onClick={() =>
-                                      openReplacementModal(row.farmer, "lessee")
+                                      handleRowActionOwnerAffiliation(
+                                        row,
+                                        "lessee",
+                                      )
                                     }
                                   >
-                                    Replace Lessee Holder
+                                    Update Lessee Landowner
                                   </button>
                                 )}
                               </div>
@@ -2653,45 +2815,55 @@ const JoLandRegistry: React.FC = () => {
                         borderRadius: "6px",
                       }}
                     >
-                      {selectedFarmerViewRole === "owner" ? (
+                      {selectedFarmerCapabilities?.canTransferOwnership ? (
                         <button
                           className="jo-land-registry-transfer-button"
                           style={{ cursor: "pointer" }}
-                          onClick={() => openTransferModal()}
+                          onClick={() => openTransferModal("owner")}
                         >
                           🔄 Transfer Ownership
                         </button>
                       ) : (
                         <div className="jo-land-registry-transfer-mini-note">
-                          Ownership transfer is owner-only. Use replacement
-                          actions below for tenant/lessee assignment changes.
+                          Ownership transfer is owner-only. Use linked landowner
+                          update actions below for tenant/lessee changes.
                         </div>
                       )}
-                      {selectedFarmerViewRole === "tenant" && (
-                        <div className="jo-land-registry-replacement-action-row">
-                          <button
-                            type="button"
-                            className="jo-land-registry-replacement-button"
-                            onClick={() =>
-                              openReplacementModal(selectedFarmer, "tenant")
-                            }
-                          >
-                            Replace Tenant Holder
-                          </button>
-                        </div>
+                      {selectedFarmerCapabilities?.canUpdateTenantLandowner && (
+                        <>
+                          <div className="jo-land-registry-replacement-action-row">
+                            <button
+                              type="button"
+                              className="jo-land-registry-replacement-button"
+                              onClick={() =>
+                                openOwnerAffiliationModal(
+                                  selectedFarmer,
+                                  "tenant",
+                                )
+                              }
+                            >
+                              Update Tenant Landowner
+                            </button>
+                          </div>
+                        </>
                       )}
-                      {selectedFarmerViewRole === "lessee" && (
-                        <div className="jo-land-registry-replacement-action-row">
-                          <button
-                            type="button"
-                            className="jo-land-registry-replacement-button"
-                            onClick={() =>
-                              openReplacementModal(selectedFarmer, "lessee")
-                            }
-                          >
-                            Replace Lessee Holder
-                          </button>
-                        </div>
+                      {selectedFarmerCapabilities?.canUpdateLesseeLandowner && (
+                        <>
+                          <div className="jo-land-registry-replacement-action-row">
+                            <button
+                              type="button"
+                              className="jo-land-registry-replacement-button"
+                              onClick={() =>
+                                openOwnerAffiliationModal(
+                                  selectedFarmer,
+                                  "lessee",
+                                )
+                              }
+                            >
+                              Update Lessee Landowner
+                            </button>
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -2777,21 +2949,26 @@ const JoLandRegistry: React.FC = () => {
                             const normalizedChangeType = String(
                               record.change_type || "",
                             ).toUpperCase();
+                            const isOwnerAffiliationChange =
+                              normalizedChangeType ===
+                              "OWNER_AFFILIATION_CHANGE";
                             const isPartial =
                               normalizedChangeType === "TRANSFER_PARTIAL";
                             const isTransfer = /TRANSFER/i.test(
                               normalizedChangeType,
                             );
+                            const isProofLinkedChange =
+                              isTransfer || isOwnerAffiliationChange;
                             const isRoleAssociation =
                               normalizedChangeType === "TENANT_CHANGE" ||
                               normalizedChangeType === "LESSEE_CHANGE" ||
                               normalizedChangeType === "ASSOCIATION_CHANGE";
                             const fromMatch =
-                              isTransfer && record.notes
+                              isProofLinkedChange && record.notes
                                 ? record.notes.match(/from farmer (\d+)/i)
                                 : null;
                             const toMatch =
-                              isTransfer && record.notes
+                              isProofLinkedChange && record.notes
                                 ? record.notes.match(/to farmer (\d+)/i)
                                 : null;
                             const fromFarmerIdFromNotes = fromMatch
@@ -2859,6 +3036,15 @@ const JoLandRegistry: React.FC = () => {
                                   return "👤 Lessee Registration";
                                 }
                                 return "👤 Tenant and Lessee Registration";
+                              }
+                              if (isOwnerAffiliationChange) {
+                                if (record.is_tenant) {
+                                  return "🔗 Tenant Landowner Update";
+                                }
+                                if (record.is_lessee) {
+                                  return "🔗 Lessee Landowner Update";
+                                }
+                                return "🔗 Linked Landowner Update";
                               }
                               if (isPartial) return "✂️ Partial Transfer";
                               const r = (record.change_reason || "")
@@ -2945,7 +3131,9 @@ const JoLandRegistry: React.FC = () => {
                               ? isPartial
                                 ? "Partial transfer — split of original parcel"
                                 : "Full transfer"
-                              : null;
+                              : isOwnerAffiliationChange
+                                ? "Owner affiliation update only (holder unchanged)"
+                                : null;
 
                             return (
                               <div
@@ -3126,7 +3314,7 @@ const JoLandRegistry: React.FC = () => {
                                   )}
 
                                   {/* Proof button */}
-                                  {isTransfer &&
+                                  {isProofLinkedChange &&
                                     cardProofs &&
                                     cardProofs.length > 0 && (
                                       <div style={{ marginTop: "6px" }}>
@@ -3507,6 +3695,14 @@ const JoLandRegistry: React.FC = () => {
                               />
                             </div>
                           )}
+
+                        {selectedRegisteredOwner &&
+                          donorSplitParcels.length === 0 && (
+                            <div className="jo-land-registry-transfer-mini-note">
+                              No transferable registered-owner parcels were
+                              found for this donor.
+                            </div>
+                          )}
                       </div>
                     )}
 
@@ -3604,11 +3800,7 @@ const JoLandRegistry: React.FC = () => {
                     {(transferMode === "voluntary" ||
                       transferMode === "inheritance") && (
                       <div className="jo-land-registry-transfer-section-card">
-                        <h4>
-                          {transferMode === "voluntary"
-                            ? "Step 3: Supporting Documents"
-                            : "Step 3: Supporting Documents"}
-                        </h4>
+                        <h4>Step 3: Proof</h4>
                         <label className="jo-land-registry-transfer-label">
                           Upload proof photo(s) - PNG/JPG (multiple)
                         </label>
@@ -3645,11 +3837,7 @@ const JoLandRegistry: React.FC = () => {
                     {(transferMode === "voluntary" ||
                       transferMode === "inheritance") && (
                       <div className="jo-land-registry-transfer-section-card">
-                        <h4>
-                          {transferMode === "voluntary"
-                            ? "Step 4: Reason + Review"
-                            : "Step 4: Reason + Review"}
-                        </h4>
+                        <h4>Step 4: Review</h4>
                         <label className="jo-land-registry-transfer-label">
                           Reason (Optional)
                         </label>
@@ -3671,6 +3859,14 @@ const JoLandRegistry: React.FC = () => {
                         <div className="jo-land-registry-transfer-review-block">
                           <div className="jo-land-registry-transfer-review-block-title">
                             Transfer Type
+                          </div>
+                          <div className="jo-land-registry-transfer-kv">
+                            <span>Type</span>
+                            <strong>
+                              {transferMode === "inheritance"
+                                ? "Inheritance"
+                                : "Voluntary Transfer"}
+                            </strong>
                           </div>
                           <div className="jo-land-registry-transfer-kv">
                             <span>Reason</span>
@@ -3870,21 +4066,21 @@ const JoLandRegistry: React.FC = () => {
             </div>
           )}
 
-        {/* Replace Tenant/Lessee Holder Modal */}
-        {showHolderReplacementModal && selectedFarmer && (
+        {/* Update Tenant/Lessee Landowner Modal */}
+        {showOwnerAffiliationModal && selectedFarmer && (
           <div
             className="jo-land-registry-modal-overlay"
-            onClick={closeReplacementModal}
+            onClick={closeOwnerAffiliationModal}
           >
             <div
               className="jo-land-registry-modal jo-land-registry-replacement-modal"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="jo-land-registry-modal-header jo-land-registry-replacement-header">
-                <h3>Replace {replacementRoleLabel} Holder</h3>
+                <h3>Update {ownerAffiliationRoleLabel} Landowner</h3>
                 <button
                   className="jo-land-registry-close-button"
-                  onClick={closeReplacementModal}
+                  onClick={closeOwnerAffiliationModal}
                 >
                   ×
                 </button>
@@ -3893,12 +4089,13 @@ const JoLandRegistry: React.FC = () => {
               <div className="jo-land-registry-modal-body">
                 <div className="jo-land-registry-replacement-flow">
                   <div className="jo-land-registry-replacement-note">
-                    <strong>Assignment Update Only:</strong> This updates
-                    tenant/lessee assignment only. Registered land ownership is
-                    not changed.
+                    <strong>Affiliation Update Only:</strong> This keeps the
+                    same {ownerAffiliationRoleLabel.toLowerCase()} holder and
+                    updates only the linked landowner on selected parcel(s).
+                    Legal ownership is not transferred.
                   </div>
 
-                  {replacementSubmitError && (
+                  {ownerAffiliationSubmitError && (
                     <div
                       className="jo-land-registry-replacement-note"
                       style={{
@@ -3908,406 +4105,393 @@ const JoLandRegistry: React.FC = () => {
                         color: "#991b1b",
                       }}
                     >
-                      <strong>Replacement Error:</strong>{" "}
-                      {replacementSubmitError}
+                      <strong>Update Error:</strong>{" "}
+                      {ownerAffiliationSubmitError}
                     </div>
                   )}
 
-                  {replacementSubmitSuccess && (
+                  {ownerAffiliationSubmitSuccess && (
                     <div className="jo-land-registry-replacement-preview-success">
-                      <strong>Success:</strong> {replacementSubmitSuccess}
+                      <strong>Success:</strong> {ownerAffiliationSubmitSuccess}
                     </div>
                   )}
 
-                  <div
-                    className="jo-land-registry-transfer-section-card"
-                    ref={replacementStep1Ref}
-                  >
-                    <h4>Current Context</h4>
+                  <div className="jo-land-registry-transfer-section-card">
+                    <h4>Step 1: Current Context</h4>
                     <div className="jo-land-registry-transfer-kv">
-                      <span>Context Farmer</span>
-                      <strong>{selectedFarmer.farmer_name}</strong>
-                    </div>
-                    <div className="jo-land-registry-transfer-kv">
-                      <span>Current Active Holder</span>
+                      <span>Holder</span>
                       <strong>{selectedFarmer.farmer_name || "—"}</strong>
                     </div>
                     <div className="jo-land-registry-transfer-kv">
-                      <span>Role To Replace</span>
-                      <strong>{replacementRoleLabel}</strong>
+                      <span>Role</span>
+                      <strong>{ownerAffiliationRoleLabel}</strong>
                     </div>
                     <div className="jo-land-registry-transfer-kv">
                       <span>FFRS Code</span>
                       <strong>{selectedFarmer.ffrs_code || "—"}</strong>
                     </div>
-                  </div>
 
-                  <div
-                    className="jo-land-registry-transfer-section-card"
-                    ref={replacementStep2Ref}
-                  >
-                    <h4>
-                      Step 1: Current Active {replacementRoleLabel} Holder
-                      (Auto-selected)
-                    </h4>
-                    <div className="jo-land-registry-transfer-kv">
-                      <span>Current Holder</span>
-                      <strong>{selectedFarmer.farmer_name || "—"}</strong>
-                    </div>
-                    <div className="jo-land-registry-transfer-mini-note">
-                      {replacementLoading
-                        ? `Loading assigned ${replacementRoleLabel.toLowerCase()} parcels...`
-                        : `Assigned ${replacementRoleLabel.toLowerCase()} parcels are auto-selected for this holder. Self-owned parcels are excluded.`}
-                    </div>
+                    {!ownerAffiliationLoading &&
+                    ownerAffiliationHasSingleSourceContext ? (
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Current Linked Landowner</span>
+                        <strong>
+                          {selectedOwnerAffiliationSource?.ownerName || "—"}
+                        </strong>
+                      </div>
+                    ) : (
+                      <>
+                        <label className="jo-land-registry-transfer-label">
+                          Current Linked Landowner
+                        </label>
+                        <select
+                          className="jo-land-registry-transfer-select"
+                          value={ownerAffiliationSourceOwnerId}
+                          disabled={
+                            ownerAffiliationLoading ||
+                            isSubmittingOwnerAffiliation
+                          }
+                          onChange={(e) =>
+                            handleOwnerAffiliationSourceOwnerChange(
+                              e.target.value,
+                            )
+                          }
+                        >
+                          <option value="">Choose linked landowner...</option>
+                          {ownerAffiliationSourceOptions.map((option) => {
+                            const optionOwnerId =
+                              typeof option.ownerId === "number" &&
+                              option.ownerId > 0
+                                ? option.ownerId
+                                : null;
+                            if (!optionOwnerId) return null;
+                            return (
+                              <option key={optionOwnerId} value={optionOwnerId}>
+                                {option.ownerName} ({option.parcelCount} parcel
+                                {option.parcelCount === 1 ? "" : "s"})
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </>
+                    )}
 
-                    {activeReplacementSourceFarmerId !== null &&
-                      !replacementLoading && (
-                        <div className="jo-land-registry-transfer-parcel-box">
-                          <div className="jo-land-registry-transfer-subheading">
-                            Auto-loaded Assigned Parcels (
-                            {selectedReplacementSourceParcels.length})
-                          </div>
+                    {ownerAffiliationLoading && (
+                      <div className="jo-land-registry-transfer-mini-note">
+                        Loading active {ownerAffiliationRoleLabel.toLowerCase()}{" "}
+                        parcel links...
+                      </div>
+                    )}
 
-                          {selectedReplacementSource && (
-                            <div className="jo-land-registry-transfer-mini-note">
-                              Owner context:{" "}
-                              {selectedReplacementSource.ownerName}
-                            </div>
-                          )}
-
-                          {selectedReplacementSourceParcels.length > 0 ? (
-                            <>
-                              <div className="jo-land-registry-transfer-mini-note">
-                                Total assigned area:{" "}
-                                {selectedReplacementSourceAreaHa.toFixed(2)} ha
-                              </div>
-                              <ul className="jo-land-registry-transfer-list">
-                                {selectedReplacementSourceParcels.map(
-                                  (parcel) => (
-                                    <li
-                                      key={`${parcel.historyId}-${parcel.farmParcelId}`}
-                                    >
-                                      <span className="jo-land-registry-transfer-list-parcel">
-                                        Parcel ID #{parcel.farmParcelId}
-                                      </span>
-                                      <span className="jo-land-registry-transfer-list-brgy">
-                                        {parcel.parcelNumber
-                                          ? `${parcel.parcelNumber} • `
-                                          : ""}
-                                        {parcel.barangay || "No barangay"}
-                                        {parcel.municipality
-                                          ? `, ${parcel.municipality}`
-                                          : ""}
-                                      </span>
-                                      <span className="jo-land-registry-transfer-list-area">
-                                        {parcel.areaHa.toFixed(2)} ha
-                                      </span>
-                                    </li>
-                                  ),
-                                )}
-                              </ul>
-                            </>
-                          ) : (
-                            <div className="jo-land-registry-transfer-mini-note">
-                              No replaceable parcels found for this holder after
-                              excluding self-owned, directly managed parcels.
-                            </div>
-                          )}
+                    {!ownerAffiliationLoading &&
+                      ownerAffiliationHasSingleSourceContext && (
+                        <div className="jo-land-registry-transfer-mini-note">
+                          Auto-selected current linked landowner based on the
+                          active {ownerAffiliationRoleLabel.toLowerCase()}{" "}
+                          parcel context.
                         </div>
+                      )}
+
+                    {!ownerAffiliationLoading &&
+                      selectedOwnerAffiliationSource && (
+                        <>
+                          <div className="jo-land-registry-transfer-mini-note">
+                            Linked owner:{" "}
+                            {selectedOwnerAffiliationSource.ownerName}
+                          </div>
+                          <div className="jo-land-registry-transfer-mini-note">
+                            Current holder links:{" "}
+                            {selectedOwnerAffiliationSource.parcelCount} parcel
+                            {selectedOwnerAffiliationSource.parcelCount === 1
+                              ? ""
+                              : "s"}{" "}
+                            • Total area{" "}
+                            {selectedOwnerAffiliationAreaHa.toFixed(2)} ha
+                          </div>
+                          <div className="jo-land-registry-transfer-mini-note">
+                            Selectable in Step 2:{" "}
+                            {ownerAffiliationStep3Parcels.length} parcel
+                            {ownerAffiliationStep3Parcels.length === 1
+                              ? ""
+                              : "s"}{" "}
+                            • Total area{" "}
+                            {ownerAffiliationSelectableAreaHa.toFixed(2)} ha
+                          </div>
+                        </>
                       )}
                   </div>
 
-                  <div
-                    className="jo-land-registry-transfer-section-card"
-                    ref={replacementStep3Ref}
-                  >
-                    <h4>
-                      Step 2: Select New {replacementRoleLabel} Holder & Portion
-                    </h4>
+                  <div className="jo-land-registry-transfer-section-card">
+                    <h4>Step 2: Select New Linked Landowner</h4>
                     <label className="jo-land-registry-transfer-label">
-                      New Land Owner
+                      New Linked Landowner
                     </label>
                     <select
                       className="jo-land-registry-transfer-select"
-                      value={replacementCandidateId}
-                      disabled={replacementLoading || isSubmittingReplacement}
+                      value={ownerAffiliationNewOwnerId}
+                      disabled={
+                        ownerAffiliationLoading || isSubmittingOwnerAffiliation
+                      }
                       onChange={(e) =>
-                        handleReplacementCandidateChange(e.target.value)
+                        handleOwnerAffiliationNewOwnerChange(e.target.value)
                       }
                     >
-                      <option value="">Choose new land owner...</option>
-                      {replacementCandidates.map((candidate) => (
-                        <option
-                          key={candidate.farmerId}
-                          value={candidate.farmerId}
-                        >
-                          {candidate.name} ({candidate.barangay})
+                      <option value="">Choose new linked landowner...</option>
+                      {ownerAffiliationOwnerOptions.map((owner) => (
+                        <option key={owner.ownerId} value={owner.ownerId}>
+                          {owner.ownerName} ({owner.parcelCount} owner parcel
+                          {owner.parcelCount === 1 ? "" : "s"})
                         </option>
                       ))}
                     </select>
                     <div className="jo-land-registry-transfer-mini-note">
-                      Current holder is excluded from options to prevent
-                      self-replacement.
+                      Current linked owner and current holder are excluded to
+                      avoid invalid self-linking.
                     </div>
 
-                    {replacementCandidateId !== "" &&
-                      selectedReplacementSourceParcels.length > 0 && (
-                        <>
-                          <label className="jo-land-registry-transfer-label">
-                            Choose Parcel(s) Under Agreement
-                          </label>
-                          <div className="jo-land-registry-transfer-parcel-box">
-                            <div className="jo-land-registry-transfer-subheading">
-                              Parcel Selection
-                            </div>
-                            <div className="jo-land-registry-transfer-mini-note">
-                              Pick which parcel(s) this{" "}
-                              {replacementRoleLabel.toLowerCase()} replacement
-                              applies to.
-                            </div>
+                    {ownerAffiliationNewOwnerId === "" ? (
+                      <div className="jo-land-registry-transfer-mini-note">
+                        Choose the new linked landowner first to continue parcel
+                        selection.
+                      </div>
+                    ) : ownerAffiliationStep3Parcels.length > 0 ? (
+                      <>
+                        <div className="jo-land-registry-transfer-subheading">
+                          Parcel(s) To Update
+                        </div>
 
-                            <div className="jo-land-registry-donor-parcel-cards">
-                              {selectedReplacementSourceParcels.map(
-                                (parcel) => {
-                                  const isSelected =
-                                    replacementSelectedParcelIds.includes(
-                                      parcel.farmParcelId,
-                                    );
-                                  return (
-                                    <div
-                                      key={`replacement-parcel-${parcel.farmParcelId}`}
-                                      className="jo-land-registry-donor-parcel-card"
-                                    >
-                                      <div className="jo-land-registry-donor-parcel-card-header">
-                                        <label
-                                          className="jo-land-registry-transfer-checkbox-row"
-                                          style={{
-                                            marginBottom: 0,
-                                            alignItems: "center",
-                                            flex: 1,
-                                          }}
-                                        >
-                                          <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={(e) =>
-                                              handleReplacementParcelToggle(
-                                                parcel.farmParcelId,
-                                                e.target.checked,
-                                              )
-                                            }
-                                          />
-                                          <span className="jo-land-registry-donor-parcel-number">
-                                            {parcel.parcelNumber ||
-                                              `Parcel ID #${parcel.farmParcelId}`}
-                                          </span>
-                                        </label>
-                                        <span className="jo-land-registry-donor-parcel-area-badge">
-                                          {parcel.areaHa.toFixed(2)} ha
-                                        </span>
-                                      </div>
-
-                                      <div className="jo-land-registry-donor-parcel-card-body">
-                                        <div className="jo-land-registry-donor-parcel-detail">
-                                          <span className="jo-land-registry-donor-parcel-detail-label">
-                                            Location
-                                          </span>
-                                          <span className="jo-land-registry-donor-parcel-detail-value">
-                                            {parcel.barangay || "No barangay"}
-                                            {parcel.municipality
-                                              ? `, ${parcel.municipality}`
-                                              : ""}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                },
-                              )}
-                            </div>
-                          </div>
-
-                          {replacementSelectedParcelIds.length > 0 ? (
-                            <>
-                              <label className="jo-land-registry-transfer-label">
-                                Takeover Portion
-                              </label>
-                              <div className="jo-land-registry-transfer-scope-radios">
-                                <label className="jo-land-registry-transfer-radio-label">
-                                  <input
-                                    type="radio"
-                                    name="replacementTakeoverMode"
-                                    checked={
-                                      replacementTakeoverMode === "full_parcel"
-                                    }
-                                    onChange={() =>
-                                      handleReplacementTakeoverModeChange(
-                                        "full_parcel",
-                                      )
-                                    }
-                                  />
-                                  <span>
-                                    <strong>Full parcel(s)</strong>
-                                    <br />
-                                    New holder takes over all selected parcels.
-                                  </span>
-                                </label>
-
-                                <label className="jo-land-registry-transfer-radio-label">
-                                  <input
-                                    type="radio"
-                                    name="replacementTakeoverMode"
-                                    checked={
-                                      replacementTakeoverMode ===
-                                      "specific_slot"
-                                    }
-                                    onChange={() =>
-                                      handleReplacementTakeoverModeChange(
-                                        "specific_slot",
-                                      )
-                                    }
-                                  />
-                                  <span>
-                                    <strong>Specific slot of parcel</strong>
-                                    <br />
-                                    Enter specific area for each selected
-                                    parcel.
-                                  </span>
-                                </label>
-                              </div>
-
-                              {replacementTakeoverMode === "specific_slot" && (
-                                <div className="jo-land-registry-transfer-parcel-box">
-                                  <div className="jo-land-registry-transfer-subheading">
-                                    Specific Slot Area Input
-                                  </div>
-                                  <div className="jo-land-registry-transfer-mini-note">
-                                    Enter the area share (ha) for each selected
-                                    parcel.
-                                  </div>
-
-                                  <div className="jo-land-registry-donor-parcel-cards">
-                                    {selectedReplacementSourceParcels
-                                      .filter((parcel) =>
-                                        replacementSelectedParcelIds.includes(
+                        <div className="jo-land-registry-transfer-mini-note">
+                          Select only the parcels currently linked to this
+                          holder under the selected landowner.
+                        </div>
+                        <div className="jo-land-registry-donor-parcel-cards">
+                          {ownerAffiliationStep3Parcels.map((parcel) => {
+                            const isChecked =
+                              ownerAffiliationSelectedParcelIds.includes(
+                                parcel.farmParcelId,
+                              );
+                            return (
+                              <div
+                                key={`owner-affiliation-parcel-${parcel.farmParcelId}`}
+                                className="jo-land-registry-donor-parcel-card"
+                              >
+                                <div className="jo-land-registry-donor-parcel-card-header">
+                                  <label
+                                    className="jo-land-registry-transfer-checkbox-row"
+                                    style={{
+                                      marginBottom: 0,
+                                      alignItems: "center",
+                                      flex: 1,
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) =>
+                                        handleOwnerAffiliationParcelToggle(
                                           parcel.farmParcelId,
-                                        ),
-                                      )
-                                      .map((parcel) => {
-                                        const specificInput =
-                                          getSpecificLotInput(
-                                            parcel.farmParcelId,
-                                          );
+                                          e.target.checked,
+                                        )
+                                      }
+                                    />
+                                    <span className="jo-land-registry-donor-parcel-number">
+                                      {parcel.parcelNumber ||
+                                        `Parcel ID #${parcel.farmParcelId}`}
+                                    </span>
+                                  </label>
+                                  <span className="jo-land-registry-donor-parcel-area-badge">
+                                    {parcel.areaHa.toFixed(2)} ha
+                                  </span>
+                                </div>
 
-                                        return (
-                                          <div
-                                            key={`specific-slot-${parcel.farmParcelId}`}
-                                            className="jo-land-registry-donor-parcel-card"
-                                          >
-                                            <div className="jo-land-registry-donor-parcel-card-header">
-                                              <span className="jo-land-registry-donor-parcel-number">
-                                                {parcel.parcelNumber ||
-                                                  `Parcel ID #${parcel.farmParcelId}`}
-                                              </span>
-                                              <span className="jo-land-registry-donor-parcel-area-badge">
-                                                {parcel.areaHa.toFixed(2)} ha
-                                              </span>
-                                            </div>
-
-                                            <div className="jo-land-registry-donor-parcel-card-body">
-                                              <div className="jo-land-registry-donor-parcel-detail">
-                                                <span className="jo-land-registry-donor-parcel-detail-label">
-                                                  Location
-                                                </span>
-                                                <span className="jo-land-registry-donor-parcel-detail-value">
-                                                  {parcel.barangay ||
-                                                    "No barangay"}
-                                                  {parcel.municipality
-                                                    ? `, ${parcel.municipality}`
-                                                    : ""}
-                                                </span>
-                                              </div>
-
-                                              <div
-                                                style={{
-                                                  marginTop: "10px",
-                                                  display: "grid",
-                                                  gap: "8px",
-                                                }}
-                                              >
-                                                <label className="jo-land-registry-transfer-label">
-                                                  Specific Area (ha)
-                                                </label>
-                                                <input
-                                                  type="number"
-                                                  min="0.01"
-                                                  step="0.01"
-                                                  max={parcel.areaHa.toFixed(2)}
-                                                  className="jo-land-registry-transfer-input"
-                                                  placeholder={`Max ${parcel.areaHa.toFixed(2)} ha`}
-                                                  value={
-                                                    specificInput.customAreaHa
-                                                  }
-                                                  onChange={(e) =>
-                                                    handleSpecificLotCustomAreaChange(
-                                                      parcel.farmParcelId,
-                                                      e.target.value,
-                                                    )
-                                                  }
-                                                />
-                                              </div>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
+                                <div className="jo-land-registry-donor-parcel-card-body">
+                                  <div className="jo-land-registry-transfer-mini-note">
+                                    Current holder linked parcel
+                                  </div>
+                                  <div className="jo-land-registry-donor-parcel-detail">
+                                    <span className="jo-land-registry-donor-parcel-detail-label">
+                                      Location
+                                    </span>
+                                    <span className="jo-land-registry-donor-parcel-detail-value">
+                                      {parcel.barangay || "No barangay"}
+                                      {parcel.municipality
+                                        ? `, ${parcel.municipality}`
+                                        : ""}
+                                    </span>
                                   </div>
                                 </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="jo-land-registry-transfer-mini-note">
-                              Select at least one parcel first, then choose the
-                              portion type.
-                            </div>
-                          )}
+                              </div>
+                            );
+                          })}
+                        </div>
 
+                        <div className="jo-land-registry-transfer-mini-note">
+                          Selected parcel count:{" "}
+                          {ownerAffiliationSelectedParcelIds.length}
+                        </div>
+
+                        <div className="jo-land-registry-transfer-subheading">
+                          Scope (Full or Partial)
+                        </div>
+
+                        {ownerAffiliationSelectedParcelIds.length === 0 ? (
                           <div className="jo-land-registry-transfer-mini-note">
-                            Takeover preview:{" "}
-                            {replacementTakeoverPlan.selectedParcelCount} parcel
-                            {replacementTakeoverPlan.selectedParcelCount === 1
-                              ? ""
-                              : "s"}{" "}
-                            ({replacementTakeoverPlan.totalAreaHa.toFixed(2)}{" "}
-                            ha)
+                            Select at least one parcel first.
                           </div>
+                        ) : (
+                          <>
+                            <div className="jo-land-registry-transfer-scope-radios">
+                              <label className="jo-land-registry-transfer-radio-label">
+                                <input
+                                  type="radio"
+                                  name="ownerAffiliationTakeoverMode"
+                                  checked={
+                                    ownerAffiliationTakeoverMode ===
+                                    "full_parcel"
+                                  }
+                                  onChange={() =>
+                                    handleOwnerAffiliationTakeoverModeChange(
+                                      "full_parcel",
+                                    )
+                                  }
+                                />
+                                <span>
+                                  <strong>Full parcel(s)</strong>
+                                  <br />
+                                  Update linked landowner for full selected
+                                  parcel area.
+                                </span>
+                              </label>
 
-                          {replacementTakeoverPlan.error && (
-                            <div
-                              className="jo-land-registry-transfer-mini-note"
-                              style={{
-                                borderColor: "#fecaca",
-                                borderLeftColor: "#dc2626",
-                                background: "#fef2f2",
-                                color: "#991b1b",
-                              }}
-                            >
-                              <strong>Portion setup issue:</strong>{" "}
-                              {replacementTakeoverPlan.error}
+                              <label className="jo-land-registry-transfer-radio-label">
+                                <input
+                                  type="radio"
+                                  name="ownerAffiliationTakeoverMode"
+                                  checked={
+                                    ownerAffiliationTakeoverMode ===
+                                    "specific_slot"
+                                  }
+                                  onChange={() =>
+                                    handleOwnerAffiliationTakeoverModeChange(
+                                      "specific_slot",
+                                    )
+                                  }
+                                />
+                                <span>
+                                  <strong>Specific slot of parcel</strong>
+                                  <br />
+                                  Enter a specific area for each selected
+                                  parcel.
+                                </span>
+                              </label>
                             </div>
-                          )}
-                        </>
-                      )}
 
-                    {replacementCandidateId === "" && (
+                            {ownerAffiliationTakeoverMode ===
+                              "specific_slot" && (
+                              <div className="jo-land-registry-transfer-parcel-box">
+                                <div className="jo-land-registry-transfer-subheading">
+                                  Specific Slot Area Input
+                                </div>
+                                <div className="jo-land-registry-transfer-mini-note">
+                                  Enter the area share (ha) for each selected
+                                  parcel.
+                                </div>
+
+                                <div className="jo-land-registry-donor-parcel-cards">
+                                  {ownerAffiliationStep3Parcels
+                                    .filter((parcel) =>
+                                      ownerAffiliationSelectedParcelIds.includes(
+                                        parcel.farmParcelId,
+                                      ),
+                                    )
+                                    .map((parcel) => {
+                                      const specificInput =
+                                        ownerAffiliationSpecificLotInputs[
+                                          parcel.farmParcelId
+                                        ] || {
+                                          customAreaHa: "",
+                                        };
+
+                                      return (
+                                        <div
+                                          key={`owner-affiliation-specific-${parcel.farmParcelId}`}
+                                          className="jo-land-registry-donor-parcel-card"
+                                        >
+                                          <div className="jo-land-registry-donor-parcel-card-header">
+                                            <span className="jo-land-registry-donor-parcel-number">
+                                              {parcel.parcelNumber ||
+                                                `Parcel ID #${parcel.farmParcelId}`}
+                                            </span>
+                                            <span className="jo-land-registry-donor-parcel-area-badge">
+                                              {parcel.areaHa.toFixed(2)} ha
+                                            </span>
+                                          </div>
+
+                                          <div className="jo-land-registry-donor-parcel-card-body">
+                                            <div
+                                              style={{
+                                                marginTop: "10px",
+                                                display: "grid",
+                                                gap: "8px",
+                                              }}
+                                            >
+                                              <label className="jo-land-registry-transfer-label">
+                                                Specific Area (ha)
+                                              </label>
+                                              <input
+                                                type="number"
+                                                min="0.01"
+                                                step="0.01"
+                                                max={parcel.areaHa.toFixed(2)}
+                                                className="jo-land-registry-transfer-input"
+                                                placeholder={`Max ${parcel.areaHa.toFixed(2)} ha`}
+                                                value={
+                                                  specificInput.customAreaHa
+                                                }
+                                                onChange={(e) =>
+                                                  handleOwnerAffiliationSpecificAreaChange(
+                                                    parcel.farmParcelId,
+                                                    e.target.value,
+                                                  )
+                                                }
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+                            )}
+
+                            {ownerAffiliationTakeoverPlan.error && (
+                              <div className="jo-land-registry-transfer-mini-note">
+                                {ownerAffiliationTakeoverPlan.error}
+                              </div>
+                            )}
+
+                            <div className="jo-land-registry-transfer-mini-note">
+                              Ready scoped parcel count:{" "}
+                              {ownerAffiliationTakeoverPlan.selectedParcelCount}{" "}
+                              • Total scoped area:{" "}
+                              {ownerAffiliationTakeoverPlan.totalAreaHa.toFixed(
+                                2,
+                              )}{" "}
+                              ha
+                            </div>
+                          </>
+                        )}
+                      </>
+                    ) : (
                       <div className="jo-land-registry-transfer-mini-note">
-                        Select the new {replacementRoleLabel.toLowerCase()}{" "}
-                        holder first to load parcel and portion options.
+                        No active holder-linked parcels found under the selected
+                        linked landowner.
                       </div>
                     )}
                   </div>
 
                   <div className="jo-land-registry-transfer-section-card">
-                    <h4>Step 3: Upload Proof/Supporting Document (Required)</h4>
+                    <h4>Step 3: Proof</h4>
                     <label className="jo-land-registry-transfer-label">
                       Upload proof file(s) - PNG/JPG/PDF/DOC/DOCX (multiple)
                     </label>
@@ -4315,271 +4499,155 @@ const JoLandRegistry: React.FC = () => {
                       type="file"
                       accept=".png,.jpg,.jpeg,.pdf,.doc,.docx,image/png,image/jpeg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       multiple
-                      onChange={handleReplacementDocsSelected}
+                      onChange={handleOwnerAffiliationDocsSelected}
                       className="jo-land-registry-transfer-file-input"
                       disabled={
-                        isSubmittingReplacement ||
-                        !replacementPortionReadyForProofUpload
+                        isSubmittingOwnerAffiliation ||
+                        !ownerAffiliationReadyForProofUpload
                       }
                     />
 
-                    {!replacementPortionReadyForProofUpload && (
+                    {!ownerAffiliationReadyForProofUpload && (
                       <div className="jo-land-registry-transfer-mini-note">
-                        Complete Step 2 (new holder, parcel selection, and
-                        portion) before uploading proof documents.
+                        Select current linked owner, new linked owner, and at
+                        least one scoped parcel before uploading proof
+                        documents.
                       </div>
                     )}
 
-                    {replacementSupportingDocs.length > 0 ? (
+                    {ownerAffiliationSupportingDocs.length > 0 && (
                       <ul className="jo-land-registry-transfer-doc-list">
-                        {replacementSupportingDocs.map((doc, index) => (
+                        {ownerAffiliationSupportingDocs.map((doc, index) => (
                           <li key={`${doc.name}-${doc.lastModified}-${index}`}>
                             <span>
                               {doc.name} ({(doc.size / 1024).toFixed(1)} KB)
                             </span>
                             <button
                               type="button"
-                              onClick={() => removeReplacementDoc(index)}
-                              disabled={isSubmittingReplacement}
+                              onClick={() => removeOwnerAffiliationDoc(index)}
+                              disabled={isSubmittingOwnerAffiliation}
                             >
                               Remove
                             </button>
                           </li>
                         ))}
                       </ul>
-                    ) : (
-                      <div className="jo-land-registry-transfer-mini-note">
-                        Upload at least one proof/supporting document to proceed
-                        to Step 4.
-                      </div>
                     )}
                   </div>
 
-                  {replacementPortionReadyForProofUpload &&
-                  replacementSupportingDocs.length > 0 ? (
-                    <div className="jo-land-registry-transfer-section-card">
-                      <h4>Step 4: Preview Summary</h4>
-                      <div className="jo-land-registry-transfer-mini-note">
-                        Review all details below before final submission. You
-                        can go back and edit any step.
+                  <div className="jo-land-registry-transfer-section-card">
+                    <h4>Step 4: Review</h4>
+
+                    <label className="jo-land-registry-transfer-label">
+                      Internal Note (Optional)
+                    </label>
+                    <textarea
+                      className="jo-land-registry-transfer-textarea"
+                      placeholder="Add optional context for staff records..."
+                      value={ownerAffiliationReason}
+                      disabled={isSubmittingOwnerAffiliation}
+                      onChange={(e) => {
+                        setOwnerAffiliationReason(e.target.value);
+                        setOwnerAffiliationSubmitError("");
+                        setOwnerAffiliationSubmitSuccess("");
+                      }}
+                    />
+
+                    <div className="jo-land-registry-transfer-review-block">
+                      <div className="jo-land-registry-transfer-review-block-title">
+                        Preview
                       </div>
-
-                      <div className="jo-land-registry-replacement-step-nav">
-                        <button
-                          type="button"
-                          onClick={() => scrollToReplacementStep(1)}
-                          disabled={isSubmittingReplacement}
-                        >
-                          Edit Step 1
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => scrollToReplacementStep(2)}
-                          disabled={isSubmittingReplacement}
-                        >
-                          Edit Step 2
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => scrollToReplacementStep(3)}
-                          disabled={isSubmittingReplacement}
-                        >
-                          Edit Step 3
-                        </button>
-                      </div>
-
-                      <label className="jo-land-registry-transfer-label">
-                        Internal Note (Optional)
-                      </label>
-                      <textarea
-                        className="jo-land-registry-transfer-textarea"
-                        placeholder="Add optional context for staff records..."
-                        value={replacementReason}
-                        disabled={isSubmittingReplacement}
-                        onChange={(e) => {
-                          setReplacementReason(e.target.value);
-                          setReplacementSubmitError("");
-                          setReplacementSubmitSuccess("");
-                        }}
-                      />
-
-                      <div className="jo-land-registry-transfer-review-block">
-                        <div className="jo-land-registry-transfer-review-block-title">
-                          Current and New Land Owner
+                      <div className="jo-land-registry-transfer-flow-row">
+                        <div className="jo-land-registry-transfer-party">
+                          <span className="jo-land-registry-transfer-party-label">
+                            CURRENT OWNER
+                          </span>
+                          <strong className="jo-land-registry-transfer-party-name">
+                            {selectedOwnerAffiliationSource?.ownerName ||
+                              "Not selected"}
+                          </strong>
                         </div>
+                        <div className="jo-land-registry-transfer-arrow">→</div>
+                        <div className="jo-land-registry-transfer-party">
+                          <span className="jo-land-registry-transfer-party-label">
+                            NEW OWNER
+                          </span>
+                          <strong className="jo-land-registry-transfer-party-name">
+                            {selectedOwnerAffiliationNewOwner?.ownerName ||
+                              "Not selected"}
+                          </strong>
+                        </div>
+                      </div>
 
-                        <div className="jo-land-registry-transfer-flow-row">
-                          <div className="jo-land-registry-transfer-party">
-                            <span className="jo-land-registry-transfer-party-label">
-                              CURRENT
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Holder (unchanged)</span>
+                        <strong>{selectedFarmer.farmer_name || "—"}</strong>
+                      </div>
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Role</span>
+                        <strong>{ownerAffiliationRoleLabel}</strong>
+                      </div>
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Scope</span>
+                        <strong>{ownerAffiliationTakeoverModeLabel}</strong>
+                      </div>
+
+                      <ul className="jo-land-registry-transfer-list">
+                        {ownerAffiliationPreviewParcels.map((parcel) => (
+                          <li
+                            key={`owner-affiliation-preview-${parcel.farmParcelId}`}
+                          >
+                            <span className="jo-land-registry-transfer-list-parcel">
+                              {parcel.parcelNumber ||
+                                `Parcel ID #${parcel.farmParcelId}`}
                             </span>
-                            <strong className="jo-land-registry-transfer-party-name">
-                              {selectedFarmer.farmer_name || "—"}
-                            </strong>
-                            <span className="jo-land-registry-transfer-party-sub">
-                              {replacementRoleLabel} holder
+                            <span className="jo-land-registry-transfer-list-brgy">
+                              {parcel.barangay || "No barangay"}
+                              {parcel.municipality
+                                ? `, ${parcel.municipality}`
+                                : ""}
                             </span>
-                          </div>
-                          <div className="jo-land-registry-transfer-arrow">
-                            →
-                          </div>
-                          <div className="jo-land-registry-transfer-party">
-                            <span className="jo-land-registry-transfer-party-label">
-                              NEW
+                            <span className="jo-land-registry-transfer-list-area">
+                              {parcel.selectedAreaHa.toFixed(2)} ha
                             </span>
-                            <strong className="jo-land-registry-transfer-party-name">
-                              {selectedReplacementCandidateDetails?.name ||
-                                selectedReplacementCandidate?.name ||
-                                "Not selected"}
-                            </strong>
-                            <span className="jo-land-registry-transfer-party-sub">
-                              {replacementRoleLabel} holder
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>New Land Owner ID</span>
-                          <strong>
-                            {selectedReplacementCandidateDetails?.farmerId ||
-                              "—"}
-                          </strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>New Land Owner FFRS</span>
-                          <strong>
-                            {selectedReplacementCandidateDetails?.ffrsCode ||
-                              "—"}
-                          </strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>New Land Owner Location</span>
-                          <strong>
-                            {selectedReplacementCandidateDetails
-                              ? `${selectedReplacementCandidateDetails.barangay}${selectedReplacementCandidateDetails.municipality ? `, ${selectedReplacementCandidateDetails.municipality}` : ""}`
-                              : selectedReplacementCandidate?.barangay || "—"}
-                          </strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>New Land Owner Current Parcels</span>
-                          <strong>
-                            {selectedReplacementCandidateDetails?.parcelCount ??
-                              0}
-                          </strong>
-                        </div>
-                      </div>
-
-                      <div className="jo-land-registry-transfer-review-block">
-                        <div className="jo-land-registry-transfer-review-block-title">
-                          Chosen Portion and Share
-                        </div>
-
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>Takeover Mode</span>
-                          <strong>{replacementTakeoverModeLabel}</strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>Selected Parcel Count</span>
-                          <strong>
-                            {replacementTakeoverPlan.selectedParcelCount}
-                          </strong>
-                        </div>
-                        <div className="jo-land-registry-transfer-kv">
-                          <span>Total Area To Assign</span>
-                          <strong>
-                            {replacementTakeoverPlan.totalAreaHa.toFixed(2)} ha
-                          </strong>
-                        </div>
-
-                        <ul className="jo-land-registry-transfer-list">
-                          {replacementPreviewParcels.map((row) => (
-                            <li
-                              key={`replacement-preview-${row.farm_parcel_id}`}
-                            >
-                              <span className="jo-land-registry-transfer-list-parcel">
-                                {row.parcel?.parcelNumber ||
-                                  `Parcel ID #${row.farm_parcel_id}`}
-                              </span>
-                              <span className="jo-land-registry-transfer-list-brgy">
-                                {row.parcel
-                                  ? `${row.parcel.barangay || "No barangay"}${row.parcel.municipality ? `, ${row.parcel.municipality}` : ""}`
-                                  : "Location unavailable"}
-                              </span>
-                              <span className="jo-land-registry-transfer-list-area">
-                                {row.selectedArea.toFixed(2)} ha (
-                                {row.sharePct.toFixed(2)}%)
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="jo-land-registry-transfer-review-block">
-                        <div className="jo-land-registry-transfer-review-block-title">
-                          Uploaded Proof/Document
-                        </div>
-
-                        <ul className="jo-land-registry-transfer-doc-list jo-land-registry-transfer-doc-list-readonly">
-                          {replacementSupportingDocs.map((doc, index) => (
-                            <li key={`replacement-proof-preview-${index}`}>
-                              <span>{doc.name}</span>
-                              <span className="jo-land-registry-transfer-doc-meta">
-                                {(doc.size / 1024).toFixed(1)} KB
-                                {doc.type ? ` • ${doc.type}` : ""}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="jo-land-registry-transfer-mini-note">
-                        {replacementReason.trim()
-                          ? `Note preview: ${replacementReason.trim()}`
-                          : "No note added."}
-                      </div>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  ) : (
-                    <div className="jo-land-registry-transfer-section-card">
-                      <h4>Step 4: Preview</h4>
-                      <div className="jo-land-registry-transfer-mini-note">
-                        Step 4 is locked until Step 2 is complete and at least
-                        one proof/supporting document is uploaded in Step 3.
-                      </div>
-                    </div>
-                  )}
+                  </div>
 
                   <div className="jo-land-registry-transfer-actions">
                     <button
                       type="button"
                       className="jo-land-registry-transfer-cancel"
-                      onClick={closeReplacementModal}
+                      onClick={closeOwnerAffiliationModal}
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
                       className="jo-land-registry-transfer-confirm"
-                      onClick={handleReplacementConfirm}
+                      onClick={handleOwnerAffiliationConfirm}
                       disabled={
-                        replacementLoading ||
-                        isSubmittingReplacement ||
-                        replacementSourceFarmerId === "" ||
-                        replacementCandidateId === "" ||
-                        selectedReplacementSourceParcels.length === 0 ||
-                        replacementSupportingDocs.length === 0 ||
-                        replacementTakeoverPlan.items.length === 0 ||
-                        replacementTakeoverPlan.error !== ""
+                        ownerAffiliationLoading ||
+                        isSubmittingOwnerAffiliation ||
+                        ownerAffiliationSourceOwnerId === "" ||
+                        ownerAffiliationNewOwnerId === "" ||
+                        ownerAffiliationTakeoverPlan.items.length === 0 ||
+                        ownerAffiliationTakeoverPlan.error !== "" ||
+                        ownerAffiliationSupportingDocs.length === 0
                       }
                     >
-                      {isSubmittingReplacement
+                      {isSubmittingOwnerAffiliation
                         ? "Submitting..."
-                        : `Confirm ${replacementRoleLabel} Replacement`}
+                        : `Confirm ${ownerAffiliationRoleLabel} Landowner Update`}
                     </button>
                   </div>
 
                   <div className="jo-land-registry-transfer-mini-note">
-                    This action closes the old active assignment and makes the
-                    selected replacement holder active.
+                    This action updates owner affiliation only. The current{" "}
+                    {ownerAffiliationRoleLabel.toLowerCase()} holder remains
+                    unchanged.
                   </div>
                 </div>
               </div>
