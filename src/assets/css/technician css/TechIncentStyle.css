@@ -1,49 +1,57 @@
 @media (max-width: 600px) {
-    .tech-incent-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important;
-    }
-    .tech-incent-card {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        margin: 0 0 12px 0 !important;
-        box-sizing: border-box;
-    }
+  .tech-incent-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .tech-incent-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 0 12px 0 !important;
+    box-sizing: border-box;
+  }
 }
+
 @media (max-width: 600px) {
-    .tech-incent-card {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        margin: 0 0 12px 0 !important;
-        box-sizing: border-box;
-    }
+  .tech-incent-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 0 12px 0 !important;
+    box-sizing: border-box;
+  }
 }
+
 @media (max-width: 600px) {
-    .tech-incent-stat-group {
-        flex-direction: column !important;
-        gap: 8px !important;
-    }
-    .tech-incent-stat-item {
-        width: 100%;
-        margin-bottom: 0 !important;
-    }
+  .tech-incent-stat-group {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .tech-incent-stat-item {
+    width: 100%;
+    margin-bottom: 0 !important;
+  }
 }
+
 @media (max-width: 600px) {
-    .tech-incent-stat-item {
-        padding: 6px 4px;
-        font-size: 0.95rem;
-        max-width: 100%;
-    }
-    .tech-incent-stat-item .stat-value {
-        font-size: 1.1rem;
-    }
-    .tech-incent-stat-item .stat-unit {
-        font-size: 0.95rem;
-    }
+  .tech-incent-stat-item {
+    padding: 6px 4px;
+    font-size: 0.95rem;
+    max-width: 100%;
+  }
+
+  .tech-incent-stat-item .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .tech-incent-stat-item .stat-unit {
+    font-size: 0.95rem;
+  }
 }
+
 /* ============================================
    TECHNICIAN INCENTIVES - UNIQUE STYLING
    ============================================ */
@@ -66,27 +74,23 @@
   flex: 1;
   padding: 20px;
   display: block;
-  background: linear-gradient(
-    135deg,
-    #e8f5e9 0%,
-    #f1f8e9 25%,
-    #ffffff 50%,
-    #e8f5e9 75%,
-    #c8e6c9 100%
-  );
+  background: linear-gradient(135deg,
+      #e8f5e9 0%,
+      #f1f8e9 25%,
+      #ffffff 50%,
+      #e8f5e9 75%,
+      #c8e6c9 100%);
   overflow: auto;
   flex: 1;
   padding: 20px;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    135deg,
-    #e8f5e9 0%,
-    #f1f8e9 25%,
-    #ffffff 50%,
-    #e8f5e9 75%,
-    #c8e6c9 100%
-  );
+  background: linear-gradient(135deg,
+      #e8f5e9 0%,
+      #f1f8e9 25%,
+      #ffffff 50%,
+      #e8f5e9 75%,
+      #c8e6c9 100%);
   overflow: auto;
   min-height: 0;
 }
@@ -121,6 +125,9 @@
   background: transparent;
   font-size: 24px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Dashboard Header */
@@ -280,7 +287,7 @@
 }
 
 /* Form Groups */
-.tech-incent-content-card form > div {
+.tech-incent-content-card form>div {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -382,7 +389,7 @@
 }
 
 /* Button container */
-.tech-incent-content-card form > div:last-child {
+.tech-incent-content-card form>div:last-child {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -424,7 +431,7 @@
 }
 
 /* Relative positioning for search container */
-.tech-incent-content-card form > div:has(input[placeholder*="Search"]) {
+.tech-incent-content-card form>div:has(input[placeholder*="Search"]) {
   position: relative;
 }
 
@@ -570,7 +577,7 @@
   margin: 0 0 12px 0;
 }
 
-.tech-incent-error-state > p {
+.tech-incent-error-state>p {
   color: #dc2626;
   font-size: 15px;
   margin: 0 0 20px 0;
@@ -860,6 +867,7 @@
     flex-direction: column;
     gap: 16px;
   }
+
   .tech-incent-dashboard-header {
     flex-direction: column;
     gap: 16px;
@@ -899,7 +907,7 @@
     width: 95%;
   }
 
-  .tech-incent-modal-content > div[style*="grid"] {
+  .tech-incent-modal-content>div[style*="grid"] {
     grid-template-columns: 1fr;
   }
 }
@@ -992,6 +1000,9 @@
     font-size: 22px;
     color: #1f2937;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .tech-incent-mobile-title {
