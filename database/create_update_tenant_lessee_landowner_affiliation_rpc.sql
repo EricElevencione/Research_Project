@@ -2,7 +2,7 @@
 -- Run this in Supabase SQL Editor.
 --
 -- Purpose:
--- - Keep the same tenant/lessee holder.
+-- - Keep the same lessee holder.
 -- - Update only the linked landowner for selected parcel(s).
 -- - Record history and audit trail with required proof documents.
 
@@ -50,10 +50,7 @@ DECLARE
   v_now date := coalesce(p_effective_date, current_date);
   v_reason text := coalesce(
     nullif(trim(p_reason), ''),
-    CASE
-      WHEN lower(trim(coalesce(p_role, ''))) = 'tenant' THEN 'Tenant landowner update'
-      ELSE 'Lessee landowner update'
-    END
+    'Lessee landowner update'
   );
   v_change_type text := 'OWNER_AFFILIATION_CHANGE';
 
@@ -79,9 +76,7 @@ DECLARE
 
   v_row record;
 BEGIN
-  IF v_role NOT IN ('tenant', 'lessee') THEN
-    RAISE EXCEPTION 'p_role must be tenant or lessee.';
-  END IF;
+  RAISE EXCEPTION 'Linked landowner update has been removed. Use Transfer Ownership instead.';
 
   IF p_holder_farmer_id IS NULL OR p_holder_farmer_id <= 0 THEN
     RAISE EXCEPTION 'Valid holder farmer ID is required.';
@@ -323,11 +318,7 @@ BEGIN
   WHERE lh.is_current = true
     AND lh.farmer_id = p_holder_farmer_id
     AND lh.land_owner_id = p_old_owner_id
-    AND (
-      (v_role = 'tenant' AND lh.is_tenant = true)
-      OR
-      (v_role = 'lessee' AND lh.is_lessee = true)
-    );
+    AND lh.is_lessee = true;
 
   SELECT count(*) INTO v_selected_count FROM tmp_owner_affiliation_rows;
 
@@ -460,27 +451,15 @@ BEGIN
       v_inserted_count := v_inserted_count + 1;
       v_full_count := v_full_count + 1;
 
-      IF v_role = 'tenant' THEN
-        UPDATE rsbsa_farm_parcels
-        SET
-          tenant_land_owner_id = p_new_owner_id,
-          tenant_land_owner_name = coalesce(v_new_owner_name, concat('Owner #', p_new_owner_id::text)),
-          updated_at = now()
-        WHERE id = v_row.farm_parcel_id
-          AND submission_id = p_holder_farmer_id
-          AND coalesce(ownership_type_tenant, false) = true
-          AND coalesce(tenant_land_owner_id, 0) = p_old_owner_id;
-      ELSE
-        UPDATE rsbsa_farm_parcels
-        SET
-          lessee_land_owner_id = p_new_owner_id,
-          lessee_land_owner_name = coalesce(v_new_owner_name, concat('Owner #', p_new_owner_id::text)),
-          updated_at = now()
-        WHERE id = v_row.farm_parcel_id
-          AND submission_id = p_holder_farmer_id
-          AND coalesce(ownership_type_lessee, false) = true
-          AND coalesce(lessee_land_owner_id, 0) = p_old_owner_id;
-      END IF;
+      UPDATE rsbsa_farm_parcels
+      SET
+        lessee_land_owner_id = p_new_owner_id,
+        lessee_land_owner_name = coalesce(v_new_owner_name, concat('Owner #', p_new_owner_id::text)),
+        updated_at = now()
+      WHERE id = v_row.farm_parcel_id
+        AND submission_id = p_holder_farmer_id
+        AND coalesce(ownership_type_lessee, false) = true
+        AND coalesce(lessee_land_owner_id, 0) = p_old_owner_id;
 
       GET DIAGNOSTICS v_rows_affected = row_count;
       IF coalesce(v_rows_affected, 0) = 0 THEN
@@ -490,29 +469,16 @@ BEGIN
 
       v_parcel_update_count := v_parcel_update_count + v_rows_affected;
     ELSE
-      IF v_role = 'tenant' THEN
-        UPDATE rsbsa_farm_parcels
-        SET
-          total_farm_area_ha = v_row.remaining_area_ha,
-          tenant_land_owner_id = p_old_owner_id,
-          tenant_land_owner_name = coalesce(v_old_owner_name, v_row.land_owner_name),
-          updated_at = now()
-        WHERE id = v_row.farm_parcel_id
-          AND submission_id = p_holder_farmer_id
-          AND coalesce(ownership_type_tenant, false) = true
-          AND coalesce(tenant_land_owner_id, 0) = p_old_owner_id;
-      ELSE
-        UPDATE rsbsa_farm_parcels
-        SET
-          total_farm_area_ha = v_row.remaining_area_ha,
-          lessee_land_owner_id = p_old_owner_id,
-          lessee_land_owner_name = coalesce(v_old_owner_name, v_row.land_owner_name),
-          updated_at = now()
-        WHERE id = v_row.farm_parcel_id
-          AND submission_id = p_holder_farmer_id
-          AND coalesce(ownership_type_lessee, false) = true
-          AND coalesce(lessee_land_owner_id, 0) = p_old_owner_id;
-      END IF;
+      UPDATE rsbsa_farm_parcels
+      SET
+        total_farm_area_ha = v_row.remaining_area_ha,
+        lessee_land_owner_id = p_old_owner_id,
+        lessee_land_owner_name = coalesce(v_old_owner_name, v_row.land_owner_name),
+        updated_at = now()
+      WHERE id = v_row.farm_parcel_id
+        AND submission_id = p_holder_farmer_id
+        AND coalesce(ownership_type_lessee, false) = true
+        AND coalesce(lessee_land_owner_id, 0) = p_old_owner_id;
 
       GET DIAGNOSTICS v_rows_affected = row_count;
       IF coalesce(v_rows_affected, 0) = 0 THEN
@@ -567,13 +533,13 @@ BEGIN
         fp.ownership_document_no,
         fp.agrarian_reform_beneficiary,
         false,
-        CASE WHEN v_role = 'tenant' THEN true ELSE false END,
-        CASE WHEN v_role = 'lessee' THEN true ELSE false END,
         false,
-        CASE WHEN v_role = 'tenant' THEN coalesce(v_new_owner_name, concat('Owner #', p_new_owner_id::text)) ELSE null END,
-        CASE WHEN v_role = 'lessee' THEN coalesce(v_new_owner_name, concat('Owner #', p_new_owner_id::text)) ELSE null END,
-        CASE WHEN v_role = 'tenant' THEN p_new_owner_id ELSE null END,
-        CASE WHEN v_role = 'lessee' THEN p_new_owner_id ELSE null END,
+        true,
+        false,
+        null,
+        coalesce(v_new_owner_name, concat('Owner #', p_new_owner_id::text)),
+        null,
+        p_new_owner_id,
         false,
         now(),
         now()
@@ -695,10 +661,7 @@ BEGIN
     p_old_owner_id,
     p_new_owner_id,
     v_now,
-    CASE
-      WHEN v_role = 'tenant' THEN 'owner_affiliation_tenant'
-      ELSE 'owner_affiliation_lessee'
-    END,
+    'owner_affiliation_lessee',
     v_reason,
     coalesce(p_proofs, '[]'::jsonb),
     format(
