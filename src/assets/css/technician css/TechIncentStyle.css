@@ -13,12 +13,14 @@
     box-sizing: border-box;
   }
 
-  .tech-incent-stat-group {
+  .tech-incent-stat-row,
+  .jo-incent-stat-row {
     flex-direction: column !important;
     gap: 8px !important;
   }
 
-  .tech-incent-stat-item {
+  .tech-incent-stat-item,
+  .jo-incent-stat-item {
     width: 100%;
     margin-bottom: 0 !important;
     padding: 6px 4px;
@@ -26,7 +28,8 @@
     max-width: 100%;
   }
 
-  .tech-incent-stat-item .stat-value {
+  .tech-incent-stat-item .stat-value,
+  .jo-incent-stat-item .jo-incent-stat-value {
     font-size: 1.1rem;
   }
 
