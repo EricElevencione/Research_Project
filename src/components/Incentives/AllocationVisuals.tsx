@@ -333,12 +333,19 @@ export const SeasonComparisonTable: React.FC<SeasonComparisonTableProps> = ({
   const seasons = useMemo(() => {
     return allocations
       .sort((a, b) => a.season.localeCompare(b.season))
-      .map((a, i) => ({
-        uniqueKey: `${a.season}-${i}`,
-        season: a.season,
-        label: formatSeason(a.season),
-        values: a as Record<string, number>,
-      }));
+      .map((a) => {
+        const row = a as { season: string; id?: number };
+        const uniqueKey =
+          row.id != null && Number.isFinite(Number(row.id))
+            ? `alloc-${row.id}`
+            : `season-${row.season}`;
+        return {
+          uniqueKey,
+          season: row.season,
+          label: formatSeason(row.season),
+          values: a as Record<string, number>,
+        };
+      });
   }, [allocations]);
 
   if (seasons.length === 0) return null;

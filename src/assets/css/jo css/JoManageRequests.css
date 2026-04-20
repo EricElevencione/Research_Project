@@ -31,17 +31,6 @@
       #ffffff 50%,
       #e8f5e9 75%,
       #c8e6c9 100%);
-  overflow: hidden;
-  flex: 1;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(135deg,
-      #e8f5e9 0%,
-      #f1f8e9 25%,
-      #ffffff 50%,
-      #e8f5e9 75%,
-      #c8e6c9 100%);
   overflow: auto;
 }
 
@@ -163,13 +152,19 @@
 /* Allocation vs Requests Comparison Grid */
 .jo-manage-requests-comparison-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 24px;
   padding: 20px;
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   border-radius: 12px;
   border: 2px solid #0ea5e9;
+}
+
+@media (max-width: 640px) {
+  .jo-manage-requests-comparison-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .jo-manage-requests-allocation-card,
