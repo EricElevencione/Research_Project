@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   getLandHistoryBarangays,
   getLandHistoryAssociationRows,
@@ -1255,68 +1257,88 @@ const JoLandHistoryReport: React.FC = () => {
   const pageEnd = Math.min(totalCount, page * pageSize);
   const farmerModalTimelineLimit = 30;
 
-  const escapeCsvValue = (value: unknown) => {
-    const text = String(value ?? "");
-    return `"${text.replace(/"/g, '""')}"`;
-  };
+  const handleExportPdf = () => {
+    if (farmerDefaultRows.length === 0) return;
 
-  const downloadCsvFile = (fileName: string, lines: string[]) => {
-    const blob = new Blob([lines.join("\n")], {
-      type: "text/csv;charset=utf-8;",
+    const relationshipLabelMap: Record<RelationshipFilter, string> = {
+      all: "All Relationships",
+      owner: "Registered Owner",
+      tenant: "Tenant",
+      lessee: "Lessee",
+      tenantLessee: "Tenant + Lessee",
+    };
+
+    const activeFilterSummary = [
+      `Search: ${searchTerm.trim() || "All"}`,
+      `Barangay: ${barangayFilter === "all" ? "All Barangays" : barangayFilter}`,
+      `Relationship: ${relationshipLabelMap[relationshipFilter]}`,
+      `Date From: ${dateFrom ? formatDate(dateFrom) : "Any"}`,
+      `Date To: ${dateTo ? formatDate(dateTo) : "Any"}`,
+    ].join(" | ");
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "pt",
+      format: "a4",
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
 
-  const handleExportCsv = () => {
-    if (rows.length === 0) return;
+    const generatedAt = new Date();
+    const datePart = generatedAt.toISOString().slice(0, 10);
 
-    const headers = [
-      "Record ID",
-      "Parcel Number",
-      "Barangay",
-      "Land Owner",
-      "Farmer",
-      "Relationship",
-      "Area (ha)",
-      "Current",
-      "Period Start",
-      "Period End",
-      "Change Type",
-      "Change Reason",
-    ];
+    doc.setFontSize(16);
+    doc.text("Land History Report", 40, 40);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${generatedAt.toLocaleString()}`, 40, 60);
+    doc.text(
+      `Page Snapshot: ${farmerDefaultRows.length} farmers shown (UI page ${page} of ${totalPages})`,
+      40,
+      76,
+    );
+    doc.text(activeFilterSummary, 40, 92, {
+      maxWidth: 760,
+    });
 
-    const lines = [headers.map(escapeCsvValue).join(",")];
-
-    rows.forEach((row) => {
-      lines.push(
+    autoTable(doc, {
+      startY: 108,
+      margin: { left: 40, right: 40 },
+      headStyles: { fillColor: [27, 72, 120] },
+      styles: {
+        fontSize: 8,
+        cellPadding: 4,
+        overflow: "linebreak",
+      },
+      columnStyles: {
+        0: { cellWidth: 140 },
+        1: { cellWidth: 90 },
+        2: { cellWidth: 180 },
+        3: { cellWidth: 90 },
+        4: { cellWidth: 75, halign: "right" },
+        5: { cellWidth: 80 },
+        6: { cellWidth: 60 },
+      },
+      head: [
         [
-          row.id,
-          row.parcel_number || "-",
-          row.farm_location_barangay || "-",
-          row.land_owner_name || "-",
-          row.farmer_name || "-",
-          getRelationship(row),
-          Number(row.total_farm_area_ha || 0).toFixed(2),
-          row.is_current ? "Yes" : "No",
-          formatDate(row.period_start_date),
-          formatDate(row.period_end_date),
-          row.change_type || "-",
-          row.change_reason || "-",
-        ]
-          .map(escapeCsvValue)
-          .join(","),
-      );
+          "Farmer",
+          "Current Role",
+          "Under Owner",
+          "Barangay",
+          "Current Area (ha)",
+          "Last Change",
+          "Status",
+        ],
+      ],
+      body: farmerDefaultRows.map((row) => [
+        row.farmerName,
+        row.currentRole,
+        row.underOwner,
+        row.barangay,
+        Number(row.currentAreaHa || 0).toFixed(2),
+        formatDate(row.lastChangeDate),
+        row.isCurrent ? "Active" : "Inactive",
+      ]),
     });
 
-    const datePart = new Date().toISOString().slice(0, 10);
-    downloadCsvFile(`land-history-report-${datePart}.csv`, lines);
+    doc.save(`land-history-report-${datePart}.pdf`);
   };
 
   const handleResetFilters = () => {
@@ -1484,10 +1506,10 @@ const JoLandHistoryReport: React.FC = () => {
 
               <button
                 className="jo-land-history-report-btn primary"
-                onClick={handleExportCsv}
-                disabled={rows.length === 0}
+                onClick={handleExportPdf}
+                disabled={farmerDefaultRows.length === 0}
               >
-                Export Current View
+                Export PDF
               </button>
             </div>
 
