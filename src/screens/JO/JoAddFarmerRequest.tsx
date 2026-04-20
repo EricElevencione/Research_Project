@@ -194,6 +194,8 @@ const JoAddFarmerRequest: React.FC = () => {
   const [notificationType, setNotificationType] = useState<"success" | "error">(
     "success",
   );
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const [showExceedConfirmModal, setShowExceedConfirmModal] = useState(false);
   const [liveExceedMessage, setLiveExceedMessage] = useState<string | null>(
     null,
@@ -365,13 +367,13 @@ const JoAddFarmerRequest: React.FC = () => {
     }));
   };
 
-  const visibleFertilizerItems = FERTILIZER_ITEMS.filter(
+  const visibleFertilizerItems = useMemo(() => FERTILIZER_ITEMS.filter(
     (item) => (Number(allocation?.[item.allocationField]) || 0) > 0,
-  );
+  ), [allocation]);
 
-  const visibleSeedItems = SEED_ITEMS.filter(
+  const visibleSeedItems = useMemo(() => SEED_ITEMS.filter(
     (item) => (Number(allocation?.[item.allocationField]) || 0) > 0,
-  );
+  ), [allocation]);
 
   const fertilizerLabelSet = useMemo(
     () => new Set(visibleFertilizerItems.map((item) => item.label)),
@@ -1109,7 +1111,7 @@ const JoAddFarmerRequest: React.FC = () => {
                           checked={
                             Number(formData.farmer_id) === Number(farmer.id)
                           }
-                          onChange={() => {}}
+                          onChange={() => { }}
                           className="jo-add-farmer-radio"
                         />
                         <div className="jo-add-farmer-item-content">

@@ -81,6 +81,7 @@ const Masterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -199,10 +200,10 @@ const Masterlist: React.FC = () => {
           data.farmLocation || data["FARM LOCATION"] || "";
         const submissionParcelArea = parseFloat(
           data.totalFarmArea ||
-            data["TOTAL FARM AREA"] ||
-            data.parcelArea ||
-            data["PARCEL AREA"] ||
-            "0",
+          data["TOTAL FARM AREA"] ||
+          data.parcelArea ||
+          data["PARCEL AREA"] ||
+          "0",
         );
         const submissionOwnership = data.ownershipType || {};
         if (submissionFarmLocation || submissionParcelArea > 0) {
@@ -488,9 +489,9 @@ const Masterlist: React.FC = () => {
         return previous.map((config) =>
           config.key === key
             ? {
-                ...config,
-                direction: config.direction === "asc" ? "desc" : "asc",
-              }
+              ...config,
+              direction: config.direction === "asc" ? "desc" : "asc",
+            }
             : config,
         );
       }
@@ -683,7 +684,7 @@ const Masterlist: React.FC = () => {
       <div className="masterlist-admin-page-container">
         <div className="masterlist-admin-page">
           {/* Sidebar starts here */}
-          <div className="sidebar">
+          <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
             <nav className="sidebar-nav">
               <div className="sidebar-logo">
                 <img src={LogoImage} alt="Logo" />
@@ -750,8 +751,22 @@ const Masterlist: React.FC = () => {
           </div>
           {/* Sidebar ends here */}
 
+          <div
+            className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+            onClick={() => setSidebarOpen(false)}
+          />
+
           {/* Main content starts here */}
           <div className="masterlist-admin-main-content">
+            <div className="tech-incent-mobile-header">
+              <button
+                className="tech-incent-hamburger"
+                onClick={() => setSidebarOpen((prev) => !prev)}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              </button>
+              <div className="tech-incent-mobile-title">Masterlist</div>
+            </div>
             <div className="masterlist-admin-dashboard-header">
               <div className="masterlist-admin-page-left">
                 <h2 className="masterlist-admin-page-header">Masterlist</h2>
@@ -761,7 +776,7 @@ const Masterlist: React.FC = () => {
               </div>
             </div>
 
-{/* Status Count Cards */}
+            {/* Status Count Cards */}
             {!loading && !error && (
               <div className="masterlist-status-cards">
                 <div className="masterlist-status-card masterlist-card-total">
@@ -905,9 +920,8 @@ const Masterlist: React.FC = () => {
                       </th>
                       <th>
                         <button
-                          className={`masterlist-admin-sort-btn ${
-                            isSortActive("farmerName") ? "is-active" : ""
-                          }`}
+                          className={`masterlist-admin-sort-btn ${isSortActive("farmerName") ? "is-active" : ""
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSortChange("farmerName");
@@ -919,9 +933,8 @@ const Masterlist: React.FC = () => {
                       <th>Address</th>
                       <th>
                         <button
-                          className={`masterlist-admin-sort-btn ${
-                            isSortActive("parcelArea") ? "is-active" : ""
-                          }`}
+                          className={`masterlist-admin-sort-btn ${isSortActive("parcelArea") ? "is-active" : ""
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSortChange("parcelArea");
@@ -933,9 +946,8 @@ const Masterlist: React.FC = () => {
                       </th>
                       <th>
                         <button
-                          className={`masterlist-admin-sort-btn ${
-                            isSortActive("dateSubmitted") ? "is-active" : ""
-                          }`}
+                          className={`masterlist-admin-sort-btn ${isSortActive("dateSubmitted") ? "is-active" : ""
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSortChange("dateSubmitted");
@@ -947,9 +959,8 @@ const Masterlist: React.FC = () => {
                       </th>
                       <th>
                         <button
-                          className={`masterlist-admin-sort-btn ${
-                            isSortActive("status") ? "is-active" : ""
-                          }`}
+                          className={`masterlist-admin-sort-btn ${isSortActive("status") ? "is-active" : ""
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSortChange("status");
@@ -1243,8 +1254,8 @@ const Masterlist: React.FC = () => {
                                   {typeof parcel.totalFarmAreaHa === "number"
                                     ? parcel.totalFarmAreaHa.toFixed(2)
                                     : parseFloat(
-                                        String(parcel.totalFarmAreaHa || 0),
-                                      ).toFixed(2)}{" "}
+                                      String(parcel.totalFarmAreaHa || 0),
+                                    ).toFixed(2)}{" "}
                                   hectares
                                 </span>
                               </div>

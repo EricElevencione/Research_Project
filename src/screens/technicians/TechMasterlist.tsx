@@ -1030,7 +1030,6 @@ const TechMasterlist: React.FC = () => {
             <div className="tech-masterlist-table-container">
               <table
                 className="tech-masterlist-farmers-table"
-                data-responsive="stack"
               >
                 <thead>
                   <tr>
