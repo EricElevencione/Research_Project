@@ -276,6 +276,24 @@
   white-space: nowrap;
 }
 
+.jo-land-registry-table td.jo-land-registry-ownership-cell {
+  white-space: normal;
+}
+
+.jo-land-registry-ownership-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.jo-land-registry-ownership-secondary-summary {
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+  line-height: 1.2;
+}
+
 .jo-land-registry-table th:nth-child(4),
 .jo-land-registry-table td:nth-child(4) {
   width: 146px;

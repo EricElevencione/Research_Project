@@ -96,14 +96,16 @@ Precondition for UI checks:
 3. Verify mixed-role farmer display under owner-first table view:
 
 - Farmer appears once in Land Registry table (owner-first row).
-- Ownership type shows Registered Owner and a secondary note (also lessee) when applicable.
+- Ownership type shows Registered Owner, Tenant, or Lessee based on row context.
 - Action menu shows role-capable actions on the same row:
   - Transfer Ownership (owner-capable)
+  - Update Tenant Landowner (tenant-capable)
+  - Update Lessee Landowner (lessee-capable)
 
 4. Verify Aaron-specific expected outcome:
 
 - If Aaron is truly owner-only after cleanup, Aaron appears as one row with Transfer Ownership only.
-- If Aaron is truly mixed-role, Aaron still appears as one row with mixed-role note only.
+- If Aaron is truly mixed-role, Aaron still appears as one row with applicable update action(s).
 
 ## 6) Rollback notes
 

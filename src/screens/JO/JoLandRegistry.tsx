@@ -98,6 +98,7 @@ interface ReplacementAssignedParcel {
 
 interface OwnerAffiliationStep3Parcel extends ReplacementAssignedParcel {
   inCurrentContract: boolean;
+  sourceType: "current_holder_link" | "new_owner_available";
 }
 
 interface OwnerAffiliationOwnerOption {
@@ -405,8 +406,12 @@ const JoLandRegistry: React.FC = () => {
     useState<RegistryRowOwnership>("owner");
   const [showOwnerAffiliationModal, setShowOwnerAffiliationModal] =
     useState(false);
-  const [, setOwnerAffiliationRole] =
-    useState<ReplacementRole>("lessee");
+  const [ownerAffiliationRole, setOwnerAffiliationRole] =
+    useState<ReplacementRole>("tenant");
+  const [
+    ownerAffiliationQuickRoleSelection,
+    setOwnerAffiliationQuickRoleSelection,
+  ] = useState<ReplacementRole | "">("");
   const [ownerAffiliationSourceOptions, setOwnerAffiliationSourceOptions] =
     useState<ReplacementSourceOption[]>([]);
   const [ownerAffiliationSourceOwnerId, setOwnerAffiliationSourceOwnerId] =
@@ -547,21 +552,26 @@ const JoLandRegistry: React.FC = () => {
     openTransferModal("owner");
   };
 
-  const handleRowActionOwnerAffiliation = (row: RegistryDisplayRow) => {
-    if (!row.capabilities.canUpdateLesseeLandowner) {
+  const handleRowActionOwnerAffiliation = (
+    row: RegistryDisplayRow,
+    role: ReplacementRole,
+  ) => {
+    const roleAllowed =
+      role === "tenant"
+        ? row.capabilities.canUpdateTenantLandowner
+        : row.capabilities.canUpdateLesseeLandowner;
+
+    if (!roleAllowed) {
       setOpenActionMenuRowId(null);
       return;
     }
 
     setOpenActionMenuRowId(null);
     setSelectedFarmer(row.farmer);
-    setSelectedFarmerViewRole("lessee");
+    setSelectedFarmerViewRole(role);
     setSelectedRegistryRowId(row.rowId);
-    openOwnerAffiliationModal(row.farmer);
+    openOwnerAffiliationModal(row.farmer, role);
   };
-
-  // Owner affiliation update is disabled, but keep the handler referenced to avoid unused symbol errors.
-  void handleRowActionOwnerAffiliation;
 
   const resetOwnerAffiliationWorkflow = () => {
     setOwnerAffiliationSourceOptions([]);
@@ -588,20 +598,32 @@ const JoLandRegistry: React.FC = () => {
     setOwnerAffiliationSubmitSuccess("");
 
     const roleColumn = role === "tenant" ? "is_tenant" : "is_lessee";
+    const roleParcelFlagColumn =
+      role === "tenant" ? "ownership_type_tenant" : "ownership_type_lessee";
     const selectColumns =
       "id, land_parcel_id, farmer_id, farmer_name, land_owner_id, land_owner_name, farm_parcel_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_registered_owner";
+    const parcelSelectColumns =
+      "id, submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, ownership_type_tenant, ownership_type_lessee, tenant_land_owner_id, lessee_land_owner_id, tenant_land_owner_name, lessee_land_owner_name";
 
     try {
-      const { data, error } = await supabase
-        .from("land_history")
-        .select(selectColumns)
-        .eq("is_current", true)
-        .eq(roleColumn, true)
-        .eq("farmer_id", group.farmer_id);
+      const [historyResult, parcelResult] = await Promise.all([
+        supabase
+          .from("land_history")
+          .select(selectColumns)
+          .eq("is_current", true)
+          .eq(roleColumn, true)
+          .eq("farmer_id", group.farmer_id),
+        supabase
+          .from("rsbsa_farm_parcels")
+          .select(parcelSelectColumns)
+          .eq("submission_id", group.farmer_id)
+          .eq(roleParcelFlagColumn, true),
+      ]);
 
-      if (error) throw error;
+      if (historyResult.error) throw historyResult.error;
+      if (parcelResult.error) throw parcelResult.error;
 
-      const sourceRows = (data || []) as Array<{
+      const sourceRows = (historyResult.data || []) as Array<{
         id: number;
         land_parcel_id: number | null;
         farmer_id: number | null;
@@ -616,6 +638,21 @@ const JoLandRegistry: React.FC = () => {
         is_registered_owner: boolean | null;
       }>;
 
+      const holderParcelRows = (parcelResult.data || []) as Array<{
+        id: number | null;
+        submission_id: number | null;
+        parcel_number: string | null;
+        farm_location_barangay: string | null;
+        farm_location_municipality: string | null;
+        total_farm_area_ha: number | null;
+        ownership_type_tenant: boolean | null;
+        ownership_type_lessee: boolean | null;
+        tenant_land_owner_id: number | null;
+        lessee_land_owner_id: number | null;
+        tenant_land_owner_name: string | null;
+        lessee_land_owner_name: string | null;
+      }>;
+
       const ownerBuckets = new Map<
         number,
         {
@@ -625,6 +662,46 @@ const JoLandRegistry: React.FC = () => {
       >();
 
       let excludedRows = 0;
+
+      const normalizeOwnerName = (value: string) =>
+        value.trim().toLowerCase().replace(/\s+/g, " ");
+
+      const ownerIdByName = new Map<string, number>();
+
+      const getOrCreateBucket = (
+        farmerId: number,
+        ownerId: number,
+        ownerNameRaw: string,
+      ) => {
+        const ownerName = ownerNameRaw.trim() || `Owner #${ownerId}`;
+
+        if (!ownerBuckets.has(ownerId)) {
+          ownerBuckets.set(ownerId, {
+            option: {
+              farmerId,
+              farmerName: group.farmer_name || `Farmer #${group.farmer_id}`,
+              ownerId,
+              ownerName,
+              parcelCount: 0,
+            },
+            parcels: new Map<number, ReplacementAssignedParcel>(),
+          });
+        }
+
+        const bucket = ownerBuckets.get(ownerId);
+        if (!bucket) return null;
+
+        if (
+          (!bucket.option.ownerName ||
+            /^Owner\s+#\d+$/i.test(bucket.option.ownerName)) &&
+          ownerName &&
+          !/^Owner\s+#\d+$/i.test(ownerName)
+        ) {
+          bucket.option.ownerName = ownerName;
+        }
+
+        return bucket;
+      };
 
       sourceRows.forEach((row) => {
         const farmerId = Number(row.farmer_id);
@@ -649,24 +726,17 @@ const JoLandRegistry: React.FC = () => {
         const farmParcelId = Number(row.farm_parcel_id);
         if (!Number.isFinite(farmParcelId) || farmParcelId <= 0) return;
 
-        const ownerName =
-          (row.land_owner_name || "").trim() || `Owner #${ownerId}`;
+        const ownerName = (row.land_owner_name || "").trim();
         const areaHa = Number(row.total_farm_area_ha);
 
-        if (!ownerBuckets.has(ownerId)) {
-          ownerBuckets.set(ownerId, {
-            option: {
-              farmerId: farmerId,
-              farmerName: group.farmer_name || `Farmer #${group.farmer_id}`,
-              ownerId,
-              ownerName,
-              parcelCount: 0,
-            },
-            parcels: new Map<number, ReplacementAssignedParcel>(),
-          });
+        if (ownerName) {
+          const normalizedOwnerName = normalizeOwnerName(ownerName);
+          if (normalizedOwnerName && !ownerIdByName.has(normalizedOwnerName)) {
+            ownerIdByName.set(normalizedOwnerName, ownerId);
+          }
         }
 
-        const bucket = ownerBuckets.get(ownerId);
+        const bucket = getOrCreateBucket(farmerId, ownerId, ownerName);
         if (!bucket) return;
 
         if (!bucket.parcels.has(farmParcelId)) {
@@ -686,6 +756,87 @@ const JoLandRegistry: React.FC = () => {
             areaHa: Number.isFinite(areaHa) && areaHa > 0 ? areaHa : 0,
             ownerId,
             ownerName,
+          });
+        }
+      });
+
+      aggregatedFarmers.forEach((farmer) => {
+        const ownerName = (farmer.farmer_name || "").trim();
+        const ownerId = Number(farmer.farmer_id);
+        if (!ownerName || !Number.isFinite(ownerId) || ownerId <= 0) return;
+        const normalizedOwnerName = normalizeOwnerName(ownerName);
+        if (!normalizedOwnerName || ownerIdByName.has(normalizedOwnerName))
+          return;
+        ownerIdByName.set(normalizedOwnerName, ownerId);
+      });
+
+      holderParcelRows.forEach((row) => {
+        const farmerId = Number(row.submission_id);
+        if (!Number.isFinite(farmerId) || farmerId <= 0) return;
+        if (farmerId !== group.farmer_id) return;
+
+        const ownerIdRaw = Number(
+          role === "tenant"
+            ? row.tenant_land_owner_id
+            : row.lessee_land_owner_id,
+        );
+        let ownerId =
+          Number.isFinite(ownerIdRaw) && ownerIdRaw > 0 ? ownerIdRaw : null;
+
+        const ownerName = (
+          role === "tenant"
+            ? row.tenant_land_owner_name
+            : row.lessee_land_owner_name
+        )
+          ? String(
+              role === "tenant"
+                ? row.tenant_land_owner_name
+                : row.lessee_land_owner_name,
+            )
+          : "";
+
+        if (!ownerId && ownerName.trim()) {
+          const normalizedOwnerName = normalizeOwnerName(ownerName);
+          const inferredOwnerId = ownerIdByName.get(normalizedOwnerName);
+          if (
+            typeof inferredOwnerId === "number" &&
+            Number.isFinite(inferredOwnerId) &&
+            inferredOwnerId > 0
+          ) {
+            ownerId = inferredOwnerId;
+          }
+        }
+
+        if (!ownerId) {
+          excludedRows += 1;
+          return;
+        }
+
+        const isDirectOwnedManaged = ownerId === farmerId;
+        if (isDirectOwnedManaged) {
+          excludedRows += 1;
+          return;
+        }
+
+        const farmParcelId = Number(row.id);
+        if (!Number.isFinite(farmParcelId) || farmParcelId <= 0) return;
+
+        const areaHa = Number(row.total_farm_area_ha);
+
+        const bucket = getOrCreateBucket(farmerId, ownerId, ownerName);
+        if (!bucket) return;
+
+        if (!bucket.parcels.has(farmParcelId)) {
+          bucket.parcels.set(farmParcelId, {
+            historyId: farmParcelId,
+            farmParcelId,
+            landParcelId: null,
+            parcelNumber: (row.parcel_number || "").trim(),
+            barangay: (row.farm_location_barangay || "").trim(),
+            municipality: (row.farm_location_municipality || "").trim(),
+            areaHa: Number.isFinite(areaHa) && areaHa > 0 ? areaHa : 0,
+            ownerId,
+            ownerName: ownerName.trim() || `Owner #${ownerId}`,
           });
         }
       });
@@ -759,8 +910,10 @@ const JoLandRegistry: React.FC = () => {
     }
   };
 
-  const openOwnerAffiliationModal = (group: FarmerGroup) => {
-    const role: ReplacementRole = "lessee";
+  const openOwnerAffiliationModal = (
+    group: FarmerGroup,
+    role: ReplacementRole,
+  ) => {
     setOpenActionMenuRowId(null);
     setSelectedFarmer(group);
     setSelectedFarmerViewRole(role);
@@ -943,10 +1096,274 @@ const JoLandRegistry: React.FC = () => {
   const handleOwnerAffiliationConfirm = async () => {
     if (ownerAffiliationLoading || isSubmittingOwnerAffiliation) return;
 
-    setOwnerAffiliationSubmitError(
-      "Linked landowner update has been removed. Use Transfer Ownership instead.",
-    );
+    setOwnerAffiliationSubmitError("");
     setOwnerAffiliationSubmitSuccess("");
+
+    if (!selectedFarmer) {
+      setOwnerAffiliationSubmitError("Missing selected farmer context.");
+      return;
+    }
+
+    const holderFarmerId = Number(selectedFarmer.farmer_id);
+    const oldOwnerId = Number(ownerAffiliationSourceOwnerId);
+    const newOwnerId = Number(ownerAffiliationNewOwnerId);
+
+    if (!Number.isFinite(holderFarmerId) || holderFarmerId <= 0) {
+      setOwnerAffiliationSubmitError("Invalid holder farmer context.");
+      return;
+    }
+
+    if (!Number.isFinite(oldOwnerId) || oldOwnerId <= 0) {
+      setOwnerAffiliationSubmitError(
+        `Select the current linked landowner for this ${ownerAffiliationRoleLabel.toLowerCase()} first.`,
+      );
+      return;
+    }
+
+    if (!Number.isFinite(newOwnerId) || newOwnerId <= 0) {
+      setOwnerAffiliationSubmitError("Select the new linked landowner first.");
+      return;
+    }
+
+    if (oldOwnerId === newOwnerId) {
+      setOwnerAffiliationSubmitError(
+        "Current and new linked landowner must be different.",
+      );
+      return;
+    }
+
+    const selectedStep3ParcelById = new Map(
+      ownerAffiliationStep3Parcels.map((parcel) => [parcel.farmParcelId, parcel]),
+    );
+
+    const selectedParcelIds = Array.from(
+      new Set(
+        ownerAffiliationTakeoverPlan.items
+          .map((item) => Number(item.farm_parcel_id))
+          .filter((parcelId) => Number.isFinite(parcelId) && parcelId > 0),
+      ),
+    );
+
+    const selectedCurrentLinkedItems = ownerAffiliationTakeoverPlan.items.filter(
+      (item) =>
+        selectedStep3ParcelById.get(item.farm_parcel_id)?.sourceType ===
+        "current_holder_link",
+    );
+
+    const selectedNewOwnerAvailableItems = ownerAffiliationTakeoverPlan.items.filter(
+      (item) =>
+        selectedStep3ParcelById.get(item.farm_parcel_id)?.sourceType ===
+        "new_owner_available",
+    );
+
+    if (ownerAffiliationTakeoverPlan.error) {
+      setOwnerAffiliationSubmitError(ownerAffiliationTakeoverPlan.error);
+      return;
+    }
+
+    if (selectedParcelIds.length === 0) {
+      setOwnerAffiliationSubmitError(
+        `Select at least one parcel for ${ownerAffiliationRoleLabel.toLowerCase()} landowner update.`,
+      );
+      return;
+    }
+
+    if (
+      ownerAffiliationTakeoverMode === "specific_slot" &&
+      selectedNewOwnerAvailableItems.length > 0
+    ) {
+      setOwnerAffiliationSubmitError(
+        "Specific slot is only allowed for current holder-linked parcels. Use Full parcel(s) when selecting new owner available parcels.",
+      );
+      return;
+    }
+
+    if (ownerAffiliationSupportingDocs.length === 0) {
+      setOwnerAffiliationSubmitError(
+        "Upload at least one proof/supporting document before proceeding.",
+      );
+      return;
+    }
+
+    const sourceParcelIdSet = new Set(
+      ownerAffiliationStep3Parcels.map((parcel) => parcel.farmParcelId),
+    );
+    const hasOutOfContextParcel = selectedParcelIds.some(
+      (parcelId) => !sourceParcelIdSet.has(parcelId),
+    );
+    if (hasOutOfContextParcel) {
+      setOwnerAffiliationSubmitError(
+        "Selected parcel list is outdated. Refresh source owner context and try again.",
+      );
+      return;
+    }
+
+    setIsSubmittingOwnerAffiliation(true);
+
+    let uploadedProofs: Array<{
+      storage_bucket: string;
+      storage_path: string;
+      file_name: string;
+      mime_type: string;
+      file_size_bytes: number;
+    }> = [];
+    let hasPersistedChanges = false;
+
+    try {
+      uploadedProofs = await uploadTransferProofs(
+        ownerAffiliationSupportingDocs,
+      );
+
+      let updatedLinkedParcels = 0;
+      let assignedOwnerParcels = 0;
+
+      if (selectedCurrentLinkedItems.length > 0) {
+        const currentLinkedParcelIds = selectedCurrentLinkedItems
+          .map((item) => Number(item.farm_parcel_id))
+          .filter((parcelId) => Number.isFinite(parcelId) && parcelId > 0);
+
+        const { data, error } = await supabase.rpc(
+          "update_tenant_lessee_landowner_affiliation_no_review",
+          {
+            p_role: ownerAffiliationRole,
+            p_holder_farmer_id: holderFarmerId,
+            p_old_owner_id: oldOwnerId,
+            p_new_owner_id: newOwnerId,
+            p_farm_parcel_ids: currentLinkedParcelIds,
+            p_items: selectedCurrentLinkedItems,
+            p_reason: ownerAffiliationReason.trim() || null,
+            p_effective_date: new Date().toISOString().slice(0, 10),
+            p_proofs: uploadedProofs,
+          },
+        );
+
+        if (error) {
+          const rpcMessage = String(error?.message || "");
+          const rpcDetails = String((error as any)?.details || "");
+
+          if (
+            /update_tenant_lessee_landowner_affiliation_no_review/i.test(
+              `${rpcMessage} ${rpcDetails}`,
+            )
+          ) {
+            throw new Error(
+              "Supabase RPC update_tenant_lessee_landowner_affiliation_no_review is missing. Run database/create_update_tenant_lessee_landowner_affiliation_rpc.sql in Supabase SQL Editor, then retry.",
+            );
+          }
+
+          throw new Error(
+            error.message ||
+              `Failed to update ${ownerAffiliationRoleLabel.toLowerCase()} linked landowner.`,
+          );
+        }
+
+        updatedLinkedParcels = Number(
+          (data as any)?.selectedParcels ??
+            (data as any)?.selected_parcels ??
+            selectedCurrentLinkedItems.length,
+        );
+        hasPersistedChanges = true;
+      }
+
+      if (selectedNewOwnerAvailableItems.length > 0) {
+        if (holderFarmerId === newOwnerId) {
+          throw new Error(
+            "Selected holder and new owner are the same record. Cannot assign owner parcels to the same owner record.",
+          );
+        }
+
+        const ownerAvailableItems = selectedNewOwnerAvailableItems.map((item) => ({
+          farm_parcel_id: item.farm_parcel_id,
+          takeover_mode: "full",
+          transfer_area_ha: item.transfer_area_ha,
+        }));
+
+        const { data: assignmentData, error: assignmentError } = await supabase.rpc(
+          "replace_tenant_lessee_holder_with_portions_no_review",
+          {
+            p_role: ownerAffiliationRole,
+            p_current_holder_id: newOwnerId,
+            p_replacement_holder_id: holderFarmerId,
+            p_owner_context_id: newOwnerId,
+            p_reason: ownerAffiliationReason.trim() || null,
+            p_effective_date: new Date().toISOString().slice(0, 10),
+            p_items: ownerAvailableItems,
+            p_proofs: uploadedProofs,
+          },
+        );
+
+        if (assignmentError) {
+          const rpcMessage = String(assignmentError?.message || "");
+          const rpcDetails = String((assignmentError as any)?.details || "");
+
+          if (
+            /replace_tenant_lessee_holder_with_portions_no_review/i.test(
+              `${rpcMessage} ${rpcDetails}`,
+            )
+          ) {
+            throw new Error(
+              "Supabase RPC replace_tenant_lessee_holder_with_portions_no_review is missing. Run database/create_replace_tenant_lessee_holder_with_portions_rpc.sql in Supabase SQL Editor, then retry.",
+            );
+          }
+
+          throw new Error(
+            assignmentError.message ||
+              `Failed to assign selected ${ownerAffiliationRoleLabel.toLowerCase()} parcel(s) from new owner context.`,
+          );
+        }
+
+        assignedOwnerParcels = Number(
+          (assignmentData as any)?.selectedParcels ??
+            (assignmentData as any)?.selected_parcels ??
+            selectedNewOwnerAvailableItems.length,
+        );
+        hasPersistedChanges = true;
+      }
+
+      const successParts: string[] = [];
+      if (updatedLinkedParcels > 0) {
+        successParts.push(
+          `${updatedLinkedParcels} linked parcel${updatedLinkedParcels === 1 ? "" : "s"} re-linked`,
+        );
+      }
+      if (assignedOwnerParcels > 0) {
+        successParts.push(
+          `${assignedOwnerParcels} new owner parcel${assignedOwnerParcels === 1 ? "" : "s"} assigned`,
+        );
+      }
+
+      if (successParts.length === 0) {
+        throw new Error("No valid parcel selection to process.");
+      }
+
+      setOwnerAffiliationSubmitSuccess(
+        `${ownerAffiliationRoleLabel} update complete: ${successParts.join(" and ")}.`,
+      );
+
+      await refreshLandParcels();
+      if (selectedFarmer.parcels.length > 0) {
+        await fetchParcelHistoryForIds(selectedFarmer.parcels.map((p) => p.id));
+      }
+    } catch (error: any) {
+      if (uploadedProofs.length > 0 && !hasPersistedChanges) {
+        await cleanupUploadedProofs(uploadedProofs);
+      }
+      setOwnerAffiliationSubmitError(
+        hasPersistedChanges
+          ? `Partial update completed before an error occurred: ${error?.message || "Unknown error"}. Refresh data and verify parcel state.`
+          : error?.message ||
+              `Failed to update ${ownerAffiliationRoleLabel.toLowerCase()} linked landowner.`,
+      );
+
+      if (hasPersistedChanges) {
+        await refreshLandParcels();
+        if (selectedFarmer.parcels.length > 0) {
+          await fetchParcelHistoryForIds(selectedFarmer.parcels.map((p) => p.id));
+        }
+      }
+    } finally {
+      setIsSubmittingOwnerAffiliation(false);
+    }
   };
 
   const fetchParcelHistoryForIds = async (parcelIds: number[]) => {
@@ -1147,13 +1564,23 @@ const JoLandRegistry: React.FC = () => {
             ? "tenant"
             : "lessee";
 
-      const ownershipSecondaryLabels: string[] = [];
-      if (
-        primaryOwnership === "owner" &&
-        capabilities.canUpdateLesseeLandowner
-      ) {
-        ownershipSecondaryLabels.push("also lessee");
-      }
+      const ownershipLabelByRole: Record<RegistryRowOwnership, string> = {
+        owner: "Registered Owner",
+        tenant: "Tenant",
+        lessee: "Lessee",
+      };
+
+      const roleAvailability: Record<RegistryRowOwnership, boolean> = {
+        owner: capabilities.canTransferOwnership,
+        tenant: capabilities.canUpdateTenantLandowner,
+        lessee: capabilities.canUpdateLesseeLandowner,
+      };
+
+      const ownershipSecondaryLabels = (
+        Object.keys(roleAvailability) as RegistryRowOwnership[]
+      )
+        .filter((role) => role !== primaryOwnership && roleAvailability[role])
+        .map((role) => ownershipLabelByRole[role]);
 
       const parcels = Array.isArray(group.parcels) ? group.parcels : [];
       const areaFromParcels = parcels.reduce(
@@ -1287,10 +1714,6 @@ const JoLandRegistry: React.FC = () => {
         if (row.parcels.length === 0) return false;
         if (row.totalAreaHa <= 0) return false;
 
-        if (!row.capabilities.canTransferOwnership) {
-          return false;
-        }
-
         if (filterBarangay) {
           const hasBarangayMatch = row.parcels.some(
             (p) =>
@@ -1344,7 +1767,61 @@ const JoLandRegistry: React.FC = () => {
     return "Registered Owner";
   }, [selectedFarmer, selectedFarmerViewRole]);
 
-  const ownerAffiliationRoleLabel = "Lessee";
+  const selectedOwnerAffiliationQuickRoleOptions = useMemo<
+    ReplacementRole[]
+  >(() => {
+    if (!selectedFarmerCapabilities) return [];
+
+    const options: ReplacementRole[] = [];
+    if (selectedFarmerCapabilities.canUpdateTenantLandowner) {
+      options.push("tenant");
+    }
+    if (selectedFarmerCapabilities.canUpdateLesseeLandowner) {
+      options.push("lessee");
+    }
+    return options;
+  }, [selectedFarmerCapabilities]);
+
+  const selectedOwnerAffiliationQuickRole: ReplacementRole | null =
+    useMemo(() => {
+      if (selectedOwnerAffiliationQuickRoleOptions.length === 0) return null;
+
+      if (
+        ownerAffiliationQuickRoleSelection &&
+        selectedOwnerAffiliationQuickRoleOptions.includes(
+          ownerAffiliationQuickRoleSelection,
+        )
+      ) {
+        return ownerAffiliationQuickRoleSelection;
+      }
+
+      if (
+        selectedFarmerViewRole === "tenant" &&
+        selectedOwnerAffiliationQuickRoleOptions.includes("tenant")
+      ) {
+        return "tenant";
+      }
+
+      if (
+        selectedFarmerViewRole === "lessee" &&
+        selectedOwnerAffiliationQuickRoleOptions.includes("lessee")
+      ) {
+        return "lessee";
+      }
+
+      return selectedOwnerAffiliationQuickRoleOptions[0];
+    }, [
+      ownerAffiliationQuickRoleSelection,
+      selectedFarmerViewRole,
+      selectedOwnerAffiliationQuickRoleOptions,
+    ]);
+
+  useEffect(() => {
+    setOwnerAffiliationQuickRoleSelection("");
+  }, [selectedFarmer?.farmer_id, selectedFarmerViewRole]);
+
+  const ownerAffiliationRoleLabel =
+    ownerAffiliationRole === "tenant" ? "Tenant" : "Lessee";
 
   const activeOwnerAffiliationSourceOwnerId = (() => {
     const candidate =
@@ -1389,14 +1866,60 @@ const JoLandRegistry: React.FC = () => {
   const ownerAffiliationHasSingleSourceContext =
     ownerAffiliationSourceOptions.length === 1;
 
-  const ownerAffiliationStep3Parcels = useMemo<
-    OwnerAffiliationStep3Parcel[]
+  const activeOwnerAffiliationNewOwnerId = (() => {
+    const candidate =
+      ownerAffiliationNewOwnerId === "" ? null : Number(ownerAffiliationNewOwnerId);
+    return Number.isFinite(candidate) && (candidate || 0) > 0
+      ? Number(candidate)
+      : null;
+  })();
+
+  const selectedOwnerAffiliationNewOwnerAvailableParcels = useMemo<
+    ReplacementAssignedParcel[]
   >(() => {
-    return selectedOwnerAffiliationSourceParcels
-      .map((parcel) => ({
-        ...parcel,
-        inCurrentContract: true,
-      }))
+    if (activeOwnerAffiliationNewOwnerId === null) return [];
+
+    const newOwnerGroup = aggregatedFarmers.find(
+      (group) => group.farmer_id === activeOwnerAffiliationNewOwnerId,
+    );
+
+    if (!newOwnerGroup) return [];
+
+    const newOwnerName =
+      (newOwnerGroup.farmer_name || `Farmer #${newOwnerGroup.farmer_id}`).trim() ||
+      `Farmer #${newOwnerGroup.farmer_id}`;
+
+    const linkedParcelIdSet = new Set(
+      selectedOwnerAffiliationSourceParcels.map((parcel) => parcel.farmParcelId),
+    );
+
+    return getEligibleTransferDonorParcels(newOwnerGroup)
+      .map((parcel) => {
+        const parcelId = Number(parcel.id);
+        const areaHa = Number(parcel.total_farm_area_ha);
+        const landParcelIdRaw = Number(parcel.land_parcel_id);
+
+        return {
+          historyId: Number.isFinite(parcelId) && parcelId > 0 ? parcelId : 0,
+          farmParcelId: Number.isFinite(parcelId) && parcelId > 0 ? parcelId : 0,
+          landParcelId:
+            Number.isFinite(landParcelIdRaw) && landParcelIdRaw > 0
+              ? landParcelIdRaw
+              : null,
+          parcelNumber: (parcel.parcel_number || "").trim(),
+          barangay: (parcel.farm_location_barangay || "").trim(),
+          municipality: (parcel.farm_location_municipality || "").trim(),
+          areaHa: Number.isFinite(areaHa) && areaHa > 0 ? areaHa : 0,
+          ownerId: activeOwnerAffiliationNewOwnerId,
+          ownerName: newOwnerName,
+        } as ReplacementAssignedParcel;
+      })
+      .filter(
+        (parcel) =>
+          Number.isFinite(parcel.farmParcelId) &&
+          parcel.farmParcelId > 0 &&
+          !linkedParcelIdSet.has(parcel.farmParcelId),
+      )
       .sort((a, b) => {
         const parcelDiff = (a.parcelNumber || "").localeCompare(
           b.parcelNumber || "",
@@ -1404,7 +1927,66 @@ const JoLandRegistry: React.FC = () => {
         if (parcelDiff !== 0) return parcelDiff;
         return a.farmParcelId - b.farmParcelId;
       });
-  }, [selectedOwnerAffiliationSourceParcels]);
+  }, [
+    activeOwnerAffiliationNewOwnerId,
+    aggregatedFarmers,
+    selectedOwnerAffiliationSourceParcels,
+    getEligibleTransferDonorParcels,
+  ]);
+
+  const ownerAffiliationStep3Parcels = useMemo<
+    OwnerAffiliationStep3Parcel[]
+  >(() => {
+    const parcelMap = new Map<number, OwnerAffiliationStep3Parcel>();
+
+    selectedOwnerAffiliationSourceParcels.forEach((parcel) => {
+      parcelMap.set(parcel.farmParcelId, {
+        ...parcel,
+        inCurrentContract: true,
+        sourceType: "current_holder_link",
+      });
+    });
+
+    selectedOwnerAffiliationNewOwnerAvailableParcels.forEach((parcel) => {
+      if (parcelMap.has(parcel.farmParcelId)) return;
+
+      parcelMap.set(parcel.farmParcelId, {
+        ...parcel,
+        inCurrentContract: false,
+        sourceType: "new_owner_available",
+      });
+    });
+
+    return Array.from(parcelMap.values()).sort((a, b) => {
+      if (a.inCurrentContract !== b.inCurrentContract) {
+        return a.inCurrentContract ? -1 : 1;
+      }
+
+      const parcelDiff = (a.parcelNumber || "").localeCompare(
+        b.parcelNumber || "",
+      );
+      if (parcelDiff !== 0) return parcelDiff;
+      return a.farmParcelId - b.farmParcelId;
+    });
+  }, [
+    selectedOwnerAffiliationSourceParcels,
+    selectedOwnerAffiliationNewOwnerAvailableParcels,
+  ]);
+
+  const handleOwnerAffiliationSelectAllParcels = useCallback(() => {
+    setOwnerAffiliationSelectedParcelIds(
+      ownerAffiliationStep3Parcels.map((parcel) => parcel.farmParcelId),
+    );
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
+  }, [ownerAffiliationStep3Parcels]);
+
+  const handleOwnerAffiliationClearSelectedParcels = useCallback(() => {
+    setOwnerAffiliationSelectedParcelIds([]);
+    setOwnerAffiliationSpecificLotInputs({});
+    setOwnerAffiliationSubmitError("");
+    setOwnerAffiliationSubmitSuccess("");
+  }, []);
 
   const ownerAffiliationSelectableAreaHa = ownerAffiliationStep3Parcels.reduce(
     (sum, parcel) => {
@@ -1431,7 +2013,7 @@ const JoLandRegistry: React.FC = () => {
   const ownerAffiliationTakeoverModeLabel =
     ownerAffiliationTakeoverMode === "full_parcel"
       ? "Full parcel(s)"
-      : "Specific slot of parcel";
+      : "Specific slot per parcel";
 
   const ownerAffiliationOwnerOptions = useMemo<OwnerAffiliationOwnerOption[]>(
     () =>
@@ -1443,8 +2025,7 @@ const JoLandRegistry: React.FC = () => {
             ownerParcels,
           };
         })
-        .filter(({ group, ownerParcels }) => {
-          if (ownerParcels.length === 0) return false;
+        .filter(({ group }) => {
           if (
             activeOwnerAffiliationSourceOwnerId !== null &&
             group.farmer_id === activeOwnerAffiliationSourceOwnerId
@@ -1462,7 +2043,10 @@ const JoLandRegistry: React.FC = () => {
         .map(({ group, ownerParcels }) => ({
           ownerId: group.farmer_id,
           ownerName: group.farmer_name || `Farmer #${group.farmer_id}`,
-          barangay: ownerParcels[0]?.farm_location_barangay || "No barangay",
+          barangay:
+            ownerParcels[0]?.farm_location_barangay ||
+            group.parcels[0]?.farm_location_barangay ||
+            "No barangay",
           parcelCount: ownerParcels.length,
         }))
         .sort((a, b) => a.ownerName.localeCompare(b.ownerName)),
@@ -2457,31 +3041,28 @@ const JoLandRegistry: React.FC = () => {
                           </strong>
                         </td>
                         <td>{row.farmer.farmer_name || "—"}</td>
-                        <td>
-                          {row.primaryOwnership === "tenant" ? (
-                            <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-tenant">
-                              Tenant
-                            </span>
-                          ) : row.primaryOwnership === "lessee" ? (
-                            <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-lessee">
-                              Lessee
-                            </span>
-                          ) : (
-                            <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-owner">
-                              Registered Owner
-                            </span>
-                          )}
-                          {row.ownershipSecondaryLabels.length > 0 && (
-                            <div
-                              style={{
-                                fontSize: "11px",
-                                color: "#475569",
-                                marginTop: "4px",
-                              }}
-                            >
-                              {row.ownershipSecondaryLabels.join(" • ")}
-                            </div>
-                          )}
+                        <td className="jo-land-registry-ownership-cell">
+                          <div className="jo-land-registry-ownership-stack">
+                            {row.primaryOwnership === "tenant" ? (
+                              <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-tenant">
+                                Tenant
+                              </span>
+                            ) : row.primaryOwnership === "lessee" ? (
+                              <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-lessee">
+                                Lessee
+                              </span>
+                            ) : (
+                              <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-owner">
+                                Registered Owner
+                              </span>
+                            )}
+
+                            {row.ownershipSecondaryLabels.length > 0 && (
+                              <span className="jo-land-registry-ownership-secondary-summary">
+                                + {row.ownershipSecondaryLabels.join(" + ")}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td>{row.primaryBarangay || "Multiple"}</td>
                         <td>{row.totalAreaHa.toFixed(2) || "0"}</td>
@@ -2528,6 +3109,43 @@ const JoLandRegistry: React.FC = () => {
                                     onClick={() => handleRowActionTransfer(row)}
                                   >
                                     Transfer Ownership
+                                  </button>
+                                )}
+                                {(row.capabilities.canUpdateTenantLandowner ||
+                                  row.capabilities
+                                    .canUpdateLesseeLandowner) && (
+                                  <div className="jo-land-registry-row-action-menu-caption">
+                                    Assignment
+                                  </div>
+                                )}
+                                {row.capabilities.canUpdateTenantLandowner && (
+                                  <button
+                                    type="button"
+                                    className="jo-land-registry-row-action-menu-item jo-land-registry-row-action-menu-item-owner"
+                                    role="menuitem"
+                                    onClick={() =>
+                                      handleRowActionOwnerAffiliation(
+                                        row,
+                                        "tenant",
+                                      )
+                                    }
+                                  >
+                                    Update Tenant Landowner
+                                  </button>
+                                )}
+                                {row.capabilities.canUpdateLesseeLandowner && (
+                                  <button
+                                    type="button"
+                                    className="jo-land-registry-row-action-menu-item jo-land-registry-row-action-menu-item-owner"
+                                    role="menuitem"
+                                    onClick={() =>
+                                      handleRowActionOwnerAffiliation(
+                                        row,
+                                        "lessee",
+                                      )
+                                    }
+                                  >
+                                    Update Lessee Landowner
                                   </button>
                                 )}
                               </div>
@@ -2583,7 +3201,7 @@ const JoLandRegistry: React.FC = () => {
                         borderRadius: "6px",
                       }}
                     >
-                      {selectedFarmerCapabilities?.canTransferOwnership ? (
+                      {selectedFarmerCapabilities?.canTransferOwnership && (
                         <button
                           className="jo-land-registry-transfer-button"
                           style={{ cursor: "pointer" }}
@@ -2591,10 +3209,42 @@ const JoLandRegistry: React.FC = () => {
                         >
                           🔄 Transfer Ownership
                         </button>
-                      ) : (
-                        <div className="jo-land-registry-transfer-mini-note">
-                          Ownership transfer is owner-only. Linked landowner
-                          affiliation update is no longer available.
+                      )}
+                      {selectedOwnerAffiliationQuickRoleOptions.length > 1 && (
+                        <div className="jo-land-registry-replacement-action-row">
+                          <select
+                            className="jo-land-registry-transfer-select"
+                            style={{ maxWidth: "260px" }}
+                            value={
+                              ownerAffiliationQuickRoleSelection ||
+                              selectedOwnerAffiliationQuickRole ||
+                              ""
+                            }
+                            onChange={(e) =>
+                              setOwnerAffiliationQuickRoleSelection(
+                                (e.target.value as ReplacementRole) || "",
+                              )
+                            }
+                          >
+                            <option value="tenant">Tenant Context</option>
+                            <option value="lessee">Lessee Context</option>
+                          </select>
+                        </div>
+                      )}
+                      {selectedOwnerAffiliationQuickRole && (
+                        <div className="jo-land-registry-replacement-action-row">
+                          <button
+                            type="button"
+                            className="jo-land-registry-replacement-button"
+                            onClick={() =>
+                              openOwnerAffiliationModal(
+                                selectedFarmer,
+                                selectedOwnerAffiliationQuickRole,
+                              )
+                            }
+                          >
+                            Update Tenant/Lessee Landowner
+                          </button>
                         </div>
                       )}
                     </div>
@@ -3977,8 +4627,11 @@ const JoLandRegistry: React.FC = () => {
                       ))}
                     </select>
                     <div className="jo-land-registry-transfer-mini-note">
-                      Current linked owner and current holder are excluded to
-                      avoid invalid self-linking.
+                      The parcels listed below are the <strong>holder's</strong>{" "}
+                      parcels currently linked to the selected landowner above
+                      (Step 1). After selecting a new owner, Step 2 can also
+                      include that owner's available owner parcels so they can
+                      be assigned to this holder under the same role.
                     </div>
 
                     {ownerAffiliationNewOwnerId === "" ? (
@@ -3993,8 +4646,34 @@ const JoLandRegistry: React.FC = () => {
                         </div>
 
                         <div className="jo-land-registry-transfer-mini-note">
-                          Select only the parcels currently linked to this
-                          holder under the selected landowner.
+                          Select one or more parcels. Current holder-linked
+                          parcels are eligible for re-link; new owner available
+                          parcels are eligible for full assignment.
+                        </div>
+                        <div className="jo-land-registry-replacement-action-row">
+                          <button
+                            type="button"
+                            className="jo-land-registry-replacement-button"
+                            disabled={ownerAffiliationStep3Parcels.length === 0}
+                            onClick={handleOwnerAffiliationSelectAllParcels}
+                          >
+                            Select All Parcels
+                          </button>
+                          <button
+                            type="button"
+                            className="jo-land-registry-replacement-button"
+                            disabled={
+                              ownerAffiliationSelectedParcelIds.length === 0
+                            }
+                            onClick={handleOwnerAffiliationClearSelectedParcels}
+                          >
+                            Clear Selection
+                          </button>
+                        </div>
+                        <div className="jo-land-registry-transfer-mini-note">
+                          Multi-select enabled: choose one or more parcels and
+                          submit them together under the same new linked
+                          landowner.
                         </div>
                         <div className="jo-land-registry-donor-parcel-cards">
                           {ownerAffiliationStep3Parcels.map((parcel) => {
@@ -4038,7 +4717,9 @@ const JoLandRegistry: React.FC = () => {
 
                                 <div className="jo-land-registry-donor-parcel-card-body">
                                   <div className="jo-land-registry-transfer-mini-note">
-                                    Current holder linked parcel
+                                    {parcel.inCurrentContract
+                                      ? "Current holder linked parcel"
+                                      : "New owner available parcel"}
                                   </div>
                                   <div className="jo-land-registry-donor-parcel-detail">
                                     <span className="jo-land-registry-donor-parcel-detail-label">
@@ -4110,7 +4791,7 @@ const JoLandRegistry: React.FC = () => {
                                   }
                                 />
                                 <span>
-                                  <strong>Specific slot of parcel</strong>
+                                  <strong>Specific slot per parcel</strong>
                                   <br />
                                   Enter a specific area for each selected
                                   parcel.
@@ -4127,6 +4808,10 @@ const JoLandRegistry: React.FC = () => {
                                 <div className="jo-land-registry-transfer-mini-note">
                                   Enter the area share (ha) for each selected
                                   parcel.
+                                </div>
+                                <div className="jo-land-registry-transfer-mini-note">
+                                  Note: new owner available parcels can only use
+                                  Full parcel(s).
                                 </div>
 
                                 <div className="jo-land-registry-donor-parcel-cards">
@@ -4216,8 +4901,9 @@ const JoLandRegistry: React.FC = () => {
                       </>
                     ) : (
                       <div className="jo-land-registry-transfer-mini-note">
-                        No active holder-linked parcels found under the selected
-                        linked landowner.
+                        No eligible parcels found for this context. Select a
+                        different source/new owner or verify parcel role-link
+                        data.
                       </div>
                     )}
                   </div>
