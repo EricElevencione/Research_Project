@@ -502,6 +502,18 @@ const JoLandRegistry: React.FC = () => {
       group.farmer_name,
       group.farmer_id,
     );
+    console.log(
+      "handleFarmerSelect parcels:",
+      (group.parcels || []).map((parcel) => ({
+        id: parcel.id,
+        parcel_number: parcel.parcel_number,
+        area: parcel.total_farm_area_ha,
+        barangay: parcel.farm_location_barangay,
+        municipality: parcel.farm_location_municipality,
+        is_tenant: parcel.is_tenant,
+        is_lessee: parcel.is_lessee,
+      })),
+    );
 
     setSelectedFarmer(group);
     setSelectedFarmerViewRole(rowOwnership);
@@ -873,11 +885,7 @@ const JoLandRegistry: React.FC = () => {
       const defaultOwnerId = defaultSource?.ownerId;
       if (typeof defaultOwnerId === "number" && defaultOwnerId > 0) {
         setOwnerAffiliationSourceOwnerId(defaultOwnerId);
-        setOwnerAffiliationSelectedParcelIds(
-          (parcelsByOwner.get(defaultOwnerId) || []).map(
-            (parcel) => parcel.farmParcelId,
-          ),
-        );
+        setOwnerAffiliationSelectedParcelIds([]);
         setOwnerAffiliationTakeoverMode("full_parcel");
         setOwnerAffiliationSpecificLotInputs({});
       } else {
@@ -934,11 +942,7 @@ const JoLandRegistry: React.FC = () => {
     setOwnerAffiliationSourceOwnerId(parsedId);
 
     if (typeof parsedId === "number" && parsedId > 0) {
-      setOwnerAffiliationSelectedParcelIds(
-        (ownerAffiliationParcelsByOwner.get(parsedId) || []).map(
-          (parcel) => parcel.farmParcelId,
-        ),
-      );
+      setOwnerAffiliationSelectedParcelIds([]);
       setOwnerAffiliationTakeoverMode("full_parcel");
       setOwnerAffiliationSpecificLotInputs({});
       setOwnerAffiliationNewOwnerId((prev) =>
@@ -1850,6 +1854,22 @@ const JoLandRegistry: React.FC = () => {
           activeOwnerAffiliationSourceOwnerId,
         ) ?? []);
 
+  const selectedFarmerParcelIdSet = useMemo(() => {
+    return new Set(
+      (selectedFarmer?.parcels || [])
+        .map((parcel) => Number(parcel.id))
+        .filter((parcelId) => Number.isFinite(parcelId) && parcelId > 0),
+    );
+  }, [selectedFarmer]);
+
+  const selectedOwnerAffiliationHolderParcels = useMemo(() => {
+    if (selectedFarmerParcelIdSet.size === 0) return [];
+
+    return selectedOwnerAffiliationSourceParcels.filter((parcel) =>
+      selectedFarmerParcelIdSet.has(parcel.farmParcelId),
+    );
+  }, [selectedOwnerAffiliationSourceParcels, selectedFarmerParcelIdSet]);
+
   const selectedOwnerAffiliationSource =
     ownerAffiliationSourceOptions.find(
       (option) => option.ownerId === activeOwnerAffiliationSourceOwnerId,
@@ -1861,14 +1881,14 @@ const JoLandRegistry: React.FC = () => {
             selectedFarmer.farmer_name || `Farmer #${selectedFarmer.farmer_id}`,
           ownerId: activeOwnerAffiliationSourceOwnerId,
           ownerName:
-            selectedOwnerAffiliationSourceParcels[0]?.ownerName ||
+            selectedOwnerAffiliationHolderParcels[0]?.ownerName ||
             `Owner #${activeOwnerAffiliationSourceOwnerId}`,
-          parcelCount: selectedOwnerAffiliationSourceParcels.length,
+          parcelCount: selectedOwnerAffiliationHolderParcels.length,
         }
       : null);
 
   const selectedOwnerAffiliationAreaHa =
-    selectedOwnerAffiliationSourceParcels.reduce((sum, parcel) => {
+    selectedOwnerAffiliationHolderParcels.reduce((sum, parcel) => {
       const area = Number(parcel.areaHa);
       return sum + (Number.isFinite(area) ? area : 0);
     }, 0);
@@ -1955,7 +1975,7 @@ const JoLandRegistry: React.FC = () => {
   >(() => {
     const parcelMap = new Map<number, OwnerAffiliationStep3Parcel>();
 
-    selectedOwnerAffiliationSourceParcels.forEach((parcel) => {
+    selectedOwnerAffiliationHolderParcels.forEach((parcel) => {
       parcelMap.set(parcel.farmParcelId, {
         ...parcel,
         inCurrentContract: true,
@@ -1985,7 +2005,7 @@ const JoLandRegistry: React.FC = () => {
       return a.farmParcelId - b.farmParcelId;
     });
   }, [
-    selectedOwnerAffiliationSourceParcels,
+    selectedOwnerAffiliationHolderParcels,
     selectedOwnerAffiliationNewOwnerAvailableParcels,
   ]);
 
@@ -2011,6 +2031,36 @@ const JoLandRegistry: React.FC = () => {
     },
     0,
   );
+
+  useEffect(() => {
+    if (!showOwnerAffiliationModal || !selectedFarmer) return;
+
+    console.log("[OwnerAffiliation debug] context", {
+      holderId: selectedFarmer.farmer_id,
+      holderName: selectedFarmer.farmer_name,
+      sourceOwnerId: activeOwnerAffiliationSourceOwnerId,
+      sourceOwnerName: selectedOwnerAffiliationSource?.ownerName || null,
+      farmerParcelIds: Array.from(selectedFarmerParcelIdSet),
+      sourceParcelIds: selectedOwnerAffiliationSourceParcels.map(
+        (parcel) => parcel.farmParcelId,
+      ),
+      holderLinkedParcelIds: selectedOwnerAffiliationHolderParcels.map(
+        (parcel) => parcel.farmParcelId,
+      ),
+      step2ParcelIds: ownerAffiliationStep3Parcels.map(
+        (parcel) => parcel.farmParcelId,
+      ),
+    });
+  }, [
+    showOwnerAffiliationModal,
+    selectedFarmer,
+    activeOwnerAffiliationSourceOwnerId,
+    selectedOwnerAffiliationSource,
+    selectedFarmerParcelIdSet,
+    selectedOwnerAffiliationSourceParcels,
+    selectedOwnerAffiliationHolderParcels,
+    ownerAffiliationStep3Parcels,
+  ]);
 
   const ownerAffiliationTakeoverPlan = useMemo(() => {
     return buildReplacementTakeoverPlan(
@@ -2962,7 +3012,20 @@ const JoLandRegistry: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">JO Land Registry</div>
           </div>
@@ -4052,7 +4115,10 @@ const JoLandRegistry: React.FC = () => {
                                     <div className="jo-land-registry-donor-parcel-card-header">
                                       <span className="jo-land-registry-donor-parcel-number">
                                         {parcel.parcel_number ||
-                                          `#${parcel.farm_parcel_id}`}
+                                          `Parcel ID #${parcel.farm_parcel_id}`}
+                                        {parcel.parcel_number
+                                          ? ` (ID #${parcel.farm_parcel_id})`
+                                          : ""}
                                       </span>
                                       <span className="jo-land-registry-donor-parcel-area-badge">
                                         {parcel.total_farm_area_ha.toFixed(2)}{" "}
@@ -4722,8 +4788,7 @@ const JoLandRegistry: React.FC = () => {
                                       }
                                     />
                                     <span className="jo-land-registry-donor-parcel-number">
-                                      {parcel.parcelNumber ||
-                                        `Parcel ID #${parcel.farmParcelId}`}
+                                      {parcel.parcelNumber || "Selected parcel"}
                                     </span>
                                   </label>
                                   <span className="jo-land-registry-donor-parcel-area-badge">
@@ -4853,7 +4918,7 @@ const JoLandRegistry: React.FC = () => {
                                           <div className="jo-land-registry-donor-parcel-card-header">
                                             <span className="jo-land-registry-donor-parcel-number">
                                               {parcel.parcelNumber ||
-                                                `Parcel ID #${parcel.farmParcelId}`}
+                                                "Selected parcel"}
                                             </span>
                                             <span className="jo-land-registry-donor-parcel-area-badge">
                                               {parcel.areaHa.toFixed(2)} ha
@@ -5032,8 +5097,7 @@ const JoLandRegistry: React.FC = () => {
                             key={`owner-affiliation-preview-${parcel.farmParcelId}`}
                           >
                             <span className="jo-land-registry-transfer-list-parcel">
-                              {parcel.parcelNumber ||
-                                `Parcel ID #${parcel.farmParcelId}`}
+                              {parcel.parcelNumber || "Selected parcel"}
                             </span>
                             <span className="jo-land-registry-transfer-list-brgy">
                               {parcel.barangay || "No barangay"}
