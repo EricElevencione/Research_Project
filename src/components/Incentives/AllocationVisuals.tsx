@@ -333,11 +333,19 @@ export const SeasonComparisonTable: React.FC<SeasonComparisonTableProps> = ({
   const seasons = useMemo(() => {
     return allocations
       .sort((a, b) => a.season.localeCompare(b.season))
-      .map((a) => ({
-        season: a.season,
-        label: formatSeason(a.season),
-        values: a as Record<string, number>,
-      }));
+      .map((a) => {
+        const row = a as { season: string; id?: number };
+        const uniqueKey =
+          row.id != null && Number.isFinite(Number(row.id))
+            ? `alloc-${row.id}`
+            : `season-${row.season}`;
+        return {
+          uniqueKey,
+          season: row.season,
+          label: formatSeason(row.season),
+          values: a as Record<string, number>,
+        };
+      });
   }, [allocations]);
 
   if (seasons.length === 0) return null;
@@ -355,7 +363,7 @@ export const SeasonComparisonTable: React.FC<SeasonComparisonTableProps> = ({
         {seasons.map((s, i) => {
           const val = vals[i];
           return (
-            <td key={s.season} className="alloc-season-val-cell">
+            <td key={s.uniqueKey} className="alloc-season-val-cell">
               <div className="alloc-season-val-bar-wrap">
                 <div
                   className="alloc-season-val-bar"
@@ -389,7 +397,7 @@ export const SeasonComparisonTable: React.FC<SeasonComparisonTableProps> = ({
             <tr>
               <th>Item</th>
               {seasons.map((s) => (
-                <th key={s.season}>{s.label}</th>
+                <th key={s.uniqueKey}>{s.label}</th>
               ))}
             </tr>
           </thead>

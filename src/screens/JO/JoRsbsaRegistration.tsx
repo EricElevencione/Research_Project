@@ -396,6 +396,33 @@ const JoRsbsa: React.FC = () => {
         ownershipOthersSpecify: "",
       },
     ],
+    farmerRice: false,
+    farmerCorn: false,
+    farmerOtherCrops: false,
+    farmerOtherCropsText: "",
+    farmerLivestock: false,
+    farmerLivestockText: "",
+    farmerPoultry: false,
+    farmerPoultryText: "",
+    fwLandPrep: false,
+    fwPlanting: false,
+    fwCultivation: false,
+    fwHarvesting: false,
+    fwOthers: false,
+    fwOthersText: "",
+    ffFishCapture: false,
+    ffAquaculture: false,
+    ffGleaning: false,
+    ffFishProcessing: false,
+    ffFishVending: false,
+    ffOthers: false,
+    ffOthersText: "",
+    ayPartHousehold: false,
+    ayFormalCourse: false,
+    ayNonFormalCourse: false,
+    ayParticipatedProgram: false,
+    ayOthers: false,
+    ayOthersText: "",
   });
 
   // validation errors (field name -> message)
@@ -772,11 +799,11 @@ const JoRsbsa: React.FC = () => {
         ownershipCategory: ownershipCategory,
         selectedLandOwner: selectedLandOwner
           ? {
-              id: selectedLandOwner.id,
-              name: selectedLandOwner.name,
-              barangay: selectedLandOwner.barangay,
-              municipality: selectedLandOwner.municipality,
-            }
+            id: selectedLandOwner.id,
+            name: selectedLandOwner.name,
+            barangay: selectedLandOwner.barangay,
+            municipality: selectedLandOwner.municipality,
+          }
           : null,
         selectedParcelIds: Array.from(selectedParcelIds),
         farmlandParcels: formData.farmlandParcels.map((parcel) => ({
@@ -877,11 +904,11 @@ const JoRsbsa: React.FC = () => {
       },
       selectedLandOwner: selectedLandOwner
         ? {
-            id: selectedLandOwner.id,
-            name: selectedLandOwner.name,
-            barangay: selectedLandOwner.barangay,
-            municipality: selectedLandOwner.municipality,
-          }
+          id: selectedLandOwner.id,
+          name: selectedLandOwner.name,
+          barangay: selectedLandOwner.barangay,
+          municipality: selectedLandOwner.municipality,
+        }
         : null,
       selectedParcelIds: Array.from(selectedParcelIds),
       farmActivities: {
@@ -1039,7 +1066,7 @@ const JoRsbsa: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              ☰
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             <div className="tech-incent-mobile-title">
               JO RSBSA Registration
@@ -1743,12 +1770,12 @@ const JoRsbsa: React.FC = () => {
                                   transition: "background-color 0.2s",
                                 }}
                                 onMouseEnter={(e) =>
-                                  (e.currentTarget.style.backgroundColor =
-                                    "#f8f9fa")
+                                (e.currentTarget.style.backgroundColor =
+                                  "#f8f9fa")
                                 }
                                 onMouseLeave={(e) =>
-                                  (e.currentTarget.style.backgroundColor =
-                                    "white")
+                                (e.currentTarget.style.backgroundColor =
+                                  "white")
                                 }
                               >
                                 <strong>{owner.name}</strong>
@@ -2256,8 +2283,8 @@ const JoRsbsa: React.FC = () => {
                         <span className="jo-registration-summary-value">
                           {formData.dateOfBirth
                             ? new Date(
-                                formData.dateOfBirth,
-                              ).toLocaleDateString()
+                              formData.dateOfBirth,
+                            ).toLocaleDateString()
                             : "Not provided"}
                         </span>
                       </div>
@@ -2306,11 +2333,11 @@ const JoRsbsa: React.FC = () => {
                               (formData as any).farmerRice && "Rice",
                               (formData as any).farmerCorn && "Corn",
                               (formData as any).farmerOtherCrops &&
-                                `Other crops: ${(formData as any).farmerOtherCropsText}`,
+                              `Other crops: ${(formData as any).farmerOtherCropsText}`,
                               (formData as any).farmerLivestock &&
-                                `Livestock: ${(formData as any).farmerLivestockText}`,
+                              `Livestock: ${(formData as any).farmerLivestockText}`,
                               (formData as any).farmerPoultry &&
-                                `Poultry: ${(formData as any).farmerPoultryText}`,
+                              `Poultry: ${(formData as any).farmerPoultryText}`,
                             ]
                               .filter(Boolean)
                               .join(", ") || "None selected"}
@@ -2327,13 +2354,13 @@ const JoRsbsa: React.FC = () => {
                           <span className="jo-registration-summary-value">
                             {[
                               (formData as any).fwLandPrep &&
-                                "Land Preparation",
+                              "Land Preparation",
                               (formData as any).fwPlanting &&
-                                "Planting/Transplanting",
+                              "Planting/Transplanting",
                               (formData as any).fwCultivation && "Cultivation",
                               (formData as any).fwHarvesting && "Harvesting",
                               (formData as any).fwOthers &&
-                                `Others: ${(formData as any).fwOthersText}`,
+                              `Others: ${(formData as any).fwOthersText}`,
                             ]
                               .filter(Boolean)
                               .join(", ") || "None selected"}
@@ -2353,10 +2380,10 @@ const JoRsbsa: React.FC = () => {
                               (formData as any).ffAquaculture && "Aquaculture",
                               (formData as any).ffGleaning && "Gleaning",
                               (formData as any).ffFishProcessing &&
-                                "Fish Processing",
+                              "Fish Processing",
                               (formData as any).ffFishVending && "Fish Vending",
                               (formData as any).ffOthers &&
-                                `Others: ${(formData as any).ffOthersText}`,
+                              `Others: ${(formData as any).ffOthersText}`,
                             ]
                               .filter(Boolean)
                               .join(", ") || "None selected"}
@@ -2373,15 +2400,15 @@ const JoRsbsa: React.FC = () => {
                           <span className="jo-registration-summary-value">
                             {[
                               (formData as any).ayPartHousehold &&
-                                "Part of farming household",
+                              "Part of farming household",
                               (formData as any).ayFormalCourse &&
-                                "Formal agri-fishery course",
+                              "Formal agri-fishery course",
                               (formData as any).ayNonFormalCourse &&
-                                "Non-formal agri-fishery course",
+                              "Non-formal agri-fishery course",
                               (formData as any).ayParticipatedProgram &&
-                                "Agricultural activity/program",
+                              "Agricultural activity/program",
                               (formData as any).ayOthers &&
-                                `Others: ${(formData as any).ayOthersText}`,
+                              `Others: ${(formData as any).ayOthersText}`,
                             ]
                               .filter(Boolean)
                               .join(", ") || "None selected"}
@@ -2424,17 +2451,17 @@ const JoRsbsa: React.FC = () => {
                             <span className="jo-registration-summary-value">
                               {[
                                 parcel.ownershipTypeRegisteredOwner &&
-                                  "Registered Owner",
+                                "Registered Owner",
                                 parcel.ownershipTypeTenant &&
-                                  (parcel.tenantLandOwnerName
-                                    ? `Tenant (${parcel.tenantLandOwnerName})`
-                                    : "Tenant"),
+                                (parcel.tenantLandOwnerName
+                                  ? `Tenant (${parcel.tenantLandOwnerName})`
+                                  : "Tenant"),
                                 parcel.ownershipTypeLessee &&
-                                  (parcel.lesseeLandOwnerName
-                                    ? `Lessee (${parcel.lesseeLandOwnerName})`
-                                    : "Lessee"),
+                                (parcel.lesseeLandOwnerName
+                                  ? `Lessee (${parcel.lesseeLandOwnerName})`
+                                  : "Lessee"),
                                 parcel.ownershipTypeOthers &&
-                                  `Others: ${parcel.ownershipOthersSpecify}`,
+                                `Others: ${parcel.ownershipOthersSpecify}`,
                               ]
                                 .filter(Boolean)
                                 .join(", ") || "Not specified"}

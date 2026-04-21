@@ -202,6 +202,32 @@ const TechIncentives: React.FC = () => {
   };
 
   const getTotalSeeds = (allocation: RegionalAllocation) => {
+    const a = allocation as RegionalAllocation & Record<string, unknown>;
+    const jackpot = a.jackpot_kg;
+    const us88 = a.us88_kg;
+    const th82 = a.th82_kg;
+    const rh9000 = a.rh9000_kg;
+    const lumping143 = a.lumping143_kg;
+    const lp296 = a.lp296_kg;
+
+    if (
+      jackpot !== undefined ||
+      us88 !== undefined ||
+      th82 !== undefined ||
+      rh9000 !== undefined ||
+      lumping143 !== undefined ||
+      lp296 !== undefined
+    ) {
+      const total =
+        (Number(jackpot) || 0) +
+        (Number(us88) || 0) +
+        (Number(th82) || 0) +
+        (Number(rh9000) || 0) +
+        (Number(lumping143) || 0) +
+        (Number(lp296) || 0);
+      return isNaN(total) ? 0 : total;
+    }
+
     const total =
       (Number(allocation.rice_seeds_nsic_rc160_kg) || 0) +
       (Number(allocation.rice_seeds_nsic_rc222_kg) || 0) +
@@ -284,7 +310,7 @@ const TechIncentives: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              ☰
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             <div className="tech-incent-mobile-title">
               Technician Incentives

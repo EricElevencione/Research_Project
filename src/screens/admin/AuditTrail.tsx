@@ -287,6 +287,7 @@ const AuditTrail: React.FC = () => {
   const location = useLocation();
 
   // State
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [stats, setStats] = useState<AuditStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1134,14 +1135,14 @@ const AuditTrail: React.FC = () => {
     const details = payload.farmDetails;
     const farmLocation =
       details.farmLocation &&
-      typeof details.farmLocation === "object" &&
-      !Array.isArray(details.farmLocation)
+        typeof details.farmLocation === "object" &&
+        !Array.isArray(details.farmLocation)
         ? details.farmLocation
         : {};
     const selectedLandOwner =
       details.selectedLandOwner &&
-      typeof details.selectedLandOwner === "object" &&
-      !Array.isArray(details.selectedLandOwner)
+        typeof details.selectedLandOwner === "object" &&
+        !Array.isArray(details.selectedLandOwner)
         ? details.selectedLandOwner
         : null;
     const parcels = Array.isArray(details.farmlandParcels)
@@ -1152,16 +1153,16 @@ const AuditTrail: React.FC = () => {
     const totalFarmArea = Number.isFinite(parsedArea)
       ? parsedArea
       : parcels.reduce(
-          (sum, parcel) => sum + (Number(parcel?.totalFarmAreaHa) || 0),
-          0,
-        );
+        (sum, parcel) => sum + (Number(parcel?.totalFarmAreaHa) || 0),
+        0,
+      );
     const selectedParcelIds = Array.isArray(details.selectedParcelIds)
       ? details.selectedParcelIds
       : [];
     const farmActivities =
       details.farmActivities &&
-      typeof details.farmActivities === "object" &&
-      !Array.isArray(details.farmActivities)
+        typeof details.farmActivities === "object" &&
+        !Array.isArray(details.farmActivities)
         ? details.farmActivities
         : {};
 
@@ -1357,7 +1358,7 @@ const AuditTrail: React.FC = () => {
                       {parcel?.ownershipType?.registeredOwner
                         ? "Registered Owner"
                         : parcel?.ownershipType?.tenant &&
-                            parcel?.ownershipType?.lessee
+                          parcel?.ownershipType?.lessee
                           ? "Tenant + Lessee"
                           : parcel?.ownershipType?.tenant
                             ? "Tenant"
@@ -1460,8 +1461,8 @@ const AuditTrail: React.FC = () => {
         : null;
     const allocationFromLookup =
       rawAllocationId !== null &&
-      rawAllocationId !== undefined &&
-      rawAllocationId !== ""
+        rawAllocationId !== undefined &&
+        rawAllocationId !== ""
         ? allocationLookup[String(rawAllocationId)] || null
         : null;
     const allocationSeason =
@@ -1963,7 +1964,7 @@ const AuditTrail: React.FC = () => {
 
       <div className="admin-audit-main-page">
         {/* Sidebar */}
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <nav className="sidebar-nav">
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
@@ -2029,8 +2030,22 @@ const AuditTrail: React.FC = () => {
           </nav>
         </div>
 
+        <div
+          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+
         {/* Main Content */}
         <div className="admin-audit-main-content">
+          <div className="tech-incent-mobile-header">
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <div className="tech-incent-mobile-title">Audit Trail</div>
+          </div>
           {/* Header */}
           <div className="admin-audit-header">
             <div className="admin-audit-header-left">
@@ -2365,7 +2380,7 @@ const AuditTrail: React.FC = () => {
                       {stats.byUser.map((user, idx) => {
                         const displayName =
                           user.user_name &&
-                          user.user_name.toLowerCase() !== "unknown"
+                            user.user_name.toLowerCase() !== "unknown"
                             ? user.user_name
                             : "Anonymous";
                         const displayRole = user.user_role || "anonymous";

@@ -749,56 +749,6 @@
       }
     ]
   },
-  "NSIC_Rc480": {
-    "seed_rank": 17,
-    "fertilizer_compatibility": [
-      {
-        "rank": 1,
-        "name": "Urea (46-0-0)",
-        "reason": "Enhances leaf area and light interception; top-dress at active tillering for optimum tiller production"
-      },
-      {
-        "rank": 2,
-        "name": "Complete (14-14-14)",
-        "reason": "Enhances seedling establishment and root growth; K improves early drought stress tolerance"
-      },
-      {
-        "rank": 3,
-        "name": "Muriate of Potash (0-0-60)",
-        "reason": "Improves stress tolerance; K supports high yield stability across different soil conditions"
-      },
-      {
-        "rank": 4,
-        "name": "Ammonium Sulfate (21-0-0)",
-        "reason": "Supports sustained canopy greenness; S improves N utilization efficiency"
-      },
-      {
-        "rank": 5,
-        "name": "Biofertilizer (Liquid)",
-        "reason": "Triacontanol enhances photosynthesis; reduces heat and drought stress impact on yield"
-      },
-      {
-        "rank": 6,
-        "name": "Foliar Liquid NPK",
-        "reason": "Improves nutrient uptake efficiency at critical stages; reduces total fertilizer input while maintaining yield"
-      },
-      {
-        "rank": 7,
-        "name": "Nanobiofertilizer",
-        "reason": "Algae biostimulants improve stress tolerance; nano-delivery reduces fertilizer application frequency"
-      },
-      {
-        "rank": 8,
-        "name": "Organic Root Exudate Mix",
-        "reason": "Improves soil aggregation and water-holding capacity in sandy or degraded paddy soils"
-      },
-      {
-        "rank": 9,
-        "name": "Azolla microphylla",
-        "reason": "Supplements chemical N biologically; improves soil moisture retention — most indirect"
-      }
-    ]
-  },
   "NSIC_Rc508": {
     "seed_rank": 18,
     "fertilizer_compatibility": [

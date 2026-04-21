@@ -173,6 +173,9 @@
     font-size: 24px;
     cursor: pointer;
     color: var(--gray-900);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .tech-incent-sidebar-overlay {
@@ -443,6 +446,9 @@
         font-size: 22px;
         color: #1f2937;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .tech-incent-mobile-title {

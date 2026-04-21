@@ -25,27 +25,12 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    135deg,
-    #e8f5e9 0%,
-    #f1f8e9 25%,
-    #ffffff 50%,
-    #e8f5e9 75%,
-    #c8e6c9 100%
-  );
-  overflow: hidden;
-  flex: 1;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(
-    135deg,
-    #e8f5e9 0%,
-    #f1f8e9 25%,
-    #ffffff 50%,
-    #e8f5e9 75%,
-    #c8e6c9 100%
-  );
+  background: linear-gradient(135deg,
+      #e8f5e9 0%,
+      #f1f8e9 25%,
+      #ffffff 50%,
+      #e8f5e9 75%,
+      #c8e6c9 100%);
   overflow: auto;
 }
 
@@ -127,6 +112,7 @@
 
 /* Animation Keyframes */
 @keyframes jo-manage-requests-pulse {
+
   0%,
   100% {
     transform: scale(1);
@@ -175,6 +161,12 @@
   border: 2px solid #0ea5e9;
 }
 
+@media (max-width: 640px) {
+  .jo-manage-requests-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .jo-manage-requests-allocation-card,
 .jo-manage-requests-farmer-requests-card {
   background: white;
@@ -217,10 +209,11 @@
 /* Stat boxes inside cards */
 .jo-manage-requests-stat-box {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 12px;
   border-radius: 8px;
+  gap: 4px;
 }
 
 .jo-manage-requests-stat-box.fertilizers {
@@ -233,6 +226,7 @@
 
 .jo-manage-requests-stat-label {
   font-weight: 500;
+  white-space: normal;
 }
 
 .jo-manage-requests-stat-label.fertilizers {
@@ -246,6 +240,7 @@
 .jo-manage-requests-stat-value {
   font-size: 20px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .jo-manage-requests-stat-value.fertilizers {
@@ -420,16 +415,12 @@
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(
-      circle at 15% 15%,
+    radial-gradient(circle at 15% 15%,
       rgba(16, 185, 129, 0.12),
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at 85% 85%,
+      transparent 45%),
+    radial-gradient(circle at 85% 85%,
       rgba(59, 130, 246, 0.1),
-      transparent 42%
-    ),
+      transparent 42%),
     rgba(15, 23, 42, 0.58);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
@@ -1129,6 +1120,7 @@
     opacity: 0;
     transform: translateX(100px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -1136,10 +1128,12 @@
 }
 
 @keyframes jo-manage-pulse {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.02);
   }
@@ -1149,6 +1143,7 @@
   from {
     transform: scale(0) rotate(-180deg);
   }
+
   to {
     transform: scale(1) rotate(0deg);
   }
@@ -1277,6 +1272,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1536,9 +1532,7 @@
   color: #065f46;
 }
 
-.jo-manage-requests-modal-field-danger
-  .jo-manage-requests-modal-meta-stat
-  strong {
+.jo-manage-requests-modal-field-danger .jo-manage-requests-modal-meta-stat strong {
   color: #991b1b;
 }
 
