@@ -33,6 +33,7 @@ import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
 import AuditTrail from "./screens/admin/AuditTrail";
 import ShortagesSuggestions from "./pages/ShortagesSuggestions.jsx";
 import "../src/assets/css/admin css/index.css";
+import Register from "./pages/Register";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -52,6 +53,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route
           path="/dashboard"
           element={

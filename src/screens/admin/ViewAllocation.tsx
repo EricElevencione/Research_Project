@@ -321,14 +321,6 @@ const ViewAllocation: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive("/audit-trail") ? "active" : ""}`}
-              onClick={() => navigate("/audit-trail")}
-            >
-              <span className="nav-icon">📋</span>
-              <span className="nav-text">Audit Trail</span>
-            </button>
-
-            <button
               className={`sidebar-nav-item ${isActive("/incentives") ? "active" : ""}`}
               onClick={() => navigate("/incentives")}
             >
@@ -371,7 +363,20 @@ const ViewAllocation: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((previous) => !previous)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">Admin Allocation</div>
           </div>
