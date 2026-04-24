@@ -18,6 +18,16 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ✅ ADD THIS HELPER right before handleLogin
+  const redirectByRole = (role: string | null) => {
+    if (role === "admin") navigate("/dashboard");
+    else if (role === "technician") navigate("/technician-dashboard");
+    else if (role === "jo") navigate("/jo-dashboard");
+    else if (role === "brgychair") navigate("/brgy-chair-dashboard");
+    else setError("Role not recognized. Please contact your administrator.");
+  };
+
+  // ✅ REPLACE your existing handleLogin with this
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -29,30 +39,36 @@ const Login: React.FC = () => {
 
     setLoading(true);
 
+    // Try Supabase first
     const { data, error: loginError } = await loginUser(email, password);
 
-    if (loginError) {
-      setError(loginError.message);
+    if (!loginError && data?.user) {
+      const role = await getUserRole();
+      if (rememberMe) localStorage.setItem("rememberMe", "true");
+      redirectByRole(role);
       setLoading(false);
       return;
     }
 
-    // Get role from Supabase user metadata
-    const role = await getUserRole();
+    // Fallback to local hardcoded accounts (dev only)
+    const localAccounts: Record<string, string> = {
+      "admin@gmail.com": "admin",
+      "technician@gmail.com": "technician",
+      "jo@gmail.com": "jo",
+      "brgychair@gmail.com": "brgychair",
+    };
 
-    if (rememberMe) {
-      localStorage.setItem("rememberMe", "true");
-    }
+    const normalizedEmail = email.toLowerCase().trim();
+    const localRole = localAccounts[normalizedEmail];
 
-    // Navigate based on role
-    if (role === "admin") {
-      navigate("/dashboard");
-    } else if (role === "technician") {
-      navigate("/technician-dashboard");
-    } else if (role === "jo") {
-      navigate("/jo-dashboard");
+    if (localRole) {
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userEmail", email);
+      localStorage.setItem("userRole", localRole);
+      if (rememberMe) localStorage.setItem("rememberMe", "true");
+      redirectByRole(localRole);
     } else {
-      setError("Role not recognized. Please contact your administrator.");
+      setError("Invalid login credentials.");
     }
 
     setLoading(false);
@@ -115,12 +131,11 @@ const Login: React.FC = () => {
               {loading ? "Logging in…" : "Log In"}
             </button>
 
-            <p className="forgot-password">
-              Didn't have an account yet?{" "}
-              <Link to="/register" className="register-link">
-                Register here
-              </Link>
-            </p>
+            <Link to="/register" className="register-link">
+              <p className="forgot-password">
+                Didn't have an account yet? Register here
+              </p>
+            </Link>
           </form>
         </div>
       </div>

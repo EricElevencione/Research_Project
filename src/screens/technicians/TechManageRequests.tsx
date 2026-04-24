@@ -470,6 +470,9 @@ const TechManageRequests: React.FC = () => {
   const [printScope, setPrintScope] = useState<PrintScope>("filtered");
   const [includePrintDetails, setIncludePrintDetails] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [pendingRejectId, setPendingRejectId] = useState<string | null>(null);
 
   // Show toast notification
   const showToast = (
@@ -765,7 +768,11 @@ const TechManageRequests: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (id: number, newStatus: string) => {
+  const handleStatusChange = async (
+    id: number,
+    newStatus: string,
+    reason?: string,
+  ) => {
     try {
       const response = await updateFarmerRequest(id, { status: newStatus });
 
@@ -2195,7 +2202,20 @@ const TechManageRequests: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">Manage Requests</div>
           </div>
@@ -2679,15 +2699,76 @@ const TechManageRequests: React.FC = () => {
                                           onClick={() => {
                                             setOpenActionsMenuFor(null);
                                             setActionsMenuPosition(null);
-                                            handleStatusChange(
-                                              request.id,
-                                              "rejected",
-                                            );
+                                            setPendingRejectId(request.id); // ✅ store which request
+                                            setRejectModalOpen(true); // ✅ open modal instead
                                           }}
                                           className="tech-manage-requests-btn-reject"
                                         >
                                           Reject
                                         </button>
+                                        {rejectModalOpen && (
+                                          <div className="modal-overlay">
+                                            <div className="modal-box">
+                                              <h3>Reason for Rejection</h3>
+                                              <p>
+                                                Please provide a reason before
+                                                rejecting this request.
+                                              </p>
+
+                                              <textarea
+                                                value={rejectReason}
+                                                onChange={(e) =>
+                                                  setRejectReason(
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                placeholder="Enter reason here..."
+                                                rows={4}
+                                                className="reject-reason-input"
+                                              />
+
+                                              {!rejectReason.trim() && (
+                                                <p className="reject-reason-error">
+                                                  Reason is required.
+                                                </p>
+                                              )}
+
+                                              <div className="modal-actions">
+                                                <button
+                                                  className="tech-manage-requests-btn-reject"
+                                                  disabled={
+                                                    !rejectReason.trim()
+                                                  }
+                                                  onClick={() => {
+                                                    if (!rejectReason.trim())
+                                                      return;
+                                                    handleStatusChange(
+                                                      pendingRejectId!,
+                                                      "rejected",
+                                                      rejectReason,
+                                                    ); // ✅ pass reason
+                                                    setRejectModalOpen(false);
+                                                    setRejectReason("");
+                                                    setPendingRejectId(null);
+                                                  }}
+                                                >
+                                                  Confirm Reject
+                                                </button>
+
+                                                <button
+                                                  className="login-button"
+                                                  onClick={() => {
+                                                    setRejectModalOpen(false);
+                                                    setRejectReason("");
+                                                    setPendingRejectId(null);
+                                                  }}
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
                                       </>
                                     )}
 
