@@ -1165,7 +1165,7 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
   // Get all farm parcels with current ownership status
   const { data: parcelsData } = await supabase
     .from("rsbsa_farm_parcels")
-    .select("submission_id, is_current_owner");
+    .select("submission_id, is_current_owner, is_cultivating");
 
   // Create a map of submission_id -> has any current parcels
   const currentOwnershipMap = new Map<number, boolean>();
@@ -1193,6 +1193,71 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
     parcelCountMap.set(subId, (parcelCountMap.get(subId) || 0) + 1);
   });
 
+  const initCultivationCounts = () => ({
+    active: 0,
+    inactive: 0,
+    unknown: 0,
+    total: 0,
+  });
+
+  const updateCultivationCounts = (
+    counts: {
+      active: number;
+      inactive: number;
+      unknown: number;
+      total: number;
+    },
+    value: unknown,
+  ) => {
+    counts.total += 1;
+    if (value === true) {
+      counts.active += 1;
+      return;
+    }
+    if (value === false) {
+      counts.inactive += 1;
+      return;
+    }
+    counts.unknown += 1;
+  };
+
+  const cultivationMap = new Map<
+    number,
+    {
+      current: ReturnType<typeof initCultivationCounts>;
+      all: ReturnType<typeof initCultivationCounts>;
+    }
+  >();
+
+  (parcelsData || []).forEach((parcel: any) => {
+    const subId = parcel.submission_id;
+    if (subId === null || subId === undefined) return;
+    const entry = cultivationMap.get(subId) || {
+      current: initCultivationCounts(),
+      all: initCultivationCounts(),
+    };
+
+    updateCultivationCounts(entry.all, parcel.is_cultivating);
+    if (parcel.is_current_owner !== false) {
+      updateCultivationCounts(entry.current, parcel.is_cultivating);
+    }
+
+    cultivationMap.set(subId, entry);
+  });
+
+  const deriveCultivationStatus = (counts?: {
+    active: number;
+    inactive: number;
+    unknown: number;
+    total: number;
+  }) => {
+    if (!counts || counts.total === 0) return "Not specified";
+    if (counts.active > 0 && counts.inactive > 0) return "Mixed";
+    if (counts.active > 0) return "Actively farming";
+    if (counts.inactive > 0) return "Not farming";
+    return "Not specified";
+  };
+
   // Transform all records and attach ownership info
   const transformedData = filteredData.map((item: any) => {
     const record = transformRsbsaRecord(item);
@@ -1203,6 +1268,13 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
         ? normalizedParcelCount
         : deriveLegacyParcelFallbackCount(item);
 
+    const cultivationEntry = cultivationMap.get(item.id);
+    const cultivationCounts = cultivationEntry
+      ? cultivationEntry.current.total > 0
+        ? cultivationEntry.current
+        : cultivationEntry.all
+      : undefined;
+
     return {
       ...record,
       // true = has current parcels, false = all transferred, undefined = no parcels at all
@@ -1212,6 +1284,15 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
         normalizedParcelCount === 0 && fallbackParcelCount > 0,
       archived_at: item.archived_at ?? null,
       archive_reason: item.archive_reason ?? null,
+      cultivationStatus: deriveCultivationStatus(cultivationCounts),
+      cultivationSummary: cultivationCounts
+        ? {
+            active: cultivationCounts.active,
+            inactive: cultivationCounts.inactive,
+            unknown: cultivationCounts.unknown,
+            total: cultivationCounts.total,
+          }
+        : null,
     };
   });
 
@@ -1285,24 +1366,36 @@ export const createRsbsaSubmission = async (
     farmerPoultry: formData.farmerPoultry || false,
     farmerPoultryText: formData.farmerPoultryText || "",
     // Parcels with transfer info
-    farmlandParcels: parcels.map((p: any) => ({
-      farmLocationBarangay: p.farmLocationBarangay || "",
-      farmLocationMunicipality: p.farmLocationMunicipality || "Dumangas",
-      totalFarmAreaHa: parseFloat(p.totalFarmAreaHa) || 0,
-      parcelNo: p.parcelNo || "",
-      existingParcelId: p.existingParcelId || null,
-      existingParcelNumber: p.existingParcelNumber || null,
-      withinAncestralDomain:
-        p.withinAncestralDomain === "Yes" || p.withinAncestralDomain === true
-          ? "Yes"
-          : "No",
-      agrarianReformBeneficiary:
-        p.agrarianReformBeneficiary === "Yes" ||
-        p.agrarianReformBeneficiary === true
-          ? "Yes"
-          : "No",
-      ownershipDocumentNo: p.ownershipDocumentNo || "",
-    })),
+    farmlandParcels: parcels.map((p: any) => {
+      const isCultivating =
+        p.isCultivating === true
+          ? true
+          : p.isCultivating === false
+            ? false
+            : null;
+      return {
+        farmLocationBarangay: p.farmLocationBarangay || "",
+        farmLocationMunicipality: p.farmLocationMunicipality || "Dumangas",
+        totalFarmAreaHa: parseFloat(p.totalFarmAreaHa) || 0,
+        parcelNo: p.parcelNo || "",
+        existingParcelId: p.existingParcelId || null,
+        existingParcelNumber: p.existingParcelNumber || null,
+        withinAncestralDomain:
+          p.withinAncestralDomain === "Yes" || p.withinAncestralDomain === true
+            ? "Yes"
+            : "No",
+        agrarianReformBeneficiary:
+          p.agrarianReformBeneficiary === "Yes" ||
+          p.agrarianReformBeneficiary === true
+            ? "Yes"
+            : "No",
+        ownershipDocumentNo: p.ownershipDocumentNo || "",
+        isCultivating,
+        cultivationStatusUpdatedAt: p.cultivationStatusUpdatedAt || null,
+        cultivationStatusReason: p.cultivationStatusReason || null,
+        cultivatorSubmissionId: p.cultivatorSubmissionId || null,
+      };
+    }),
   };
 
   console.log(

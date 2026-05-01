@@ -33,6 +33,7 @@ interface RSBSARecord {
   dateSubmitted: string;
   status: string;
   landParcel: string;
+  cultivationStatus?: string;
   archivedAt?: string | null;
   archiveReason?: string | null;
   ownershipType?: {
@@ -591,6 +592,9 @@ const JoMasterlist: React.FC = () => {
             dateSubmitted,
             status,
             landParcel,
+            cultivationStatus: String(
+              item.cultivationStatus || "Not specified",
+            ),
             archivedAt,
             archiveReason,
             ownershipType: item.ownershipType,
@@ -810,7 +814,7 @@ const JoMasterlist: React.FC = () => {
   );
 
   const isNoParcelsQueueView = selectedStatus === "noParcels";
-  const visibleColumnCount = isNoParcelsQueueView ? 9 : 8;
+  const visibleColumnCount = isNoParcelsQueueView ? 8 : 7;
 
   const allFilteredSelected =
     filteredRecords.length > 0 &&
@@ -1195,20 +1199,6 @@ const JoMasterlist: React.FC = () => {
         idsToRestore.forEach((id) => next.delete(id));
         return next;
       });
-    }
-  };
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case "Submitted":
-      case "Active Farmer":
-        return "jo-masterlist-status-approved";
-      case "Not Submitted":
-        return "jo-masterlist-status-not-approved";
-      case "No Parcels":
-        return "jo-masterlist-status-no-parcels";
-      default:
-        return "jo-masterlist-status-pending";
     }
   };
 
@@ -1812,7 +1802,20 @@ const JoMasterlist: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">JO Masterlist</div>
           </div>
@@ -2028,7 +2031,6 @@ const JoMasterlist: React.FC = () => {
                         Farmer <span>{getSortIndicator("farmerName")}</span>
                       </button>
                     </th>
-                    <th>Address</th>
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${
@@ -2039,10 +2041,10 @@ const JoMasterlist: React.FC = () => {
                           handleSortChange("parcelArea");
                         }}
                       >
-                        Parcel Area{" "}
-                        <span>{getSortIndicator("parcelArea")}</span>
+                        Parcels <span>{getSortIndicator("parcelArea")}</span>
                       </button>
                     </th>
+                    <th>Cultivation</th>
                     <th>Ownership Status</th>
                     <th>
                       <button
@@ -2056,19 +2058,6 @@ const JoMasterlist: React.FC = () => {
                       >
                         Date Submitted{" "}
                         <span>{getSortIndicator("dateSubmitted")}</span>
-                      </button>
-                    </th>
-                    <th>
-                      <button
-                        className={`jo-masterlist-sort-btn ${
-                          isSortActive("status") ? "is-active" : ""
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSortChange("status");
-                        }}
-                      >
-                        Status <span>{getSortIndicator("status")}</span>
                       </button>
                     </th>
                     {isNoParcelsQueueView && <th>Archive Details</th>}
@@ -2106,15 +2095,6 @@ const JoMasterlist: React.FC = () => {
                       const normalizedStatus = statusText.toLowerCase().trim();
                       const isNoParcelsStatus =
                         normalizedStatus === "no parcels";
-                      const archiveMeta = [
-                        record.archiveReason || "",
-                        record.archivedAt
-                          ? `Archived: ${formatDateTime(record.archivedAt)}`
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" • ");
-
                       return (
                         <tr
                           key={record.id}
@@ -2147,13 +2127,6 @@ const JoMasterlist: React.FC = () => {
                             </div>
                           </td>
                           <td>
-                            <div className="jo-masterlist-address-cell">
-                              <span className="jo-masterlist-address-primary">
-                                {record.farmerAddress}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
                             <div className="jo-masterlist-parcel-cell">
                               <span className="jo-masterlist-parcel-count">
                                 {record.parcelCount} parcel
@@ -2163,6 +2136,11 @@ const JoMasterlist: React.FC = () => {
                                 {formatParcelArea(record.parcelArea)}
                               </span>
                             </div>
+                          </td>
+                          <td>
+                            <span className="jo-masterlist-cultivation-text">
+                              {record.cultivationStatus || "Not specified"}
+                            </span>
                           </td>
                           <td>
                             <div className="jo-masterlist-status-cell">
@@ -2177,20 +2155,6 @@ const JoMasterlist: React.FC = () => {
                             <span className="jo-masterlist-date">
                               {formatDate(record.dateSubmitted)}
                             </span>
-                          </td>
-                          <td>
-                            <div className="jo-masterlist-status-cell">
-                              <span
-                                className={`jo-masterlist-status-pill ${getStatusClass(statusText)}`}
-                              >
-                                {statusText}
-                              </span>
-                              {isNoParcelsStatus && archiveMeta && (
-                                <span className="jo-masterlist-archive-meta">
-                                  {archiveMeta}
-                                </span>
-                              )}
-                            </div>
                           </td>
                           {isNoParcelsQueueView && (
                             <td>

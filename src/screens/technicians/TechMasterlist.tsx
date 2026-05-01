@@ -28,6 +28,7 @@ interface RSBSARecord {
   dateSubmitted: string;
   status: string;
   landParcel: string;
+  cultivationStatus?: string;
   // Simple per-record data quality based on key fields present in masterlist
   completeness: number;
   ownershipType?: {
@@ -64,6 +65,10 @@ interface ParcelDetail {
   ownershipTypeLessee: boolean;
   tenantLandOwnerName: string;
   lesseeLandOwnerName: string;
+  isCultivating?: boolean | null;
+  cultivationStatusReason?: string | null;
+  cultivationStatusUpdatedAt?: string | null;
+  cultivatorSubmissionId?: number | null;
 }
 
 interface UnplottedFarmerItem {
@@ -130,7 +135,6 @@ const TechMasterlist: React.FC = () => {
   >([]);
 
   const isActive = (path: string) => location.pathname === path;
-
   const showUpdateNotification = (
     message: string,
     type: "success" | "error",
@@ -255,6 +259,22 @@ const TechMasterlist: React.FC = () => {
         ownershipTypeLessee: p.ownership_type_lessee || false,
         tenantLandOwnerName: p.tenant_land_owner_name || "",
         lesseeLandOwnerName: p.lessee_land_owner_name || "",
+        isCultivating:
+          typeof p.is_cultivating === "boolean"
+            ? p.is_cultivating
+            : typeof p.isCultivating === "boolean"
+              ? p.isCultivating
+              : null,
+        cultivationStatusReason:
+          p.cultivation_status_reason || p.cultivationStatusReason || null,
+        cultivationStatusUpdatedAt:
+          p.cultivation_status_updated_at ||
+          p.cultivationStatusUpdatedAt ||
+          null,
+        cultivatorSubmissionId:
+          typeof p.cultivator_submission_id === "number"
+            ? p.cultivator_submission_id
+            : p.cultivatorSubmissionId || null,
       }));
 
       // Fallback: if no parcels in rsbsa_farm_parcels, build from submission-level data
@@ -304,6 +324,10 @@ const TechMasterlist: React.FC = () => {
                 false,
               tenantLandOwnerName: "",
               lesseeLandOwnerName: "",
+              isCultivating: null,
+              cultivationStatusReason: null,
+              cultivationStatusUpdatedAt: null,
+              cultivatorSubmissionId: null,
             },
           ];
         }
@@ -405,6 +429,7 @@ const TechMasterlist: React.FC = () => {
           dateSubmitted,
           status,
           landParcel,
+          cultivationStatus: String(item.cultivationStatus || "Not specified"),
         };
 
         const completeness = calculateRecordCompleteness(baseRecord);
@@ -508,7 +533,7 @@ const TechMasterlist: React.FC = () => {
   };
 
   const getStatusClass = (status: string) => {
-    const normalizedStatus = String(status || "")
+    const normalizedStatus = String(status ?? "")
       .toLowerCase()
       .trim();
 
@@ -518,7 +543,6 @@ const TechMasterlist: React.FC = () => {
 
     if (
       normalizedStatus === "not active" ||
-      normalizedStatus === "not active farmer" ||
       normalizedStatus === "inactive farmer" ||
       normalizedStatus === "inactive"
     ) {
@@ -526,6 +550,49 @@ const TechMasterlist: React.FC = () => {
     }
 
     return "status-pending";
+  };
+
+  const getOwnershipLabel = (record: RSBSARecord) => {
+    const ownership = record.ownershipType;
+    if (!ownership) return "Unknown";
+    if (ownership.registeredOwner) return "Owner";
+    if (ownership.tenant && ownership.lessee) return "Tenant + Lessee";
+    if (ownership.tenant) return "Tenant";
+    if (ownership.lessee) return "Lessee";
+    if (ownership.tenantLessee) return "Tenant/Lessee";
+    return "Unknown";
+  };
+
+  const getOwnershipChipClass = (record: RSBSARecord) => {
+    const ownership = record.ownershipType;
+    if (!ownership) return "tech-masterlist-chip-unknown";
+    if (ownership.registeredOwner) return "tech-masterlist-chip-owner";
+    if (ownership.lessee && !ownership.tenant)
+      return "tech-masterlist-chip-lessee";
+    if (ownership.tenant) return "tech-masterlist-chip-tenant";
+    if (ownership.tenantLessee) return "tech-masterlist-chip-tenant";
+    return "tech-masterlist-chip-unknown";
+  };
+
+  const getFarmerStatusLabel = (record: RSBSARecord) => {
+    const normalized = String(record.status || "")
+      .toLowerCase()
+      .trim();
+    if (normalized === "active farmer" || normalized === "active")
+      return "Active";
+    if (normalized) return "Not Active";
+    return "Unknown";
+  };
+
+  const getFarmerStatusClass = (record: RSBSARecord) => {
+    const normalized = String(record.status || "")
+      .toLowerCase()
+      .trim();
+    if (normalized === "active farmer" || normalized === "active") {
+      return "tech-masterlist-chip-status-active";
+    }
+    if (normalized) return "tech-masterlist-chip-status-inactive";
+    return "tech-masterlist-chip-status-unknown";
   };
 
   const toggleStatus = async (id: string) => {
@@ -956,7 +1023,20 @@ const TechMasterlist: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">Masterlist</div>
           </div>
@@ -1028,9 +1108,7 @@ const TechMasterlist: React.FC = () => {
               </div>
             </div>
             <div className="tech-masterlist-table-container">
-              <table
-                className="tech-masterlist-farmers-table"
-              >
+              <table className="tech-masterlist-farmers-table">
                 <thead>
                   <tr>
                     {[
@@ -1049,14 +1127,14 @@ const TechMasterlist: React.FC = () => {
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={7} className="tech-masterlist-loading-cell">
+                      <td colSpan={8} className="tech-masterlist-loading-cell">
                         Loading...
                       </td>
                     </tr>
                   )}
                   {error && !loading && (
                     <tr>
-                      <td colSpan={7} className="tech-masterlist-error-cell">
+                      <td colSpan={8} className="tech-masterlist-error-cell">
                         Error: {error}
                       </td>
                     </tr>
@@ -1078,10 +1156,29 @@ const TechMasterlist: React.FC = () => {
                             {record.referenceNumber || "N/A"}
                           </span>
                         </td>
-                        <td>{record.farmerName}</td>
+                        <td>
+                          <div className="tech-masterlist-farmer-cell">
+                            <span className="tech-masterlist-farmer-name">
+                              {record.farmerName}
+                            </span>
+                            <div className="tech-masterlist-farmer-chips">
+                              <span
+                                className={`tech-masterlist-chip ${getOwnershipChipClass(record)}`}
+                              >
+                                {getOwnershipLabel(record)}
+                              </span>
+                              <span
+                                className={`tech-masterlist-chip ${getFarmerStatusClass(record)}`}
+                              >
+                                {getFarmerStatusLabel(record)}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
                         <td>{record.farmerAddress}</td>
                         <td>{record.farmLocation}</td>
                         <td>{record.parcelArea}</td>
+                        <td>{record.cultivationStatus || "Not specified"}</td>
                         <td>{formatDate(record.dateSubmitted)}</td>
                         <td>
                           <button
@@ -1101,7 +1198,7 @@ const TechMasterlist: React.FC = () => {
                     sortedFilteredRecords.length === 0 &&
                     Array.from({ length: 16 }).map((_, i) => (
                       <tr key={`empty-${i}`}>
-                        <td colSpan={7}>&nbsp;</td>
+                        <td colSpan={8}>&nbsp;</td>
                       </tr>
                     ))}
                 </tbody>
@@ -1455,6 +1552,25 @@ const TechMasterlist: React.FC = () => {
                                           String(parcel.totalFarmAreaHa || 0),
                                         ).toFixed(2)}{" "}
                                     hectares
+                                  </span>
+                                </div>
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Cultivation Status:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.isCultivating === true
+                                      ? "Actively farming"
+                                      : parcel.isCultivating === false
+                                        ? "Not farming"
+                                        : "Not specified"}
+                                    {parcel.isCultivating === false &&
+                                      parcel.cultivationStatusReason && (
+                                        <span className="farmer-modal-owner-name">
+                                          {" "}
+                                          ({parcel.cultivationStatusReason})
+                                        </span>
+                                      )}
                                   </span>
                                 </div>
                               </div>

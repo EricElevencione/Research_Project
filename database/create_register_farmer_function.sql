@@ -33,6 +33,10 @@ DECLARE
     v_selected_land_owner JSONB;
     v_remaining_count INT;
     v_has_existing_parcel_ref BOOLEAN;
+    v_is_cultivating BOOLEAN;
+    v_cultivation_status_updated_at TIMESTAMPTZ;
+    v_cultivation_status_reason TEXT;
+    v_cultivator_submission_id BIGINT;
 BEGIN
     -- CRITICAL: Disable the auto-insert trigger on rsbsa_farm_parcels
     -- This trigger (create_land_history_from_farm_parcel) auto-creates a land_history record
@@ -128,6 +132,25 @@ BEGIN
         v_previous_history_id := NULL;
         v_land_parcel_id := NULL;
         v_has_existing_parcel_ref := (v_parcel->>'existingParcelId') IS NOT NULL AND (v_parcel->>'existingParcelId') != '';
+                v_is_cultivating := CASE
+                        WHEN COALESCE(v_parcel->>'isCultivating', '') = '' THEN TRUE
+                        WHEN LOWER(COALESCE(v_parcel->>'isCultivating', '')) IN ('false', 'f', 'no', '0') THEN FALSE
+                        ELSE TRUE
+                END;
+                v_cultivation_status_reason := NULLIF(v_parcel->>'cultivationStatusReason', '');
+                v_cultivation_status_updated_at := CASE
+                        WHEN (v_parcel ? 'cultivationStatusUpdatedAt')
+                            AND COALESCE(v_parcel->>'cultivationStatusUpdatedAt', '') <> ''
+                            THEN (v_parcel->>'cultivationStatusUpdatedAt')::TIMESTAMPTZ
+                        WHEN (v_parcel ? 'isCultivating') THEN NOW()
+                        ELSE NULL
+                END;
+                v_cultivator_submission_id := CASE
+                        WHEN COALESCE(v_parcel->>'cultivatorSubmissionId', '') <> ''
+                            THEN (v_parcel->>'cultivatorSubmissionId')::BIGINT
+                        WHEN v_is_cultivating THEN v_submission_id
+                        ELSE NULL
+                END;
 
         -- Skip parcels with no location or area
         IF v_barangay = '' OR v_area = 0 THEN
@@ -231,7 +254,9 @@ BEGIN
             total_farm_area_ha, within_ancestral_domain, agrarian_reform_beneficiary,
             ownership_document_no, ownership_type_registered_owner, ownership_type_tenant,
             ownership_type_lessee, tenant_land_owner_name, lessee_land_owner_name,
-            tenant_land_owner_id, lessee_land_owner_id, is_current_owner
+            tenant_land_owner_id, lessee_land_owner_id, is_current_owner,
+            is_cultivating, cultivation_status_updated_at, cultivation_status_reason,
+            cultivator_submission_id
         ) VALUES (
             v_submission_id, v_parcel_number, v_barangay, v_municipality,
             v_area,
@@ -245,11 +270,38 @@ BEGIN
             CASE WHEN v_is_lessee AND v_selected_land_owner IS NOT NULL THEN v_selected_land_owner->>'name' ELSE '' END,
             CASE WHEN v_is_tenant AND v_selected_land_owner IS NOT NULL THEN (v_selected_land_owner->>'id')::BIGINT ELSE NULL END,
             CASE WHEN v_is_lessee AND v_selected_land_owner IS NOT NULL THEN (v_selected_land_owner->>'id')::BIGINT ELSE NULL END,
-            v_is_registered_owner
+            v_is_registered_owner,
+            v_is_cultivating,
+            v_cultivation_status_updated_at,
+            v_cultivation_status_reason,
+            v_cultivator_submission_id
         )
         RETURNING id INTO v_farm_parcel_id;
 
         RAISE NOTICE 'Created farm_parcel: % (id=%)', v_parcel_number, v_farm_parcel_id;
+
+        -- For tenant/lessee associations, mark the selected owner's matching parcel as
+        -- not currently cultivated by the owner and link it to the new cultivator submission.
+        IF (v_is_tenant OR v_is_lessee) AND v_selected_land_owner IS NOT NULL THEN
+            UPDATE rsbsa_farm_parcels
+            SET is_cultivating = FALSE,
+                cultivation_status_updated_at = COALESCE(v_cultivation_status_updated_at, NOW()),
+                cultivation_status_reason = COALESCE(
+                    v_cultivation_status_reason,
+                    CASE
+                        WHEN v_is_tenant AND v_is_lessee THEN 'Cultivated by tenant/lessee: ' || v_farmer_name
+                        WHEN v_is_tenant THEN 'Cultivated by tenant: ' || v_farmer_name
+                        WHEN v_is_lessee THEN 'Cultivated by lessee: ' || v_farmer_name
+                        ELSE 'Cultivation status updated'
+                    END
+                ),
+                cultivator_submission_id = v_submission_id,
+                updated_at = NOW()
+                        WHERE submission_id = NULLIF(v_selected_land_owner->>'id', '')::BIGINT
+              AND parcel_number = v_parcel_number
+              AND ownership_type_registered_owner = TRUE
+              AND (is_current_owner IS NULL OR is_current_owner = TRUE);
+        END IF;
 
         -- Insert land_history record
         INSERT INTO land_history (

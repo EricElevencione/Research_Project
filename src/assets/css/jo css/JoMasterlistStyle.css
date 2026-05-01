@@ -333,6 +333,12 @@
   font-size: 12px;
 }
 
+.jo-masterlist-cultivation-text {
+  color: #14532d;
+  font-weight: 700;
+  font-size: 13px;
+}
+
 .jo-masterlist-address-cell,
 .jo-masterlist-parcel-cell {
   display: flex;

@@ -33,6 +33,7 @@ interface RSBSARecord {
   parcelArea: number | string | null;
   totalFarmArea: number;
   parcelCount: number;
+  cultivationStatus?: string;
   ownershipType: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -67,6 +68,10 @@ interface ParcelDetail {
   ownershipTypeLessee: boolean;
   tenantLandOwnerName: string;
   lesseeLandOwnerName: string;
+  isCultivating?: boolean | null;
+  cultivationStatusReason?: string | null;
+  cultivationStatusUpdatedAt?: string | null;
+  cultivatorSubmissionId?: number | null;
 }
 
 interface Parcel {
@@ -84,6 +89,9 @@ interface Parcel {
   tenant_land_owner_name: string;
   lessee_land_owner_name: string;
   ownership_others_specify: string;
+  is_cultivating?: boolean | null;
+  cultivation_status_reason?: string | null;
+  cultivation_status_updated_at?: string | null;
 }
 
 interface EditFormData {
@@ -101,7 +109,7 @@ interface EditFormData {
   age?: string;
 }
 
-type SortKey = "farmer" | "gender" | "parcelArea" | "dateSubmitted";
+type SortKey = "farmer" | "parcelArea" | "dateSubmitted";
 type SortDirection = "asc" | "desc";
 
 const JoRsbsaPage: React.FC = () => {
@@ -155,6 +163,13 @@ const JoRsbsaPage: React.FC = () => {
     "Tamboilan",
     "Victorias",
   ].sort();
+
+  const cultivationReasonOptions = [
+    "Tenant/Lessee farming",
+    "Contract expired",
+    "Idle",
+    "Unknown",
+  ];
 
   const [_activeTab] = useState("overview");
   const [_rsbsaRecords, _setRsbsaRecords] = useState<RSBSARecord[]>([]);
@@ -379,6 +394,22 @@ const JoRsbsaPage: React.FC = () => {
         ownershipTypeLessee: p.ownership_type_lessee || false,
         tenantLandOwnerName: p.tenant_land_owner_name || "",
         lesseeLandOwnerName: p.lessee_land_owner_name || "",
+        isCultivating:
+          typeof p.is_cultivating === "boolean"
+            ? p.is_cultivating
+            : typeof p.isCultivating === "boolean"
+              ? p.isCultivating
+              : null,
+        cultivationStatusReason:
+          p.cultivation_status_reason || p.cultivationStatusReason || null,
+        cultivationStatusUpdatedAt:
+          p.cultivation_status_updated_at ||
+          p.cultivationStatusUpdatedAt ||
+          null,
+        cultivatorSubmissionId:
+          typeof p.cultivator_submission_id === "number"
+            ? p.cultivator_submission_id
+            : p.cultivatorSubmissionId || null,
       }));
 
       // Fallback: if no parcels in rsbsa_farm_parcels, build from submission-level data
@@ -427,6 +458,10 @@ const JoRsbsaPage: React.FC = () => {
                 false,
               tenantLandOwnerName: "",
               lesseeLandOwnerName: "",
+              isCultivating: null,
+              cultivationStatusReason: null,
+              cultivationStatusUpdatedAt: null,
+              cultivatorSubmissionId: null,
             },
           ];
         }
@@ -483,20 +518,23 @@ const JoRsbsaPage: React.FC = () => {
     return Array.from(barangays).sort();
   }, [registeredOwners]);
 
-  const statusCounts = React.useMemo(() => {
+  const isActiveFarmerStatus = (statusValue: string) => {
     const activeStatuses = new Set([
       "submitted",
       "approved",
       "active",
       "active farmer",
     ]);
+    return activeStatuses.has(
+      String(statusValue || "")
+        .toLowerCase()
+        .trim(),
+    );
+  };
 
+  const statusCounts = React.useMemo(() => {
     const active = registeredOwners.filter((record) =>
-      activeStatuses.has(
-        String(record.status || "")
-          .toLowerCase()
-          .trim(),
-      ),
+      isActiveFarmerStatus(record.status || ""),
     ).length;
     const total = registeredOwners.length;
     const inactive = Math.max(0, total - active);
@@ -569,23 +607,6 @@ const JoRsbsaPage: React.FC = () => {
         );
       }
 
-      if (sortConfig.key === "gender") {
-        const genderRank = (gender: string) => {
-          const normalized = String(gender || "")
-            .toLowerCase()
-            .trim();
-          if (normalized === "male") return 0;
-          if (normalized === "female") return 1;
-          return 2;
-        };
-
-        const rankDiff = genderRank(a.gender) - genderRank(b.gender);
-        if (rankDiff !== 0) return rankDiff * factor;
-        return (
-          String(a.gender || "").localeCompare(String(b.gender || "")) * factor
-        );
-      }
-
       if (sortConfig.key === "parcelArea") {
         const parseArea = (value: number | string | null | undefined) => {
           const parsed =
@@ -618,7 +639,7 @@ const JoRsbsaPage: React.FC = () => {
         };
       }
 
-      if (key === "farmer" || key === "gender") {
+      if (key === "farmer") {
         return { key, direction: "asc" };
       }
 
@@ -1106,6 +1127,12 @@ const JoRsbsaPage: React.FC = () => {
               tenant_land_owner_name: parcel.tenant_land_owner_name,
               lessee_land_owner_name: parcel.lessee_land_owner_name,
               ownership_others_specify: parcel.ownership_others_specify,
+              is_cultivating: parcel.is_cultivating ?? null,
+              cultivation_status_reason:
+                parcel.is_cultivating === false
+                  ? (parcel.cultivation_status_reason ?? null)
+                  : null,
+              cultivation_status_updated_at: new Date().toISOString(),
             });
 
             if (parcelResponse.error) {
@@ -1236,7 +1263,20 @@ const JoRsbsaPage: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">JO RSBSA</div>
           </div>
@@ -1318,9 +1358,15 @@ const JoRsbsaPage: React.FC = () => {
 
               <button
                 className="jo-rsbsa-register-button"
+                onClick={() => navigate("/jo-rsbsa-landowner")}
+              >
+                Register Land Owner
+              </button>
+              <button
+                className="jo-rsbsa-register-button"
                 onClick={() => navigate("/jo-rsbsa")}
               >
-                Register Farmer
+                Register Tenant/Lessee
               </button>
             </div>
             {loading ? (
@@ -1368,19 +1414,6 @@ const JoRsbsaPage: React.FC = () => {
                       <th>
                         <button
                           className={`jo-rsbsa-sort-btn ${
-                            sortConfig.key === "gender" ? "is-active" : ""
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSortChange("gender");
-                          }}
-                        >
-                          Gender <span>{getSortIndicator("gender")}</span>
-                        </button>
-                      </th>
-                      <th>
-                        <button
-                          className={`jo-rsbsa-sort-btn ${
                             sortConfig.key === "parcelArea" ? "is-active" : ""
                           }`}
                           onClick={(e) => {
@@ -1388,10 +1421,10 @@ const JoRsbsaPage: React.FC = () => {
                             handleSortChange("parcelArea");
                           }}
                         >
-                          Parcel Area{" "}
-                          <span>{getSortIndicator("parcelArea")}</span>
+                          Parcels <span>{getSortIndicator("parcelArea")}</span>
                         </button>
                       </th>
+                      <th>Cultivation</th>
                       <th>Ownership Status</th>
                       <th>
                         <button
@@ -1446,7 +1479,6 @@ const JoRsbsaPage: React.FC = () => {
                                 </div>
                               </div>
                             </td>
-                            <td>{record.gender || "N/A"}</td>
                             <td>
                               <div className="jo-rsbsa-parcel-cell">
                                 <span className="jo-rsbsa-parcel-count">
@@ -1457,6 +1489,9 @@ const JoRsbsaPage: React.FC = () => {
                                   {formatParcelArea(record.totalFarmArea)}
                                 </span>
                               </div>
+                            </td>
+                            <td>
+                              {record.cultivationStatus || "Not specified"}
                             </td>
                             <td>
                               <span
@@ -1641,6 +1676,65 @@ const JoRsbsaPage: React.FC = () => {
                             Location: {parcel.farm_location_barangay || "N/A"}
                           </small>
                         </div>
+                        <div className="jo-rsbsa-form-group">
+                          <label>Currently farming this parcel?</label>
+                          <select
+                            value={
+                              parcel.is_cultivating === true
+                                ? "true"
+                                : parcel.is_cultivating === false
+                                  ? "false"
+                                  : ""
+                            }
+                            onChange={(e) => {
+                              const nextValue = e.target.value;
+                              const normalizedValue =
+                                nextValue === "true"
+                                  ? true
+                                  : nextValue === "false"
+                                    ? false
+                                    : null;
+                              handleIndividualParcelChange(
+                                parcel.id,
+                                "is_cultivating",
+                                normalizedValue,
+                              );
+                              if (normalizedValue !== false) {
+                                handleIndividualParcelChange(
+                                  parcel.id,
+                                  "cultivation_status_reason",
+                                  null,
+                                );
+                              }
+                            }}
+                          >
+                            <option value="">Not specified</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                          </select>
+                        </div>
+                        {parcel.is_cultivating === false && (
+                          <div className="jo-rsbsa-form-group">
+                            <label>Reason</label>
+                            <select
+                              value={parcel.cultivation_status_reason || ""}
+                              onChange={(e) =>
+                                handleIndividualParcelChange(
+                                  parcel.id,
+                                  "cultivation_status_reason",
+                                  e.target.value || null,
+                                )
+                              }
+                            >
+                              <option value="">Select reason</option>
+                              {cultivationReasonOptions.map((reason) => (
+                                <option key={reason} value={reason}>
+                                  {reason}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -1862,6 +1956,25 @@ const JoRsbsaPage: React.FC = () => {
                                             String(parcel.totalFarmAreaHa || 0),
                                           ).toFixed(2)}{" "}
                                       hectares
+                                    </span>
+                                  </div>
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      Cultivation Status:
+                                    </span>
+                                    <span className="farmer-modal-value">
+                                      {parcel.isCultivating === true
+                                        ? "Actively farming"
+                                        : parcel.isCultivating === false
+                                          ? "Not farming"
+                                          : "Not specified"}
+                                      {parcel.isCultivating === false &&
+                                        parcel.cultivationStatusReason && (
+                                          <span className="farmer-modal-owner-name">
+                                            {" "}
+                                            ({parcel.cultivationStatusReason})
+                                          </span>
+                                        )}
                                     </span>
                                   </div>
                                 </div>

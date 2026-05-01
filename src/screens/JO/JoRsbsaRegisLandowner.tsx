@@ -1,10 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  getLandOwners,
-  getFarmParcels,
-  createRsbsaSubmission,
-} from "../../api";
+import { getLandOwners, createRsbsaSubmission } from "../../api";
 import { supabase } from "../../supabase";
 import {
   getAuditLogger,
@@ -26,11 +22,11 @@ interface Parcel {
   farmLocationMunicipality: string;
   totalFarmAreaHa: string;
   withinAncestralDomain: string; // 'Yes' | 'No'
+  isCultivating?: boolean | null;
   ownershipDocumentNo: string;
   agrarianReformBeneficiary: string; // 'Yes' | 'No'
-  ownershipTypeRegisteredOwner: false;
-  ownershipTypeTenant: boolean; // ✅ accepts isTenant
-  isCultivating: boolean;
+  ownershipTypeRegisteredOwner: boolean;
+  ownershipTypeTenant: boolean;
   ownershipTypeLessee: boolean;
   ownershipTypeOthers: boolean;
   tenantLandOwnerName: string;
@@ -46,17 +42,6 @@ interface LandOwner {
   name: string;
   barangay?: string;
   municipality?: string;
-}
-
-// Interface for existing parcels from land_parcels table
-interface ExistingParcel {
-  id: number;
-  parcel_number: string;
-  farm_location_barangay: string;
-  farm_location_municipality: string;
-  total_farm_area_ha: number;
-  current_holder?: string;
-  ownership_type?: string;
 }
 
 interface FormData {
@@ -168,38 +153,15 @@ const toTitleCase = (text: string): string => {
     .trim();
 };
 
-const JoRsbsa: React.FC = () => {
+const JoRsbsaRegisLandowner: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-
-  type OwnershipCategory = "tenant" | "lessee";
 
   const [_activeTab] = useState("overview");
   const isActive = (path: string) => location.pathname === path;
   const [draftId, _setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [landowners, setLandowners] = useState<LandOwner[]>([]);
-
-  // New state for ownership category selection
-  const [ownershipCategory, setOwnershipCategory] =
-    useState<OwnershipCategory>("tenant");
-
-  const [selectedLandOwner, setSelectedLandOwner] = useState<any>(null);
-  const [landOwnerSearchTerm, setLandOwnerSearchTerm] = useState("");
-  const [showLandOwnerDropdown, setShowLandOwnerDropdown] = useState(false);
-  const [ownerParcels, setOwnerParcels] = useState<any[]>([]);
-  const [selectedParcelIds, setSelectedParcelIds] = useState<Set<string>>(
-    new Set(),
-  );
-
-  // State for existing parcel selection (for registered owners)
-  const [allRegisteredOwners, setAllRegisteredOwners] = useState<
-    ExistingParcel[]
-  >([]);
-  const [existingParcelFilter, setExistingParcelFilter] = useState("");
-  const [useExistingParcel, setUseExistingParcel] = useState<boolean>(false);
-  const [selectedExistingParcel, setSelectedExistingParcel] =
-    useState<ExistingParcel | null>(null);
 
   // Toast notification state
   const [toast, setToast] = useState<{
@@ -213,19 +175,6 @@ const JoRsbsa: React.FC = () => {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Confirmation modal state
-  const [confirmModal, setConfirmModal] = useState<{
-    show: boolean;
-    roleText: string;
-    parcelCount: number;
-    landOwnerName: string;
-  }>({
-    show: false,
-    roleText: "",
-    parcelCount: 0,
-    landOwnerName: "",
-  });
 
   // Show toast notification
   const showToast = (
@@ -242,99 +191,7 @@ const JoRsbsa: React.FC = () => {
     );
   };
 
-  // Load all registered owners with their parcels on mount
-  useEffect(() => {
-    const fetchRegisteredOwners = async () => {
-      try {
-        const ownersResponse = await getLandOwners();
-        if (ownersResponse.error) {
-          console.error(
-            "Error fetching registered owners:",
-            ownersResponse.error,
-          );
-          setAllRegisteredOwners([]);
-          return;
-        }
-
-        const owners = (ownersResponse.data || []) as LandOwner[];
-        if (!owners.length) {
-          setAllRegisteredOwners([]);
-          return;
-        }
-
-        const ownerIds = owners
-          .map((owner) => Number(owner.id))
-          .filter((id) => Number.isFinite(id));
-
-        if (!ownerIds.length) {
-          setAllRegisteredOwners([]);
-          return;
-        }
-
-        const { data: parcels, error: parcelError } = await supabase
-          .from("rsbsa_farm_parcels")
-          .select(
-            "id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, submission_id, ownership_type_registered_owner, is_current_owner",
-          )
-          .in("submission_id", ownerIds)
-          .eq("ownership_type_registered_owner", true)
-          .or("is_current_owner.is.null,is_current_owner.eq.true");
-
-        if (parcelError) {
-          console.error("Error fetching parcels:", parcelError);
-          return;
-        }
-
-        // Build name lookup
-        const nameMap: Record<number, string> = {};
-        owners.forEach((owner) => {
-          const ownerId = Number(owner.id);
-          if (!Number.isFinite(ownerId)) return;
-          nameMap[ownerId] = owner.name;
-        });
-
-        // Map parcels to ExistingParcel format
-        const ownerParcels: ExistingParcel[] = (parcels || []).map(
-          (p: any) => ({
-            id: p.id,
-            parcel_number: p.parcel_number || `Parcel-${p.submission_id}`,
-            farm_location_barangay: p.farm_location_barangay || "",
-            farm_location_municipality:
-              p.farm_location_municipality || "Dumangas",
-            total_farm_area_ha: p.total_farm_area_ha || 0,
-            current_holder: nameMap[p.submission_id] || "Unknown",
-            ownership_type: "Owner",
-          }),
-        );
-
-        setAllRegisteredOwners(ownerParcels);
-      } catch (err) {
-        console.error("Error loading registered owners:", err);
-      }
-    };
-
-    fetchRegisteredOwners();
-  }, []);
-
   // Clear existing parcel selection
-  const clearExistingParcelSelection = () => {
-    setFormData((prev) => {
-      const parcels = [...prev.farmlandParcels];
-      parcels[0] = {
-        ...parcels[0],
-        existingParcelId: undefined,
-        existingParcelNumber: undefined,
-        farmLocationBarangay: "",
-        farmLocationMunicipality: "Dumangas",
-        totalFarmAreaHa: "",
-        isCultivating: true,
-      };
-      return { ...prev, farmlandParcels: parcels };
-    });
-    setSelectedExistingParcel(null);
-    setExistingParcelFilter("");
-    setUseExistingParcel(false);
-  };
 
   // Fetch landowners from the database
   useEffect(() => {
@@ -378,11 +235,11 @@ const JoRsbsa: React.FC = () => {
         farmLocationMunicipality: "",
         totalFarmAreaHa: "",
         withinAncestralDomain: "",
-        isCultivating: true,
+        isCultivating: null,
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
-        ownershipTypeRegisteredOwner: false, // Default to registered owner
-        ownershipTypeTenant: true,
+        ownershipTypeRegisteredOwner: true, // Default to registered owner
+        ownershipTypeTenant: false,
         ownershipTypeLessee: false,
         ownershipTypeOthers: false,
         tenantLandOwnerName: "",
@@ -471,10 +328,10 @@ const JoRsbsa: React.FC = () => {
         withinAncestralDomain: "",
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
-        isCultivating: true, // ✅ always true
-        ownershipTypeRegisteredOwner: false, // ✅ always false
-        ownershipTypeTenant: true,
-        ownershipTypeLessee: ownershipCategory === "lessee",
+        isCultivating: null, // Land owner decides later
+        ownershipTypeRegisteredOwner: true, // Always true
+        ownershipTypeTenant: false,
+        ownershipTypeLessee: false,
         ownershipTypeOthers: false,
         tenantLandOwnerName: "",
         lesseeLandOwnerName: "",
@@ -493,138 +350,6 @@ const JoRsbsa: React.FC = () => {
   };
 
   // Handle ownership category change (Registered Owner, Tenant, Lessee)
-  const handleOwnershipCategoryChange = (category: OwnershipCategory) => {
-    setOwnershipCategory(category);
-    setSelectedLandOwner(null);
-    setLandOwnerSearchTerm("");
-    setShowLandOwnerDropdown(false);
-    setOwnerParcels([]);
-    setSelectedParcelIds(new Set());
-    setErrors((prev) => ({
-      ...prev,
-      farmland: "",
-      landOwner: "",
-      parcelSelection: "",
-    }));
-
-    const isTenant = category === "tenant";
-    const isLessee = category === "lessee";
-
-    // Clear or set ownership type checkboxes based on selection
-    setFormData((prev) => {
-      const parcels = prev.farmlandParcels.map((p) => ({
-        ...p,
-        ownershipTypeRegisteredOwner: false,
-        ownershipTypeTenant: isTenant,
-        ownershipTypeLessee: isLessee,
-        tenantLandOwnerName: isTenant ? p.tenantLandOwnerName : "",
-        lesseeLandOwnerName: isLessee ? p.lesseeLandOwnerName : "",
-        isCultivating: true,
-      })) as Parcel[]; // ✅ add this cast
-      return { ...prev, farmlandParcels: parcels };
-    });
-  };
-
-  // Handle land owner selection for tenant/lessee
-  const handleLandOwnerSelect = async (owner: any) => {
-    setSelectedLandOwner(owner);
-    setLandOwnerSearchTerm(owner.name);
-    setShowLandOwnerDropdown(false);
-    setSelectedParcelIds(new Set());
-    setErrors((prev) => ({ ...prev, landOwner: "", parcelSelection: "" }));
-
-    // Fetch the land owner's parcels to show for selection
-    try {
-      const response = await getFarmParcels(owner.id, {
-        currentOwnerOnly: true,
-      });
-      if (!response.error) {
-        const parcels = (response.data || []).filter((parcel: any) => {
-          if (!parcel) return false;
-          const isOwnerParcel =
-            parcel.ownership_type_registered_owner === undefined
-              ? true
-              : parcel.ownership_type_registered_owner === true;
-          const isCurrent = parcel.is_current_owner !== false;
-          return isOwnerParcel && isCurrent;
-        });
-        console.log("Fetched land owner parcels:", parcels);
-        setOwnerParcels(parcels);
-
-        if (!parcels || parcels.length === 0) {
-          console.warn("No parcels found for land owner");
-        }
-      } else {
-        console.error("Failed to fetch land owner parcels");
-        setOwnerParcels([]);
-      }
-    } catch (error) {
-      console.error("Error fetching land owner parcels:", error);
-      setOwnerParcels([]);
-    }
-  };
-
-  // Handle parcel selection toggle
-  const handleParcelSelectionToggle = (parcelId: string | number) => {
-    const normalizedParcelId = String(parcelId);
-    setSelectedParcelIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(normalizedParcelId)) {
-        newSet.delete(normalizedParcelId);
-      } else {
-        newSet.add(normalizedParcelId);
-      }
-      return newSet;
-    });
-    setErrors((prev) => ({ ...prev, parcelSelection: "" }));
-  };
-
-  // Apply selected parcels to form data (called internally after confirmation)
-  const applySelectedParcels = () => {
-    const selectedParcels = ownerParcels.filter((p) =>
-      selectedParcelIds.has(String(p.id)),
-    );
-    const isTenant = ownershipCategory === "tenant";
-    const isLessee = ownershipCategory === "lessee";
-
-    console.log("📋 Applying selected parcels:", selectedParcels);
-
-    setFormData((prev) => {
-      const parcels: Parcel[] = selectedParcels.map(
-        (ownerParcel: any, index: number) => ({
-          parcelNo: String(index + 1),
-          farmLocationBarangay: ownerParcel.farm_location_barangay || "",
-          farmLocationMunicipality:
-            ownerParcel.farm_location_municipality || "Dumangas",
-          totalFarmAreaHa: String(ownerParcel.total_farm_area_ha || ""),
-          withinAncestralDomain: ownerParcel.within_ancestral_domain || "",
-          ownershipDocumentNo: ownerParcel.ownership_document_no || "",
-          agrarianReformBeneficiary:
-            ownerParcel.agrarian_reform_beneficiary || "",
-          isCultivating: true,
-          ownershipTypeRegisteredOwner: false,
-          ownershipTypeTenant: isTenant,
-          ownershipTypeLessee: isLessee,
-          ownershipTypeOthers: false,
-          tenantLandOwnerName: isTenant ? selectedLandOwner.name : "",
-          lesseeLandOwnerName: isLessee ? selectedLandOwner.name : "",
-          ownershipOthersSpecify: "",
-          // IMPORTANT: Include existing parcel info for ownership transfer tracking
-          existingParcelId: ownerParcel.land_parcel_id || ownerParcel.id,
-          existingParcelNumber: ownerParcel.parcel_number || "",
-        }),
-      );
-      console.log("📋 Mapped parcels with existingParcelId:", parcels);
-      return { ...prev, farmlandParcels: parcels };
-    });
-
-    setErrors((prev) => ({ ...prev, parcelSelection: "" }));
-  };
-
-  // Filter land owners based on search term
-  const filteredLandOwners = landowners.filter((owner) =>
-    owner.name.toLowerCase().includes(landOwnerSearchTerm.toLowerCase()),
-  );
 
   // Next step validation is handled by handleSubmitForm now
 
@@ -693,25 +418,37 @@ const JoRsbsa: React.FC = () => {
     }
 
     if (currentStep === 3) {
-      if (!selectedLandOwner) {
-        newErrors.landOwner = "Please search and select the land owner";
-      } else if (ownerParcels.length === 0) {
-        newErrors.parcelSelection =
-          "The selected land owner has no registered parcels. Please choose a different land owner.";
-      } else if (selectedParcelIds.size === 0) {
-        newErrors.parcelSelection = "Please select at least one parcel";
+      // KEEP only this block, DELETE the isTenantLesseeCategory block:
+      const hasValidFarmland = formData.farmlandParcels.some(
+        (parcel) =>
+          parcel.farmLocationBarangay?.toString().trim() &&
+          parcel.totalFarmAreaHa?.toString().trim(),
+      );
+      if (!hasValidFarmland)
+        newErrors.farmland = "Please fill in farm location and area";
+
+      const hasUndesignatedCultivation = formData.farmlandParcels.some(
+        (parcel) => {
+          const hasCoreParcelData =
+            !!parcel.farmLocationBarangay?.toString().trim() &&
+            !!parcel.totalFarmAreaHa?.toString().trim();
+          return (
+            hasCoreParcelData &&
+            (parcel.isCultivating === null ||
+              parcel.isCultivating === undefined)
+          );
+        },
+      );
+      if (hasUndesignatedCultivation) {
+        newErrors.farmland =
+          "Set 'Are you currently farming this parcel?' for each listed parcel.";
       }
 
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) return;
 
-      const roleText = ownershipCategory === "tenant" ? "Tenant" : "Lessee";
-      setConfirmModal({
-        show: true,
-        roleText,
-        parcelCount: selectedParcelIds.size,
-        landOwnerName: selectedLandOwner.name,
-      });
+      setErrors({});
+      setCurrentStep(4);
       return;
     }
 
@@ -738,11 +475,29 @@ const JoRsbsa: React.FC = () => {
     if (!formData.barangay?.trim()) newErrors.barangay = "Barangay is required";
 
     // Validate based on ownership category
+    const hasValidFarmlandFinal = formData.farmlandParcels.some(
+      (parcel) =>
+        parcel.farmLocationBarangay?.toString().trim() &&
+        parcel.totalFarmAreaHa?.toString().trim(),
+    );
+    if (!hasValidFarmlandFinal)
+      newErrors.farmland = "At least one parcel must include barangay and area";
 
-    if (!selectedLandOwner) {
-      if (!selectedLandOwner) {
-        newErrors.landOwner = "Please select the land owner";
-      }
+    const hasUndesignatedCultivationFinal = formData.farmlandParcels.some(
+      (parcel) => {
+        const hasCoreParcelData =
+          !!parcel.farmLocationBarangay?.toString().trim() &&
+          !!parcel.totalFarmAreaHa?.toString().trim();
+        return (
+          hasCoreParcelData &&
+          (parcel.isCultivating === null || parcel.isCultivating === undefined)
+        );
+      },
+    );
+
+    if (hasUndesignatedCultivationFinal) {
+      newErrors.farmland =
+        "Each listed parcel must have a cultivation status (Yes or No).";
     }
 
     setErrors(newErrors);
@@ -758,17 +513,10 @@ const JoRsbsa: React.FC = () => {
         dateOfBirth: formData.dateOfBirth
           ? new Date(formData.dateOfBirth)
           : null,
-        // Include ownership category and land owner info for land_history creation
-        ownershipCategory: ownershipCategory,
-        selectedLandOwner: selectedLandOwner
-          ? {
-              id: selectedLandOwner.id,
-              name: selectedLandOwner.name,
-              barangay: selectedLandOwner.barangay,
-              municipality: selectedLandOwner.municipality,
-            }
-          : null,
-        selectedParcelIds: Array.from(selectedParcelIds),
+        // DELETE these three lines:
+        // ownershipCategory: ownershipCategory,
+        // selectedLandOwner: selectedLandOwner ? { ... } : null,
+        // selectedParcelIds: Array.from(selectedParcelIds),
         farmlandParcels: formData.farmlandParcels.map((parcel) => ({
           ...parcel,
           totalFarmAreaHa: parcel.totalFarmAreaHa
@@ -777,19 +525,13 @@ const JoRsbsa: React.FC = () => {
           withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
           agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
           isCultivating: parcel.isCultivating ?? true,
-          // Include existing parcel info for ownership transfer
           existingParcelId: parcel.existingParcelId || null,
           existingParcelNumber: parcel.existingParcelNumber || null,
           ownershipType: {
-            registeredOwner: parcel.ownershipTypeRegisteredOwner || false,
-            tenant: parcel.ownershipTypeTenant || false,
-            lessee: parcel.ownershipTypeLessee || false,
+            registeredOwner: true, // Always true for this page
+            tenant: false,
+            lessee: false,
           },
-          // Optional: Remove the old flat fields so only ownershipType remains
-          // You can comment out or filter these as needed
-          // ownershipTypeRegisteredOwner: undefined,
-          // ownershipTypeTenant: undefined,
-          // ownershipTypeLessee: undefined,
         })),
       };
 
@@ -859,7 +601,7 @@ const JoRsbsa: React.FC = () => {
     );
 
     return {
-      ownershipCategory,
+      ownershipCategory: "registeredOwner",
       totalParcels: farmlandParcels.length,
       totalFarmAreaHa: Number(totalFarmAreaHa.toFixed(4)),
       farmLocation: {
@@ -867,15 +609,8 @@ const JoRsbsa: React.FC = () => {
         municipality: formData.municipality || null,
         province: formData.province || null,
       },
-      selectedLandOwner: selectedLandOwner
-        ? {
-            id: selectedLandOwner.id,
-            name: selectedLandOwner.name,
-            barangay: selectedLandOwner.barangay,
-            municipality: selectedLandOwner.municipality,
-          }
-        : null,
-      selectedParcelIds: Array.from(selectedParcelIds),
+      selectedLandOwner: null,
+      selectedParcelIds: [],
       farmActivities: {
         mainLivelihood: formData.mainLivelihood || null,
         farmerRice: !!formData.farmerRice,
@@ -1047,10 +782,10 @@ const JoRsbsa: React.FC = () => {
               </svg>
             </button>
             <div className="tech-incent-mobile-title">
-              JO RSBSA Registration - Tenant & Lessee
+              Land Owner Registration
             </div>
           </div>
-          <h2>RSBSA Enrollment Form - Tenant & Lessee</h2>
+          <h2>RSBSA Enrollment Form - Land Owner</h2>
 
           <div className="jo-registration-back-button">
             <button
@@ -1542,410 +1277,236 @@ const JoRsbsa: React.FC = () => {
               <div className="jo-registration-form-section">
                 <h3>PART III: FARMLAND</h3>
 
-                {/* Step 1: Role Selection */}
-                <div
-                  style={{
-                    marginBottom: "2rem",
-                    padding: "1.5rem",
-                    backgroundColor: "#f8f9fa",
-                    borderRadius: "8px",
-                    border: "2px solid #dee2e6",
-                  }}
-                >
-                  <h4 style={{ marginBottom: "1rem", color: "#2c3e50" }}>
-                    Select Your Role
-                  </h4>
-                  <div
-                    style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}
-                  >
-                    <label
-                      style={{
-                        flex: "1",
-                        minWidth: "200px",
-                        padding: "1rem",
-                        backgroundColor:
-                          ownershipCategory === "tenant" ? "#28a745" : "white",
-                        color:
-                          ownershipCategory === "tenant" ? "white" : "#2c3e50",
-                        border: "2px solid #28a745",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="ownershipCategory"
-                        value="tenant"
-                        checked={ownershipCategory === "tenant"}
-                        onChange={() => handleOwnershipCategoryChange("tenant")}
-                        style={{ marginRight: "0.5rem" }}
-                      />
-                      Tenant
-                    </label>
-                    <label
-                      style={{
-                        flex: "1",
-                        minWidth: "200px",
-                        padding: "1rem",
-                        backgroundColor:
-                          ownershipCategory === "lessee" ? "#ffc107" : "white",
-                        color: "#2c3e50",
-                        border: "2px solid #ffc107",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        textAlign: "center",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="ownershipCategory"
-                        value="lessee"
-                        checked={ownershipCategory === "lessee"}
-                        onChange={() => handleOwnershipCategoryChange("lessee")}
-                        style={{ marginRight: "0.5rem" }}
-                      />
-                      Lessee
-                    </label>
-                  </div>
-                </div>
-
-                {/* Step 2: Land Owner Search — shown after role is picked */}
-                <div
-                  style={{
-                    marginBottom: "2rem",
-                    padding: "1.5rem",
-                    backgroundColor: "#f8f9fa",
-                    borderRadius: "8px",
-                    border: errors.landOwner
-                      ? "2px solid #dc2626"
-                      : "2px solid #dee2e6",
-                  }}
-                >
-                  <h4 style={{ marginBottom: "1rem", color: "#2c3e50" }}>
-                    Search Land Owner
-                  </h4>
-                  <p
-                    style={{
-                      fontSize: "0.9rem",
-                      color: "#6c757d",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    Search for the land owner of the parcel(s) you are farming:
-                  </p>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      type="text"
-                      placeholder="Type land owner name..."
-                      value={landOwnerSearchTerm}
-                      onChange={(e) => {
-                        setLandOwnerSearchTerm(e.target.value);
-                        setShowLandOwnerDropdown(true);
-                        if (!e.target.value) {
-                          setSelectedLandOwner(null);
-                          setOwnerParcels([]);
-                          setSelectedParcelIds(new Set());
-                        }
-                      }}
-                      onFocus={() => setShowLandOwnerDropdown(true)}
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem",
-                        border: "1px solid #ced4da",
-                        borderRadius: "6px",
-                        fontSize: "0.95rem",
-                      }}
-                    />
-                    {showLandOwnerDropdown && landOwnerSearchTerm && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "100%",
-                          left: 0,
-                          right: 0,
-                          backgroundColor: "white",
-                          border: "1px solid #ced4da",
-                          borderRadius: "0 0 6px 6px",
-                          maxHeight: "200px",
-                          overflowY: "auto",
-                          zIndex: 100,
-                          boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                        }}
-                      >
-                        {filteredLandOwners.length > 0 ? (
-                          filteredLandOwners.map((owner) => (
-                            <div
-                              key={owner.id}
-                              onClick={() => handleLandOwnerSelect(owner)}
-                              style={{
-                                padding: "0.75rem 1rem",
-                                cursor: "pointer",
-                                borderBottom: "1px solid #f0f0f0",
-                                fontSize: "0.95rem",
-                              }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  "#f8f9fa")
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  "white")
-                              }
-                            >
-                              <strong>{owner.name}</strong>
-                              {owner.barangay && (
-                                <span
-                                  style={{
-                                    color: "#6c757d",
-                                    marginLeft: "0.5rem",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  — {owner.barangay}
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          <div
-                            style={{
-                              padding: "0.75rem 1rem",
-                              color: "#6c757d",
-                              fontSize: "0.9rem",
-                            }}
-                          >
-                            No land owners found
-                          </div>
-                        )}
+                {/* Show validation summary for farmland */}
+                {(errors.farmland || errors.landOwner) && (
+                  <div className="jo-registration-form-errors">
+                    {errors.farmland && (
+                      <div className="jo-registration-error">
+                        {errors.farmland}
                       </div>
                     )}
-                  </div>
-
-                  {/* Selected land owner confirmation badge */}
-                  {selectedLandOwner && (
-                    <div
-                      style={{
-                        marginTop: "0.75rem",
-                        padding: "0.6rem 1rem",
-                        backgroundColor: "#d4edda",
-                        border: "1px solid #c3e6cb",
-                        borderRadius: "6px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <span style={{ color: "#155724", fontWeight: "bold" }}>
-                        ✓ {selectedLandOwner.name}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setSelectedLandOwner(null);
-                          setLandOwnerSearchTerm("");
-                          setOwnerParcels([]);
-                          setSelectedParcelIds(new Set());
-                        }}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#721c24",
-                          cursor: "pointer",
-                          fontWeight: "bold",
-                          fontSize: "1rem",
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
-
-                  {errors.landOwner && (
-                    <div
-                      className="jo-registration-error"
-                      style={{ marginTop: "0.5rem" }}
-                    >
-                      {errors.landOwner}
-                    </div>
-                  )}
-                </div>
-
-                {/* Step 3: Parcel Selection — shown after land owner is selected */}
-                {selectedLandOwner && (
-                  <div
-                    style={{
-                      padding: "1.5rem",
-                      backgroundColor: "#f8f9fa",
-                      borderRadius: "8px",
-                      border: errors.parcelSelection
-                        ? "2px solid #dc2626"
-                        : "2px solid #dee2e6",
-                    }}
-                  >
-                    <h4 style={{ marginBottom: "1rem", color: "#2c3e50" }}>
-                      Select Parcel(s)
-                    </h4>
-
-                    {ownerParcels.length === 0 ? (
-                      /* Blocked state — no parcels found */
-                      <div
-                        style={{
-                          padding: "1.5rem",
-                          backgroundColor: "#fff3cd",
-                          border: "1px solid #ffc107",
-                          borderRadius: "6px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div
-                          style={{ fontSize: "2rem", marginBottom: "0.5rem" }}
-                        >
-                          ⚠️
-                        </div>
-                        <p
-                          style={{
-                            fontWeight: "bold",
-                            color: "#856404",
-                            marginBottom: "0.25rem",
-                          }}
-                        >
-                          No Registered Parcels Found
-                        </p>
-                        <p style={{ color: "#856404", fontSize: "0.9rem" }}>
-                          {selectedLandOwner.name} has no registered parcels in
-                          the system. Please select a different land owner or
-                          contact your supervisor.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <p
-                          style={{
-                            fontSize: "0.9rem",
-                            color: "#6c757d",
-                            marginBottom: "1rem",
-                          }}
-                        >
-                          Select all parcel(s) you are currently farming under{" "}
-                          <strong>{selectedLandOwner.name}</strong>:
-                        </p>
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "0.75rem",
-                          }}
-                        >
-                          {ownerParcels.map((parcel: any) => {
-                            const isSelected = selectedParcelIds.has(
-                              String(parcel.id),
-                            );
-                            return (
-                              <div
-                                key={parcel.id}
-                                onClick={() =>
-                                  handleParcelSelectionToggle(parcel.id)
-                                }
-                                style={{
-                                  padding: "1rem",
-                                  backgroundColor: isSelected
-                                    ? "#d4edda"
-                                    : "white",
-                                  border: isSelected
-                                    ? "2px solid #28a745"
-                                    : "2px solid #dee2e6",
-                                  borderRadius: "6px",
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "1rem",
-                                  transition: "all 0.15s ease",
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() =>
-                                    handleParcelSelectionToggle(parcel.id)
-                                  }
-                                  onClick={(e) => e.stopPropagation()}
-                                  style={{
-                                    width: "18px",
-                                    height: "18px",
-                                    cursor: "pointer",
-                                  }}
-                                />
-                                <div style={{ flex: 1 }}>
-                                  <div
-                                    style={{
-                                      fontWeight: "bold",
-                                      color: "#2c3e50",
-                                      marginBottom: "0.25rem",
-                                    }}
-                                  >
-                                    Parcel No.{" "}
-                                    {parcel.parcel_number || parcel.id}
-                                  </div>
-                                  <div
-                                    style={{
-                                      fontSize: "0.85rem",
-                                      color: "#6c757d",
-                                    }}
-                                  >
-                                    📍 {parcel.farm_location_barangay || "—"},{" "}
-                                    {parcel.farm_location_municipality ||
-                                      "Dumangas"}
-                                    &nbsp;&nbsp;|&nbsp;&nbsp; 🌾{" "}
-                                    {parcel.total_farm_area_ha ?? "—"} ha
-                                  </div>
-                                </div>
-                                {isSelected && (
-                                  <span
-                                    style={{
-                                      color: "#28a745",
-                                      fontWeight: "bold",
-                                      fontSize: "1.2rem",
-                                    }}
-                                  >
-                                    ✓
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {selectedParcelIds.size > 0 && (
-                          <div
-                            style={{
-                              marginTop: "1rem",
-                              padding: "0.6rem 1rem",
-                              backgroundColor: "#cce5ff",
-                              border: "1px solid #b8daff",
-                              borderRadius: "6px",
-                              fontSize: "0.9rem",
-                              color: "#004085",
-                            }}
-                          >
-                            ✓ {selectedParcelIds.size} parcel
-                            {selectedParcelIds.size !== 1 ? "s" : ""} selected
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {errors.parcelSelection && (
-                      <div
-                        className="jo-registration-error"
-                        style={{ marginTop: "0.5rem" }}
-                      >
-                        {errors.parcelSelection}
+                    {errors.landOwner && (
+                      <div className="jo-registration-error">
+                        {errors.landOwner}
                       </div>
                     )}
                   </div>
                 )}
+
+                {/* Ownership Category Selection */}
+
+                {/* Land Owner Search for Tenant/Lessee */}
+
+                {/* Parcel Selection for Tenant/Lessee */}
+
+                {/* Farmland Parcels - Show only for Registered Owner */}
+
+                {/* Existing Parcel Dropdown Section */}
+
+                {(formData.farmlandParcels as any[]).map((p, idx) => (
+                  <div key={idx} className="jo-registration-parcel-card">
+                    <div className="jo-registration-parcel-card-header">
+                      <div className="jo-registration-parcel-no">
+                        {p.existingParcelNumber
+                          ? `📍 ${p.existingParcelNumber} (Existing Parcel)`
+                          : `Farm Parcel No. ${p.parcelNo || idx + 1}`}
+                      </div>
+                      <div className="jo-registration-parcel-card-actions">
+                        {(formData.farmlandParcels as any[]).length > 1 && (
+                          <button
+                            className="jo-registration-btn-small"
+                            onClick={() => removeParcel(idx)}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="jo-registration-form-row">
+                      <div className="jo-registration-form-group">
+                        <label>Farm Location (Barangay)</label>
+                        <select
+                          value={p.farmLocationBarangay || ""}
+                          onChange={(e) =>
+                            handleParcelChange(
+                              idx,
+                              "farmLocationBarangay",
+                              e.target.value,
+                            )
+                          }
+                          className={
+                            errors.farmland ? "jo-registration-input-error" : ""
+                          }
+                        >
+                          <option value="">Select Barangay</option>
+                          <option value="Aurora-Del Pilar">
+                            Aurora-Del Pilar
+                          </option>
+                          <option value="Bacay">Bacay</option>
+                          <option value="Bacong">Bacong</option>
+                          <option value="Balabag">Balabag</option>
+                          <option value="Balud">Balud</option>
+                          <option value="Bantud">Bantud</option>
+                          <option value="Bantud Fabrica">Bantud Fabrica</option>
+                          <option value="Baras">Baras</option>
+                          <option value="Barasan">Barasan</option>
+                          <option value="Basa-Mabini Bonifacio">
+                            Basa-Mabini Bonifacio
+                          </option>
+                          <option value="Bolilao">Bolilao</option>
+                          <option value="Buenaflor Embarkadero">
+                            Buenaflor Embarkadero
+                          </option>
+                          <option value="Burgos-Regidor">Burgos-Regidor</option>
+                          <option value="Calao">Calao</option>
+                          <option value="Cali">Cali</option>
+                          <option value="Cansilayan">Cansilayan</option>
+                          <option value="Capaliz">Capaliz</option>
+                          <option value="Cayos">Cayos</option>
+                          <option value="Compayan">Compayan</option>
+                          <option value="Dacutan">Dacutan</option>
+                          <option value="Ermita">Ermita</option>
+                          <option value="Ilaya 1st">Ilaya 1st</option>
+                          <option value="Ilaya 2nd">Ilaya 2nd</option>
+                          <option value="Ilaya 3rd">Ilaya 3rd</option>
+                          <option value="Jardin">Jardin</option>
+                          <option value="Lacturan">Lacturan</option>
+                          <option value="Lopez Jaena - Rizal">
+                            Lopez Jaena - Rizal
+                          </option>
+                          <option value="Managuit">Managuit</option>
+                          <option value="Maquina">Maquina</option>
+                          <option value="Nanding Lopez">Nanding Lopez</option>
+                          <option value="Pagdugue">Pagdugue</option>
+                          <option value="Paloc Bigque">Paloc Bigque</option>
+                          <option value="Paloc Sool">Paloc Sool</option>
+                          <option value="Patlad">Patlad</option>
+                          <option value="Pd Monfort North">
+                            Pd Monfort North
+                          </option>
+                          <option value="Pd Monfort South">
+                            Pd Monfort South
+                          </option>
+                          <option value="Pulao">Pulao</option>
+                          <option value="Rosario">Rosario</option>
+                          <option value="Sapao">Sapao</option>
+                          <option value="Sulangan">Sulangan</option>
+                          <option value="Tabucan">Tabucan</option>
+                          <option value="Talusan">Talusan</option>
+                          <option value="Tambobo">Tambobo</option>
+                          <option value="Tamboilan">Tamboilan</option>
+                          <option value="Victorias">Victorias</option>
+                        </select>
+                        {errors.farmland && (
+                          <div className="jo-registration-error">
+                            {errors.farmland}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="jo-registration-form-row">
+                      <div className="jo-registration-form-group">
+                        <label>Total Farm Area (in hectares)</label>
+                        <input
+                          type="number"
+                          value={p.totalFarmAreaHa || ""}
+                          onChange={(e) =>
+                            handleParcelChange(
+                              idx,
+                              "totalFarmAreaHa",
+                              e.target.value,
+                            )
+                          }
+                          className={
+                            errors.farmland ? "jo-registration-input-error" : ""
+                          }
+                        />
+                        {errors.farmland && (
+                          <div className="jo-registration-error">
+                            {errors.farmland}
+                          </div>
+                        )}
+                      </div>
+                      <div className="jo-registration-form-group">
+                        <label>Within Ancestral Domain</label>
+                        <select
+                          value={p.withinAncestralDomain || ""}
+                          onChange={(e) =>
+                            handleParcelChange(
+                              idx,
+                              "withinAncestralDomain",
+                              e.target.value,
+                            )
+                          }
+                        >
+                          <option value="">Select</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="jo-registration-form-row">
+                      <div className="jo-registration-form-group">
+                        <label>Agrarian Reform Beneficiary</label>
+                        <select
+                          value={p.agrarianReformBeneficiary || ""}
+                          onChange={(e) =>
+                            handleParcelChange(
+                              idx,
+                              "agrarianReformBeneficiary",
+                              e.target.value,
+                            )
+                          }
+                        >
+                          <option value="">Select</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="jo-registration-form-group">
+                      <label>Are you currently farming this parcel?</label>
+                      <select
+                        value={
+                          p.isCultivating === true
+                            ? "Yes"
+                            : p.isCultivating === false
+                              ? "No"
+                              : ""
+                        }
+                        onChange={(e) =>
+                          handleParcelChange(
+                            idx,
+                            "isCultivating",
+                            e.target.value === ""
+                              ? null
+                              : e.target.value === "Yes",
+                          )
+                        }
+                      >
+                        <option value="">Select</option>
+                        <option value="Yes">
+                          Yes — I am actively farming this
+                        </option>
+                        <option value="No">
+                          No — someone else is farming this (tenant/lessee)
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="jo-registration-parcel-actions-bar">
+                  <button
+                    className="jo-registration-btn-submit"
+                    onClick={addParcel}
+                  >
+                    + Add Another Parcel
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2222,95 +1783,6 @@ const JoRsbsa: React.FC = () => {
       </div>
 
       {/* Confirmation Modal */}
-      {confirmModal.show && (
-        <div
-          className="jo-confirm-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="jo-confirm-title"
-        >
-          <div className="jo-confirm-modal">
-            {/* Header */}
-            <div className="jo-confirm-modal-header">
-              <div className="jo-confirm-modal-header-icon">🏛️</div>
-              <div>
-                <h2 id="jo-confirm-title" className="jo-confirm-modal-title">
-                  Registration Confirmation
-                </h2>
-                <p className="jo-confirm-modal-header-sub">
-                  RSBSA — Registry System for Basic Sectors in Agriculture
-                </p>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="jo-confirm-modal-divider" />
-
-            {/* Body */}
-            <div className="jo-confirm-modal-body">
-              <p className="jo-confirm-modal-intro">
-                Please review the following details before proceeding:
-              </p>
-
-              <div className="jo-confirm-modal-details">
-                <div className="jo-confirm-modal-detail-row">
-                  <span className="jo-confirm-modal-detail-label">
-                    Registration Type
-                  </span>
-                  <span className="jo-confirm-modal-detail-value jo-confirm-modal-badge">
-                    {confirmModal.roleText}
-                  </span>
-                </div>
-                <div className="jo-confirm-modal-detail-row">
-                  <span className="jo-confirm-modal-detail-label">
-                    Land Owner
-                  </span>
-                  <span className="jo-confirm-modal-detail-value">
-                    {confirmModal.landOwnerName}
-                  </span>
-                </div>
-                <div className="jo-confirm-modal-detail-row">
-                  <span className="jo-confirm-modal-detail-label">
-                    Selected Parcels
-                  </span>
-                  <span className="jo-confirm-modal-detail-value">
-                    {confirmModal.parcelCount} parcel
-                    {confirmModal.parcelCount !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              </div>
-
-              <p className="jo-confirm-modal-notice">
-                ⚠️ By confirming, you acknowledge that the information provided
-                is accurate and complete.
-              </p>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="jo-confirm-modal-footer">
-              <button
-                className="jo-confirm-modal-btn-cancel"
-                onClick={() =>
-                  setConfirmModal((prev) => ({ ...prev, show: false }))
-                }
-              >
-                Cancel
-              </button>
-              <button
-                className="jo-confirm-modal-btn-confirm"
-                onClick={() => {
-                  setConfirmModal((prev) => ({ ...prev, show: false }));
-                  applySelectedParcels();
-                  setErrors({});
-                  setCurrentStep(4);
-                }}
-              >
-                ✓ Confirm &amp; Proceed
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast Notification */}
       {toast.show && (
@@ -2339,4 +1811,4 @@ const JoRsbsa: React.FC = () => {
   );
 };
 
-export default JoRsbsa;
+export default JoRsbsaRegisLandowner;

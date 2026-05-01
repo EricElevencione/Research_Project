@@ -119,12 +119,10 @@ router.get("/by-farmer", async (req, res) => {
     res.json(rows);
   } catch (error) {
     console.error("Error fetching parcels by farmer:", error);
-    res
-      .status(500)
-      .json({
-        message: "Error fetching parcels by farmer",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Error fetching parcels by farmer",
+      error: error.message,
+    });
   }
 });
 
@@ -208,6 +206,10 @@ router.put("/:id", async (req, res) => {
       "tenant_land_owner_name",
       "lessee_land_owner_name",
       "ownership_others_specify",
+      "is_cultivating",
+      "cultivation_status_updated_at",
+      "cultivation_status_reason",
+      "cultivator_submission_id",
     ];
 
     if (hasOwnershipCategoryColumn) {

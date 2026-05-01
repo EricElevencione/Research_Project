@@ -156,6 +156,34 @@ router.post("/", async (req, res) => {
           SELECT 1
           FROM information_schema.columns
           WHERE table_schema = 'public'
+            AND table_name = 'rsbsa_farm_parcels'
+            AND column_name = 'is_cultivating'
+        ) AS has_is_cultivating_column,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'rsbsa_farm_parcels'
+            AND column_name = 'cultivation_status_updated_at'
+        ) AS has_cultivation_status_updated_at_column,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'rsbsa_farm_parcels'
+            AND column_name = 'cultivation_status_reason'
+        ) AS has_cultivation_status_reason_column,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'rsbsa_farm_parcels'
+            AND column_name = 'cultivator_submission_id'
+        ) AS has_cultivator_submission_id_column,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
             AND table_name = 'land_history'
             AND column_name = 'ownership_category'
         ) AS has_land_history_ownership_category_column
@@ -174,6 +202,15 @@ router.post("/", async (req, res) => {
       true;
     const hasParcelOwnershipCategoryColumn =
       dependencyCheck.rows[0]?.has_parcel_ownership_category_column === true;
+    const hasIsCultivatingColumn =
+      dependencyCheck.rows[0]?.has_is_cultivating_column === true;
+    const hasCultivationStatusUpdatedAtColumn =
+      dependencyCheck.rows[0]?.has_cultivation_status_updated_at_column ===
+      true;
+    const hasCultivationStatusReasonColumn =
+      dependencyCheck.rows[0]?.has_cultivation_status_reason_column === true;
+    const hasCultivatorSubmissionIdColumn =
+      dependencyCheck.rows[0]?.has_cultivator_submission_id_column === true;
     const hasLandHistoryOwnershipCategoryColumn =
       dependencyCheck.rows[0]?.has_land_history_ownership_category_column ===
       true;
@@ -337,6 +374,22 @@ router.post("/", async (req, res) => {
         parcelInsertColumns.push("is_current_owner");
       }
 
+      if (hasIsCultivatingColumn) {
+        parcelInsertColumns.push("is_cultivating");
+      }
+
+      if (hasCultivationStatusUpdatedAtColumn) {
+        parcelInsertColumns.push("cultivation_status_updated_at");
+      }
+
+      if (hasCultivationStatusReasonColumn) {
+        parcelInsertColumns.push("cultivation_status_reason");
+      }
+
+      if (hasCultivatorSubmissionIdColumn) {
+        parcelInsertColumns.push("cultivator_submission_id");
+      }
+
       const parcelInsertPlaceholders = parcelInsertColumns
         .map((_, index) => `$${index + 1}`)
         .join(", ");
@@ -349,6 +402,15 @@ router.post("/", async (req, res) => {
                 )
                 RETURNING id
             `;
+
+      const selectedLandOwnerIdRaw = Number(data?.selectedLandOwner?.id);
+      const selectedLandOwnerId = Number.isFinite(selectedLandOwnerIdRaw)
+        ? selectedLandOwnerIdRaw
+        : null;
+      const registrantName =
+        `${data.firstName || ""} ${data.middleName || ""} ${data.surname || data.lastName || ""}`.trim() ||
+        `Submission ${submissionId}`;
+
       for (let parcel of data.farmlandParcels) {
         try {
           // For ownership transfers, fetch missing data from the existing parcel
@@ -418,6 +480,27 @@ router.post("/", async (req, res) => {
             isNewRegisteredOwner && !isNewTenant && !isNewLessee;
           const isAssociationRole =
             !isNewRegisteredOwner && (isNewTenant || isNewLessee);
+
+          const isCultivating =
+            parcel.isCultivating === undefined || parcel.isCultivating === null
+              ? true
+              : toBooleanFlag(parcel.isCultivating);
+          const cultivationStatusUpdatedAt =
+            parcel.cultivationStatusUpdatedAt || new Date().toISOString();
+          const cultivationStatusReason =
+            parcel.cultivationStatusReason || null;
+          const parsedCultivatorId = parcel.cultivatorSubmissionId
+            ? Number(parcel.cultivatorSubmissionId)
+            : null;
+          const cultivatorSubmissionId = Number.isFinite(parsedCultivatorId)
+            ? parsedCultivatorId
+            : isCultivating
+              ? submissionId
+              : null;
+          const effectiveCultivationStatusReason =
+            isAssociationRole && !cultivationStatusReason
+              ? `${isNewTenant && isNewLessee ? "Cultivated by tenant/lessee" : isNewTenant ? "Cultivated by tenant" : "Cultivated by lessee"}: ${registrantName}`
+              : cultivationStatusReason;
 
           // Try to resolve land owner IDs from names if provided
           let tenantLandOwnerId = parcel.tenantLandOwnerId || null;
@@ -502,12 +585,102 @@ router.post("/", async (req, res) => {
             parcelInsertValues.push(isNewRegisteredOwner);
           }
 
+          if (hasIsCultivatingColumn) {
+            parcelInsertValues.push(isCultivating);
+          }
+
+          if (hasCultivationStatusUpdatedAtColumn) {
+            parcelInsertValues.push(cultivationStatusUpdatedAt);
+          }
+
+          if (hasCultivationStatusReasonColumn) {
+            parcelInsertValues.push(effectiveCultivationStatusReason);
+          }
+
+          if (hasCultivatorSubmissionIdColumn) {
+            parcelInsertValues.push(cultivatorSubmissionId);
+          }
+
           const parcelResult = await client.query(
             parcelInsertQuery,
             parcelInsertValues,
           );
 
           const newFarmParcelId = parcelResult.rows[0].id;
+
+          if (
+            isAssociationRole &&
+            selectedLandOwnerId !== null &&
+            parcelNumber &&
+            (hasIsCultivatingColumn ||
+              hasCultivationStatusUpdatedAtColumn ||
+              hasCultivationStatusReasonColumn ||
+              hasCultivatorSubmissionIdColumn)
+          ) {
+            const ownerParcelUpdateFields = [];
+            const ownerParcelUpdateValues = [];
+            let ownerParamIndex = 1;
+
+            if (hasIsCultivatingColumn) {
+              ownerParcelUpdateFields.push(
+                `is_cultivating = $${ownerParamIndex}`,
+              );
+              ownerParcelUpdateValues.push(false);
+              ownerParamIndex += 1;
+            }
+
+            if (hasCultivationStatusUpdatedAtColumn) {
+              ownerParcelUpdateFields.push(
+                `cultivation_status_updated_at = COALESCE($${ownerParamIndex}::timestamptz, NOW())`,
+              );
+              ownerParcelUpdateValues.push(cultivationStatusUpdatedAt || null);
+              ownerParamIndex += 1;
+            }
+
+            if (hasCultivationStatusReasonColumn) {
+              ownerParcelUpdateFields.push(
+                `cultivation_status_reason = $${ownerParamIndex}`,
+              );
+              ownerParcelUpdateValues.push(effectiveCultivationStatusReason);
+              ownerParamIndex += 1;
+            }
+
+            if (hasCultivatorSubmissionIdColumn) {
+              ownerParcelUpdateFields.push(
+                `cultivator_submission_id = $${ownerParamIndex}`,
+              );
+              ownerParcelUpdateValues.push(submissionId);
+              ownerParamIndex += 1;
+            }
+
+            ownerParcelUpdateFields.push("updated_at = NOW()");
+            ownerParcelUpdateValues.push(selectedLandOwnerId);
+            const ownerSubmissionParam = ownerParamIndex;
+            ownerParamIndex += 1;
+            ownerParcelUpdateValues.push(parcelNumber);
+            const ownerParcelNumberParam = ownerParamIndex;
+            const currentOwnerFilter = hasCurrentOwnerColumn
+              ? "AND (is_current_owner IS NULL OR is_current_owner = TRUE)"
+              : "";
+
+            const ownerParcelUpdateResult = await client.query(
+              `
+                UPDATE rsbsa_farm_parcels
+                SET ${ownerParcelUpdateFields.join(", ")}
+                WHERE submission_id = $${ownerSubmissionParam}
+                  AND parcel_number = $${ownerParcelNumberParam}
+                  AND ownership_type_registered_owner = TRUE
+                  ${currentOwnerFilter}
+              `,
+              ownerParcelUpdateValues,
+            );
+
+            if (ownerParcelUpdateResult.rowCount === 0) {
+              console.warn(
+                `No owner parcel row updated for owner=${selectedLandOwnerId}, parcel=${parcelNumber}`,
+              );
+            }
+          }
 
           const canWriteLandHistory =
             hasLandHistoryTable && hasLandParcelsTable;

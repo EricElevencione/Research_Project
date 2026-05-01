@@ -1964,6 +1964,22 @@ const LandPlottingPage: React.FC = () => {
     );
   }
 
+  function getCultivationStatusDisplay() {
+    const raw =
+      (currentParcel as any)?.is_cultivating ??
+      (currentParcel as any)?.isCultivating;
+    const reason =
+      (currentParcel as any)?.cultivation_status_reason ??
+      (currentParcel as any)?.cultivationStatusReason;
+
+    if (raw === true) return "Actively farming";
+    if (raw === false) {
+      return reason ? `Not farming (${reason})` : "Not farming";
+    }
+
+    return "Not specified";
+  }
+
   return (
     <div className="tech-landplotting-container">
       {/* Toast Notification */}
@@ -2113,6 +2129,12 @@ const LandPlottingPage: React.FC = () => {
                 Parcel Area:
               </span>
               {` ${getDisplayAreaHectares()}`}
+            </div>
+            <div className="tech-landplotting-detail-row">
+              <span className="tech-landplotting-detail-label">
+                Cultivation Status:
+              </span>
+              {` ${getCultivationStatusDisplay()}`}
             </div>
           </div>
 

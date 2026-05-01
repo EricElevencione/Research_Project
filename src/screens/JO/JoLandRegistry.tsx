@@ -60,6 +60,20 @@ interface LandHistoryRecord {
   previous_history_id: number | null;
 }
 
+interface CultivationParcel {
+  id: number;
+  submission_id: number;
+  parcel_number: string;
+  farm_location_barangay: string;
+  farm_location_municipality: string;
+  total_farm_area_ha: number;
+  is_cultivating: boolean | null;
+  cultivation_status_reason: string | null;
+  cultivation_status_updated_at: string | null;
+  cultivator_submission_id: number | null;
+  cultivator_name?: string | null;
+}
+
 interface ProofItem {
   storage_bucket: string;
   storage_path: string;
@@ -349,6 +363,10 @@ const JoLandRegistry: React.FC = () => {
   );
   const [landParcels] = useState<LandParcel[]>([]);
   const [parcelHistory, setParcelHistory] = useState<LandHistoryRecord[]>([]);
+  const [cultivationParcels, setCultivationParcels] = useState<
+    CultivationParcel[]
+  >([]);
+  const [cultivationLoading, setCultivationLoading] = useState(false);
   const [farmerNameMap, setFarmerNameMap] = useState<Map<number, string>>(
     new Map(),
   );
@@ -356,6 +374,9 @@ const JoLandRegistry: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBarangay, setFilterBarangay] = useState("");
+  const [filterCultivation, setFilterCultivation] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [showModal, setShowModal] = useState(false);
 
   // Proof viewer state
@@ -490,6 +511,80 @@ const JoLandRegistry: React.FC = () => {
     refreshLandParcels();
   }, [refreshLandParcels]);
 
+  const fetchCultivationParcelsForFarmer = async (
+    farmerId: number,
+    parcels: FarmerGroup["parcels"],
+  ) => {
+    setCultivationLoading(true);
+    try {
+      const parcelNumbers = (parcels || [])
+        .map((parcel) => String(parcel.parcel_number || "").trim())
+        .filter(Boolean);
+
+      let query = supabase
+        .from("rsbsa_farm_parcels")
+        .select(
+          "id, submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_cultivating, cultivation_status_reason, cultivation_status_updated_at, cultivator_submission_id",
+        )
+        .eq("submission_id", farmerId);
+
+      if (parcelNumbers.length > 0) {
+        query = query.in("parcel_number", parcelNumbers);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const rows: CultivationParcel[] = Array.isArray(data) ? data : [];
+      const cultivatorIds = Array.from(
+        new Set(
+          rows
+            .map((row) => Number(row.cultivator_submission_id))
+            .filter((id) => Number.isFinite(id) && id > 0),
+        ),
+      );
+
+      const cultivatorNameMap = new Map<number, string>();
+      if (cultivatorIds.length > 0) {
+        const { data: cultivators, error: cultivatorError } = await supabase
+          .from("rsbsa_submission")
+          .select(`id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME"`)
+          .in("id", cultivatorIds);
+
+        if (!cultivatorError && Array.isArray(cultivators)) {
+          cultivators.forEach((row: any) => {
+            const fullName = [
+              row["FIRST NAME"],
+              row["MIDDLE NAME"],
+              row["LAST NAME"],
+              row["EXT NAME"],
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+            if (fullName) {
+              cultivatorNameMap.set(Number(row.id), fullName);
+            }
+          });
+        }
+      }
+
+      const formatted = rows.map((row) => ({
+        ...row,
+        cultivator_name: row.cultivator_submission_id
+          ? cultivatorNameMap.get(Number(row.cultivator_submission_id)) || null
+          : null,
+      }));
+
+      setCultivationParcels(formatted);
+    } catch (err) {
+      console.error("Cultivation status fetch error:", err);
+      setCultivationParcels([]);
+    } finally {
+      setCultivationLoading(false);
+    }
+  };
+
   // Handle parcel selection
   const handleFarmerSelect = (
     group: FarmerGroup,
@@ -522,6 +617,8 @@ const JoLandRegistry: React.FC = () => {
       setParcelHistory([]);
       console.log("No parcel IDs found for selected row.");
     }
+
+    void fetchCultivationParcelsForFarmer(group.farmer_id, group.parcels);
 
     setOpenActionMenuRowId(null);
     setShowModal(true);
@@ -1734,6 +1831,34 @@ const JoLandRegistry: React.FC = () => {
         if (row.parcels.length === 0) return false;
         if (row.totalAreaHa <= 0) return false;
 
+        if (filterCultivation !== "all") {
+          const cultivationFlags = row.parcels
+            .map((parcel) => {
+              const raw =
+                (parcel as any)?.is_cultivating ??
+                (parcel as any)?.isCultivating;
+              if (raw === true || raw === false) return raw;
+              if (typeof raw === "string") {
+                const normalized = raw.trim().toLowerCase();
+                if (normalized === "true" || normalized === "yes") return true;
+                if (normalized === "false" || normalized === "no") return false;
+              }
+              return null;
+            })
+            .filter((value): value is boolean => value !== null);
+
+          if (filterCultivation === "active") {
+            if (!cultivationFlags.some((value) => value === true)) return false;
+          }
+
+          if (filterCultivation === "inactive") {
+            const hasInactive = cultivationFlags.some(
+              (value) => value === false,
+            );
+            if (!hasInactive) return false;
+          }
+        }
+
         if (filterBarangay) {
           const hasBarangayMatch = row.parcels.some(
             (p) =>
@@ -1769,7 +1894,7 @@ const JoLandRegistry: React.FC = () => {
           ownershipOrder[b.primaryOwnership]
         );
       });
-  }, [registryRows, searchTerm, filterBarangay]);
+  }, [registryRows, searchTerm, filterBarangay, filterCultivation]);
 
   const registeredOwnerParcels = landParcels.filter(
     (p) => p.is_registered_owner,
@@ -3023,6 +3148,21 @@ const JoLandRegistry: React.FC = () => {
                   ))}
                 </select>
               </div>
+              <div className="jo-land-registry-barangay-filter">
+                <select
+                  className="jo-land-registry-barangay-select"
+                  value={filterCultivation}
+                  onChange={(e) =>
+                    setFilterCultivation(
+                      e.target.value as "all" | "active" | "inactive",
+                    )
+                  }
+                >
+                  <option value="all">All Cultivation Status</option>
+                  <option value="active">Actively Farming</option>
+                  <option value="inactive">Not Farming</option>
+                </select>
+              </div>
             </div>
 
             {/* Table */}
@@ -3256,6 +3396,109 @@ const JoLandRegistry: React.FC = () => {
                       </span>
                     </div>
                   </div>
+                </div>
+
+                {/* Cultivation Status Section */}
+                <div className="jo-land-registry-detail-section">
+                  <h4>🌾 Parcel Cultivation Status</h4>
+                  {cultivationLoading ? (
+                    <p>Loading cultivation status...</p>
+                  ) : cultivationParcels.length === 0 ? (
+                    <p>No cultivation status recorded yet.</p>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
+                      {cultivationParcels.map((parcel) => {
+                        const statusLabel =
+                          parcel.is_cultivating === true
+                            ? "Actively farming"
+                            : parcel.is_cultivating === false
+                              ? "Not farming"
+                              : "Not specified";
+                        const detailLine =
+                          parcel.is_cultivating === false
+                            ? parcel.cultivator_name
+                              ? `Cultivator: ${parcel.cultivator_name}`
+                              : parcel.cultivation_status_reason || ""
+                            : "";
+
+                        return (
+                          <div
+                            key={parcel.id}
+                            style={{
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "8px",
+                              padding: "10px 12px",
+                              backgroundColor: "#fff",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                gap: "12px",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <strong>
+                                {parcel.parcel_number
+                                  ? `Parcel ${parcel.parcel_number}`
+                                  : "Parcel"}
+                              </strong>
+                              <span style={{ color: "#374151" }}>
+                                {statusLabel}
+                              </span>
+                            </div>
+                            <div
+                              style={{
+                                marginTop: "6px",
+                                fontSize: "12px",
+                                color: "#6b7280",
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: "10px",
+                              }}
+                            >
+                              <span>
+                                📍 {parcel.farm_location_barangay || "—"}
+                              </span>
+                              <span>
+                                📐{" "}
+                                {Number(parcel.total_farm_area_ha || 0).toFixed(
+                                  2,
+                                )}{" "}
+                                ha
+                              </span>
+                              {parcel.cultivation_status_updated_at && (
+                                <span>
+                                  Updated:{" "}
+                                  {formatDate(
+                                    parcel.cultivation_status_updated_at,
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                            {detailLine && (
+                              <div
+                                style={{
+                                  marginTop: "6px",
+                                  fontSize: "12px",
+                                  color: "#4b5563",
+                                }}
+                              >
+                                {detailLine}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* History Section – grouped by parcel */}

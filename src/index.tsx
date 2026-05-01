@@ -32,6 +32,7 @@ import JoLandRegistry from "./screens/JO/JoLandRegistry";
 import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
 import AuditTrail from "./screens/admin/AuditTrail";
 import ShortagesSuggestions from "./pages/ShortagesSuggestions.jsx";
+import JoRsbsaRegisLandowner from "./screens/JO/JoRsbsaRegisLandowner";
 import "../src/assets/css/admin css/index.css";
 import Register from "./pages/Register";
 
@@ -219,6 +220,14 @@ function App() {
           element={
             <ProtectedRoute>
               <JoRsbsa />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jo-rsbsa-landowner"
+          element={
+            <ProtectedRoute>
+              <JoRsbsaRegisLandowner />
             </ProtectedRoute>
           }
         />

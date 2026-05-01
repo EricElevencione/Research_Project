@@ -313,7 +313,7 @@
   border-collapse: collapse;
   background: #fff;
   font-size: 14px;
-  min-width: 1040px;
+  min-width: 1150px;
 }
 
 .jo-rsbsa-owners-table th {
@@ -361,8 +361,8 @@
 
 .jo-rsbsa-owners-table th:nth-child(3),
 .jo-rsbsa-owners-table td:nth-child(3) {
-  min-width: 250px;
-  width: 250px;
+  min-width: 108px;
+  width: 108px;
 }
 
 .jo-rsbsa-table-row {
@@ -403,6 +403,44 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.jo-rsbsa-farmer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.jo-rsbsa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.jo-rsbsa-chip-status-active {
+  background-color: #dcfce7;
+  border: 1px solid #16a34a;
+  color: #166534;
+}
+
+.jo-rsbsa-chip-status-inactive {
+  background-color: #fee2e2;
+  border: 1px solid #f87171;
+  color: #991b1b;
+}
+
+.jo-rsbsa-chip-status-unknown {
+  background-color: #e2e8f0;
+  border: 1px solid #94a3b8;
+  color: #475569;
 }
 
 .jo-rsbsa-farmer-name {

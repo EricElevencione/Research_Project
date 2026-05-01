@@ -256,6 +256,77 @@
   border-bottom: none;
 }
 
+.tech-masterlist-farmer-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tech-masterlist-farmer-name {
+  font-weight: 700;
+  color: #111827;
+}
+
+.tech-masterlist-farmer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tech-masterlist-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tech-masterlist-chip-owner {
+  background-color: #1e3a8a;
+  border: 1px solid #132a5f;
+  color: #ffffff;
+}
+
+.tech-masterlist-chip-tenant {
+  background-color: #10b981;
+  border: 1px solid #0a7e5e;
+  color: #ffffff;
+}
+
+.tech-masterlist-chip-lessee {
+  background-color: #f59e0b;
+  border: 1px solid #c47c08;
+  color: #ffffff;
+}
+
+.tech-masterlist-chip-unknown {
+  background-color: #e2e8f0;
+  border: 1px solid #94a3b8;
+  color: #475569;
+}
+
+.tech-masterlist-chip-status-active {
+  background-color: #dcfce7;
+  border: 1px solid #16a34a;
+  color: #166534;
+}
+
+.tech-masterlist-chip-status-inactive {
+  background-color: #fee2e2;
+  border: 1px solid #f87171;
+  color: #991b1b;
+}
+
+.tech-masterlist-chip-status-unknown {
+  background-color: #e2e8f0;
+  border: 1px solid #94a3b8;
+  color: #475569;
+}
+
 .tech-masterlist-farmers-table th:last-child,
 .tech-masterlist-farmers-table td:last-child {
   border-right: none;
