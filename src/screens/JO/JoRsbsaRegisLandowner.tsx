@@ -815,7 +815,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                 <span className="jo-registration-dot">
                   {isStepCompleted(2) ? "✓" : "2"}
                 </span>
-                <span className="jo-registration-label">Farm Profile</span>
+                <span className="jo-registration-label">Farm Information</span>
               </div>
               <div
                 className={`jo-registration-step ${isStepActive(3) ? "jo-registration-active" : ""} ${isStepCompleted(3) ? "jo-registration-completed" : ""}`}
@@ -823,7 +823,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                 <span className="jo-registration-dot">
                   {isStepCompleted(3) ? "✓" : "3"}
                 </span>
-                <span className="jo-registration-label">Farmland</span>
+                <span className="jo-registration-label">Land Parcel</span>
               </div>
               <div
                 className={`jo-registration-step ${isStepActive(4) ? "jo-registration-active" : ""}${isStepCompleted(4) ? "jo-registration-completed" : ""}`}
@@ -1121,7 +1121,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
             {currentStep === 2 && (
               <div className="jo-registration-form-section">
-                <h3>PART II: FARM PROFILE</h3>
+                <h3>PART II: Farm Information</h3>
                 <div className="jo-registration-form-grid">
                   <div className="jo-registration-livelihood-details">
                     <h4>Type of Farming Activity</h4>
@@ -1275,7 +1275,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
             {currentStep === 3 && (
               <div className="jo-registration-form-section">
-                <h3>PART III: FARMLAND</h3>
+                <h3>PART III: Land Parcel</h3>
 
                 {/* Show validation summary for farmland */}
                 {(errors.farmland || errors.landOwner) && (
@@ -1574,7 +1574,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
                   {/* Step 2: Farm Profile Summary */}
                   <div className="jo-registration-summary-section">
-                    <h3>PART II: FARM PROFILE</h3>
+                    <h3>PART II: Farm Information</h3>
                     <div className="jo-registration-summary-grid">
                       <div className="jo-registration-summary-item">
                         <span className="jo-registration-summary-label">
@@ -1683,7 +1683,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
                   {/* Step 3: Farmland Summary */}
                   <div className="jo-registration-summary-section">
-                    <h3>PART III: FARMLAND</h3>
+                    <h3>PART III: Land Parcel</h3>
                     {(formData.farmlandParcels as any[]).map((parcel, idx) => (
                       <div key={idx} className="jo-registration-parcel-summary">
                         <h6>Farm Parcel No. {parcel.parcelNo || idx + 1}</h6>
