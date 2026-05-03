@@ -1508,6 +1508,7 @@ const normalizeRsbsaSubmissionUpdateData = (raw: any): Record<string, any> => {
     "status",
     "archived_at",
     "archive_reason",
+    "status_change_reason",
     "age",
     "LAST NAME",
     "FIRST NAME",
@@ -1635,6 +1636,9 @@ const normalizeRsbsaSubmissionUpdateData = (raw: any): Record<string, any> => {
     if (typeof raw.ownershipType.lessee === "boolean") {
       normalized["OWNERSHIP_TYPE_LESSEE"] = raw.ownershipType.lessee;
     }
+  }
+  if (hasMeaningfulValue(raw.statusChangeReason)) {
+    normalized["status_change_reason"] = String(raw.statusChangeReason).trim();
   }
 
   return normalized;

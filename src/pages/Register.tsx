@@ -12,6 +12,8 @@ const Register: React.FC = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
+    firstName: "", // ✅ add
+    lastName: "", // ✅ add
     email: "",
     password: "",
     confirmPassword: "",
@@ -34,9 +36,17 @@ const Register: React.FC = () => {
     e.preventDefault();
     setError("");
 
-    const { email, password, confirmPassword, role } = formData;
+    const { email, password, confirmPassword, role, firstName, lastName } =
+      formData; // ✅ fixed
 
-    if (!email || !password || !confirmPassword || !role) {
+    if (
+      !email ||
+      !password ||
+      !confirmPassword ||
+      !role ||
+      !firstName ||
+      !lastName
+    ) {
       setError("Please fill in all fields.");
       return;
     }
@@ -53,8 +63,13 @@ const Register: React.FC = () => {
 
     setLoading(true);
 
-    const { error: registerError } = await registerUser(email, password, role);
-
+    const { error: registerError } = await registerUser(
+      email,
+      password,
+      role,
+      firstName, // ✅ now works since it's destructured
+      lastName, // ✅ now works since it's destructured
+    );
     setLoading(false);
 
     if (registerError) {
@@ -103,6 +118,24 @@ const Register: React.FC = () => {
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleRegister}>
+            <label>First Name</label>
+            <input
+              type="text"
+              name="firstName"
+              placeholder="Enter first name"
+              value={formData.firstName}
+              onChange={handleChange}
+              required
+            />
+            <label>Last Name</label>
+            <input
+              type="text"
+              name="lastName"
+              placeholder="Enter last name"
+              value={formData.lastName}
+              onChange={handleChange}
+              required
+            />
             {/* Role Selector */}
             <label>Role</label>
             <select

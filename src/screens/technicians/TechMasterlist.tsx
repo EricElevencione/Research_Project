@@ -130,9 +130,12 @@ const TechMasterlist: React.FC = () => {
     type: "success",
     message: "",
   });
-  const [unplottedFarmers, setUnplottedFarmers] = useState<
-    UnplottedFarmerItem[]
-  >([]);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusChangeTarget, setStatusChangeTarget] = useState<{
+    id: string;
+    newStatus: string;
+  } | null>(null);
+  const [statusChangeReason, setStatusChangeReason] = useState("");
 
   const isActive = (path: string) => location.pathname === path;
   const showUpdateNotification = (
@@ -447,31 +450,9 @@ const TechMasterlist: React.FC = () => {
 
       setRsbsaRecords(formattedRecords);
 
-      if (!techDashboardResponse.error) {
-        const queue = Array.isArray(
-          techDashboardResponse.data?.unplottedFarmers,
-        )
-          ? techDashboardResponse.data.unplottedFarmers
-          : [];
-        setUnplottedFarmers(
-          queue.map((item: any) => ({
-            id: String(item.id),
-            farmerName: String(item.farmerName || "N/A"),
-            referenceNumber: String(item.referenceNumber || "N/A"),
-            barangay: String(item.barangay || "N/A"),
-            totalParcels: Number(item.totalParcels || 0),
-            plottedParcels: Number(item.plottedParcels || 0),
-            unplottedParcels: Number(item.unplottedParcels || 0),
-          })),
-        );
-      } else {
-        setUnplottedFarmers([]);
-      }
-
       setLoading(false);
     } catch (err: any) {
       setError(err.message ?? "Failed to load RSBSA records");
-      setUnplottedFarmers([]);
       setLoading(false);
     }
   };
@@ -574,65 +555,50 @@ const TechMasterlist: React.FC = () => {
     return "tech-masterlist-chip-unknown";
   };
 
-  const getFarmerStatusLabel = (record: RSBSARecord) => {
-    const normalized = String(record.status || "")
-      .toLowerCase()
-      .trim();
-    if (normalized === "active farmer" || normalized === "active")
-      return "Active";
-    if (normalized) return "Not Active";
-    return "Unknown";
+  const toggleStatus = (id: string) => {
+    const record = rsbsaRecords.find((r) => r.id === id);
+    if (!record) return;
+
+    const newStatus =
+      record.status === "Active Farmer" ? "Not Active" : "Active Farmer";
+    setStatusChangeTarget({ id, newStatus });
+    setStatusChangeReason("");
+    setShowStatusModal(true);
   };
 
-  const getFarmerStatusClass = (record: RSBSARecord) => {
-    const normalized = String(record.status || "")
-      .toLowerCase()
-      .trim();
-    if (normalized === "active farmer" || normalized === "active") {
-      return "tech-masterlist-chip-status-active";
+  const confirmStatusChange = async () => {
+    if (!statusChangeTarget) return;
+    if (!statusChangeReason.trim()) {
+      alert("Please provide a reason for the status change.");
+      return;
     }
-    if (normalized) return "tech-masterlist-chip-status-inactive";
-    return "tech-masterlist-chip-status-unknown";
-  };
 
-  const toggleStatus = async (id: string) => {
     try {
-      // Find the current record
-      const record = rsbsaRecords.find((r) => r.id === id);
-      if (!record) {
-        throw new Error("Record not found");
-      }
+      const response = await updateRsbsaSubmission(statusChangeTarget.id, {
+        status: statusChangeTarget.newStatus,
+        statusChangeReason: statusChangeReason.trim(),
+      });
 
-      // Determine the new status
-      const newStatus =
-        record.status === "Active Farmer" ? "Not Active" : "Active Farmer";
+      if (response.error) throw new Error(response.error);
 
-      // Prepare the update data
-      const updateData = {
-        status: newStatus,
-      };
-
-      // Make the API call
-      const response = await updateRsbsaSubmission(id, updateData);
-
-      if (response.error) {
-        throw new Error(response.error || "Failed to update status");
-      }
-
-      // Success! Update the local state
-      setRsbsaRecords((prevRecords) =>
-        prevRecords.map((record) =>
-          record.id === id ? { ...record, status: newStatus } : record,
+      setRsbsaRecords((prev) =>
+        prev.map((r) =>
+          r.id === statusChangeTarget.id
+            ? { ...r, status: statusChangeTarget.newStatus }
+            : r,
         ),
       );
 
-      // Clear any existing errors
-      setError(null);
       showUpdateNotification("Farmer status updated successfully.", "success");
     } catch (err: any) {
-      const errorMessage = `Failed to update farmer status: ${err.message}`;
-      setError(errorMessage);
-      showUpdateNotification(errorMessage, "error");
+      showUpdateNotification(
+        `Failed to update status: ${err.message}`,
+        "error",
+      );
+    } finally {
+      setShowStatusModal(false);
+      setStatusChangeTarget(null);
+      setStatusChangeReason("");
     }
   };
 
@@ -1057,22 +1023,6 @@ const TechMasterlist: React.FC = () => {
             </button>
           </div>
           <div className="tech-masterlist-content-card">
-            <div
-              className={`tech-masterlist-unplotted-reminder ${unplottedFarmers.length > 0 ? "has-items" : "all-clear"}`}
-            >
-              <div className="tech-masterlist-unplotted-reminder-head">
-                {unplottedFarmers.length > 0 ? (
-                  <>
-                    <strong>{unplottedFarmers.length}</strong> parcel
-                    {unplottedFarmers.length !== 1 ? "s" : ""} still need
-                    plotting.
-                  </>
-                ) : (
-                  <>All plotting queue items are cleared.</>
-                )}
-              </div>
-            </div>
-
             <div className="tech-masterlist-filters-section">
               <div className="tech-masterlist-search-filter">
                 <input
@@ -1117,6 +1067,7 @@ const TechMasterlist: React.FC = () => {
                       "Farmer Address",
                       "Parcel Address",
                       "Parcel Area",
+                      "Ownership Type",
                       "Date Submitted",
                       "Status",
                     ].map((header) => (
@@ -1161,24 +1112,13 @@ const TechMasterlist: React.FC = () => {
                             <span className="tech-masterlist-farmer-name">
                               {record.farmerName}
                             </span>
-                            <div className="tech-masterlist-farmer-chips">
-                              <span
-                                className={`tech-masterlist-chip ${getOwnershipChipClass(record)}`}
-                              >
-                                {getOwnershipLabel(record)}
-                              </span>
-                              <span
-                                className={`tech-masterlist-chip ${getFarmerStatusClass(record)}`}
-                              >
-                                {getFarmerStatusLabel(record)}
-                              </span>
-                            </div>
                           </div>
                         </td>
+
                         <td>{record.farmerAddress}</td>
                         <td>{record.farmLocation}</td>
                         <td>{record.parcelArea}</td>
-                        <td>{record.cultivationStatus || "Not specified"}</td>
+                        <td>{getOwnershipLabel(record)}</td>
                         <td>{formatDate(record.dateSubmitted)}</td>
                         <td>
                           <button
@@ -1361,6 +1301,72 @@ const TechMasterlist: React.FC = () => {
                   }
                 >
                   🖨️ Print
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showStatusModal && statusChangeTarget && (
+          <div className="tech-masterlist-print-modal-overlay">
+            <div className="tech-masterlist-print-modal">
+              <div className="tech-masterlist-print-modal-header">
+                <h3>Confirm Status Change</h3>
+                <button
+                  className="tech-masterlist-close-button"
+                  onClick={() => {
+                    setShowStatusModal(false);
+                    setStatusChangeTarget(null);
+                    setStatusChangeReason("");
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="tech-masterlist-print-modal-body">
+                <p>
+                  Changing status to{" "}
+                  <strong>{statusChangeTarget.newStatus}</strong>.
+                </p>
+                <div className="tech-masterlist-print-filter-group">
+                  <label>
+                    Reason for status change{" "}
+                    <span style={{ color: "red" }}>*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Enter reason..."
+                    value={statusChangeReason}
+                    onChange={(e) => setStatusChangeReason(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "8px",
+                      borderRadius: "6px",
+                      border: "1px solid #ccc",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="tech-masterlist-print-modal-footer">
+                <button
+                  className="tech-masterlist-print-modal-cancel-button"
+                  onClick={() => {
+                    setShowStatusModal(false);
+                    setStatusChangeTarget(null);
+                    setStatusChangeReason("");
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="tech-masterlist-print-modal-print-button"
+                  onClick={confirmStatusChange}
+                  disabled={!statusChangeReason.trim()}
+                >
+                  Confirm
                 </button>
               </div>
             </div>

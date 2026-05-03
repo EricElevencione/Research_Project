@@ -6,7 +6,7 @@ import DaLogo from "../assets/images/Logo.png";
 import {
   loginUser,
   getUserRole,
-} from "../components/Registration/authRegistration"; // ✅ from auth.ts
+} from "../components/Registration/authRegistration";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
