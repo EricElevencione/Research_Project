@@ -402,8 +402,7 @@ const JoIncentives: React.FC = () => {
   };
 
   const formatSeasonName = (season: string) => {
-    const [type, year] = season.split("_");
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+    return season; // Now it's just a program name string
   };
 
   const getTotalFertilizer = (allocation: RegionalAllocation) => {
@@ -688,9 +687,9 @@ const JoIncentives: React.FC = () => {
         {/* Main content starts here */}
         <div className="jo-incent-main-content">
           <div className="jo-incent-dashboard-header">
-            <h2 className="jo-incent-page-header">Farmer Allocations</h2>
+            <h2 className="jo-incent-page-header">Farmer Programs</h2>
             <p className="jo-incent-page-subtitle">
-              Add farmer requests to available regional allocations
+              Add farmer requests to available regional programs
             </p>
           </div>
 

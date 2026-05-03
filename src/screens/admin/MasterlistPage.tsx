@@ -101,6 +101,8 @@ const Masterlist: React.FC = () => {
   const [printingRecordIds, setPrintingRecordIds] = useState<Set<string>>(
     new Set(),
   );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage] = useState(15);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -246,6 +248,10 @@ const Masterlist: React.FC = () => {
   useEffect(() => {
     fetchRSBSARecords();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, barangayFilter]);
 
   useEffect(() => {
     const handleWindowClick = () => {
@@ -711,6 +717,28 @@ const Masterlist: React.FC = () => {
                   View and manage all registered farmers in the system.
                 </p>
               </div>
+
+              {!loading && !error && filteredRecords.length > recordsPerPage && (
+                <div className="masterlist-admin-pagination">
+                  <button
+                    className="masterlist-admin-pagination-btn"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </button>
+                  <span className="masterlist-admin-pagination-info">
+                    Page {currentPage} of {Math.ceil(filteredRecords.length / recordsPerPage)}
+                  </span>
+                  <button
+                    className="masterlist-admin-pagination-btn"
+                    onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredRecords.length / recordsPerPage), p + 1))}
+                    disabled={currentPage >= Math.ceil(filteredRecords.length / recordsPerPage)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
 
             {!loading && !error && (
@@ -1010,6 +1038,28 @@ const Masterlist: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+
+              {!loading && !error && filteredRecords.length > recordsPerPage && (
+                <div className="masterlist-admin-pagination">
+                  <button
+                    className="masterlist-admin-pagination-btn"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </button>
+                  <span className="masterlist-admin-pagination-info">
+                    Page {currentPage} of {Math.ceil(filteredRecords.length / recordsPerPage)}
+                  </span>
+                  <button
+                    className="masterlist-admin-pagination-btn"
+                    onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredRecords.length / recordsPerPage), p + 1))}
+                    disabled={currentPage >= Math.ceil(filteredRecords.length / recordsPerPage)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -376,6 +376,10 @@ export const getDashboardStats = async (
       "salinas_7_kg",
       "salinas_8_kg",
       "malagkit_5_kg",
+      "rice_seeds_nsic_rc440_kg",
+      "corn_seeds_hybrid_kg",
+      "corn_seeds_opm_kg",
+      "vegetable_seeds_kg",
     ] as const;
 
     const sumAllocationFields = (

@@ -60,7 +60,13 @@ type AllocationNumericField =
   | "salinas_6_kg"
   | "salinas_7_kg"
   | "salinas_8_kg"
-  | "malagkit_5_kg";
+  | "malagkit_5_kg"
+  | "complete_16_16_16_bags"
+  | "ammonium_phosphate_16_20_0_bags"
+  | "rice_seeds_nsic_rc440_kg"
+  | "corn_seeds_hybrid_kg"
+  | "corn_seeds_opm_kg"
+  | "vegetable_seeds_kg";
 
 interface AllocationItem {
   key: AllocationNumericField;
@@ -86,6 +92,8 @@ const FERTILIZER_FIELDS: Array<{
   { key: "organic_root_exudate_mix_liters", label: "Organic Root Exudate Mix" },
   { key: "azolla_microphylla_kg", label: "Azolla microphylla" },
   { key: "foliar_liquid_fertilizer_npk_liters", label: "Foliar Liquid Fertilizer (NPK)" },
+  { key: "complete_16_16_16_bags", label: "Complete (16-16-16)" },
+  { key: "ammonium_phosphate_16_20_0_bags", label: "Ammonium Phosphate" },
 ];
 
 const SEED_FIELDS: Array<{
@@ -124,6 +132,10 @@ const SEED_FIELDS: Array<{
   { key: "salinas_7_kg", label: "Salinas 7" },
   { key: "salinas_8_kg", label: "Salinas 8" },
   { key: "malagkit_5_kg", label: "Malagkit 5" },
+  { key: "rice_seeds_nsic_rc440_kg", label: "NSIC Rc 440" },
+  { key: "corn_seeds_hybrid_kg", label: "Corn Seeds (Hybrid)" },
+  { key: "corn_seeds_opm_kg", label: "Corn Seeds (OPM)" },
+  { key: "vegetable_seeds_kg", label: "Vegetable Seeds" },
 ];
 
 const FERTILIZER_CATALOG_ROWS: Array<{ name: string; category: string }> = [
@@ -142,6 +154,8 @@ const FERTILIZER_CATALOG_ROWS: Array<{ name: string; category: string }> = [
   { name: "Organic Root Exudate Mix", category: "Liquid" },
   { name: "Azolla microphylla", category: "Liquid" },
   { name: "Foliar Liquid Fertilizer (NPK)", category: "Liquid" },
+  { name: "Complete (16-16-16)", category: "Solid" },
+  { name: "Ammonium Phosphate", category: "Solid" },
 ];
 
 const SEED_CATALOG_ROWS: Array<{ name: string; category: string }> = [
@@ -177,6 +191,10 @@ const SEED_CATALOG_ROWS: Array<{ name: string; category: string }> = [
   { name: "Malagkit 5", category: "Inbred" },
   { name: "Lumping143", category: "Inbred" },
   { name: "LP296", category: "Inbred" },
+  { name: "NSIC Rc 440", category: "Inbred" },
+  { name: "Corn Seeds (Hybrid)", category: "Hybrid" },
+  { name: "Corn Seeds (OPM)", category: "Inbred" },
+  { name: "Vegetable Seeds", category: "Inbred" },
 ];
 
 const AdminCreateAllocation: React.FC = () => {
@@ -189,15 +207,8 @@ const AdminCreateAllocation: React.FC = () => {
 
   const todayDate = new Date().toISOString().split("T")[0];
   
-  const determineSeasonFromDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-    return month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
-  };
-
   const [formData, setFormData] = useState({
-    season: determineSeasonFromDate(todayDate),
+    season: "", // This will now store the "Program Name"
     allocation_date: todayDate,
     notes: "",
   });
@@ -214,15 +225,7 @@ const AdminCreateAllocation: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === "allocation_date") {
-      setFormData(prev => ({
-        ...prev,
-        allocation_date: value,
-        season: determineSeasonFromDate(value)
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const addItem = (type: 'fertilizer' | 'seed', key: string) => {
@@ -334,12 +337,16 @@ const AdminCreateAllocation: React.FC = () => {
                     <input type="date" name="allocation_date" value={formData.allocation_date} onChange={handleInputChange} required className="jo-allocation-input" />
                   </div>
                   <div className="jo-allocation-field">
-                    <label className="jo-allocation-label">Auto-Detected Season</label>
-                    <div className="jo-allocation-season-display">
-                      {formData.season ? (
-                        <span>{formData.season.includes("wet") ? "🌧️ Wet Season" : "☀️ Dry Season"} {formData.season.split("_")[1]}</span>
-                      ) : <span className="jo-allocation-season-placeholder">Select a date first</span>}
-                    </div>
+                    <label className="jo-allocation-label">Program Name <span className="jo-allocation-required">*</span></label>
+                    <input 
+                      type="text" 
+                      name="season" 
+                      value={formData.season} 
+                      onChange={handleInputChange} 
+                      required 
+                      className="jo-allocation-input" 
+                      placeholder="e.g. Rice Subsidy 2024"
+                    />
                   </div>
                 </div>
               </div>
