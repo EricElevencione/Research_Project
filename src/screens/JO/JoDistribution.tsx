@@ -15,6 +15,10 @@ import IncentivesIcon from "../../assets/images/incentives.png";
 import LandRecsIcon from "../../assets/images/landrecord.png";
 import "../../assets/css/jo css/JoDistribution.css";
 import "../../components/layout/sidebarStyle.css";
+import {
+  EDIT_REGIONAL_FERTILIZER_FIELDS,
+  EDIT_REGIONAL_SEED_FIELDS,
+} from "../../constants/joRegionalAllocationEditCatalog";
 
 // Recharts for donut charts and timeline
 import {
@@ -51,26 +55,78 @@ interface RegionalAllocation {
   status: string;
   urea_46_0_0_bags?: number;
   complete_14_14_14_bags?: number;
+  np_16_20_0_bags?: number;
   complete_16_16_16_bags?: number;
   ammonium_sulfate_21_0_0_bags?: number;
   ammonium_phosphate_16_20_0_bags?: number;
   muriate_potash_0_0_60_bags?: number;
+  zinc_sulfate_bags?: number;
+  vermicompost_bags?: number;
+  chicken_manure_bags?: number;
+  rice_straw_kg?: number;
+  carbonized_rice_hull_bags?: number;
+  biofertilizer_liters?: number;
+  nanobiofertilizer_liters?: number;
+  organic_root_exudate_mix_liters?: number;
+  azolla_microphylla_kg?: number;
+  foliar_liquid_fertilizer_npk_liters?: number;
   rice_seeds_nsic_rc160_kg?: number;
   rice_seeds_nsic_rc222_kg?: number;
-  rice_seeds_nsic_rc440_kg?: number;
-  corn_seeds_hybrid_kg?: number;
-  corn_seeds_opm_kg?: number;
-  vegetable_seeds_kg?: number;
   jackpot_kg?: number;
   us88_kg?: number;
   th82_kg?: number;
   rh9000_kg?: number;
   lumping143_kg?: number;
   lp296_kg?: number;
+  mestiso_1_kg?: number;
+  mestiso_20_kg?: number;
+  mestiso_29_kg?: number;
+  mestiso_55_kg?: number;
+  mestiso_73_kg?: number;
+  mestiso_99_kg?: number;
+  mestiso_103_kg?: number;
+  nsic_rc402_kg?: number;
+  nsic_rc480_kg?: number;
+  nsic_rc216_kg?: number;
+  nsic_rc218_kg?: number;
+  nsic_rc506_kg?: number;
+  nsic_rc508_kg?: number;
+  nsic_rc512_kg?: number;
+  nsic_rc534_kg?: number;
+  tubigan_28_kg?: number;
+  tubigan_30_kg?: number;
+  tubigan_22_kg?: number;
+  sahod_ulan_2_kg?: number;
+  sahod_ulan_10_kg?: number;
+  salinas_6_kg?: number;
+  salinas_7_kg?: number;
+  salinas_8_kg?: number;
+  malagkit_5_kg?: number;
+  rice_seeds_nsic_rc440_kg?: number;
+  corn_seeds_hybrid_kg?: number;
+  corn_seeds_opm_kg?: number;
+  vegetable_seeds_kg?: number;
   notes?: string;
   season_start_date?: string;
   season_end_date?: string;
 }
+
+const EDIT_FERTILIZER_FIELDS = EDIT_REGIONAL_FERTILIZER_FIELDS as Array<{
+  key: keyof RegionalAllocation;
+  label: string;
+  category: "Solid" | "Liquid";
+}>;
+
+const EDIT_SEED_FIELDS = EDIT_REGIONAL_SEED_FIELDS as Array<{
+  key: keyof RegionalAllocation;
+  label: string;
+  category: "Hybrid" | "Inbred";
+}>;
+
+const EDIT_ALLOCATION_NUMERIC_KEYS: Array<keyof RegionalAllocation> = [
+  ...EDIT_FERTILIZER_FIELDS.map((row) => row.key),
+  ...EDIT_SEED_FIELDS.map((row) => row.key),
+];
 
 // New interfaces for Completion Report
 interface CompletionStats {
@@ -120,6 +176,7 @@ const JoDistribution: React.FC = () => {
   const [editFormData, setEditFormData] = useState<RegionalAllocation | null>(
     null,
   );
+  const [addedFields, setAddedFields] = useState<Set<string>>(new Set());
   const [requestCount, setRequestCount] = useState<number>(0);
   const [savingEdit, setSavingEdit] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -235,27 +292,15 @@ const JoDistribution: React.FC = () => {
     records: DistributionRecord[],
   ) => {
     // Calculate total allocated
-    const totalFertilizerAllocated =
-      (allocation.urea_46_0_0_bags || 0) +
-      (allocation.complete_14_14_14_bags || 0) +
-      (allocation.complete_16_16_16_bags || 0) +
-      (allocation.ammonium_sulfate_21_0_0_bags || 0) +
-      (allocation.ammonium_phosphate_16_20_0_bags || 0) +
-      (allocation.muriate_potash_0_0_60_bags || 0);
+    const totalFertilizerAllocated = EDIT_FERTILIZER_FIELDS.reduce(
+      (sum, field) => sum + Number((allocation as any)[field.key] || 0),
+      0,
+    );
 
-    const totalSeedAllocated =
-      (allocation.jackpot_kg || 0) +
-      (allocation.us88_kg || 0) +
-      (allocation.th82_kg || 0) +
-      (allocation.rh9000_kg || 0) +
-      (allocation.lumping143_kg || 0) +
-      (allocation.lp296_kg || 0) +
-      (allocation.rice_seeds_nsic_rc160_kg || 0) +
-      (allocation.rice_seeds_nsic_rc222_kg || 0) +
-      (allocation.rice_seeds_nsic_rc440_kg || 0) +
-      (allocation.corn_seeds_hybrid_kg || 0) +
-      (allocation.corn_seeds_opm_kg || 0) +
-      (allocation.vegetable_seeds_kg || 0);
+    const totalSeedAllocated = EDIT_SEED_FIELDS.reduce(
+      (sum, field) => sum + Number((allocation as any)[field.key] || 0),
+      0,
+    );
 
     // Calculate total distributed from records
     let totalFertilizerDistributed = 0;
@@ -623,9 +668,74 @@ const JoDistribution: React.FC = () => {
       setRequestCount(0);
     }
 
-    setEditAllocationModal(currentAllocation);
-    setEditFormData(currentAllocation);
+    setAddedFields(new Set());
+    const normalizedAllocation: RegionalAllocation = {
+      ...currentAllocation,
+      ...Object.fromEntries(
+        EDIT_ALLOCATION_NUMERIC_KEYS.map((key) => [
+          key,
+          Number((currentAllocation as Record<string, unknown>)[key as string]) ||
+            0,
+        ]),
+      ),
+    };
+    setEditAllocationModal(normalizedAllocation);
+    setEditFormData(normalizedAllocation);
   };
+
+  const handleDateChange = (part: "year" | "month" | "day", value: string) => {
+    if (!editFormData) return;
+
+    const currentDate = editFormData.allocation_date
+      ? new Date(editFormData.allocation_date)
+      : new Date();
+    let year = currentDate.getFullYear();
+    let month = currentDate.getMonth();
+    let day = currentDate.getDate();
+
+    if (part === "year") year = parseInt(value);
+    if (part === "month") month = parseInt(value);
+    if (part === "day") day = parseInt(value);
+
+    const newDate = new Date(year, month, day);
+    setEditFormData({
+      ...editFormData,
+      allocation_date: newDate.toISOString().split("T")[0],
+    });
+  };
+
+  const addFieldToEdit = (key: string) => {
+    setAddedFields((prev) => new Set(prev).add(key));
+  };
+
+  const removeAllocationLineItem = (key: string) => {
+    if (!editFormData) return;
+    setAddedFields((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setEditFormData({
+      ...editFormData,
+      [key]: 0 as any,
+    });
+  };
+
+  const visibleEditFertilizerFields = editFormData
+    ? EDIT_FERTILIZER_FIELDS.filter(
+        (field) =>
+          Number((editFormData as any)[field.key]) > 0 ||
+          addedFields.has(field.key as string),
+      )
+    : [];
+
+  const visibleEditSeedFields = editFormData
+    ? EDIT_SEED_FIELDS.filter(
+        (field) =>
+          Number((editFormData as any)[field.key]) > 0 ||
+          addedFields.has(field.key as string),
+      )
+    : [];
 
   const handleEditInputChange = (
     e: React.ChangeEvent<
@@ -638,7 +748,9 @@ const JoDistribution: React.FC = () => {
     setEditFormData({
       ...editFormData,
       [name]:
-        name.includes("bags") || name.includes("kg")
+        name.includes("bags") ||
+        name.includes("kg") ||
+        name.includes("liters")
           ? parseFloat(value) || 0
           : value,
     });
@@ -1148,7 +1260,7 @@ const JoDistribution: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Season Information */}
+                          {/* Program Information */}
                           <div style={{ marginBottom: "24px" }}>
                             <h4
                               style={{
@@ -1157,7 +1269,7 @@ const JoDistribution: React.FC = () => {
                                 marginBottom: "12px",
                               }}
                             >
-                              Season Information
+                              Program Information
                             </h4>
                             <div
                               style={{
@@ -1175,7 +1287,7 @@ const JoDistribution: React.FC = () => {
                                     fontWeight: "500",
                                   }}
                                 >
-                                  Season{" "}
+                                  Program Name{" "}
                                   <span style={{ color: "#ef4444" }}>*</span>
                                 </label>
                                 <input
@@ -1183,15 +1295,14 @@ const JoDistribution: React.FC = () => {
                                   name="season"
                                   value={editFormData.season}
                                   onChange={handleEditInputChange}
-                                  disabled
                                   style={{
                                     width: "100%",
                                     padding: "8px 12px",
                                     border: "1px solid #d1d5db",
                                     borderRadius: "6px",
                                     fontSize: "14px",
-                                    backgroundColor: "#f3f4f6",
-                                    color: "#6b7280",
+                                    backgroundColor: "white",
+                                    color: "#374151",
                                   }}
                                 />
                               </div>
@@ -1206,28 +1317,117 @@ const JoDistribution: React.FC = () => {
                                 >
                                   Allocation Date
                                 </label>
-                                <input
-                                  type="date"
-                                  name="allocation_date"
-                                  value={
-                                    editFormData.allocation_date?.split(
-                                      "T",
-                                    )[0] || ""
-                                  }
-                                  onChange={handleEditInputChange}
+                                <div
                                   style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
+                                    display: "grid",
+                                    gridTemplateColumns: "2fr 1fr 1fr",
+                                    gap: "8px",
                                   }}
-                                />
+                                >
+                                  {/* Month Dropdown */}
+                                  <select
+                                    value={
+                                      editFormData.allocation_date
+                                        ? new Date(
+                                            editFormData.allocation_date,
+                                          ).getMonth()
+                                        : new Date().getMonth()
+                                    }
+                                    onChange={(e) =>
+                                      handleDateChange("month", e.target.value)
+                                    }
+                                    style={{
+                                      width: "100%",
+                                      padding: "8px 12px",
+                                      border: "1px solid #d1d5db",
+                                      borderRadius: "6px",
+                                      fontSize: "14px",
+                                      backgroundColor: "white",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <option value="0">January</option>
+                                    <option value="1">February</option>
+                                    <option value="2">March</option>
+                                    <option value="3">April</option>
+                                    <option value="4">May</option>
+                                    <option value="5">June</option>
+                                    <option value="6">July</option>
+                                    <option value="7">August</option>
+                                    <option value="8">September</option>
+                                    <option value="9">October</option>
+                                    <option value="10">November</option>
+                                    <option value="11">December</option>
+                                  </select>
+
+                                  {/* Day Dropdown */}
+                                  <select
+                                    value={
+                                      editFormData.allocation_date
+                                        ? new Date(
+                                            editFormData.allocation_date,
+                                          ).getDate()
+                                        : new Date().getDate()
+                                    }
+                                    onChange={(e) =>
+                                      handleDateChange("day", e.target.value)
+                                    }
+                                    style={{
+                                      width: "100%",
+                                      padding: "8px 12px",
+                                      border: "1px solid #d1d5db",
+                                      borderRadius: "6px",
+                                      fontSize: "14px",
+                                      backgroundColor: "white",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    {Array.from({ length: 31 }, (_, i) => i + 1).map(
+                                      (day) => (
+                                        <option key={day} value={day}>
+                                          {day}
+                                        </option>
+                                      ),
+                                    )}
+                                  </select>
+
+                                  {/* Year Dropdown */}
+                                  <select
+                                    value={
+                                      editFormData.allocation_date
+                                        ? new Date(
+                                            editFormData.allocation_date,
+                                          ).getFullYear()
+                                        : new Date().getFullYear()
+                                    }
+                                    onChange={(e) =>
+                                      handleDateChange("year", e.target.value)
+                                    }
+                                    style={{
+                                      width: "100%",
+                                      padding: "8px 12px",
+                                      border: "1px solid #d1d5db",
+                                      borderRadius: "6px",
+                                      fontSize: "14px",
+                                      backgroundColor: "white",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    {Array.from(
+                                      { length: 76 },
+                                      (_, i) => 2025 + i,
+                                    ).map((year) => (
+                                      <option key={year} value={year}>
+                                        {year}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
                               </div>
                             </div>
                           </div>
 
-                          {/* Fertilizers */}
+                          {/* Fertilizers — rows with quantity or added; remove sets 0 */}
                           <div style={{ marginBottom: "24px" }}>
                             <h4
                               style={{
@@ -1236,184 +1436,178 @@ const JoDistribution: React.FC = () => {
                                 marginBottom: "12px",
                               }}
                             >
-                              🌱 Fertilizer Allocation (bags)
+                              🌱 Fertilizer Allocation
                             </h4>
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(2, 1fr)",
-                                gap: "12px",
-                              }}
-                            >
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Urea (46-0-0)
-                                </label>
-                                <input
-                                  type="number"
-                                  name="urea_46_0_0_bags"
-                                  value={editFormData.urea_46_0_0_bags || 0}
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Complete (14-14-14)
-                                </label>
-                                <input
-                                  type="number"
-                                  name="complete_14_14_14_bags"
-                                  value={
-                                    editFormData.complete_14_14_14_bags || 0
+                            <div style={{ marginBottom: "16px" }}>
+                              <select
+                                style={{
+                                  width: "100%",
+                                  padding: "8px 12px",
+                                  border: "1px solid #d1d5db",
+                                  borderRadius: "6px",
+                                  fontSize: "14px",
+                                  backgroundColor: "white",
+                                  cursor: "pointer",
+                                }}
+                                aria-label="Select fertilizer to add"
+                                value=""
+                                onChange={(e) => {
+                                  const key = e.target.value;
+                                  if (key) {
+                                    addFieldToEdit(key);
                                   }
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Complete (16-16-16)
-                                </label>
-                                <input
-                                  type="number"
-                                  name="complete_16_16_16_bags"
-                                  value={
-                                    editFormData.complete_16_16_16_bags || 0
-                                  }
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Ammonium Sulfate (21-0-0)
-                                </label>
-                                <input
-                                  type="number"
-                                  name="ammonium_sulfate_21_0_0_bags"
-                                  value={
-                                    editFormData.ammonium_sulfate_21_0_0_bags ||
-                                    0
-                                  }
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Ammonium Phosphate (16-20-0)
-                                </label>
-                                <input
-                                  type="number"
-                                  name="ammonium_phosphate_16_20_0_bags"
-                                  value={
-                                    editFormData.ammonium_phosphate_16_20_0_bags ||
-                                    0
-                                  }
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Muriate of Potash (0-0-60)
-                                </label>
-                                <input
-                                  type="number"
-                                  name="muriate_potash_0_0_60_bags"
-                                  value={
-                                    editFormData.muriate_potash_0_0_60_bags || 0
-                                  }
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
+                                  e.target.value = "";
+                                }}
+                              >
+                                <option value="" disabled>
+                                  Select Fertilizer to Add...
+                                </option>
+                                {(["Solid", "Liquid"] as const).map((category) => (
+                                  <optgroup
+                                    key={category}
+                                    label={`${category} Fertilizers`}
+                                  >
+                                    {EDIT_FERTILIZER_FIELDS.filter(
+                                      (f) =>
+                                        f.category === category &&
+                                        !visibleEditFertilizerFields.some(
+                                          (vf) => vf.key === f.key,
+                                        ),
+                                    ).map((f) => (
+                                      <option
+                                        key={f.key as string}
+                                        value={f.key as string}
+                                      >
+                                        {f.label}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                ))}
+                              </select>
                             </div>
+                            {visibleEditFertilizerFields.length === 0 ? (
+                              <p
+                                style={{
+                                  margin: 0,
+                                  color: "#6b7280",
+                                  fontSize: "14px",
+                                }}
+                              >
+                                No fertilizer inputs in this allocation. Add rows
+                                from the dropdown above.
+                              </p>
+                            ) : (
+                              (["Solid", "Liquid"] as const).map((category) => {
+                                const categoryFields =
+                                  visibleEditFertilizerFields.filter(
+                                    (field) => field.category === category,
+                                  );
+
+                                if (categoryFields.length === 0) return null;
+
+                                return (
+                                  <div
+                                    key={category}
+                                    style={{ marginBottom: "16px" }}
+                                  >
+                                    <h5
+                                      style={{
+                                        margin: "0 0 8px 0",
+                                        fontSize: "14px",
+                                        fontWeight: 600,
+                                        color: "#374151",
+                                      }}
+                                    >
+                                      {category} Fertilizers
+                                    </h5>
+                                    <div
+                                      style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(2, 1fr)",
+                                        gap: "12px",
+                                      }}
+                                    >
+                                      {categoryFields.map((field) => (
+                                        <div key={field.key as string}>
+                                          <label
+                                            style={{
+                                              display: "block",
+                                              marginBottom: "6px",
+                                              fontSize: "14px",
+                                            }}
+                                          >
+                                            {field.label}
+                                          </label>
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              gap: "8px",
+                                              alignItems: "center",
+                                            }}
+                                          >
+                                            <input
+                                              type="number"
+                                              name={field.key as string}
+                                              value={
+                                                Number(
+                                                  (editFormData as any)[
+                                                    field.key
+                                                  ],
+                                                ) || 0
+                                              }
+                                              onChange={handleEditInputChange}
+                                              min="0"
+                                              step={
+                                                (field.key as string).includes(
+                                                  "liters",
+                                                ) ||
+                                                (field.key as string).includes(
+                                                  "kg",
+                                                )
+                                                  ? "0.01"
+                                                  : "1"
+                                              }
+                                              style={{
+                                                flex: 1,
+                                                padding: "8px 12px",
+                                                border: "1px solid #d1d5db",
+                                                borderRadius: "6px",
+                                                fontSize: "14px",
+                                              }}
+                                            />
+                                            <button
+                                              type="button"
+                                              aria-label={`Remove ${field.label}`}
+                                              onClick={() =>
+                                                removeAllocationLineItem(
+                                                  field.key as string,
+                                                )
+                                              }
+                                              title="Remove (sets amount to 0)"
+                                              style={{
+                                                flexShrink: 0,
+                                                padding: "0 10px",
+                                                alignSelf: "stretch",
+                                                minHeight: "38px",
+                                                background: "#fee2e2",
+                                                color: "#ef4444",
+                                                border: "none",
+                                                borderRadius: "4px",
+                                                cursor: "pointer",
+                                                fontSize: "16px",
+                                                lineHeight: 1,
+                                              }}
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
                           </div>
 
                           {/* Seeds */}
@@ -1425,172 +1619,158 @@ const JoDistribution: React.FC = () => {
                                 marginBottom: "12px",
                               }}
                             >
-                              🌾 Seed Allocation (kg)
+                              🌾 Seed Allocation
                             </h4>
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(2, 1fr)",
-                                gap: "12px",
-                              }}
-                            >
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Jackpot
-                                </label>
-                                <input
-                                  type="number"
-                                  name="jackpot_kg"
-                                  value={editFormData.jackpot_kg || 0}
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  US88
-                                </label>
-                                <input
-                                  type="number"
-                                  name="us88_kg"
-                                  value={editFormData.us88_kg || 0}
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  TH82
-                                </label>
-                                <input
-                                  type="number"
-                                  name="th82_kg"
-                                  value={editFormData.th82_kg || 0}
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  RH9000
-                                </label>
-                                <input
-                                  type="number"
-                                  name="rh9000_kg"
-                                  value={editFormData.rh9000_kg || 0}
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  Lumping143
-                                </label>
-                                <input
-                                  type="number"
-                                  name="lumping143_kg"
-                                  value={editFormData.lumping143_kg || 0}
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                >
-                                  LP296
-                                </label>
-                                <input
-                                  type="number"
-                                  name="lp296_kg"
-                                  value={editFormData.lp296_kg || 0}
-                                  onChange={handleEditInputChange}
-                                  min="0"
-                                  step="0.01"
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 12px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "6px",
-                                    fontSize: "14px",
-                                  }}
-                                />
-                              </div>
+                            <div style={{ marginBottom: "16px" }}>
+                              <select
+                                style={{
+                                  width: "100%",
+                                  padding: "8px 12px",
+                                  border: "1px solid #d1d5db",
+                                  borderRadius: "6px",
+                                  fontSize: "14px",
+                                  backgroundColor: "white",
+                                  cursor: "pointer",
+                                }}
+                                onChange={(e) => {
+                                  addFieldToEdit(e.target.value);
+                                  e.target.value = "";
+                                }}
+                                value=""
+                              >
+                                <option value="" disabled>
+                                  Select Seed to Add...
+                                </option>
+                                {["Hybrid", "Inbred"].map((category) => (
+                                  <optgroup key={category} label={`${category} Seeds`}>
+                                    {EDIT_SEED_FIELDS.filter(
+                                      (s) =>
+                                        s.category === category &&
+                                        !visibleEditSeedFields.some(
+                                          (vs) => vs.key === s.key,
+                                        ),
+                                    ).map((s) => (
+                                      <option key={s.key as string} value={s.key as string}>
+                                        {s.label}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                ))}
+                              </select>
                             </div>
+                            {visibleEditSeedFields.length === 0 ? (
+                              <p
+                                style={{
+                                  margin: 0,
+                                  color: "#6b7280",
+                                  fontSize: "14px",
+                                }}
+                              >
+                                No seed inputs in this allocation. Add rows from
+                                the dropdown above.
+                              </p>
+                            ) : (
+                              (["Hybrid", "Inbred"] as const).map((category) => {
+                                const categoryFields = visibleEditSeedFields.filter(
+                                  (field) => field.category === category,
+                                );
+
+                                if (categoryFields.length === 0) return null;
+
+                                return (
+                                  <div
+                                    key={category}
+                                    style={{ marginBottom: "16px" }}
+                                  >
+                                    <h5
+                                      style={{
+                                        margin: "0 0 8px 0",
+                                        fontSize: "14px",
+                                        fontWeight: 600,
+                                        color: "#374151",
+                                      }}
+                                    >
+                                      {category} Seeds
+                                    </h5>
+                                    <div
+                                      style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(2, 1fr)",
+                                        gap: "12px",
+                                      }}
+                                    >
+                                      {categoryFields.map((field) => (
+                                        <div key={field.key as string}>
+                                          <label
+                                            style={{
+                                              display: "block",
+                                              marginBottom: "6px",
+                                              fontSize: "14px",
+                                            }}
+                                          >
+                                            {field.label}
+                                          </label>
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              gap: "8px",
+                                              alignItems: "center",
+                                            }}
+                                          >
+                                            <input
+                                              type="number"
+                                              name={field.key as string}
+                                              value={
+                                                Number(
+                                                  (editFormData as any)[
+                                                    field.key
+                                                  ],
+                                                ) || 0
+                                              }
+                                              onChange={handleEditInputChange}
+                                              min="0"
+                                              step="0.01"
+                                              style={{
+                                                flex: 1,
+                                                padding: "8px 12px",
+                                                border: "1px solid #d1d5db",
+                                                borderRadius: "6px",
+                                                fontSize: "14px",
+                                              }}
+                                            />
+                                            <button
+                                              type="button"
+                                              aria-label={`Remove ${field.label}`}
+                                              onClick={() =>
+                                                removeAllocationLineItem(
+                                                  field.key as string,
+                                                )
+                                              }
+                                              title="Remove (sets amount to 0)"
+                                              style={{
+                                                flexShrink: 0,
+                                                padding: "0 10px",
+                                                alignSelf: "stretch",
+                                                minHeight: "38px",
+                                                background: "#fee2e2",
+                                                color: "#ef4444",
+                                                border: "none",
+                                                borderRadius: "4px",
+                                                cursor: "pointer",
+                                                fontSize: "16px",
+                                                lineHeight: 1,
+                                              }}
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
                           </div>
 
                           {/* Notes */}

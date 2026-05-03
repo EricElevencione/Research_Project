@@ -475,8 +475,7 @@ const TechViewAllocation: React.FC = () => {
   };
 
   const formatSeasonName = (season: string) => {
-    const [type, year] = season.split("_");
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+    return season;
   };
 
   const getTotalAllocated = (field: AllocationValueField) => {
@@ -650,7 +649,7 @@ const TechViewAllocation: React.FC = () => {
                 {formatSeasonName(allocation.season)}
               </h2>
               <p className="jo-view-alloc-subtitle">
-                Regional Allocation Details
+                Regional Program Details
               </p>
             </div>
           </div>

@@ -330,7 +330,7 @@ const AdminCreateAllocation: React.FC = () => {
           <div className="jo-allocation-content-card">
             <form onSubmit={handleSubmit}>
               <div className="jo-allocation-section">
-                <h3 className="jo-allocation-section-title">Season Information</h3>
+                <h3 className="jo-allocation-section-title">Program Information</h3>
                 <div className="jo-allocation-grid-2">
                   <div className="jo-allocation-field">
                     <label className="jo-allocation-label">Allocation Date <span className="jo-allocation-required">*</span></label>

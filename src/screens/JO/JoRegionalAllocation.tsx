@@ -15,9 +15,11 @@ type NumericInput = number | "";
 type AllocationNumericField =
   | "urea_46_0_0_bags"
   | "complete_14_14_14_bags"
+  | "complete_16_16_16_bags"
   | "ammonium_sulfate_21_0_0_bags"
   | "np_16_20_0_bags"
   | "muriate_potash_0_0_60_bags"
+  | "ammonium_phosphate_16_20_0_bags"
   | "zinc_sulfate_bags"
   | "vermicompost_bags"
   | "chicken_manure_bags"
@@ -70,6 +72,7 @@ interface RegionalAllocation extends Record<
   notes: string;
 }
 
+// Mirrors JoIncentives EDIT_FERTILIZER_FIELDS (dropdown parity).
 const FERTILIZER_FIELDS: Array<{
   key: AllocationNumericField;
   label: string;
@@ -81,12 +84,12 @@ const FERTILIZER_FIELDS: Array<{
     label: "Complete (14-14-14)",
     category: "Solid",
   },
+  { key: "np_16_20_0_bags", label: "16-20-0", category: "Solid" },
   {
     key: "ammonium_sulfate_21_0_0_bags",
     label: "Ammonium Sulfate (21-0-0)",
     category: "Solid",
   },
-  { key: "np_16_20_0_bags", label: "16-20-0", category: "Solid" },
   {
     key: "muriate_potash_0_0_60_bags",
     label: "Muriate of Potash (0-0-60)",
@@ -94,7 +97,11 @@ const FERTILIZER_FIELDS: Array<{
   },
   { key: "zinc_sulfate_bags", label: "Zinc Sulfate", category: "Solid" },
   { key: "vermicompost_bags", label: "Vermicompost", category: "Solid" },
-  { key: "chicken_manure_bags", label: "Chicken Manure", category: "Solid" },
+  {
+    key: "chicken_manure_bags",
+    label: "Chicken Manure",
+    category: "Solid",
+  },
   {
     key: "rice_straw_kg",
     label: "Rice Straw (incorporated)",
@@ -129,6 +136,16 @@ const FERTILIZER_FIELDS: Array<{
     key: "foliar_liquid_fertilizer_npk_liters",
     label: "Foliar Liquid Fertilizer (NPK)",
     category: "Liquid",
+  },
+  {
+    key: "complete_16_16_16_bags",
+    label: "Complete (16-16-16)",
+    category: "Solid",
+  },
+  {
+    key: "ammonium_phosphate_16_20_0_bags",
+    label: "Ammonium Phosphate (16-20-0)",
+    category: "Solid",
   },
 ];
 
@@ -176,29 +193,41 @@ const NUMERIC_FIELDS: AllocationNumericField[] = [
   ...SEED_FIELDS.map((field) => field.key),
 ];
 
-const determineSeasonFromDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
-  return month >= 5 && month <= 10 ? `wet_${year}` : `dry_${year}`;
-};
+function syncAddedItemsFromMerged(merged: RegionalAllocation) {
+  const ferts = FERTILIZER_FIELDS.filter(
+    (f) => Number(merged[f.key]) > 0,
+  ).map((f) => f.key);
+  const seeds = SEED_FIELDS.filter((s) => Number(merged[s.key]) > 0).map(
+    (s) => s.key,
+  );
+  return {
+    fertilizers: new Set<string>(ferts),
+    seeds: new Set<string>(seeds),
+  };
+}
 
 const JoRegionalAllocation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [addedFertilizers, setAddedFertilizers] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [addedSeeds, setAddedSeeds] = useState<Set<string>>(() => new Set());
 
   const todayDate = new Date().toISOString().split("T")[0];
   const [formData, setFormData] = useState<RegionalAllocation>({
-    season: determineSeasonFromDate(todayDate),
+    season: "",
     allocation_date: todayDate,
     notes: "",
     urea_46_0_0_bags: 0,
     complete_14_14_14_bags: 0,
+    complete_16_16_16_bags: 0,
     ammonium_sulfate_21_0_0_bags: 0,
     np_16_20_0_bags: 0,
     muriate_potash_0_0_60_bags: 0,
+    ammonium_phosphate_16_20_0_bags: 0,
     zinc_sulfate_bags: 0,
     vermicompost_bags: 0,
     chicken_manure_bags: 0,
@@ -246,22 +275,61 @@ const JoRegionalAllocation: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
+    if (!formData.season?.trim()) return;
     fetchAllocation();
   }, [formData.season]);
 
   const fetchAllocation = async () => {
+    const seasonKey = formData.season.trim();
+    if (!seasonKey) return;
     try {
-      const response = await getAllocationBySeason(formData.season);
+      const response = await getAllocationBySeason(seasonKey);
       if (!response.error && response.data) {
-        setFormData((prev) => ({
-          ...prev,
-          ...response.data,
-          notes: response.data.notes || "",
-        }));
+        setFormData((prev) => {
+          const merged: RegionalAllocation = {
+            ...prev,
+            ...(response.data as Partial<RegionalAllocation>),
+            notes: (response.data as { notes?: string }).notes || "",
+          };
+          queueMicrotask(() => {
+            const { fertilizers, seeds } = syncAddedItemsFromMerged(merged);
+            setAddedFertilizers(fertilizers);
+            setAddedSeeds(seeds);
+          });
+          return merged;
+        });
       }
     } catch {
-      console.log("No existing allocation found, starting fresh");
+      console.log("No existing allocation found");
     }
+  };
+
+  const addFertilizer = (key: string) => {
+    if (!key) return;
+    setAddedFertilizers((prev) => new Set(prev).add(key));
+  };
+
+  const removeFertilizer = (key: AllocationNumericField) => {
+    setAddedFertilizers((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setFormData((prev) => ({ ...prev, [key]: 0 }));
+  };
+
+  const addSeed = (key: string) => {
+    if (!key) return;
+    setAddedSeeds((prev) => new Set(prev).add(key));
+  };
+
+  const removeSeed = (key: AllocationNumericField) => {
+    setAddedSeeds((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setFormData((prev) => ({ ...prev, [key]: 0 }));
   };
 
   const handleInputChange = (
@@ -270,16 +338,6 @@ const JoRegionalAllocation: React.FC = () => {
     >,
   ) => {
     const { name, value } = e.target;
-
-    if (name === "allocation_date") {
-      const autoSeason = determineSeasonFromDate(value);
-      setFormData((prev) => ({
-        ...prev,
-        allocation_date: value,
-        season: autoSeason,
-      }));
-      return;
-    }
 
     if (
       name.includes("bags") ||
@@ -436,7 +494,7 @@ const JoRegionalAllocation: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="jo-regional-form">
           <div className="jo-regional-card">
-            <h3>Season Information</h3>
+            <h3>Program Information</h3>
             <div className="jo-regional-form-grid">
               <div className="jo-regional-form-field">
                 <label>Allocation Date *</label>
@@ -449,23 +507,61 @@ const JoRegionalAllocation: React.FC = () => {
                 />
               </div>
               <div className="jo-regional-form-field">
-                <label>Auto-Detected Season</label>
-                <input type="text" value={formData.season} readOnly />
+                <label>Program Name</label>
+                <input
+                  type="text"
+                  name="season"
+                  value={formData.season}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Rice Subsidy 2024"
+                  required
+                />
               </div>
             </div>
           </div>
 
           <div className="jo-regional-card">
             <h3>Fertilizer Allocations</h3>
-            {(["Solid", "Liquid"] as const).map((category) => (
-              <div key={category} style={{ marginBottom: "16px" }}>
-                <h4>{category} Fertilizers</h4>
-                <div className="jo-regional-form-grid">
-                  {FERTILIZER_FIELDS.filter(
-                    (field) => field.category === category,
-                  ).map((field) => (
-                    <div className="jo-regional-form-field" key={field.key}>
-                      <label>{field.label}</label>
+            <div
+              className="jo-regional-form-field"
+              style={{ marginBottom: "20px" }}
+            >
+              <select
+                onChange={(e) => {
+                  addFertilizer(e.target.value);
+                  e.target.value = "";
+                }}
+                value=""
+              >
+                <option value="" disabled>
+                  Select Fertilizer to Add...
+                </option>
+                {(["Solid", "Liquid"] as const).map((category) => (
+                  <optgroup key={category} label={`${category} Fertilizers`}>
+                    {FERTILIZER_FIELDS.filter(
+                      (f) =>
+                        f.category === category &&
+                        !addedFertilizers.has(f.key),
+                    ).map((f) => (
+                      <option key={f.key} value={f.key}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            <div className="jo-regional-form-grid">
+              {FERTILIZER_FIELDS.filter((f) => addedFertilizers.has(f.key)).map(
+                (field) => (
+                  <div
+                    className="jo-regional-form-field"
+                    key={field.key}
+                    style={{ position: "relative" }}
+                  >
+                    <label>{field.label}</label>
+                    <div style={{ display: "flex", gap: "8px" }}>
                       <input
                         type="number"
                         name={field.key}
@@ -479,40 +575,114 @@ const JoRegionalAllocation: React.FC = () => {
                             : "1"
                         }
                       />
+                      <button
+                        type="button"
+                        onClick={() => removeFertilizer(field.key)}
+                        style={{
+                          padding: "0 8px",
+                          background: "#fee2e2",
+                          color: "#ef4444",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        ✕
+                      </button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                  </div>
+                ),
+              )}
+            </div>
+            {addedFertilizers.size === 0 && (
+              <p
+                style={{
+                  color: "#94a3b8",
+                  fontStyle: "italic",
+                  textAlign: "center",
+                }}
+              >
+                No fertilizers added yet.
+              </p>
+            )}
             <div className="jo-regional-total-summary">
               Total Fertilizer Inputs: {totalFertilizer.toLocaleString()}
             </div>
           </div>
 
           <div className="jo-regional-card">
-            <h3>Seed Allocations (kg)</h3>
-            {(["Hybrid", "Inbred"] as const).map((category) => (
-              <div key={category} style={{ marginBottom: "16px" }}>
-                <h4>{category} Seeds</h4>
-                <div className="jo-regional-form-grid">
-                  {SEED_FIELDS.filter(
-                    (field) => field.category === category,
-                  ).map((field) => (
-                    <div className="jo-regional-form-field" key={field.key}>
-                      <label>{field.label}</label>
-                      <input
-                        type="number"
-                        name={field.key}
-                        value={formData[field.key]}
-                        onChange={handleInputChange}
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                  ))}
+            <h3>Seed Allocations</h3>
+            <div
+              className="jo-regional-form-field"
+              style={{ marginBottom: "20px" }}
+            >
+              <select
+                onChange={(e) => {
+                  addSeed(e.target.value);
+                  e.target.value = "";
+                }}
+                value=""
+              >
+                <option value="" disabled>
+                  Select Seed to Add...
+                </option>
+                {(["Hybrid", "Inbred"] as const).map((category) => (
+                  <optgroup key={category} label={`${category} Seeds`}>
+                    {SEED_FIELDS.filter(
+                      (s) =>
+                        s.category === category && !addedSeeds.has(s.key),
+                    ).map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            <div className="jo-regional-form-grid">
+              {SEED_FIELDS.filter((s) => addedSeeds.has(s.key)).map((field) => (
+                <div className="jo-regional-form-field" key={field.key}>
+                  <label>{field.label}</label>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input
+                      type="number"
+                      name={field.key}
+                      value={formData[field.key]}
+                      onChange={handleInputChange}
+                      min="0"
+                      step="0.01"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeSeed(field.key)}
+                      style={{
+                        padding: "0 8px",
+                        background: "#fee2e2",
+                        color: "#ef4444",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            {addedSeeds.size === 0 && (
+              <p
+                style={{
+                  color: "#94a3b8",
+                  fontStyle: "italic",
+                  textAlign: "center",
+                }}
+              >
+                No seeds added yet.
+              </p>
+            )}
             <div className="jo-regional-total-summary">
               Total Seed Inputs: {totalSeeds.toLocaleString()} kg
             </div>

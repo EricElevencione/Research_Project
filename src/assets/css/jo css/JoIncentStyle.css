@@ -1182,3 +1182,36 @@
     max-width: none;
   }
 }
+
+/* Edit Modal Specific Inputs */
+.jo-incent-edit-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.jo-incent-edit-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background-color: #f9fafb;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.jo-incent-edit-input:focus {
+  outline: none;
+  border-color: #10b981;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.jo-incent-edit-input:hover {
+  border-color: #10b981;
+  background-color: white;
+}

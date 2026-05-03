@@ -812,12 +812,6 @@ const JoAddFarmerRequest: React.FC = () => {
         requested_corn_seeds_hybrid_kg: formData.requested_corn_seeds_hybrid_kg,
         requested_corn_seeds_opm_kg: formData.requested_corn_seeds_opm_kg,
         requested_vegetable_seeds_kg: formData.requested_vegetable_seeds_kg,
-        requested_jackpot_kg: formData.requested_jackpot_kg,
-        requested_us88_kg: formData.requested_us88_kg,
-        requested_th82_kg: formData.requested_th82_kg,
-        requested_rh9000_kg: formData.requested_rh9000_kg,
-        requested_lumping143_kg: formData.requested_lumping143_kg,
-        requested_lp296_kg: formData.requested_lp296_kg,
       });
 
       if (response.error) {
@@ -841,11 +835,11 @@ const JoAddFarmerRequest: React.FC = () => {
           AuditModule.REQUESTS,
           "farmer_request",
           response.data?.id || 0,
-          `Added farmer request for ${farmerFullName} (${allocationLabel})`,
+          `Added farmer request for ${farmerFullName} (Program: ${allocationLabel})`,
           undefined,
           {
             farmer_name: farmerFullName,
-            allocation_season: allocation.season || null,
+            allocation_program: allocation.season || null,
             allocation_date: allocation.allocation_date || null,
             requested_fertilizer_total_bags: totalFertilizerRequested,
             requested_seed_total_kg: totalSeedsRequested,
@@ -890,12 +884,6 @@ const JoAddFarmerRequest: React.FC = () => {
               formData.requested_rice_seeds_nsic_rc160_kg,
             requested_rice_seeds_nsic_rc222_kg:
               formData.requested_rice_seeds_nsic_rc222_kg,
-            requested_jackpot_kg: formData.requested_jackpot_kg,
-            requested_us88_kg: formData.requested_us88_kg,
-            requested_th82_kg: formData.requested_th82_kg,
-            requested_rh9000_kg: formData.requested_rh9000_kg,
-            requested_lumping143_kg: formData.requested_lumping143_kg,
-            requested_lp296_kg: formData.requested_lp296_kg,
             requested_mestiso_1_kg: formData.requested_mestiso_1_kg,
             requested_mestiso_20_kg: formData.requested_mestiso_20_kg,
             requested_mestiso_29_kg: formData.requested_mestiso_29_kg,
@@ -1200,6 +1188,9 @@ const JoAddFarmerRequest: React.FC = () => {
                           className="jo-add-farmer-radio"
                         />
                         <div className="jo-add-farmer-item-content">
+                          <label className="jo-add-farmer-label">
+                            Program Name
+                          </label>
                           <div className="jo-add-farmer-name">
                             {farmer.last_name}, {farmer.first_name}{" "}
                             {farmer.middle_name ? farmer.middle_name + " " : ""}

@@ -78,6 +78,92 @@
   flex-shrink: 0;
 }
 
+/* Status Count Cards */
+.masterlist-status-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.masterlist-status-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 15px;
+  padding: 0.6rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-left: 4px solid #6366f1;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.masterlist-status-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.masterlist-card-icon {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.masterlist-card-total {
+  border-left-color: #6366f1; /* Purple */
+}
+
+.masterlist-card-total .masterlist-card-icon {
+  color: #6366f1;
+}
+
+.masterlist-card-active {
+  border-left-color: #10b981;
+}
+
+.masterlist-card-active .masterlist-card-icon {
+  color: #10b981;
+}
+
+.masterlist-card-inactive {
+  border-left-color: #ef4444;
+}
+
+.masterlist-card-inactive .masterlist-card-icon {
+  color: #ef4444;
+}
+
+.masterlist-card-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.masterlist-card-count {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.masterlist-card-label {
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 1px;
+}
+
 .masterlist-admin-search-filter {
   flex: 1;
   min-width: 300px;
@@ -573,89 +659,6 @@
   }
 }
 
-/* ============================================
-   Status Count Cards
-   ============================================ */
-.masterlist-status-cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 8px;
-  margin-bottom: 8px;
-}
-
-.masterlist-status-card {
-  background: white;
-  border-radius: 10px;
-  padding: 10px 12px;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  position: relative;
-  overflow: hidden;
-  border-left: 3px solid transparent;
-  min-height: 64px;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
-}
-
-.masterlist-status-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-}
-
-.masterlist-card-total {
-  border-left-color: #6366f1;
-  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
-}
-
-.masterlist-card-active {
-  border-left-color: #22c55e;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-}
-
-.masterlist-card-inactive {
-  border-left-color: #ef4444;
-  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
-}
-
-.masterlist-card-submitted {
-  border-left-color: #f59e0b;
-  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
-}
-
-.masterlist-card-icon {
-  font-size: 18px;
-  width: 20px;
-  text-align: center;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.masterlist-card-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.masterlist-card-count {
-  font-size: 22px;
-  font-weight: 700;
-  color: #111827;
-  line-height: 1;
-}
-
-.masterlist-card-label {
-  font-size: 11px;
-  color: #6b7280;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.35px;
-}
 
 .masterlist-card-bar {
   height: 6px;

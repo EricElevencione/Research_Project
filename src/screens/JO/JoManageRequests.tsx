@@ -236,6 +236,16 @@ const FERTILIZER_ITEMS: AllocationRequestItem[] = [
     allocationField: "foliar_liquid_fertilizer_npk_liters",
     requestField: "requested_foliar_liquid_fertilizer_npk_liters",
   },
+  {
+    label: "Complete (16-16-16)",
+    allocationField: "complete_16_16_16_bags",
+    requestField: "requested_complete_16_bags",
+  },
+  {
+    label: "Ammonium Phosphate",
+    allocationField: "ammonium_phosphate_16_20_0_bags",
+    requestField: "requested_ammonium_phosphate_bags",
+  },
 ];
 
 const SEED_ITEMS: AllocationRequestItem[] = [
@@ -920,8 +930,7 @@ const JoManageRequests: React.FC = () => {
   };
 
   const formatSeasonName = (season: string) => {
-    const [type, year] = season.split("_");
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+    return season;
   };
 
   // Edit request functionality
@@ -1323,12 +1332,10 @@ const JoManageRequests: React.FC = () => {
         <div className="main-content">
           <div className="jo-manage-dashboard-header-incent">
             <div className="jo-manage-header-sub">
-              <h2 className="jo-manage-page-header">Manage Farmer Requests</h2>
-              {allocation && (
-                <p className="jo-manage-page-subtitle">
-                  {formatSeasonName(allocation.season)}
-                </p>
-              )}
+              <h2 className="jo-manage-title">Manage Requests</h2>
+              <p className="jo-manage-subtitle">
+                {formatSeasonName(allocation?.season)} · Regional Program
+              </p>
             </div>
             <div className="jo-manage-requests-back-create-section">
               <button
@@ -1385,86 +1392,64 @@ const JoManageRequests: React.FC = () => {
             {/* Allocation vs Requests Comparison */}
             <div className="jo-manage-requests-comparison-grid">
               {/* Regional Allocation Card */}
-              <div className="jo-manage-requests-allocation-card">
+              <div className="jo-manage-requests-comparison-card jo-manage-requests-allocation-card">
                 <h3 className="jo-manage-requests-card-header allocation">
-                  📦 Regional Allocation (Total Received)
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                  Regional Allocation
                 </h3>
                 <div className="jo-manage-requests-card-content">
                   <div className="jo-manage-requests-stat-box fertilizers">
-                    <span className="jo-manage-requests-stat-label fertilizers">
-                      🌱 Total Fertilizers
-                    </span>
+                    <span className="jo-manage-requests-stat-label fertilizers">Total Fertilizers</span>
                     <span className="jo-manage-requests-stat-value fertilizers">
-                      {sumAllocationFields(
-                        allocation,
-                        FERTILIZER_ITEMS,
-                      ).toFixed(2)}{" "}
-                      bags
+                      {sumAllocationFields(allocation, FERTILIZER_ITEMS).toFixed(2)} bags
                     </span>
                   </div>
                   <div className="jo-manage-requests-stat-box seeds">
-                    <span className="jo-manage-requests-stat-label seeds">
-                      🌾 Total Seeds
-                    </span>
+                    <span className="jo-manage-requests-stat-label seeds">Total Seeds</span>
                     <span className="jo-manage-requests-stat-value seeds">
-                      {sumAllocationFields(allocation, SEED_ITEMS).toFixed(2)}{" "}
-                      kg
+                      {sumAllocationFields(allocation, SEED_ITEMS).toFixed(2)} kg
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Total Farmer Requests Card */}
-              <div className="jo-manage-requests-farmer-requests-card">
+              <div className="jo-manage-requests-comparison-card jo-manage-requests-total-requests-card">
                 <h3 className="jo-manage-requests-card-header total-requests">
-                  📊 Total Farmer Requests
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                  Total Requests
                 </h3>
                 <div className="jo-manage-requests-card-content">
                   <div className="jo-manage-requests-stat-box fertilizers">
-                    <span className="jo-manage-requests-stat-label fertilizers">
-                      🌱 Total Fertilizers Requested
-                    </span>
+                    <span className="jo-manage-requests-stat-label fertilizers">Fertilizers Requested</span>
                     <span className="jo-manage-requests-stat-value fertilizers">
-                      {sumRequestFieldsForList(
-                        filteredRequests,
-                        FERTILIZER_REQUEST_FIELDS,
-                      ).toFixed(2)}{" "}
-                      bags
+                      {sumRequestFieldsForList(filteredRequests, FERTILIZER_REQUEST_FIELDS).toFixed(2)} bags
                     </span>
                   </div>
                   <div className="jo-manage-requests-stat-box seeds">
-                    <span className="jo-manage-requests-stat-label seeds">
-                      🌾 Total Seeds Requested
-                    </span>
+                    <span className="jo-manage-requests-stat-label seeds">Seeds Requested</span>
                     <span className="jo-manage-requests-stat-value seeds">
-                      {sumRequestFieldsForList(
-                        filteredRequests,
-                        SEED_REQUEST_FIELDS,
-                      ).toFixed(2)}{" "}
-                      kg
+                      {sumRequestFieldsForList(filteredRequests, SEED_REQUEST_FIELDS).toFixed(2)} kg
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Approved Farmer Requests Card */}
-              <div className="jo-manage-requests-farmer-requests-card approved">
+              <div className="jo-manage-requests-comparison-card jo-manage-requests-approved-card">
                 <h3 className="jo-manage-requests-card-header farmer-requests">
-                  ✅ Approved Farmer Requests
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approved Requests
                 </h3>
                 <div className="jo-manage-requests-card-content">
                   <div className="jo-manage-requests-stat-box fertilizers">
-                    <span className="jo-manage-requests-stat-label fertilizers">
-                      🌱 Total Fertilizers
-                    </span>
+                    <span className="jo-manage-requests-stat-label fertilizers">Total Fertilizers</span>
                     <span className="jo-manage-requests-stat-value fertilizers">
                       {getStatusTotals("approved").fertilizer.toFixed(2)} bags
                     </span>
                   </div>
                   <div className="jo-manage-requests-stat-box seeds">
-                    <span className="jo-manage-requests-stat-label seeds">
-                      🌾 Total Seeds
-                    </span>
+                    <span className="jo-manage-requests-stat-label seeds">Total Seeds</span>
                     <span className="jo-manage-requests-stat-value seeds">
                       {getStatusTotals("approved").seeds.toFixed(2)} kg
                     </span>
@@ -1473,23 +1458,20 @@ const JoManageRequests: React.FC = () => {
               </div>
 
               {/* Rejected Farmer Requests Card */}
-              <div className="jo-manage-requests-farmer-requests-card rejected">
+              <div className="jo-manage-requests-comparison-card jo-manage-requests-rejected-card">
                 <h3 className="jo-manage-requests-card-header farmer-requests-rejected">
-                  ❌ Rejected Farmer Requests
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  Rejected Requests
                 </h3>
                 <div className="jo-manage-requests-card-content">
                   <div className="jo-manage-requests-stat-box fertilizers">
-                    <span className="jo-manage-requests-stat-label fertilizers">
-                      🌱 Total Fertilizers
-                    </span>
+                    <span className="jo-manage-requests-stat-label fertilizers">Total Fertilizers</span>
                     <span className="jo-manage-requests-stat-value fertilizers">
                       {getStatusTotals("rejected").fertilizer.toFixed(2)} bags
                     </span>
                   </div>
                   <div className="jo-manage-requests-stat-box seeds">
-                    <span className="jo-manage-requests-stat-label seeds">
-                      🌾 Total Seeds
-                    </span>
+                    <span className="jo-manage-requests-stat-label seeds">Total Seeds</span>
                     <span className="jo-manage-requests-stat-value seeds">
                       {getStatusTotals("rejected").seeds.toFixed(2)} kg
                     </span>
@@ -1500,102 +1482,84 @@ const JoManageRequests: React.FC = () => {
 
             {/* Summary Cards */}
             <div className="jo-manage-requests-summary-grid">
-              <div className="jo-manage-requests-summary-card total">
-                <div className="jo-manage-requests-summary-label">
-                  Total Requests
+              {/* Total Requests */}
+              <div className="jo-manage-requests-summary-card jo-manage-card-total">
+                <div className="jo-manage-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                 </div>
-                <div className="jo-manage-requests-summary-value">
-                  {filteredRequests.length}
-                </div>
-              </div>
-              <div className="jo-manage-requests-summary-card pending">
-                <div className="jo-manage-requests-summary-label pending">
-                  Pending
-                </div>
-                <div className="jo-manage-requests-summary-value pending">
-                  {
-                    filteredRequests.filter((r) => r.status === "pending")
-                      .length
-                  }
+                <div className="jo-manage-card-info">
+                  <div className="jo-manage-card-count">{filteredRequests.length}</div>
+                  <div className="jo-manage-card-label">Total Requests</div>
                 </div>
               </div>
-              <div className="jo-manage-requests-summary-card approved">
-                <div className="jo-manage-requests-summary-label approved">
-                  Approved
+
+              {/* Pending Requests */}
+              <div className="jo-manage-requests-summary-card jo-manage-card-pending">
+                <div className="jo-manage-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                 </div>
-                <div className="jo-manage-requests-summary-value approved">
-                  {
-                    filteredRequests.filter((r) => r.status === "approved")
-                      .length
-                  }
+                <div className="jo-manage-card-info">
+                  <div className="jo-manage-card-count">
+                    {filteredRequests.filter((r) => r.status === "pending").length}
+                  </div>
+                  <div className="jo-manage-card-label">Pending Requests</div>
                 </div>
               </div>
-              <div className="jo-manage-requests-summary-card rejected">
-                <div className="jo-manage-requests-summary-label rejected">
-                  Rejected
+
+              {/* Approved Requests */}
+              <div className="jo-manage-requests-summary-card jo-manage-card-approved">
+                <div className="jo-manage-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
                 </div>
-                <div className="jo-manage-requests-summary-value rejected">
-                  {
-                    filteredRequests.filter((r) => r.status === "rejected")
-                      .length
-                  }
+                <div className="jo-manage-card-info">
+                  <div className="jo-manage-card-count">
+                    {filteredRequests.filter((r) => r.status === "approved").length}
+                  </div>
+                  <div className="jo-manage-card-label">Approved Requests</div>
+                </div>
+              </div>
+
+              {/* Rejected Requests */}
+              <div className="jo-manage-requests-summary-card jo-manage-card-rejected">
+                <div className="jo-manage-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                </div>
+                <div className="jo-manage-card-info">
+                  <div className="jo-manage-card-count">
+                    {filteredRequests.filter((r) => r.status === "rejected").length}
+                  </div>
+                  <div className="jo-manage-card-label">Rejected Requests</div>
                 </div>
               </div>
               {/* Combined Shortage & Suggestions Card */}
               <div
-                className="jo-manage-requests-summary-card shortage"
+                className="jo-manage-requests-summary-card jo-manage-card-suggestions"
                 onClick={() => setShowSuggestionsModal(true)}
-                style={{ cursor: "pointer" }}
               >
                 {newSuggestionsCount > 0 && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "-8px",
-                      right: "-8px",
-                      background: "#ef4444",
-                      color: "white",
-                      borderRadius: "50%",
-                      width: "24px",
-                      height: "24px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      border: "2px solid white",
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                      animation: "pulse 2s infinite",
-                    }}
-                  >
+                  <div className="jo-manage-card-pulse-badge">
                     {newSuggestionsCount}
                   </div>
                 )}
-                <div
-                  style={{
-                    fontSize: "14px",
-                    color: "#92400e",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  ⚠️ Shortages & Suggestions
+                <div className="jo-manage-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
                 </div>
-                <div
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: "600",
-                    color: "#92400e",
-                  }}
-                >
-                  {autoSuggestionsCount} /{" "}
-                  {
-                    Object.keys(alternatives).filter((key) => {
-                      const alt = alternatives[parseInt(key)];
-                      return alt?.suggestions?.suggestions?.length > 0;
-                    }).length
-                  }
+                <div className="jo-manage-card-info">
+                  <div className="jo-manage-card-count">
+                    {autoSuggestionsCount} /{" "}
+                    {
+                      Object.keys(alternatives).filter((key) => {
+                        const alt = alternatives[parseInt(key)];
+                        return (
+                          alt &&
+                          alt.suggestions &&
+                          alt.suggestions.suggestions &&
+                          alt.suggestions.suggestions.length > 0
+                        );
+                      }).length
+                    }
+                  </div>
+                  <div className="jo-manage-card-label">Shortages & Suggestions</div>
                 </div>
                 <div
                   style={{

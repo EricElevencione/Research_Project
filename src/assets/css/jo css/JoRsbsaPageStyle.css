@@ -82,76 +82,87 @@
 /* Status Count Cards */
 .jo-rsbsa-status-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 8px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .jo-rsbsa-status-card {
-  background: white;
-  border-radius: 10px;
-  padding: 10px 12px;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 15px;
+  padding: 0.6rem 1.2rem;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 10px;
-  border-left: 3px solid transparent;
-  min-height: 64px;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
+  gap: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-left: 4px solid #6366f1;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jo-rsbsa-status-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-}
-
-.jo-rsbsa-card-total {
-  border-left-color: #6366f1;
-  background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
-}
-
-.jo-rsbsa-card-active {
-  border-left-color: #22c55e;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-}
-
-.jo-rsbsa-card-inactive {
-  border-left-color: #ef4444;
-  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .jo-rsbsa-card-icon {
-  font-size: 18px;
-  width: 20px;
-  text-align: center;
-  line-height: 1;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
+}
+
+.jo-rsbsa-card-total {
+  border-left-color: #6366f1; /* Purple */
+}
+
+.jo-rsbsa-card-total .jo-rsbsa-card-icon {
+  color: #6366f1;
+}
+
+.jo-rsbsa-card-active {
+  border-left-color: #10b981;
+}
+
+.jo-rsbsa-card-active .jo-rsbsa-card-icon {
+  color: #10b981;
+}
+
+.jo-rsbsa-card-inactive {
+  border-left-color: #ef4444; /* Red */
+}
+
+.jo-rsbsa-card-inactive .jo-rsbsa-card-icon {
+  color: #ef4444;
 }
 
 .jo-rsbsa-card-info {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   min-width: 0;
+  line-height: 1.1;
 }
 
 .jo-rsbsa-card-count {
-  font-size: 22px;
-  font-weight: 700;
-  color: #111827;
-  line-height: 1;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
 }
 
 .jo-rsbsa-card-label {
-  font-size: 11px;
-  color: #6b7280;
-  font-weight: 500;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.35px;
+  letter-spacing: 0.05em;
 }
 
 /* Content Card */

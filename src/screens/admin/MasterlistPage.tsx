@@ -744,30 +744,47 @@ const Masterlist: React.FC = () => {
             {!loading && !error && (
               <div className="masterlist-status-cards">
                 <div className="masterlist-status-card masterlist-card-total">
-                  <div className="masterlist-card-icon">👥</div>
+                  <div className="masterlist-card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                  </div>
                   <div className="masterlist-card-info">
                     <span className="masterlist-card-count">
                       {rsbsaRecords.length}
                     </span>
-                    <span className="masterlist-card-label">Total Farmers</span>
+                    <span className="masterlist-card-label">TOTAL LAND OWNERS</span>
                   </div>
                 </div>
                 <div className="masterlist-status-card masterlist-card-active">
-                  <div className="masterlist-card-icon">✅</div>
+                  <div className="masterlist-card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 11 12 14 22 4"></polyline>
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                  </div>
                   <div className="masterlist-card-info">
                     <span className="masterlist-card-count">
-                      {rsbsaRecords.filter((r) => r.status === "Active").length}
+                      {rsbsaRecords.filter((r) => r.status === "Active" || r.status === "Active Farmer").length}
                     </span>
-                    <span className="masterlist-card-label">Active</span>
+                    <span className="masterlist-card-label">ACTIVE LAND OWNERS</span>
                   </div>
                 </div>
                 <div className="masterlist-status-card masterlist-card-inactive">
-                  <div className="masterlist-card-icon">❌</div>
+                  <div className="masterlist-card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </div>
                   <div className="masterlist-card-info">
                     <span className="masterlist-card-count">
-                      {rsbsaRecords.filter((r) => r.status !== "Active").length}
+                      {rsbsaRecords.filter((r) => r.status !== "Active" && r.status !== "Active Farmer").length}
                     </span>
-                    <span className="masterlist-card-label">Inactive</span>
+                    <span className="masterlist-card-label">INACTIVE LAND OWNERS</span>
                   </div>
                 </div>
               </div>

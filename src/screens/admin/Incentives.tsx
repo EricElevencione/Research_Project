@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAllocations, getFarmerRequests } from "../../api";
+import { FERTILIZER_FIELD_MAPS, SEED_FIELD_MAPS } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminIncentives.css";
 import "../../components/layout/sidebarStyle.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
@@ -9,17 +10,8 @@ interface RegionalAllocation {
   id: number;
   season: string;
   allocation_date: string;
-  urea_46_0_0_bags: number;
-  complete_14_14_14_bags: number;
-  ammonium_sulfate_21_0_0_bags: number;
-  muriate_potash_0_0_60_bags: number;
-  rice_seeds_nsic_rc160_kg: number;
-  rice_seeds_nsic_rc222_kg: number;
-  rice_seeds_nsic_rc440_kg: number;
-  corn_seeds_hybrid_kg: number;
-  corn_seeds_opm_kg: number;
-  vegetable_seeds_kg: number;
   farmer_count?: number;
+  [key: string]: any;
 }
 
 const Incentives: React.FC = () => {
@@ -77,28 +69,19 @@ const Incentives: React.FC = () => {
   };
 
   const formatSeasonName = (season: string) => {
-    const [type, year] = season.split("_");
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+    return season;
   };
 
   const getTotalFertilizer = (allocation: RegionalAllocation) => {
-    const total =
-      (Number(allocation.urea_46_0_0_bags) || 0) +
-      (Number(allocation.complete_14_14_14_bags) || 0) +
-      (Number(allocation.ammonium_sulfate_21_0_0_bags) || 0) +
-      (Number(allocation.muriate_potash_0_0_60_bags) || 0);
-    return isNaN(total) ? 0 : total;
+    return FERTILIZER_FIELD_MAPS.reduce((acc, map) => {
+      return acc + (Number(allocation[map.allocationField]) || 0);
+    }, 0);
   };
 
   const getTotalSeeds = (allocation: RegionalAllocation) => {
-    const total =
-      (Number(allocation.rice_seeds_nsic_rc160_kg) || 0) +
-      (Number(allocation.rice_seeds_nsic_rc222_kg) || 0) +
-      (Number(allocation.rice_seeds_nsic_rc440_kg) || 0) +
-      (Number(allocation.corn_seeds_hybrid_kg) || 0) +
-      (Number(allocation.corn_seeds_opm_kg) || 0) +
-      (Number(allocation.vegetable_seeds_kg) || 0);
-    return isNaN(total) ? 0 : total;
+    return SEED_FIELD_MAPS.reduce((acc, map) => {
+      return acc + (Number(allocation[map.allocationField]) || 0);
+    }, 0);
   };
 
   return (
@@ -167,8 +150,9 @@ const Incentives: React.FC = () => {
                         <span className="admin-incent-stat-value">{allocation.farmer_count || 0}</span>
                       </div>
                     </div>
-                    <div className="admin-incent-card-footer">
-                      <button className="admin-incent-btn-view" onClick={() => navigate(`/view-allocation/${allocation.id}`)}>View Details</button>
+                    <div className="admin-incent-card-actions">
+                      <button className="admin-incent-btn-action admin-incent-btn-manage" onClick={() => navigate(`/manage-requests/${allocation.id}`)}>Manage Allocation</button>
+                      <button className="admin-incent-btn-action admin-incent-btn-view" onClick={() => navigate(`/view-allocation/${allocation.id}`)}>View Details</button>
                     </div>
                   </div>
                 ))}

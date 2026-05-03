@@ -14,6 +14,10 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import {
+  EDIT_REGIONAL_FERTILIZER_FIELDS,
+  EDIT_REGIONAL_SEED_FIELDS,
+} from "../../constants/joRegionalAllocationEditCatalog";
 
 interface RegionalAllocation {
   id: number;
@@ -66,6 +70,12 @@ interface RegionalAllocation {
   salinas_7_kg?: number;
   salinas_8_kg?: number;
   malagkit_5_kg?: number;
+  complete_16_16_16_bags?: number;
+  ammonium_phosphate_16_20_0_bags?: number;
+  rice_seeds_nsic_rc440_kg?: number;
+  corn_seeds_hybrid_kg?: number;
+  corn_seeds_opm_kg?: number;
+  vegetable_seeds_kg?: number;
   notes?: string;
   status?: string;
   farmer_count?: number;
@@ -118,170 +128,48 @@ type AllocationNumericField =
   | "salinas_6_kg"
   | "salinas_7_kg"
   | "salinas_8_kg"
-  | "malagkit_5_kg";
+  | "malagkit_5_kg"
+  | "complete_16_16_16_bags"
+  | "ammonium_phosphate_16_20_0_bags"
+  | "rice_seeds_nsic_rc440_kg"
+  | "corn_seeds_hybrid_kg"
+  | "corn_seeds_opm_kg"
+  | "vegetable_seeds_kg";
 
-const EDIT_FERTILIZER_FIELDS: Array<{
+const PROGRAM_NAME_OPTIONS = [
+  "RCEF (Rice Competitiveness Enhancement Fund)",
+  "National Rice Program",
+  "National Corn Program",
+  "High Value Crops Development Program (HVCDP)",
+  "Hybrid Rice Program",
+  "Organic Agriculture Program",
+  "Special Area for Agricultural Development (SAAD)",
+  "LSA (Learning Site for Agriculture)",
+  "Regular Program",
+];
+
+const EDIT_FERTILIZER_FIELDS = EDIT_REGIONAL_FERTILIZER_FIELDS as Array<{
   key: AllocationNumericField;
   label: string;
   category: "Solid" | "Liquid";
-}> = [
-  { key: "urea_46_0_0_bags", label: "Urea (46-0-0)", category: "Solid" },
-  {
-    key: "complete_14_14_14_bags",
-    label: "Complete (14-14-14)",
-    category: "Solid",
-  },
-  { key: "np_16_20_0_bags", label: "16-20-0", category: "Solid" },
-  {
-    key: "ammonium_sulfate_21_0_0_bags",
-    label: "Ammonium Sulfate (21-0-0)",
-    category: "Solid",
-  },
-  {
-    key: "muriate_potash_0_0_60_bags",
-    label: "Muriate of Potash (0-0-60)",
-    category: "Solid",
-  },
-  { key: "zinc_sulfate_bags", label: "Zinc Sulfate", category: "Solid" },
-  { key: "vermicompost_bags", label: "Vermicompost", category: "Solid" },
-  {
-    key: "chicken_manure_bags",
-    label: "Chicken Manure",
-    category: "Solid",
-  },
-  {
-    key: "rice_straw_kg",
-    label: "Rice Straw (incorporated)",
-    category: "Solid",
-  },
-  {
-    key: "carbonized_rice_hull_bags",
-    label: "Carbonized Rice Hull (CRH)",
-    category: "Solid",
-  },
-  {
-    key: "biofertilizer_liters",
-    label: "Biofertilizer (Liquid Concentrate)",
-    category: "Liquid",
-  },
-  {
-    key: "nanobiofertilizer_liters",
-    label: "Nanobiofertilizer",
-    category: "Liquid",
-  },
-  {
-    key: "organic_root_exudate_mix_liters",
-    label: "Organic Root Exudate Mix",
-    category: "Liquid",
-  },
-  {
-    key: "azolla_microphylla_kg",
-    label: "Azolla microphylla",
-    category: "Liquid",
-  },
-  {
-    key: "foliar_liquid_fertilizer_npk_liters",
-    label: "Foliar Liquid Fertilizer (NPK)",
-    category: "Liquid",
-  },
-];
+}>;
 
-const EDIT_SEED_FIELDS: Array<{
+const EDIT_SEED_FIELDS = EDIT_REGIONAL_SEED_FIELDS as Array<{
   key: AllocationNumericField;
   label: string;
   category: "Hybrid" | "Inbred";
-}> = [
-  { key: "rice_seeds_nsic_rc160_kg", label: "NSIC Rc 160", category: "Inbred" },
-  { key: "rice_seeds_nsic_rc222_kg", label: "NSIC Rc 222", category: "Inbred" },
-  { key: "jackpot_kg", label: "Jackpot", category: "Hybrid" },
-  { key: "us88_kg", label: "US88", category: "Hybrid" },
-  { key: "th82_kg", label: "TH82", category: "Hybrid" },
-  { key: "rh9000_kg", label: "RH9000", category: "Hybrid" },
-  { key: "lumping143_kg", label: "Lumping143", category: "Inbred" },
-  { key: "lp296_kg", label: "LP296", category: "Inbred" },
-  { key: "mestiso_1_kg", label: "Mestiso 1 (M1)", category: "Hybrid" },
-  { key: "mestiso_20_kg", label: "Mestiso 20 (M20)", category: "Hybrid" },
-  { key: "mestiso_29_kg", label: "Mestiso 29", category: "Hybrid" },
-  { key: "mestiso_55_kg", label: "Mestiso 55", category: "Hybrid" },
-  { key: "mestiso_73_kg", label: "Mestiso 73", category: "Hybrid" },
-  { key: "mestiso_99_kg", label: "Mestiso 99", category: "Hybrid" },
-  { key: "mestiso_103_kg", label: "Mestiso 103", category: "Hybrid" },
-  { key: "nsic_rc402_kg", label: "NSIC Rc 402", category: "Inbred" },
-  { key: "nsic_rc480_kg", label: "NSIC Rc 480", category: "Inbred" },
-  { key: "nsic_rc216_kg", label: "NSIC Rc 216", category: "Inbred" },
-  { key: "nsic_rc218_kg", label: "NSIC Rc 218", category: "Inbred" },
-  { key: "nsic_rc506_kg", label: "NSIC Rc 506", category: "Inbred" },
-  { key: "nsic_rc508_kg", label: "NSIC Rc 508", category: "Inbred" },
-  { key: "nsic_rc512_kg", label: "NSIC Rc 512", category: "Inbred" },
-  { key: "nsic_rc534_kg", label: "NSIC Rc 534", category: "Inbred" },
-  { key: "tubigan_28_kg", label: "Tubigan 28", category: "Inbred" },
-  { key: "tubigan_30_kg", label: "Tubigan 30", category: "Inbred" },
-  { key: "tubigan_22_kg", label: "Tubigan 22", category: "Inbred" },
-  { key: "sahod_ulan_2_kg", label: "Sahod Ulan 2", category: "Inbred" },
-  { key: "sahod_ulan_10_kg", label: "Sahod Ulan 10", category: "Inbred" },
-  { key: "salinas_6_kg", label: "Salinas 6", category: "Inbred" },
-  { key: "salinas_7_kg", label: "Salinas 7", category: "Inbred" },
-  { key: "salinas_8_kg", label: "Salinas 8", category: "Inbred" },
-  { key: "malagkit_5_kg", label: "Malagkit 5", category: "Inbred" },
-];
+}>;
 
 const EDIT_NUMERIC_FIELDS: AllocationNumericField[] = [
   ...EDIT_FERTILIZER_FIELDS.map((field) => field.key),
   ...EDIT_SEED_FIELDS.map((field) => field.key),
 ];
 
-const FERTILIZER_TOTAL_FIELDS: Array<keyof RegionalAllocation | string> = [
-  "urea_46_0_0_bags",
-  "complete_14_14_14_bags",
-  "ammonium_sulfate_21_0_0_bags",
-  "np_16_20_0_bags",
-  "muriate_potash_0_0_60_bags",
-  "zinc_sulfate_bags",
-  "vermicompost_bags",
-  "chicken_manure_bags",
-  "rice_straw_kg",
-  "carbonized_rice_hull_bags",
-  "biofertilizer_liters",
-  "nanobiofertilizer_liters",
-  "organic_root_exudate_mix_liters",
-  "azolla_microphylla_kg",
-  "foliar_liquid_fertilizer_npk_liters",
-];
+const FERTILIZER_TOTAL_FIELDS: Array<keyof RegionalAllocation | string> =
+  EDIT_FERTILIZER_FIELDS.map((field) => field.key);
 
-const SEED_TOTAL_FIELDS: Array<keyof RegionalAllocation | string> = [
-  "rice_seeds_nsic_rc160_kg",
-  "rice_seeds_nsic_rc222_kg",
-  "jackpot_kg",
-  "us88_kg",
-  "th82_kg",
-  "rh9000_kg",
-  "lumping143_kg",
-  "lp296_kg",
-  "mestiso_1_kg",
-  "mestiso_20_kg",
-  "mestiso_29_kg",
-  "mestiso_55_kg",
-  "mestiso_73_kg",
-  "mestiso_99_kg",
-  "mestiso_103_kg",
-  "nsic_rc402_kg",
-  "nsic_rc480_kg",
-  "nsic_rc216_kg",
-  "nsic_rc218_kg",
-  "nsic_rc506_kg",
-  "nsic_rc508_kg",
-  "nsic_rc512_kg",
-  "nsic_rc534_kg",
-  "tubigan_28_kg",
-  "tubigan_30_kg",
-  "tubigan_22_kg",
-  "sahod_ulan_2_kg",
-  "sahod_ulan_10_kg",
-  "salinas_6_kg",
-  "salinas_7_kg",
-  "salinas_8_kg",
-  "malagkit_5_kg",
-];
+const SEED_TOTAL_FIELDS: Array<keyof RegionalAllocation | string> =
+  EDIT_SEED_FIELDS.map((field) => field.key);
 
 interface DeleteConfirmationState {
   id: number;
@@ -302,6 +190,7 @@ const JoIncentives: React.FC = () => {
   const [editFormData, setEditFormData] = useState<RegionalAllocation | null>(
     null,
   );
+  const [addedFields, setAddedFields] = useState<Set<string>>(new Set());
   const [requestCount, setRequestCount] = useState<number>(0);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] =
@@ -402,7 +291,7 @@ const JoIncentives: React.FC = () => {
   };
 
   const formatSeasonName = (season: string) => {
-    return season; // Now it's just a program name string
+    return season; // Simply return the string as it is now a Program Name
   };
 
   const getTotalFertilizer = (allocation: RegionalAllocation) => {
@@ -422,6 +311,7 @@ const JoIncentives: React.FC = () => {
   };
 
   const handleEditAllocation = async (allocation: RegionalAllocation) => {
+    setAddedFields(new Set());
     try {
       // Fetch request count for this allocation
       const response = await getFarmerRequests(allocation.id, true);
@@ -494,17 +384,38 @@ const JoIncentives: React.FC = () => {
     });
   };
 
-  const visibleEditFertilizerFields = editAllocationModal
+  const visibleEditFertilizerFields = editFormData
     ? EDIT_FERTILIZER_FIELDS.filter(
-        (field) => Number((editAllocationModal as any)[field.key]) > 0,
+        (field) =>
+          Number((editFormData as any)[field.key]) > 0 ||
+          addedFields.has(field.key),
       )
     : [];
 
-  const visibleEditSeedFields = editAllocationModal
+  const visibleEditSeedFields = editFormData
     ? EDIT_SEED_FIELDS.filter(
-        (field) => Number((editAllocationModal as any)[field.key]) > 0,
+        (field) =>
+          Number((editFormData as any)[field.key]) > 0 ||
+          addedFields.has(field.key),
       )
     : [];
+
+  const addFieldToEdit = (key: string) => {
+    setAddedFields((prev) => new Set(prev).add(key));
+  };
+
+  const removeAllocationLineItem = (key: string) => {
+    if (!editFormData) return;
+    setAddedFields((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setEditFormData({
+      ...editFormData,
+      [key]: 0 as any,
+    });
+  };
 
   const buildAllocationUpdatePayload = (allocation: RegionalAllocation) => {
     return {
@@ -864,7 +775,7 @@ const JoIncentives: React.FC = () => {
                     {/* Season Information */}
                     <div style={{ marginBottom: "24px" }}>
                       <h4 className="jo-incent-modal-section-title">
-                        Season Information
+                        Program Information
                       </h4>
                       <div
                         style={{
@@ -874,49 +785,33 @@ const JoIncentives: React.FC = () => {
                         }}
                       >
                         <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                              fontWeight: "500",
-                            }}
-                          >
-                            Season <span style={{ color: "#ef4444" }}>*</span>
+                          <label className="jo-incent-edit-label">
+                            Program Name <span style={{ color: "#ef4444" }}>*</span>
                           </label>
                           <input
                             type="text"
                             name="season"
+                            list="program-names"
+                            className="jo-incent-edit-input"
                             value={editFormData.season}
                             onChange={handleEditInputChange}
-                            disabled
-                            style={{
-                              width: "100%",
-                              padding: "8px 12px",
-                              border: "1px solid #d1d5db",
-                              borderRadius: "6px",
-                              fontSize: "14px",
-                              backgroundColor: "#f3f4f6",
-                              color: "#6b7280",
-                            }}
+                            placeholder="Type or select a program..."
                           />
+                          <datalist id="program-names">
+                            {PROGRAM_NAME_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt} />
+                            ))}
+                          </datalist>
                         </div>
                         <div>
-                          <label
-                            style={{
-                              display: "block",
-                              marginBottom: "6px",
-                              fontSize: "14px",
-                              fontWeight: "500",
-                            }}
-                          >
+                          <label className="jo-incent-edit-label">
                             Allocation Date
                           </label>
                           <div
                             style={{
                               display: "grid",
                               gridTemplateColumns: "2fr 1fr 1fr",
-                              gap: "8px",
+                              gap: "10px",
                             }}
                           >
                             {/* Month Dropdown */}
@@ -931,15 +826,7 @@ const JoIncentives: React.FC = () => {
                               onChange={(e) =>
                                 handleDateChange("month", e.target.value)
                               }
-                              style={{
-                                width: "100%",
-                                padding: "8px 12px",
-                                border: "1px solid #d1d5db",
-                                borderRadius: "6px",
-                                fontSize: "14px",
-                                backgroundColor: "white",
-                                cursor: "pointer",
-                              }}
+                              className="jo-incent-edit-input"
                             >
                               <option value="0">January</option>
                               <option value="1">February</option>
@@ -967,15 +854,7 @@ const JoIncentives: React.FC = () => {
                               onChange={(e) =>
                                 handleDateChange("day", e.target.value)
                               }
-                              style={{
-                                width: "100%",
-                                padding: "8px 12px",
-                                border: "1px solid #d1d5db",
-                                borderRadius: "6px",
-                                fontSize: "14px",
-                                backgroundColor: "white",
-                                cursor: "pointer",
-                              }}
+                              className="jo-incent-edit-input"
                             >
                               {Array.from({ length: 31 }, (_, i) => i + 1).map(
                                 (day) => (
@@ -998,15 +877,7 @@ const JoIncentives: React.FC = () => {
                               onChange={(e) =>
                                 handleDateChange("year", e.target.value)
                               }
-                              style={{
-                                width: "100%",
-                                padding: "8px 12px",
-                                border: "1px solid #d1d5db",
-                                borderRadius: "6px",
-                                fontSize: "14px",
-                                backgroundColor: "white",
-                                cursor: "pointer",
-                              }}
+                              className="jo-incent-edit-input"
                             >
                               {Array.from(
                                 { length: 76 },
@@ -1022,11 +893,47 @@ const JoIncentives: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Fertilizers */}
+                    {/* Fertilizers — only rows with quantity or added via dropdown; remove clears to zero */}
                     <div style={{ marginBottom: "24px" }}>
                       <h4 className="jo-incent-modal-section-title">
                         🌱 Fertilizer Allocation
                       </h4>
+                      <div style={{ marginBottom: "16px" }}>
+                        <select
+                          className="jo-incent-edit-input"
+                          aria-label="Select fertilizer to add"
+                          value=""
+                          onChange={(e) => {
+                            const key = e.target.value;
+                            if (key) {
+                              addFieldToEdit(key);
+                            }
+                            e.target.value = "";
+                          }}
+                        >
+                          <option value="" disabled>
+                            Select Fertilizer to Add...
+                          </option>
+                          {(["Solid", "Liquid"] as const).map((category) => (
+                            <optgroup
+                              key={category}
+                              label={`${category} Fertilizers`}
+                            >
+                              {EDIT_FERTILIZER_FIELDS.filter(
+                                (f) =>
+                                  f.category === category &&
+                                  !visibleEditFertilizerFields.some(
+                                    (vf) => vf.key === f.key,
+                                  ),
+                              ).map((f) => (
+                                <option key={f.key} value={f.key}>
+                                  {f.label}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
                       {visibleEditFertilizerFields.length === 0 ? (
                         <p
                           style={{
@@ -1035,7 +942,8 @@ const JoIncentives: React.FC = () => {
                             fontSize: "14px",
                           }}
                         >
-                          No fertilizer inputs were allocated.
+                          No fertilizer inputs in this allocation. Add rows
+                          from the dropdown above.
                         </p>
                       ) : (
                         (["Solid", "Liquid"] as const).map((category) => {
@@ -1079,30 +987,59 @@ const JoIncentives: React.FC = () => {
                                     >
                                       {field.label}
                                     </label>
-                                    <input
-                                      type="number"
-                                      name={field.key}
-                                      value={
-                                        Number(
-                                          (editFormData as any)[field.key],
-                                        ) || 0
-                                      }
-                                      onChange={handleEditInputChange}
-                                      min="0"
-                                      step={
-                                        field.key.includes("liters") ||
-                                        field.key.includes("kg")
-                                          ? "0.01"
-                                          : "1"
-                                      }
+                                    <div
                                       style={{
-                                        width: "100%",
-                                        padding: "8px 12px",
-                                        border: "1px solid #d1d5db",
-                                        borderRadius: "6px",
-                                        fontSize: "14px",
+                                        display: "flex",
+                                        gap: "8px",
+                                        alignItems: "center",
                                       }}
-                                    />
+                                    >
+                                      <input
+                                        type="number"
+                                        name={field.key}
+                                        value={
+                                          Number(
+                                            (editFormData as any)[field.key],
+                                          ) || 0
+                                        }
+                                        onChange={handleEditInputChange}
+                                        min="0"
+                                        step={
+                                          field.key.includes("liters") ||
+                                          field.key.includes("kg")
+                                            ? "0.01"
+                                            : "1"
+                                        }
+                                        className="jo-incent-edit-input"
+                                        style={{
+                                          flex: 1,
+                                          backgroundColor: "white",
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        aria-label={`Remove ${field.label}`}
+                                        onClick={() =>
+                                          removeAllocationLineItem(field.key)
+                                        }
+                                        title="Remove (sets amount to 0)"
+                                        style={{
+                                          flexShrink: 0,
+                                          padding: "0 10px",
+                                          alignSelf: "stretch",
+                                          minHeight: "38px",
+                                          background: "#fee2e2",
+                                          color: "#ef4444",
+                                          border: "none",
+                                          borderRadius: "4px",
+                                          cursor: "pointer",
+                                          fontSize: "16px",
+                                          lineHeight: 1,
+                                        }}
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -1115,8 +1052,37 @@ const JoIncentives: React.FC = () => {
                     {/* Seeds */}
                     <div style={{ marginBottom: "24px" }}>
                       <h4 className="jo-incent-modal-section-title">
-                        🌾 Seed Allocation (kg)
+                        🌾 Seed Allocation
                       </h4>
+                      <div style={{ marginBottom: "16px" }}>
+                        <select
+                          className="jo-incent-edit-input"
+                          onChange={(e) => {
+                            addFieldToEdit(e.target.value);
+                            e.target.value = "";
+                          }}
+                          value=""
+                        >
+                          <option value="" disabled>
+                            Select Seed to Add...
+                          </option>
+                          {["Hybrid", "Inbred"].map((category) => (
+                            <optgroup key={category} label={`${category} Seeds`}>
+                              {EDIT_SEED_FIELDS.filter(
+                                (s) =>
+                                  s.category === category &&
+                                  !visibleEditSeedFields.some(
+                                    (vs) => vs.key === s.key,
+                                  ),
+                              ).map((s) => (
+                                <option key={s.key} value={s.key}>
+                                  {s.label}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
                       {visibleEditSeedFields.length === 0 ? (
                         <p
                           style={{
@@ -1125,7 +1091,8 @@ const JoIncentives: React.FC = () => {
                             fontSize: "14px",
                           }}
                         >
-                          No seed inputs were allocated.
+                          No seed inputs in this allocation. Add rows from the
+                          dropdown above.
                         </p>
                       ) : (
                         (["Hybrid", "Inbred"] as const).map((category) => {
@@ -1168,25 +1135,54 @@ const JoIncentives: React.FC = () => {
                                     >
                                       {field.label}
                                     </label>
-                                    <input
-                                      type="number"
-                                      name={field.key}
-                                      value={
-                                        Number(
-                                          (editFormData as any)[field.key],
-                                        ) || 0
-                                      }
-                                      onChange={handleEditInputChange}
-                                      min="0"
-                                      step="0.01"
+                                    <div
                                       style={{
-                                        width: "100%",
-                                        padding: "8px 12px",
-                                        border: "1px solid #d1d5db",
-                                        borderRadius: "6px",
-                                        fontSize: "14px",
+                                        display: "flex",
+                                        gap: "8px",
+                                        alignItems: "center",
                                       }}
-                                    />
+                                    >
+                                      <input
+                                        type="number"
+                                        name={field.key}
+                                        value={
+                                          Number(
+                                            (editFormData as any)[field.key],
+                                          ) || 0
+                                        }
+                                        onChange={handleEditInputChange}
+                                        min="0"
+                                        step="0.01"
+                                        className="jo-incent-edit-input"
+                                        style={{
+                                          flex: 1,
+                                          backgroundColor: "white",
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        aria-label={`Remove ${field.label}`}
+                                        onClick={() =>
+                                          removeAllocationLineItem(field.key)
+                                        }
+                                        title="Remove (sets amount to 0)"
+                                        style={{
+                                          flexShrink: 0,
+                                          padding: "0 10px",
+                                          alignSelf: "stretch",
+                                          minHeight: "38px",
+                                          background: "#fee2e2",
+                                          color: "#ef4444",
+                                          border: "none",
+                                          borderRadius: "4px",
+                                          cursor: "pointer",
+                                          fontSize: "16px",
+                                          lineHeight: 1,
+                                        }}
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -1206,14 +1202,8 @@ const JoIncentives: React.FC = () => {
                         value={editFormData.notes || ""}
                         onChange={handleEditInputChange}
                         rows={3}
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          border: "1px solid #d1d5db",
-                          borderRadius: "6px",
-                          fontSize: "14px",
-                          fontFamily: "inherit",
-                        }}
+                        className="jo-incent-edit-input"
+                        style={{ backgroundColor: "white", minHeight: "80px", cursor: "auto" }}
                         placeholder="Add any notes or comments..."
                       />
                     </div>
