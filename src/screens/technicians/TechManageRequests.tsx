@@ -1497,10 +1497,10 @@ const TechManageRequests: React.FC = () => {
     const requestedPotash = Number(request.requested_muriate_potash_bags || 0);
 
     const fertilizerShortage =
-      requestedUrea > remainingUrea ||
-      requestedComplete > remainingComplete ||
-      requestedAmSul > remainingAmSul ||
-      requestedPotash > remainingPotash;
+      (requestedUrea > 0 && requestedUrea > remainingUrea) ||
+      (requestedComplete > 0 && requestedComplete > remainingComplete) ||
+      (requestedAmSul > 0 && requestedAmSul > remainingAmSul) ||
+      (requestedPotash > 0 && requestedPotash > remainingPotash);
 
     // Seed shortages
     const approvedJackpot = requestsList
@@ -1568,12 +1568,12 @@ const TechManageRequests: React.FC = () => {
     const requestedLp296 = Number(request.requested_lp296_kg || 0);
 
     const seedShortage =
-      requestedJackpot > remainingJackpot ||
-      requestedUs88 > remainingUs88 ||
-      requestedTh82 > remainingTh82 ||
-      requestedRh9000 > remainingRh9000 ||
-      requestedLumping143 > remainingLumping143 ||
-      requestedLp296 > remainingLp296;
+      (requestedJackpot > 0 && requestedJackpot > remainingJackpot) ||
+      (requestedUs88 > 0 && requestedUs88 > remainingUs88) ||
+      (requestedTh82 > 0 && requestedTh82 > remainingTh82) ||
+      (requestedRh9000 > 0 && requestedRh9000 > remainingRh9000) ||
+      (requestedLumping143 > 0 && requestedLumping143 > remainingLumping143) ||
+      (requestedLp296 > 0 && requestedLp296 > remainingLp296);
 
     return fertilizerShortage || seedShortage;
   };
@@ -2645,20 +2645,6 @@ const TechManageRequests: React.FC = () => {
                                       </>
                                     )}
 
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenActionsMenuFor(null);
-                                        setActionsMenuPosition(null);
-                                        openDeleteDialog(
-                                          request.id,
-                                          request.farmer_name,
-                                        );
-                                      }}
-                                      className="tech-manage-requests-btn-delete"
-                                    >
-                                      Delete
-                                    </button>
 
                                     <button
                                       type="button"
@@ -3194,7 +3180,7 @@ const TechManageRequests: React.FC = () => {
             <div
               style={{
                 overflowY: "auto",
-                maxHeight: "calc(80vh - 140px),",
+                maxHeight: "calc(80vh - 140px)",
                 padding: "15px 9px",
               }}
             >
@@ -3341,14 +3327,7 @@ const TechManageRequests: React.FC = () => {
                                     onClick={handleEditFromOverview}
                                     className="tech-manage-requests-btn-unresolved-edit"
                                   >
-                                    Edit request manually
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={handleDeleteFromOverview}
-                                    className="tech-manage-requests-btn-unresolved-delete"
-                                  >
-                                    Delete and submit new
+                                    Edit Request
                                   </button>
                                 </div>
                               </div>

@@ -1028,7 +1028,7 @@ const JoManageRequests: React.FC = () => {
       const remainingStock =
         (Number(allocToUse[item.allocationField]) || 0) - alreadyRequested;
       const requestedAmount = Number(request[item.requestField]) || 0;
-      return requestedAmount > remainingStock;
+      return requestedAmount > 0 && requestedAmount > remainingStock;
     });
 
     if (request.status === "pending" && shortageItems.length > 0) {
