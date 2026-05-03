@@ -18,6 +18,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface RSBSARecord {
   id: string;
@@ -145,6 +146,10 @@ const TechMasterlist: React.FC = () => {
     useState<Record<string, boolean>>({});
   // true = not farming, false = still farming
   const [statusChangeReason, setStatusChangeReason] = useState("");
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
   const showUpdateNotification = (
@@ -159,6 +164,19 @@ const TechMasterlist: React.FC = () => {
 
   useEffect(() => {
     fetchRSBSARecords();
+  }, []);
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
   }, []);
 
   // Fetch farmer details when row is clicked
@@ -1008,6 +1026,11 @@ const TechMasterlist: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    navigate("/login");
+  };
+
   return (
     <div className="tech-masterlist-page-container">
       <div className="tech-masterlist-page">
@@ -1029,7 +1052,7 @@ const TechMasterlist: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsapage") ? "active" : ""}`}
+              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
               onClick={() => navigate("/technician-rsbsa")}
             >
               <span className="nav-icon">
@@ -1058,15 +1081,28 @@ const TechMasterlist: React.FC = () => {
               <span className="nav-text">Masterlist</span>
             </button>
 
-            <button
-              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
-              onClick={() => navigate("/")}
-            >
+            <button className="sidebar-nav-item logout" onClick={handleLogout}>
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {/* Current User — inside nav, at the bottom */}
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
         {/* Sidebar ends here */}

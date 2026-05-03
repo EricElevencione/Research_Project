@@ -15,6 +15,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface RegionalAllocation {
   id: number;
@@ -81,20 +82,38 @@ const FERTILIZER_FIELDS = [
   { name: "urea_46_0_0_bags", label: "Urea (46-0-0) [bags]" },
   { name: "complete_14_14_14_bags", label: "Complete (14-14-14) [bags]" },
   { name: "np_16_20_0_bags", label: "16-20-0 [bags]" },
-  { name: "ammonium_sulfate_21_0_0_bags", label: "Ammonium Sulfate (21-0-0) [bags]" },
-  { name: "muriate_potash_0_0_60_bags", label: "Muriate of Potash (0-0-60) [bags]" },
+  {
+    name: "ammonium_sulfate_21_0_0_bags",
+    label: "Ammonium Sulfate (21-0-0) [bags]",
+  },
+  {
+    name: "muriate_potash_0_0_60_bags",
+    label: "Muriate of Potash (0-0-60) [bags]",
+  },
   { name: "zinc_sulfate_bags", label: "Zinc Sulfate [bags]" },
   { name: "vermicompost_bags", label: "Vermicompost [bags]" },
   { name: "chicken_manure_bags", label: "Chicken Manure [bags]" },
   { name: "rice_straw_kg", label: "Rice Straw [kg]" },
-  { name: "carbonized_rice_hull_bags", label: "Carbonized Rice Hull (CRH) [bags]" },
+  {
+    name: "carbonized_rice_hull_bags",
+    label: "Carbonized Rice Hull (CRH) [bags]",
+  },
   { name: "biofertilizer_liters", label: "Biofertilizer [liters]" },
   { name: "nanobiofertilizer_liters", label: "Nanobiofertilizer [liters]" },
-  { name: "organic_root_exudate_mix_liters", label: "Organic Root Exudate Mix [liters]" },
+  {
+    name: "organic_root_exudate_mix_liters",
+    label: "Organic Root Exudate Mix [liters]",
+  },
   { name: "azolla_microphylla_kg", label: "Azolla microphylla [kg]" },
-  { name: "foliar_liquid_fertilizer_npk_liters", label: "Foliar Liquid Fertilizer (NPK) [liters]" },
+  {
+    name: "foliar_liquid_fertilizer_npk_liters",
+    label: "Foliar Liquid Fertilizer (NPK) [liters]",
+  },
   { name: "complete_16_16_16_bags", label: "Complete (16-16-16) [bags]" },
-  { name: "ammonium_phosphate_16_20_0_bags", label: "Ammonium Phosphate (16-20-0) [bags]" },
+  {
+    name: "ammonium_phosphate_16_20_0_bags",
+    label: "Ammonium Phosphate (16-20-0) [bags]",
+  },
 ];
 
 const SEED_FIELDS = [
@@ -152,11 +171,29 @@ const TechIncentives: React.FC = () => {
   const [requestCount, setRequestCount] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [addedFields, setAddedFields] = useState<Set<string>>(new Set());
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
     fetchAllocations();
+  }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
   }, []);
 
   const fetchAllocations = async () => {
@@ -213,7 +250,7 @@ const TechIncentives: React.FC = () => {
     }
 
     const fieldsWithValues = new Set<string>();
-    [...FERTILIZER_FIELDS, ...SEED_FIELDS].forEach(field => {
+    [...FERTILIZER_FIELDS, ...SEED_FIELDS].forEach((field) => {
       if (Number(allocation[field.name as keyof RegionalAllocation] || 0) > 0) {
         fieldsWithValues.add(field.name);
       }
@@ -277,15 +314,23 @@ const TechIncentives: React.FC = () => {
   };
 
   const getTotalFertilizer = (allocation: RegionalAllocation) => {
-    return FERTILIZER_FIELDS.reduce((sum, field) => sum + (Number(allocation[field.name as keyof RegionalAllocation]) || 0), 0);
+    return FERTILIZER_FIELDS.reduce(
+      (sum, field) =>
+        sum + (Number(allocation[field.name as keyof RegionalAllocation]) || 0),
+      0,
+    );
   };
 
   const getTotalSeeds = (allocation: RegionalAllocation) => {
-    return SEED_FIELDS.reduce((sum, field) => sum + (Number(allocation[field.name as keyof RegionalAllocation]) || 0), 0);
+    return SEED_FIELDS.reduce(
+      (sum, field) =>
+        sum + (Number(allocation[field.name as keyof RegionalAllocation]) || 0),
+      0,
+    );
   };
 
   const addFieldToEdit = (fieldName: string) => {
-    setAddedFields(prev => {
+    setAddedFields((prev) => {
       const next = new Set(prev);
       next.add(fieldName);
       return next;
@@ -293,12 +338,17 @@ const TechIncentives: React.FC = () => {
   };
 
   const removeFieldFromEdit = (fieldName: string) => {
-    setAddedFields(prev => {
+    setAddedFields((prev) => {
       const next = new Set(prev);
       next.delete(fieldName);
       return next;
     });
-    setEditFormData(prev => prev ? ({ ...prev, [fieldName]: 0 }) : null);
+    setEditFormData((prev) => (prev ? { ...prev, [fieldName]: 0 } : null));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    navigate("/login");
   };
 
   return (
@@ -321,7 +371,7 @@ const TechIncentives: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsapage") ? "active" : ""}`}
+              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
               onClick={() => navigate("/technician-rsbsa")}
             >
               <span className="nav-icon">
@@ -350,15 +400,28 @@ const TechIncentives: React.FC = () => {
               <span className="nav-text">Masterlist</span>
             </button>
 
-            <button
-              className={`sidebar-nav-item logout`}
-              onClick={() => navigate("/")}
-            >
+            <button className="sidebar-nav-item logout" onClick={handleLogout}>
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {/* Current User — inside nav, at the bottom */}
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -373,7 +436,20 @@ const TechIncentives: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">
               Technician Incentives
@@ -532,7 +608,7 @@ const TechIncentives: React.FC = () => {
 
                     <div className="tech-incent-modal-form-group full-width">
                       <label>Select to Add Item</label>
-                      <select 
+                      <select
                         className="tech-allocation-select"
                         onChange={(e) => {
                           if (e.target.value) {
@@ -541,36 +617,57 @@ const TechIncentives: React.FC = () => {
                           }
                         }}
                       >
-                        <option value="">-- Choose Fertilizer or Seed --</option>
+                        <option value="">
+                          -- Choose Fertilizer or Seed --
+                        </option>
                         <optgroup label="Fertilizers">
-                          {FERTILIZER_FIELDS.filter(f => !addedFields.has(f.name)).map(f => (
-                            <option key={f.name} value={f.name}>{f.label}</option>
+                          {FERTILIZER_FIELDS.filter(
+                            (f) => !addedFields.has(f.name),
+                          ).map((f) => (
+                            <option key={f.name} value={f.name}>
+                              {f.label}
+                            </option>
                           ))}
                         </optgroup>
                         <optgroup label="Seeds">
-                          {SEED_FIELDS.filter(s => !addedFields.has(s.name)).map(s => (
-                            <option key={s.name} value={s.name}>{s.label}</option>
+                          {SEED_FIELDS.filter(
+                            (s) => !addedFields.has(s.name),
+                          ).map((s) => (
+                            <option key={s.name} value={s.name}>
+                              {s.label}
+                            </option>
                           ))}
                         </optgroup>
                       </select>
                     </div>
 
-                    {[...addedFields].sort().map(fieldName => {
-                      const field = [...FERTILIZER_FIELDS, ...SEED_FIELDS].find(f => f.name === fieldName);
+                    {[...addedFields].sort().map((fieldName) => {
+                      const field = [...FERTILIZER_FIELDS, ...SEED_FIELDS].find(
+                        (f) => f.name === fieldName,
+                      );
                       return (
-                        <div key={fieldName} className="tech-incent-modal-form-group dynamic-edit-field">
+                        <div
+                          key={fieldName}
+                          className="tech-incent-modal-form-group dynamic-edit-field"
+                        >
                           <div className="field-label-row">
                             <label>{field?.label}</label>
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               className="remove-field-btn"
                               onClick={() => removeFieldFromEdit(fieldName)}
-                            >×</button>
+                            >
+                              ×
+                            </button>
                           </div>
                           <input
                             type="number"
                             name={fieldName}
-                            value={editFormData[fieldName as keyof RegionalAllocation] || 0}
+                            value={
+                              editFormData[
+                                fieldName as keyof RegionalAllocation
+                              ] || 0
+                            }
                             onChange={handleEditInputChange}
                             min="0"
                             step="0.01"

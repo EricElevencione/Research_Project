@@ -9,6 +9,7 @@ import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
 import { getRsbsaSubmissions, getFarmParcels } from "../../api";
+import { supabase } from "../../supabase";
 
 interface LandOwner {
   id: string;
@@ -50,6 +51,10 @@ const TechPickLandParcel: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -162,6 +167,20 @@ const TechPickLandParcel: React.FC = () => {
     }
   }, [ownerId]);
 
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
   // Handle parcel selection -> navigate to mapping page
   const handleParcelSelect = (parcel: FarmParcel, parcelIndex: number) => {
     setSelectedParcel(parcel);
@@ -170,6 +189,10 @@ const TechPickLandParcel: React.FC = () => {
         `/technician-landplotting?recordId=${ownerId}&parcelIndex=${parcelIndex}`,
       );
     }
+  };
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    navigate("/login");
   };
 
   // Format date for display
@@ -237,7 +260,7 @@ const TechPickLandParcel: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsapage") ? "active" : ""}`}
+              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
               onClick={() => navigate("/technician-rsbsa")}
             >
               <span className="nav-icon">
@@ -266,15 +289,28 @@ const TechPickLandParcel: React.FC = () => {
               <span className="nav-text">Masterlist</span>
             </button>
 
-            <button
-              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
-              onClick={() => navigate("/")}
-            >
+            <button className="sidebar-nav-item logout" onClick={handleLogout}>
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {/* Current User — inside nav, at the bottom */}
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
         {/* Sidebar ends here */}

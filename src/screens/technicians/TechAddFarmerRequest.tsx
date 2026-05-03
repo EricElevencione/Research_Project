@@ -19,6 +19,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface Farmer {
   id: number;
@@ -406,6 +407,10 @@ const TechAddFarmerRequest: React.FC = () => {
   const [liveExceedMessage, setLiveExceedMessage] = useState<string | null>(
     null,
   );
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   // Toast notification state
   const [toast, setToast] = useState<{
@@ -504,6 +509,19 @@ const TechAddFarmerRequest: React.FC = () => {
       fetchExistingRequests();
     }
   }, [allocationId]);
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   const fetchAllocation = async () => {
     try {
@@ -1117,6 +1135,22 @@ const TechAddFarmerRequest: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {/* Current User — inside nav, at the bottom */}
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -1132,7 +1166,20 @@ const TechAddFarmerRequest: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">Add Request</div>
           </div>

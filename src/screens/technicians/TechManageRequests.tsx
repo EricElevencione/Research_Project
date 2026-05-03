@@ -23,6 +23,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface FarmerRequest {
   id: number;
@@ -476,7 +477,11 @@ const TechManageRequests: React.FC = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [pendingRejectId, setPendingRejectId] = useState<string | null>(null);
+  const [pendingRejectId, setPendingRejectId] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   // Show toast notification
   const showToast = (
@@ -505,6 +510,20 @@ const TechManageRequests: React.FC = () => {
   useEffect(() => {
     filterRequests();
   }, [requests, searchTerm, statusFilter, barangayFilter]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
@@ -2188,6 +2207,22 @@ const TechManageRequests: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {/* Current User — inside nav, at the bottom */}
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -2224,7 +2259,7 @@ const TechManageRequests: React.FC = () => {
             <div className="tech-manage-header-sub">
               <h2 className="tech-req-dashboard-title">Manage Requests</h2>
               <p className="tech-req-dashboard-subtitle">
-                {formatSeasonName(allocation?.season)} · Regional Program
+                {formatSeasonName(allocation?.season ?? "")} · Regional Program
               </p>
             </div>
             <div className="tech-manage-requests-back-create-section">
@@ -2235,14 +2270,6 @@ const TechManageRequests: React.FC = () => {
                   disabled={isPrinting}
                 >
                   {isPrinting ? "Preparing..." : "Print Requests"}
-                </button>
-                <button
-                  className="tech-manage-requests-add-btn"
-                  onClick={() =>
-                    navigate(`/technician-add-farmer-request/${allocationId}`)
-                  }
-                >
-                  Add Farmer Request
                 </button>
               </div>
 
@@ -2307,27 +2334,58 @@ const TechManageRequests: React.FC = () => {
                   {/* Regional Allocation Card */}
                   <div className="tech-manage-requests-comparison-card tech-manage-requests-allocation-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                        <path d="m3.3 7 8.7 5 8.7-5" />
+                        <path d="M12 22V12" />
+                      </svg>
                       Regional Allocation
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                        <span className="tech-manage-requests-stat-label">Total Fertilizers</span>
+                        <span className="tech-manage-requests-stat-label">
+                          Total Fertilizers
+                        </span>
                         <span className="tech-manage-requests-stat-value">
                           {allocation
                             ? FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
-                                return sum + (Number(allocation[map.allocationField as keyof AllocationDetails]) || 0);
+                                return (
+                                  sum +
+                                  (Number(
+                                    allocation[
+                                      map.allocationField as keyof AllocationDetails
+                                    ],
+                                  ) || 0)
+                                );
                               }, 0).toFixed(2)
                             : "0.00"}{" "}
                           bags
                         </span>
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                        <span className="tech-manage-requests-stat-label">Total Seeds</span>
+                        <span className="tech-manage-requests-stat-label">
+                          Total Seeds
+                        </span>
                         <span className="tech-manage-requests-stat-value">
                           {allocation
                             ? SEED_FIELD_MAPS.reduce((sum, map) => {
-                                return sum + (Number(allocation[map.allocationField as keyof AllocationDetails]) || 0);
+                                return (
+                                  sum +
+                                  (Number(
+                                    allocation[
+                                      map.allocationField as keyof AllocationDetails
+                                    ],
+                                  ) || 0)
+                                );
                               }, 0).toFixed(2)
                             : "0.00"}{" "}
                           kg
@@ -2339,24 +2397,45 @@ const TechManageRequests: React.FC = () => {
                   {/* Total Farmer Requests Card */}
                   <div className="tech-manage-requests-comparison-card tech-manage-requests-total-requests-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="20" x2="18" y2="10" />
+                        <line x1="12" y1="20" x2="12" y2="4" />
+                        <line x1="6" y1="20" x2="6" y2="14" />
+                      </svg>
                       Total Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                        <span className="tech-manage-requests-stat-label">Fertilizers Requested</span>
+                        <span className="tech-manage-requests-stat-label">
+                          Fertilizers Requested
+                        </span>
                         <span className="tech-manage-requests-stat-value">
                           {FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
-                            return sum + getTotalRequested(map.requestField as any);
+                            return (
+                              sum + getTotalRequested(map.requestField as any)
+                            );
                           }, 0).toFixed(2)}{" "}
                           bags
                         </span>
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                        <span className="tech-manage-requests-stat-label">Seeds Requested</span>
+                        <span className="tech-manage-requests-stat-label">
+                          Seeds Requested
+                        </span>
                         <span className="tech-manage-requests-stat-value">
                           {SEED_FIELD_MAPS.reduce((sum, map) => {
-                            return sum + getTotalRequested(map.requestField as any);
+                            return (
+                              sum + getTotalRequested(map.requestField as any)
+                            );
                           }, 0).toFixed(2)}{" "}
                           kg
                         </span>
@@ -2367,19 +2446,47 @@ const TechManageRequests: React.FC = () => {
                   {/* Approved Farmer Requests Card */}
                   <div className="tech-manage-requests-comparison-card tech-manage-requests-approved-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                       Approved Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                        <span className="tech-manage-requests-stat-label">Total Fertilizers</span>
+                        <span className="tech-manage-requests-stat-label">
+                          Total Fertilizers
+                        </span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
-                            const approvedRequests = requests.filter((r) => r.status === "approved");
+                            const approvedRequests = requests.filter(
+                              (r) => r.status === "approved",
+                            );
                             const total = approvedRequests.reduce((sum, r) => {
-                              return sum + FERTILIZER_FIELD_MAPS.reduce((innerSum, map) => {
-                                return innerSum + (Number(r[map.requestField as keyof FarmerRequest]) || 0);
-                              }, 0);
+                              return (
+                                sum +
+                                FERTILIZER_FIELD_MAPS.reduce(
+                                  (innerSum, map) => {
+                                    return (
+                                      innerSum +
+                                      (Number(
+                                        r[
+                                          map.requestField as keyof FarmerRequest
+                                        ],
+                                      ) || 0)
+                                    );
+                                  },
+                                  0,
+                                )
+                              );
                             }, 0);
                             return Number(total).toFixed(2);
                           })()}{" "}
@@ -2387,14 +2494,28 @@ const TechManageRequests: React.FC = () => {
                         </span>
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                        <span className="tech-manage-requests-stat-label">Total Seeds</span>
+                        <span className="tech-manage-requests-stat-label">
+                          Total Seeds
+                        </span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
-                            const approvedRequests = requests.filter((r) => r.status === "approved");
+                            const approvedRequests = requests.filter(
+                              (r) => r.status === "approved",
+                            );
                             const total = approvedRequests.reduce((sum, r) => {
-                              return sum + SEED_FIELD_MAPS.reduce((innerSum, map) => {
-                                return innerSum + (Number(r[map.requestField as keyof FarmerRequest]) || 0);
-                              }, 0);
+                              return (
+                                sum +
+                                SEED_FIELD_MAPS.reduce((innerSum, map) => {
+                                  return (
+                                    innerSum +
+                                    (Number(
+                                      r[
+                                        map.requestField as keyof FarmerRequest
+                                      ],
+                                    ) || 0)
+                                  );
+                                }, 0)
+                              );
                             }, 0);
                             return Number(total).toFixed(2);
                           })()}{" "}
@@ -2407,19 +2528,49 @@ const TechManageRequests: React.FC = () => {
                   {/* Rejected Farmer Requests Card */}
                   <div className="tech-manage-requests-comparison-card tech-manage-requests-rejected-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                      </svg>
                       Rejected Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                        <span className="tech-manage-requests-stat-label">Total Fertilizers</span>
+                        <span className="tech-manage-requests-stat-label">
+                          Total Fertilizers
+                        </span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
-                            const rejectedRequests = requests.filter((r) => r.status === "rejected");
+                            const rejectedRequests = requests.filter(
+                              (r) => r.status === "rejected",
+                            );
                             const total = rejectedRequests.reduce((sum, r) => {
-                              return sum + FERTILIZER_FIELD_MAPS.reduce((innerSum, map) => {
-                                return innerSum + (Number(r[map.requestField as keyof FarmerRequest]) || 0);
-                              }, 0);
+                              return (
+                                sum +
+                                FERTILIZER_FIELD_MAPS.reduce(
+                                  (innerSum, map) => {
+                                    return (
+                                      innerSum +
+                                      (Number(
+                                        r[
+                                          map.requestField as keyof FarmerRequest
+                                        ],
+                                      ) || 0)
+                                    );
+                                  },
+                                  0,
+                                )
+                              );
                             }, 0);
                             return Number(total).toFixed(2);
                           })()}{" "}
@@ -2427,14 +2578,28 @@ const TechManageRequests: React.FC = () => {
                         </span>
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                        <span className="tech-manage-requests-stat-label">Total Seeds</span>
+                        <span className="tech-manage-requests-stat-label">
+                          Total Seeds
+                        </span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
-                            const rejectedRequests = requests.filter((r) => r.status === "rejected");
+                            const rejectedRequests = requests.filter(
+                              (r) => r.status === "rejected",
+                            );
                             const total = rejectedRequests.reduce((sum, r) => {
-                              return sum + SEED_FIELD_MAPS.reduce((innerSum, map) => {
-                                return innerSum + (Number(r[map.requestField as keyof FarmerRequest]) || 0);
-                              }, 0);
+                              return (
+                                sum +
+                                SEED_FIELD_MAPS.reduce((innerSum, map) => {
+                                  return (
+                                    innerSum +
+                                    (Number(
+                                      r[
+                                        map.requestField as keyof FarmerRequest
+                                      ],
+                                    ) || 0)
+                                  );
+                                }, 0)
+                              );
                             }, 0);
                             return Number(total).toFixed(2);
                           })()}{" "}
@@ -2450,50 +2615,122 @@ const TechManageRequests: React.FC = () => {
                   {/* Total Requests */}
                   <div className="tech-manage-requests-summary-card tech-manage-card-total">
                     <div className="tech-manage-card-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
                     </div>
                     <div className="tech-manage-card-info">
-                      <div className="tech-manage-card-count">{filteredRequests.length}</div>
-                      <div className="tech-manage-card-label">Total Requests</div>
+                      <div className="tech-manage-card-count">
+                        {filteredRequests.length}
+                      </div>
+                      <div className="tech-manage-card-label">
+                        Total Requests
+                      </div>
                     </div>
                   </div>
 
                   {/* Pending Requests */}
                   <div className="tech-manage-requests-summary-card tech-manage-card-pending">
                     <div className="tech-manage-card-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
                     </div>
                     <div className="tech-manage-card-info">
                       <div className="tech-manage-card-count">
-                        {filteredRequests.filter((r) => r.status === "pending").length}
+                        {
+                          filteredRequests.filter((r) => r.status === "pending")
+                            .length
+                        }
                       </div>
-                      <div className="tech-manage-card-label">Pending Requests</div>
+                      <div className="tech-manage-card-label">
+                        Pending Requests
+                      </div>
                     </div>
                   </div>
 
                   {/* Approved Requests */}
                   <div className="tech-manage-requests-summary-card tech-manage-card-approved">
                     <div className="tech-manage-card-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="9 11 12 14 22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                      </svg>
                     </div>
                     <div className="tech-manage-card-info">
                       <div className="tech-manage-card-count">
-                        {filteredRequests.filter((r) => r.status === "approved").length}
+                        {
+                          filteredRequests.filter(
+                            (r) => r.status === "approved",
+                          ).length
+                        }
                       </div>
-                      <div className="tech-manage-card-label">Approved Requests</div>
+                      <div className="tech-manage-card-label">
+                        Approved Requests
+                      </div>
                     </div>
                   </div>
 
                   {/* Rejected Requests */}
                   <div className="tech-manage-requests-summary-card tech-manage-card-rejected">
                     <div className="tech-manage-card-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                      </svg>
                     </div>
                     <div className="tech-manage-card-info">
                       <div className="tech-manage-card-count">
-                        {filteredRequests.filter((r) => r.status === "rejected").length}
+                        {
+                          filteredRequests.filter(
+                            (r) => r.status === "rejected",
+                          ).length
+                        }
                       </div>
-                      <div className="tech-manage-card-label">Rejected Requests</div>
+                      <div className="tech-manage-card-label">
+                        Rejected Requests
+                      </div>
                     </div>
                   </div>
                   {/* Combined Shortage & Suggestions Card */}
@@ -2507,7 +2744,20 @@ const TechManageRequests: React.FC = () => {
                       </div>
                     )}
                     <div className="tech-manage-card-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
                     </div>
                     <div className="tech-manage-card-info">
                       <div className="tech-manage-card-count">
@@ -2523,7 +2773,9 @@ const TechManageRequests: React.FC = () => {
                           }).length
                         }
                       </div>
-                      <div className="tech-manage-card-label">Shortages & Suggestions</div>
+                      <div className="tech-manage-card-label">
+                        Shortages & Suggestions
+                      </div>
                     </div>
                     <div className="tech-manage-card-note">
                       {autoSuggestionsCount} shortages found • Click to view
@@ -2642,86 +2894,87 @@ const TechManageRequests: React.FC = () => {
                                         >
                                           Reject
                                         </button>
-                                        {rejectModalOpen && (
-                                          <div className="modal-overlay">
-                                            <div className="modal-box">
-                                              <h3>Reason for Rejection</h3>
-                                              <p>
-                                                Please provide a reason before
-                                                rejecting this request.
-                                              </p>
-
-                                              <textarea
-                                                value={rejectReason}
-                                                onChange={(e) =>
-                                                  setRejectReason(
-                                                    e.target.value,
-                                                  )
-                                                }
-                                                placeholder="Enter reason here..."
-                                                rows={4}
-                                                className="reject-reason-input"
-                                              />
-
-                                              {!rejectReason.trim() && (
-                                                <p className="reject-reason-error">
-                                                  Reason is required.
-                                                </p>
-                                              )}
-
-                                              <div className="modal-actions">
-                                                <button
-                                                  className="tech-manage-requests-btn-reject"
-                                                  disabled={
-                                                    !rejectReason.trim()
-                                                  }
-                                                  onClick={() => {
-                                                    if (!rejectReason.trim())
-                                                      return;
-                                                    handleStatusChange(
-                                                      pendingRejectId!,
-                                                      "rejected",
-                                                      rejectReason,
-                                                    ); // ✅ pass reason
-                                                    setRejectModalOpen(false);
-                                                    setRejectReason("");
-                                                    setPendingRejectId(null);
-                                                  }}
-                                                >
-                                                  Confirm Reject
-                                                </button>
-
-                                                <button
-                                                  className="login-button"
-                                                  onClick={() => {
-                                                    setRejectModalOpen(false);
-                                                    setRejectReason("");
-                                                    setPendingRejectId(null);
-                                                  }}
-                                                >
-                                                  Cancel
-                                                </button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )}
                                       </>
                                     )}
+                                    {rejectModalOpen && (
+                                      <div className="tech-manage-requests-modal-overlay">
+                                        <div className="tech-manage-requests-modal-content">
+                                          <h3 className="tech-manage-requests-modal-title">
+                                            Reason for Rejection
+                                          </h3>
 
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenActionsMenuFor(null);
-                                        setActionsMenuPosition(null);
-                                        openDeleteDialog(
-                                          request.id,
-                                          request.farmer_name,
-                                        );
-                                      }}
-                                      className="tech-manage-requests-btn-delete"
-                                    >
-                                      Delete
-                                    </button>
+                                          <p
+                                            style={{
+                                              marginBottom: "12px",
+                                              color: "#4b5563",
+                                            }}
+                                          >
+                                            Please provide a reason before
+                                            rejecting this request.
+                                          </p>
+
+                                          <div className="tech-manage-requests-modal-section">
+                                            <label className="tech-manage-requests-modal-label">
+                                              Rejection Reason{" "}
+                                              <span style={{ color: "red" }}>
+                                                *
+                                              </span>
+                                            </label>
+                                            <textarea
+                                              value={rejectReason}
+                                              onChange={(e) =>
+                                                setRejectReason(e.target.value)
+                                              }
+                                              placeholder="Enter reason here..."
+                                              rows={4}
+                                              className="tech-manage-requests-modal-textarea"
+                                            />
+                                            {!rejectReason.trim() && (
+                                              <p
+                                                style={{
+                                                  color: "#dc2626",
+                                                  fontSize: "12px",
+                                                  marginTop: "4px",
+                                                }}
+                                              >
+                                                Reason is required.
+                                              </p>
+                                            )}
+                                          </div>
+
+                                          <div className="tech-manage-requests-modal-actions">
+                                            <button
+                                              className="tech-manage-requests-modal-btn-cancel"
+                                              onClick={() => {
+                                                setRejectModalOpen(false);
+                                                setRejectReason("");
+                                                setPendingRejectId(null);
+                                              }}
+                                            >
+                                              Cancel
+                                            </button>
+                                            <button
+                                              className="tech-manage-requests-modal-btn-delete-confirm"
+                                              disabled={!rejectReason.trim()}
+                                              onClick={() => {
+                                                if (!rejectReason.trim())
+                                                  return;
+                                                handleStatusChange(
+                                                  pendingRejectId!,
+                                                  "rejected",
+                                                  rejectReason,
+                                                );
+                                                setRejectModalOpen(false);
+                                                setRejectReason("");
+                                                setPendingRejectId(null);
+                                              }}
+                                            >
+                                              Confirm Reject
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
 
                                     <button
                                       type="button"
