@@ -6,6 +6,7 @@ import { supabase } from "../supabase";
 export interface KPIStats {
   totalFarmers: number;
   totalHectares: number;
+  totalRequests: number;
   fulfillmentRate: number; // % of approved/distributed vs total requests
   claimRate: number; // % of claimed vs distributed
 }
@@ -105,6 +106,7 @@ export const useAdminDashboardStats = (
     kpi: {
       totalFarmers: 0,
       totalHectares: 0,
+      totalRequests: 0,
       fulfillmentRate: 0,
       claimRate: 0,
     },
@@ -224,6 +226,7 @@ export const useAdminDashboardStats = (
       const kpi: KPIStats = {
         totalFarmers,
         totalHectares: Math.round(totalHectaresFallback * 100) / 100,
+        totalRequests: requests.length,
         fulfillmentRate,
         claimRate,
       };

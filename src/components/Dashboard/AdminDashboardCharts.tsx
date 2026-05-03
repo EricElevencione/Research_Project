@@ -49,6 +49,15 @@ export const KPICards: React.FC<KPICardsProps> = ({ kpi }) => {
       suffix: " ha",
     },
     {
+      label: "Subsidy Requests",
+      value: kpi.totalRequests,
+      icon: "📝",
+      color: "#8b5cf6",
+      bgGradient: "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)",
+      borderColor: "#ddd6fe",
+      suffix: "",
+    },
+    {
       label: "Claim Rate",
       value: kpi.claimRate,
       icon: "✅",

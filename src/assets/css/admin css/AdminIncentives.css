@@ -235,108 +235,110 @@
 
 /* Card Header */
 .admin-incent-card-header {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  padding: 20px;
+  background: #10b981;
+  padding: 1.5rem;
   color: white;
 }
 
-.admin-incent-season-info h3 {
-  font-size: 20px;
+.admin-incent-card-season {
+  font-size: 1.25rem;
   font-weight: 700;
-  margin: 0 0 8px 0;
-  color: #f0f0f0;
+  margin: 0 0 0.5rem 0;
+  color: white;
 }
 
-.admin-incent-date {
-  font-size: 13px;
+.admin-incent-card-date {
+  font-size: 0.85rem;
   opacity: 0.9;
-  font-weight: 400;
+  font-weight: 500;
+  margin: 0;
 }
 
 /* Card Body */
 .admin-incent-card-body {
-  padding: 20px;
-  background: #f9fafb;
-}
-
-.admin-incent-stat-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.admin-incent-stat-row:last-child {
-  margin-bottom: 0;
-}
-
-.admin-incent-stat-item {
-  flex: 1;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px;
+  padding: 1.5rem;
+  background: #fdfdfd;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 1rem;
 }
 
-.admin-incent-stat-label {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 500;
+.admin-incent-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.admin-incent-stat-box {
+  background: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.admin-incent-stat-box.farmer-box {
+  width: 100%;
+}
+
+.admin-incent-stat-box label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.02em;
 }
 
-.admin-incent-stat-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
+.admin-incent-stat-box strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1e293b;
 }
 
 /* Card Actions */
 .admin-incent-card-actions {
   display: flex;
-  gap: 8px;
-  padding: 16px;
+  gap: 1rem;
+  padding: 0 1.5rem 1.5rem 1.5rem;
   background: white;
-  border-top: 1px solid #e5e7eb;
-  flex-wrap: wrap;
 }
 
-.admin-incent-btn-action {
+.admin-incent-btn-view,
+.admin-incent-btn-manage {
   flex: 1;
-  padding: 10px 16px;
+  padding: 0.75rem;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
 }
 
 .admin-incent-btn-view {
   background: #eff6ff;
-  color: #1e40af;
+  color: #3b82f6;
 }
 
 .admin-incent-btn-view:hover {
-  background: #dbeafe;
-  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
+  background: #e0f2fe;
+  transform: translateY(-1px);
 }
 
 .admin-incent-btn-manage {
   background: #fef3c7;
-  color: #92400e;
+  color: #d97706;
 }
 
 .admin-incent-btn-manage:hover {
   background: #fde68a;
-  box-shadow: 0 2px 8px rgba(146, 64, 14, 0.15);
+  transform: translateY(-1px);
 }
 
 /* ============================================
