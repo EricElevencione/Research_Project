@@ -249,7 +249,7 @@ const JoIncentives: React.FC = () => {
       const sortedAllocations = allocationsWithCounts.sort((a, b) => {
         const dateA = new Date(a.allocation_date).getTime();
         const dateB = new Date(b.allocation_date).getTime();
-        
+
         if (dateB !== dateA) {
           return dateB - dateA;
         }
@@ -602,6 +602,20 @@ const JoIncentives: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
         {/* Sidebar ends here */}
@@ -781,7 +795,8 @@ const JoIncentives: React.FC = () => {
                       >
                         <div>
                           <label className="jo-incent-edit-label">
-                            Program Name <span style={{ color: "#ef4444" }}>*</span>
+                            Program Name{" "}
+                            <span style={{ color: "#ef4444" }}>*</span>
                           </label>
                           <input
                             type="text"
@@ -937,8 +952,8 @@ const JoIncentives: React.FC = () => {
                             fontSize: "14px",
                           }}
                         >
-                          No fertilizer inputs in this allocation. Add rows
-                          from the dropdown above.
+                          No fertilizer inputs in this allocation. Add rows from
+                          the dropdown above.
                         </p>
                       ) : (
                         (["Solid", "Liquid"] as const).map((category) => {
@@ -1062,7 +1077,10 @@ const JoIncentives: React.FC = () => {
                             Select Seed to Add...
                           </option>
                           {["Hybrid", "Inbred"].map((category) => (
-                            <optgroup key={category} label={`${category} Seeds`}>
+                            <optgroup
+                              key={category}
+                              label={`${category} Seeds`}
+                            >
                               {EDIT_SEED_FIELDS.filter(
                                 (s) =>
                                   s.category === category &&
@@ -1198,7 +1216,11 @@ const JoIncentives: React.FC = () => {
                         onChange={handleEditInputChange}
                         rows={3}
                         className="jo-incent-edit-input"
-                        style={{ backgroundColor: "white", minHeight: "80px", cursor: "auto" }}
+                        style={{
+                          backgroundColor: "white",
+                          minHeight: "80px",
+                          cursor: "auto",
+                        }}
                         placeholder="Add any notes or comments..."
                       />
                     </div>
