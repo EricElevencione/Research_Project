@@ -885,11 +885,11 @@ const TechAddFarmerRequest: React.FC = () => {
           AuditModule.REQUESTS,
           "farmer_request",
           response.data?.id || 0,
-          `Added farmer request for ${farmerFullName} (${allocationLabel})`,
+          `Added farmer request for ${farmerFullName} (Program: ${allocationLabel})`,
           undefined,
           {
             farmer_name: farmerFullName,
-            allocation_season: allocation?.season || null,
+            allocation_program: allocation?.season || null,
             allocation_date: allocation?.allocation_date || null,
             requested_fertilizer_total_bags: totalFertilizerRequested,
             requested_seed_total_kg: totalSeedsRequested,

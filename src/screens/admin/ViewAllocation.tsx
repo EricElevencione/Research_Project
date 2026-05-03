@@ -69,10 +69,7 @@ const ViewAllocation: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const formatSeasonName = (season: string) => {
-    if (!season) return "Unknown Season";
-    const [type, year] = season.split("_");
-    if (!type || !year) return season;
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} ${year}`;
+    return season || "Unknown Program";
   };
 
   const formatCount = (value: number) => value.toLocaleString("en-US");
@@ -319,7 +316,7 @@ const ViewAllocation: React.FC = () => {
           <div className="admin-viewalloc-header">
             <h2 className="admin-viewalloc-title">View Allocation</h2>
             <p className="admin-viewalloc-subtitle">
-              {formatSeasonName(allocation.season)} · Regional Allocation
+              {formatSeasonName(allocation.season)} · Regional Program
               Details
             </p>
           </div>
@@ -417,8 +414,8 @@ const ViewAllocation: React.FC = () => {
 
             <section className="admin-viewalloc-section-block">
               <div className="admin-viewalloc-section-head">
-                <h3>Season Comparison</h3>
-                <span>Compare this season against other allocations</span>
+                <h3>Program Comparison</h3>
+                <span>Compare this program against other allocations</span>
               </div>
               <SeasonComparisonTable allocations={allAllocations} />
             </section>

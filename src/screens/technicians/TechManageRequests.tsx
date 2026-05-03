@@ -11,6 +11,10 @@ import {
   suggestAlternatives,
   calculateRemainingStock,
 } from "../../services/alternativeEngine";
+import {
+  FERTILIZER_FIELD_MAPS,
+  SEED_FIELD_MAPS,
+} from "../../constants/shortageFieldMaps";
 import "../../assets/css/technician css/TechManageRequestsStyle.css";
 import "../../components/layout/sidebarStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
@@ -596,13 +600,13 @@ const TechManageRequests: React.FC = () => {
     allocationData: AllocationDetails,
   ) => {
     if (!allocationData) {
-      console.log("ΓÜá∩╕Å No allocation data provided, skipping auto-fetch");
+      console.log("⚠️ No allocation data provided, skipping auto-fetch");
       return;
     }
 
     const pendingRequests = requestsList.filter((r) => r.status === "pending");
     console.log(
-      `≡ƒôè Checking ${pendingRequests.length} pending requests for shortages...`,
+      `📊 Checking ${pendingRequests.length} pending requests for shortages...`,
     );
 
     let countWithShortages = 0;
@@ -618,7 +622,7 @@ const TechManageRequests: React.FC = () => {
       if (hasShortage) {
         countWithShortages++;
         console.log(
-          `ΓÜá∩╕Å Shortage detected for request #${request.id} (${request.farmer_name})`,
+          `⚠️ Shortage detected for request #${request.id} (${request.farmer_name})`,
         );
 
         // Auto-fetch if not already loaded
@@ -627,7 +631,7 @@ const TechManageRequests: React.FC = () => {
             setLoadingAlternatives((prev) => ({ ...prev, [request.id]: true }));
 
             console.log(
-              `≡ƒñû Computing alternatives for request #${request.id}...`,
+              `🤖 Computing alternatives for request #${request.id}...`,
             );
 
             // Calculate remaining stock for this request
@@ -980,10 +984,7 @@ const TechManageRequests: React.FC = () => {
     );
   };
 
-  const formatSeasonName = (season: string) => {
-    const [type, year] = season.split("_");
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
-  };
+  const formatSeasonName = (season: string) => season;
 
   const editingRequestData = editingRequest
     ? requests.find((r) => r.id === editingRequest) || null
@@ -2221,14 +2222,10 @@ const TechManageRequests: React.FC = () => {
           </div>
           <div className="tech-manage-dashboard-header-incent">
             <div className="tech-manage-header-sub">
-              <h2 className="tech-manage-page-header">
-                Manage Farmer Requests
-              </h2>
-              {allocation && (
-                <p className="page-subtitle">
-                  {formatSeasonName(allocation.season)}
-                </p>
-              )}
+              <h2 className="tech-req-dashboard-title">Manage Requests</h2>
+              <p className="tech-req-dashboard-subtitle">
+                {formatSeasonName(allocation?.season)} · Regional Program
+              </p>
             </div>
             <div className="tech-manage-requests-back-create-section">
               <div className="tech-manage-requests-action-buttons">
@@ -2308,45 +2305,30 @@ const TechManageRequests: React.FC = () => {
                 {/* Allocation vs Requests Comparison */}
                 <div className="tech-manage-requests-comparison-grid">
                   {/* Regional Allocation Card */}
-                  <div className="tech-manage-requests-comparison-card">
+                  <div className="tech-manage-requests-comparison-card tech-manage-requests-allocation-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      Regional Allocation (Total Received)
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                      Regional Allocation
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                        <span className="tech-manage-requests-stat-label">
-                          Total Fertilizers
-                        </span>
+                        <span className="tech-manage-requests-stat-label">Total Fertilizers</span>
                         <span className="tech-manage-requests-stat-value">
                           {allocation
-                            ? (
-                                Number(allocation.urea_46_0_0_bags || 0) +
-                                Number(allocation.complete_14_14_14_bags || 0) +
-                                Number(
-                                  allocation.ammonium_sulfate_21_0_0_bags || 0,
-                                ) +
-                                Number(
-                                  allocation.muriate_potash_0_0_60_bags || 0,
-                                )
-                              ).toFixed(2)
+                            ? FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
+                                return sum + (Number(allocation[map.allocationField as keyof AllocationDetails]) || 0);
+                              }, 0).toFixed(2)
                             : "0.00"}{" "}
                           bags
                         </span>
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                        <span className="tech-manage-requests-stat-label">
-                          Total Seeds
-                        </span>
+                        <span className="tech-manage-requests-stat-label">Total Seeds</span>
                         <span className="tech-manage-requests-stat-value">
                           {allocation
-                            ? (
-                                Number(allocation.jackpot_kg || 0) +
-                                Number(allocation.us88_kg || 0) +
-                                Number(allocation.th82_kg || 0) +
-                                Number(allocation.rh9000_kg || 0) +
-                                Number(allocation.lumping143_kg || 0) +
-                                Number(allocation.lp296_kg || 0)
-                              ).toFixed(2)
+                            ? SEED_FIELD_MAPS.reduce((sum, map) => {
+                                return sum + (Number(allocation[map.allocationField as keyof AllocationDetails]) || 0);
+                              }, 0).toFixed(2)
                             : "0.00"}{" "}
                           kg
                         </span>
@@ -2355,38 +2337,27 @@ const TechManageRequests: React.FC = () => {
                   </div>
 
                   {/* Total Farmer Requests Card */}
-                  <div className="tech-manage-requests-comparison-card">
+                  <div className="tech-manage-requests-comparison-card tech-manage-requests-total-requests-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      Total Farmer Requests
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      Total Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                        <span className="tech-manage-requests-stat-label">
-                          Total Fertilizers Requested
-                        </span>
+                        <span className="tech-manage-requests-stat-label">Fertilizers Requested</span>
                         <span className="tech-manage-requests-stat-value">
-                          {getTotalRequested("requested_urea_bags") +
-                            getTotalRequested("requested_complete_14_bags") +
-                            getTotalRequested(
-                              "requested_ammonium_sulfate_bags",
-                            ) +
-                            getTotalRequested(
-                              "requested_muriate_potash_bags",
-                            )}{" "}
+                          {FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
+                            return sum + getTotalRequested(map.requestField as any);
+                          }, 0).toFixed(2)}{" "}
                           bags
                         </span>
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                        <span className="tech-manage-requests-stat-label">
-                          Total Seeds Requested
-                        </span>
+                        <span className="tech-manage-requests-stat-label">Seeds Requested</span>
                         <span className="tech-manage-requests-stat-value">
-                          {getTotalRequested("requested_jackpot_kg") +
-                            getTotalRequested("requested_us88_kg") +
-                            getTotalRequested("requested_th82_kg") +
-                            getTotalRequested("requested_rh9000_kg") +
-                            getTotalRequested("requested_lumping143_kg") +
-                            getTotalRequested("requested_lp296_kg")}{" "}
+                          {SEED_FIELD_MAPS.reduce((sum, map) => {
+                            return sum + getTotalRequested(map.requestField as any);
+                          }, 0).toFixed(2)}{" "}
                           kg
                         </span>
                       </div>
@@ -2394,54 +2365,37 @@ const TechManageRequests: React.FC = () => {
                   </div>
 
                   {/* Approved Farmer Requests Card */}
-                  <div className="tech-manage-requests-comparison-card tech-manage-requests-comparison-card-approved">
+                  <div className="tech-manage-requests-comparison-card tech-manage-requests-approved-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      Approved Farmer Requests
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      Approved Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                        <span className="tech-manage-requests-stat-label">
-                          Total Fertilizers
-                        </span>
+                        <span className="tech-manage-requests-stat-label">Total Fertilizers</span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
-                            const approvedRequests = requests.filter(
-                              (r) => r.status === "approved",
-                            );
-                            const total = approvedRequests.reduce(
-                              (sum, r) =>
-                                sum +
-                                Number(r.requested_urea_bags || 0) +
-                                Number(r.requested_complete_14_bags || 0) +
-                                Number(r.requested_ammonium_sulfate_bags || 0) +
-                                Number(r.requested_muriate_potash_bags || 0),
-                              0,
-                            );
+                            const approvedRequests = requests.filter((r) => r.status === "approved");
+                            const total = approvedRequests.reduce((sum, r) => {
+                              return sum + FERTILIZER_FIELD_MAPS.reduce((innerSum, map) => {
+                                return innerSum + (Number(r[map.requestField as keyof FarmerRequest]) || 0);
+                              }, 0);
+                            }, 0);
                             return Number(total).toFixed(2);
                           })()}{" "}
                           bags
                         </span>
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                        <span className="tech-manage-requests-stat-label">
-                          Total Seeds
-                        </span>
+                        <span className="tech-manage-requests-stat-label">Total Seeds</span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
-                            const approvedRequests = requests.filter(
-                              (r) => r.status === "approved",
-                            );
-                            const total = approvedRequests.reduce(
-                              (sum, r) =>
-                                sum +
-                                Number(r.requested_jackpot_kg || 0) +
-                                Number(r.requested_us88_kg || 0) +
-                                Number(r.requested_th82_kg || 0) +
-                                Number(r.requested_rh9000_kg || 0) +
-                                Number(r.requested_lumping143_kg || 0) +
-                                Number(r.requested_lp296_kg || 0),
-                              0,
-                            );
+                            const approvedRequests = requests.filter((r) => r.status === "approved");
+                            const total = approvedRequests.reduce((sum, r) => {
+                              return sum + SEED_FIELD_MAPS.reduce((innerSum, map) => {
+                                return innerSum + (Number(r[map.requestField as keyof FarmerRequest]) || 0);
+                              }, 0);
+                            }, 0);
                             return Number(total).toFixed(2);
                           })()}{" "}
                           kg
@@ -2451,54 +2405,37 @@ const TechManageRequests: React.FC = () => {
                   </div>
 
                   {/* Rejected Farmer Requests Card */}
-                  <div className="tech-manage-requests-comparison-card tech-manage-requests-comparison-card-rejected">
+                  <div className="tech-manage-requests-comparison-card tech-manage-requests-rejected-card">
                     <h3 className="tech-manage-requests-comparison-title">
-                      Rejected Farmer Requests
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                      Rejected Requests
                     </h3>
                     <div className="tech-manage-requests-comparison-stats">
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-fertilizer">
-                        <span className="tech-manage-requests-stat-label">
-                          Total Fertilizers
-                        </span>
+                        <span className="tech-manage-requests-stat-label">Total Fertilizers</span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
-                            const rejectedRequests = requests.filter(
-                              (r) => r.status === "rejected",
-                            );
-                            const total = rejectedRequests.reduce(
-                              (sum, r) =>
-                                sum +
-                                Number(r.requested_urea_bags || 0) +
-                                Number(r.requested_complete_14_bags || 0) +
-                                Number(r.requested_ammonium_sulfate_bags || 0) +
-                                Number(r.requested_muriate_potash_bags || 0),
-                              0,
-                            );
+                            const rejectedRequests = requests.filter((r) => r.status === "rejected");
+                            const total = rejectedRequests.reduce((sum, r) => {
+                              return sum + FERTILIZER_FIELD_MAPS.reduce((innerSum, map) => {
+                                return innerSum + (Number(r[map.requestField as keyof FarmerRequest]) || 0);
+                              }, 0);
+                            }, 0);
                             return Number(total).toFixed(2);
                           })()}{" "}
                           bags
                         </span>
                       </div>
                       <div className="tech-manage-requests-stat-box tech-manage-requests-stat-seed">
-                        <span className="tech-manage-requests-stat-label">
-                          Total Seeds
-                        </span>
+                        <span className="tech-manage-requests-stat-label">Total Seeds</span>
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
-                            const rejectedRequests = requests.filter(
-                              (r) => r.status === "rejected",
-                            );
-                            const total = rejectedRequests.reduce(
-                              (sum, r) =>
-                                sum +
-                                Number(r.requested_jackpot_kg || 0) +
-                                Number(r.requested_us88_kg || 0) +
-                                Number(r.requested_th82_kg || 0) +
-                                Number(r.requested_rh9000_kg || 0) +
-                                Number(r.requested_lumping143_kg || 0) +
-                                Number(r.requested_lp296_kg || 0),
-                              0,
-                            );
+                            const rejectedRequests = requests.filter((r) => r.status === "rejected");
+                            const total = rejectedRequests.reduce((sum, r) => {
+                              return sum + SEED_FIELD_MAPS.reduce((innerSum, map) => {
+                                return innerSum + (Number(r[map.requestField as keyof FarmerRequest]) || 0);
+                              }, 0);
+                            }, 0);
                             return Number(total).toFixed(2);
                           })()}{" "}
                           kg
@@ -2510,87 +2447,86 @@ const TechManageRequests: React.FC = () => {
 
                 {/* Summary Stats */}
                 <div className="tech-manage-requests-summary-cards">
-                  <div className="tech-manage-requests-summary-card tech-manage-requests-summary-total">
-                    <div className="tech-manage-requests-summary-label">
-                      Total Requests
+                  {/* Total Requests */}
+                  <div className="tech-manage-requests-summary-card tech-manage-card-total">
+                    <div className="tech-manage-card-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                     </div>
-                    <div className="tech-manage-requests-summary-value">
-                      {filteredRequests.length}
-                    </div>
-                  </div>
-                  <div className="tech-manage-requests-summary-card tech-manage-requests-summary-pending">
-                    <div className="tech-manage-requests-summary-label">
-                      Pending
-                    </div>
-                    <div className="tech-manage-requests-summary-value">
-                      {
-                        filteredRequests.filter((r) => r.status === "pending")
-                          .length
-                      }
+                    <div className="tech-manage-card-info">
+                      <div className="tech-manage-card-count">{filteredRequests.length}</div>
+                      <div className="tech-manage-card-label">Total Requests</div>
                     </div>
                   </div>
-                  <div className="tech-manage-requests-summary-card tech-manage-requests-summary-approved">
-                    <div className="tech-manage-requests-summary-label">
-                      Approved
+
+                  {/* Pending Requests */}
+                  <div className="tech-manage-requests-summary-card tech-manage-card-pending">
+                    <div className="tech-manage-card-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                     </div>
-                    <div className="tech-manage-requests-summary-value">
-                      {
-                        filteredRequests.filter((r) => r.status === "approved")
-                          .length
-                      }
+                    <div className="tech-manage-card-info">
+                      <div className="tech-manage-card-count">
+                        {filteredRequests.filter((r) => r.status === "pending").length}
+                      </div>
+                      <div className="tech-manage-card-label">Pending Requests</div>
                     </div>
                   </div>
-                  <div className="tech-manage-requests-summary-card tech-manage-requests-summary-rejected">
-                    <div className="tech-manage-requests-summary-label">
-                      Rejected
+
+                  {/* Approved Requests */}
+                  <div className="tech-manage-requests-summary-card tech-manage-card-approved">
+                    <div className="tech-manage-card-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
                     </div>
-                    <div className="tech-manage-requests-summary-value">
-                      {
-                        filteredRequests.filter((r) => r.status === "rejected")
-                          .length
-                      }
+                    <div className="tech-manage-card-info">
+                      <div className="tech-manage-card-count">
+                        {filteredRequests.filter((r) => r.status === "approved").length}
+                      </div>
+                      <div className="tech-manage-card-label">Approved Requests</div>
+                    </div>
+                  </div>
+
+                  {/* Rejected Requests */}
+                  <div className="tech-manage-requests-summary-card tech-manage-card-rejected">
+                    <div className="tech-manage-card-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                    </div>
+                    <div className="tech-manage-card-info">
+                      <div className="tech-manage-card-count">
+                        {filteredRequests.filter((r) => r.status === "rejected").length}
+                      </div>
+                      <div className="tech-manage-card-label">Rejected Requests</div>
                     </div>
                   </div>
                   {/* Combined Shortage & Suggestions Card */}
                   <div
-                    className="tech-manage-requests-summary-card tech-manage-requests-summary-shortage"
+                    className="tech-manage-requests-summary-card tech-manage-card-suggestions"
                     onClick={() => setShowSuggestionsModal(true)}
-                    style={{ cursor: "pointer" }}
                   >
                     {newSuggestionsCount > 0 && (
-                      <div className="tech-manage-requests-shortage-pulse-badge">
+                      <div className="tech-manage-card-pulse-badge">
                         {newSuggestionsCount}
                       </div>
                     )}
-                    <div className="tech-manage-requests-summary-label">
-                      Shortages & Suggestions
+                    <div className="tech-manage-card-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
                     </div>
-                    <div className="tech-manage-requests-summary-value">
-                      {autoSuggestionsCount} /{" "}
-                      {
-                        Object.keys(alternatives).filter((key) => {
-                          const alt = alternatives[parseInt(key, 10)];
-                          return alt?.suggestions?.suggestions?.some(
-                            (s: any) =>
-                              Array.isArray(s?.alternatives) &&
-                              s.alternatives.length > 0,
-                          );
-                        }).length
-                      }
+                    <div className="tech-manage-card-info">
+                      <div className="tech-manage-card-count">
+                        {autoSuggestionsCount} /{" "}
+                        {
+                          Object.keys(alternatives).filter((key) => {
+                            const alt = alternatives[parseInt(key, 10)];
+                            return alt?.suggestions?.suggestions?.some(
+                              (s: any) =>
+                                Array.isArray(s?.alternatives) &&
+                                s.alternatives.length > 0,
+                            );
+                          }).length
+                        }
+                      </div>
+                      <div className="tech-manage-card-label">Shortages & Suggestions</div>
                     </div>
-                    <div className="tech-manage-requests-summary-hint">
-                      {autoSuggestionsCount} shortages,{" "}
-                      {
-                        Object.keys(alternatives).filter((key) => {
-                          const alt = alternatives[parseInt(key, 10)];
-                          return alt?.suggestions?.suggestions?.some(
-                            (s: any) =>
-                              Array.isArray(s?.alternatives) &&
-                              s.alternatives.length > 0,
-                          );
-                        }).length
-                      }{" "}
-                      with solutions Click to view
+                    <div className="tech-manage-card-note">
+                      {autoSuggestionsCount} shortages found • Click to view
                     </div>
                   </div>
                 </div>

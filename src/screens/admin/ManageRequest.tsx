@@ -11,6 +11,10 @@ import {
   suggestAlternatives,
   calculateRemainingStock,
 } from "../../services/alternativeEngine";
+import {
+  FERTILIZER_FIELD_MAPS,
+  SEED_FIELD_MAPS,
+} from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminManageRequest.css";
 import "../../components/layout/sidebarStyle.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
@@ -108,27 +112,24 @@ const ManageRequests: React.FC = () => {
     ...statuses: string[]
   ) => statuses.includes(normalizeStatus(request.status));
   const getFertilizerTotal = (requestList: FarmerRequest[]) =>
-    requestList.reduce(
-      (sum, r) =>
+    requestList.reduce((sum, r) => {
+      return (
         sum +
-        Number(r.requested_urea_bags || 0) +
-        Number(r.requested_complete_14_bags || 0) +
-        Number(r.requested_ammonium_sulfate_bags || 0) +
-        Number(r.requested_muriate_potash_bags || 0),
-      0,
-    );
+        FERTILIZER_FIELD_MAPS.reduce((innerSum, map) => {
+          return innerSum + (Number(r[map.requestField]) || 0);
+        }, 0)
+      );
+    }, 0);
+
   const getSeedTotal = (requestList: FarmerRequest[]) =>
-    requestList.reduce(
-      (sum, r) =>
+    requestList.reduce((sum, r) => {
+      return (
         sum +
-        Number(r.requested_jackpot_kg || 0) +
-        Number(r.requested_us88_kg || 0) +
-        Number(r.requested_th82_kg || 0) +
-        Number(r.requested_rh9000_kg || 0) +
-        Number(r.requested_lumping143_kg || 0) +
-        Number(r.requested_lp296_kg || 0),
-      0,
-    );
+        SEED_FIELD_MAPS.reduce((innerSum, map) => {
+          return innerSum + (Number(r[map.requestField]) || 0);
+        }, 0)
+      );
+    }, 0);
   const approvedRequests = useMemo(
     () => requests.filter((r) => hasStatus(r, "approved")),
     [requests],
@@ -696,8 +697,7 @@ const ManageRequests: React.FC = () => {
   };
 
   const formatSeasonName = (season: string) => {
-    const [type, year] = season.split("_");
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+    return season;
   };
 
   // Helper function to check if a request might have stock issues
@@ -956,12 +956,15 @@ const ManageRequests: React.FC = () => {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </button>
-            <div className="tech-incent-mobile-title">Admin Requests</div>
+            <div className="tech-incent-mobile-title">Manage Requests</div>
           </div>
 
           <div className="admin-req-dashboard-header">
             <div>
-              <h2 className="admin-req-page-header">View Farmer Requests</h2>
+              <h2 className="admin-manage-title">Manage Requests</h2>
+              <p className="admin-manage-subtitle">
+                {formatSeasonName(allocation?.season)} · Regional Program
+              </p>
             </div>
             <button
               className="app-back-button"
@@ -1010,41 +1013,32 @@ const ManageRequests: React.FC = () => {
               {/* Regional Allocation Card */}
               <div className="admin-req-comparison-card admin-req-card-allocation">
                 <h3 className="admin-req-card-header allocation">
-                  📦 Regional Allocation (Total Received)
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                  Regional Allocation
                 </h3>
                 <div className="admin-req-card-content">
                   <div className="admin-req-stat-box fertilizers">
                     <span className="admin-req-stat-label fertilizers">
-                      🌱 Total Fertilizers
+                      Total Fertilizers
                     </span>
                     <span className="admin-req-stat-value fertilizers">
                       {allocation
-                        ? (
-                            Number(allocation.urea_46_0_0_bags || 0) +
-                            Number(allocation.complete_14_14_14_bags || 0) +
-                            Number(
-                              allocation.ammonium_sulfate_21_0_0_bags || 0,
-                            ) +
-                            Number(allocation.muriate_potash_0_0_60_bags || 0)
-                          ).toFixed(2)
+                        ? FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
+                            return sum + (Number(allocation[map.allocationField]) || 0);
+                          }, 0).toFixed(2)
                         : "0.00"}{" "}
                       bags
                     </span>
                   </div>
                   <div className="admin-req-stat-box seeds">
                     <span className="admin-req-stat-label seeds">
-                      🌾 Total Seeds
+                      Total Seeds
                     </span>
                     <span className="admin-req-stat-value seeds">
                       {allocation
-                        ? (
-                            Number(allocation.jackpot_kg || 0) +
-                            Number(allocation.us88_kg || 0) +
-                            Number(allocation.th82_kg || 0) +
-                            Number(allocation.rh9000_kg || 0) +
-                            Number(allocation.lumping143_kg || 0) +
-                            Number(allocation.lp296_kg || 0)
-                          ).toFixed(2)
+                        ? SEED_FIELD_MAPS.reduce((sum, map) => {
+                            return sum + (Number(allocation[map.allocationField]) || 0);
+                          }, 0).toFixed(2)
                         : "0.00"}{" "}
                       kg
                     </span>
@@ -1055,12 +1049,13 @@ const ManageRequests: React.FC = () => {
               {/* Total Farmer Requests Card */}
               <div className="admin-req-comparison-card admin-req-card-total-requests">
                 <h3 className="admin-req-card-header total-requests">
-                  📊 Total Farmer Requests
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                  Total Requests
                 </h3>
                 <div className="admin-req-card-content">
                   <div className="admin-req-stat-box fertilizers">
                     <span className="admin-req-stat-label fertilizers">
-                      🌱 Total Fertilizers Requested
+                      Fertilizers Requested
                     </span>
                     <span className="admin-req-stat-value fertilizers">
                       {Number(getFertilizerTotal(filteredRequests)).toFixed(2)}{" "}
@@ -1069,7 +1064,7 @@ const ManageRequests: React.FC = () => {
                   </div>
                   <div className="admin-req-stat-box seeds">
                     <span className="admin-req-stat-label seeds">
-                      🌾 Total Seeds Requested
+                      Seeds Requested
                     </span>
                     <span className="admin-req-stat-value seeds">
                       {Number(getSeedTotal(filteredRequests)).toFixed(2)} kg
@@ -1081,12 +1076,13 @@ const ManageRequests: React.FC = () => {
               {/* Farmer Requests Card */}
               <div className="admin-req-comparison-card admin-req-card-approved">
                 <h3 className="admin-req-card-header approved">
-                  ✅ Approved Farmer Requests
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approved Requests
                 </h3>
                 <div className="admin-req-card-content">
                   <div className="admin-req-stat-box fertilizers">
                     <span className="admin-req-stat-label fertilizers">
-                      🌱 Total Fertilizers
+                      Total Fertilizers
                     </span>
                     <span className="admin-req-stat-value fertilizers">
                       {Number(getFertilizerTotal(approvedRequests)).toFixed(2)}{" "}
@@ -1095,7 +1091,7 @@ const ManageRequests: React.FC = () => {
                   </div>
                   <div className="admin-req-stat-box seeds">
                     <span className="admin-req-stat-label seeds">
-                      🌾 Total Seeds
+                      Total Seeds
                     </span>
                     <span className="admin-req-stat-value seeds">
                       {Number(getSeedTotal(approvedRequests)).toFixed(2)} kg
@@ -1107,12 +1103,13 @@ const ManageRequests: React.FC = () => {
               {/* Rejected Farmer Requests Card */}
               <div className="admin-req-comparison-card admin-req-card-rejected">
                 <h3 className="admin-req-card-header rejected">
-                  ❌ Rejected Farmer Requests
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  Rejected Requests
                 </h3>
                 <div className="admin-req-card-content">
                   <div className="admin-req-stat-box rejected">
                     <span className="admin-req-stat-label rejected">
-                      🌱 Total Fertilizers
+                      Total Fertilizers
                     </span>
                     <span className="admin-req-stat-value rejected">
                       {Number(getFertilizerTotal(rejectedRequests)).toFixed(2)}{" "}
@@ -1121,7 +1118,7 @@ const ManageRequests: React.FC = () => {
                   </div>
                   <div className="admin-req-stat-box rejected">
                     <span className="admin-req-stat-label rejected">
-                      🌾 Total Seeds
+                      Total Seeds
                     </span>
                     <span className="admin-req-stat-value rejected">
                       {Number(getSeedTotal(rejectedRequests)).toFixed(2)} kg
@@ -1133,37 +1130,70 @@ const ManageRequests: React.FC = () => {
 
             {/* Summary Cards */}
             <div className="admin-req-summary-grid">
-              <div className="admin-req-summary-card total">
-                <div className="admin-req-summary-label">Total Requests</div>
-                <div className="admin-req-summary-value total">
-                  {filteredRequests.length}
+              {/* Total Requests */}
+              <div className="admin-req-summary-card admin-req-card-total">
+                <div className="admin-req-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </div>
+                <div className="admin-req-card-info">
+                  <div className="admin-req-card-count">
+                    {filteredRequests.length}
+                  </div>
+                  <div className="admin-req-card-label">Total Requests</div>
                 </div>
               </div>
-              <div className="admin-req-summary-card pending">
-                <div className="admin-req-summary-label pending">Pending</div>
-                <div className="admin-req-summary-value pending">
-                  {
-                    filteredRequests.filter((r) => hasStatus(r, "pending"))
-                      .length
-                  }
+
+              {/* Pending Requests */}
+              <div className="admin-req-summary-card admin-req-card-pending">
+                <div className="admin-req-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <div className="admin-req-card-info">
+                  <div className="admin-req-card-count">
+                    {filteredRequests.filter((r) => hasStatus(r, "pending")).length}
+                  </div>
+                  <div className="admin-req-card-label">Pending Requests</div>
                 </div>
               </div>
-              <div className="admin-req-summary-card approved">
-                <div className="admin-req-summary-label approved">Approved</div>
-                <div className="admin-req-summary-value approved">
-                  {
-                    filteredRequests.filter((r) => hasStatus(r, "approved"))
-                      .length
-                  }
+
+              {/* Approved Requests */}
+              <div className="admin-req-summary-card admin-req-card-approved">
+                <div className="admin-req-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 11 12 14 22 4" />
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                  </svg>
+                </div>
+                <div className="admin-req-card-info">
+                  <div className="admin-req-card-count">
+                    {filteredRequests.filter((r) => hasStatus(r, "approved")).length}
+                  </div>
+                  <div className="admin-req-card-label">Approved Requests</div>
                 </div>
               </div>
-              <div className="admin-req-summary-card rejected">
-                <div className="admin-req-summary-label rejected">Rejected</div>
-                <div className="admin-req-summary-value rejected">
-                  {
-                    filteredRequests.filter((r) => hasStatus(r, "rejected"))
-                      .length
-                  }
+
+              {/* Rejected Requests */}
+              <div className="admin-req-summary-card admin-req-card-rejected">
+                <div className="admin-req-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                </div>
+                <div className="admin-req-card-info">
+                  <div className="admin-req-card-count">
+                    {filteredRequests.filter((r) => hasStatus(r, "rejected")).length}
+                  </div>
+                  <div className="admin-req-card-label">Rejected Requests</div>
                 </div>
               </div>
             </div>

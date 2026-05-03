@@ -763,10 +763,10 @@ const LandPlottingPage: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("≡ƒöä selectedShape changed:", selectedShape);
+    console.log("🔄 selectedShape changed:", selectedShape);
     if (selectedShape) {
       console.log(
-        "≡ƒô¥ Setting landAttributes from selectedShape.properties:",
+        "📝 Setting landAttributes from selectedShape.properties:",
         selectedShape.properties,
       );
       setLandAttributes({
@@ -780,7 +780,7 @@ const LandPlottingPage: React.FC = () => {
       });
       setIsEditingAttributes(true);
     } else {
-      console.log("≡ƒô¥ Resetting landAttributes (no shape selected)");
+      console.log("📝 Resetting landAttributes (no shape selected)");
       setLandAttributes({
         name: "",
         ffrs_id: "",

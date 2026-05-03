@@ -22,16 +22,119 @@ interface RegionalAllocation {
   allocation_date: string;
   urea_46_0_0_bags: number;
   complete_14_14_14_bags: number;
+  np_16_20_0_bags: number;
   ammonium_sulfate_21_0_0_bags: number;
   muriate_potash_0_0_60_bags: number;
+  zinc_sulfate_bags: number;
+  vermicompost_bags: number;
+  chicken_manure_bags: number;
+  rice_straw_kg: number;
+  carbonized_rice_hull_bags: number;
+  biofertilizer_liters: number;
+  nanobiofertilizer_liters: number;
+  organic_root_exudate_mix_liters: number;
+  azolla_microphylla_kg: number;
+  foliar_liquid_fertilizer_npk_liters: number;
   rice_seeds_nsic_rc160_kg: number;
   rice_seeds_nsic_rc222_kg: number;
+  jackpot_kg: number;
+  us88_kg: number;
+  th82_kg: number;
+  rh9000_kg: number;
+  lumping143_kg: number;
+  lp296_kg: number;
+  mestiso_1_kg: number;
+  mestiso_20_kg: number;
+  mestiso_29_kg: number;
+  mestiso_55_kg: number;
+  mestiso_73_kg: number;
+  mestiso_99_kg: number;
+  mestiso_103_kg: number;
+  nsic_rc402_kg: number;
+  nsic_rc480_kg: number;
+  nsic_rc216_kg: number;
+  nsic_rc218_kg: number;
+  nsic_rc506_kg: number;
+  nsic_rc508_kg: number;
+  nsic_rc512_kg: number;
+  nsic_rc534_kg: number;
+  tubigan_28_kg: number;
+  tubigan_30_kg: number;
+  tubigan_22_kg: number;
+  sahod_ulan_2_kg: number;
+  sahod_ulan_10_kg: number;
+  salinas_6_kg: number;
+  salinas_7_kg: number;
+  salinas_8_kg: number;
+  malagkit_5_kg: number;
+  complete_16_16_16_bags: number;
+  ammonium_phosphate_16_20_0_bags: number;
   rice_seeds_nsic_rc440_kg: number;
   corn_seeds_hybrid_kg: number;
   corn_seeds_opm_kg: number;
   vegetable_seeds_kg: number;
+  notes: string;
   farmer_count?: number;
 }
+
+const FERTILIZER_FIELDS = [
+  { name: "urea_46_0_0_bags", label: "Urea (46-0-0) [bags]" },
+  { name: "complete_14_14_14_bags", label: "Complete (14-14-14) [bags]" },
+  { name: "np_16_20_0_bags", label: "16-20-0 [bags]" },
+  { name: "ammonium_sulfate_21_0_0_bags", label: "Ammonium Sulfate (21-0-0) [bags]" },
+  { name: "muriate_potash_0_0_60_bags", label: "Muriate of Potash (0-0-60) [bags]" },
+  { name: "zinc_sulfate_bags", label: "Zinc Sulfate [bags]" },
+  { name: "vermicompost_bags", label: "Vermicompost [bags]" },
+  { name: "chicken_manure_bags", label: "Chicken Manure [bags]" },
+  { name: "rice_straw_kg", label: "Rice Straw [kg]" },
+  { name: "carbonized_rice_hull_bags", label: "Carbonized Rice Hull (CRH) [bags]" },
+  { name: "biofertilizer_liters", label: "Biofertilizer [liters]" },
+  { name: "nanobiofertilizer_liters", label: "Nanobiofertilizer [liters]" },
+  { name: "organic_root_exudate_mix_liters", label: "Organic Root Exudate Mix [liters]" },
+  { name: "azolla_microphylla_kg", label: "Azolla microphylla [kg]" },
+  { name: "foliar_liquid_fertilizer_npk_liters", label: "Foliar Liquid Fertilizer (NPK) [liters]" },
+  { name: "complete_16_16_16_bags", label: "Complete (16-16-16) [bags]" },
+  { name: "ammonium_phosphate_16_20_0_bags", label: "Ammonium Phosphate (16-20-0) [bags]" },
+];
+
+const SEED_FIELDS = [
+  { name: "rice_seeds_nsic_rc160_kg", label: "NSIC Rc 160 [kg]" },
+  { name: "rice_seeds_nsic_rc222_kg", label: "NSIC Rc 222 [kg]" },
+  { name: "jackpot_kg", label: "Jackpot [kg]" },
+  { name: "us88_kg", label: "US88 [kg]" },
+  { name: "th82_kg", label: "TH82 [kg]" },
+  { name: "rh9000_kg", label: "RH9000 [kg]" },
+  { name: "lumping143_kg", label: "Lumping143 [kg]" },
+  { name: "lp296_kg", label: "LP296 [kg]" },
+  { name: "mestiso_1_kg", label: "Mestiso 1 [kg]" },
+  { name: "mestiso_20_kg", label: "Mestiso 20 [kg]" },
+  { name: "mestiso_29_kg", label: "Mestiso 29 [kg]" },
+  { name: "mestiso_55_kg", label: "Mestiso 55 [kg]" },
+  { name: "mestiso_73_kg", label: "Mestiso 73 [kg]" },
+  { name: "mestiso_99_kg", label: "Mestiso 99 [kg]" },
+  { name: "mestiso_103_kg", label: "Mestiso 103 [kg]" },
+  { name: "nsic_rc402_kg", label: "NSIC Rc 402 [kg]" },
+  { name: "nsic_rc480_kg", label: "NSIC Rc 480 [kg]" },
+  { name: "nsic_rc216_kg", label: "NSIC Rc 216 [kg]" },
+  { name: "nsic_rc218_kg", label: "NSIC Rc 218 [kg]" },
+  { name: "nsic_rc506_kg", label: "NSIC Rc 506 [kg]" },
+  { name: "nsic_rc508_kg", label: "NSIC Rc 508 [kg]" },
+  { name: "nsic_rc512_kg", label: "NSIC Rc 512 [kg]" },
+  { name: "nsic_rc534_kg", label: "NSIC Rc 534 [kg]" },
+  { name: "tubigan_28_kg", label: "Tubigan 28 [kg]" },
+  { name: "tubigan_30_kg", label: "Tubigan 30 [kg]" },
+  { name: "tubigan_22_kg", label: "Tubigan 22 [kg]" },
+  { name: "sahod_ulan_2_kg", label: "Sahod Ulan 2 [kg]" },
+  { name: "sahod_ulan_10_kg", label: "Sahod Ulan 10 [kg]" },
+  { name: "salinas_6_kg", label: "Salinas 6 [kg]" },
+  { name: "salinas_7_kg", label: "Salinas 7 [kg]" },
+  { name: "salinas_8_kg", label: "Salinas 8 [kg]" },
+  { name: "malagkit_5_kg", label: "Malagkit 5 [kg]" },
+  { name: "rice_seeds_nsic_rc440_kg", label: "NSIC Rc 440 [kg]" },
+  { name: "corn_seeds_hybrid_kg", label: "Corn Seeds (Hybrid) [kg]" },
+  { name: "corn_seeds_opm_kg", label: "Corn Seeds (OPM) [kg]" },
+  { name: "vegetable_seeds_kg", label: "Vegetable Seeds [kg]" },
+];
 
 const TechIncentives: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +151,7 @@ const TechIncentives: React.FC = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [requestCount, setRequestCount] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [addedFields, setAddedFields] = useState<Set<string>>(new Set());
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -94,29 +198,6 @@ const TechIncentives: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number, season: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete ${season}? This will also delete all associated farmer requests.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const response = await deleteAllocation(id);
-      if (!response.error) {
-        alert("Allocation deleted successfully");
-        fetchAllocations();
-      } else {
-        alert("Failed to delete allocation");
-      }
-    } catch (err) {
-      console.error("Error deleting allocation:", err);
-      alert("Error deleting allocation");
-    }
-  };
-
   const handleEditAllocation = async (allocation: RegionalAllocation) => {
     try {
       const response = await getFarmerRequests(allocation.id, true);
@@ -131,8 +212,16 @@ const TechIncentives: React.FC = () => {
       setRequestCount(0);
     }
 
+    const fieldsWithValues = new Set<string>();
+    [...FERTILIZER_FIELDS, ...SEED_FIELDS].forEach(field => {
+      if (Number(allocation[field.name as keyof RegionalAllocation] || 0) > 0) {
+        fieldsWithValues.add(field.name);
+      }
+    });
+
+    setAddedFields(fieldsWithValues);
     setEditAllocationModal(allocation);
-    setEditFormData(allocation);
+    setEditFormData({ ...allocation });
   };
 
   const handleEditInputChange = (
@@ -143,16 +232,12 @@ const TechIncentives: React.FC = () => {
     const { name, value } = e.target;
     if (!editFormData) return;
 
-    let parsedValue: string | number = value;
-    if (name.includes("bags")) {
-      parsedValue = parseInt(value, 10) || 0;
-    } else if (name.includes("kg")) {
-      parsedValue = parseFloat(value) || 0;
-    }
-
     setEditFormData({
       ...editFormData,
-      [name]: parsedValue,
+      [name]:
+        name === "season" || name === "allocation_date" || name === "notes"
+          ? value
+          : parseFloat(value) || 0,
     });
   };
 
@@ -188,54 +273,32 @@ const TechIncentives: React.FC = () => {
   };
 
   const formatSeasonName = (season: string) => {
-    const [type, year] = season.split("_");
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} Season ${year}`;
+    return season;
   };
 
   const getTotalFertilizer = (allocation: RegionalAllocation) => {
-    const total =
-      (Number(allocation.urea_46_0_0_bags) || 0) +
-      (Number(allocation.complete_14_14_14_bags) || 0) +
-      (Number(allocation.ammonium_sulfate_21_0_0_bags) || 0) +
-      (Number(allocation.muriate_potash_0_0_60_bags) || 0);
-    return isNaN(total) ? 0 : total;
+    return FERTILIZER_FIELDS.reduce((sum, field) => sum + (Number(allocation[field.name as keyof RegionalAllocation]) || 0), 0);
   };
 
   const getTotalSeeds = (allocation: RegionalAllocation) => {
-    const a = allocation as RegionalAllocation & Record<string, unknown>;
-    const jackpot = a.jackpot_kg;
-    const us88 = a.us88_kg;
-    const th82 = a.th82_kg;
-    const rh9000 = a.rh9000_kg;
-    const lumping143 = a.lumping143_kg;
-    const lp296 = a.lp296_kg;
+    return SEED_FIELDS.reduce((sum, field) => sum + (Number(allocation[field.name as keyof RegionalAllocation]) || 0), 0);
+  };
 
-    if (
-      jackpot !== undefined ||
-      us88 !== undefined ||
-      th82 !== undefined ||
-      rh9000 !== undefined ||
-      lumping143 !== undefined ||
-      lp296 !== undefined
-    ) {
-      const total =
-        (Number(jackpot) || 0) +
-        (Number(us88) || 0) +
-        (Number(th82) || 0) +
-        (Number(rh9000) || 0) +
-        (Number(lumping143) || 0) +
-        (Number(lp296) || 0);
-      return isNaN(total) ? 0 : total;
-    }
+  const addFieldToEdit = (fieldName: string) => {
+    setAddedFields(prev => {
+      const next = new Set(prev);
+      next.add(fieldName);
+      return next;
+    });
+  };
 
-    const total =
-      (Number(allocation.rice_seeds_nsic_rc160_kg) || 0) +
-      (Number(allocation.rice_seeds_nsic_rc222_kg) || 0) +
-      (Number(allocation.rice_seeds_nsic_rc440_kg) || 0) +
-      (Number(allocation.corn_seeds_hybrid_kg) || 0) +
-      (Number(allocation.corn_seeds_opm_kg) || 0) +
-      (Number(allocation.vegetable_seeds_kg) || 0);
-    return isNaN(total) ? 0 : total;
+  const removeFieldFromEdit = (fieldName: string) => {
+    setAddedFields(prev => {
+      const next = new Set(prev);
+      next.delete(fieldName);
+      return next;
+    });
+    setEditFormData(prev => prev ? ({ ...prev, [fieldName]: 0 }) : null);
   };
 
   return (
@@ -288,7 +351,7 @@ const TechIncentives: React.FC = () => {
             </button>
 
             <button
-              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
+              className={`sidebar-nav-item logout`}
               onClick={() => navigate("/")}
             >
               <span className="nav-icon">
@@ -323,14 +386,14 @@ const TechIncentives: React.FC = () => {
                 Farmer Incentive Requests
               </h2>
               <p className="jo-incent-page-subtitle">
-                Add farmer requests to available regional allocations
+                Manage farmer requests for agricultural programs
               </p>
             </div>
           </div>
 
           <div className="jo-incent-content-card">
             {loading ? (
-              <div className="jo-incent-loading">Loading allocations...</div>
+              <div className="jo-incent-loading">Loading programs...</div>
             ) : error ? (
               <div className="jo-incent-error-state">
                 <div className="jo-incent-error-icon">⚠️</div>
@@ -346,8 +409,8 @@ const TechIncentives: React.FC = () => {
             ) : allocations.length === 0 ? (
               <div className="jo-incent-empty-state">
                 <div className="jo-incent-empty-icon">📦</div>
-                <h3>No Allocations Available</h3>
-                <p>Contact the JO officer to create regional allocations</p>
+                <h3>No Programs Available</h3>
+                <p>Regional programs will appear here once created</p>
               </div>
             ) : (
               <div className="jo-incent-grid">
@@ -440,7 +503,7 @@ const TechIncentives: React.FC = () => {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="jo-incent-modal-header">
-                  <h2>Edit Regional Allocation</h2>
+                  <h2>Edit Regional Program</h2>
                   <button
                     className="jo-incent-modal-close"
                     onClick={() => setEditAllocationModal(null)}
@@ -451,64 +514,70 @@ const TechIncentives: React.FC = () => {
                 <div className="jo-incent-modal-body">
                   {requestCount > 0 && (
                     <div className="jo-incent-modal-warning">
-                      This allocation has {requestCount} existing farmer
+                      This program has {requestCount} existing farmer
                       request(s).
                     </div>
                   )}
 
                   <div className="tech-incent-modal-form-grid">
                     <div className="tech-incent-modal-form-group full-width">
-                      <label>Season</label>
+                      <label>Program Name</label>
                       <input
                         type="text"
-                        value={formatSeasonName(editFormData.season)}
-                        disabled
+                        name="season"
+                        value={editFormData.season}
+                        onChange={handleEditInputChange}
                       />
                     </div>
 
-                    <div className="tech-incent-modal-form-group">
-                      <label>Urea (46-0-0)</label>
-                      <input
-                        type="number"
-                        name="urea_46_0_0_bags"
-                        value={editFormData.urea_46_0_0_bags}
-                        onChange={handleEditInputChange}
-                        min="0"
-                      />
+                    <div className="tech-incent-modal-form-group full-width">
+                      <label>Select to Add Item</label>
+                      <select 
+                        className="tech-allocation-select"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            addFieldToEdit(e.target.value);
+                            e.target.value = "";
+                          }
+                        }}
+                      >
+                        <option value="">-- Choose Fertilizer or Seed --</option>
+                        <optgroup label="Fertilizers">
+                          {FERTILIZER_FIELDS.filter(f => !addedFields.has(f.name)).map(f => (
+                            <option key={f.name} value={f.name}>{f.label}</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Seeds">
+                          {SEED_FIELDS.filter(s => !addedFields.has(s.name)).map(s => (
+                            <option key={s.name} value={s.name}>{s.label}</option>
+                          ))}
+                        </optgroup>
+                      </select>
                     </div>
 
-                    <div className="tech-incent-modal-form-group">
-                      <label>Complete (14-14-14)</label>
-                      <input
-                        type="number"
-                        name="complete_14_14_14_bags"
-                        value={editFormData.complete_14_14_14_bags}
-                        onChange={handleEditInputChange}
-                        min="0"
-                      />
-                    </div>
-
-                    <div className="tech-incent-modal-form-group">
-                      <label>Ammonium Sulfate (21-0-0)</label>
-                      <input
-                        type="number"
-                        name="ammonium_sulfate_21_0_0_bags"
-                        value={editFormData.ammonium_sulfate_21_0_0_bags}
-                        onChange={handleEditInputChange}
-                        min="0"
-                      />
-                    </div>
-
-                    <div className="tech-incent-modal-form-group">
-                      <label>Muriate of Potash (0-0-60)</label>
-                      <input
-                        type="number"
-                        name="muriate_potash_0_0_60_bags"
-                        value={editFormData.muriate_potash_0_0_60_bags}
-                        onChange={handleEditInputChange}
-                        min="0"
-                      />
-                    </div>
+                    {[...addedFields].sort().map(fieldName => {
+                      const field = [...FERTILIZER_FIELDS, ...SEED_FIELDS].find(f => f.name === fieldName);
+                      return (
+                        <div key={fieldName} className="tech-incent-modal-form-group dynamic-edit-field">
+                          <div className="field-label-row">
+                            <label>{field?.label}</label>
+                            <button 
+                              type="button" 
+                              className="remove-field-btn"
+                              onClick={() => removeFieldFromEdit(fieldName)}
+                            >×</button>
+                          </div>
+                          <input
+                            type="number"
+                            name={fieldName}
+                            value={editFormData[fieldName as keyof RegionalAllocation] || 0}
+                            onChange={handleEditInputChange}
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <div className="jo-incent-modal-actions">

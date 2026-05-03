@@ -88,6 +88,11 @@ interface AllocationDetails {
   salinas_7_kg?: number;
   salinas_8_kg?: number;
   malagkit_5_kg?: number;
+  complete_16_16_16_bags?: number;
+  rice_seeds_nsic_rc440_kg?: number;
+  corn_seeds_hybrid_kg?: number;
+  corn_seeds_opm_kg?: number;
+  vegetable_seeds_kg?: number;
 }
 
 interface FarmerRequestForm {
@@ -140,6 +145,11 @@ interface FarmerRequestForm {
   requested_salinas_7_kg: number;
   requested_salinas_8_kg: number;
   requested_malagkit_5_kg: number;
+  requested_np_16_20_0_bags: number;
+  requested_rice_seeds_nsic_rc440_kg: number;
+  requested_corn_seeds_hybrid_kg: number;
+  requested_corn_seeds_opm_kg: number;
+  requested_vegetable_seeds_kg: number;
   notes: string;
 }
 
@@ -251,6 +261,11 @@ const JoAddFarmerRequest: React.FC = () => {
     requested_salinas_7_kg: 0,
     requested_salinas_8_kg: 0,
     requested_malagkit_5_kg: 0,
+    requested_np_16_20_0_bags: 0,
+    requested_rice_seeds_nsic_rc440_kg: 0,
+    requested_corn_seeds_hybrid_kg: 0,
+    requested_corn_seeds_opm_kg: 0,
+    requested_vegetable_seeds_kg: 0,
     notes: "",
   });
   const [debouncedFormData, setDebouncedFormData] =
@@ -258,6 +273,59 @@ const JoAddFarmerRequest: React.FC = () => {
   const [inlineSuggestions, setInlineSuggestions] = useState<
     Record<string, InlineSuggestion>
   >({});
+
+  const [selectedFertilizerKeys, setSelectedFertilizerKeys] = useState<RequestField[]>([]);
+  const [selectedSeedKeys, setSelectedSeedKeys] = useState<RequestField[]>([]);
+
+  const fertilizerCategories = {
+    Solid: [
+      "Urea (46-0-0)", "Complete (14-14-14)", "Complete (16-16-16)",
+      "Ammonium Sulfate (21-0-0)", "Muriate of Potash (0-0-60)", "16-20-0",
+      "Ammonium Phosphate", "Zinc Sulfate", "Vermicompost", "Chicken Manure",
+      "Rice Straw (incorporated)", "Carbonized Rice Hull (CRH)"
+    ],
+    Liquid: [
+      "Biofertilizer (Liquid Concentrate)", "Nanobiofertilizer",
+      "Organic Root Exudate Mix", "Azolla microphylla", "Foliar Liquid Fertilizer (NPK)"
+    ]
+  };
+
+  const seedCategories = {
+    Hybrid: [
+      "Mestiso 1 (M1)", "Mestiso 20 (M20)", "Mestiso 29", "Mestiso 55",
+      "Mestiso 73", "Mestiso 99", "Mestiso 103", "Jackpot", "US88", "TH82",
+      "RH9000", "Corn Seeds (Hybrid)"
+    ],
+    Inbred: [
+      "NSIC Rc 222", "NSIC Rc 402", "NSIC Rc 480", "NSIC Rc 216", "NSIC Rc 160",
+      "NSIC Rc 218", "NSIC Rc 506", "NSIC Rc 508", "NSIC Rc 512", "NSIC Rc 534",
+      "Tubigan 28", "Tubigan 30", "Tubigan 22", "Sahod Ulan 2", "Sahod Ulan 10",
+      "Salinas 6", "Salinas 7", "Salinas 8", "Malagkit 5", "Lumping143", "LP296",
+      "NSIC Rc 440", "Corn Seeds (OPM)", "Vegetable Seeds"
+    ]
+  };
+
+  const addItem = (type: "fertilizer" | "seed", field: RequestField) => {
+    if (type === "fertilizer") {
+      if (!selectedFertilizerKeys.includes(field)) {
+        setSelectedFertilizerKeys([...selectedFertilizerKeys, field]);
+      }
+    } else {
+      if (!selectedSeedKeys.includes(field)) {
+        setSelectedSeedKeys([...selectedSeedKeys, field]);
+      }
+    }
+  };
+
+  const removeItem = (type: "fertilizer" | "seed", field: RequestField) => {
+    if (type === "fertilizer") {
+      setSelectedFertilizerKeys(selectedFertilizerKeys.filter(k => k !== field));
+    } else {
+      setSelectedSeedKeys(selectedSeedKeys.filter(k => k !== field));
+    }
+    // Also reset the value in formData
+    setFormData(prev => ({ ...prev, [field]: 0 }));
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -367,13 +435,8 @@ const JoAddFarmerRequest: React.FC = () => {
     }));
   };
 
-  const visibleFertilizerItems = useMemo(() => FERTILIZER_ITEMS.filter(
-    (item) => (Number(allocation?.[item.allocationField]) || 0) > 0,
-  ), [allocation]);
-
-  const visibleSeedItems = useMemo(() => SEED_ITEMS.filter(
-    (item) => (Number(allocation?.[item.allocationField]) || 0) > 0,
-  ), [allocation]);
+  const visibleFertilizerItems = useMemo(() => FERTILIZER_ITEMS, []);
+  const visibleSeedItems = useMemo(() => SEED_ITEMS, []);
 
   const fertilizerLabelSet = useMemo(
     () => new Set(visibleFertilizerItems.map((item) => item.label)),
@@ -744,6 +807,11 @@ const JoAddFarmerRequest: React.FC = () => {
         requested_salinas_7_kg: formData.requested_salinas_7_kg,
         requested_salinas_8_kg: formData.requested_salinas_8_kg,
         requested_malagkit_5_kg: formData.requested_malagkit_5_kg,
+        requested_np_16_20_0_bags: formData.requested_np_16_20_0_bags,
+        requested_rice_seeds_nsic_rc440_kg: formData.requested_rice_seeds_nsic_rc440_kg,
+        requested_corn_seeds_hybrid_kg: formData.requested_corn_seeds_hybrid_kg,
+        requested_corn_seeds_opm_kg: formData.requested_corn_seeds_opm_kg,
+        requested_vegetable_seeds_kg: formData.requested_vegetable_seeds_kg,
       });
 
       if (response.error) {
@@ -767,11 +835,11 @@ const JoAddFarmerRequest: React.FC = () => {
           AuditModule.REQUESTS,
           "farmer_request",
           response.data?.id || 0,
-          `Added farmer request for ${farmerFullName} (${allocationLabel})`,
+          `Added farmer request for ${farmerFullName} (Program: ${allocationLabel})`,
           undefined,
           {
             farmer_name: farmerFullName,
-            allocation_season: allocation.season || null,
+            allocation_program: allocation.season || null,
             allocation_date: allocation.allocation_date || null,
             requested_fertilizer_total_bags: totalFertilizerRequested,
             requested_seed_total_kg: totalSeedsRequested,
@@ -780,6 +848,17 @@ const JoAddFarmerRequest: React.FC = () => {
             requested_complete_16_bags: formData.requested_complete_16_bags,
             requested_ammonium_sulfate_bags:
               formData.requested_ammonium_sulfate_bags,
+            requested_np_16_20_0_bags: formData.requested_np_16_20_0_bags,
+            requested_rice_seeds_nsic_rc440_kg: formData.requested_rice_seeds_nsic_rc440_kg,
+            requested_corn_seeds_hybrid_kg: formData.requested_corn_seeds_hybrid_kg,
+            requested_corn_seeds_opm_kg: formData.requested_corn_seeds_opm_kg,
+            requested_vegetable_seeds_kg: formData.requested_vegetable_seeds_kg,
+            requested_jackpot_kg: formData.requested_jackpot_kg,
+            requested_us88_kg: formData.requested_us88_kg,
+            requested_th82_kg: formData.requested_th82_kg,
+            requested_rh9000_kg: formData.requested_rh9000_kg,
+            requested_lumping143_kg: formData.requested_lumping143_kg,
+            requested_lp296_kg: formData.requested_lp296_kg,
             requested_ammonium_phosphate_bags:
               formData.requested_ammonium_phosphate_bags,
             requested_muriate_potash_bags:
@@ -805,12 +884,6 @@ const JoAddFarmerRequest: React.FC = () => {
               formData.requested_rice_seeds_nsic_rc160_kg,
             requested_rice_seeds_nsic_rc222_kg:
               formData.requested_rice_seeds_nsic_rc222_kg,
-            requested_jackpot_kg: formData.requested_jackpot_kg,
-            requested_us88_kg: formData.requested_us88_kg,
-            requested_th82_kg: formData.requested_th82_kg,
-            requested_rh9000_kg: formData.requested_rh9000_kg,
-            requested_lumping143_kg: formData.requested_lumping143_kg,
-            requested_lp296_kg: formData.requested_lp296_kg,
             requested_mestiso_1_kg: formData.requested_mestiso_1_kg,
             requested_mestiso_20_kg: formData.requested_mestiso_20_kg,
             requested_mestiso_29_kg: formData.requested_mestiso_29_kg,
@@ -1045,7 +1118,7 @@ const JoAddFarmerRequest: React.FC = () => {
             <h2 className="jo-add-farmer-title">➕ Add Farmer Request</h2>
             <p className="jo-add-farmer-subtitle">
               {allocation
-                ? `Season: ${allocation.season.replace("_", " ").toUpperCase()}`
+                ? `Program: ${allocation.season}`
                 : "Loading..."}
             </p>
             <button
@@ -1115,6 +1188,9 @@ const JoAddFarmerRequest: React.FC = () => {
                           className="jo-add-farmer-radio"
                         />
                         <div className="jo-add-farmer-item-content">
+                          <label className="jo-add-farmer-label">
+                            Program Name
+                          </label>
                           <div className="jo-add-farmer-name">
                             {farmer.last_name}, {farmer.first_name}{" "}
                             {farmer.middle_name ? farmer.middle_name + " " : ""}
@@ -1229,121 +1305,156 @@ const JoAddFarmerRequest: React.FC = () => {
 
               <div className="jo-add-farmer-section">
                 <h3 className="jo-add-farmer-section-title">
-                  🌱 Requested Fertilizers (Bags)
+                  🌱 Requested Fertilizers
                 </h3>
-                <div className="jo-add-farmer-form-grid">
-                  {visibleFertilizerItems.length === 0 ? (
-                    <div className="jo-add-farmer-empty-state">
-                      No fertilizer items are available in this allocation.
-                    </div>
-                  ) : (
-                    visibleFertilizerItems.map((item) => (
-                      <div
-                        key={item.requestField}
-                        className="jo-add-farmer-form-group"
-                      >
-                        <label className="jo-add-farmer-label">
-                          {item.label}
-                        </label>
-                        <input
-                          type="number"
-                          name={item.requestField}
-                          value={Number(formData[item.requestField]) || 0}
-                          onChange={handleInputChange}
-                          min="0"
-                          step="1"
-                          className="jo-add-farmer-input"
-                        />
-                        {getInlineExceedAmount(item) > 0 && (
-                          <div
-                            style={{
-                              color: "#b91c1c",
-                              fontSize: "12px",
-                              marginTop: "6px",
-                              fontWeight: 600,
-                            }}
+                <div className="jo-add-farmer-dropdown-control">
+                  <select
+                    className="jo-add-farmer-input"
+                    onChange={(e) => {
+                      addItem("fertilizer", e.target.value as RequestField);
+                      e.target.value = "";
+                    }}
+                    value=""
+                  >
+                    <option value="" disabled>Select Fertilizer to Add...</option>
+                    {Object.entries(fertilizerCategories).map(([cat, labels]) => (
+                      <optgroup key={cat} label={`${cat} Fertilizers`}>
+                        {visibleFertilizerItems
+                          .filter(item => labels.includes(item.label) && !selectedFertilizerKeys.includes(item.requestField))
+                          .map(item => {
+                            const stock = Number(allocation?.[item.allocationField]) || 0;
+                            return (
+                              <option key={item.requestField} value={item.requestField}>
+                                {item.label} (Stock: {stock})
+                              </option>
+                            );
+                          })}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="jo-add-farmer-dynamic-list">
+                  {selectedFertilizerKeys.map((field) => {
+                    const item = visibleFertilizerItems.find(i => i.requestField === field);
+                    if (!item) return null;
+                    return (
+                      <div key={field} className="jo-add-farmer-dynamic-row">
+                        <div className="jo-add-farmer-row-info">
+                          <label className="jo-add-farmer-label">{item.label} (Bags)</label>
+                        </div>
+                        <div className="jo-add-farmer-row-input-group">
+                          <input
+                            type="number"
+                            name={item.requestField}
+                            value={Number(formData[item.requestField]) || 0}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="1"
+                            className="jo-add-farmer-input"
+                          />
+                          <button
+                            type="button"
+                            className="jo-add-farmer-row-remove"
+                            onClick={() => removeItem("fertilizer", field)}
                           >
-                            the allocation exceeds by{" "}
-                            {formatSummaryValue(getInlineExceedAmount(item))}{" "}
-                            bags.
+                            ✕
+                          </button>
+                        </div>
+                        {getInlineExceedAmount(item) > 0 && (
+                          <div className="jo-add-farmer-row-warning">
+                            Exceeds allocation by {formatSummaryValue(getInlineExceedAmount(item))} bags.
                           </div>
                         )}
-                        {getInlineExceedAmount(item) > 0 &&
-                          inlineSuggestions[item.requestField] && (
-                            <div
-                              className={`jo-add-farmer-inline-suggestion-card jo-add-farmer-inline-suggestion-${inlineSuggestions[item.requestField].status}`}
-                            >
-                              <div className="jo-add-farmer-inline-suggestion-title">
-                                {inlineSuggestions[item.requestField].title}
-                              </div>
-                              <div className="jo-add-farmer-inline-suggestion-message">
-                                {inlineSuggestions[item.requestField].message}
-                              </div>
-                            </div>
-                          )}
+                        {getInlineExceedAmount(item) > 0 && inlineSuggestions[field] && (
+                          <div className={`jo-add-farmer-inline-suggestion-card jo-add-farmer-inline-suggestion-${inlineSuggestions[field].status}`}>
+                            <div className="jo-add-farmer-inline-suggestion-title">{inlineSuggestions[field].title}</div>
+                            <div className="jo-add-farmer-inline-suggestion-message">{inlineSuggestions[field].message}</div>
+                          </div>
+                        )}
                       </div>
-                    ))
+                    );
+                  })}
+                  {selectedFertilizerKeys.length === 0 && (
+                    <p className="jo-add-farmer-empty-hint">No fertilizers selected.</p>
                   )}
                 </div>
               </div>
 
               <div className="jo-add-farmer-section">
                 <h3 className="jo-add-farmer-section-title">
-                  🌾 Requested Seeds (Kg)
+                  🌾 Requested Seeds
                 </h3>
-                <div className="jo-add-farmer-form-grid">
-                  {visibleSeedItems.length === 0 ? (
-                    <div className="jo-add-farmer-empty-state">
-                      No seed items are available in this allocation.
-                    </div>
-                  ) : (
-                    visibleSeedItems.map((item) => (
-                      <div
-                        key={item.requestField}
-                        className="jo-add-farmer-form-group"
-                      >
-                        <label className="jo-add-farmer-label">
-                          {item.label}
-                        </label>
-                        <input
-                          type="number"
-                          name={item.requestField}
-                          value={Number(formData[item.requestField]) || 0}
-                          onChange={handleInputChange}
-                          min="0"
-                          step="any"
-                          inputMode="decimal"
-                          className="jo-add-farmer-input"
-                        />
-                        {getInlineExceedAmount(item) > 0 && (
-                          <div
-                            style={{
-                              color: "#b91c1c",
-                              fontSize: "12px",
-                              marginTop: "6px",
-                              fontWeight: 600,
-                            }}
+                <div className="jo-add-farmer-dropdown-control">
+                  <select
+                    className="jo-add-farmer-input"
+                    onChange={(e) => {
+                      addItem("seed", e.target.value as RequestField);
+                      e.target.value = "";
+                    }}
+                    value=""
+                  >
+                    <option value="" disabled>Select Seed to Add...</option>
+                    {Object.entries(seedCategories).map(([cat, labels]) => (
+                      <optgroup key={cat} label={`${cat} Seeds`}>
+                        {visibleSeedItems
+                          .filter(item => labels.includes(item.label) && !selectedSeedKeys.includes(item.requestField))
+                          .map(item => {
+                            const stock = Number(allocation?.[item.allocationField]) || 0;
+                            return (
+                              <option key={item.requestField} value={item.requestField}>
+                                {item.label} (Stock: {stock})
+                              </option>
+                            );
+                          })}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="jo-add-farmer-dynamic-list">
+                  {selectedSeedKeys.map((field) => {
+                    const item = visibleSeedItems.find(i => i.requestField === field);
+                    if (!item) return null;
+                    return (
+                      <div key={field} className="jo-add-farmer-dynamic-row">
+                        <div className="jo-add-farmer-row-info">
+                          <label className="jo-add-farmer-label">{item.label} (Kg)</label>
+                        </div>
+                        <div className="jo-add-farmer-row-input-group">
+                          <input
+                            type="number"
+                            name={item.requestField}
+                            value={Number(formData[item.requestField]) || 0}
+                            onChange={handleInputChange}
+                            min="0"
+                            step="any"
+                            className="jo-add-farmer-input"
+                          />
+                          <button
+                            type="button"
+                            className="jo-add-farmer-row-remove"
+                            onClick={() => removeItem("seed", field)}
                           >
-                            the allocation exceeds by{" "}
-                            {formatSummaryValue(getInlineExceedAmount(item))}{" "}
-                            kg.
+                            ✕
+                          </button>
+                        </div>
+                        {getInlineExceedAmount(item) > 0 && (
+                          <div className="jo-add-farmer-row-warning">
+                            Exceeds allocation by {formatSummaryValue(getInlineExceedAmount(item))} kg.
                           </div>
                         )}
-                        {getInlineExceedAmount(item) > 0 &&
-                          inlineSuggestions[item.requestField] && (
-                            <div
-                              className={`jo-add-farmer-inline-suggestion-card jo-add-farmer-inline-suggestion-${inlineSuggestions[item.requestField].status}`}
-                            >
-                              <div className="jo-add-farmer-inline-suggestion-title">
-                                {inlineSuggestions[item.requestField].title}
-                              </div>
-                              <div className="jo-add-farmer-inline-suggestion-message">
-                                {inlineSuggestions[item.requestField].message}
-                              </div>
-                            </div>
-                          )}
+                        {getInlineExceedAmount(item) > 0 && inlineSuggestions[field] && (
+                          <div className={`jo-add-farmer-inline-suggestion-card jo-add-farmer-inline-suggestion-${inlineSuggestions[field].status}`}>
+                            <div className="jo-add-farmer-inline-suggestion-title">{inlineSuggestions[field].title}</div>
+                            <div className="jo-add-farmer-inline-suggestion-message">{inlineSuggestions[field].message}</div>
+                          </div>
+                        )}
                       </div>
-                    ))
+                    );
+                  })}
+                  {selectedSeedKeys.length === 0 && (
+                    <p className="jo-add-farmer-empty-hint">No seeds selected.</p>
                   )}
                 </div>
               </div>

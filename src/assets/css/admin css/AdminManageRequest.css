@@ -108,29 +108,32 @@
 /* Comparison cards */
 .admin-req-comparison-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 20px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border-radius: 12px;
-  border: 2px solid #0ea5e9;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0;
+  background: none;
+  border: none;
 }
 
 .admin-req-comparison-card {
-  background: #fff;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .admin-req-card-header {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .admin-req-card-header.allocation {
@@ -152,15 +155,16 @@
 .admin-req-card-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.5rem;
 }
 
 .admin-req-stat-box {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: 0.5rem 0.75rem;
   border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 .admin-req-stat-box.fertilizers {
@@ -177,6 +181,8 @@
 
 .admin-req-stat-label {
   font-weight: 500;
+  font-size: 0.75rem;
+  color: #64748b;
 }
 
 .admin-req-stat-label.fertilizers {
@@ -192,8 +198,9 @@
 }
 
 .admin-req-stat-value {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .admin-req-stat-value.fertilizers {
@@ -211,67 +218,95 @@
 /* Summary cards */
 .admin-req-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .admin-req-summary-card {
-  padding: 16px;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 15px;
+  padding: 0.6rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-left: 4px solid #6366f1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.admin-req-summary-card.total {
-  background: #f3f4f6;
+.admin-req-summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.06);
 }
 
-.admin-req-summary-card.pending {
-  background: #fef3c7;
+.admin-req-card-icon {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
-.admin-req-summary-card.approved {
-  background: #d1fae5;
+.admin-req-card-total {
+  border-left-color: #6366f1; /* Purple/Blue */
 }
 
-.admin-req-summary-card.rejected {
-  background: #fee2e2;
+.admin-req-card-total .admin-req-card-icon {
+  color: #6366f1;
 }
 
-.admin-req-summary-label {
-  font-size: 14px;
+.admin-req-card-pending {
+  border-left-color: #f59e0b; /* Orange/Yellow */
 }
 
-.admin-req-summary-label.pending {
-  color: #92400e;
+.admin-req-card-pending .admin-req-card-icon {
+  color: #f59e0b;
 }
 
-.admin-req-summary-label.approved {
-  color: #065f46;
+.admin-req-card-approved {
+  border-left-color: #10b981; /* Green */
 }
 
-.admin-req-summary-label.rejected {
-  color: #991b1b;
+.admin-req-card-approved .admin-req-card-icon {
+  color: #10b981;
 }
 
-.admin-req-summary-value {
-  font-size: 24px;
+.admin-req-card-rejected {
+  border-left-color: #ef4444; /* Red */
+}
+
+.admin-req-card-rejected .admin-req-card-icon {
+  color: #ef4444;
+}
+
+.admin-req-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.admin-req-card-count {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+
+.admin-req-card-label {
+  color: #64748b;
+  font-size: 0.65rem;
   font-weight: 600;
-}
-
-.admin-req-summary-value.total {
-  color: #1f2937;
-}
-
-.admin-req-summary-value.pending {
-  color: #92400e;
-}
-
-.admin-req-summary-value.approved {
-  color: #065f46;
-}
-
-.admin-req-summary-value.rejected {
-  color: #991b1b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 1px;
 }
 
 /* Info box */
