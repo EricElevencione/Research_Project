@@ -604,8 +604,7 @@ const JoIncentives: React.FC = () => {
             </p>
           </div>
 
-          <div className="jo-incent-action-header">
-          </div>
+          <div className="jo-incent-action-header"></div>
 
           <div className="jo-incent-content-card">
             {loading ? (
@@ -701,13 +700,7 @@ const JoIncentives: React.FC = () => {
                       >
                         👁️ View
                       </button>
-                      <button
-                        className="jo-incent-btn-action jo-incent-btn-edit"
-                        onClick={() => handleEditAllocation(allocation)}
-                        title="Edit Allocation"
-                      >
-                        ✏️ Edit
-                      </button>
+
                       <button
                         className="jo-incent-btn-action jo-incent-btn-add"
                         onClick={() =>
@@ -725,15 +718,6 @@ const JoIncentives: React.FC = () => {
                         title="Manage Requests"
                       >
                         📋 Manage
-                      </button>
-                      <button
-                        className="jo-incent-btn-action jo-incent-btn-delete"
-                        onClick={() =>
-                          handleDelete(allocation.id, allocation.season)
-                        }
-                        title="Delete"
-                      >
-                        🗑️
                       </button>
                     </div>
                   </div>

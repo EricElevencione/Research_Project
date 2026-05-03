@@ -13,8 +13,10 @@
 
 .login-container {
   display: flex;
-  width: 850px;
-  height: 500px;
+  width: min(900px, 100%);
+  max-width: 900px;
+  height: auto;
+  min-height: 460px;
   background: #fff;
   border-radius: 16px;
   overflow: hidden;
@@ -63,7 +65,7 @@
 
 .login-right {
   width: 50%;
-  padding: 40px;
+  padding: 32px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -78,9 +80,9 @@
 }
 
 .login-right h1 {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 600;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .login-right h3 {
@@ -97,6 +99,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 8px;
 }
 
 input[type="email"],
@@ -220,9 +223,9 @@ input[type="password"]:focus {
 
 .checkbox-container {
   display: flex;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  font-size: 15px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 14px;
 }
 
 #remember {
@@ -235,7 +238,7 @@ input[type="password"]:focus {
   background-color: #4e944f;
   border: none;
   color: white;
-  font-size: 16px;
+  font-size: 15px;
   cursor: pointer;
   border-radius: 8px;
   transition: background-color 0.3s;
@@ -248,8 +251,8 @@ input[type="password"]:focus {
 .forgot-password {
   text-align: center;
   color: #4e944f;
-  font-size: 14px;
-  margin-top: 12px;
+  font-size: 13px;
+  margin-top: 10px;
   cursor: pointer;
 }
 
@@ -260,10 +263,10 @@ input[type="password"]:focus {
 .error-message {
   background-color: #ffebee;
   color: #c62828;
-  padding: 10px;
-  border-radius: 4px;
-  margin-bottom: 15px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
   text-align: center;
-  font-size: 14px;
+  font-size: 13px;
   border: 1px solid #ffcdd2;
 }

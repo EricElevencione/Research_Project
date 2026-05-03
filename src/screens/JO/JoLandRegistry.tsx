@@ -16,6 +16,7 @@ import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
 
 // Interfaces
+
 interface LandParcel {
   id: number;
   land_parcel_id: number;
@@ -513,27 +514,19 @@ const JoLandRegistry: React.FC = () => {
 
   const fetchCultivationParcelsForFarmer = async (
     farmerId: number,
-    parcels: FarmerGroup["parcels"],
+    parcels: FarmerGroup["parcels"], // no longer used for filtering
   ) => {
     setCultivationLoading(true);
     try {
-      const parcelNumbers = (parcels || [])
-        .map((parcel) => String(parcel.parcel_number || "").trim())
-        .filter(Boolean);
-
-      let query = supabase
+      // Query ALL parcels for this farmer directly from the table
+      // Don't rely on group.parcels since normalizeCurrentOwnershipGroups
+      // may have already dropped parcels with is_current_owner === false
+      const { data, error } = await supabase
         .from("rsbsa_farm_parcels")
         .select(
           "id, submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_cultivating, cultivation_status_reason, cultivation_status_updated_at, cultivator_submission_id",
         )
         .eq("submission_id", farmerId);
-
-      if (parcelNumbers.length > 0) {
-        query = query.in("parcel_number", parcelNumbers);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
 
       const rows: CultivationParcel[] = Array.isArray(data) ? data : [];
       const cultivatorIds = Array.from(
@@ -2864,6 +2857,62 @@ const JoLandRegistry: React.FC = () => {
         );
       }
 
+      const transferredParcelIds = donorSplitParcels
+        .map((p) => p.farm_parcel_id)
+        .filter((id) => Number.isFinite(id) && id > 0);
+
+      if (transferredParcelIds.length > 0) {
+        if (transferMode === "inheritance") {
+          // Inheritance: always auto-relink, no prompt needed
+          const { error: relinkError } = await supabase.rpc(
+            "auto_relink_tenant_lessee_on_transfer",
+            {
+              p_old_owner_id: fromFarmerId,
+              p_new_owner_id: toFarmerId,
+              p_farm_parcel_ids: transferredParcelIds,
+            },
+          );
+          if (relinkError) {
+            console.warn(
+              "Transfer succeeded but auto tenant/lessee re-link failed:",
+              relinkError.message,
+            );
+          }
+        } else if (transferMode === "voluntary") {
+          // Voluntary: only relink if the donor is being archived (transferred ALL parcels)
+          // i.e. they have no remaining parcels after this transfer
+          const remainingParcels =
+            donorFarmerGroup?.parcels.filter(
+              (p) => !transferredParcelIds.includes(p.id),
+            ) ?? [];
+
+          if (remainingParcels.length === 0) {
+            // Donor is going to be archived — must relink or tenant/lessee is orphaned
+            const { error: relinkError } = await supabase.rpc(
+              "auto_relink_tenant_lessee_on_transfer",
+              {
+                p_old_owner_id: fromFarmerId,
+                p_new_owner_id: toFarmerId,
+                p_farm_parcel_ids: transferredParcelIds,
+              },
+            );
+            if (relinkError) {
+              console.warn(
+                "Transfer succeeded but tenant/lessee re-link failed:",
+                relinkError.message,
+              );
+            }
+          }
+          // If donor still has remaining parcels after voluntary transfer,
+          // tenant/lessee links are still valid — no re-linking needed
+        }
+      }
+
+      // Then existing cleanup RPCs continue as normal...
+      await supabase.rpc("check_and_update_farmer_parcel_status", {
+        p_farmer_id: fromFarmerId,
+      });
+
       // ── Step 4: Post-transfer cleanup (runs for BOTH paths) ──────
       await supabase.rpc("check_and_update_farmer_parcel_status", {
         p_farmer_id: fromFarmerId,
@@ -3221,11 +3270,23 @@ const JoLandRegistry: React.FC = () => {
                         <td>{row.farmer.farmer_name || "—"}</td>
                         <td className="jo-land-registry-ownership-cell">
                           <div className="jo-land-registry-ownership-stack">
-                            <span className="jo-land-registry-ownership-pill jo-land-registry-ownership-owner">
-                              Registered Owner
+                            <span
+                              className={`jo-land-registry-ownership-pill jo-land-registry-ownership-${row.primaryOwnership}`}
+                            >
+                              {row.primaryOwnership === "owner"
+                                ? "Registered Owner"
+                                : row.primaryOwnership === "tenant"
+                                  ? "Tenant"
+                                  : "Lessee"}
                             </span>
-
-                            {/* Secondary ownership labels (Tenant/Lessee) hidden */}
+                            {row.ownershipSecondaryLabels.map((label) => (
+                              <span
+                                key={label}
+                                className="jo-land-registry-ownership-pill jo-land-registry-ownership-secondary"
+                              >
+                                {label}
+                              </span>
+                            ))}
                           </div>
                         </td>
                         <td>{row.primaryBarangay || "Multiple"}</td>
