@@ -3197,21 +3197,6 @@ const JoLandRegistry: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="jo-land-registry-barangay-filter">
-                <select
-                  className="jo-land-registry-barangay-select"
-                  value={filterCultivation}
-                  onChange={(e) =>
-                    setFilterCultivation(
-                      e.target.value as "all" | "active" | "inactive",
-                    )
-                  }
-                >
-                  <option value="all">All Cultivation Status</option>
-                  <option value="active">Actively Farming</option>
-                  <option value="inactive">Not Farming</option>
-                </select>
-              </div>
             </div>
 
             {/* Table */}

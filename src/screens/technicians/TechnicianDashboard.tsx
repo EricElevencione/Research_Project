@@ -10,6 +10,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface BarangayRow {
   barangay: string;
@@ -40,6 +41,10 @@ const TechnicianDashboard: React.FC = () => {
     "all" | "incomplete" | "complete"
   >("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -59,6 +64,25 @@ const TechnicianDashboard: React.FC = () => {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    navigate("/login");
+  };
 
   const filteredChecklist =
     dashboardData?.barangayChecklist?.filter((row) => {
@@ -80,6 +104,7 @@ const TechnicianDashboard: React.FC = () => {
             <div className="sidebar-logo">
               <img src={LogoImage} alt="Logo" />
             </div>
+
             <button
               className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
               onClick={() => navigate("/technician-dashboard")}
@@ -89,8 +114,9 @@ const TechnicianDashboard: React.FC = () => {
               </span>
               <span className="nav-text">Home</span>
             </button>
+
             <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsapage") ? "active" : ""}`}
+              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
               onClick={() => navigate("/technician-rsbsa")}
             >
               <span className="nav-icon">
@@ -98,6 +124,7 @@ const TechnicianDashboard: React.FC = () => {
               </span>
               <span className="nav-text">RSBSA</span>
             </button>
+
             <button
               className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
               onClick={() => navigate("/technician-incentives")}
@@ -107,6 +134,7 @@ const TechnicianDashboard: React.FC = () => {
               </span>
               <span className="nav-text">Subsidy</span>
             </button>
+
             <button
               className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
               onClick={() => navigate("/technician-masterlist")}
@@ -116,15 +144,29 @@ const TechnicianDashboard: React.FC = () => {
               </span>
               <span className="nav-text">Masterlist</span>
             </button>
-            <button
-              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
-              onClick={() => navigate("/")}
-            >
+
+            <button className="sidebar-nav-item logout" onClick={handleLogout}>
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {/* Current User — inside nav, at the bottom */}
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 

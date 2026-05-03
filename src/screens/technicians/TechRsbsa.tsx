@@ -15,6 +15,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface RSBSARecord {
   id: string;
@@ -107,6 +108,10 @@ const TechRsbsa: React.FC = () => {
     const params = new URLSearchParams(location.search);
     return params.get("unplotted") === "1";
   });
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const unplottedFarmerIdSet = React.useMemo(
     () => new Set(unplottedFarmers.map((farmer) => String(farmer.id))),
@@ -536,6 +541,20 @@ const TechRsbsa: React.FC = () => {
   ]);
 
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     setShowUnplottedOnly(params.get("unplotted") === "1");
   }, [location.search]);
@@ -617,6 +636,11 @@ const TechRsbsa: React.FC = () => {
     return "1/1";
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    navigate("/login");
+  };
+
   return (
     <div className="tech-rsbsa-page-container">
       <div className="tech-rsbsa-page">
@@ -667,15 +691,28 @@ const TechRsbsa: React.FC = () => {
               <span className="nav-text">Masterlist</span>
             </button>
 
-            <button
-              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
-              onClick={() => navigate("/")}
-            >
+            <button className="sidebar-nav-item logout" onClick={handleLogout}>
               <span className="nav-icon">
                 <img src={LogoutIcon} alt="Logout" />
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {/* Current User — inside nav, at the bottom */}
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
         <div
@@ -692,7 +729,20 @@ const TechRsbsa: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">RSBSA</div>
           </div>
