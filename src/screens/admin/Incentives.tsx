@@ -58,7 +58,18 @@ const Incentives: React.FC = () => {
           }
         }),
       );
-      setAllocations(allocationsWithCounts);
+      // Sort allocations: Newest first (by date, then by ID as tie-breaker)
+      const sortedAllocations = allocationsWithCounts.sort((a, b) => {
+        const dateA = new Date(a.allocation_date).getTime();
+        const dateB = new Date(b.allocation_date).getTime();
+        
+        if (dateB !== dateA) {
+          return dateB - dateA;
+        }
+        return b.id - a.id; // Newest ID first if dates are same
+      });
+
+      setAllocations(sortedAllocations);
     } catch (error: any) {
       console.error("Error fetching allocations:", error);
       setError(error.message || "Failed to connect to server");
@@ -131,28 +142,53 @@ const Incentives: React.FC = () => {
                 {allocations.map((allocation) => (
                   <div key={allocation.id} className="admin-incent-card">
                     <div className="admin-incent-card-header">
-                      <div className="admin-incent-season-info">
-                        <h3>{formatSeasonName(allocation.season)}</h3>
-                        <span className="admin-incent-date">{new Date(allocation.allocation_date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
-                      </div>
+                      <h3 className="admin-incent-card-season">{formatSeasonName(allocation.season)}</h3>
+                      <p className="admin-incent-card-date">
+                        {new Date(allocation.allocation_date).toLocaleDateString("en-US", { 
+                          year: "numeric", 
+                          month: "long", 
+                          day: "numeric" 
+                        })}
+                      </p>
                     </div>
+                    
                     <div className="admin-incent-card-body">
-                      <div className="admin-incent-stat-row">
-                        <span className="admin-incent-stat-label">Fertilizer (Total)</span>
-                        <span className="admin-incent-stat-value">{getTotalFertilizer(allocation)} bags</span>
+                      <div className="admin-incent-stat-grid">
+                        <div className="admin-incent-stat-box">
+                          <label>TOTAL FERTILIZER</label>
+                          <strong>{getTotalFertilizer(allocation).toLocaleString()} bags</strong>
+                        </div>
+                        <div className="admin-incent-stat-box">
+                          <label>TOTAL SEEDS</label>
+                          <strong>{getTotalSeeds(allocation).toLocaleString("en-US", { minimumFractionDigits: 2 })} kg</strong>
+                        </div>
                       </div>
-                      <div className="admin-incent-stat-row">
-                        <span className="admin-incent-stat-label">Seeds (Total)</span>
-                        <span className="admin-incent-stat-value">{getTotalSeeds(allocation)} kg</span>
-                      </div>
-                      <div className="admin-incent-stat-row">
-                        <span className="admin-incent-stat-label">Registered Farmers</span>
-                        <span className="admin-incent-stat-value">{allocation.farmer_count || 0}</span>
+                      
+                      <div className="admin-incent-stat-box farmer-box">
+                        <label>FARMER REQUESTS</label>
+                        <strong>{allocation.farmer_count || 0} farmers</strong>
                       </div>
                     </div>
+
                     <div className="admin-incent-card-actions">
-                      <button className="admin-incent-btn-action admin-incent-btn-manage" onClick={() => navigate(`/manage-requests/${allocation.id}`)}>Manage Allocation</button>
-                      <button className="admin-incent-btn-action admin-incent-btn-view" onClick={() => navigate(`/view-allocation/${allocation.id}`)}>View Details</button>
+                      <button 
+                        className="admin-incent-btn-view" 
+                        onClick={() => navigate(`/view-allocation/${allocation.id}`)}
+                      >
+                        View
+                      </button>
+                      <button 
+                        className="admin-incent-btn-edit" 
+                        onClick={() => navigate(`/admin-edit-allocation/${allocation.id}`)}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="admin-incent-btn-manage" 
+                        onClick={() => navigate(`/manage-requests/${allocation.id}`)}
+                      >
+                        Manage
+                      </button>
                     </div>
                   </div>
                 ))}

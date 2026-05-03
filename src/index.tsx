@@ -129,6 +129,14 @@ function App() {
           }
         />
         <Route
+          path="/admin-edit-allocation/:allocationId"
+          element={
+            <ProtectedRoute>
+              <AdminCreateAllocation />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/manage-requests/:allocationId"
           element={
             <ProtectedRoute>

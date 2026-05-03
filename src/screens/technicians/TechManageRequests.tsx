@@ -1516,10 +1516,10 @@ const TechManageRequests: React.FC = () => {
     const requestedPotash = Number(request.requested_muriate_potash_bags || 0);
 
     const fertilizerShortage =
-      requestedUrea > remainingUrea ||
-      requestedComplete > remainingComplete ||
-      requestedAmSul > remainingAmSul ||
-      requestedPotash > remainingPotash;
+      (requestedUrea > 0 && requestedUrea > remainingUrea) ||
+      (requestedComplete > 0 && requestedComplete > remainingComplete) ||
+      (requestedAmSul > 0 && requestedAmSul > remainingAmSul) ||
+      (requestedPotash > 0 && requestedPotash > remainingPotash);
 
     // Seed shortages
     const approvedJackpot = requestsList
@@ -1587,12 +1587,12 @@ const TechManageRequests: React.FC = () => {
     const requestedLp296 = Number(request.requested_lp296_kg || 0);
 
     const seedShortage =
-      requestedJackpot > remainingJackpot ||
-      requestedUs88 > remainingUs88 ||
-      requestedTh82 > remainingTh82 ||
-      requestedRh9000 > remainingRh9000 ||
-      requestedLumping143 > remainingLumping143 ||
-      requestedLp296 > remainingLp296;
+      (requestedJackpot > 0 && requestedJackpot > remainingJackpot) ||
+      (requestedUs88 > 0 && requestedUs88 > remainingUs88) ||
+      (requestedTh82 > 0 && requestedTh82 > remainingTh82) ||
+      (requestedRh9000 > 0 && requestedRh9000 > remainingRh9000) ||
+      (requestedLumping143 > 0 && requestedLumping143 > remainingLumping143) ||
+      (requestedLp296 > 0 && requestedLp296 > remainingLp296);
 
     return fertilizerShortage || seedShortage;
   };
@@ -2894,87 +2894,86 @@ const TechManageRequests: React.FC = () => {
                                         >
                                           Reject
                                         </button>
+                                        {rejectModalOpen && (
+                                          <div className="modal-overlay">
+                                            <div className="modal-box">
+                                              <h3>Reason for Rejection</h3>
+                                              <p>
+                                                Please provide a reason before
+                                                rejecting this request.
+                                              </p>
+
+                                              <textarea
+                                                value={rejectReason}
+                                                onChange={(e) =>
+                                                  setRejectReason(
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                placeholder="Enter reason here..."
+                                                rows={4}
+                                                className="reject-reason-input"
+                                              />
+
+                                              {!rejectReason.trim() && (
+                                                <p className="reject-reason-error">
+                                                  Reason is required.
+                                                </p>
+                                              )}
+
+                                              <div className="modal-actions">
+                                                <button
+                                                  className="tech-manage-requests-btn-reject"
+                                                  disabled={
+                                                    !rejectReason.trim()
+                                                  }
+                                                  onClick={() => {
+                                                    if (!rejectReason.trim())
+                                                      return;
+                                                    handleStatusChange(
+                                                      pendingRejectId!,
+                                                      "rejected",
+                                                      rejectReason,
+                                                    ); // ✅ pass reason
+                                                    setRejectModalOpen(false);
+                                                    setRejectReason("");
+                                                    setPendingRejectId(null);
+                                                  }}
+                                                >
+                                                  Confirm Reject
+                                                </button>
+
+                                                <button
+                                                  className="login-button"
+                                                  onClick={() => {
+                                                    setRejectModalOpen(false);
+                                                    setRejectReason("");
+                                                    setPendingRejectId(null);
+                                                  }}
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
                                       </>
                                     )}
-                                    {rejectModalOpen && (
-                                      <div className="tech-manage-requests-modal-overlay">
-                                        <div className="tech-manage-requests-modal-content">
-                                          <h3 className="tech-manage-requests-modal-title">
-                                            Reason for Rejection
-                                          </h3>
 
-                                          <p
-                                            style={{
-                                              marginBottom: "12px",
-                                              color: "#4b5563",
-                                            }}
-                                          >
-                                            Please provide a reason before
-                                            rejecting this request.
-                                          </p>
-
-                                          <div className="tech-manage-requests-modal-section">
-                                            <label className="tech-manage-requests-modal-label">
-                                              Rejection Reason{" "}
-                                              <span style={{ color: "red" }}>
-                                                *
-                                              </span>
-                                            </label>
-                                            <textarea
-                                              value={rejectReason}
-                                              onChange={(e) =>
-                                                setRejectReason(e.target.value)
-                                              }
-                                              placeholder="Enter reason here..."
-                                              rows={4}
-                                              className="tech-manage-requests-modal-textarea"
-                                            />
-                                            {!rejectReason.trim() && (
-                                              <p
-                                                style={{
-                                                  color: "#dc2626",
-                                                  fontSize: "12px",
-                                                  marginTop: "4px",
-                                                }}
-                                              >
-                                                Reason is required.
-                                              </p>
-                                            )}
-                                          </div>
-
-                                          <div className="tech-manage-requests-modal-actions">
-                                            <button
-                                              className="tech-manage-requests-modal-btn-cancel"
-                                              onClick={() => {
-                                                setRejectModalOpen(false);
-                                                setRejectReason("");
-                                                setPendingRejectId(null);
-                                              }}
-                                            >
-                                              Cancel
-                                            </button>
-                                            <button
-                                              className="tech-manage-requests-modal-btn-delete-confirm"
-                                              disabled={!rejectReason.trim()}
-                                              onClick={() => {
-                                                if (!rejectReason.trim())
-                                                  return;
-                                                handleStatusChange(
-                                                  pendingRejectId!,
-                                                  "rejected",
-                                                  rejectReason,
-                                                );
-                                                setRejectModalOpen(false);
-                                                setRejectReason("");
-                                                setPendingRejectId(null);
-                                              }}
-                                            >
-                                              Confirm Reject
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenActionsMenuFor(null);
+                                        setActionsMenuPosition(null);
+                                        openDeleteDialog(
+                                          request.id,
+                                          request.farmer_name,
+                                        );
+                                      }}
+                                      className="tech-manage-requests-btn-delete"
+                                    >
+                                      Delete
+                                    </button>
 
                                     <button
                                       type="button"
@@ -3085,6 +3084,65 @@ const TechManageRequests: React.FC = () => {
                         })}
                       </tbody>
                     </table>
+
+                    {/* Rejection Reason Modal */}
+                    {rejectModalOpen && (
+                      <div className="tech-reject-modal-overlay">
+                        <div className="tech-reject-modal-content">
+                          <h3 className="tech-reject-modal-title">
+                            Reason for Rejection
+                          </h3>
+                          <p className="tech-reject-modal-subtitle">
+                            Please provide a reason before rejecting this
+                            request.
+                          </p>
+
+                          <textarea
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            placeholder="Enter reason here..."
+                            className="tech-reject-textarea"
+                          />
+
+                          {!rejectReason.trim() && (
+                            <p className="tech-reject-error-text">
+                              Reason is required.
+                            </p>
+                          )}
+
+                          <div className="tech-reject-modal-actions">
+                            <button
+                              className="tech-reject-confirm-btn"
+                              disabled={!rejectReason.trim()}
+                              onClick={() => {
+                                if (!rejectReason.trim()) return;
+                                handleStatusChange(
+                                  pendingRejectId!,
+                                  "rejected",
+                                  rejectReason,
+                                );
+                                setRejectModalOpen(false);
+                                setRejectReason("");
+                                setPendingRejectId(null);
+                              }}
+                            >
+                              Confirm Reject
+                            </button>
+
+                            <button
+                              className="tech-reject-cancel-btn"
+                              onClick={() => {
+                                setRejectModalOpen(false);
+                                setRejectReason("");
+                                setPendingRejectId(null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -3456,7 +3514,7 @@ const TechManageRequests: React.FC = () => {
             <div
               style={{
                 overflowY: "auto",
-                maxHeight: "calc(80vh - 140px),",
+                maxHeight: "calc(80vh - 140px)",
                 padding: "15px 9px",
               }}
             >
@@ -3603,14 +3661,7 @@ const TechManageRequests: React.FC = () => {
                                     onClick={handleEditFromOverview}
                                     className="tech-manage-requests-btn-unresolved-edit"
                                   >
-                                    Edit request manually
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={handleDeleteFromOverview}
-                                    className="tech-manage-requests-btn-unresolved-delete"
-                                  >
-                                    Delete and submit new
+                                    Edit Request
                                   </button>
                                 </div>
                               </div>

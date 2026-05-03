@@ -245,7 +245,18 @@ const JoIncentives: React.FC = () => {
         }),
       );
 
-      setAllocations(allocationsWithCounts);
+      // Sort allocations: Newest first (by date, then by ID as tie-breaker)
+      const sortedAllocations = allocationsWithCounts.sort((a, b) => {
+        const dateA = new Date(a.allocation_date).getTime();
+        const dateB = new Date(b.allocation_date).getTime();
+        
+        if (dateB !== dateA) {
+          return dateB - dateA;
+        }
+        return b.id - a.id; // Newest ID first if dates are same
+      });
+
+      setAllocations(sortedAllocations);
     } catch (error: any) {
       console.error("Error fetching allocations:", error);
       setError(error.message || "Failed to connect to server");
