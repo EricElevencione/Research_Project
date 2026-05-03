@@ -22,7 +22,6 @@ import JoDashboard from "./screens/JO/JoDashboard";
 import JoRsbsa from "./screens/JO/JoRsbsaRegistration";
 import JoMasterlist from "./screens/JO/JoMasterlist";
 import JoIncentives from "./screens/JO/JoIncentives";
-import JoCreateAllocation from "./screens/JO/JoCreateAllocation";
 import JoAddFarmerRequest from "./screens/JO/JoAddFarmerRequest";
 import JoManageRequests from "./screens/JO/JoManageRequests";
 import JoViewAllocation from "./screens/JO/JoViewAllocation";
@@ -31,6 +30,8 @@ import JoDistribution from "./screens/JO/JoDistribution";
 import JoLandRegistry from "./screens/JO/JoLandRegistry";
 import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
 import AuditTrail from "./screens/admin/AuditTrail";
+import InventoryPage from "./screens/admin/InventoryPage";
+import AdminCreateAllocation from "./screens/admin/AdminCreateAllocation";
 import ShortagesSuggestions from "./pages/ShortagesSuggestions.jsx";
 import JoRsbsaRegisLandowner from "./screens/JO/JoRsbsaRegisLandowner";
 import "../src/assets/css/admin css/index.css";
@@ -88,10 +89,18 @@ function App() {
           }
         />
         <Route
-          path="/Incentives"
+          path="/incentives"
           element={
             <ProtectedRoute>
               <Incentives />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryPage />
             </ProtectedRoute>
           }
         />
@@ -108,6 +117,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ViewAllocation />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin-create-allocation"
+          element={
+            <ProtectedRoute>
+              <AdminCreateAllocation />
             </ProtectedRoute>
           }
         />
@@ -236,14 +253,6 @@ function App() {
           element={
             <ProtectedRoute>
               <JoIncentives />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/jo-create-allocation"
-          element={
-            <ProtectedRoute>
-              <JoCreateAllocation />
             </ProtectedRoute>
           }
         />

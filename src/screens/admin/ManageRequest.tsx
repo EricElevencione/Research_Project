@@ -13,12 +13,7 @@ import {
 } from "../../services/alternativeEngine";
 import "../../assets/css/admin css/AdminManageRequest.css";
 import "../../components/layout/sidebarStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import MasterlistIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 
 // ─── Main Component ────────────────────────────────────────
 
@@ -937,66 +932,7 @@ const ManageRequests: React.FC = () => {
                 }
             `}</style>
       <div className="admin-req-page has-mobile-sidebar">
-        {/* Sidebar */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/rsbsa") ? "active" : ""}`}
-              onClick={() => navigate("/rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/incentives") ? "active" : ""}`}
-              onClick={() => navigate("/incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={MasterlistIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button className="sidebar-nav-item logout" onClick={handleLogout}>
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-        </div>
-
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Main Content */}
         <div className="admin-req-main-content">

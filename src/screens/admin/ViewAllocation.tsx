@@ -12,12 +12,8 @@ import {
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminViewAllocation.css";
 import "../../components/layout/sidebarStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
+import AdminSidebar from "../../components/layout/AdminSidebar";
+import { FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
 
 interface FarmerRequest extends Record<
   string,
@@ -294,68 +290,7 @@ const ViewAllocation: React.FC = () => {
   return (
     <div className="admin-viewalloc-page-container">
       <div className="admin-viewalloc-page has-mobile-sidebar">
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/rsbsa") ? "active" : ""}`}
-              onClick={() => navigate("/rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/incentives") ? "active" : ""}`}
-              onClick={() => navigate("/incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
-              onClick={() => navigate("/")}
-            >
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-        </div>
-
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         <div className="admin-viewalloc-main-content">
           <div className="tech-incent-mobile-header">
@@ -405,28 +340,48 @@ const ViewAllocation: React.FC = () => {
           </div>
 
           <div className="admin-viewalloc-kpi-grid">
-            <div className="admin-viewalloc-kpi-card">
-              <div className="admin-viewalloc-kpi-label">Total Requests</div>
-              <div className="admin-viewalloc-kpi-value">
-                {formatCount(requests.length)}
+            <div className="admin-viewalloc-kpi-card total">
+              <div className="admin-viewalloc-kpi-icon">
+                <FileText size={20} />
+              </div>
+              <div className="admin-viewalloc-kpi-content">
+                <div className="admin-viewalloc-kpi-label">Total Requests</div>
+                <div className="admin-viewalloc-kpi-value">
+                  {formatCount(requests.length)}
+                </div>
               </div>
             </div>
-            <div className="admin-viewalloc-kpi-card">
-              <div className="admin-viewalloc-kpi-label">Approved</div>
-              <div className="admin-viewalloc-kpi-value">
-                {formatCount(overviewStats.approved)}
+            <div className="admin-viewalloc-kpi-card approved">
+              <div className="admin-viewalloc-kpi-icon">
+                <CheckCircle size={20} />
+              </div>
+              <div className="admin-viewalloc-kpi-content">
+                <div className="admin-viewalloc-kpi-label">Approved</div>
+                <div className="admin-viewalloc-kpi-value">
+                  {formatCount(overviewStats.approved)}
+                </div>
               </div>
             </div>
-            <div className="admin-viewalloc-kpi-card">
-              <div className="admin-viewalloc-kpi-label">Pending</div>
-              <div className="admin-viewalloc-kpi-value">
-                {formatCount(overviewStats.pending)}
+            <div className="admin-viewalloc-kpi-card pending">
+              <div className="admin-viewalloc-kpi-icon">
+                <Clock size={20} />
+              </div>
+              <div className="admin-viewalloc-kpi-content">
+                <div className="admin-viewalloc-kpi-label">Pending</div>
+                <div className="admin-viewalloc-kpi-value">
+                  {formatCount(overviewStats.pending)}
+                </div>
               </div>
             </div>
-            <div className="admin-viewalloc-kpi-card">
-              <div className="admin-viewalloc-kpi-label">Rejected</div>
-              <div className="admin-viewalloc-kpi-value">
-                {formatCount(overviewStats.rejected)}
+            <div className="admin-viewalloc-kpi-card rejected">
+              <div className="admin-viewalloc-kpi-icon">
+                <AlertCircle size={20} />
+              </div>
+              <div className="admin-viewalloc-kpi-content">
+                <div className="admin-viewalloc-kpi-label">Rejected</div>
+                <div className="admin-viewalloc-kpi-value">
+                  {formatCount(overviewStats.rejected)}
+                </div>
               </div>
             </div>
           </div>

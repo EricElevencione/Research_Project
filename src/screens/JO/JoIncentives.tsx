@@ -695,17 +695,6 @@ const JoIncentives: React.FC = () => {
           </div>
 
           <div className="jo-incent-action-header">
-            <button
-              className="jo-incent-btn-create"
-              onClick={() => {
-                console.log(
-                  "Button clicked! Navigating to /jo-create-allocation",
-                );
-                navigate("/jo-create-allocation");
-              }}
-            >
-              ➕ New Regional Allocation
-            </button>
           </div>
 
           <div className="jo-incent-content-card">

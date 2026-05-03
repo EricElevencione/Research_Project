@@ -2,12 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../../components/layout/sidebarStyle.css";
 import "../../assets/css/admin css/AdminAuditTrail.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 import { AuditAPI } from "../../components/Audit/auditAPI";
 import { supabase } from "../../supabase";
 
@@ -1963,77 +1958,7 @@ const AuditTrail: React.FC = () => {
       )}
 
       <div className="admin-audit-main-page">
-        {/* Sidebar */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/rsbsa") ? "active" : ""}`}
-              onClick={() => navigate("/rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/audit-trail") ? "active" : ""}`}
-              onClick={() => navigate("/audit-trail")}
-            >
-              <span className="nav-icon">📋</span>
-              <span className="nav-text">Audit Trail</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/incentives") ? "active" : ""}`}
-              onClick={() => navigate("/incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button
-              className="sidebar-nav-item logout"
-              onClick={() => navigate("/")}
-            >
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-        </div>
-
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Main Content */}
         <div className="admin-audit-main-content">

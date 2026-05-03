@@ -12,12 +12,7 @@ import {
 import "../../assets/css/admin css/MasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 
 interface FarmerDetailModal {
   id: string;
@@ -671,7 +666,7 @@ const Masterlist: React.FC = () => {
 
   const getFarmerInitials = (fullName: string) => {
     const cleaned = (fullName || "")
-      .replace(/,/g, " ")
+.replace(/,/g, " ")
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
@@ -683,72 +678,8 @@ const Masterlist: React.FC = () => {
     <>
       <div className="masterlist-admin-page-container">
         <div className="masterlist-admin-page">
-          {/* Sidebar starts here */}
-          <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-            <nav className="sidebar-nav">
-              <div className="sidebar-logo">
-                <img src={LogoImage} alt="Logo" />
-              </div>
+          <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-              <button
-                className={`sidebar-nav-item ${isActive("/dashboard") ? "active" : ""}`}
-                onClick={() => navigate("/dashboard")}
-              >
-                <span className="nav-icon">
-                  <img src={HomeIcon} alt="Home" />
-                </span>
-                <span className="nav-text">Home</span>
-              </button>
-
-              <button
-                className={`sidebar-nav-item ${isActive("/rsbsa") ? "active" : ""}`}
-                onClick={() => navigate("/rsbsa")}
-              >
-                <span className="nav-icon">
-                  <img src={RSBSAIcon} alt="RSBSA" />
-                </span>
-                <span className="nav-text">RSBSA</span>
-              </button>
-
-              <button
-                className={`sidebar-nav-item ${isActive("/incentives") ? "active" : ""}`}
-                onClick={() => navigate("/incentives")}
-              >
-                <span className="nav-icon">
-                  <img src={IncentivesIcon} alt="Incentives" />
-                </span>
-                <span className="nav-text">Subsidy</span>
-              </button>
-
-              <button
-                className={`sidebar-nav-item ${isActive("/masterlist") ? "active" : ""}`}
-                onClick={() => navigate("/masterlist")}
-              >
-                <span className="nav-icon">
-                  <img src={ApproveIcon} alt="Masterlist" />
-                </span>
-                <span className="nav-text">Masterlist</span>
-              </button>
-
-              <button
-                className={`sidebar-nav-item ${isActive("/logout") ? "active" : ""}`}
-                onClick={() => navigate("/")}
-              >
-                <span className="nav-icon">
-                  <img src={LogoutIcon} alt="Logout" />
-                </span>
-                <span className="nav-text">Logout</span>
-              </button>
-            </nav>
-          </div>
-          {/* Sidebar ends here */}
-
-          <div
-            className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-            onClick={() => setSidebarOpen(false)}
-          />
-
-          {/* Main content starts here */}
           <div className="masterlist-admin-main-content">
             <div className="tech-incent-mobile-header">
               <button
@@ -772,23 +703,23 @@ const Masterlist: React.FC = () => {
               </button>
               <div className="tech-incent-mobile-title">Masterlist</div>
             </div>
+
             <div className="masterlist-admin-dashboard-header">
               <div className="masterlist-admin-page-left">
                 <h2 className="masterlist-admin-page-header">Masterlist</h2>
                 <p className="masterlist-admin-page-subtitle">
-                  Browse all RSBSA farmers, filter by status, and manage records
+                  View and manage all registered farmers in the system.
                 </p>
               </div>
             </div>
 
-            {/* Status Count Cards */}
             {!loading && !error && (
               <div className="masterlist-status-cards">
                 <div className="masterlist-status-card masterlist-card-total">
                   <div className="masterlist-card-icon">👥</div>
                   <div className="masterlist-card-info">
                     <span className="masterlist-card-count">
-                      {statusCounts.total}
+                      {rsbsaRecords.length}
                     </span>
                     <span className="masterlist-card-label">Total Farmers</span>
                   </div>
@@ -797,7 +728,7 @@ const Masterlist: React.FC = () => {
                   <div className="masterlist-card-icon">✅</div>
                   <div className="masterlist-card-info">
                     <span className="masterlist-card-count">
-                      {statusCounts.active}
+                      {rsbsaRecords.filter((r) => r.status === "Active").length}
                     </span>
                     <span className="masterlist-card-label">Active</span>
                   </div>
@@ -806,7 +737,7 @@ const Masterlist: React.FC = () => {
                   <div className="masterlist-card-icon">❌</div>
                   <div className="masterlist-card-info">
                     <span className="masterlist-card-count">
-                      {statusCounts.inactive}
+                      {rsbsaRecords.filter((r) => r.status !== "Active").length}
                     </span>
                     <span className="masterlist-card-label">Inactive</span>
                   </div>
@@ -815,7 +746,6 @@ const Masterlist: React.FC = () => {
             )}
 
             <div className="masterlist-admin-content-card">
-              {/* Filters and Search */}
               <div className="masterlist-admin-filters-section">
                 <div className="masterlist-admin-search-filter">
                   <input
@@ -845,8 +775,7 @@ const Masterlist: React.FC = () => {
               {!loading && !error && (
                 <div className="masterlist-admin-table-meta">
                   <span>
-                    Showing {filteredRecords.length} of {rsbsaRecords.length}{" "}
-                    farmers
+                    Showing {filteredRecords.length} of {rsbsaRecords.length} farmers
                   </span>
                   <span>
                     Tip: Sort up to 2 levels (e.g. Farmer then Parcel Area).
@@ -907,7 +836,6 @@ const Masterlist: React.FC = () => {
                 </div>
               )}
 
-              {/* RSBSA Records Table */}
               <div className="masterlist-admin-table-container">
                 <table className="masterlist-admin-farmers-table">
                   <thead>
@@ -932,10 +860,10 @@ const Masterlist: React.FC = () => {
                             handleSortChange("farmerName");
                           }}
                         >
-                          Farmer <span>{getSortIndicator("farmerName")}</span>
+                          Farmer Name {getSortIndicator("farmerName")}
                         </button>
                       </th>
-                      <th>Address</th>
+                      <th>Barangay</th>
                       <th>
                         <button
                           className={`masterlist-admin-sort-btn ${
@@ -946,8 +874,7 @@ const Masterlist: React.FC = () => {
                             handleSortChange("parcelArea");
                           }}
                         >
-                          Parcel Area{" "}
-                          <span>{getSortIndicator("parcelArea")}</span>
+                          Parcel Area {getSortIndicator("parcelArea")}
                         </button>
                       </th>
                       <th>
@@ -960,8 +887,7 @@ const Masterlist: React.FC = () => {
                             handleSortChange("dateSubmitted");
                           }}
                         >
-                          Date Submitted{" "}
-                          <span>{getSortIndicator("dateSubmitted")}</span>
+                          Submitted {getSortIndicator("dateSubmitted")}
                         </button>
                       </th>
                       <th>
@@ -974,7 +900,7 @@ const Masterlist: React.FC = () => {
                             handleSortChange("status");
                           }}
                         >
-                          Status <span>{getSortIndicator("status")}</span>
+                          Status {getSortIndicator("status")}
                         </button>
                       </th>
                       <th>Actions</th>
@@ -983,15 +909,11 @@ const Masterlist: React.FC = () => {
                   <tbody>
                     {loading && (
                       <tr>
-                        <td
-                          colSpan={7}
-                          className="masterlist-admin-loading-cell"
-                        >
+                        <td colSpan={7} className="masterlist-admin-loading-cell">
                           Loading...
                         </td>
                       </tr>
                     )}
-
                     {error && !loading && (
                       <tr>
                         <td colSpan={7} className="masterlist-admin-error-cell">
@@ -999,13 +921,9 @@ const Masterlist: React.FC = () => {
                         </td>
                       </tr>
                     )}
-
-                    {!loading &&
-                      !error &&
-                      filteredRecords.length > 0 &&
-                      filteredRecords.map((record) => {
+                    {!loading && !error && filteredRecords.length > 0 &&
+                      filteredRecords.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage).map((record) => {
                         const statusText = record.status || "Not Active";
-
                         return (
                           <tr
                             key={record.id}
@@ -1019,7 +937,6 @@ const Masterlist: React.FC = () => {
                                 checked={selectedRecordIds.has(record.id)}
                                 onChange={() => toggleSelectRecord(record.id)}
                                 onClick={(e) => e.stopPropagation()}
-                                aria-label={`Select ${record.farmerName}`}
                               />
                             </td>
                             <td>
@@ -1028,57 +945,39 @@ const Masterlist: React.FC = () => {
                                   {getFarmerInitials(record.farmerName)}
                                 </div>
                                 <div className="masterlist-admin-farmer-meta">
-                                  <span className="masterlist-admin-farmer-name">
-                                    {record.farmerName}
-                                  </span>
-                                  <span className="masterlist-admin-farmer-ref">
-                                    Ref: {record.referenceNumber}
-                                  </span>
+                                  <span className="masterlist-admin-farmer-name">{record.farmerName}</span>
+                                  <span className="masterlist-admin-farmer-ref">Ref: {record.referenceNumber}</span>
                                 </div>
                               </div>
                             </td>
                             <td>
                               <div className="masterlist-admin-address-cell">
-                                <span className="masterlist-admin-address-primary">
-                                  {record.farmerAddress}
-                                </span>
+                                <span className="masterlist-admin-address-primary">{record.farmerAddress}</span>
                               </div>
                             </td>
                             <td>
                               <div className="masterlist-admin-parcel-cell">
                                 <span className="masterlist-admin-parcel-count">
-                                  {record.parcelCount} parcel
-                                  {record.parcelCount === 1 ? "" : "s"}
+                                  {record.parcelCount} parcel{record.parcelCount === 1 ? "" : "s"}
                                 </span>
-                                <span className="masterlist-admin-parcel-area">
-                                  {formatParcelArea(record.parcelArea)}
-                                </span>
+                                <span className="masterlist-admin-parcel-area">{formatParcelArea(record.parcelArea)}</span>
                               </div>
                             </td>
                             <td>
-                              <span className="masterlist-admin-date">
-                                {formatDate(record.dateSubmitted)}
-                              </span>
+                              <span className="masterlist-admin-date">{formatDate(record.dateSubmitted)}</span>
                             </td>
                             <td>
-                              <span
-                                className={`masterlist-admin-status-pill ${getStatusClassName(statusText)}`}
-                              >
+                              <span className={`masterlist-admin-status-pill ${getStatusClassName(statusText)}`}>
                                 {statusText}
                               </span>
                             </td>
                             <td className="masterlist-admin-actions-cell">
-                              <div
-                                className="masterlist-admin-quick-actions"
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                              <div className="masterlist-admin-quick-actions" onClick={(e) => e.stopPropagation()}>
                                 <button
-                                  className="masterlist-admin-view-btn"
+                                  className="masterlist-admin-quick-btn"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setOpenQuickActionsId((previous) =>
-                                      previous === record.id ? null : record.id,
-                                    );
+                                    setOpenQuickActionsId((previous) => previous === record.id ? null : record.id);
                                   }}
                                 >
                                   Quick Actions ▾
@@ -1087,26 +986,13 @@ const Masterlist: React.FC = () => {
                                   <div className="masterlist-admin-quick-menu">
                                     <button
                                       className="masterlist-admin-quick-item"
-                                      onClick={() => {
-                                        fetchFarmerDetails(record.id);
-                                        setOpenQuickActionsId(null);
-                                      }}
-                                    >
-                                      View
-                                    </button>
-                                    <button
-                                      className="masterlist-admin-quick-item"
                                       onClick={async () => {
                                         setOpenQuickActionsId(null);
                                         await handlePrintSingleRecord(record);
                                       }}
-                                      disabled={printingRecordIds.has(
-                                        record.id,
-                                      )}
+                                      disabled={printingRecordIds.has(record.id)}
                                     >
-                                      {printingRecordIds.has(record.id)
-                                        ? "Preparing form..."
-                                        : "Print RSBSA Form"}
+                                      {printingRecordIds.has(record.id) ? "Preparing form..." : "Print RSBSA Form"}
                                     </button>
                                   </div>
                                 )}
@@ -1114,13 +1000,11 @@ const Masterlist: React.FC = () => {
                             </td>
                           </tr>
                         );
-                      })}
-
+                      })
+                    }
                     {!loading && !error && filteredRecords.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="masterlist-admin-empty-cell">
-                          No farmers found for the selected filters.
-                        </td>
+                        <td colSpan={7} className="masterlist-admin-empty-cell">No farmers found for the selected filters.</td>
                       </tr>
                     )}
                   </tbody>
@@ -1131,99 +1015,60 @@ const Masterlist: React.FC = () => {
         </div>
       </div>
 
-      {/* Farmer Detail Modal */}
       {showModal && selectedFarmer && (
-        <div
-          className="farmer-modal-overlay"
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            className="farmer-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="farmer-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="farmer-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="farmer-modal-header">
-              <h2>Farmer Details</h2>
+              <div className="farmer-modal-header-left">
+                <h2>Farmer Details</h2>
+              </div>
               <div className="farmer-modal-header-actions">
-                <button
-                  className="farmer-modal-print-btn"
-                  onClick={handleModalPrint}
-                  disabled={isModalPrinting}
-                >
-                  {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
+                <button className="farmer-modal-print-btn" onClick={handleModalPrint} disabled={isModalPrinting}>
+                  {isModalPrinting ? "Preparing..." : "Print RSBSA Form"}
                 </button>
-                <button
-                  className="farmer-modal-close"
-                  onClick={() => setShowModal(false)}
-                >
-                  ×
-                </button>
+                <button className="farmer-modal-close-btn" onClick={() => setShowModal(false)}>×</button>
               </div>
             </div>
             <div className="farmer-modal-body">
               {loadingFarmerDetail ? (
-                <div className="farmer-modal-loading">
-                  Loading farmer details...
-                </div>
+                <div className="farmer-modal-loading">Loading farmer details...</div>
               ) : (
                 <>
                   <div className="farmer-modal-section">
-                    <h3 className="farmer-modal-section-title">
-                      👤 Personal Information
-                    </h3>
+                    <h3 className="farmer-modal-section-title">👤 Personal Information</h3>
                     <div className="farmer-modal-info-grid">
                       <div className="farmer-modal-info-item">
                         <span className="farmer-modal-label">Farmer Name:</span>
-                        <span className="farmer-modal-value">
-                          {selectedFarmer.farmerName}
-                        </span>
+                        <span className="farmer-modal-value">{selectedFarmer.farmerName}</span>
                       </div>
                       <div className="farmer-modal-info-item">
-                        <span className="farmer-modal-label">
-                          Farmer Address:
-                        </span>
-                        <span className="farmer-modal-value">
-                          {selectedFarmer.farmerAddress}
-                        </span>
+                        <span className="farmer-modal-label">Farmer Address:</span>
+                        <span className="farmer-modal-value">{selectedFarmer.farmerAddress}</span>
                       </div>
                       <div className="farmer-modal-info-item">
                         <span className="farmer-modal-label">Age:</span>
-                        <span className="farmer-modal-value">
-                          {typeof selectedFarmer.age === "number"
-                            ? `${selectedFarmer.age} years old`
-                            : selectedFarmer.age}
-                        </span>
+                        <span className="farmer-modal-value">{selectedFarmer.age}</span>
                       </div>
                       <div className="farmer-modal-info-item">
                         <span className="farmer-modal-label">Gender:</span>
-                        <span className="farmer-modal-value">
-                          {selectedFarmer.gender}
-                        </span>
+                        <span className="farmer-modal-value">{selectedFarmer.gender}</span>
                       </div>
                       <div className="farmer-modal-info-item farmer-modal-full-width">
-                        <span className="farmer-modal-label">
-                          Main Livelihood:
-                        </span>
+                        <span className="farmer-modal-label">Main Livelihood:</span>
                         <span className="farmer-modal-value">
-                          {selectedFarmer.farmingActivities.length > 0
-                            ? selectedFarmer.farmingActivities.join(", ")
-                            : "Not Available"}
+                          {selectedFarmer.farmingActivities.length > 0 ? selectedFarmer.farmingActivities.join(", ") : "Not Available"}
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="farmer-modal-section">
-                    <h3 className="farmer-modal-section-title">
-                      🌾 Farm Information
-                    </h3>
+                    <h3 className="farmer-modal-section-title">🚜 Farm Information</h3>
                     {selectedFarmer.parcels.length === 0 ? (
                       <p className="farmer-modal-no-data">No parcels found</p>
                     ) : (
                       <div className="farmer-modal-parcels-container">
                         {selectedFarmer.parcels.map((parcel, index) => (
-                          <div
-                            key={parcel.id}
-                            className="farmer-modal-parcel-card"
-                          >
+                          <div key={parcel.id} className="farmer-modal-parcel-card">
                             <div className="farmer-modal-parcel-header">
                               <h4>
                                 Parcel #
@@ -1237,33 +1082,17 @@ const Masterlist: React.FC = () => {
                             </div>
                             <div className="farmer-modal-parcel-details">
                               <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">
-                                  Land Ownership:
-                                </span>
-                                <span className="farmer-modal-value">
-                                  {getParcelOwnershipLabel(parcel)}
-                                </span>
+                                <span className="farmer-modal-label">Land Ownership:</span>
+                                <span className="farmer-modal-value">{getParcelOwnershipLabel(parcel)}</span>
                               </div>
                               <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">
-                                  Parcel Location:
-                                </span>
-                                <span className="farmer-modal-value">
-                                  {parcel.farmLocationBarangay},{" "}
-                                  {parcel.farmLocationMunicipality}
-                                </span>
+                                <span className="farmer-modal-label">Parcel Location:</span>
+                                <span className="farmer-modal-value">{parcel.farmLocationBarangay}, {parcel.farmLocationMunicipality}</span>
                               </div>
                               <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">
-                                  Parcel Size:
-                                </span>
+                                <span className="farmer-modal-label">Parcel Size:</span>
                                 <span className="farmer-modal-value">
-                                  {typeof parcel.totalFarmAreaHa === "number"
-                                    ? parcel.totalFarmAreaHa.toFixed(2)
-                                    : parseFloat(
-                                        String(parcel.totalFarmAreaHa || 0),
-                                      ).toFixed(2)}{" "}
-                                  hectares
+                                  {typeof parcel.totalFarmAreaHa === "number" ? parcel.totalFarmAreaHa.toFixed(2) : parseFloat(String(parcel.totalFarmAreaHa || 0)).toFixed(2)} hectares
                                 </span>
                               </div>
                             </div>

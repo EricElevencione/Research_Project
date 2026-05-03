@@ -16,25 +16,27 @@
 .admin-viewalloc-main-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background: linear-gradient(180deg, #f6faf6 0%, #f1f5f9 100%);
+  padding: 32px;
+  background: #f8fafc;
 }
 
 .admin-viewalloc-header {
-  margin-bottom: 10px;
+  margin-bottom: 24px;
 }
 
 .admin-viewalloc-title {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 32px;
+  font-weight: 800;
   color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .admin-viewalloc-subtitle {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: #475569;
+  margin: 6px 0 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #64748b;
 }
 
 .admin-viewalloc-header-actions {
@@ -46,50 +48,114 @@
 
 .admin-viewalloc-btn-nav {
   border: none;
-  border-radius: 10px;
-  padding: 10px 16px;
+  border-radius: 12px;
+  padding: 12px 20px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
-  background: linear-gradient(135deg, #0f766e 0%, #16a34a 100%);
-  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.24);
+  background: #0f172a;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .admin-viewalloc-btn-nav:hover {
-  transform: translateY(-1px);
+  background: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+}
+
+.app-back-button {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.app-back-button:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
 }
 
 .admin-viewalloc-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .admin-viewalloc-kpi-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-viewalloc-kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  border-color: #cbd5e1;
+}
+
+.admin-viewalloc-kpi-icon {
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
-  padding: 14px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* KPI Variant Colors */
+.admin-viewalloc-kpi-card.total .admin-viewalloc-kpi-icon {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.admin-viewalloc-kpi-card.approved .admin-viewalloc-kpi-icon {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.admin-viewalloc-kpi-card.pending .admin-viewalloc-kpi-icon {
+  background: #fffbeb;
+  color: #d97706;
+}
+.admin-viewalloc-kpi-card.rejected .admin-viewalloc-kpi-icon {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.admin-viewalloc-kpi-content {
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-viewalloc-kpi-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  margin-bottom: 4px;
 }
 
 .admin-viewalloc-kpi-value {
-  margin-top: 6px;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
+  font-size: 24px;
+  font-weight: 800;
   color: #0f172a;
+  line-height: 1;
 }
 
 .admin-viewalloc-content-card {

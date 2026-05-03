@@ -16,6 +16,8 @@ import type {
   KPIStats,
   SeasonAllocation,
   ClaimRateTrend,
+  SubsidyStock,
+  RequestStats,
 } from "../../hooks/useAdminDashboardStats";
 import "./AdminDashboardCharts.css";
 
@@ -290,6 +292,105 @@ export const ClaimRateTrendChart: React.FC<ClaimRateTrendChartProps> = ({
           />
         </AreaChart>
       </ResponsiveContainer>
+    </div>
+  );
+};
+
+// ─── Inventory Summary ──────────────────────────────────────
+
+interface InventorySummaryProps {
+  data: SubsidyStock[];
+}
+
+export const InventorySummary: React.FC<InventorySummaryProps> = ({ data }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="admin-chart-empty">
+        <p>No inventory data available.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-dashboard-inventory-container">
+      <table className="admin-dashboard-inventory-table">
+        <thead>
+          <tr>
+            <th>Item Name</th>
+            <th>Allocated</th>
+            <th>Distributed</th>
+            <th>Remaining</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((item, idx) => {
+            const progress = item.allocated > 0 ? (item.distributed / item.allocated) * 100 : 0;
+            const status = item.remaining === 0 ? "Out" : item.remaining < (item.allocated * 0.1) ? "Low" : "In Stock";
+            const statusClass = status === "Out" ? "status-out" : status === "Low" ? "status-low" : "status-in-stock";
+
+            return (
+              <tr key={idx}>
+                <td style={{ fontWeight: 600 }}>{item.name}</td>
+                <td>{item.allocated.toLocaleString()}</td>
+                <td>{item.distributed.toLocaleString()}</td>
+                <td style={{ fontWeight: 700, color: item.remaining === 0 ? "#ef4444" : "inherit" }}>
+                  {item.remaining.toLocaleString()}
+                </td>
+                <td>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span className={`inventory-status-pill ${statusClass}`}>{status}</span>
+                    <div className="inventory-progress-bar">
+                      <div 
+                        className="inventory-progress-fill" 
+                        style={{ 
+                          width: `${Math.min(100, progress)}%`,
+                          background: progress > 90 ? '#ef4444' : progress > 70 ? '#f59e0b' : '#16a34a'
+                        }} 
+                      />
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// ─── Request Tracking Stats ───────────────────────────────
+
+interface RequestTrackingProps {
+  stats: RequestStats;
+}
+
+export const RequestTracking: React.FC<RequestTrackingProps> = ({ stats }) => {
+  const items = [
+    { label: "Pending Requests", value: stats.pending, class: "pending", icon: "⏳" },
+    { label: "Approved Requests", value: stats.approved, class: "approved", icon: "✅" },
+    { label: "Distributed", value: stats.distributed, class: "distributed", icon: "📦" },
+    { label: "Rejected", value: stats.rejected, class: "rejected", icon: "❌" },
+  ];
+
+  return (
+    <div className="admin-request-stats-grid">
+      {items.map((item, idx) => (
+        <div key={idx} className={`request-stat-item ${item.class}`}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="request-stat-value">{item.value.toLocaleString()}</span>
+            <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
+          </div>
+          <span className="request-stat-label">{item.label}</span>
+        </div>
+      ))}
+      <div className="request-stat-item" style={{ gridColumn: 'span 2', background: '#f3f4f6' }}>
+         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="request-stat-value" style={{ fontSize: '1.25rem' }}>{stats.total.toLocaleString()}</span>
+            <span className="request-stat-label" style={{ fontWeight: 700 }}>TOTAL SYSTEM REQUESTS</span>
+         </div>
+      </div>
     </div>
   );
 };
