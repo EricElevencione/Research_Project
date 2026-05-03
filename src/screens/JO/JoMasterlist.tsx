@@ -87,6 +87,9 @@ interface ParcelDetail {
   ownershipTypeLessee: boolean;
   tenantLandOwnerName: string;
   lesseeLandOwnerName: string;
+  isCultivating?: boolean | null;
+  cultivationStatusReason?: string | null;
+  cultivationStatusUpdatedAt?: string | null;
 }
 
 interface EditFormData {
@@ -336,6 +339,10 @@ const JoMasterlist: React.FC = () => {
         ownershipTypeLessee: p.ownership_type_lessee || false,
         tenantLandOwnerName: p.tenant_land_owner_name || "",
         lesseeLandOwnerName: p.lessee_land_owner_name || "",
+        isCultivating:
+          typeof p.is_cultivating === "boolean" ? p.is_cultivating : null,
+        cultivationStatusReason: p.cultivation_status_reason || null,
+        cultivationStatusUpdatedAt: p.cultivation_status_updated_at || null,
       }));
 
       // Fallback: if no parcels in rsbsa_farm_parcels, build from submission-level data
@@ -2655,6 +2662,43 @@ const JoMasterlist: React.FC = () => {
                                           String(parcel.totalFarmAreaHa || 0),
                                         ).toFixed(2)}{" "}
                                     hectares
+                                  </span>
+                                </div>
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Cultivation Status:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.isCultivating === true ? (
+                                      <span
+                                        style={{
+                                          color: "green",
+                                          fontWeight: "500",
+                                        }}
+                                      >
+                                        ✅ Actively farming
+                                      </span>
+                                    ) : parcel.isCultivating === false ? (
+                                      <span
+                                        style={{
+                                          color: "red",
+                                          fontWeight: "500",
+                                        }}
+                                      >
+                                        ❌ Not farming
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: "#888" }}>
+                                        Not specified
+                                      </span>
+                                    )}
+                                    {parcel.isCultivating === false &&
+                                      parcel.cultivationStatusReason && (
+                                        <span className="farmer-modal-owner-name">
+                                          {" "}
+                                          ({parcel.cultivationStatusReason})
+                                        </span>
+                                      )}
                                   </span>
                                 </div>
                               </div>

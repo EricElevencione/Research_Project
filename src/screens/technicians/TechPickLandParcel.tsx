@@ -91,9 +91,7 @@ const TechPickLandParcel: React.FC = () => {
   const fetchLandParcels = async (submissionId: string) => {
     try {
       console.log("Fetching parcels for submissionId:", submissionId);
-      const response = await getFarmParcels(submissionId, {
-        currentOwnerOnly: true,
-      });
+      const response = await getFarmParcels(submissionId);
       console.log("Response status:", response.status);
 
       if (response.error) {
@@ -103,29 +101,34 @@ const TechPickLandParcel: React.FC = () => {
       const data = response.data;
       console.log("Raw parcels data:", data);
 
-      const mappedParcels: FarmParcel[] = data.map((parcel: any) => ({
-        id: parcel.id,
-        submissionId: parcel.submission_id,
-        parcelNumber: parcel.parcel_number || "N/A",
-        farmLocationBarangay: parcel.farm_location_barangay || "N/A",
-        farmLocationCityMunicipality:
-          parcel.farm_location_municipality || "N/A",
-        totalFarmArea: parseFloat(parcel.total_farm_area_ha) || 0,
-        cropCommodity: parcel.crop_commodity || "N/A",
-        farmSize: parcel.total_farm_area_ha
-          ? `${parcel.total_farm_area_ha} ha`
-          : "N/A",
-        farmType: parcel.farm_type || "N/A",
-        organicPractitioner: parcel.organic_practitioner || false,
-        plotStatus: parcel.plot_status || "N/A",
-        geometry: parcel.geometry || null,
-        ownershipTypeRegisteredOwner:
-          parcel.ownership_type_registered_owner || false,
-        ownershipTypeTenant: parcel.ownership_type_tenant || false,
-        ownershipTypeLessee: parcel.ownership_type_lessee || false,
-        createdAt: parcel.created_at || new Date().toISOString(),
-        updatedAt: parcel.updated_at || new Date().toISOString(),
-      }));
+      const mappedParcels: FarmParcel[] = data
+        .map((parcel: any) => ({
+          id: parcel.id,
+          submissionId: parcel.submission_id,
+          parcelNumber: parcel.parcel_number || "N/A",
+          farmLocationBarangay: parcel.farm_location_barangay || "N/A",
+          farmLocationCityMunicipality:
+            parcel.farm_location_municipality || "N/A",
+          totalFarmArea: parseFloat(parcel.total_farm_area_ha) || 0,
+          cropCommodity: parcel.crop_commodity || "N/A",
+          farmSize: parcel.total_farm_area_ha
+            ? `${parcel.total_farm_area_ha} ha`
+            : "N/A",
+          farmType: parcel.farm_type || "N/A",
+          organicPractitioner: parcel.organic_practitioner || false,
+          plotStatus: parcel.plot_status || "N/A",
+          geometry: parcel.geometry || null,
+          ownershipTypeRegisteredOwner:
+            parcel.ownership_type_registered_owner === true ||
+            parcel.ownership_type_registered_owner === "true" ||
+            parcel.ownership_type_registered_owner === 1 ||
+            parcel.ownership_type_registered_owner === "1",
+          ownershipTypeTenant: parcel.ownership_type_tenant || false,
+          ownershipTypeLessee: parcel.ownership_type_lessee || false,
+          createdAt: parcel.created_at || new Date().toISOString(),
+          updatedAt: parcel.updated_at || new Date().toISOString(),
+        }))
+        .filter((parcel: FarmParcel) => parcel.ownershipTypeRegisteredOwner);
 
       console.log("Mapped parcels:", mappedParcels);
       setLandParcels(mappedParcels);
