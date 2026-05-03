@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { createAllocation } from "../../api";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { createAllocation, getAllocationById, updateAllocation } from "../../api";
 import {
   getAuditLogger,
   AuditModule,
@@ -200,9 +200,53 @@ const SEED_CATALOG_ROWS: Array<{ name: string; category: string }> = [
 const AdminCreateAllocation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { allocationId } = useParams<{ allocationId: string }>();
+  const isEditMode = !!allocationId;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isEditMode) {
+      fetchAllocationData();
+    }
+  }, [allocationId]);
+
+  const fetchAllocationData = async () => {
+    try {
+      setLoading(true);
+      const response = await getAllocationById(allocationId!);
+      if (response.error) throw new Error(response.error);
+
+      const data = response.data;
+      setFormData({
+        season: data.season,
+        allocation_date: data.allocation_date,
+        notes: data.notes || "",
+      });
+
+      const ferts: AllocationItem[] = [];
+      FERTILIZER_FIELDS.forEach((field) => {
+        if (data[field.key] > 0) {
+          ferts.push({ key: field.key, value: data[field.key] });
+        }
+      });
+      setSelectedFertilizers(ferts);
+
+      const sds: AllocationItem[] = [];
+      SEED_FIELDS.forEach((field) => {
+        if (data[field.key] > 0) {
+          sds.push({ key: field.key, value: data[field.key] });
+        }
+      });
+      setSelectedSeeds(sds);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   const [createdAllocationId, setCreatedAllocationId] = useState<number | null>(null);
 
   const todayDate = new Date().toISOString().split("T")[0];
@@ -278,13 +322,18 @@ const AdminCreateAllocation: React.FC = () => {
         payload[item.key] = (payload[item.key] as number) + item.value;
       });
 
-      const response = await createAllocation(payload);
+      let response;
+      if (isEditMode) {
+        response = await updateAllocation(allocationId!, payload);
+      } else {
+        response = await createAllocation(payload);
+      }
       if (response.error) throw new Error(response.error);
 
-      const allocationId = response.data?.id;
-      if (!allocationId) throw new Error("No allocation ID returned");
+      const newId = response.data?.id;
+      if (!newId) throw new Error("No allocation ID returned");
 
-      setCreatedAllocationId(allocationId);
+      setCreatedAllocationId(newId);
 
       // Audit Log
       try {
@@ -292,11 +341,11 @@ const AdminCreateAllocation: React.FC = () => {
         const auditLogger = getAuditLogger();
         await auditLogger.logCRUD(
           { id: currentUser.id, name: currentUser.name || "Admin", role: currentUser.role || "ADMIN" },
-          "CREATE",
+          isEditMode ? "UPDATE" : "CREATE",
           AuditModule.ALLOCATIONS,
           "regional_allocation",
-          allocationId,
-          `Created allocation for ${formData.season}`,
+          newId,
+          `${isEditMode ? "Updated" : "Created"} allocation for ${formData.season}`,
           undefined,
           payload
         );
@@ -319,11 +368,11 @@ const AdminCreateAllocation: React.FC = () => {
             <button className="tech-incent-hamburger" onClick={() => setSidebarOpen(prev => !prev)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
-            <div className="tech-incent-mobile-title">Admin Create Allocation</div>
+            <div className="tech-incent-mobile-title">Admin {isEditMode ? "Edit" : "Create"} Allocation</div>
           </div>
 
           <div className="jo-allocation-header">
-            <h2 className="jo-allocation-title">Create Regional Allocation</h2>
+            <h2 className="jo-allocation-title">{isEditMode ? "Edit" : "Create"} Regional Allocation</h2>
             <p className="jo-allocation-subtitle">Input fertilizer and seed allocation from Regional Office</p>
           </div>
 
@@ -455,7 +504,9 @@ const AdminCreateAllocation: React.FC = () => {
 
               <div className="jo-allocation-actions">
                 <button type="button" onClick={() => navigate("/incentives")} className="jo-allocation-btn-cancel" disabled={loading}>Cancel</button>
-                <button type="submit" className="jo-allocation-btn-submit" disabled={loading}>{loading ? "💾 Saving..." : "✅ Create Allocation"}</button>
+                <button type="submit" className="jo-allocation-btn-submit" disabled={loading}>
+                  {loading ? "💾 Saving..." : isEditMode ? "✅ Update Allocation" : "✅ Create Allocation"}
+                </button>
               </div>
             </form>
           </div>
@@ -464,8 +515,8 @@ const AdminCreateAllocation: React.FC = () => {
             <div className="jo-allocation-success-overlay" role="dialog" aria-modal="true">
               <div className="jo-allocation-success-modal">
                 <div className="jo-allocation-success-icon">✅</div>
-                <h3 className="jo-allocation-success-title">Regional allocation created</h3>
-                <p className="jo-allocation-success-text">Your allocation was saved successfully.</p>
+                <h3 className="jo-allocation-success-title">Regional allocation {isEditMode ? "updated" : "created"}</h3>
+                <p className="jo-allocation-success-text">Your allocation was {isEditMode ? "updated" : "saved"} successfully.</p>
                 <div className="jo-allocation-success-meta">Allocation ID: <strong>{createdAllocationId}</strong></div>
                 <div className="jo-allocation-success-actions">
                   <button type="button" className="jo-allocation-success-btn-primary" onClick={() => navigate("/incentives")}>Back to List</button>

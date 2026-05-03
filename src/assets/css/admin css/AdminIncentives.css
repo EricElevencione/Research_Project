@@ -307,6 +307,7 @@
 }
 
 .admin-incent-btn-view,
+.admin-incent-btn-edit,
 .admin-incent-btn-manage {
   flex: 1;
   padding: 0.75rem;
@@ -328,6 +329,16 @@
 
 .admin-incent-btn-view:hover {
   background: #e0f2fe;
+  transform: translateY(-1px);
+}
+
+.admin-incent-btn-edit {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.admin-incent-btn-edit:hover {
+  background: #ede9fe;
   transform: translateY(-1px);
 }
 
