@@ -402,7 +402,7 @@ const AdminCreateAllocation: React.FC = () => {
 
               {/* Fertilizer Section */}
               <div className="jo-allocation-section">
-                <h3 className="jo-allocation-section-title">🌱 Fertilizer Allocation</h3>
+                <h3 className="jo-allocation-section-title">🌱 Fertilizer Allocation (bags)</h3>
                 <div className="jo-allocation-dynamic-controls">
                   <select 
                     className="jo-allocation-input" 
@@ -449,7 +449,7 @@ const AdminCreateAllocation: React.FC = () => {
 
               {/* Seed Section */}
               <div className="jo-allocation-section">
-                <h3 className="jo-allocation-section-title">🌾 Seed Allocation</h3>
+                <h3 className="jo-allocation-section-title">🌾 Seed Allocation (kg)</h3>
                 <div className="jo-allocation-dynamic-controls">
                   <select 
                     className="jo-allocation-input" 
