@@ -18,6 +18,7 @@ import {
   EDIT_REGIONAL_FERTILIZER_FIELDS,
   EDIT_REGIONAL_SEED_FIELDS,
 } from "../../constants/joRegionalAllocationEditCatalog";
+import { supabase } from "../../supabase";
 
 interface RegionalAllocation {
   id: number;
@@ -208,9 +209,27 @@ const JoIncentives: React.FC = () => {
   const [updateNotificationType, setUpdateNotificationType] = useState<
     "success" | "error"
   >("success");
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchAllocations();
+  }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
   }, []);
 
   const fetchAllocations = async () => {

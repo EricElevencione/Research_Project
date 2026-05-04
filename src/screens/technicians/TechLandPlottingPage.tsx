@@ -118,7 +118,12 @@ const LandPlottingPage: React.FC = () => {
     message: string;
     type: "success" | "error";
   } | null>(null);
-
+  
+  const [currentUser, setCurrentUser] = useState<{
+      firstName: string;
+      lastName: string;
+    } | null>(null);
+  
   // Only validate location/parcel fields - personal info is already validated in RSBSA registration
   const requiredFields: (keyof LandAttributes)[] = [
     "barangay",

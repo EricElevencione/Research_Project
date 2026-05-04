@@ -1426,6 +1426,7 @@ const JoLandHistoryReport: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+            
           </nav>
         </div>
 

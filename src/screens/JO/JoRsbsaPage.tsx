@@ -17,6 +17,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface RSBSARecord {
   id: string;
@@ -195,6 +196,10 @@ const JoRsbsaPage: React.FC = () => {
     direction: SortDirection;
   }>({ key: "dateSubmitted", direction: "desc" });
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
   const isActive = (path: string) => location.pathname === path;
 
   // Fetch RSBSA records from API
@@ -494,6 +499,19 @@ const JoRsbsaPage: React.FC = () => {
   // Load data on component mount
   useEffect(() => {
     fetchRSBSARecords();
+  }, []);
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
   }, []);
 
   // Re-filter registered owners when source records change.
@@ -1248,6 +1266,20 @@ const JoRsbsaPage: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
         {/* Sidebar ends here */}
@@ -1289,7 +1321,16 @@ const JoRsbsaPage: React.FC = () => {
             <div className="jo-rsbsa-status-cards">
               <div className="jo-rsbsa-status-card jo-rsbsa-card-total">
                 <div className="jo-rsbsa-card-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                     <circle cx="9" cy="7" r="4"></circle>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -1305,7 +1346,16 @@ const JoRsbsaPage: React.FC = () => {
               </div>
               <div className="jo-rsbsa-status-card jo-rsbsa-card-active">
                 <div className="jo-rsbsa-card-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <polyline points="9 11 12 14 22 4"></polyline>
                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                   </svg>
@@ -1314,12 +1364,23 @@ const JoRsbsaPage: React.FC = () => {
                   <span className="jo-rsbsa-card-count">
                     {statusCounts.active}
                   </span>
-                  <span className="jo-rsbsa-card-label">ACTIVE LAND OWNERS</span>
+                  <span className="jo-rsbsa-card-label">
+                    ACTIVE LAND OWNERS
+                  </span>
                 </div>
               </div>
               <div className="jo-rsbsa-status-card jo-rsbsa-card-inactive">
                 <div className="jo-rsbsa-card-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                   </svg>
@@ -1328,7 +1389,9 @@ const JoRsbsaPage: React.FC = () => {
                   <span className="jo-rsbsa-card-count">
                     {statusCounts.inactive}
                   </span>
-                  <span className="jo-rsbsa-card-label">INACTIVE LAND OWNERS</span>
+                  <span className="jo-rsbsa-card-label">
+                    INACTIVE LAND OWNERS
+                  </span>
                 </div>
               </div>
             </div>
