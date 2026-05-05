@@ -15,6 +15,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface LandHistoryReportRow {
   id: number;
@@ -105,6 +106,10 @@ const JoLandHistoryReport: React.FC = () => {
     useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
   const isActive = (path: string) => location.pathname === path;
 
   const normalizeOwnershipCategory = (value: unknown): OwnershipCategory => {
@@ -527,6 +532,20 @@ const JoLandHistoryReport: React.FC = () => {
 
   useEffect(() => {
     fetchBarangayOptions();
+  }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
   }, []);
 
   useEffect(() => {
@@ -1426,8 +1445,21 @@ const JoLandHistoryReport: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-            
           </nav>
+          {currentUser && (
+            <div className="sidebar-current-user">
+              <div className="sidebar-current-user-avatar">
+                {currentUser.firstName.charAt(0).toUpperCase()}
+                {currentUser.lastName.charAt(0).toUpperCase()}
+              </div>
+              <div className="sidebar-current-user-info">
+                <span className="sidebar-current-user-name">
+                  {currentUser.firstName} {currentUser.lastName}
+                </span>
+                <span className="sidebar-current-user-label">Logged in</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div

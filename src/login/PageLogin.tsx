@@ -23,7 +23,6 @@ const Login: React.FC = () => {
     if (role === "admin") navigate("/dashboard");
     else if (role === "technician") navigate("/technician-dashboard");
     else if (role === "jo") navigate("/jo-dashboard");
-    else if (role === "brgychair") navigate("/brgy-chair-dashboard");
     else setError("Role not recognized. Please contact your administrator.");
   };
 
@@ -44,7 +43,11 @@ const Login: React.FC = () => {
 
     if (!loginError && data?.user) {
       const role = await getUserRole();
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userEmail", email);
+      if (role) localStorage.setItem("userRole", role);
       if (rememberMe) localStorage.setItem("rememberMe", "true");
+
       redirectByRole(role);
       setLoading(false);
       return;

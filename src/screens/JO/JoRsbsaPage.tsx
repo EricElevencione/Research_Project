@@ -191,6 +191,15 @@ const JoRsbsaPage: React.FC = () => {
   const [loadingParcels, setLoadingParcels] = useState(false);
   const [parcelErrors, setParcelErrors] = useState<Record<string, string>>({});
   const [isModalPrinting, setIsModalPrinting] = useState(false);
+  const [updateNotification, setUpdateNotification] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({
+    show: false,
+    type: "success",
+    message: "",
+  });
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     direction: SortDirection;
@@ -201,6 +210,16 @@ const JoRsbsaPage: React.FC = () => {
     lastName: string;
   } | null>(null);
   const isActive = (path: string) => location.pathname === path;
+
+  const showUpdateNotification = (
+    message: string,
+    type: "success" | "error",
+  ) => {
+    setUpdateNotification({ show: true, type, message });
+    setTimeout(() => {
+      setUpdateNotification((prev) => ({ ...prev, show: false }));
+    }, 3200);
+  };
 
   // Fetch RSBSA records from API
   const fetchRSBSARecords = async () => {
@@ -881,6 +900,34 @@ const JoRsbsaPage: React.FC = () => {
     return `${parsed.toFixed(2)} ha`;
   };
 
+  const formatRecordStatus = (status?: string | null) => {
+    const normalized = String(status || "")
+      .toLowerCase()
+      .trim();
+    if (!normalized) return "Not Submitted";
+    if (normalized === "no parcels") return "No Parcels";
+
+    const activeStatuses = new Set([
+      "submitted",
+      "approved",
+      "active",
+      "active farmer",
+    ]);
+    const inactiveStatuses = new Set([
+      "not submitted",
+      "not_active",
+      "not active",
+      "draft",
+      "pending",
+      "not approved",
+      "inactive",
+    ]);
+
+    if (activeStatuses.has(normalized)) return "Active Farmer";
+    if (inactiveStatuses.has(normalized)) return "Inactive Farmer";
+    return status || "Not Submitted";
+  };
+
   const getOwnershipFlags = (record: RSBSARecord) => {
     const owner = record.ownershipType?.registeredOwner === true;
     const tenant = record.ownershipType?.tenant === true;
@@ -1164,7 +1211,10 @@ const JoRsbsaPage: React.FC = () => {
 
       await fetchRSBSARecords();
       handleCancelEdit();
-      alert("Land owner information updated successfully.");
+      showUpdateNotification(
+        "Land owner information updated successfully.",
+        "success",
+      );
     } catch (error) {
       console.error("Error updating record:", error);
       const message =
@@ -1172,6 +1222,7 @@ const JoRsbsaPage: React.FC = () => {
           ? error.message
           : "Failed to update record. Please try again.";
       setEditError(message);
+      showUpdateNotification(message, "error");
     }
   };
 
@@ -1266,21 +1317,21 @@ const JoRsbsaPage: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-            {currentUser && (
-              <div className="sidebar-current-user">
-                <div className="sidebar-current-user-avatar">
-                  {currentUser.firstName.charAt(0).toUpperCase()}
-                  {currentUser.lastName.charAt(0).toUpperCase()}
-                </div>
-                <div className="sidebar-current-user-info">
-                  <span className="sidebar-current-user-name">
-                    {currentUser.firstName} {currentUser.lastName}
-                  </span>
-                  <span className="sidebar-current-user-label">Logged in</span>
-                </div>
-              </div>
-            )}
           </nav>
+          {currentUser && (
+            <div className="sidebar-current-user">
+              <div className="sidebar-current-user-avatar">
+                {currentUser.firstName.charAt(0).toUpperCase()}
+                {currentUser.lastName.charAt(0).toUpperCase()}
+              </div>
+              <div className="sidebar-current-user-info">
+                <span className="sidebar-current-user-name">
+                  {currentUser.firstName} {currentUser.lastName}
+                </span>
+                <span className="sidebar-current-user-label">Logged in</span>
+              </div>
+            </div>
+          )}
         </div>
         {/* Sidebar ends here */}
         <div
@@ -1399,51 +1450,60 @@ const JoRsbsaPage: React.FC = () => {
 
           <div className="jo-rsbsa-content-card">
             <div className="jo-rsbsa-actions-bar">
-              <div className="jo-rsbsa-search-container">
-                <input
-                  type="text"
-                  placeholder="Search by FFRS ID, name, address, gender..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="jo-rsbsa-search-input"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="jo-rsbsa-clear-search-button"
-                    title="Clear search"
+              <div className="jo-rsbsa-actions-left">
+                <div className="jo-rsbsa-search-container">
+                  <input
+                    type="text"
+                    placeholder="Search by FFRS ID, name, address, gender..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="jo-rsbsa-search-input"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="jo-rsbsa-clear-search-button"
+                      title="Clear search"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <div className="jo-rsbsa-filter-container">
+                  <select
+                    value={selectedBarangay}
+                    onChange={(e) => setSelectedBarangay(e.target.value)}
+                    className="jo-rsbsa-filter-select"
                   >
-                    ×
-                  </button>
-                )}
+                    <option value="all">All Barangays</option>
+                    {uniqueBarangays.map((barangay) => (
+                      <option key={barangay} value={barangay}>
+                        {barangay}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="jo-rsbsa-filter-container">
-                <select
-                  value={selectedBarangay}
-                  onChange={(e) => setSelectedBarangay(e.target.value)}
-                  className="jo-rsbsa-filter-select"
+              <div className="jo-rsbsa-actions-right">
+                <button
+                  className="jo-rsbsa-register-button"
+                  onClick={() => navigate("/jo-rsbsa-farmer")}
                 >
-                  <option value="all">All Barangays</option>
-                  {uniqueBarangays.map((barangay) => (
-                    <option key={barangay} value={barangay}>
-                      {barangay}
-                    </option>
-                  ))}
-                </select>
+                  Register Farmer
+                </button>
+                <button
+                  className="jo-rsbsa-register-button"
+                  onClick={() => navigate("/jo-rsbsa-landowner")}
+                >
+                  Register Land Owner
+                </button>
+                <button
+                  className="jo-rsbsa-register-button"
+                  onClick={() => navigate("/jo-rsbsa")}
+                >
+                  Register Tenant/Lessee
+                </button>
               </div>
-
-              <button
-                className="jo-rsbsa-register-button"
-                onClick={() => navigate("/jo-rsbsa-landowner")}
-              >
-                Register Land Owner
-              </button>
-              <button
-                className="jo-rsbsa-register-button"
-                onClick={() => navigate("/jo-rsbsa")}
-              >
-                Register Tenant/Lessee
-              </button>
             </div>
             {loading ? (
               <div className="jo-rsbsa-loading-container">
@@ -1502,6 +1562,7 @@ const JoRsbsaPage: React.FC = () => {
                       </th>
                       <th>Cultivation</th>
                       <th>Ownership Status</th>
+                      <th>Status</th>
                       <th>
                         <button
                           className={`jo-rsbsa-sort-btn ${
@@ -1524,7 +1585,7 @@ const JoRsbsaPage: React.FC = () => {
                   <tbody>
                     {filteredOwners.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="jo-rsbsa-no-data">
+                        <td colSpan={7} className="jo-rsbsa-no-data">
                           {searchQuery
                             ? "No results found for your search"
                             : "No registered owners found"}
@@ -1577,6 +1638,11 @@ const JoRsbsaPage: React.FC = () => {
                               </span>
                             </td>
                             <td>
+                              <span className="jo-rsbsa-record-status">
+                                {formatRecordStatus(record.status)}
+                              </span>
+                            </td>
+                            <td>
                               <span className="jo-rsbsa-date">
                                 {formatDate(record.dateSubmitted)}
                               </span>
@@ -1613,6 +1679,27 @@ const JoRsbsaPage: React.FC = () => {
           </div>
         </div>
 
+        {updateNotification.show && (
+          <div
+            className={`jo-rsbsa-update-toast ${updateNotification.type}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="jo-rsbsa-update-toast-message">
+              {updateNotification.message}
+            </span>
+            <button
+              className="jo-rsbsa-update-toast-close"
+              onClick={() =>
+                setUpdateNotification((prev) => ({ ...prev, show: false }))
+              }
+              aria-label="Close notification"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {/* Edit Modal */}
         {editingRecord && (
           <div
@@ -1624,7 +1711,10 @@ const JoRsbsaPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="jo-rsbsa-edit-modal-header">
-                <h2>Edit Land Owner Information</h2>
+                <div className="jo-rsbsa-edit-modal-title">
+                  <h2>Edit Land Owner Information</h2>
+                  <p>Update farmer details and parcel cultivation status.</p>
+                </div>
                 <button
                   className="jo-rsbsa-close-button"
                   onClick={handleCancelEdit}
@@ -1639,80 +1729,82 @@ const JoRsbsaPage: React.FC = () => {
                     {editError}
                   </div>
                 )}
+                <div className="jo-rsbsa-form-grid">
+                  <div className="jo-rsbsa-form-group">
+                    <label>Last Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.lastName || ""}
+                      onChange={(e) =>
+                        handleInputChange("lastName", e.target.value)
+                      }
+                      placeholder="Last Name"
+                    />
+                  </div>
 
-                <div className="jo-rsbsa-form-group">
-                  <label>Last Name:</label>
-                  <input
-                    type="text"
-                    value={editFormData.lastName || ""}
-                    onChange={(e) =>
-                      handleInputChange("lastName", e.target.value)
-                    }
-                    placeholder="Last Name"
-                  />
-                </div>
+                  <div className="jo-rsbsa-form-group">
+                    <label>First Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.firstName || ""}
+                      onChange={(e) =>
+                        handleInputChange("firstName", e.target.value)
+                      }
+                      placeholder="First Name"
+                    />
+                  </div>
 
-                <div className="jo-rsbsa-form-group">
-                  <label>First Name:</label>
-                  <input
-                    type="text"
-                    value={editFormData.firstName || ""}
-                    onChange={(e) =>
-                      handleInputChange("firstName", e.target.value)
-                    }
-                    placeholder="First Name"
-                  />
-                </div>
+                  <div className="jo-rsbsa-form-group">
+                    <label>Middle Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.middleName || ""}
+                      onChange={(e) =>
+                        handleInputChange("middleName", e.target.value)
+                      }
+                      placeholder="Middle Name"
+                    />
+                  </div>
 
-                <div className="jo-rsbsa-form-group">
-                  <label>Middle Name:</label>
-                  <input
-                    type="text"
-                    value={editFormData.middleName || ""}
-                    onChange={(e) =>
-                      handleInputChange("middleName", e.target.value)
-                    }
-                    placeholder="Middle Name"
-                  />
-                </div>
+                  <div className="jo-rsbsa-form-group">
+                    <label>Age:</label>
+                    <input
+                      type="text"
+                      value={editFormData.age || ""}
+                      onChange={(e) => handleInputChange("age", e.target.value)}
+                      placeholder="Age"
+                    />
+                  </div>
 
-                <div className="jo-rsbsa-form-group">
-                  <label>Age:</label>
-                  <input
-                    type="text"
-                    value={editFormData.age || ""}
-                    onChange={(e) => handleInputChange("age", e.target.value)}
-                    placeholder="Age"
-                  />
-                </div>
+                  <div className="jo-rsbsa-form-group">
+                    <label>Barangay:</label>
+                    <select
+                      value={editFormData.barangay || ""}
+                      onChange={(e) =>
+                        handleInputChange("barangay", e.target.value)
+                      }
+                      className="jo-rsbsa-form-select"
+                    >
+                      <option value="">Select Barangay</option>
+                      {barangays.map((barangay) => (
+                        <option key={barangay} value={barangay}>
+                          {barangay}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="jo-rsbsa-form-group">
-                  <label>Barangay:</label>
-                  <select
-                    value={editFormData.barangay || ""}
-                    onChange={(e) =>
-                      handleInputChange("barangay", e.target.value)
-                    }
-                  >
-                    <option value="">Select Barangay</option>
-                    {barangays.map((barangay) => (
-                      <option key={barangay} value={barangay}>
-                        {barangay}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="jo-rsbsa-form-group">
-                  <label>Municipality:</label>
-                  <input
-                    type="text"
-                    value={editFormData.municipality || ""}
-                    onChange={(e) =>
-                      handleInputChange("municipality", e.target.value)
-                    }
-                    placeholder="Municipality"
-                  />
+                  <div className="jo-rsbsa-form-group">
+                    <label>Municipality:</label>
+                    <input
+                      type="text"
+                      value={editFormData.municipality || ""}
+                      onChange={(e) =>
+                        handleInputChange("municipality", e.target.value)
+                      }
+                      placeholder="Municipality"
+                    />
+                  </div>
                 </div>
 
                 <div className="jo-rsbsa-parcel-section">
@@ -1726,10 +1818,9 @@ const JoRsbsaPage: React.FC = () => {
                         className={`jo-rsbsa-parcel-item ${parcelErrors[parcel.id] ? "error" : ""}`}
                       >
                         <div className="jo-rsbsa-form-group">
-                          <label>
+                          <label className="jo-rsbsa-parcel-label">
                             Parcel Area {index + 1} (Parcel No.{" "}
-                            {parcel.parcel_number}
-                            ):
+                            {parcel.parcel_number})
                           </label>
                           <input
                             type="text"
@@ -1742,6 +1833,10 @@ const JoRsbsaPage: React.FC = () => {
                               )
                             }
                             placeholder="e.g., 2.5"
+                            className="jo-rsbsa-parcel-input"
+                            data-error={
+                              parcelErrors[parcel.id] ? "true" : "false"
+                            }
                           />
                           {parcelErrors[parcel.id] && (
                             <small className="jo-rsbsa-parcel-error">
@@ -1753,7 +1848,7 @@ const JoRsbsaPage: React.FC = () => {
                           </small>
                         </div>
                         <div className="jo-rsbsa-form-group">
-                          <label>Currently farming this parcel?</label>
+                          <label>Currently farming?</label>
                           <select
                             value={
                               parcel.is_cultivating === true
@@ -1792,7 +1887,8 @@ const JoRsbsaPage: React.FC = () => {
                         {parcel.is_cultivating === false && (
                           <div className="jo-rsbsa-form-group">
                             <label>Reason</label>
-                            <select
+                            <input
+                              type="text"
                               value={parcel.cultivation_status_reason || ""}
                               onChange={(e) =>
                                 handleIndividualParcelChange(
@@ -1801,14 +1897,8 @@ const JoRsbsaPage: React.FC = () => {
                                   e.target.value || null,
                                 )
                               }
-                            >
-                              <option value="">Select reason</option>
-                              {cultivationReasonOptions.map((reason) => (
-                                <option key={reason} value={reason}>
-                                  {reason}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="Enter reason"
+                            />
                           </div>
                         )}
                       </div>
@@ -2040,7 +2130,7 @@ const JoRsbsaPage: React.FC = () => {
                                     </span>
                                     <span className="farmer-modal-value">
                                       {parcel.isCultivating === true
-                                        ? "Actively farming"
+                                        ? "Farming"
                                         : parcel.isCultivating === false
                                           ? "Not farming"
                                           : "Not specified"}

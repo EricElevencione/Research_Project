@@ -763,19 +763,25 @@
 }
 
 .jo-masterlist-edit-modal-header {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  padding: 24px 32px;
+  background: linear-gradient(135deg, #0f766e 0%, #10b981 55%, #34d399 100%);
+  color: #ffffff;
+  padding: 22px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 3px solid #047857;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-.jo-masterlist-edit-modal-header h2 {
+.jo-masterlist-edit-modal-title h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
+}
+
+.jo-masterlist-edit-modal-title p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .jo-masterlist-close-button {
@@ -801,7 +807,8 @@
 }
 
 .jo-masterlist-edit-modal-body {
-  padding: 24px;
+  padding: 24px 28px 28px;
+  background: #f8fafc;
 }
 
 .jo-masterlist-edit-error-banner {
@@ -845,6 +852,33 @@
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1) !important;
 }
 
+.jo-masterlist-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+  margin-bottom: 8px;
+}
+
+.jo-masterlist-form-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.jo-masterlist-form-select:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
 .jo-masterlist-parcel-section {
   margin-top: 20px;
   border-top: 2px solid #e0e0e0;
@@ -853,19 +887,40 @@
 
 .jo-masterlist-parcel-section h4 {
   margin-bottom: 15px;
-  color: #2c5f2d;
+  color: #0f172a;
+  font-size: 15px;
 }
 
 .jo-masterlist-parcel-item {
-  margin-bottom: 15px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
 }
 
 .jo-masterlist-parcel-item.error {
   border: 2px solid #d32f2f;
+}
+
+.jo-masterlist-parcel-label {
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.jo-masterlist-parcel-input[data-error="true"] {
+  border: 2px solid #d32f2f !important;
+  background-color: #ffebee !important;
+}
+
+.jo-masterlist-parcel-location {
+  color: #64748b;
+  font-size: 12px;
+  display: block;
+  margin-top: 6px;
 }
 
 .jo-masterlist-parcel-error {
@@ -874,6 +929,11 @@
   display: block;
   margin-top: 5px;
   font-weight: 500;
+}
+
+.jo-masterlist-parcel-empty {
+  color: #64748b;
+  font-style: italic;
 }
 
 .jo-masterlist-edit-modal-footer {
@@ -996,6 +1056,14 @@
   .jo-masterlist-bulk-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .jo-masterlist-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jo-masterlist-parcel-item {
+    grid-template-columns: 1fr;
   }
 
   .jo-masterlist-bulk-actions {

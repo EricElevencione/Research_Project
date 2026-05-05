@@ -34,6 +34,7 @@ import InventoryPage from "./screens/admin/InventoryPage";
 import AdminCreateAllocation from "./screens/admin/AdminCreateAllocation";
 import ShortagesSuggestions from "./pages/ShortagesSuggestions.jsx";
 import JoRsbsaRegisLandowner from "./screens/JO/JoRsbsaRegisLandowner";
+import JoRsbsaRegisFarmer from "./screens/JO/JoRsbsaRegisFarmer";
 import "../src/assets/css/admin css/index.css";
 import Register from "./pages/Register";
 
@@ -253,6 +254,14 @@ function App() {
           element={
             <ProtectedRoute>
               <JoRsbsaRegisLandowner />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jo-rsbsa-farmer"
+          element={
+            <ProtectedRoute>
+              <JoRsbsaRegisFarmer />
             </ProtectedRoute>
           }
         />
