@@ -1,3 +1,4 @@
+import { supabase } from "../../supabase";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -512,6 +513,25 @@ const JoManageRequests: React.FC = () => {
   } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
+
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     fetchAllocation();
@@ -1325,6 +1345,21 @@ const JoManageRequests: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -1798,25 +1833,7 @@ const JoManageRequests: React.FC = () => {
                                       </button>
                                     </>
                                   )}
-                                  <button
-                                    onClick={() =>
-                                      handleDelete(
-                                        request.id,
-                                        request.farmer_name,
-                                      )
-                                    }
-                                    style={{
-                                      padding: "6px 12px",
-                                      background: "#6b7280",
-                                      color: "white",
-                                      border: "none",
-                                      borderRadius: "4px",
-                                      cursor: "pointer",
-                                      fontSize: "12px",
-                                    }}
-                                  >
-                                    🗑️ Delete
-                                  </button>
+
                                 </div>
                               </td>
                             </tr>

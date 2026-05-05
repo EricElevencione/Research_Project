@@ -380,7 +380,7 @@ const TechMasterlist: React.FC = () => {
   const openStatusModal = async (record: RSBSARecord) => {
     setStatusChangeTarget({
       id: record.id,
-      newStatus: "",
+      newStatus: record.status === "Active Farmer" ? "Not Active" : "Active Farmer",
       farmerName: record.farmerName,
     });
     setStatusChangeReason("");
@@ -411,13 +411,6 @@ const TechMasterlist: React.FC = () => {
       }));
 
       setStatusModalParcels(mapped);
-
-      // Pre-select parcels already marked as not farming
-      const initial: Record<string, boolean> = {};
-      mapped.forEach((p) => {
-        initial[p.id] = p.isCultivating === false; // true = "not farming" selected
-      });
-      setParcelCultivationSelections(initial);
     } catch (err) {
       showUpdateNotification("Failed to load parcels.", "error");
       setShowStatusModal(false);
@@ -640,29 +633,19 @@ const TechMasterlist: React.FC = () => {
     }
 
     try {
-      // Update each parcel's cultivation status in DB
+      const isNowActive = statusChangeTarget.newStatus === "Active Farmer";
+
+      // Update each parcel's cultivation status in DB based on the new farmer status
       for (const parcel of statusModalParcels) {
-        const isNotFarming = parcelCultivationSelections[parcel.id] === true;
         await updateFarmParcel(parcel.id, {
-          is_cultivating: !isNotFarming,
-          cultivation_status_reason: isNotFarming
-            ? statusChangeReason.trim()
-            : null,
+          is_cultivating: isNowActive,
+          cultivation_status_reason: isNowActive ? null : statusChangeReason.trim(),
           cultivation_status_updated_at: new Date().toISOString(),
         });
       }
 
-      // Check if ALL parcels are not farming
-      const allNotFarming = statusModalParcels.every(
-        (p) => parcelCultivationSelections[p.id] === true,
-      );
-
-      const newFarmerStatus = allNotFarming ? "Not Active" : "Active Farmer";
-      const newCultivationStatus = allNotFarming
-        ? "Not farming"
-        : statusModalParcels.some((p) => parcelCultivationSelections[p.id])
-          ? "Partially farming"
-          : "Actively farming";
+      const newFarmerStatus = statusChangeTarget.newStatus;
+      const newCultivationStatus = isNowActive ? "Actively farming" : "Not farming";
 
       await updateRsbsaSubmission(statusChangeTarget.id, {
         status: newFarmerStatus,
@@ -697,9 +680,7 @@ const TechMasterlist: React.FC = () => {
       }
 
       showUpdateNotification(
-        allNotFarming
-          ? "Farmer marked as Not Active — all parcels not farming."
-          : "Selected parcels updated. Farmer remains Active.",
+        `Farmer marked as ${newFarmerStatus}.`,
         "success",
       );
     } catch (err: any) {
@@ -1459,7 +1440,7 @@ const TechMasterlist: React.FC = () => {
               </div>
 
               <div className="tech-masterlist-print-modal-body">
-                <p style={{ marginBottom: "12px" }}>
+                <p style={{ marginBottom: "16px" }}>
                   Farmer:{" "}
                   <strong>
                     {rsbsaRecords.find((r) => r.id === statusChangeTarget.id)
@@ -1468,139 +1449,55 @@ const TechMasterlist: React.FC = () => {
                 </p>
 
                 {statusModalLoading ? (
-                  <p>Loading parcels...</p>
-                ) : statusModalParcels.length === 0 ? (
-                  <p style={{ color: "#888" }}>
-                    No parcels found for this farmer.
-                  </p>
+                  <p>Loading...</p>
                 ) : (
                   <>
-                    <p style={{ marginBottom: "8px", fontWeight: "500" }}>
-                      Select parcels that are <strong>NOT farming</strong>:
-                    </p>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px",
-                        marginBottom: "16px",
-                      }}
-                    >
-                      {statusModalParcels.map((parcel, index) => (
-                        <label
-                          key={parcel.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "10px",
-                            padding: "10px",
-                            border: "1px solid #ddd",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            background: parcelCultivationSelections[parcel.id]
-                              ? "#fff3f3"
-                              : "#f9fff9",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={
-                              parcelCultivationSelections[parcel.id] === true
-                            }
-                            onChange={(e) =>
-                              setParcelCultivationSelections((prev) => ({
-                                ...prev,
-                                [parcel.id]: e.target.checked,
-                              }))
-                            }
-                            style={{ marginTop: "2px" }}
+                    <div className="tech-masterlist-print-filter-group" style={{ marginBottom: "16px" }}>
+                      <label>Update Status</label>
+                      <div style={{ display: "flex", gap: "16px", marginTop: "8px" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                          <input 
+                            type="radio" 
+                            name="farmerStatus"
+                            value="Active Farmer"
+                            checked={statusChangeTarget.newStatus === "Active Farmer"}
+                            onChange={(e) => setStatusChangeTarget(prev => prev ? { ...prev, newStatus: e.target.value } : null)}
                           />
-                          <div>
-                            <div style={{ fontWeight: "500" }}>
-                              Parcel #
-                              {parcel.parcelNumber !== "N/A"
-                                ? parcel.parcelNumber
-                                : index + 1}
-                            </div>
-                            <div style={{ fontSize: "0.85em", color: "#555" }}>
-                              {parcel.farmLocationBarangay},{" "}
-                              {parcel.farmLocationMunicipality}
-                            </div>
-                            <div style={{ fontSize: "0.85em", color: "#555" }}>
-                              {parcel.totalFarmAreaHa.toFixed(2)} ha
-                            </div>
-                            <div
-                              style={{ fontSize: "0.82em", marginTop: "2px" }}
-                            >
-                              Current:{" "}
-                              <span
-                                style={{
-                                  color:
-                                    parcel.isCultivating === true
-                                      ? "green"
-                                      : parcel.isCultivating === false
-                                        ? "red"
-                                        : "#888",
-                                }}
-                              >
-                                {parcel.isCultivating === true
-                                  ? "Actively farming"
-                                  : parcel.isCultivating === false
-                                    ? "Not farming"
-                                    : "Not specified"}
-                              </span>
-                            </div>
-                          </div>
+                          Active Farmer
                         </label>
-                      ))}
+                        <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                          <input 
+                            type="radio" 
+                            name="farmerStatus"
+                            value="Not Active"
+                            checked={statusChangeTarget.newStatus === "Not Active"}
+                            onChange={(e) => setStatusChangeTarget(prev => prev ? { ...prev, newStatus: e.target.value } : null)}
+                          />
+                          Not Active Farmer
+                        </label>
+                      </div>
                     </div>
 
-                    {/* Show what the result will be */}
-                    <div
-                      style={{
-                        padding: "10px",
-                        borderRadius: "6px",
-                        marginBottom: "12px",
-                        background: statusModalParcels.every(
-                          (p) => parcelCultivationSelections[p.id],
-                        )
-                          ? "#fff3f3"
-                          : "#f0fff4",
-                        border: "1px solid #ddd",
-                        fontSize: "0.9em",
-                      }}
-                    >
-                      {statusModalParcels.every(
-                        (p) => parcelCultivationSelections[p.id],
-                      )
-                        ? "⚠️ All parcels selected — farmer will be set to Not Active"
-                        : statusModalParcels.some(
-                              (p) => parcelCultivationSelections[p.id],
-                            )
-                          ? "✅ Some parcels selected — farmer remains Active Farmer"
-                          : "ℹ️ No parcels selected — no changes will be made"}
+                    <div className="tech-masterlist-print-filter-group">
+                      <label>
+                        Reason <span style={{ color: "red" }}>*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Enter reason for cultivation status change..."
+                        value={statusChangeReason}
+                        onChange={(e) => setStatusChangeReason(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          borderRadius: "6px",
+                          border: "1px solid #ccc",
+                          resize: "vertical",
+                        }}
+                      />
                     </div>
                   </>
                 )}
-
-                <div className="tech-masterlist-print-filter-group">
-                  <label>
-                    Reason <span style={{ color: "red" }}>*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Enter reason for cultivation status change..."
-                    value={statusChangeReason}
-                    onChange={(e) => setStatusChangeReason(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px",
-                      borderRadius: "6px",
-                      border: "1px solid #ccc",
-                      resize: "vertical",
-                    }}
-                  />
-                </div>
               </div>
 
               <div className="tech-masterlist-print-modal-footer">
@@ -1621,10 +1518,7 @@ const TechMasterlist: React.FC = () => {
                   onClick={confirmStatusChange}
                   disabled={
                     !statusChangeReason.trim() ||
-                    statusModalLoading ||
-                    !statusModalParcels.some(
-                      (p) => parcelCultivationSelections[p.id],
-                    )
+                    statusModalLoading
                   }
                 >
                   Confirm

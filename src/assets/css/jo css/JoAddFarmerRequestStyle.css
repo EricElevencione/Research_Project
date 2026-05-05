@@ -297,6 +297,26 @@
   border-radius: 10px;
   overflow: hidden;
   background: #ffffff;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.jo-add-farmer-summary-table::-webkit-scrollbar {
+  width: 6px;
+}
+
+.jo-add-farmer-summary-table::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.jo-add-farmer-summary-table::-webkit-scrollbar-thumb {
+  background: #c7d2fe;
+  border-radius: 3px;
+}
+
+.jo-add-farmer-summary-table::-webkit-scrollbar-thumb:hover {
+  background: #a5b4fc;
 }
 
 .jo-add-farmer-summary-header,

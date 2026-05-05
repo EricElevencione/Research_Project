@@ -22,6 +22,8 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
+
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -61,9 +63,13 @@ const Dashboard: React.FC = () => {
 
   const selectedAllocationLabel = selectedAllocationId
     ? availableAllocations.find((a) => a.allocationId === selectedAllocationId)
-        ?.label
+      ?.label
     : undefined;
 
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
   return (
     <div className="admin-page-container">
       <div className="admin-dashboard-page has-mobile-sidebar">

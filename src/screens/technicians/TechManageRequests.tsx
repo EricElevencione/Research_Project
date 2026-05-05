@@ -475,9 +475,7 @@ const TechManageRequests: React.FC = () => {
   const [printScope, setPrintScope] = useState<PrintScope>("filtered");
   const [includePrintDetails, setIncludePrintDetails] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
-  const [pendingRejectId, setPendingRejectId] = useState<number | null>(null);
+
   const [currentUser, setCurrentUser] = useState<{
     firstName: string;
     lastName: string;
@@ -2882,98 +2880,12 @@ const TechManageRequests: React.FC = () => {
                                         >
                                           Approve
                                         </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setOpenActionsMenuFor(null);
-                                            setActionsMenuPosition(null);
-                                            setPendingRejectId(request.id); // ✅ store which request
-                                            setRejectModalOpen(true); // ✅ open modal instead
-                                          }}
-                                          className="tech-manage-requests-btn-reject"
-                                        >
-                                          Reject
-                                        </button>
-                                        {rejectModalOpen && (
-                                          <div className="modal-overlay">
-                                            <div className="modal-box">
-                                              <h3>Reason for Rejection</h3>
-                                              <p>
-                                                Please provide a reason before
-                                                rejecting this request.
-                                              </p>
 
-                                              <textarea
-                                                value={rejectReason}
-                                                onChange={(e) =>
-                                                  setRejectReason(
-                                                    e.target.value,
-                                                  )
-                                                }
-                                                placeholder="Enter reason here..."
-                                                rows={4}
-                                                className="reject-reason-input"
-                                              />
 
-                                              {!rejectReason.trim() && (
-                                                <p className="reject-reason-error">
-                                                  Reason is required.
-                                                </p>
-                                              )}
-
-                                              <div className="modal-actions">
-                                                <button
-                                                  className="tech-manage-requests-btn-reject"
-                                                  disabled={
-                                                    !rejectReason.trim()
-                                                  }
-                                                  onClick={() => {
-                                                    if (!rejectReason.trim())
-                                                      return;
-                                                    handleStatusChange(
-                                                      pendingRejectId!,
-                                                      "rejected",
-                                                      rejectReason,
-                                                    ); // ✅ pass reason
-                                                    setRejectModalOpen(false);
-                                                    setRejectReason("");
-                                                    setPendingRejectId(null);
-                                                  }}
-                                                >
-                                                  Confirm Reject
-                                                </button>
-
-                                                <button
-                                                  className="login-button"
-                                                  onClick={() => {
-                                                    setRejectModalOpen(false);
-                                                    setRejectReason("");
-                                                    setPendingRejectId(null);
-                                                  }}
-                                                >
-                                                  Cancel
-                                                </button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )}
                                       </>
                                     )}
 
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenActionsMenuFor(null);
-                                        setActionsMenuPosition(null);
-                                        openDeleteDialog(
-                                          request.id,
-                                          request.farmer_name,
-                                        );
-                                      }}
-                                      className="tech-manage-requests-btn-delete"
-                                    >
-                                      Delete
-                                    </button>
+
 
                                     <button
                                       type="button"
@@ -3085,64 +2997,7 @@ const TechManageRequests: React.FC = () => {
                       </tbody>
                     </table>
 
-                    {/* Rejection Reason Modal */}
-                    {rejectModalOpen && (
-                      <div className="tech-reject-modal-overlay">
-                        <div className="tech-reject-modal-content">
-                          <h3 className="tech-reject-modal-title">
-                            Reason for Rejection
-                          </h3>
-                          <p className="tech-reject-modal-subtitle">
-                            Please provide a reason before rejecting this
-                            request.
-                          </p>
 
-                          <textarea
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Enter reason here..."
-                            className="tech-reject-textarea"
-                          />
-
-                          {!rejectReason.trim() && (
-                            <p className="tech-reject-error-text">
-                              Reason is required.
-                            </p>
-                          )}
-
-                          <div className="tech-reject-modal-actions">
-                            <button
-                              className="tech-reject-confirm-btn"
-                              disabled={!rejectReason.trim()}
-                              onClick={() => {
-                                if (!rejectReason.trim()) return;
-                                handleStatusChange(
-                                  pendingRejectId!,
-                                  "rejected",
-                                  rejectReason,
-                                );
-                                setRejectModalOpen(false);
-                                setRejectReason("");
-                                setPendingRejectId(null);
-                              }}
-                            >
-                              Confirm Reject
-                            </button>
-
-                            <button
-                              className="tech-reject-cancel-btn"
-                              onClick={() => {
-                                setRejectModalOpen(false);
-                                setRejectReason("");
-                                setPendingRejectId(null);
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </>

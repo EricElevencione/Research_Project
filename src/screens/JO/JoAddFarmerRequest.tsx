@@ -1,3 +1,4 @@
+import { supabase } from "../../supabase";
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -328,6 +329,25 @@ const JoAddFarmerRequest: React.FC = () => {
   };
 
   const isActive = (path: string) => location.pathname === path;
+
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     fetchAllocation();
@@ -711,6 +731,17 @@ const JoAddFarmerRequest: React.FC = () => {
       return;
     }
 
+    const hasAtLeastOneItem =
+      selectedFertilizerKeys.some((field) => Number(formData[field]) > 0) ||
+      selectedSeedKeys.some((field) => Number(formData[field]) > 0);
+
+    if (!hasAtLeastOneItem) {
+      setError(
+        "Please add at least one fertilizer or seed.",
+      );
+      return;
+    }
+
     const selectedFarmer = farmers.find(
       (f) => Number(f.id) === Number(formData.farmer_id),
     );
@@ -980,8 +1011,7 @@ const JoAddFarmerRequest: React.FC = () => {
             <h3 className="jo-add-farmer-modal-title">⚠️ Exceeds Allocation</h3>
             <p className="jo-add-farmer-modal-message">
               Some requested values exceed the available incentives/allocation.
-              You can go back and edit the values, or submit anyway and adjust
-              later.
+              Please go back and edit the values to match the available stock.
             </p>
 
             <div className="jo-add-farmer-modal-list">
@@ -1007,14 +1037,6 @@ const JoAddFarmerRequest: React.FC = () => {
                 disabled={loading}
               >
                 Change Values
-              </button>
-              <button
-                type="button"
-                className="jo-add-farmer-modal-submit"
-                onClick={handleConfirmSubmitWithExceeded}
-                disabled={loading}
-              >
-                Submit Anyway
               </button>
             </div>
           </div>
@@ -1110,6 +1132,21 @@ const JoAddFarmerRequest: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
+
+            {currentUser && (
+              <div className="sidebar-current-user">
+                <div className="sidebar-current-user-avatar">
+                  {currentUser.firstName.charAt(0).toUpperCase()}
+                  {currentUser.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div className="sidebar-current-user-info">
+                  <span className="sidebar-current-user-name">
+                    {currentUser.firstName} {currentUser.lastName}
+                  </span>
+                  <span className="sidebar-current-user-label">Logged in</span>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 
@@ -1320,7 +1357,10 @@ const JoAddFarmerRequest: React.FC = () => {
                     {Object.entries(fertilizerCategories).map(([cat, labels]) => (
                       <optgroup key={cat} label={`${cat} Fertilizers`}>
                         {visibleFertilizerItems
-                          .filter(item => labels.includes(item.label) && !selectedFertilizerKeys.includes(item.requestField))
+                          .filter(item => {
+                            const stock = Number(allocation?.[item.allocationField]) || 0;
+                            return labels.includes(item.label) && !selectedFertilizerKeys.includes(item.requestField) && stock > 0;
+                          })
                           .map(item => {
                             const stock = Number(allocation?.[item.allocationField]) || 0;
                             return (
@@ -1398,7 +1438,10 @@ const JoAddFarmerRequest: React.FC = () => {
                     {Object.entries(seedCategories).map(([cat, labels]) => (
                       <optgroup key={cat} label={`${cat} Seeds`}>
                         {visibleSeedItems
-                          .filter(item => labels.includes(item.label) && !selectedSeedKeys.includes(item.requestField))
+                          .filter(item => {
+                            const stock = Number(allocation?.[item.allocationField]) || 0;
+                            return labels.includes(item.label) && !selectedSeedKeys.includes(item.requestField) && stock > 0;
+                          })
                           .map(item => {
                             const stock = Number(allocation?.[item.allocationField]) || 0;
                             return (

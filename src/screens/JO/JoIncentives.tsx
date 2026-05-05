@@ -1,3 +1,4 @@
+import { supabase } from "../../supabase";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -181,6 +182,25 @@ const JoIncentives: React.FC = () => {
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   const [allocations, setAllocations] = useState<RegionalAllocation[]>([]);
   const [loading, setLoading] = useState(true);
