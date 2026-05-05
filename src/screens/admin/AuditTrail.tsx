@@ -5,6 +5,15 @@ import "../../assets/css/admin css/AdminAuditTrail.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import { AuditAPI } from "../../components/Audit/auditAPI";
 import { supabase } from "../../supabase";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
+import {
+  FERTILIZER_FIELD_MAPS,
+  SEED_FIELD_MAPS,
+} from "../../constants/shortageFieldMaps";
 
 // Recharts for statistics
 import {
@@ -64,6 +73,13 @@ interface AllocationFieldDefinition {
   unit?: string;
 }
 
+interface RequestFieldDefinition {
+  key: string;
+  label: string;
+  unit?: string;
+  category: "fertilizer" | "seed";
+}
+
 interface AuditPageContext {
   label: string;
   path: string | null;
@@ -91,6 +107,22 @@ interface RouteMetadataPayload {
   routeUrl: string | null;
   routePath: string | null;
   routeFullPath: string | null;
+}
+
+interface LandOwnerParcelPayloadItem {
+  id: number | string | null;
+  parcelNumber: string | null;
+  isCultivating: boolean | null;
+  totalFarmAreaHa: number | string | null;
+  farmLocationBarangay: string | null;
+  cultivationStatusReason: string | null;
+}
+
+interface LandOwnerUpdatePayload {
+  farmerName: string | null;
+  farmerAddress: string | null;
+  age: string | number | null;
+  parcels: LandOwnerParcelPayloadItem[];
 }
 
 interface AllocationLookupRow {
@@ -237,6 +269,23 @@ const ALLOCATION_DETECTION_FIELDS = [
   ...ALLOCATION_FERTILIZER_FIELDS.map((f) => f.key),
   ...ALLOCATION_SEED_FIELDS.map((f) => f.key),
 ];
+
+const REQUEST_FERTILIZER_FIELDS: RequestFieldDefinition[] =
+  FERTILIZER_FIELD_MAPS.map((field) => ({
+    key: field.requestField,
+    label: field.label,
+    unit: field.unit,
+    category: "fertilizer",
+  }));
+
+const REQUEST_SEED_FIELDS: RequestFieldDefinition[] = SEED_FIELD_MAPS.map(
+  (field) => ({
+    key: field.requestField,
+    label: field.label,
+    unit: field.unit,
+    category: "seed",
+  }),
+);
 
 const MODULE_PAGE_FALLBACKS: Record<string, AuditPageContext> = {
   AUTH: { label: "Authentication", path: "/login" },
@@ -657,6 +706,38 @@ const AuditTrail: React.FC = () => {
     return value;
   };
 
+  const extractJsonArrayFromText = (value: string): any[] | null => {
+    const start = value.indexOf("[");
+    const end = value.lastIndexOf("]");
+    if (start < 0 || end <= start) return null;
+
+    const candidate = value.slice(start, end + 1).trim();
+    if (!candidate) return null;
+
+    try {
+      const parsed = JSON.parse(candidate);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const extractLabelValueFromText = (
+    value: string,
+    labels: string[],
+  ): string | null => {
+    for (const label of labels) {
+      const pattern = new RegExp(`${label}\\s*[:\\n]+\\s*([^\\n]+)`, "i");
+      const match = value.match(pattern);
+      if (match && match[1]) {
+        const extracted = match[1].trim();
+        if (extracted) return extracted;
+      }
+    }
+
+    return null;
+  };
+
   const getHashRoutePath = (input: string): string | null => {
     const hashIndex = input.indexOf("#");
     if (hashIndex < 0) return null;
@@ -828,6 +909,14 @@ const AuditTrail: React.FC = () => {
     );
   };
 
+  const isFarmerRequestPayload = (value: any): boolean => {
+    const parsed = parseJsonLikeValue(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return false;
+
+    return Object.keys(parsed).some((key) => key.startsWith("requested_"));
+  };
+
   const formatAllocationSeason = (seasonValue: any) => {
     const season =
       typeof seasonValue === "string" ? seasonValue : String(seasonValue ?? "");
@@ -990,6 +1079,175 @@ const AuditTrail: React.FC = () => {
     );
   };
 
+  const renderRequestFieldRows = (
+    payload: Record<string, any>,
+    fields: RequestFieldDefinition[],
+  ) => {
+    const enteredFields = fields.filter((field) => {
+      const num = Number(payload[field.key]);
+      return Number.isFinite(num) && num !== 0;
+    });
+
+    if (enteredFields.length === 0) {
+      return (
+        <div className="admin-audit-allocation-row">
+          <span className="admin-audit-allocation-label">
+            No inputs recorded
+          </span>
+          <span className="admin-audit-allocation-value">-</span>
+        </div>
+      );
+    }
+
+    return enteredFields.map((field) => (
+      <div className="admin-audit-allocation-row" key={field.key}>
+        <span className="admin-audit-allocation-label">{field.label}</span>
+        <span className="admin-audit-allocation-value">
+          {formatAllocationAmount(payload[field.key], field.unit)}
+        </span>
+      </div>
+    ));
+  };
+
+  const renderFarmerRequestPayload = (
+    value: any,
+    section: "old" | "new" | "metadata" = "new",
+  ) => {
+    const payload = parseJsonLikeValue(value);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload))
+      return null;
+
+    const record = payload as Record<string, any>;
+    if (!isFarmerRequestPayload(record)) return null;
+
+    const farmerName =
+      typeof (record.farmer_name ?? record.farmerName) === "string"
+        ? String(record.farmer_name ?? record.farmerName)
+        : (record.farmer_name ?? record.farmerName ?? null);
+    const allocationProgram =
+      typeof (
+        record.allocation_program ??
+        record.allocationSeason ??
+        record.allocation_season ??
+        record.season
+      ) === "string"
+        ? String(
+            record.allocation_program ??
+              record.allocationSeason ??
+              record.allocation_season ??
+              record.season,
+          )
+        : (record.allocation_program ??
+          record.allocationSeason ??
+          record.allocation_season ??
+          record.season ??
+          null);
+    const allocationDate =
+      record.allocation_date ??
+      record.request_date ??
+      record.requestDate ??
+      null;
+
+    const fertilizerTotalProvided =
+      record.requested_fertilizer_total_bags !== undefined &&
+      record.requested_fertilizer_total_bags !== null;
+    const seedTotalProvided =
+      record.requested_seed_total_kg !== undefined &&
+      record.requested_seed_total_kg !== null;
+
+    const fertilizerTotal = fertilizerTotalProvided
+      ? Number(record.requested_fertilizer_total_bags)
+      : REQUEST_FERTILIZER_FIELDS.reduce(
+          (sum, field) => sum + (Number(record[field.key]) || 0),
+          0,
+        );
+    const seedTotal = seedTotalProvided
+      ? Number(record.requested_seed_total_kg)
+      : REQUEST_SEED_FIELDS.reduce(
+          (sum, field) => sum + (Number(record[field.key]) || 0),
+          0,
+        );
+
+    const notesValue =
+      typeof (record.request_notes ?? record.notes) === "string"
+        ? String(record.request_notes ?? record.notes).trim()
+        : (record.request_notes ?? record.notes);
+
+    return (
+      <div
+        className={`admin-audit-request-payload admin-audit-request-payload--${section}`}
+      >
+        <div className="admin-audit-request-header">
+          <span className="admin-audit-request-title">
+            Farmer Request Details
+          </span>
+          <span className="admin-audit-request-tag">
+            {section === "metadata"
+              ? "Metadata"
+              : section === "old"
+                ? "Previous"
+                : "New"}
+          </span>
+        </div>
+
+        <div className="admin-audit-allocation-summary">
+          <div className="admin-audit-allocation-summary-item">
+            <span className="admin-audit-allocation-summary-label">Farmer</span>
+            <span className="admin-audit-allocation-summary-value">
+              {farmerName || "N/A"}
+            </span>
+          </div>
+          <div className="admin-audit-allocation-summary-item">
+            <span className="admin-audit-allocation-summary-label">
+              Program
+            </span>
+            <span className="admin-audit-allocation-summary-value">
+              {allocationProgram
+                ? formatAllocationSeason(allocationProgram)
+                : "N/A"}
+            </span>
+          </div>
+          <div className="admin-audit-allocation-summary-item">
+            <span className="admin-audit-allocation-summary-label">
+              Allocation Date
+            </span>
+            <span className="admin-audit-allocation-summary-value">
+              {allocationDate ? formatAllocationDate(allocationDate) : "N/A"}
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-audit-allocation-totals-strip">
+          <span className="admin-audit-allocation-pill">
+            Fertilizer Total: {formatAllocationAmount(fertilizerTotal)}
+          </span>
+          <span className="admin-audit-allocation-pill">
+            Seed Total: {formatAllocationAmount(seedTotal)}
+          </span>
+        </div>
+
+        <div className="admin-audit-allocation-grid">
+          <div className="admin-audit-allocation-group">
+            <h5>Fertilizer Requests</h5>
+            {renderRequestFieldRows(record, REQUEST_FERTILIZER_FIELDS)}
+          </div>
+
+          <div className="admin-audit-allocation-group">
+            <h5>Seed Requests</h5>
+            {renderRequestFieldRows(record, REQUEST_SEED_FIELDS)}
+          </div>
+        </div>
+
+        <div className="admin-audit-allocation-notes">
+          <span className="admin-audit-allocation-summary-label">Notes</span>
+          <span className="admin-audit-allocation-notes-value">
+            {notesValue || "No notes provided"}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   const renderAllocationChangeSummary = (oldValue: any, newValue: any) => {
     const oldPayload = parseJsonLikeValue(oldValue);
     const newPayload = parseJsonLikeValue(newValue);
@@ -1072,6 +1330,346 @@ const AuditTrail: React.FC = () => {
       minimumFractionDigits: num % 1 === 0 ? 0 : 2,
       maximumFractionDigits: 2,
     })} ha`;
+  };
+
+  const extractLandOwnerParcelPayload = (
+    value: any,
+  ): LandOwnerParcelPayloadItem[] | null => {
+    let parsed = parseJsonLikeValue(value);
+    if (typeof parsed === "string") {
+      const extractedArray = extractJsonArrayFromText(parsed);
+      if (extractedArray) {
+        parsed = extractedArray;
+      }
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+
+    const parcelKeyCandidates = [
+      "parcelNumber",
+      "parcel_number",
+      "totalFarmAreaHa",
+      "total_farm_area_ha",
+      "farmLocationBarangay",
+      "farm_location_barangay",
+      "isCultivating",
+      "is_cultivating",
+      "cultivationStatusReason",
+      "cultivation_status_reason",
+    ];
+
+    const normalized = parsed
+      .filter(
+        (item) =>
+          item &&
+          typeof item === "object" &&
+          !Array.isArray(item) &&
+          parcelKeyCandidates.some((key) => key in item),
+      )
+      .map((item: Record<string, any>) => ({
+        id: item.id ?? item.parcel_id ?? item.parcelId ?? null,
+        parcelNumber:
+          typeof (item.parcelNumber ?? item.parcel_number ?? item.parcelNo) ===
+          "string"
+            ? String(item.parcelNumber ?? item.parcel_number ?? item.parcelNo)
+            : (item.parcelNumber ??
+              item.parcel_number ??
+              item.parcelNo ??
+              null),
+        isCultivating:
+          typeof (item.isCultivating ?? item.is_cultivating) === "boolean"
+            ? Boolean(item.isCultivating ?? item.is_cultivating)
+            : null,
+        totalFarmAreaHa:
+          item.totalFarmAreaHa ??
+          item.total_farm_area_ha ??
+          item.totalFarmArea ??
+          null,
+        farmLocationBarangay:
+          typeof (
+            item.farmLocationBarangay ??
+            item.farm_location_barangay ??
+            item.barangay
+          ) === "string"
+            ? String(
+                item.farmLocationBarangay ??
+                  item.farm_location_barangay ??
+                  item.barangay,
+              )
+            : (item.farmLocationBarangay ??
+              item.farm_location_barangay ??
+              item.barangay ??
+              null),
+        cultivationStatusReason:
+          typeof (
+            item.cultivationStatusReason ??
+            item.cultivation_status_reason ??
+            item.cultivationReason
+          ) === "string"
+            ? String(
+                item.cultivationStatusReason ??
+                  item.cultivation_status_reason ??
+                  item.cultivationReason,
+              )
+            : (item.cultivationStatusReason ??
+              item.cultivation_status_reason ??
+              item.cultivationReason ??
+              null),
+      }));
+
+    if (normalized.length === 0) return null;
+
+    return normalized;
+  };
+
+  const extractLandOwnerUpdatePayload = (
+    value: any,
+  ): LandOwnerUpdatePayload | null => {
+    let parsed = parseJsonLikeValue(value);
+
+    if (typeof parsed === "string") {
+      const parcelsFromText = extractJsonArrayFromText(parsed);
+      const parcels = parcelsFromText
+        ? extractLandOwnerParcelPayload(parcelsFromText)
+        : null;
+      if (!parcels) return null;
+
+      const farmerName = extractLabelValueFromText(parsed, [
+        "Farmername",
+        "Farmer Name",
+        "Farmer",
+      ]);
+      const farmerAddress = extractLabelValueFromText(parsed, [
+        "Farmeraddress",
+        "Farmer Address",
+        "Address",
+      ]);
+      const ageText = extractLabelValueFromText(parsed, ["Age"]);
+      const age = ageText ? ageText : null;
+
+      return {
+        farmerName,
+        farmerAddress,
+        age,
+        parcels,
+      };
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const record = parsed as Record<string, any>;
+    const parcelsValue =
+      record.parcels ??
+      record.farmlandParcels ??
+      record.farm_parcels ??
+      record.farmParcels ??
+      null;
+    const parcels = extractLandOwnerParcelPayload(parcelsValue);
+    if (!parcels) return null;
+
+    return {
+      farmerName:
+        typeof (record.farmerName ?? record.farmer_name) === "string"
+          ? String(record.farmerName ?? record.farmer_name)
+          : (record.farmerName ?? record.farmer_name ?? null),
+      farmerAddress:
+        typeof (record.farmerAddress ?? record.farmer_address) === "string"
+          ? String(record.farmerAddress ?? record.farmer_address)
+          : (record.farmerAddress ?? record.farmer_address ?? null),
+      age:
+        record.age ?? record.farmerAge ?? record.farmer_age ?? record.farmerAge,
+      parcels,
+    };
+  };
+
+  const formatLandOwnerParcelTitle = (
+    parcelNumber: LandOwnerParcelPayloadItem["parcelNumber"],
+    fallbackIndex: number,
+  ) => {
+    if (!parcelNumber) return `Parcel ${fallbackIndex}`;
+    const text = String(parcelNumber).trim();
+    if (!text) return `Parcel ${fallbackIndex}`;
+    return /parcel/i.test(text) ? text.replace(/[_]+/g, " ") : `Parcel ${text}`;
+  };
+
+  const renderLandOwnerParcelPayload = (
+    value: any,
+    section: "old" | "new" | "metadata" = "new",
+  ) => {
+    const parcels = extractLandOwnerParcelPayload(value);
+    if (!parcels) return null;
+
+    const totalArea = parcels.reduce(
+      (sum, parcel) => sum + (Number(parcel.totalFarmAreaHa) || 0),
+      0,
+    );
+    const cultivatedCount = parcels.filter(
+      (parcel) => parcel.isCultivating === true,
+    ).length;
+    const sectionLabel =
+      section === "metadata"
+        ? "Land Owner Parcels (Metadata)"
+        : section === "old"
+          ? "Previous Land Owner Parcels"
+          : "New Land Owner Parcels";
+
+    return (
+      <div
+        className={`admin-audit-landowner-payload admin-audit-landowner-payload--${section}`}
+      >
+        <div className="admin-audit-landowner-header">
+          <span className="admin-audit-landowner-title">{sectionLabel}</span>
+          <span className="admin-audit-landowner-tag">
+            {section === "metadata"
+              ? "Metadata"
+              : section === "old"
+                ? "Previous"
+                : "New"}
+          </span>
+        </div>
+
+        <div className="admin-audit-landowner-summary">
+          <div className="admin-audit-landowner-summary-item">
+            <span className="admin-audit-landowner-summary-label">
+              Total Parcels
+            </span>
+            <span className="admin-audit-landowner-summary-value">
+              {parcels.length.toLocaleString("en-US")}
+            </span>
+          </div>
+          <div className="admin-audit-landowner-summary-item">
+            <span className="admin-audit-landowner-summary-label">
+              Cultivating
+            </span>
+            <span className="admin-audit-landowner-summary-value">
+              {cultivatedCount.toLocaleString("en-US")}
+            </span>
+          </div>
+          <div className="admin-audit-landowner-summary-item">
+            <span className="admin-audit-landowner-summary-label">
+              Total Farm Area
+            </span>
+            <span className="admin-audit-landowner-summary-value">
+              {formatAreaHectares(totalArea)}
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-audit-landowner-grid">
+          {parcels.map((parcel, index) => {
+            const cultivationState =
+              parcel.isCultivating === true
+                ? "yes"
+                : parcel.isCultivating === false
+                  ? "no"
+                  : "unknown";
+            const cultivationLabel =
+              parcel.isCultivating === true
+                ? "Cultivating"
+                : parcel.isCultivating === false
+                  ? "Not cultivating"
+                  : "Unknown";
+            const cultivationReason =
+              typeof parcel.cultivationStatusReason === "string"
+                ? parcel.cultivationStatusReason.trim()
+                : parcel.cultivationStatusReason !== null &&
+                    parcel.cultivationStatusReason !== undefined
+                  ? String(parcel.cultivationStatusReason)
+                  : "";
+
+            return (
+              <div
+                className="admin-audit-landowner-card"
+                key={`${parcel.id ?? parcel.parcelNumber ?? index}-${index}`}
+              >
+                <div className="admin-audit-landowner-card-header">
+                  <span className="admin-audit-landowner-card-title">
+                    {formatLandOwnerParcelTitle(parcel.parcelNumber, index + 1)}
+                  </span>
+                  <span
+                    className={`admin-audit-landowner-status admin-audit-landowner-status--${cultivationState}`}
+                  >
+                    {cultivationLabel}
+                  </span>
+                </div>
+
+                {parcel.id !== null && parcel.id !== undefined && (
+                  <div className="admin-audit-landowner-row">
+                    <span className="admin-audit-landowner-label">
+                      Parcel ID
+                    </span>
+                    <span className="admin-audit-landowner-value">
+                      {parcel.id}
+                    </span>
+                  </div>
+                )}
+
+                <div className="admin-audit-landowner-row">
+                  <span className="admin-audit-landowner-label">Barangay</span>
+                  <span className="admin-audit-landowner-value">
+                    {formatTitleText(parcel.farmLocationBarangay)}
+                  </span>
+                </div>
+                <div className="admin-audit-landowner-row">
+                  <span className="admin-audit-landowner-label">Area</span>
+                  <span className="admin-audit-landowner-value">
+                    {formatAreaHectares(parcel.totalFarmAreaHa)}
+                  </span>
+                </div>
+                <div className="admin-audit-landowner-row">
+                  <span className="admin-audit-landowner-label">
+                    Cultivation Reason
+                  </span>
+                  <span className="admin-audit-landowner-value">
+                    {cultivationReason || "None"}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderLandOwnerUpdatePayload = (
+    value: any,
+    section: "old" | "new" | "metadata" = "new",
+  ) => {
+    const payload = extractLandOwnerUpdatePayload(value);
+    if (!payload) return null;
+
+    return (
+      <div className="admin-audit-landowner-update">
+        <div className="admin-audit-landowner-meta">
+          <div className="admin-audit-landowner-meta-item">
+            <span className="admin-audit-landowner-meta-label">Farmer</span>
+            <span className="admin-audit-landowner-meta-value">
+              {payload.farmerName || "N/A"}
+            </span>
+          </div>
+          <div className="admin-audit-landowner-meta-item">
+            <span className="admin-audit-landowner-meta-label">Address</span>
+            <span className="admin-audit-landowner-meta-value">
+              {payload.farmerAddress || "N/A"}
+            </span>
+          </div>
+          <div className="admin-audit-landowner-meta-item">
+            <span className="admin-audit-landowner-meta-label">Age</span>
+            <span className="admin-audit-landowner-meta-value">
+              {payload.age === null ||
+              payload.age === undefined ||
+              payload.age === ""
+                ? "N/A"
+                : String(payload.age)}
+            </span>
+          </div>
+        </div>
+        {renderLandOwnerParcelPayload(payload.parcels, section)}
+      </div>
+    );
   };
 
   const extractFarmerRegistrationPayload = (
@@ -1871,8 +2469,23 @@ const AuditTrail: React.FC = () => {
     section: "old" | "new" | "metadata" = "new",
     logContext?: AuditLog | null,
   ) => {
+    const farmerRequestPayload = renderFarmerRequestPayload(value, section);
+    if (farmerRequestPayload) {
+      return farmerRequestPayload;
+    }
+
     if (isAllocationPayload(value)) {
       return renderAllocationPayload(value, section);
+    }
+
+    const landOwnerUpdatePayload = renderLandOwnerUpdatePayload(value, section);
+    if (landOwnerUpdatePayload) {
+      return landOwnerUpdatePayload;
+    }
+
+    const landOwnerParcelPayload = renderLandOwnerParcelPayload(value, section);
+    if (landOwnerParcelPayload) {
+      return landOwnerParcelPayload;
     }
 
     const farmerRegistrationPayload = renderFarmerRegistrationPayload(value);

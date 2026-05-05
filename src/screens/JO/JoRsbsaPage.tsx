@@ -18,6 +18,11 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 interface RSBSARecord {
   id: string;
@@ -209,6 +214,7 @@ const JoRsbsaPage: React.FC = () => {
     firstName: string;
     lastName: string;
   } | null>(null);
+  const [originalParcels, setOriginalParcels] = useState<Parcel[]>([]);
   const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
@@ -822,6 +828,7 @@ const JoRsbsaPage: React.FC = () => {
     setEditFormData({});
     setEditError(null);
     setEditingParcels([]);
+    setOriginalParcels([]);
     setParcelErrors({});
   };
 
@@ -1079,6 +1086,7 @@ const JoRsbsaPage: React.FC = () => {
         setEditError("Failed to load parcel rows for editing.");
       } else {
         setEditingParcels(response.data || []);
+        setOriginalParcels(response.data || []);
       }
     } catch (error) {
       console.error("Error fetching parcels for edit:", error);
@@ -1225,6 +1233,45 @@ const JoRsbsaPage: React.FC = () => {
 
       await fetchRSBSARecords();
       handleCancelEdit();
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "UPDATE",
+          AuditModule.RSBSA,
+          "rsbsa_submission",
+          editingRecord.id,
+          `Updated land owner information for ${composedFarmerName}`,
+          {
+            farmerName: editingRecord.farmerName,
+            farmerAddress: editingRecord.farmerAddress,
+            age: editingRecord.age,
+            parcels: originalParcels.map((p) => ({
+              id: p.id,
+              parcelNumber: p.parcel_number,
+              totalFarmAreaHa: p.total_farm_area_ha,
+              farmLocationBarangay: p.farm_location_barangay,
+              isCultivating: p.is_cultivating ?? null,
+              cultivationStatusReason: p.cultivation_status_reason ?? null,
+            })),
+          },
+          {
+            farmerName: composedFarmerName,
+            farmerAddress: composedAddress,
+            age: normalizedAge,
+            parcels: editingParcels.map((p) => ({
+              id: p.id,
+              parcelNumber: p.parcel_number,
+              totalFarmAreaHa: p.total_farm_area_ha,
+              farmLocationBarangay: p.farm_location_barangay,
+              isCultivating: p.is_cultivating ?? null,
+              cultivationStatusReason: p.cultivation_status_reason ?? null,
+            })),
+          },
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
       showUpdateNotification(
         "Land owner information updated successfully.",
         "success",

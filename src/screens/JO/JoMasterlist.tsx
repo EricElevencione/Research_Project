@@ -27,7 +27,6 @@ import {
 } from "../../components/Audit/auditLogger";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
-
 interface RSBSARecord {
   id: string;
   referenceNumber: string;
@@ -1949,21 +1948,6 @@ const JoMasterlist: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
-            {currentUser && (
-              <div className="sidebar-current-user">
-                <div className="sidebar-current-user-avatar">
-                  {currentUser.firstName.charAt(0).toUpperCase()}
-                  {currentUser.lastName.charAt(0).toUpperCase()}
-                </div>
-                <div className="sidebar-current-user-info">
-                  <span className="sidebar-current-user-name">
-                    {currentUser.firstName} {currentUser.lastName}
-                  </span>
-                  <span className="sidebar-current-user-label">Logged in</span>
-                </div>
-              </div>
-            )}
           </nav>
           {currentUser && (
             <div className="sidebar-current-user">
@@ -2649,7 +2633,6 @@ const JoMasterlist: React.FC = () => {
                             }}
                             className="jo-masterlist-form-select"
                           >
-                            <option value="">Not specified</option>
                             <option value="true">Yes</option>
                             <option value="false">No</option>
                           </select>
