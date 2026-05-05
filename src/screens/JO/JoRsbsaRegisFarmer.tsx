@@ -10,6 +10,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 // ─────────────────────────────────────────────
 // KEY DISTINCTION FROM LAND OWNER FORM:
@@ -416,16 +417,11 @@ const JoRsbsaRegisFarmer: React.FC = () => {
       const submitted = await submitFinalToServer();
       if (submitted && submitted.submissionId) {
         try {
-          const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
           const farmerName =
             `${formData.surname}, ${formData.firstName} ${formData.middleName || ""}`.trim();
-          const auditLogger = getAuditLogger();
-          await auditLogger.logFarmerRegistration(
-            {
-              id: currentUser.id,
-              name: currentUser.name || currentUser.username || "Unknown",
-              role: currentUser.role || "JO",
-            },
+          const user = await getCurrentUserForAudit();
+          await getAuditLogger().logFarmerRegistration(
+            { ...user, id: undefined },
             submitted.submissionId,
             farmerName,
             {

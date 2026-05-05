@@ -15,6 +15,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 interface Parcel {
   parcelNo: string;
@@ -441,7 +442,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
       );
       if (hasUndesignatedCultivation) {
         newErrors.farmland =
-          "Set 'Are you currently farming this parcel?' for each listed parcel.";
+          "Set 'Are you farming this parcel?' for each listed parcel.";
       }
 
       setErrors(newErrors);
@@ -637,17 +638,13 @@ const JoRsbsaRegisLandowner: React.FC = () => {
       if (submitted && submitted.submissionId) {
         // Log audit trail for farmer registration
         try {
-          const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+          const user = await getCurrentUserForAudit();
           const farmerName =
             `${formData.surname}, ${formData.firstName} ${formData.middleName || ""}`.trim();
           const farmDetails = buildFarmerAuditFarmDetails();
           const auditLogger = getAuditLogger();
           await auditLogger.logFarmerRegistration(
-            {
-              id: currentUser.id,
-              name: currentUser.name || currentUser.username || "Unknown",
-              role: currentUser.role || "JO",
-            },
+            { ...user, id: undefined }, // UUIDs don't fit number, just drop id
             submitted.submissionId,
             farmerName,
             farmDetails,
@@ -1468,7 +1465,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                       </div>
                     </div>
                     <div className="jo-registration-form-group">
-                      <label>Are you currently farming this parcel?</label>
+                      <label>Are you farming this parcel?</label>
                       <select
                         value={
                           p.isCultivating === true

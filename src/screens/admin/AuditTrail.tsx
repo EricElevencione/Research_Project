@@ -818,14 +818,6 @@ const AuditTrail: React.FC = () => {
     return getPageContextFromModule(log);
   };
 
-  const getRoleBasedTablePageLabel = (userRole: string | null): string => {
-    const role = (userRole || "").trim().toLowerCase();
-    if (role === "jo" || role.includes("job order")) return "JO";
-    if (role === "technician" || role.includes("tech")) return "Technician";
-    if (role === "admin") return "Admin";
-    return "Unknown";
-  };
-
   const isAllocationPayload = (value: any): boolean => {
     const parsed = parseJsonLikeValue(value);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
@@ -1130,14 +1122,14 @@ const AuditTrail: React.FC = () => {
     const details = payload.farmDetails;
     const farmLocation =
       details.farmLocation &&
-        typeof details.farmLocation === "object" &&
-        !Array.isArray(details.farmLocation)
+      typeof details.farmLocation === "object" &&
+      !Array.isArray(details.farmLocation)
         ? details.farmLocation
         : {};
     const selectedLandOwner =
       details.selectedLandOwner &&
-        typeof details.selectedLandOwner === "object" &&
-        !Array.isArray(details.selectedLandOwner)
+      typeof details.selectedLandOwner === "object" &&
+      !Array.isArray(details.selectedLandOwner)
         ? details.selectedLandOwner
         : null;
     const parcels = Array.isArray(details.farmlandParcels)
@@ -1148,16 +1140,16 @@ const AuditTrail: React.FC = () => {
     const totalFarmArea = Number.isFinite(parsedArea)
       ? parsedArea
       : parcels.reduce(
-        (sum, parcel) => sum + (Number(parcel?.totalFarmAreaHa) || 0),
-        0,
-      );
+          (sum, parcel) => sum + (Number(parcel?.totalFarmAreaHa) || 0),
+          0,
+        );
     const selectedParcelIds = Array.isArray(details.selectedParcelIds)
       ? details.selectedParcelIds
       : [];
     const farmActivities =
       details.farmActivities &&
-        typeof details.farmActivities === "object" &&
-        !Array.isArray(details.farmActivities)
+      typeof details.farmActivities === "object" &&
+      !Array.isArray(details.farmActivities)
         ? details.farmActivities
         : {};
 
@@ -1353,7 +1345,7 @@ const AuditTrail: React.FC = () => {
                       {parcel?.ownershipType?.registeredOwner
                         ? "Registered Owner"
                         : parcel?.ownershipType?.tenant &&
-                          parcel?.ownershipType?.lessee
+                            parcel?.ownershipType?.lessee
                           ? "Tenant + Lessee"
                           : parcel?.ownershipType?.tenant
                             ? "Tenant"
@@ -1456,8 +1448,8 @@ const AuditTrail: React.FC = () => {
         : null;
     const allocationFromLookup =
       rawAllocationId !== null &&
-        rawAllocationId !== undefined &&
-        rawAllocationId !== ""
+      rawAllocationId !== undefined &&
+      rawAllocationId !== ""
         ? allocationLookup[String(rawAllocationId)] || null
         : null;
     const allocationSeason =
@@ -1958,7 +1950,10 @@ const AuditTrail: React.FC = () => {
       )}
 
       <div className="admin-audit-main-page">
-        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <AdminSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         {/* Main Content */}
         <div className="admin-audit-main-content">
@@ -1967,7 +1962,20 @@ const AuditTrail: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">Audit Trail</div>
           </div>
@@ -2081,7 +2089,7 @@ const AuditTrail: React.FC = () => {
                     <thead>
                       <tr>
                         <th>Timestamp</th>
-                        <th>Page</th>
+                        <th>User</th>
                         <th>Action</th>
                         <th>Module</th>
                         <th>Description</th>
@@ -2090,25 +2098,18 @@ const AuditTrail: React.FC = () => {
                     </thead>
                     <tbody>
                       {logs.map((log) => {
-                        const tablePageLabel = getRoleBasedTablePageLabel(
-                          log.user_role,
-                        );
                         return (
                           <tr key={log.id}>
-                            <td className="admin-audit-td-timestamp">
-                              <div className="admin-audit-timestamp">
-                                <span className="admin-audit-time-ago">
-                                  {formatTimeAgo(log.timestamp)}
+                            <td className="admin-audit-td-user">
+                              <div className="admin-audit-user-cell">
+                                <span className="admin-audit-user-display-name">
+                                  {log.user_name &&
+                                  log.user_name.toLowerCase() !== "unknown"
+                                    ? log.user_name
+                                    : "Unknown User"}
                                 </span>
-                                <span className="admin-audit-time-full">
-                                  {log.formatted_timestamp}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="admin-audit-td-page">
-                              <div className="admin-audit-page">
-                                <span className="admin-audit-page-name">
-                                  {tablePageLabel}
+                                <span className="admin-audit-user-role-badge">
+                                  {log.user_role || "—"}
                                 </span>
                               </div>
                             </td>
@@ -2305,7 +2306,7 @@ const AuditTrail: React.FC = () => {
                       {stats.byUser.map((user, idx) => {
                         const displayName =
                           user.user_name &&
-                            user.user_name.toLowerCase() !== "unknown"
+                          user.user_name.toLowerCase() !== "unknown"
                             ? user.user_name
                             : "Anonymous";
                         const displayRole = user.user_role || "anonymous";
@@ -2396,9 +2397,21 @@ const AuditTrail: React.FC = () => {
                     </span>
                   </div>
                   <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">Actor Role</span>
+                    <span className="admin-audit-detail-label">
+                      Performed By
+                    </span>
                     <span className="admin-audit-detail-value">
-                      {selectedLog.user_role || "anonymous"}
+                      {selectedLog.user_name &&
+                      selectedLog.user_name.toLowerCase() !== "unknown"
+                        ? selectedLog.user_name
+                        : "Unknown User"}
+                    </span>
+                  </div>
+                  <div className="admin-audit-detail-item">
+                    <span className="admin-audit-detail-label">Role</span>
+                    <span className="admin-audit-detail-value">
+                      {" "}
+                      {selectedLog.user_role || "—"}
                     </span>
                   </div>
                 </div>

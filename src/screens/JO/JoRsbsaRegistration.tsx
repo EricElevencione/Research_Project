@@ -19,6 +19,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 interface Parcel {
   parcelNo: string;
@@ -902,17 +903,13 @@ const JoRsbsa: React.FC = () => {
       if (submitted && submitted.submissionId) {
         // Log audit trail for farmer registration
         try {
-          const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
           const farmerName =
             `${formData.surname}, ${formData.firstName} ${formData.middleName || ""}`.trim();
           const farmDetails = buildFarmerAuditFarmDetails();
           const auditLogger = getAuditLogger();
+          const user = await getCurrentUserForAudit();
           await auditLogger.logFarmerRegistration(
-            {
-              id: currentUser.id,
-              name: currentUser.name || currentUser.username || "Unknown",
-              role: currentUser.role || "JO",
-            },
+            { ...user, id: undefined },
             submitted.submissionId,
             farmerName,
             farmDetails,
