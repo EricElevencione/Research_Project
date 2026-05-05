@@ -19,7 +19,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
-import { supabase } from "../../supabase";
+
 
 interface FarmerRequest {
   id: number;
@@ -518,25 +518,6 @@ const JoManageRequests: React.FC = () => {
   } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
-
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const firstName = user.user_metadata?.first_name || "";
-        const lastName = user.user_metadata?.last_name || "";
-        setCurrentUser({ firstName, lastName });
-      }
-    };
-    fetchCurrentUser();
-  }, []);
 
   useEffect(() => {
     fetchAllocation();

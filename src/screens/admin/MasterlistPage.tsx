@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
@@ -73,9 +72,6 @@ const getDefaultSortDirection = (key: SortKey): SortDirection => {
 };
 
 const Masterlist: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,8 +99,6 @@ const Masterlist: React.FC = () => {
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage] = useState(15);
-
-  const isActive = (path: string) => location.pathname === path;
 
   const fetchFarmerDetails = async (farmerId: string) => {
     try {
@@ -524,30 +518,6 @@ const Masterlist: React.FC = () => {
 
   const isSortActive = (key: SortKey) =>
     sortConfigs.some((config) => config.key === key);
-
-  // ── Status Counts ──
-
-  const statusCounts = useMemo(() => {
-    const active = rsbsaRecords.filter(
-      (r) => r.status === "Active Farmer",
-    ).length;
-    const inactive = rsbsaRecords.filter(
-      (r) => r.status === "Not Active",
-    ).length;
-    const submitted = rsbsaRecords.filter(
-      (r) => r.status === "Submitted",
-    ).length;
-    const notSubmitted = rsbsaRecords.filter(
-      (r) => !["Active Farmer", "Not Active", "Submitted"].includes(r.status),
-    ).length;
-    return {
-      active,
-      inactive,
-      submitted,
-      notSubmitted,
-      total: rsbsaRecords.length,
-    };
-  }, [rsbsaRecords]);
 
   const formatDate = (iso: string) => {
     if (!iso) return "—";

@@ -404,7 +404,6 @@ export const useAdminDashboardStats = (
               // In this system, if status is 'distributed', it means the requested items were given.
               const reqFields = Object.keys(req).filter(k => k.startsWith('requested_'));
               reqFields.forEach(rf => {
-                  const field = rf.replace('requested_', '').replace('_kg', '').replace('_bags', ''); // sanitize to match allocation field if possible
                   // Mapping requested_ fields back to allocation fields
                   let allocField = rf.replace('requested_', '');
                   if (allocField === 'complete_14_bags') allocField = 'complete_14_14_14_bags';
@@ -412,7 +411,7 @@ export const useAdminDashboardStats = (
                   if (allocField === 'muriate_potash_bags') allocField = 'muriate_potash_0_0_60_bags';
                   if (allocField === 'urea_bags') allocField = 'urea_46_0_0_bags';
 
-                  const val = Number(req[rf]) || 0;
+                  const val = Number((req as any)[rf]) || 0;
                   if (val > 0) {
                       const current = subsidyMap.get(allocField) || { allocated: 0, distributed: 0 };
                       subsidyMap.set(allocField, { ...current, distributed: current.distributed + val });

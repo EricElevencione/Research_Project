@@ -206,8 +206,6 @@ const JoAddFarmerRequest: React.FC = () => {
   const [notificationType, setNotificationType] = useState<"success" | "error">(
     "success",
   );
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const [showExceedConfirmModal, setShowExceedConfirmModal] = useState(false);
   const [liveExceedMessage, setLiveExceedMessage] = useState<string | null>(
     null,
@@ -1621,9 +1619,7 @@ const JoAddFarmerRequest: React.FC = () => {
 
               {hasOverAllocation && (
                 <div className="jo-add-farmer-warning-box">
-                  Some entered values are above exceeds the allocation. You can
-                  still submit, but please review remaining values highlighted
-                  in red.
+                  Some entered values exceed the allocation.
                 </div>
               )}
 

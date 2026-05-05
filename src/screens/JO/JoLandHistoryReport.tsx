@@ -16,7 +16,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
-import { supabase } from "../../supabase";
+
 
 interface LandHistoryReportRow {
   id: number;
@@ -113,10 +113,7 @@ const JoLandHistoryReport: React.FC = () => {
   } | null>(null);
   const isActive = (path: string) => location.pathname === path;
 
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
+
 
   useEffect(() => {
     const fetchCurrentUser = async () => {

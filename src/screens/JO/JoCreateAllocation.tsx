@@ -1,4 +1,3 @@
-import { supabase } from "../../supabase";
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createAllocation } from "../../api";
@@ -9,12 +8,11 @@ import {
 import "../../assets/css/jo css/JoIncentStyle.css";
 import "../../assets/css/jo css/JoCreateAllocationStyle.css";
 import "../../components/layout/sidebarStyle.css";
+import IncentivesIcon from "../../assets/images/incentives.png";
 import LogoImage from "../../assets/images/Logo.png";
 import HomeIcon from "../../assets/images/home.png";
 import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
 
 type NumericInput = number | "";
 
@@ -284,10 +282,7 @@ const JoCreateAllocation: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
+
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -462,28 +457,6 @@ const JoCreateAllocation: React.FC = () => {
               <div className="nav-icon">📜</div>
               <span className="nav-text">Land History Report</span>
             </div>
-
-            <button className="sidebar-nav-item logout" onClick={handleLogout}>
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-
-            {currentUser && (
-              <div className="sidebar-current-user">
-                <div className="sidebar-current-user-avatar">
-                  {currentUser.firstName.charAt(0).toUpperCase()}
-                  {currentUser.lastName.charAt(0).toUpperCase()}
-                </div>
-                <div className="sidebar-current-user-info">
-                  <span className="sidebar-current-user-name">
-                    {currentUser.firstName} {currentUser.lastName}
-                  </span>
-                  <span className="sidebar-current-user-label">Logged in</span>
-                </div>
-              </div>
-            )}
           </nav>
         </div>
 

@@ -26,7 +26,7 @@ import {
   AuditModule,
 } from "../../components/Audit/auditLogger";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
-import { supabase } from "../../supabase";
+
 
 interface RSBSARecord {
   id: string;
@@ -184,13 +184,6 @@ const JoMasterlist: React.FC = () => {
     "Victorias",
   ].sort();
 
-  const cultivationReasonOptions = [
-    "Tenant/Lessee farming",
-    "Contract expired",
-    "Idle",
-    "Unknown",
-  ];
-
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -244,11 +237,6 @@ const JoMasterlist: React.FC = () => {
   } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
-
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {

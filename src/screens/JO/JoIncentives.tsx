@@ -19,7 +19,7 @@ import {
   EDIT_REGIONAL_FERTILIZER_FIELDS,
   EDIT_REGIONAL_SEED_FIELDS,
 } from "../../constants/joRegionalAllocationEditCatalog";
-import { supabase } from "../../supabase";
+
 
 interface RegionalAllocation {
   id: number;
@@ -184,11 +184,6 @@ const JoIncentives: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
-
   useEffect(() => {
     const fetchCurrentUser = async () => {
       const {
@@ -305,10 +300,6 @@ const JoIncentives: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number, season: string) => {
-    setDeleteConfirmation({ id, season });
-  };
-
   const confirmDelete = async () => {
     if (!deleteConfirmation) return;
 
@@ -360,10 +351,10 @@ const JoIncentives: React.FC = () => {
     return isNaN(total) ? 0 : total;
   };
 
+
   const handleEditAllocation = async (allocation: RegionalAllocation) => {
     setAddedFields(new Set());
     try {
-      // Fetch request count for this allocation
       const response = await getFarmerRequests(allocation.id, true);
       if (!response.error) {
         const requests = response.data || [];
@@ -754,34 +745,34 @@ const JoIncentives: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Card Footer Buttons */}
                     <div className="jo-incent-card-actions">
                       <button
-                        className="jo-incent-btn-action jo-incent-btn-view"
+                        className="jo-incent-btn-view"
                         onClick={() =>
-                          navigate(`/jo-view-allocation/${allocation.id}`)
+                          navigate(
+                            `/jo-manage-requests/${allocation.id}`,
+                          )
                         }
-                        title="View Details"
                       >
-                        👁️ View
-                      </button>
-
-                      <button
-                        className="jo-incent-btn-action jo-incent-btn-add"
-                        onClick={() =>
-                          navigate(`/jo-add-farmer-request/${allocation.id}`)
-                        }
-                        title="Add Farmer Request"
-                      >
-                        ➕ Add Request
+                        👁️ View Requests
                       </button>
                       <button
-                        className="jo-incent-btn-action jo-incent-btn-manage"
-                        onClick={() =>
-                          navigate(`/jo-manage-requests/${allocation.id}`)
-                        }
-                        title="Manage Requests"
+                        className="jo-incent-btn-edit"
+                        onClick={() => handleEditAllocation(allocation)}
                       >
-                        📋 Manage
+                        ✏️ Edit
+                      </button>
+                      <button
+                        className="jo-incent-btn-delete"
+                        onClick={() =>
+                          setDeleteConfirmation({
+                            id: allocation.id,
+                            season: allocation.season,
+                          })
+                        }
+                      >
+                        🗑️ Delete
                       </button>
                     </div>
                   </div>

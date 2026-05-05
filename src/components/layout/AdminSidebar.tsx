@@ -8,7 +8,6 @@ import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
 import InventoryIcon from "../../assets/images/distribution.png";
 import "./sidebarStyle.css";
-import { supabase } from "../../supabase";
 
 interface AdminSidebarProps {
   sidebarOpen: boolean;

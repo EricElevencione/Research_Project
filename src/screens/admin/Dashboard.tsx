@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../../assets/css/admin css/DashStyle.css";
 import "../../components/layout/sidebarStyle.css";
@@ -16,18 +16,8 @@ import {
   formatSeasonLabel,
 } from "../../hooks/useAdminDashboardStats";
 import AdminSidebar from "../../components/layout/AdminSidebar";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
-import { supabase } from "../../supabase";
-
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedAllocationId, setSelectedAllocationId] = useState<
     number | undefined
@@ -35,7 +25,6 @@ const Dashboard: React.FC = () => {
 
   const dashData = useAdminDashboardStats(selectedAllocationId);
 
-  const isActive = (path: string) => location.pathname === path;
 
   // Build farmer density map for the heatmap: barangay name -> farmer count
   const farmerDensityMap = useMemo(() => {
@@ -51,25 +40,11 @@ const Dashboard: React.FC = () => {
     return dashData.seasonComparison;
   }, [dashData.seasonComparison]);
 
-  // Heatmap legend items
-  const heatmapLegend = [
-    { color: "#ef4444", label: "0 farmers" },
-    { color: "#f97316", label: "1" },
-    { color: "#eab308", label: "2" },
-    { color: "#84cc16", label: "3-4" },
-    { color: "#22c55e", label: "5-8" },
-    { color: "#14532d", label: "8+" },
-  ];
-
   const selectedAllocationLabel = selectedAllocationId
     ? availableAllocations.find((a) => a.allocationId === selectedAllocationId)
       ?.label
     : undefined;
 
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
   return (
     <div className="admin-page-container">
       <div className="admin-dashboard-page has-mobile-sidebar">

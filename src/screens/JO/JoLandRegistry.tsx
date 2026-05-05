@@ -485,25 +485,6 @@ const JoLandRegistry: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const firstName = user.user_metadata?.first_name || "";
-        const lastName = user.user_metadata?.last_name || "";
-        setCurrentUser({ firstName, lastName });
-      }
-    };
-    fetchCurrentUser();
-  }, []);
-
   const refreshLandParcels = useCallback(async () => {
     setLoading(true);
     console.log("[FETCH START] Starting refresh...");

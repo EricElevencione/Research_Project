@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   getFarmParcels,
   getRsbsaSubmissionById,
@@ -10,12 +10,7 @@ import "../../assets/css/admin css/RSBSAStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
 import Analytics from "./Analytics";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
+
 import AdminSidebar from "../../components/layout/AdminSidebar";
 
 interface ParcelDetail {
@@ -75,8 +70,6 @@ interface RSBSARecord {
 }
 
 const RsbsaAdminPage: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const [activePage, setActivePage] = useState<"farmers" | "analytics">(
     "farmers",
@@ -95,7 +88,6 @@ const RsbsaAdminPage: React.FC = () => {
   const [barangayFilter, setBarangayFilter] = useState<string>("all");
   const [printingRecordId, setPrintingRecordId] = useState<string | null>(null);
 
-  const isActive = (path: string) => location.pathname === path;
 
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
     return records.filter(

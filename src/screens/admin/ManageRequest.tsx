@@ -63,7 +63,6 @@ interface AllocationDetails {
 
 const ManageRequests: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { allocationId } = useParams<{ allocationId: string }>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
@@ -102,7 +101,7 @@ const ManageRequests: React.FC = () => {
   const [, setAutoSuggestionsCount] = useState<number>(0);
   const [, setNewSuggestionsCount] = useState<number>(0);
 
-  const isActive = (path: string) => location.pathname === path;
+
   const normalizeStatus = (status: string | null | undefined) =>
     String(status ?? "")
       .trim()
@@ -116,7 +115,7 @@ const ManageRequests: React.FC = () => {
       return (
         sum +
         FERTILIZER_FIELD_MAPS.reduce((innerSum, map) => {
-          return innerSum + (Number(r[map.requestField]) || 0);
+          return innerSum + (Number((r as any)[map.requestField]) || 0);
         }, 0)
       );
     }, 0);
@@ -126,7 +125,7 @@ const ManageRequests: React.FC = () => {
       return (
         sum +
         SEED_FIELD_MAPS.reduce((innerSum, map) => {
-          return innerSum + (Number(r[map.requestField]) || 0);
+          return innerSum + (Number((r as any)[map.requestField]) || 0);
         }, 0)
       );
     }, 0);
@@ -139,10 +138,6 @@ const ManageRequests: React.FC = () => {
     [requests],
   );
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
 
   useEffect(() => {
     fetchAllocation();
@@ -963,7 +958,7 @@ const ManageRequests: React.FC = () => {
             <div>
               <h2 className="admin-manage-title">Manage Requests</h2>
               <p className="admin-manage-subtitle">
-                {formatSeasonName(allocation?.season)} · Regional Program
+                {formatSeasonName(allocation?.season || "")} · Regional Program
               </p>
             </div>
             <button
@@ -1024,7 +1019,7 @@ const ManageRequests: React.FC = () => {
                     <span className="admin-req-stat-value fertilizers">
                       {allocation
                         ? FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
-                            return sum + (Number(allocation[map.allocationField]) || 0);
+                            return sum + (Number((allocation as any)[map.allocationField]) || 0);
                           }, 0).toFixed(2)
                         : "0.00"}{" "}
                       bags
@@ -1037,7 +1032,7 @@ const ManageRequests: React.FC = () => {
                     <span className="admin-req-stat-value seeds">
                       {allocation
                         ? SEED_FIELD_MAPS.reduce((sum, map) => {
-                            return sum + (Number(allocation[map.allocationField]) || 0);
+                            return sum + (Number((allocation as any)[map.allocationField]) || 0);
                           }, 0).toFixed(2)
                         : "0.00"}{" "}
                       kg

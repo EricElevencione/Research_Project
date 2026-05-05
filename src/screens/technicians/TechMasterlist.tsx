@@ -4,7 +4,6 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
-  getTechDashboardData,
   updateRsbsaSubmission,
   updateFarmParcel, // ✅ add this
 } from "../../api";
@@ -73,15 +72,6 @@ interface ParcelDetail {
   cultivatorSubmissionId?: number | null;
 }
 
-interface UnplottedFarmerItem {
-  id: string;
-  farmerName: string;
-  referenceNumber: string;
-  barangay: string;
-  totalParcels: number;
-  plottedParcels: number;
-  unplottedParcels: number;
-}
 
 // Type declaration for Electron API exposed via preload
 declare global {
@@ -142,9 +132,7 @@ const TechMasterlist: React.FC = () => {
     [],
   );
   const [statusModalLoading, setStatusModalLoading] = useState(false);
-  const [parcelCultivationSelections, setParcelCultivationSelections] =
-    useState<Record<string, boolean>>({});
-  // true = not farming, false = still farming
+
   const [statusChangeReason, setStatusChangeReason] = useState("");
   const [currentUser, setCurrentUser] = useState<{
     firstName: string;
@@ -421,10 +409,7 @@ const TechMasterlist: React.FC = () => {
 
   const fetchRSBSARecords = async () => {
     try {
-      const [response, techDashboardResponse] = await Promise.all([
-        getRsbsaSubmissions(),
-        getTechDashboardData(),
-      ]);
+      const response = await getRsbsaSubmissions();
       if (response.error) throw new Error(response.error);
       const data = response.data;
 
@@ -603,27 +588,7 @@ const TechMasterlist: React.FC = () => {
     return "Unknown";
   };
 
-  const getOwnershipChipClass = (record: RSBSARecord) => {
-    const ownership = record.ownershipType;
-    if (!ownership) return "tech-masterlist-chip-unknown";
-    if (ownership.registeredOwner) return "tech-masterlist-chip-owner";
-    if (ownership.lessee && !ownership.tenant)
-      return "tech-masterlist-chip-lessee";
-    if (ownership.tenant) return "tech-masterlist-chip-tenant";
-    if (ownership.tenantLessee) return "tech-masterlist-chip-tenant";
-    return "tech-masterlist-chip-unknown";
-  };
 
-  const toggleStatus = (id: string) => {
-    const record = rsbsaRecords.find((r) => r.id === id);
-    if (!record) return;
-
-    const newStatus =
-      record.status === "Active Farmer" ? "Not Active" : "Active Farmer";
-    setStatusChangeTarget({ id, newStatus, farmerName: record.farmerName });
-    setStatusChangeReason("");
-    setShowStatusModal(true);
-  };
 
   const confirmStatusChange = async () => {
     if (!statusChangeTarget) return;
@@ -689,7 +654,6 @@ const TechMasterlist: React.FC = () => {
       setShowStatusModal(false);
       setStatusChangeTarget(null);
       setStatusModalParcels([]);
-      setParcelCultivationSelections({});
       setStatusChangeReason("");
     }
   };
@@ -1431,7 +1395,6 @@ const TechMasterlist: React.FC = () => {
                     setShowStatusModal(false);
                     setStatusChangeTarget(null);
                     setStatusModalParcels([]);
-                    setParcelCultivationSelections({});
                     setStatusChangeReason("");
                   }}
                 >
@@ -1507,7 +1470,6 @@ const TechMasterlist: React.FC = () => {
                     setShowStatusModal(false);
                     setStatusChangeTarget(null);
                     setStatusModalParcels([]);
-                    setParcelCultivationSelections({});
                     setStatusChangeReason("");
                   }}
                 >
