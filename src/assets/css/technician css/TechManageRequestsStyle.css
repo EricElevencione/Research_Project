@@ -48,6 +48,12 @@
   margin: 0 0 20px 0;
 }
 
+.tech-req-dashboard-title {
+  font-weight: 600;
+  font-size: 28px;
+  color: #111827;
+}
+
 /* Content Card */
 .content-card-incent {
   background-color: white;
@@ -2907,7 +2913,9 @@
   padding: 2rem;
   width: 90%;
   max-width: 400px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   text-align: center;
   animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -2998,8 +3006,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalSlideUp {
