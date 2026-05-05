@@ -20,7 +20,6 @@ import {
   EDIT_REGIONAL_SEED_FIELDS,
 } from "../../constants/joRegionalAllocationEditCatalog";
 
-
 interface RegionalAllocation {
   id: number;
   season: string;
@@ -350,7 +349,6 @@ const JoIncentives: React.FC = () => {
     );
     return isNaN(total) ? 0 : total;
   };
-
 
   const handleEditAllocation = async (allocation: RegionalAllocation) => {
     setAddedFields(new Set());
@@ -750,29 +748,10 @@ const JoIncentives: React.FC = () => {
                       <button
                         className="jo-incent-btn-view"
                         onClick={() =>
-                          navigate(
-                            `/jo-manage-requests/${allocation.id}`,
-                          )
+                          navigate(`/jo-manage-requests/${allocation.id}`)
                         }
                       >
                         👁️ View Requests
-                      </button>
-                      <button
-                        className="jo-incent-btn-edit"
-                        onClick={() => handleEditAllocation(allocation)}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        className="jo-incent-btn-delete"
-                        onClick={() =>
-                          setDeleteConfirmation({
-                            id: allocation.id,
-                            season: allocation.season,
-                          })
-                        }
-                      >
-                        🗑️ Delete
                       </button>
                     </div>
                   </div>

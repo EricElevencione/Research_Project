@@ -2251,23 +2251,22 @@ const TechManageRequests: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
-            {/* Current User — inside nav, at the bottom */}
-            {currentUser && (
-              <div className="sidebar-current-user">
-                <div className="sidebar-current-user-avatar">
-                  {currentUser.firstName.charAt(0).toUpperCase()}
-                  {currentUser.lastName.charAt(0).toUpperCase()}
-                </div>
-                <div className="sidebar-current-user-info">
-                  <span className="sidebar-current-user-name">
-                    {currentUser.firstName} {currentUser.lastName}
-                  </span>
-                  <span className="sidebar-current-user-label">Logged in</span>
-                </div>
-              </div>
-            )}
           </nav>
+          {/* Current User — inside nav, at the bottom */}
+          {currentUser && (
+            <div className="sidebar-current-user">
+              <div className="sidebar-current-user-avatar">
+                {currentUser.firstName.charAt(0).toUpperCase()}
+                {currentUser.lastName.charAt(0).toUpperCase()}
+              </div>
+              <div className="sidebar-current-user-info">
+                <span className="sidebar-current-user-name">
+                  {currentUser.firstName} {currentUser.lastName}
+                </span>
+                <span className="sidebar-current-user-label">Logged in</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div
@@ -2926,12 +2925,8 @@ const TechManageRequests: React.FC = () => {
                                         >
                                           Approve
                                         </button>
-
-
                                       </>
                                     )}
-
-
 
                                     <button
                                       type="button"
@@ -3042,8 +3037,6 @@ const TechManageRequests: React.FC = () => {
                         })}
                       </tbody>
                     </table>
-
-
                   </div>
                 )}
               </>

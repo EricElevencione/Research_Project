@@ -778,9 +778,7 @@ const JoAddFarmerRequest: React.FC = () => {
       selectedSeedKeys.some((field) => Number(formData[field]) > 0);
 
     if (!hasAtLeastOneItem) {
-      setError(
-        "Please add at least one fertilizer or seed.",
-      );
+      setError("Please add at least one fertilizer or seed.");
       return;
     }
 
@@ -1173,22 +1171,21 @@ const JoAddFarmerRequest: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
-            {currentUser && (
-              <div className="sidebar-current-user">
-                <div className="sidebar-current-user-avatar">
-                  {currentUser.firstName.charAt(0).toUpperCase()}
-                  {currentUser.lastName.charAt(0).toUpperCase()}
-                </div>
-                <div className="sidebar-current-user-info">
-                  <span className="sidebar-current-user-name">
-                    {currentUser.firstName} {currentUser.lastName}
-                  </span>
-                  <span className="sidebar-current-user-label">Logged in</span>
-                </div>
-              </div>
-            )}
           </nav>
+          {currentUser && (
+            <div className="sidebar-current-user">
+              <div className="sidebar-current-user-avatar">
+                {currentUser.firstName.charAt(0).toUpperCase()}
+                {currentUser.lastName.charAt(0).toUpperCase()}
+              </div>
+              <div className="sidebar-current-user-info">
+                <span className="sidebar-current-user-name">
+                  {currentUser.firstName} {currentUser.lastName}
+                </span>
+                <span className="sidebar-current-user-label">Logged in</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="jo-add-farmer-main-content">
@@ -1335,17 +1332,19 @@ const JoAddFarmerRequest: React.FC = () => {
                           <span>Entered</span>
                           <span>Remaining</span>
                         </div>
-                        {fertilizerSummaryItems.map((item) => (
-                          <div
-                            key={item.label}
-                            className={`jo-add-farmer-summary-row ${item.remaining < 0 ? "is-warning" : ""}`}
-                          >
-                            <span>{item.label}</span>
-                            <span>{formatSummaryValue(item.allocated)}</span>
-                            <span>{formatSummaryValue(item.requested)}</span>
-                            <span>{formatSummaryValue(item.remaining)}</span>
-                          </div>
-                        ))}
+                        {fertilizerSummaryItems
+                          .filter((item) => item.allocated > 0)
+                          .map((item) => (
+                            <div
+                              key={item.label}
+                              className={`jo-add-farmer-summary-row ${item.remaining < 0 ? "is-warning" : ""}`}
+                            >
+                              <span>{item.label}</span>
+                              <span>{formatSummaryValue(item.allocated)}</span>
+                              <span>{formatSummaryValue(item.requested)}</span>
+                              <span>{formatSummaryValue(item.remaining)}</span>
+                            </div>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -1362,17 +1361,19 @@ const JoAddFarmerRequest: React.FC = () => {
                           <span>Entered</span>
                           <span>Remaining</span>
                         </div>
-                        {seedSummaryItems.map((item) => (
-                          <div
-                            key={item.label}
-                            className={`jo-add-farmer-summary-row ${item.remaining < 0 ? "is-warning" : ""}`}
-                          >
-                            <span>{item.label}</span>
-                            <span>{formatSummaryValue(item.allocated)}</span>
-                            <span>{formatSummaryValue(item.requested)}</span>
-                            <span>{formatSummaryValue(item.remaining)}</span>
-                          </div>
-                        ))}
+                        {seedSummaryItems
+                          .filter((item) => item.allocated > 0)
+                          .map((item) => (
+                            <div
+                              key={item.label}
+                              className={`jo-add-farmer-summary-row ${item.remaining < 0 ? "is-warning" : ""}`}
+                            >
+                              <span>{item.label}</span>
+                              <span>{formatSummaryValue(item.allocated)}</span>
+                              <span>{formatSummaryValue(item.requested)}</span>
+                              <span>{formatSummaryValue(item.remaining)}</span>
+                            </div>
+                          ))}
                       </div>
                     </div>
                   )}
