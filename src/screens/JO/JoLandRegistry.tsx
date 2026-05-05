@@ -14,6 +14,11 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 // Interfaces
 
@@ -1484,6 +1489,26 @@ const JoLandRegistry: React.FC = () => {
         `${ownerAffiliationRoleLabel} update complete: ${successParts.join(" and ")}.`,
       );
 
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "UPDATE",
+          AuditModule.LAND_HISTORY,
+          "owner_affiliation_update",
+          `${holderFarmerId}`,
+          `Updated ${ownerAffiliationRoleLabel} landowner for ${selectedFarmer?.farmer_name || "Unknown"} — from ${selectedOwnerAffiliationSource?.ownerName || "Unknown"} to ${selectedOwnerAffiliationNewOwner?.ownerName || "Unknown"}`,
+          { previousOwnerId: activeOwnerAffiliationSourceOwnerId },
+          {
+            newOwnerId,
+            role: ownerAffiliationRole,
+            parcelCount: ownerAffiliationTakeoverPlan.selectedParcelCount,
+          },
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
+
       await refreshLandParcels();
       if (selectedFarmer.parcels.length > 0) {
         await fetchParcelHistoryForIds(selectedFarmer.parcels.map((p) => p.id));
@@ -2891,6 +2916,26 @@ const JoLandRegistry: React.FC = () => {
         setTransferSubmitSuccess(
           `Transfer submitted successfully${transferId ? ` (ID: ${transferId})` : ""}.`,
         );
+
+        try {
+          const user = await getCurrentUserForAudit();
+          await getAuditLogger().logCRUD(
+            { ...user, id: undefined },
+            "UPDATE",
+            AuditModule.LAND_PLOTS,
+            "ownership_transfer",
+            `${donorFarmerId}-to-${toFarmerId}`,
+            `Transferred ownership from ${selectedSource?.name || "Unknown"} to ${selectedContextFarmerName} (${transferMode})`,
+            { fromFarmerId: donorFarmerId, transferMode },
+            {
+              toFarmerId,
+              totalAreaHa: partialTotalTransferAreaHa,
+              parcelCount: donorSplitParcels.length,
+            },
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed (non-blocking):", auditErr);
+        }
       }
 
       const transferredParcelIds = donorSplitParcels

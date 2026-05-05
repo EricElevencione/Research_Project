@@ -1556,6 +1556,33 @@
   word-break: break-word;
 }
 
+.admin-audit-td-user {
+  min-width: 140px;
+}
+
+.admin-audit-user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-audit-user-display-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+
+.admin-audit-user-role-badge {
+  font-size: 11px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 8px;
+  display: inline-block;
+  width: fit-content;
+  text-transform: capitalize;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .admin-audit-charts-row {

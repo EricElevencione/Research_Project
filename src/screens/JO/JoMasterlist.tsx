@@ -21,6 +21,11 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 import { supabase } from "../../supabase";
 
 interface RSBSARecord {
@@ -1076,6 +1081,19 @@ const JoMasterlist: React.FC = () => {
         "error",
       );
     }
+    if (result.success) {
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logExport(
+          { ...user, id: undefined },
+          AuditModule.FARMERS,
+          "RSBSA Form Print",
+          1,
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
+    }
 
     setPrintingRecordIds((previous) => {
       const next = new Set(previous);
@@ -1119,6 +1137,17 @@ const JoMasterlist: React.FC = () => {
     }
 
     showUpdateNotification("Selected RSBSA forms sent to print.", "success");
+    try {
+      const user = await getCurrentUserForAudit();
+      await getAuditLogger().logExport(
+        { ...user, id: undefined },
+        AuditModule.FARMERS,
+        "Bulk RSBSA Form Print",
+        selectedRecords.length,
+      );
+    } catch (auditErr) {
+      console.error("Audit log failed (non-blocking):", auditErr);
+    }
   };
 
   const handleModalPrint = async () => {
@@ -1827,6 +1856,24 @@ const JoMasterlist: React.FC = () => {
           "Land owner information updated successfully.",
           "success",
         );
+        try {
+          const user = await getCurrentUserForAudit();
+          await getAuditLogger().logCRUD(
+            { ...user, id: undefined },
+            "UPDATE",
+            AuditModule.FARMERS,
+            "farmer_record",
+            editingRecord.id,
+            `Updated farmer record: ${editingRecord.farmerName}`,
+            { farmerName: editingRecord.farmerName },
+            {
+              updatedName: composedFarmerName,
+              parcelCount: editingParcels.length,
+            },
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed (non-blocking):", auditErr);
+        }
       } catch (error) {
         console.error("Error updating record:", error);
         const message =
