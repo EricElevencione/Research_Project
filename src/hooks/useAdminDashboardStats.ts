@@ -206,7 +206,7 @@ export const useAdminDashboardStats = (
 
       // Fulfillment rate: all-time — approved+distributed / all requests ever
       const fulfilledRequests = requests.filter(
-        (r: any) => r.status === "approved" || r.status === "distributed",
+        (r: any) => r.status === "approved" || r.status === "Claimed" || r.status === "NOT_CLAIMED" || r.status === "distributed",
       ).length;
       const fulfillmentRate =
         requests.length > 0
@@ -294,7 +294,7 @@ export const useAdminDashboardStats = (
             totalDistributed: fertilizerDistributed + seedsDistributed,
             totalRequests: allocReqs.length,
             approvedRequests: allocReqs.filter(
-              (r: any) => r.status === "approved" || r.status === "distributed",
+              (r: any) => r.status === "approved" || r.status === "Claimed" || r.status === "NOT_CLAIMED" || r.status === "distributed",
             ).length,
             distributedRequests: allocReqs.filter(
               (r: any) => r.status === "distributed",
@@ -370,7 +370,7 @@ export const useAdminDashboardStats = (
       // ── Subsidy & Request Stats ───────────────────────────
       const requestStats: RequestStats = {
         pending: requests.filter((r: any) => r.status === "pending").length,
-        approved: requests.filter((r: any) => r.status === "approved").length,
+        approved: requests.filter((r: any) => r.status === "approved" || r.status === "Claimed" || r.status === "NOT_CLAIMED").length,
         distributed: requests.filter((r: any) => r.status === "distributed")
           .length,
         rejected: requests.filter((r: any) => r.status === "rejected").length,

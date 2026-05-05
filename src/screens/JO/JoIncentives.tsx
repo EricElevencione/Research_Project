@@ -753,6 +753,12 @@ const JoIncentives: React.FC = () => {
                       >
                         👁️ View Requests
                       </button>
+                      <button
+                        className="jo-incent-btn-edit"
+                        onClick={() => handleEditAllocation(allocation)}
+                      >
+                        ✏️ Edit
+                      </button>
                     </div>
                   </div>
                 ))}

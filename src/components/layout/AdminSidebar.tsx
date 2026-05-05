@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LogoImage from "../../assets/images/Logo.png";
 import HomeIcon from "../../assets/images/home.png";
@@ -7,6 +7,7 @@ import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
 import InventoryIcon from "../../assets/images/distribution.png";
+import { supabase } from "../../supabase";
 import "./sidebarStyle.css";
 
 interface AdminSidebarProps {
@@ -17,8 +18,23 @@ interface AdminSidebarProps {
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [currentUser, setCurrentUser] = useState<{ firstName: string; lastName: string } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
@@ -68,8 +84,22 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ sidebarOpen, setSidebarOpen
             </span>
             <span className="nav-text">Logout</span>
           </button>
-
         </nav>
+
+        {currentUser && (
+          <div className="sidebar-current-user">
+            <div className="sidebar-current-user-avatar">
+              {currentUser.firstName.charAt(0).toUpperCase()}
+              {currentUser.lastName.charAt(0).toUpperCase()}
+            </div>
+            <div className="sidebar-current-user-info">
+              <span className="sidebar-current-user-name">
+                {currentUser.firstName} {currentUser.lastName}
+              </span>
+              <span className="sidebar-current-user-label">Logged in</span>
+            </div>
+          </div>
+        )}
       </div>
       <div
         className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}

@@ -970,7 +970,7 @@ const JoManageRequests: React.FC = () => {
     seeds: sumRequestFields(request, SEED_REQUEST_FIELDS),
   });
 
-  const getStatusTotals = (status: "approved" | "rejected") => {
+  const getStatusTotals = (status: "Claimed" | "rejected") => {
     const statusRequests = requests.filter((r) => r.status === status);
     return {
       fertilizer: sumRequestFieldsForList(
@@ -1087,7 +1087,7 @@ const JoManageRequests: React.FC = () => {
       const alreadyRequested = requestsList
         .filter(
           (r) =>
-            (r.status === "approved" || r.status === "pending") &&
+            (r.status === "Claimed" || r.status === "approved" || r.status === "pending") &&
             r.id !== request.id,
         )
         .reduce((sum, r) => sum + (Number(r[item.requestField]) || 0), 0);
@@ -1453,7 +1453,7 @@ const JoManageRequests: React.FC = () => {
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
+                <option value="Claimed">Claimed</option>
                 <option value="rejected">Rejected</option>
               </select>
               <select
@@ -1564,7 +1564,7 @@ const JoManageRequests: React.FC = () => {
               </div>
 
               {/* Approved Farmer Requests Card */}
-              <div className="jo-manage-requests-comparison-card jo-manage-requests-approved-card">
+              <div className="jo-manage-requests-comparison-card jo-manage-requests-Claimed-card">
                 <h3 className="jo-manage-requests-card-header farmer-requests">
                   <svg
                     width="16"
@@ -1578,7 +1578,7 @@ const JoManageRequests: React.FC = () => {
                   >
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  Approved Requests
+                  Claimed Requests
                 </h3>
                 <div className="jo-manage-requests-card-content">
                   <div className="jo-manage-requests-stat-box fertilizers">
@@ -1586,7 +1586,7 @@ const JoManageRequests: React.FC = () => {
                       Total Fertilizers
                     </span>
                     <span className="jo-manage-requests-stat-value fertilizers">
-                      {getStatusTotals("approved").fertilizer.toFixed(2)} bags
+                      {getStatusTotals("Claimed").fertilizer.toFixed(2)} bags
                     </span>
                   </div>
                   <div className="jo-manage-requests-stat-box seeds">
@@ -1594,7 +1594,7 @@ const JoManageRequests: React.FC = () => {
                       Total Seeds
                     </span>
                     <span className="jo-manage-requests-stat-value seeds">
-                      {getStatusTotals("approved").seeds.toFixed(2)} kg
+                      {getStatusTotals("Claimed").seeds.toFixed(2)} kg
                     </span>
                   </div>
                 </div>
@@ -1661,7 +1661,7 @@ const JoManageRequests: React.FC = () => {
               </div>
 
               {/* Approved Requests */}
-              <div className="jo-manage-requests-summary-card jo-manage-card-approved">
+              <div className="jo-manage-requests-summary-card jo-manage-card-Claimed">
                 <div className="jo-manage-card-icon">
                   <svg
                     width="20"
@@ -1680,11 +1680,11 @@ const JoManageRequests: React.FC = () => {
                 <div className="jo-manage-card-info">
                   <div className="jo-manage-card-count">
                     {
-                      filteredRequests.filter((r) => r.status === "approved")
-                        .length
+                        filteredRequests.filter((r) => r.status === "Claimed" || r.status === "approved")
+                          .length
                     }
                   </div>
-                  <div className="jo-manage-card-label">Approved Requests</div>
+                  <div className="jo-manage-card-label">Claimed Requests</div>
                 </div>
               </div>
 
@@ -1859,27 +1859,8 @@ const JoManageRequests: React.FC = () => {
                               <td
                                 style={{ padding: "12px", textAlign: "center" }}
                               >
-                                <span
-                                  style={{
-                                    padding: "4px 12px",
-                                    borderRadius: "12px",
-                                    fontSize: "12px",
-                                    fontWeight: "600",
-                                    background:
-                                      request.status === "pending"
-                                        ? "#fef3c7"
-                                        : request.status === "approved"
-                                          ? "#d1fae5"
-                                          : "#fee2e2",
-                                    color:
-                                      request.status === "pending"
-                                        ? "#92400e"
-                                        : request.status === "approved"
-                                          ? "#065f46"
-                                          : "#991b1b",
-                                  }}
-                                >
-                                  {request.status.toUpperCase()}
+                                <span className={`jo-manage-requests-status-badge ${request.status}`}>
+                                  {request.status === "approved" ? "CLAIMED" : request.status.toUpperCase()}
                                 </span>
                               </td>
                               <td

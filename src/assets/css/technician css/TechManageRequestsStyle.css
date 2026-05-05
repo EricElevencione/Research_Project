@@ -279,11 +279,11 @@
   color: #f59e0b;
 }
 
-.tech-manage-card-approved {
+.tech-manage-card-Claimed {
   border-left-color: #10b981;
 }
 
-.tech-manage-card-approved .tech-manage-card-icon {
+.tech-manage-card-Claimed .tech-manage-card-icon {
   color: #10b981;
 }
 
@@ -408,28 +408,48 @@
   text-align: center;
 }
 
-/* Status Badge */
+/* Status Badge - Premium Refinement */
 .tech-manage-requests-status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .tech-manage-requests-status-badge.tech-manage-requests-status-pending {
-  background: #fef3c7;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
   color: #92400e;
+  border-color: #fde68a;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
 }
 
-.tech-manage-requests-status-badge.tech-manage-requests-status-approved {
-  background: #d1fae5;
+.tech-manage-requests-status-badge.tech-manage-requests-status-Claimed,
+.tech-manage-requests-status-badge.tech-manage-requests-status-approved,
+.tech-manage-requests-status-badge.tech-manage-requests-status-NOT_CLAIMED {
+  background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
   color: #065f46;
+  border-color: #a7f3d0;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
 }
 
 .tech-manage-requests-status-badge.tech-manage-requests-status-rejected {
-  background: #fee2e2;
+  background: linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%);
   color: #991b1b;
+  border-color: #fecaca;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+}
+
+.tech-manage-requests-status-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* Shortage Badge */
