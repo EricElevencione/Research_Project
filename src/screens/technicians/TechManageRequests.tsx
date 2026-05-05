@@ -24,6 +24,11 @@ import ApproveIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
 import { supabase } from "../../supabase";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 interface FarmerRequest {
   id: number;
@@ -780,6 +785,19 @@ const TechManageRequests: React.FC = () => {
         showToast("Request deleted successfully", "success");
         closeDeleteDialog();
         fetchRequests();
+        try {
+          const user = await getCurrentUserForAudit();
+          await getAuditLogger().logCRUD(
+            { ...user, id: undefined },
+            "DELETE",
+            AuditModule.REQUESTS,
+            "farmer_request",
+            deleteDialog.requestId,
+            `Deleted farmer request for ${deleteDialog.farmerName}`,
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed (non-blocking):", auditErr);
+        }
       } else {
         showToast("Failed to delete request", "error");
       }
@@ -820,6 +838,19 @@ const TechManageRequests: React.FC = () => {
               ? "warning"
               : "success",
         );
+        try {
+          const user = await getCurrentUserForAudit();
+          await getAuditLogger().logCRUD(
+            { ...user, id: undefined }, // ← user must be here
+            "UPDATE",
+            AuditModule.REQUESTS,
+            "farmer_request",
+            id,
+            `${newStatus === "approved" ? "Approved" : newStatus === "rejected" ? "Rejected" : "Updated"} farmer request${reason ? ` — Reason: ${reason}` : ""}`,
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed (non-blocking):", auditErr);
+        }
         fetchRequests();
       } else {
         showToast("Failed to update status", "error");
@@ -979,6 +1010,21 @@ const TechManageRequests: React.FC = () => {
       setEditFormData({});
 
       showToast("Request updated successfully!", "success");
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "UPDATE",
+          AuditModule.REQUESTS,
+          "farmer_request",
+          editingRequest,
+          `Updated farmer request for ${originalRequest.farmer_name}`,
+          { season: originalRequest.season },
+          { updatedFields: Object.keys(editFormData) },
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
 
       // Refresh from backend to ensure data consistency
       await fetchRequests();
