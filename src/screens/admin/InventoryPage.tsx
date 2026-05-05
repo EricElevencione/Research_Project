@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAdminDashboardStats, SubsidyStock } from "../../hooks/useAdminDashboardStats";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import { 
@@ -10,10 +11,11 @@ import {
   Search,
   ArrowUpRight
 } from "lucide-react";
-import "../../assets/css/admin css/AdminViewAllocation.css"; // Reuse similar styling
+import "../../assets/css/admin css/AdminViewAllocation.css";
 import "./InventoryPage.css";
 
 const InventoryPage: React.FC = () => {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dashData = useAdminDashboardStats();
@@ -37,10 +39,6 @@ const InventoryPage: React.FC = () => {
     data.forEach(item => {
       const name = item.name.toLowerCase();
       
-      // Determine if it's a seed or fertilizer based on unit or name hints
-      // From shortageFieldMaps: seeds are generally kg, fertilizers are bags/liters
-      // However, our SubsidyStock doesn't have the original unit, so we check name hints
-      
       const isLiquid = name.includes("liquid") || name.includes("liters") || name.includes("foliar") || name.includes("biofertilizer");
       const isFertilizer = name.includes("urea") || name.includes("complete") || name.includes("sulfate") || name.includes("potash") || name.includes("manure") || name.includes("compost") || isLiquid;
       
@@ -51,7 +49,6 @@ const InventoryPage: React.FC = () => {
           result.fertilizers.solid.push(item);
         }
       } else {
-        // Assume seed
         const isHybrid = hybridKeywords.some(keyword => item.name.includes(keyword));
         if (isHybrid) {
           result.seeds.hybrid.push(item);
@@ -84,6 +81,7 @@ const InventoryPage: React.FC = () => {
             <tr>
               <th>Item Name</th>
               <th>Allocated</th>
+              <th>Requested</th>
               <th>Distributed</th>
               <th>Remaining</th>
               <th>Stock</th>
@@ -92,7 +90,7 @@ const InventoryPage: React.FC = () => {
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="inventory-empty">No items found in this category</td>
+                <td colSpan={6} className="inventory-empty">No items found in this category</td>
               </tr>
             ) : (
               items.map((item, idx) => {
@@ -104,6 +102,7 @@ const InventoryPage: React.FC = () => {
                   <tr key={idx}>
                     <td className="item-name-cell">{item.name}</td>
                     <td>{item.allocated.toLocaleString()}</td>
+                    <td className="requested-cell">{item.requested.toLocaleString()}</td>
                     <td>{item.distributed.toLocaleString()}</td>
                     <td className={`remaining-cell ${isOut ? 'out' : isLow ? 'low' : ''}`}>
                       {item.remaining.toLocaleString()}

@@ -45,6 +45,7 @@ export interface BarangayDensity {
 export interface SubsidyStock {
   name: string;
   allocated: number;
+  requested: number;
   distributed: number;
   remaining: number;
 }
@@ -147,7 +148,7 @@ export const useAdminDashboardStats = (
           ),
         supabase
           .from("farmer_requests")
-          .select("id, status, season, allocation_id, created_at"),
+          .select("*"),
         supabase.from("regional_allocations").select("*"),
         supabase
           .from("distribution_records")
@@ -378,7 +379,7 @@ export const useAdminDashboardStats = (
       };
 
       // Calculate totals for allocated vs distributed across all seasons
-      const subsidyMap = new Map<string, { allocated: number; distributed: number }>();
+      const subsidyMap = new Map<string, { allocated: number; requested: number; distributed: number }>();
 
       // Allocated amounts (sum across all regional_allocations)
       allocations.forEach((a: any) => {
@@ -386,43 +387,48 @@ export const useAdminDashboardStats = (
         fields.forEach(field => {
           const val = Number(a[field]) || 0;
           if (val > 0) {
-            const current = subsidyMap.get(field) || { allocated: 0, distributed: 0 };
+            const current = subsidyMap.get(field) || { allocated: 0, requested: 0, distributed: 0 };
             subsidyMap.set(field, { ...current, allocated: current.allocated + val });
           }
         });
       });
 
-      // Distributed amounts (sum across distribution_records)
-      distributions.forEach((d: any) => {
-          // This is a bit tricky because distribution_records uses fertilizer_bags_given and seed_kg_given
-          // instead of specific item fields. We'd need to link back to the request to know WHICH item was given.
-          // For now, let's group by general category if itemized data isn't readily available in the record.
-          // Better: just use the request to find the items that were distributed.
-          const req = requests.find((r: any) => r.id === d.request_id);
-          if (req && req.status === 'distributed') {
-              // Approximate distribution based on what was requested if specific item isn't in distribution_record
-              // In this system, if status is 'distributed', it means the requested items were given.
-              const reqFields = Object.keys(req).filter(k => k.startsWith('requested_'));
-              reqFields.forEach(rf => {
-                  // Mapping requested_ fields back to allocation fields
-                  let allocField = rf.replace('requested_', '');
-                  if (allocField === 'complete_14_bags') allocField = 'complete_14_14_14_bags';
-                  if (allocField === 'ammonium_sulfate_bags') allocField = 'ammonium_sulfate_21_0_0_bags';
-                  if (allocField === 'muriate_potash_bags') allocField = 'muriate_potash_0_0_60_bags';
-                  if (allocField === 'urea_bags') allocField = 'urea_46_0_0_bags';
+      // Requested vs Distributed amounts
+      // We iterate over requests to get the total demand (requested)
+      requests.forEach((req: any) => {
+        const reqFields = Object.keys(req).filter(k => k.startsWith('requested_'));
+        reqFields.forEach(rf => {
+          let allocField = rf.replace('requested_', '');
+          // Mapping requested_ fields back to allocation fields
+          if (allocField === 'complete_14_bags') allocField = 'complete_14_14_14_bags';
+          if (allocField === 'ammonium_sulfate_bags') allocField = 'ammonium_sulfate_21_0_0_bags';
+          if (allocField === 'muriate_potash_bags') allocField = 'muriate_potash_0_0_60_bags';
+          if (allocField === 'urea_bags') allocField = 'urea_46_0_0_bags';
+          if (allocField === 'ammonium_phosphate_bags') allocField = 'np_16_20_0_bags';
+          if (allocField === 'complete_16_bags') allocField = 'complete_16_16_16_bags';
 
-                  const val = Number((req as any)[rf]) || 0;
-                  if (val > 0) {
-                      const current = subsidyMap.get(allocField) || { allocated: 0, distributed: 0 };
-                      subsidyMap.set(allocField, { ...current, distributed: current.distributed + val });
-                  }
-              });
+          const val = Number((req as any)[rf]) || 0;
+          if (val > 0) {
+            const current = subsidyMap.get(allocField) || { allocated: 0, requested: 0, distributed: 0 };
+            
+            // Add to requested total regardless of status (demand)
+            current.requested += val;
+
+            // Add to distributed if status is claimed/distributed (given)
+            const status = (req.status || "").toLowerCase();
+            if (status === 'distributed' || status === 'claimed' || status === 'not_claimed') {
+              current.distributed += val;
+            }
+            
+            subsidyMap.set(allocField, { ...current });
           }
+        });
       });
 
       const subsidyBreakdown: SubsidyStock[] = Array.from(subsidyMap.entries()).map(([field, val]) => ({
         name: field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         allocated: val.allocated,
+        requested: val.requested,
         distributed: val.distributed,
         remaining: Math.max(0, val.allocated - val.distributed),
       })).sort((a, b) => b.allocated - a.allocated);

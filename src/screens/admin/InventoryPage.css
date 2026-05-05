@@ -189,6 +189,11 @@
     color: #0f172a;
 }
 
+.requested-cell {
+    color: #64748b;
+    font-weight: 500;
+}
+
 .remaining-cell.low { color: #d97706; font-weight: 700; }
 .remaining-cell.out { color: #dc2626; font-weight: 700; }
 
@@ -238,5 +243,187 @@
     }
     .inventory-search-box {
         width: 100%;
+    }
+}
+
+/* Regional Allocation Activity Styles */
+.visuals-section {
+    margin-bottom: 3rem;
+}
+
+.section-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.section-header-hint {
+    font-size: 0.85rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.allocation-activity-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
+}
+
+.allocation-trends-card, .recent-activity-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.card-header-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+    color: #0f172a;
+}
+
+.card-header-with-icon h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.card-header-with-icon svg {
+    color: #16a34a;
+}
+
+.chart-container-small {
+    height: 300px;
+    width: 100%;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activity-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+    transition: all 0.2s;
+}
+
+.activity-item:hover {
+    background: white;
+    border-color: #16a34a;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.activity-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f0fdf4;
+    color: #16a34a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.activity-primary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.activity-season {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1e293b;
+}
+
+.activity-date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.activity-secondary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.activity-view-btn {
+    background: transparent;
+    border: none;
+    color: #16a34a;
+    font-weight: 600;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.activity-view-btn:hover {
+    background: #f0fdf4;
+}
+
+.empty-activity {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.inventory-btn-register {
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.2);
+}
+
+.inventory-btn-register:hover {
+    background: #15803d;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px -1px rgba(22, 163, 74, 0.3);
+}
+
+@media (max-width: 1100px) {
+    .allocation-activity-grid {
+        grid-template-columns: 1fr;
     }
 }
