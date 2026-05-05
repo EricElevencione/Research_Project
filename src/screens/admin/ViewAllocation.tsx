@@ -153,8 +153,7 @@ const ViewAllocation: React.FC = () => {
   const overviewStats = useMemo(() => {
     if (!allocation) {
       return {
-        approved: 0,
-        rejected: 0,
+        claimed: 0,
         pending: 0,
         totalFertilizerAllocated: 0,
         totalSeedsAllocated: 0,
@@ -162,11 +161,11 @@ const ViewAllocation: React.FC = () => {
     }
 
     return {
-      approved: requests.filter((request) => request.status === "approved")
-        .length,
-      rejected: requests.filter((request) => request.status === "rejected")
-        .length,
-      pending: requests.filter((request) => request.status === "pending")
+      claimed: requests.filter((request) => {
+        const s = (request.status || "").toLowerCase();
+        return s === "approved" || s === "claimed" || s === "distributed";
+      }).length,
+      pending: requests.filter((request) => (request.status || "").toLowerCase() === "pending")
         .length,
       totalFertilizerAllocated: FERTILIZER_FIELD_MAPS.reduce(
         (sum, fertilizer) => {
@@ -353,9 +352,9 @@ const ViewAllocation: React.FC = () => {
                 <CheckCircle size={20} />
               </div>
               <div className="admin-viewalloc-kpi-content">
-                <div className="admin-viewalloc-kpi-label">Approved</div>
+                <div className="admin-viewalloc-kpi-label">Claimed</div>
                 <div className="admin-viewalloc-kpi-value">
-                  {formatCount(overviewStats.approved)}
+                  {formatCount(overviewStats.claimed)}
                 </div>
               </div>
             </div>
@@ -367,17 +366,6 @@ const ViewAllocation: React.FC = () => {
                 <div className="admin-viewalloc-kpi-label">Pending</div>
                 <div className="admin-viewalloc-kpi-value">
                   {formatCount(overviewStats.pending)}
-                </div>
-              </div>
-            </div>
-            <div className="admin-viewalloc-kpi-card rejected">
-              <div className="admin-viewalloc-kpi-icon">
-                <AlertCircle size={20} />
-              </div>
-              <div className="admin-viewalloc-kpi-content">
-                <div className="admin-viewalloc-kpi-label">Rejected</div>
-                <div className="admin-viewalloc-kpi-value">
-                  {formatCount(overviewStats.rejected)}
                 </div>
               </div>
             </div>
