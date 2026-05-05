@@ -15,6 +15,11 @@ import {
   getRsbsaSubmissionById,
   getFarmParcels,
 } from "../../api";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 // interfaces unchanged...
 interface LandAttributes {
@@ -118,12 +123,12 @@ const LandPlottingPage: React.FC = () => {
     message: string;
     type: "success" | "error";
   } | null>(null);
-  
+
   const [currentUser, setCurrentUser] = useState<{
-      firstName: string;
-      lastName: string;
-    } | null>(null);
-  
+    firstName: string;
+    lastName: string;
+  } | null>(null);
+
   // Only validate location/parcel fields - personal info is already validated in RSBSA registration
   const requiredFields: (keyof LandAttributes)[] = [
     "barangay",
@@ -460,6 +465,27 @@ const LandPlottingPage: React.FC = () => {
         next.add(String(shapeToSave.id));
         return next;
       });
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          isExisting ? "UPDATE" : "CREATE",
+          AuditModule.LAND_PLOTS,
+          "land_plot",
+          shapeToSave.id,
+          `${isExisting ? "Updated" : "Created"} land plot for ${landAttributes.firstName} ${landAttributes.surname} — Parcel ${landAttributes.parcelNumber ?? "N/A"} in ${landAttributes.barangay}, ${landAttributes.municipality}`,
+          undefined,
+          {
+            barangay: landAttributes.barangay,
+            municipality: landAttributes.municipality,
+            areaHa: landPlotData.area,
+            parcelNumber: landPlotData.parcel_number,
+            coordinateAccuracy: landAttributes.coordinateAccuracy,
+          },
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
       return true;
     } catch (error) {
       console.error("Error saving land plot:", error);
@@ -729,6 +755,19 @@ const LandPlottingPage: React.FC = () => {
     for (const deletedShape of e.shapes) {
       try {
         const response = await deleteLandPlot(deletedShape.id);
+        try {
+          const user = await getCurrentUserForAudit();
+          await getAuditLogger().logCRUD(
+            { ...user, id: undefined },
+            "DELETE",
+            AuditModule.LAND_PLOTS,
+            "land_plot",
+            deletedShape.id,
+            `Deleted land plot — Parcel in ${landAttributes.barangay || parcelBarangay}, ${landAttributes.municipality}`,
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed (non-blocking):", auditErr);
+        }
         if (response.error) throw new Error("Failed to delete land plot");
       } catch (error) {
         setToast({

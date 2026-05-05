@@ -19,6 +19,11 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 
 interface FarmerRequest {
@@ -742,6 +747,19 @@ const JoManageRequests: React.FC = () => {
         setShowNotification(true);
         setTimeout(() => setShowNotification(false), 3000);
         fetchRequests();
+        try {
+          const user = await getCurrentUserForAudit();
+          await getAuditLogger().logCRUD(
+            { ...user, id: undefined },
+            "DELETE",
+            AuditModule.REQUESTS,
+            "farmer_request",
+            deleteTarget.id,
+            `Deleted farmer request for ${deleteTarget.name}`,
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed (non-blocking):", auditErr);
+        }
       } else {
         setNotificationType("error");
         setNotificationMessage("Failed to delete request. Please try again.");
@@ -891,6 +909,21 @@ const JoManageRequests: React.FC = () => {
         );
         // Refresh requests and close alternatives panel
         await fetchRequests();
+        try {
+          const user = await getCurrentUserForAudit();
+          await getAuditLogger().logCRUD(
+            { ...user, id: undefined },
+            "UPDATE",
+            AuditModule.REQUESTS,
+            "farmer_request",
+            requestId,
+            `Applied fertilizer alternative for ${altData.farmer_name} — replaced ${originalFert} with ${substituteFert}`,
+            { originalFertilizer: originalFert },
+            { substitute: substituteFert, confidence: `${confidence}%` },
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed (non-blocking):", auditErr);
+        }
         setShowAlternatives((prev) => ({ ...prev, [requestId]: false }));
         setSelectedAlternative((prev) => {
           const newState = { ...prev };
@@ -1008,6 +1041,21 @@ const JoManageRequests: React.FC = () => {
 
       setNotificationType("success");
       setNotificationMessage("Request updated successfully!");
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "UPDATE",
+          AuditModule.REQUESTS,
+          "farmer_request",
+          editingRequest,
+          `Updated farmer request for ${originalRequest.farmer_name}`,
+          { season: originalRequest.season },
+          { updatedFields: Object.keys(editFormData) },
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 3000);
     } catch (err) {
