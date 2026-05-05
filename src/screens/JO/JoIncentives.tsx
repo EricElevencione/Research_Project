@@ -19,6 +19,7 @@ import {
   EDIT_REGIONAL_FERTILIZER_FIELDS,
   EDIT_REGIONAL_SEED_FIELDS,
 } from "../../constants/joRegionalAllocationEditCatalog";
+import { supabase } from "../../supabase";
 
 interface RegionalAllocation {
   id: number;
@@ -228,9 +229,27 @@ const JoIncentives: React.FC = () => {
   const [updateNotificationType, setUpdateNotificationType] = useState<
     "success" | "error"
   >("success");
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchAllocations();
+  }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
   }, []);
 
   const fetchAllocations = async () => {
@@ -622,21 +641,21 @@ const JoIncentives: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-            {currentUser && (
-              <div className="sidebar-current-user">
-                <div className="sidebar-current-user-avatar">
-                  {currentUser.firstName.charAt(0).toUpperCase()}
-                  {currentUser.lastName.charAt(0).toUpperCase()}
-                </div>
-                <div className="sidebar-current-user-info">
-                  <span className="sidebar-current-user-name">
-                    {currentUser.firstName} {currentUser.lastName}
-                  </span>
-                  <span className="sidebar-current-user-label">Logged in</span>
-                </div>
-              </div>
-            )}
           </nav>
+          {currentUser && (
+            <div className="sidebar-current-user">
+              <div className="sidebar-current-user-avatar">
+                {currentUser.firstName.charAt(0).toUpperCase()}
+                {currentUser.lastName.charAt(0).toUpperCase()}
+              </div>
+              <div className="sidebar-current-user-info">
+                <span className="sidebar-current-user-name">
+                  {currentUser.firstName} {currentUser.lastName}
+                </span>
+                <span className="sidebar-current-user-label">Logged in</span>
+              </div>
+            </div>
+          )}
         </div>
         {/* Sidebar ends here */}
 

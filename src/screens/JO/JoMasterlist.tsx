@@ -21,6 +21,7 @@ import RSBSAIcon from "../../assets/images/rsbsa.png";
 import MasterlistIcon from "../../assets/images/approve.png";
 import LogoutIcon from "../../assets/images/logout.png";
 import IncentivesIcon from "../../assets/images/incentives.png";
+import { supabase } from "../../supabase";
 
 interface RSBSARecord {
   id: string;
@@ -61,6 +62,9 @@ interface Parcel {
   tenant_land_owner_name: string;
   lessee_land_owner_name: string;
   ownership_others_specify: string;
+  is_cultivating?: boolean | null;
+  cultivation_status_reason?: string | null;
+  cultivation_status_updated_at?: string | null;
 }
 
 interface FarmerDetail {
@@ -175,6 +179,13 @@ const JoMasterlist: React.FC = () => {
     "Victorias",
   ].sort();
 
+  const cultivationReasonOptions = [
+    "Tenant/Lessee farming",
+    "Contract expired",
+    "Idle",
+    "Unknown",
+  ];
+
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -222,6 +233,10 @@ const JoMasterlist: React.FC = () => {
   );
   const [showArchived, setShowArchived] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -501,6 +516,20 @@ const JoMasterlist: React.FC = () => {
 
   useEffect(() => {
     fetchRSBSARecords();
+  }, []);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
   }, []);
 
   const fetchRSBSARecords = async () => {
@@ -841,7 +870,7 @@ const JoMasterlist: React.FC = () => {
   );
 
   const isNoParcelsQueueView = selectedStatus === "noParcels";
-  const visibleColumnCount = isNoParcelsQueueView ? 8 : 7;
+  const visibleColumnCount = isNoParcelsQueueView ? 9 : 8;
 
   const allFilteredSelected =
     filteredRecords.length > 0 &&
@@ -991,6 +1020,41 @@ const JoMasterlist: React.FC = () => {
     }
 
     return parcelArea && parcelArea !== "—" ? parcelArea : "—";
+  };
+
+  const formatCultivationStatus = (status?: string | null) => {
+    if (!status) return "Not specified";
+    const normalized = status.toLowerCase().trim();
+    if (normalized === "actively farming") return "Farming";
+    return status;
+  };
+
+  const formatRecordStatus = (status?: string | null) => {
+    const normalized = String(status || "")
+      .toLowerCase()
+      .trim();
+    if (!normalized) return "Not Submitted";
+    if (normalized === "no parcels") return "No Parcels";
+
+    const activeStatuses = new Set([
+      "submitted",
+      "approved",
+      "active",
+      "active farmer",
+    ]);
+    const inactiveStatuses = new Set([
+      "not submitted",
+      "not_active",
+      "not active",
+      "draft",
+      "pending",
+      "not approved",
+      "inactive",
+    ]);
+
+    if (activeStatuses.has(normalized)) return "Active Farmer";
+    if (inactiveStatuses.has(normalized)) return "Inactive Farmer";
+    return status || "Not Submitted";
   };
 
   const handlePrintSingleRecord = async (record: RSBSARecord) => {
@@ -1416,7 +1480,14 @@ const JoMasterlist: React.FC = () => {
       try {
         const response = await getFarmParcels(recordId);
         if (!response.error) {
-          const parcels = response.data || [];
+          const parcels = (response.data || []).map((parcel: Parcel) => ({
+            ...parcel,
+            is_cultivating:
+              typeof parcel.is_cultivating === "boolean"
+                ? parcel.is_cultivating
+                : null,
+            cultivation_status_reason: parcel.cultivation_status_reason || null,
+          }));
           setEditingParcels(parcels);
         } else {
           console.error("Failed to fetch parcels");
@@ -1465,6 +1536,25 @@ const JoMasterlist: React.FC = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const deriveCultivationStatusFromParcels = (parcels: Parcel[]): string => {
+    if (!parcels || parcels.length === 0) return "Not specified";
+    let active = 0;
+    let inactive = 0;
+    let total = 0;
+
+    parcels.forEach((parcel) => {
+      total += 1;
+      if (parcel.is_cultivating === true) active += 1;
+      if (parcel.is_cultivating === false) inactive += 1;
+    });
+
+    if (total === 0) return "Not specified";
+    if (active > 0 && inactive > 0) return "Mixed";
+    if (active > 0) return "Farming";
+    if (inactive > 0) return "Not farming";
+    return "Not specified";
   };
 
   const handleIndividualParcelChange = (
@@ -1684,6 +1774,12 @@ const JoMasterlist: React.FC = () => {
                 tenant_land_owner_name: parcel.tenant_land_owner_name,
                 lessee_land_owner_name: parcel.lessee_land_owner_name,
                 ownership_others_specify: parcel.ownership_others_specify,
+                is_cultivating: parcel.is_cultivating ?? null,
+                cultivation_status_reason:
+                  parcel.is_cultivating === false
+                    ? (parcel.cultivation_status_reason ?? null)
+                    : null,
+                cultivation_status_updated_at: new Date().toISOString(),
               });
 
               if (parcelResponse.error) {
@@ -1707,6 +1803,10 @@ const JoMasterlist: React.FC = () => {
             serverRecord.age ?? formattedData.age,
             serverRecord.birthdate ?? serverRecord.dateOfBirth ?? null,
           ),
+          cultivationStatus:
+            editingParcels.length > 0
+              ? deriveCultivationStatusFromParcels(editingParcels)
+              : editingRecord.cultivationStatus,
         };
 
         // Update the main rsbsaRecords state
@@ -1830,6 +1930,20 @@ const JoMasterlist: React.FC = () => {
               </div>
             )}
           </nav>
+          {currentUser && (
+            <div className="sidebar-current-user">
+              <div className="sidebar-current-user-avatar">
+                {currentUser.firstName.charAt(0).toUpperCase()}
+                {currentUser.lastName.charAt(0).toUpperCase()}
+              </div>
+              <div className="sidebar-current-user-info">
+                <span className="sidebar-current-user-name">
+                  {currentUser.firstName} {currentUser.lastName}
+                </span>
+                <span className="sidebar-current-user-label">Logged in</span>
+              </div>
+            </div>
+          )}
         </div>
         {/* Sidebar ends here */}
         <div
@@ -2088,6 +2202,7 @@ const JoMasterlist: React.FC = () => {
                     </th>
                     <th>Cultivation</th>
                     <th>Ownership Status</th>
+                    <th>Status</th>
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${
@@ -2181,7 +2296,9 @@ const JoMasterlist: React.FC = () => {
                           </td>
                           <td>
                             <span className="jo-masterlist-cultivation-text">
-                              {record.cultivationStatus || "Not specified"}
+                              {formatCultivationStatus(
+                                record.cultivationStatus || "Not specified",
+                              )}
                             </span>
                           </td>
                           <td>
@@ -2192,6 +2309,11 @@ const JoMasterlist: React.FC = () => {
                                 {getOwnershipLabel(record)}
                               </span>
                             </div>
+                          </td>
+                          <td>
+                            <span className="jo-masterlist-record-status">
+                              {formatRecordStatus(record.status)}
+                            </span>
                           </td>
                           <td>
                             <span className="jo-masterlist-date">
@@ -2328,7 +2450,10 @@ const JoMasterlist: React.FC = () => {
           <div className="jo-masterlist-edit-modal-overlay">
             <div className="jo-masterlist-edit-modal">
               <div className="jo-masterlist-edit-modal-header">
-                <h2>Edit Land Owner Information</h2>
+                <div className="jo-masterlist-edit-modal-title">
+                  <h2>Edit Land Owner Information</h2>
+                  <p>Update farmer details and parcel cultivation status.</p>
+                </div>
                 <button
                   className="jo-masterlist-close-button"
                   onClick={handleCancel}
@@ -2342,83 +2467,77 @@ const JoMasterlist: React.FC = () => {
                     {editError}
                   </div>
                 )}
-                <div className="form-group">
-                  <label>Last Name:</label>
-                  <input
-                    type="text"
-                    value={editFormData.lastName || ""}
-                    onChange={(e) =>
-                      handleInputChange("lastName", e.target.value)
-                    }
-                    placeholder="Last Name"
-                  />
-                </div>
-                {/*Gender function kung may jan*/}
-                {/*Birthdate function kung may jan*/}
-                <div className="form-group">
-                  <label>First Name:</label>
-                  <input
-                    type="text"
-                    value={editFormData.firstName || ""}
-                    onChange={(e) =>
-                      handleInputChange("firstName", e.target.value)
-                    }
-                    placeholder="First Name"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Middle Name:</label>
-                  <input
-                    type="text"
-                    value={editFormData.middleName || ""}
-                    onChange={(e) =>
-                      handleInputChange("middleName", e.target.value)
-                    }
-                    placeholder="Middle Name"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Age:</label>
-                  <input
-                    type="text"
-                    value={editFormData.age || ""}
-                    onChange={(e) => handleInputChange("age", e.target.value)}
-                    placeholder="Age"
-                  />
-                </div>
-                {/*Barangay function kung may jan*/}
-                <div className="form-group">
-                  <label>Barangay:</label>
-                  <select
-                    value={editFormData.barangay || ""}
-                    onChange={(e) =>
-                      handleInputChange("barangay", e.target.value)
-                    }
-                    style={{
-                      width: "100%",
-                      padding: "8px",
-                      border: "1px solid #ccc",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    <option value="">Select Barangay</option>
-                    {barangays.map((barangay) => (
-                      <option key={barangay} value={barangay}>
-                        {barangay}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="jo-masterlist-form-group">
-                  <label>Municipality:</label>
-                  <input
-                    type="text"
-                    value={editFormData.municipality || ""}
-                    onChange={(e) =>
-                      handleInputChange("municipality", e.target.value)
-                    }
-                    placeholder="Municipality"
-                  />
+                <div className="jo-masterlist-form-grid">
+                  <div className="jo-masterlist-form-group">
+                    <label>Last Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.lastName || ""}
+                      onChange={(e) =>
+                        handleInputChange("lastName", e.target.value)
+                      }
+                      placeholder="Last Name"
+                    />
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>First Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.firstName || ""}
+                      onChange={(e) =>
+                        handleInputChange("firstName", e.target.value)
+                      }
+                      placeholder="First Name"
+                    />
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>Middle Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.middleName || ""}
+                      onChange={(e) =>
+                        handleInputChange("middleName", e.target.value)
+                      }
+                      placeholder="Middle Name"
+                    />
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>Age:</label>
+                    <input
+                      type="text"
+                      value={editFormData.age || ""}
+                      onChange={(e) => handleInputChange("age", e.target.value)}
+                      placeholder="Age"
+                    />
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>Barangay:</label>
+                    <select
+                      value={editFormData.barangay || ""}
+                      onChange={(e) =>
+                        handleInputChange("barangay", e.target.value)
+                      }
+                      className="jo-masterlist-form-select"
+                    >
+                      <option value="">Select Barangay</option>
+                      {barangays.map((barangay) => (
+                        <option key={barangay} value={barangay}>
+                          {barangay}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>Municipality:</label>
+                    <input
+                      type="text"
+                      value={editFormData.municipality || ""}
+                      onChange={(e) =>
+                        handleInputChange("municipality", e.target.value)
+                      }
+                      placeholder="Municipality"
+                    />
+                  </div>
                 </div>
 
                 {/* Individual Parcel Areas */}
@@ -2433,11 +2552,9 @@ const JoMasterlist: React.FC = () => {
                         className={`jo-masterlist-parcel-item ${parcelErrors[parcel.id] ? "error" : ""}`}
                       >
                         <div className="jo-masterlist-form-group">
-                          <label
-                            style={{ fontWeight: "bold", color: "#2c5f2d" }}
-                          >
+                          <label className="jo-masterlist-parcel-label">
                             Parcel Area {index + 1} (Parcel No.{" "}
-                            {parcel.parcel_number}):
+                            {parcel.parcel_number})
                           </label>
                           <input
                             type="text"
@@ -2450,39 +2567,79 @@ const JoMasterlist: React.FC = () => {
                               )
                             }
                             placeholder="e.g., 2.5"
-                            style={{
-                              width: "100%",
-                              border: parcelErrors[parcel.id]
-                                ? "2px solid #d32f2f"
-                                : "1px solid #ccc",
-                              backgroundColor: parcelErrors[parcel.id]
-                                ? "#ffebee"
-                                : "white",
-                              outline: parcelErrors[parcel.id]
-                                ? "none"
-                                : undefined,
-                            }}
+                            className="jo-masterlist-parcel-input"
+                            data-error={
+                              parcelErrors[parcel.id] ? "true" : "false"
+                            }
                           />
                           {parcelErrors[parcel.id] && (
                             <small className="jo-masterlist-parcel-error">
                               {parcelErrors[parcel.id]}
                             </small>
                           )}
-                          <small
-                            style={{
-                              color: "#666",
-                              fontSize: "0.85em",
-                              display: "block",
-                              marginTop: "5px",
-                            }}
-                          >
+                          <small className="jo-masterlist-parcel-location">
                             Location: {parcel.farm_location_barangay || "N/A"}
                           </small>
                         </div>
+                        <div className="jo-masterlist-form-group">
+                          <label>Currently farming?</label>
+                          <select
+                            value={
+                              parcel.is_cultivating === true
+                                ? "true"
+                                : parcel.is_cultivating === false
+                                  ? "false"
+                                  : ""
+                            }
+                            onChange={(e) => {
+                              const nextValue = e.target.value;
+                              const normalizedValue =
+                                nextValue === "true"
+                                  ? true
+                                  : nextValue === "false"
+                                    ? false
+                                    : null;
+                              handleIndividualParcelChange(
+                                parcel.id,
+                                "is_cultivating",
+                                normalizedValue,
+                              );
+                              if (normalizedValue !== false) {
+                                handleIndividualParcelChange(
+                                  parcel.id,
+                                  "cultivation_status_reason",
+                                  null,
+                                );
+                              }
+                            }}
+                            className="jo-masterlist-form-select"
+                          >
+                            <option value="">Not specified</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                          </select>
+                        </div>
+                        {parcel.is_cultivating === false && (
+                          <div className="jo-masterlist-form-group">
+                            <label>Reason</label>
+                            <input
+                              type="text"
+                              value={parcel.cultivation_status_reason || ""}
+                              onChange={(e) =>
+                                handleIndividualParcelChange(
+                                  parcel.id,
+                                  "cultivation_status_reason",
+                                  e.target.value || null,
+                                )
+                              }
+                              placeholder="Enter reason"
+                            />
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
-                    <p style={{ color: "#666", fontStyle: "italic" }}>
+                    <p className="jo-masterlist-parcel-empty">
                       No parcels found for this farmer.
                     </p>
                   )}
@@ -2711,7 +2868,7 @@ const JoMasterlist: React.FC = () => {
                                           fontWeight: "500",
                                         }}
                                       >
-                                        ✅ Actively farming
+                                        ✅ Farming
                                       </span>
                                     ) : parcel.isCultivating === false ? (
                                       <span

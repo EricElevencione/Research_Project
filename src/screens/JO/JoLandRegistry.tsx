@@ -463,6 +463,10 @@ const JoLandRegistry: React.FC = () => {
     useState("");
   const [ownerAffiliationSubmitSuccess, setOwnerAffiliationSubmitSuccess] =
     useState("");
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const {
     parcelScope,
@@ -530,6 +534,19 @@ const JoLandRegistry: React.FC = () => {
     console.log("Fetching aggregated farmers...");
     refreshLandParcels();
   }, [refreshLandParcels]);
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const firstName = user.user_metadata?.first_name || "";
+        const lastName = user.user_metadata?.last_name || "";
+        setCurrentUser({ firstName, lastName });
+      }
+    };
+    fetchCurrentUser();
+  }, []);
 
   const fetchCultivationParcelsForFarmer = async (
     farmerId: number,
@@ -3179,6 +3196,20 @@ const JoLandRegistry: React.FC = () => {
               </div>
             )}
           </nav>
+          {currentUser && (
+            <div className="sidebar-current-user">
+              <div className="sidebar-current-user-avatar">
+                {currentUser.firstName.charAt(0).toUpperCase()}
+                {currentUser.lastName.charAt(0).toUpperCase()}
+              </div>
+              <div className="sidebar-current-user-info">
+                <span className="sidebar-current-user-name">
+                  {currentUser.firstName} {currentUser.lastName}
+                </span>
+                <span className="sidebar-current-user-label">Logged in</span>
+              </div>
+            </div>
+          )}
         </div>
         <div
           className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
