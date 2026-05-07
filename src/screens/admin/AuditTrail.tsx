@@ -2705,7 +2705,7 @@ const AuditTrail: React.FC = () => {
                         <th>User</th>
                         <th>Action</th>
                         <th>Module</th>
-                        <th>Description</th>
+
                         <th>Details</th>
                       </tr>
                     </thead>

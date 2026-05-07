@@ -25,7 +25,6 @@ const Dashboard: React.FC = () => {
 
   const dashData = useAdminDashboardStats(selectedAllocationId);
 
-
   // Build farmer density map for the heatmap: barangay name -> farmer count
   const farmerDensityMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -42,13 +41,16 @@ const Dashboard: React.FC = () => {
 
   const selectedAllocationLabel = selectedAllocationId
     ? availableAllocations.find((a) => a.allocationId === selectedAllocationId)
-      ?.label
+        ?.label
     : undefined;
 
   return (
     <div className="admin-page-container">
       <div className="admin-dashboard-page has-mobile-sidebar">
-        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <AdminSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         {/* Main content starts here */}
         <div className="admin-dashboard-main-content">
@@ -94,7 +96,7 @@ const Dashboard: React.FC = () => {
                 setSelectedAllocationId(next ? Number(next) : undefined);
               }}
             >
-              <option value="">Current Season</option>
+              <option value="">Current Program</option>
               {availableAllocations.map((allocation) => (
                 <option
                   key={allocation.allocationId}

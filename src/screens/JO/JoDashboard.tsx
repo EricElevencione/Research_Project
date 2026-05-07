@@ -546,7 +546,7 @@ const JoDashboard: React.FC = () => {
               {/* Season Selector Row */}
               <div className="kpi-season-row">
                 <div className="season-selector">
-                  <label htmlFor="season-select">📅 View Season:</label>
+                  <label htmlFor="season-select">📅 View Program:</label>
                   <select
                     id="season-select"
                     value={selectedAllocationId}

@@ -697,7 +697,6 @@ const TechRsbsa: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
           </nav>
           {currentUser && (
             <div className="sidebar-current-user">
@@ -747,9 +746,9 @@ const TechRsbsa: React.FC = () => {
           </div>
           <div className="tech-rsbsa-dashboard-header">
             <div>
-              <h2 className="tech-rsbsa-page-title">Registered Land Owners</h2>
+              <h2 className="tech-rsbsa-page-title">RSBSA</h2>
               <p className="tech-rsbsa-page-subtitle">
-                View and manage registered land owners from RSBSA submissions
+                View and manage farmers from RSBSA submissions
               </p>
             </div>
           </div>

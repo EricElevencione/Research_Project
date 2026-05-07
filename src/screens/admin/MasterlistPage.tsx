@@ -642,7 +642,7 @@ const Masterlist: React.FC = () => {
 
   const getFarmerInitials = (fullName: string) => {
     const cleaned = (fullName || "")
-.replace(/,/g, " ")
+      .replace(/,/g, " ")
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
@@ -654,7 +654,10 @@ const Masterlist: React.FC = () => {
     <>
       <div className="masterlist-admin-page-container">
         <div className="masterlist-admin-page">
-          <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+          <AdminSidebar
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
 
           <div className="masterlist-admin-main-content">
             <div className="tech-incent-mobile-header">
@@ -687,35 +690,22 @@ const Masterlist: React.FC = () => {
                   View and manage all registered farmers in the system.
                 </p>
               </div>
-
-              {!loading && !error && filteredRecords.length > recordsPerPage && (
-                <div className="masterlist-admin-pagination">
-                  <button
-                    className="masterlist-admin-pagination-btn"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </button>
-                  <span className="masterlist-admin-pagination-info">
-                    Page {currentPage} of {Math.ceil(filteredRecords.length / recordsPerPage)}
-                  </span>
-                  <button
-                    className="masterlist-admin-pagination-btn"
-                    onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredRecords.length / recordsPerPage), p + 1))}
-                    disabled={currentPage >= Math.ceil(filteredRecords.length / recordsPerPage)}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
             </div>
 
             {!loading && !error && (
               <div className="masterlist-status-cards">
                 <div className="masterlist-status-card masterlist-card-total">
                   <div className="masterlist-card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                       <circle cx="9" cy="7" r="4"></circle>
                       <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -726,35 +716,69 @@ const Masterlist: React.FC = () => {
                     <span className="masterlist-card-count">
                       {rsbsaRecords.length}
                     </span>
-                    <span className="masterlist-card-label">TOTAL LAND OWNERS</span>
+                    <span className="masterlist-card-label">TOTAL FARMERS</span>
                   </div>
                 </div>
                 <div className="masterlist-status-card masterlist-card-active">
                   <div className="masterlist-card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <polyline points="9 11 12 14 22 4"></polyline>
                       <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                     </svg>
                   </div>
                   <div className="masterlist-card-info">
                     <span className="masterlist-card-count">
-                      {rsbsaRecords.filter((r) => r.status === "Active" || r.status === "Active Farmer").length}
+                      {
+                        rsbsaRecords.filter(
+                          (r) =>
+                            r.status === "Active" ||
+                            r.status === "Active Farmer",
+                        ).length
+                      }
                     </span>
-                    <span className="masterlist-card-label">ACTIVE LAND OWNERS</span>
+                    <span className="masterlist-card-label">
+                      ACTIVE FARMERS
+                    </span>
                   </div>
                 </div>
                 <div className="masterlist-status-card masterlist-card-inactive">
                   <div className="masterlist-card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                   </div>
                   <div className="masterlist-card-info">
                     <span className="masterlist-card-count">
-                      {rsbsaRecords.filter((r) => r.status !== "Active" && r.status !== "Active Farmer").length}
+                      {
+                        rsbsaRecords.filter(
+                          (r) =>
+                            r.status !== "Active" &&
+                            r.status !== "Active Farmer",
+                        ).length
+                      }
                     </span>
-                    <span className="masterlist-card-label">INACTIVE LAND OWNERS</span>
+                    <span className="masterlist-card-label">
+                      INACTIVE FARMERS
+                    </span>
                   </div>
                 </div>
               </div>
@@ -790,7 +814,8 @@ const Masterlist: React.FC = () => {
               {!loading && !error && (
                 <div className="masterlist-admin-table-meta">
                   <span>
-                    Showing {filteredRecords.length} of {rsbsaRecords.length} farmers
+                    Showing {filteredRecords.length} of {rsbsaRecords.length}{" "}
+                    farmers
                   </span>
                   <span>
                     Tip: Sort up to 2 levels (e.g. Farmer then Parcel Area).
@@ -924,7 +949,10 @@ const Masterlist: React.FC = () => {
                   <tbody>
                     {loading && (
                       <tr>
-                        <td colSpan={7} className="masterlist-admin-loading-cell">
+                        <td
+                          colSpan={7}
+                          className="masterlist-admin-loading-cell"
+                        >
                           Loading...
                         </td>
                       </tr>
@@ -936,176 +964,259 @@ const Masterlist: React.FC = () => {
                         </td>
                       </tr>
                     )}
-                    {!loading && !error && filteredRecords.length > 0 &&
-                      filteredRecords.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage).map((record) => {
-                        const statusText = record.status || "Not Active";
-                        return (
-                          <tr
-                            key={record.id}
-                            className="masterlist-admin-table-row"
-                            onClick={() => fetchFarmerDetails(record.id)}
-                          >
-                            <td className="masterlist-admin-checkbox-col">
-                              <input
-                                type="checkbox"
-                                className="masterlist-admin-row-checkbox"
-                                checked={selectedRecordIds.has(record.id)}
-                                onChange={() => toggleSelectRecord(record.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </td>
-                            <td>
-                              <div className="masterlist-admin-farmer-cell">
-                                <div className="masterlist-admin-farmer-avatar">
-                                  {getFarmerInitials(record.farmerName)}
-                                </div>
-                                <div className="masterlist-admin-farmer-meta">
-                                  <span className="masterlist-admin-farmer-name">{record.farmerName}</span>
-                                  <span className="masterlist-admin-farmer-ref">Ref: {record.referenceNumber}</span>
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="masterlist-admin-address-cell">
-                                <span className="masterlist-admin-address-primary">{record.farmerAddress}</span>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="masterlist-admin-parcel-cell">
-                                <span className="masterlist-admin-parcel-count">
-                                  {record.parcelCount} parcel{record.parcelCount === 1 ? "" : "s"}
-                                </span>
-                                <span className="masterlist-admin-parcel-area">{formatParcelArea(record.parcelArea)}</span>
-                              </div>
-                            </td>
-                            <td>
-                              <span className="masterlist-admin-date">{formatDate(record.dateSubmitted)}</span>
-                            </td>
-                            <td>
-                              <span className={`masterlist-admin-status-pill ${getStatusClassName(statusText)}`}>
-                                {statusText}
-                              </span>
-                            </td>
-                            <td className="masterlist-admin-actions-cell">
-                              <div className="masterlist-admin-quick-actions" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  className="masterlist-admin-quick-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenQuickActionsId((previous) => previous === record.id ? null : record.id);
-                                  }}
-                                >
-                                  Quick Actions ▾
-                                </button>
-                                {openQuickActionsId === record.id && (
-                                  <div className="masterlist-admin-quick-menu">
-                                    <button
-                                      className="masterlist-admin-quick-item"
-                                      onClick={async () => {
-                                        setOpenQuickActionsId(null);
-                                        await handlePrintSingleRecord(record);
-                                      }}
-                                      disabled={printingRecordIds.has(record.id)}
-                                    >
-                                      {printingRecordIds.has(record.id) ? "Preparing form..." : "Print RSBSA Form"}
-                                    </button>
+                    {!loading &&
+                      !error &&
+                      filteredRecords.length > 0 &&
+                      filteredRecords
+                        .slice(
+                          (currentPage - 1) * recordsPerPage,
+                          currentPage * recordsPerPage,
+                        )
+                        .map((record) => {
+                          const statusText = record.status || "Not Active";
+                          return (
+                            <tr
+                              key={record.id}
+                              className="masterlist-admin-table-row"
+                              onClick={() => fetchFarmerDetails(record.id)}
+                            >
+                              <td className="masterlist-admin-checkbox-col">
+                                <input
+                                  type="checkbox"
+                                  className="masterlist-admin-row-checkbox"
+                                  checked={selectedRecordIds.has(record.id)}
+                                  onChange={() => toggleSelectRecord(record.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </td>
+                              <td>
+                                <div className="masterlist-admin-farmer-cell">
+                                  <div className="masterlist-admin-farmer-avatar">
+                                    {getFarmerInitials(record.farmerName)}
                                   </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    }
+                                  <div className="masterlist-admin-farmer-meta">
+                                    <span className="masterlist-admin-farmer-name">
+                                      {record.farmerName}
+                                    </span>
+                                    <span className="masterlist-admin-farmer-ref">
+                                      Ref: {record.referenceNumber}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="masterlist-admin-address-cell">
+                                  <span className="masterlist-admin-address-primary">
+                                    {record.farmerAddress}
+                                  </span>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="masterlist-admin-parcel-cell">
+                                  <span className="masterlist-admin-parcel-count">
+                                    {record.parcelCount} parcel
+                                    {record.parcelCount === 1 ? "" : "s"}
+                                  </span>
+                                  <span className="masterlist-admin-parcel-area">
+                                    {formatParcelArea(record.parcelArea)}
+                                  </span>
+                                </div>
+                              </td>
+                              <td>
+                                <span className="masterlist-admin-date">
+                                  {formatDate(record.dateSubmitted)}
+                                </span>
+                              </td>
+                              <td>
+                                <span
+                                  className={`masterlist-admin-status-pill ${getStatusClassName(statusText)}`}
+                                >
+                                  {statusText}
+                                </span>
+                              </td>
+                              <td className="masterlist-admin-actions-cell">
+                                <div
+                                  className="masterlist-admin-quick-actions"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    className="masterlist-admin-quick-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenQuickActionsId((previous) =>
+                                        previous === record.id
+                                          ? null
+                                          : record.id,
+                                      );
+                                    }}
+                                  >
+                                    Quick Actions ▾
+                                  </button>
+                                  {openQuickActionsId === record.id && (
+                                    <div className="masterlist-admin-quick-menu">
+                                      <button
+                                        className="masterlist-admin-quick-item"
+                                        onClick={async () => {
+                                          setOpenQuickActionsId(null);
+                                          await handlePrintSingleRecord(record);
+                                        }}
+                                        disabled={printingRecordIds.has(
+                                          record.id,
+                                        )}
+                                      >
+                                        {printingRecordIds.has(record.id)
+                                          ? "Preparing form..."
+                                          : "Print RSBSA Form"}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                     {!loading && !error && filteredRecords.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="masterlist-admin-empty-cell">No farmers found for the selected filters.</td>
+                        <td colSpan={7} className="masterlist-admin-empty-cell">
+                          No farmers found for the selected filters.
+                        </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
 
-              {!loading && !error && filteredRecords.length > recordsPerPage && (
-                <div className="masterlist-admin-pagination">
-                  <button
-                    className="masterlist-admin-pagination-btn"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </button>
-                  <span className="masterlist-admin-pagination-info">
-                    Page {currentPage} of {Math.ceil(filteredRecords.length / recordsPerPage)}
-                  </span>
-                  <button
-                    className="masterlist-admin-pagination-btn"
-                    onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredRecords.length / recordsPerPage), p + 1))}
-                    disabled={currentPage >= Math.ceil(filteredRecords.length / recordsPerPage)}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+              {!loading &&
+                !error &&
+                filteredRecords.length > recordsPerPage && (
+                  <div className="masterlist-admin-pagination">
+                    <button
+                      className="masterlist-admin-pagination-btn"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </button>
+                    <span className="masterlist-admin-pagination-info">
+                      Page {currentPage} of{" "}
+                      {Math.ceil(filteredRecords.length / recordsPerPage)}
+                    </span>
+                    <button
+                      className="masterlist-admin-pagination-btn"
+                      onClick={() =>
+                        setCurrentPage((p) =>
+                          Math.min(
+                            Math.ceil(filteredRecords.length / recordsPerPage),
+                            p + 1,
+                          ),
+                        )
+                      }
+                      disabled={
+                        currentPage >=
+                        Math.ceil(filteredRecords.length / recordsPerPage)
+                      }
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
             </div>
           </div>
         </div>
       </div>
 
       {showModal && selectedFarmer && (
-        <div className="farmer-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="farmer-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="farmer-modal-overlay"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="farmer-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="farmer-modal-header">
               <div className="farmer-modal-header-left">
                 <h2>Farmer Details</h2>
               </div>
               <div className="farmer-modal-header-actions">
-                <button className="farmer-modal-print-btn" onClick={handleModalPrint} disabled={isModalPrinting}>
+                <button
+                  className="farmer-modal-print-btn"
+                  onClick={handleModalPrint}
+                  disabled={isModalPrinting}
+                >
                   {isModalPrinting ? "Preparing..." : "Print RSBSA Form"}
                 </button>
-                <button className="farmer-modal-close-btn" onClick={() => setShowModal(false)}>×</button>
+                <button
+                  className="farmer-modal-close-btn"
+                  onClick={() => setShowModal(false)}
+                >
+                  ×
+                </button>
               </div>
             </div>
             <div className="farmer-modal-body">
               {loadingFarmerDetail ? (
-                <div className="farmer-modal-loading">Loading farmer details...</div>
+                <div className="farmer-modal-loading">
+                  Loading farmer details...
+                </div>
               ) : (
                 <>
                   <div className="farmer-modal-section">
-                    <h3 className="farmer-modal-section-title">👤 Personal Information</h3>
+                    <h3 className="farmer-modal-section-title">
+                      👤 Personal Information
+                    </h3>
                     <div className="farmer-modal-info-grid">
                       <div className="farmer-modal-info-item">
                         <span className="farmer-modal-label">Farmer Name:</span>
-                        <span className="farmer-modal-value">{selectedFarmer.farmerName}</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.farmerName}
+                        </span>
                       </div>
                       <div className="farmer-modal-info-item">
-                        <span className="farmer-modal-label">Farmer Address:</span>
-                        <span className="farmer-modal-value">{selectedFarmer.farmerAddress}</span>
+                        <span className="farmer-modal-label">
+                          Farmer Address:
+                        </span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.farmerAddress}
+                        </span>
                       </div>
                       <div className="farmer-modal-info-item">
                         <span className="farmer-modal-label">Age:</span>
-                        <span className="farmer-modal-value">{selectedFarmer.age}</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.age}
+                        </span>
                       </div>
                       <div className="farmer-modal-info-item">
                         <span className="farmer-modal-label">Gender:</span>
-                        <span className="farmer-modal-value">{selectedFarmer.gender}</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.gender}
+                        </span>
                       </div>
                       <div className="farmer-modal-info-item farmer-modal-full-width">
-                        <span className="farmer-modal-label">Main Livelihood:</span>
+                        <span className="farmer-modal-label">
+                          Main Livelihood:
+                        </span>
                         <span className="farmer-modal-value">
-                          {selectedFarmer.farmingActivities.length > 0 ? selectedFarmer.farmingActivities.join(", ") : "Not Available"}
+                          {selectedFarmer.farmingActivities.length > 0
+                            ? selectedFarmer.farmingActivities.join(", ")
+                            : "Not Available"}
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="farmer-modal-section">
-                    <h3 className="farmer-modal-section-title">🚜 Farm Information</h3>
+                    <h3 className="farmer-modal-section-title">
+                      🚜 Farm Information
+                    </h3>
                     {selectedFarmer.parcels.length === 0 ? (
                       <p className="farmer-modal-no-data">No parcels found</p>
                     ) : (
                       <div className="farmer-modal-parcels-container">
                         {selectedFarmer.parcels.map((parcel, index) => (
-                          <div key={parcel.id} className="farmer-modal-parcel-card">
+                          <div
+                            key={parcel.id}
+                            className="farmer-modal-parcel-card"
+                          >
                             <div className="farmer-modal-parcel-header">
                               <h4>
                                 Parcel #
@@ -1119,17 +1230,33 @@ const Masterlist: React.FC = () => {
                             </div>
                             <div className="farmer-modal-parcel-details">
                               <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">Land Ownership:</span>
-                                <span className="farmer-modal-value">{getParcelOwnershipLabel(parcel)}</span>
-                              </div>
-                              <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">Parcel Location:</span>
-                                <span className="farmer-modal-value">{parcel.farmLocationBarangay}, {parcel.farmLocationMunicipality}</span>
-                              </div>
-                              <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">Parcel Size:</span>
+                                <span className="farmer-modal-label">
+                                  Land Ownership:
+                                </span>
                                 <span className="farmer-modal-value">
-                                  {typeof parcel.totalFarmAreaHa === "number" ? parcel.totalFarmAreaHa.toFixed(2) : parseFloat(String(parcel.totalFarmAreaHa || 0)).toFixed(2)} hectares
+                                  {getParcelOwnershipLabel(parcel)}
+                                </span>
+                              </div>
+                              <div className="farmer-modal-parcel-item">
+                                <span className="farmer-modal-label">
+                                  Parcel Location:
+                                </span>
+                                <span className="farmer-modal-value">
+                                  {parcel.farmLocationBarangay},{" "}
+                                  {parcel.farmLocationMunicipality}
+                                </span>
+                              </div>
+                              <div className="farmer-modal-parcel-item">
+                                <span className="farmer-modal-label">
+                                  Parcel Size:
+                                </span>
+                                <span className="farmer-modal-value">
+                                  {typeof parcel.totalFarmAreaHa === "number"
+                                    ? parcel.totalFarmAreaHa.toFixed(2)
+                                    : parseFloat(
+                                        String(parcel.totalFarmAreaHa || 0),
+                                      ).toFixed(2)}{" "}
+                                  hectares
                                 </span>
                               </div>
                             </div>

@@ -768,7 +768,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
           </nav>
           {currentUser && (
             <div className="sidebar-current-user">

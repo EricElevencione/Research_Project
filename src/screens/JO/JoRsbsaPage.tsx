@@ -1424,9 +1424,9 @@ const JoRsbsaPage: React.FC = () => {
             </button>
             <div className="tech-incent-mobile-title">JO RSBSA</div>
           </div>
-          <h2 className="jo-rsbsa-page-title">Registered Land Owners</h2>
+          <h2 className="jo-rsbsa-page-title">RSBSA</h2>
           <p className="jo-rsbsa-page-subtitle">
-            View and manage registered land owners from RSBSA submissions
+            View and manage farmers from RSBSA submissions
           </p>
 
           {!loading && !error && (
@@ -1453,7 +1453,7 @@ const JoRsbsaPage: React.FC = () => {
                   <span className="jo-rsbsa-card-count">
                     {statusCounts.total}
                   </span>
-                  <span className="jo-rsbsa-card-label">TOTAL LAND OWNERS</span>
+                  <span className="jo-rsbsa-card-label">TOTAL FARMERS</span>
                 </div>
               </div>
               <div className="jo-rsbsa-status-card jo-rsbsa-card-active">
@@ -1476,9 +1476,7 @@ const JoRsbsaPage: React.FC = () => {
                   <span className="jo-rsbsa-card-count">
                     {statusCounts.active}
                   </span>
-                  <span className="jo-rsbsa-card-label">
-                    ACTIVE LAND OWNERS
-                  </span>
+                  <span className="jo-rsbsa-card-label">ACTIVE FARMERS</span>
                 </div>
               </div>
               <div className="jo-rsbsa-status-card jo-rsbsa-card-inactive">
@@ -1501,9 +1499,7 @@ const JoRsbsaPage: React.FC = () => {
                   <span className="jo-rsbsa-card-count">
                     {statusCounts.inactive}
                   </span>
-                  <span className="jo-rsbsa-card-label">
-                    INACTIVE LAND OWNERS
-                  </span>
+                  <span className="jo-rsbsa-card-label">INACTIVE FARMERS</span>
                 </div>
               </div>
             </div>
