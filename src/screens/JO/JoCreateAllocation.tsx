@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createAllocation } from "../../api";
 import {
@@ -6,13 +6,8 @@ import {
   AuditModule,
 } from "../../components/Audit/auditLogger";
 import "../../assets/css/jo css/JoIncentStyle.css";
+import JOSidebar from "../../components/Layout/JOSidebar";
 import "../../assets/css/jo css/JoCreateAllocationStyle.css";
-import "../../components/layout/sidebarStyle.css";
-import IncentivesIcon from "../../assets/images/incentives.png";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import MasterlistIcon from "../../assets/images/approve.png";
 
 type NumericInput = number | "";
 
@@ -280,10 +275,6 @@ const JoCreateAllocation: React.FC = () => {
     notes: "",
   });
 
-  const isActive = (path: string) => location.pathname === path;
-
-
-
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -397,73 +388,7 @@ const JoCreateAllocation: React.FC = () => {
     <div className="jo-allocation-page-container">
       <div className="jo-allocation-page has-mobile-sidebar">
         {/* Sidebar */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-            <button
-              className={`sidebar-nav-item ${isActive("/jo-dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/jo-dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/jo-rsbsapage") ? "active" : ""}`}
-              onClick={() => navigate("/jo-rsbsapage")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/jo-incentives") ? "active" : ""}`}
-              onClick={() => navigate("/jo-incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/jo-masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/jo-masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={MasterlistIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <div
-              className={`sidebar-nav-item ${isActive("/jo-land-registry") ? "active" : ""}`}
-              onClick={() => navigate("/jo-land-registry")}
-            >
-              <div className="nav-icon">🗺️</div>
-              <span className="nav-text">Land Registry</span>
-            </div>
-
-            <div
-              className={`sidebar-nav-item ${isActive("/jo-land-history-report") ? "active" : ""}`}
-              onClick={() => navigate("/jo-land-history-report")}
-            >
-              <div className="nav-icon">📜</div>
-              <span className="nav-text">Land History Report</span>
-            </div>
-          </nav>
-        </div>
-
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Main Content */}
         <div className="jo-allocation-main-content">

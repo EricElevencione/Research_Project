@@ -32,11 +32,11 @@ import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
 import AuditTrail from "./screens/admin/AuditTrail";
 import InventoryPage from "./screens/admin/InventoryPage";
 import AdminCreateAllocation from "./screens/admin/AdminCreateAllocation";
-import ShortagesSuggestions from "./pages/ShortagesSuggestions.jsx";
+import ShortagesSuggestions from "./screens/dss/ShortagesSuggestions.jsx";
 import JoRsbsaRegisLandowner from "./screens/JO/JoRsbsaRegisLandowner";
 import JoRsbsaRegisFarmer from "./screens/JO/JoRsbsaRegisFarmer";
 import "../src/assets/css/admin css/index.css";
-import Register from "./pages/Register";
+import Register from "./screens/auth/Register";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {

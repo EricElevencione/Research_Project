@@ -24,3 +24,5 @@ dist-electron
 *.sln
 *.sw?
 .vercel
+.env
+

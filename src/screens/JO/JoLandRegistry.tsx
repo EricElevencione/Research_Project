@@ -1,19 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+﻿import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../supabase";
 import {
   usePartialTransfer,
   ParcelSplitInput,
-} from "../../components/land_registry/usePartialTransfer";
-import { PartialParcelTransferSection } from "../../components/land_registry/PartialParcelTransferSection";
-import "../../components/layout/sidebarStyle.css";
+} from "../../components/LandRegistry/usePartialTransfer";
+import { PartialParcelTransferSection } from "../../components/LandRegistry/PartialParcelTransferSection";
 import "../../assets/css/jo css/JoLandRegistryStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import MasterlistIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
+import JOSidebar from "../../components/Layout/JOSidebar";
 import {
   getAuditLogger,
   AuditModule,
@@ -468,10 +462,6 @@ const JoLandRegistry: React.FC = () => {
     useState("");
   const [ownerAffiliationSubmitSuccess, setOwnerAffiliationSubmitSuccess] =
     useState("");
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
 
   const {
     parcelScope,
@@ -483,7 +473,6 @@ const JoLandRegistry: React.FC = () => {
     executePartialTransfers,
   } = usePartialTransfer();
 
-  const isActive = (path: string) => location.pathname === path;
 
   const refreshLandParcels = useCallback(async () => {
     setLoading(true);
@@ -520,19 +509,6 @@ const JoLandRegistry: React.FC = () => {
     console.log("Fetching aggregated farmers...");
     refreshLandParcels();
   }, [refreshLandParcels]);
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const firstName = user.user_metadata?.first_name || "";
-        const lastName = user.user_metadata?.last_name || "";
-        setCurrentUser({ firstName, lastName });
-      }
-    };
-    fetchCurrentUser();
-  }, []);
 
   const fetchCultivationParcelsForFarmer = async (
     farmerId: number,
@@ -3135,97 +3111,7 @@ const JoLandRegistry: React.FC = () => {
     <div className="jo-land-registry-page-container">
       <div className="jo-land-registry-page has-mobile-sidebar">
         {/* Sidebar */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/jo-dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/jo-dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/jo-rsbsapage") ? "active" : ""}`}
-              onClick={() => navigate("/jo-rsbsapage")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/jo-incentives") ? "active" : ""}`}
-              onClick={() => navigate("/jo-incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/jo-masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/jo-masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={MasterlistIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <div
-              className={`sidebar-nav-item ${isActive("/jo-land-registry") ? "active" : ""}`}
-              onClick={() => navigate("/jo-land-registry")}
-            >
-              <div className="nav-icon">🗺️</div>
-              <span className="nav-text">Land Registry</span>
-            </div>
-
-            <div
-              className={`sidebar-nav-item ${isActive("/jo-land-history-report") ? "active" : ""}`}
-              onClick={() => navigate("/jo-land-history-report")}
-            >
-              <div className="nav-icon">📜</div>
-              <span className="nav-text">Land History Report</span>
-            </div>
-
-            <button
-              className="sidebar-nav-item logout"
-              onClick={() => navigate("/")}
-            >
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-          {currentUser && (
-            <div className="sidebar-current-user">
-              <div className="sidebar-current-user-avatar">
-                {currentUser.firstName.charAt(0).toUpperCase()}
-                {currentUser.lastName.charAt(0).toUpperCase()}
-              </div>
-              <div className="sidebar-current-user-info">
-                <span className="sidebar-current-user-name">
-                  {currentUser.firstName} {currentUser.lastName}
-                </span>
-                <span className="sidebar-current-user-label">Logged in</span>
-              </div>
-            </div>
-          )}
-        </div>
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Main Content */}
         <div className="jo-land-registry-main-content">

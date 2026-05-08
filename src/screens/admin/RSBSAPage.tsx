@@ -11,7 +11,7 @@ import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
 import Analytics from "./Analytics";
 
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import AdminSidebar from "../../components/Layout/AdminSidebar";
 
 interface ParcelDetail {
   id: string;

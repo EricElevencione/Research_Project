@@ -1,4 +1,4 @@
-import { supabase } from "../../supabase";
+﻿import { supabase } from "../../supabase";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -7,15 +7,9 @@ import {
   getFarmerRequests,
   createAllocation,
 } from "../../api";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import MasterlistIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
 import LandRecsIcon from "../../assets/images/landrecord.png";
 import "../../assets/css/jo css/JoDistribution.css";
-import "../../components/layout/sidebarStyle.css";
+import JOSidebar from "../../components/Layout/JOSidebar";
 import {
   EDIT_REGIONAL_FERTILIZER_FIELDS,
   EDIT_REGIONAL_SEED_FIELDS,
@@ -199,7 +193,6 @@ const JoDistribution: React.FC = () => {
     farmers: { filled: "#f59e0b", empty: "#e5e7eb" },
   };
 
-  const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
     fetchAllocations();
@@ -792,85 +785,8 @@ const JoDistribution: React.FC = () => {
 
   return (
     <div className="distribution-container has-mobile-sidebar">
-      {/* Sidebar starts here */}
-      <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-        <nav className="sidebar-nav">
-          <div className="sidebar-logo">
-            <img src={LogoImage} alt="Logo" />
-          </div>
-
-          <button
-            className={`sidebar-nav-item ${isActive("/jo-dashboard") ? "active" : ""}`}
-            onClick={() => navigate("/jo-dashboard")}
-          >
-            <span className="nav-icon">
-              <img src={HomeIcon} alt="Home" />
-            </span>
-            <span className="nav-text">Home</span>
-          </button>
-
-          <button
-            className={`sidebar-nav-item ${isActive("/jo-rsbsapage") ? "active" : ""}`}
-            onClick={() => navigate("/jo-rsbsapage")}
-          >
-            <span className="nav-icon">
-              <img src={RSBSAIcon} alt="RSBSA" />
-            </span>
-            <span className="nav-text">RSBSA</span>
-          </button>
-
-          <button
-            className={`sidebar-nav-item ${isActive("/jo-incentives") ? "active" : ""}`}
-            onClick={() => navigate("/jo-incentives")}
-          >
-            <span className="nav-icon">
-              <img src={IncentivesIcon} alt="Incentives" />
-            </span>
-            <span className="nav-text">Subsidy</span>
-          </button>
-
-          <button
-            className={`sidebar-nav-item ${isActive("/jo-masterlist") ? "active" : ""}`}
-            onClick={() => navigate("/jo-masterlist")}
-          >
-            <span className="nav-icon">
-              <img src={MasterlistIcon} alt="Masterlist" />
-            </span>
-            <span className="nav-text">Masterlist</span>
-          </button>
-
-          <div
-            className={`sidebar-nav-item ${isActive("/jo-land-registry") ? "active" : ""}`}
-            onClick={() => navigate("/jo-land-registry")}
-          >
-            <div className="nav-icon">🗺️</div>
-            <span className="nav-text">Land Registry</span>
-          </div>
-
-          <div
-            className={`sidebar-nav-item ${isActive("/jo-land-history-report") ? "active" : ""}`}
-            onClick={() => navigate("/jo-land-history-report")}
-          >
-            <div className="nav-icon">📜</div>
-            <span className="nav-text">Land History Report</span>
-          </div>
-
-          <button
-            className="sidebar-nav-item logout"
-            onClick={() => navigate("/")}
-          >
-            <span className="nav-icon">
-              <img src={LogoutIcon} alt="Logout" />
-            </span>
-            <span className="nav-text">Logout</span>
-          </button>
-        </nav>
-      </div>
-      {/* Sidebar ends here */}
-      <div
-        className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-        onClick={() => setSidebarOpen(false)}
-      />
+      {/* Sidebar */}
+        <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* Main Content */}
       <div className="main-content distribution-main-content">

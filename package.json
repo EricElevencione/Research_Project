@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "electron/main.cjs",
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "vite",
@@ -11,9 +10,6 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "electron": "electron .",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
     "test": "jest",
     "test:shortages": "jest backend/shortages.test.cjs --runInBand",
     "test:shortages:parity": "node scripts/test-shortages-parity.mjs",
@@ -36,7 +32,6 @@
     "firebase": "^11.6.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
-    "knex": "^3.1.0",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "lucide-react": "^0.552.0",
@@ -55,7 +50,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
-    "@tailwindcss/postcss": "^4.1.17",
     "@types/file-saver": "^2.0.7",
     "@types/leaflet": "^1.9.19",
     "@types/react": "^18.2.66",
@@ -64,8 +58,6 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
-    "electron": "^39.2.4",
-    "electron-builder": "^26.0.12",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
@@ -73,10 +65,8 @@
     "jest": "^30.2.0",
     "postcss": "^8.5.6",
     "supertest": "^7.1.4",
-    "tailwindcss": "^4.1.16",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.24.1",
-    "vite": "^5.2.0",
-    "wait-on": "^9.0.3"
+    "vite": "^5.2.0"
   }
 }

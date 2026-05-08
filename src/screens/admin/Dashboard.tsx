@@ -15,7 +15,7 @@ import {
   useAdminDashboardStats,
   formatSeasonLabel,
 } from "../../hooks/useAdminDashboardStats";
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import AdminSidebar from "../../components/Layout/AdminSidebar";
 
 const Dashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

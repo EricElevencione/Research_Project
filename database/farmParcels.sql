@@ -1,0 +1,22 @@
+create table public.farm_parcels (
+  id serial not null,
+  submission_id integer not null,
+  parcel_number character varying(50) not null,
+  farm_location_barangay character varying(100) null,
+  farm_location_city_municipality character varying(100) null,
+  total_farm_area_ha numeric(10, 2) not null,
+  within_ancestral_domain boolean null default false,
+  ownership_document_no character varying(100) null,
+  agrarian_reform_beneficiary boolean null default false,
+  ownership_type_registered_owner boolean null default false,
+  ownership_type_tenant boolean null default false,
+  ownership_type_lessee boolean null default false,
+  tenant_land_owner_name character varying(100) null,
+  lessee_land_owner_name character varying(100) null,
+  ownership_others_specify character varying(100) null,
+  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  constraint farm_parcels_pkey primary key (id),
+  constraint farm_parcels_submission_id_fkey foreign KEY (submission_id) references rsbsa_submission (id) on delete CASCADE,
+  constraint farm_parcels_total_farm_area_ha_check check ((total_farm_area_ha >= (0)::numeric))
+) TABLESPACE pg_default;
