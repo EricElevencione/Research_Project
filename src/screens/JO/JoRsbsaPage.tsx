@@ -1426,12 +1426,7 @@ const JoRsbsaPage: React.FC = () => {
                 >
                   Register Land Owner
                 </button>
-                <button
-                  className="jo-rsbsa-register-button"
-                  onClick={() => navigate("/jo-rsbsa")}
-                >
-                  Register Tenant/Lessee
-                </button>
+                
               </div>
             </div>
             {loading ? (

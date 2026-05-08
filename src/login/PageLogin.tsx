@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaSignInAlt, FaExclamationCircle, FaShieldAlt } from "react-icons/fa";
 import "../assets/css/admin css/Login.css";
+import "../assets/css/admin css/PageLogin.css";
 import { useNavigate, Link } from "react-router-dom";
 import DaLogo from "../assets/images/Logo.png";
 import {
@@ -80,67 +81,121 @@ const Login: React.FC = () => {
   return (
     <div className="login-page">
       <div className="login-container">
+        {/* Left decorative panel — unchanged */}
         <div className="login-left"></div>
 
-        <div className="login-right">
+        {/* ─────── Redesigned Right Panel ─────── */}
+        <div className="login-right-panel">
+
+          {/* Mobile logo (hidden on desktop via Login.css) */}
           <img className="login-da-icon" src={DaLogo} alt="DA logo" />
-          <h1>Welcome back</h1>
-          <h3>LOGIN</h3>
 
-          {error && <div className="error-message">{error}</div>}
+          {/* Header */}
+          <div className="login-panel-header">
+            <span className="login-panel-badge">
+              <FaLock />
+              Log-In
+            </span>
+            <h1>Welcome back</h1>
+            <p>Sign in to access your dashboard.</p>
+          </div>
 
-          <form onSubmit={handleLogin}>
-            <label>Email</label>
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+          {/* Error Banner */}
+          {error && (
+            <div className="login-panel-error">
+              <FaExclamationCircle />
+              {error}
+            </div>
+          )}
 
-            <label>Password</label>
-            <div className="password-container">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label="Toggle password visibility"
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
+          <form className="login-panel-form" onSubmit={handleLogin} noValidate>
+
+            {/* Email */}
+            <div className="login-panel-field">
+              <label htmlFor="login-email">Email Address</label>
+              <div className="login-panel-input-wrap">
+                <span className="login-panel-input-icon"><FaEnvelope /></span>
+                <input
+                  id="login-email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
             </div>
 
-            <div className="checkbox-container">
-              <input
-                type="checkbox"
-                id="remember"
-                checked={rememberMe}
-                onChange={() => setRememberMe(!rememberMe)}
-              />
-              <label htmlFor="remember" className="remember-label">
+            {/* Password */}
+            <div className="login-panel-field">
+              <label htmlFor="login-password">Password</label>
+              <div className="login-panel-input-wrap">
+                <span className="login-panel-input-icon"><FaLock /></span>
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="login-panel-toggle-pw"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember me */}
+            <div className="login-panel-meta">
+              <label className="login-panel-remember">
+                <input
+                  type="checkbox"
+                  id="login-remember"
+                  checked={rememberMe}
+                  onChange={() => setRememberMe(!rememberMe)}
+                />
                 Keep me logged in
               </label>
             </div>
 
-            <button type="submit" className="login-button" disabled={loading}>
-              {loading ? "Logging in…" : "Log In"}
+            {/* Submit */}
+            <button
+              id="login-submit"
+              type="submit"
+              className="login-panel-submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="lp-spinner" />
+                  Signing in…
+                </>
+              ) : (
+                <>
+                  <FaSignInAlt />
+                  Sign In
+                </>
+              )}
             </button>
-
-            <Link to="/register" className="register-link">
-              <p className="forgot-password">
-                Didn't have an account yet? Register here
-              </p>
-            </Link>
           </form>
+
+          {/* Divider */}
+          <div className="login-panel-divider">or</div>
+
+          {/* Footer */}
+          <p className="login-panel-footer">
+            Don't have an account?
+            <Link to="/register">Register here</Link>
+          </p>
         </div>
+        {/* ─────── End Redesigned Right Panel ─────── */}
       </div>
     </div>
   );

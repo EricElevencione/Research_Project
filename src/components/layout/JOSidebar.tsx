@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import MasterlistIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
+import {
+  FaHome,
+  FaIdCard,
+  FaGift,
+  FaListAlt,
+  FaMap,
+  FaScroll,
+  FaSignOutAlt,
+} from "react-icons/fa";
 import { supabase } from "../../supabase";
 import "./sidebarStyle.css";
 
@@ -13,6 +17,15 @@ interface JOSidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 }
+
+const navItems = [
+  { path: "/jo-dashboard",           icon: <FaHome />,    text: "Home" },
+  { path: "/jo-rsbsapage",           icon: <FaIdCard />,  text: "RSBSA" },
+  { path: "/jo-incentives",          icon: <FaGift />,    text: "Subsidy" },
+  { path: "/jo-masterlist",          icon: <FaListAlt />, text: "Masterlist" },
+  { path: "/jo-land-registry",       icon: <FaMap />,     text: "Land Registry" },
+  { path: "/jo-land-history-report", icon: <FaScroll />,  text: "Land History" },
+];
 
 const JOSidebar: React.FC<JOSidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const navigate = useNavigate();
@@ -40,51 +53,46 @@ const JOSidebar: React.FC<JOSidebarProps> = ({ sidebarOpen, setSidebarOpen }) =>
     navigate("/");
   };
 
-  const navItems = [
-    { path: "/jo-dashboard", icon: HomeIcon, text: "Home" },
-    { path: "/jo-rsbsapage", icon: RSBSAIcon, text: "RSBSA" },
-    { path: "/jo-incentives", icon: IncentivesIcon, text: "Subsidy" },
-    { path: "/jo-masterlist", icon: MasterlistIcon, text: "Masterlist" },
-    { path: "/jo-land-registry", icon: "🗺️", text: "Land Registry" },
-    { path: "/jo-land-history-report", icon: "📜", text: "Land History Report" },
-  ];
+  const handleNav = (path: string) => {
+    navigate(path);
+    setSidebarOpen(false);
+  };
 
   return (
     <>
       <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+
+        {/* Logo */}
+        <div className="sidebar-logo">
+          <img src={LogoImage} alt="DA Logo" />
+          <span className="sidebar-logo-title">JO Portal</span>
+        </div>
+
+        {/* Navigation */}
         <nav className="sidebar-nav">
-          <div className="sidebar-logo">
-            <img src={LogoImage} alt="Logo" />
-          </div>
+          <span className="sidebar-section-label">Navigation</span>
 
           {navItems.map((item) => (
             <button
               key={item.path}
               className={`sidebar-nav-item ${isActive(item.path) ? "active" : ""}`}
-              onClick={() => {
-                navigate(item.path);
-                setSidebarOpen(false);
-              }}
+              onClick={() => handleNav(item.path)}
             >
-              <span className="nav-icon">
-                {typeof item.icon === "string" && !item.icon.includes("/") && !item.icon.includes(".") ? (
-                  <span style={{ fontSize: "20px" }}>{item.icon}</span>
-                ) : (
-                  <img src={item.icon as string} alt={item.text} />
-                )}
-              </span>
+              <span className="nav-icon">{item.icon}</span>
               <span className="nav-text">{item.text}</span>
             </button>
           ))}
 
+          <div className="sidebar-separator" />
+
+          {/* Logout */}
           <button className="sidebar-nav-item logout" onClick={handleLogout}>
-            <span className="nav-icon">
-              <img src={LogoutIcon} alt="Logout" />
-            </span>
+            <span className="nav-icon"><FaSignOutAlt /></span>
             <span className="nav-text">Logout</span>
           </button>
         </nav>
 
+        {/* User card */}
         {currentUser && (
           <div className="sidebar-current-user">
             <div className="sidebar-current-user-avatar">
@@ -100,6 +108,8 @@ const JOSidebar: React.FC<JOSidebarProps> = ({ sidebarOpen, setSidebarOpen }) =>
           </div>
         )}
       </div>
+
+      {/* Overlay (mobile) */}
       <div
         className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
         onClick={() => setSidebarOpen(false)}

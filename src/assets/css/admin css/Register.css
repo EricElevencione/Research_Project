@@ -1,0 +1,338 @@
+/* =============================================
+   REGISTER PAGE — login-right REDESIGN
+   ============================================= */
+
+/* ---- Scoped overrides for the register right panel ---- */
+.register-right {
+  width: 50%;
+  padding: 36px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle decorative blob top-right */
+.register-right::before {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(78, 148, 79, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ---- Header area ---- */
+.register-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.register-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+  color: #2e7d32;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid #c8e6c9;
+  margin-bottom: 10px;
+}
+
+.register-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.register-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+
+.register-header p {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ---- Form layout ---- */
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Two-column row for first/last name */
+.register-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.register-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.register-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 5px;
+  letter-spacing: 0.02em;
+}
+
+/* Floating icon input wrapper */
+.register-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.register-input-icon {
+  position: absolute;
+  left: 12px;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+.register-input-wrapper input,
+.register-input-wrapper select {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111827;
+  background: #f9fafb;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.register-input-wrapper input:focus,
+.register-input-wrapper select:focus {
+  border-color: #4e944f;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(78, 148, 79, 0.12);
+}
+
+.register-input-wrapper:focus-within .register-input-icon {
+  color: #4e944f;
+}
+
+/* Password toggle button */
+.register-toggle-pw {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  font-size: 15px;
+  transition: color 0.2s;
+}
+
+.register-toggle-pw:hover {
+  color: #4e944f;
+}
+
+/* ---- Password strength bar ---- */
+.password-strength {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.strength-segment {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: #e5e7eb;
+  transition: background 0.3s;
+}
+
+.strength-segment.weak   { background: #ef4444; }
+.strength-segment.medium { background: #f59e0b; }
+.strength-segment.strong { background: #4e944f; }
+
+/* ---- Error message ---- */
+.register-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-bottom: 14px;
+  animation: shake 0.35s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-5px); }
+  60%       { transform: translateX(5px); }
+}
+
+/* ---- Submit button ---- */
+.register-submit-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #4e944f 0%, #2e7d32 100%);
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  border-radius: 10px;
+  margin-top: 6px;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.register-submit-btn:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
+}
+
+.register-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.register-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Spinner inside button */
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Footer link ---- */
+.register-footer-link {
+  text-align: center;
+  font-size: 12.5px;
+  color: #6b7280;
+  margin-top: 14px;
+}
+
+.register-footer-link a {
+  color: #4e944f;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.register-footer-link a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Success state ---- */
+.register-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.register-success-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.register-success h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.register-success p {
+  font-size: 13px;
+  color: #6b7280;
+  max-width: 260px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.register-success p strong {
+  color: #2e7d32;
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 520px) {
+  .register-right {
+    width: 100%;
+    padding: 28px 20px 22px;
+  }
+
+  .register-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .register-header h1 {
+    font-size: 20px;
+  }
+}

@@ -353,8 +353,6 @@ const buildReplacementTakeoverPlan = (
 };
 
 const JoLandRegistry: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
 
   // State
   const [aggregatedFarmers, setAggregatedFarmers] = useState<FarmerGroup[]>([]);
@@ -512,14 +510,14 @@ const JoLandRegistry: React.FC = () => {
 
   const fetchCultivationParcelsForFarmer = async (
     farmerId: number,
-    parcels: FarmerGroup["parcels"], // no longer used for filtering
+
   ) => {
     setCultivationLoading(true);
     try {
       // Query ALL parcels for this farmer directly from the table
       // Don't rely on group.parcels since normalizeCurrentOwnershipGroups
       // may have already dropped parcels with is_current_owner === false
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("rsbsa_farm_parcels")
         .select(
           "id, submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_cultivating, cultivation_status_reason, cultivation_status_updated_at, cultivator_submission_id",
@@ -609,7 +607,7 @@ const JoLandRegistry: React.FC = () => {
       console.log("No parcel IDs found for selected row.");
     }
 
-    void fetchCultivationParcelsForFarmer(group.farmer_id, group.parcels);
+    void fetchCultivationParcelsForFarmer(group.farmer_id);
 
     setOpenActionMenuRowId(null);
     setShowModal(true);
@@ -640,26 +638,7 @@ const JoLandRegistry: React.FC = () => {
     openTransferModal("owner");
   };
 
-  const handleRowActionOwnerAffiliation = (
-    row: RegistryDisplayRow,
-    role: ReplacementRole,
-  ) => {
-    const roleAllowed =
-      role === "tenant"
-        ? row.capabilities.canUpdateTenantLandowner
-        : row.capabilities.canUpdateLesseeLandowner;
-
-    if (!roleAllowed) {
-      setOpenActionMenuRowId(null);
-      return;
-    }
-
-    setOpenActionMenuRowId(null);
-    setSelectedFarmer(row.farmer);
-    setSelectedFarmerViewRole(role);
-    setSelectedRegistryRowId(row.rowId);
-    openOwnerAffiliationModal(row.farmer, role);
-  };
+  
 
   const resetOwnerAffiliationWorkflow = () => {
     setOwnerAffiliationSourceOptions([]);
@@ -999,20 +978,6 @@ const JoLandRegistry: React.FC = () => {
     } finally {
       setOwnerAffiliationLoading(false);
     }
-  };
-
-  const openOwnerAffiliationModal = (
-    group: FarmerGroup,
-    role: ReplacementRole,
-  ) => {
-    setOpenActionMenuRowId(null);
-    setSelectedFarmer(group);
-    setSelectedFarmerViewRole(role);
-    setShowModal(false);
-    setOwnerAffiliationRole(role);
-    resetOwnerAffiliationWorkflow();
-    setShowOwnerAffiliationModal(true);
-    void loadOwnerAffiliationSourceOptions(group, role);
   };
 
   const closeOwnerAffiliationModal = () => {
