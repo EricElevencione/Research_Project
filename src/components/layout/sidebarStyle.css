@@ -3,15 +3,16 @@
    ============================================= */
 
 :root {
-  --sb-bg: #f0fdf4;
-  --sb-surface: #dcfce7;
-  --sb-border: rgba(0, 0, 0, 0.08);
-  --sb-accent: #16a34a;
-  --sb-accent-dark: #15803d;
-  --sb-accent-glow: rgba(22, 163, 74, 0.1);
-  --sb-text: #14532d;
-  --sb-text-muted: #4b7355;
-  --sb-width: 256px;
+  --sb-bg: #ffffff;
+  --sb-surface: #f8fafc;
+  --sb-border: rgba(0, 0, 0, 0.05);
+  --sb-accent: #059669;
+  --sb-accent-light: #34d399;
+  --sb-accent-glow: rgba(5, 150, 105, 0.08);
+  --sb-text: #1e293b;
+  --sb-text-muted: #64748b;
+  --sb-width: 260px;
+  --sb-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* ---- Shell ---- */
@@ -19,14 +20,16 @@
   background: var(--sb-bg);
   width: var(--sb-width);
   min-width: var(--sb-width);
-  height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  font-family: var(--font-family);
-  position: relative;
+  position: sticky;
+  top: 0;
   border-right: 1px solid var(--sb-border);
-  box-shadow: 1px 0 0 0 var(--sb-border), 4px 0 20px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--sb-shadow);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
 }
 
 /* ---- Logo / Branding ---- */
@@ -98,19 +101,19 @@
 /* Active state */
 .sidebar-nav-item.active {
   background: var(--sb-accent-glow);
-  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.18);
+  color: var(--sb-accent);
 }
 
-/* Active left bar */
 .sidebar-nav-item.active::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 20%;
-  height: 60%;
-  width: 3px;
+  top: 12%;
+  height: 76%;
+  width: 4px;
   background: var(--sb-accent);
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 2px 0 8px var(--sb-accent-glow);
 }
 
 /* ---- Nav Icon ---- */
@@ -125,7 +128,15 @@
   flex-shrink: 0;
   font-size: 16px;
   color: var(--sb-text-muted);
-  transition: background 0.18s, color 0.18s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.nav-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  transition: transform 0.2s ease;
 }
 
 .sidebar-nav-item:hover .nav-icon {
@@ -148,8 +159,12 @@
 }
 
 .sidebar-nav-item:hover .nav-text {
-  color: #fff;
+  color: var(--sb-accent);
   text-decoration: none;
+}
+
+.sidebar-nav-item:hover .nav-icon img {
+  transform: scale(1.1);
 }
 
 .sidebar-nav-item.active .nav-text {

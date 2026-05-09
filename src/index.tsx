@@ -35,6 +35,7 @@ import AdminCreateAllocation from "./screens/admin/AdminCreateAllocation";
 import ShortagesSuggestions from "./screens/dss/ShortagesSuggestions.jsx";
 import JoRsbsaRegisLandowner from "./screens/JO/JoRsbsaRegisLandowner";
 import JoRsbsaRegisFarmer from "./screens/JO/JoRsbsaRegisFarmer";
+import ManageVarieties from "./screens/admin/ManageVarieties";
 import "../src/assets/css/admin css/index.css";
 import Register from "./screens/auth/Register";
 
@@ -102,6 +103,14 @@ function App() {
           element={
             <ProtectedRoute>
               <InventoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manage-varieties"
+          element={
+            <ProtectedRoute>
+              <ManageVarieties />
             </ProtectedRoute>
           }
         />

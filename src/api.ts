@@ -2914,6 +2914,72 @@ export const getShortagesFertilizers = async (): Promise<ApiResponse> => {
   return callShortagesApiViaNode("/fertilizers");
 };
 
+export const addShortageSeed = async (seedData: any): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("shortages_seeds")
+    .insert(seedData)
+    .select()
+    .single();
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 201);
+};
+
+export const updateShortageSeed = async (id: string, updateData: any): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("shortages_seeds")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
+};
+
+export const deleteShortageSeed = async (id: string): Promise<ApiResponse> => {
+  const { error } = await supabase
+    .from("shortages_seeds")
+    .delete()
+    .eq("id", id);
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse({ success: true }, null, 200);
+};
+
+export const addShortageFertilizer = async (fertData: any): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("shortages_fertilizers")
+    .insert(fertData)
+    .select()
+    .single();
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 201);
+};
+
+export const updateShortageFertilizer = async (id: string, updateData: any): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("shortages_fertilizers")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
+};
+
+export const deleteShortageFertilizer = async (id: string): Promise<ApiResponse> => {
+  const { error } = await supabase
+    .from("shortages_fertilizers")
+    .delete()
+    .eq("id", id);
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse({ success: true }, null, 200);
+};
+
 export const resolveFertilizerShortageSuggestion = async (
   payload: FertilizerShortagePayload,
 ): Promise<ApiResponse> => {
@@ -3667,6 +3733,14 @@ export default {
 
   // Technician Dashboard
   getTechDashboardData,
+
+  // Varieties Management
+  addShortageSeed,
+  updateShortageSeed,
+  deleteShortageSeed,
+  addShortageFertilizer,
+  updateShortageFertilizer,
+  deleteShortageFertilizer,
 
   // Universal fetch
   apiFetch,

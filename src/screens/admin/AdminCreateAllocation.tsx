@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { createAllocation, getAllocationById, updateAllocation } from "../../api";
+import { createAllocation, getAllocationById, updateAllocation, getShortagesSeeds, getShortagesFertilizers } from "../../api";
 import {
   getAuditLogger,
   AuditModule,
@@ -203,7 +203,48 @@ const AdminCreateAllocation: React.FC = () => {
   const { allocationId } = useParams<{ allocationId: string }>();
   const isEditMode = !!allocationId;
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [seedVarieties, setSeedVarieties] = useState<any[]>([]);
+  const [fertVarieties, setFertVarieties] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    const fetchVarieties = async () => {
+      try {
+        const [seedsRes, fertsRes] = await Promise.all([
+          getShortagesSeeds(),
+          getShortagesFertilizers()
+        ]);
+        
+        if (seedsRes.data) {
+          setSeedVarieties(seedsRes.data.filter((v: any) => v.is_active));
+        }
+        if (fertsRes.data) {
+          setFertVarieties(fertsRes.data.filter((v: any) => v.is_active));
+        }
+      } catch (err) {
+        console.error("Failed to fetch varieties for allocation form:", err);
+      }
+    };
+    fetchVarieties();
+  }, []);
+
+  // Map varieties to fields for selection
+  const dynamicFertFields = React.useMemo(() => {
+    if (fertVarieties.length === 0) return FERTILIZER_FIELDS;
+    return fertVarieties.map(v => ({
+      key: `${v.id}_bags` as AllocationNumericField, 
+      label: v.name,
+      category: v.category || "Solid"
+    }));
+  }, [fertVarieties]);
+
+  const dynamicSeedFields = React.useMemo(() => {
+    if (seedVarieties.length === 0) return SEED_FIELDS;
+    return seedVarieties.map(v => ({
+      key: `${v.id}_kg` as AllocationNumericField, 
+      label: v.name,
+      category: v.category || "Inbred"
+    }));
+  }, [seedVarieties]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -309,17 +350,17 @@ const AdminCreateAllocation: React.FC = () => {
         notes: formData.notes,
       };
 
-      // Initialize all numeric fields to 0
-      [...FERTILIZER_FIELDS, ...SEED_FIELDS].forEach(field => {
+      // Initialize all numeric fields from dynamic lists
+      [...dynamicFertFields, ...dynamicSeedFields].forEach(field => {
         payload[field.key] = 0;
       });
 
       // Populate from selected lists
       selectedFertilizers.forEach(item => {
-        payload[item.key] = (payload[item.key] as number) + item.value;
+        payload[item.key] = item.value;
       });
       selectedSeeds.forEach(item => {
-        payload[item.key] = (payload[item.key] as number) + item.value;
+        payload[item.key] = item.value;
       });
 
       let response;
@@ -415,8 +456,8 @@ const AdminCreateAllocation: React.FC = () => {
                     <option value="" disabled>Select Fertilizer to Add...</option>
                     {["Solid", "Liquid"].map(category => (
                       <optgroup key={category} label={`${category} Fertilizers`}>
-                        {FERTILIZER_FIELDS.filter(f => {
-                          const cat = FERTILIZER_CATALOG_ROWS.find(c => c.name === f.label)?.category;
+                        {dynamicFertFields.filter(f => {
+                          const cat = f.category || (FERTILIZER_CATALOG_ROWS.find(c => c.name === f.label)?.category);
                           return cat === category && !selectedFertilizers.some(sf => sf.key === f.key);
                         }).map(f => (
                           <option key={f.key} value={f.key}>{f.label}</option>
@@ -428,7 +469,7 @@ const AdminCreateAllocation: React.FC = () => {
                 
                 <div className="jo-allocation-dynamic-list">
                   {selectedFertilizers.map((item, index) => {
-                    const label = FERTILIZER_FIELDS.find(f => f.key === item.key)?.label;
+                    const label = dynamicFertFields.find(f => f.key === item.key)?.label || FERTILIZER_FIELDS.find(f => f.key === item.key)?.label;
                     return (
                       <div key={item.key} className="jo-allocation-dynamic-row">
                         <div className="jo-allocation-row-label">{label}</div>
@@ -462,8 +503,8 @@ const AdminCreateAllocation: React.FC = () => {
                     <option value="" disabled>Select Seed to Add...</option>
                     {["Hybrid", "Inbred"].map(category => (
                       <optgroup key={category} label={`${category} Seeds`}>
-                        {SEED_FIELDS.filter(s => {
-                          const cat = SEED_CATALOG_ROWS.find(c => c.name === s.label)?.category;
+                        {dynamicSeedFields.filter(s => {
+                          const cat = s.category || (SEED_CATALOG_ROWS.find(c => c.name === s.label)?.category);
                           return cat === category && !selectedSeeds.some(ss => ss.key === s.key);
                         }).map(s => (
                           <option key={s.key} value={s.key}>{s.label}</option>
@@ -475,7 +516,7 @@ const AdminCreateAllocation: React.FC = () => {
                 
                 <div className="jo-allocation-dynamic-list">
                   {selectedSeeds.map((item, index) => {
-                    const label = SEED_FIELDS.find(s => s.key === item.key)?.label;
+                    const label = dynamicSeedFields.find(s => s.key === item.key)?.label || SEED_FIELDS.find(s => s.key === item.key)?.label;
                     return (
                       <div key={item.key} className="jo-allocation-dynamic-row">
                         <div className="jo-allocation-row-label">{label}</div>
