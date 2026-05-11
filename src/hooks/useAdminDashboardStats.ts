@@ -50,6 +50,16 @@ export interface SubsidyStock {
   remaining: number;
 }
 
+export interface TraceabilityRecord {
+  id: number;
+  date: string;
+  farmerName: string;
+  barangay: string;
+  program: string;
+  items: string;
+  status: string;
+}
+
 export interface RequestStats {
   pending: number;
   approved: number;
@@ -65,6 +75,7 @@ export interface AdminDashboardData {
   barangayDensity: BarangayDensity[];
   subsidyBreakdown: SubsidyStock[];
   requestStats: RequestStats;
+  traceabilityLog: TraceabilityRecord[];
   currentSeason: string;
   loading: boolean;
   error: string | null;
@@ -122,6 +133,7 @@ export const useAdminDashboardStats = (
       rejected: 0,
       total: 0,
     },
+    traceabilityLog: [],
     currentSeason: getCurrentSeason(),
     loading: true,
     error: null,
@@ -153,7 +165,7 @@ export const useAdminDashboardStats = (
         supabase
           .from("distribution_records")
           .select(
-            "id, request_id, fertilizer_bags_given, seed_kg_given, claimed, claim_date, distribution_date, created_at",
+            "id, request_id, fertilizer_type, fertilizer_bags_given, seed_type, seed_kg_given, claimed, claim_date, distribution_date, created_at",
           ),
       ]);
 
@@ -378,11 +390,15 @@ export const useAdminDashboardStats = (
         total: requests.length,
       };
 
-      // Calculate totals for allocated vs distributed across all seasons
+      // Calculate totals for allocated vs distributed
       const subsidyMap = new Map<string, { allocated: number; requested: number; distributed: number }>();
 
-      // Allocated amounts (sum across all regional_allocations)
-      allocations.forEach((a: any) => {
+      // Allocated amounts (sum across regional_allocations)
+      const filteredAllocations = selectedAllocationId 
+        ? allocations.filter((a: any) => a.id === selectedAllocationId)
+        : allocations;
+
+      filteredAllocations.forEach((a: any) => {
         const fields = Object.keys(a).filter(k => k.includes('_bags') || k.includes('_kg') || k.includes('_liters'));
         fields.forEach(field => {
           const val = Number(a[field]) || 0;
@@ -394,8 +410,12 @@ export const useAdminDashboardStats = (
       });
 
       // Requested vs Distributed amounts
-      // We iterate over requests to get the total demand (requested)
-      requests.forEach((req: any) => {
+      // Filter requests by allocation if selected
+      const filteredRequestsInv = selectedAllocationId
+        ? requests.filter((r: any) => r.allocation_id === selectedAllocationId)
+        : requests;
+
+      filteredRequestsInv.forEach((req: any) => {
         const reqFields = Object.keys(req).filter(k => k.startsWith('requested_'));
         reqFields.forEach(rf => {
           let allocField = rf.replace('requested_', '');
@@ -433,6 +453,57 @@ export const useAdminDashboardStats = (
         remaining: Math.max(0, val.allocated - val.distributed),
       })).sort((a, b) => b.allocated - a.allocated);
 
+      // ── Traceability Log (Full Lifecycle) ──────────────────
+      const traceabilityLog: TraceabilityRecord[] = requests
+        .filter((req: any) => !selectedAllocationId || req.allocation_id === selectedAllocationId)
+        .map((req: any) => {
+          const dist = distributions.find((d: any) => d.request_id === req.id);
+          const alloc = allocations.find((a: any) => a.id === req.allocation_id);
+          
+          let statusText = "Pending Approval";
+          if (req.status === 'approved') statusText = "Awaiting Distribution";
+          if (dist) {
+            statusText = dist.claimed ? "Claimed" : "Distributed";
+          }
+
+          const itemsList: string[] = [];
+          
+          // Try to get from actual distribution first
+          if (dist) {
+            if (dist.fertilizer_bags_given > 0) itemsList.push(`${dist.fertilizer_bags_given} Bags ${dist.fertilizer_type || ""}`);
+            if (dist.seed_kg_given > 0) itemsList.push(`${dist.seed_kg_given} KG ${dist.seed_type || ""}`);
+          }
+          
+          // Fallback to assigned if empty
+          if (itemsList.length === 0) {
+            if (req.assigned_fertilizer_bags > 0) itemsList.push(`${req.assigned_fertilizer_bags} Bags ${req.assigned_fertilizer_type || ""}`);
+            if (req.assigned_seed_kg > 0) itemsList.push(`${req.assigned_seed_kg} KG ${req.assigned_seed_type || ""}`);
+          }
+
+          let itemText = itemsList.join(", ");
+          
+          // Apply appropriate verbs based on data completion state
+          if (!itemText) {
+            if (dist) {
+              itemText = "Missing Item Record (Requires Edit)";
+            } else if (req.status === 'approved') {
+              itemText = "Awaiting Allocation";
+            } else {
+              itemText = "Pending Assignment";
+            }
+          }
+
+          return {
+            id: req.id,
+            date: dist?.distribution_date || req.request_date || req.created_at,
+            farmerName: req.farmer_name || "Unknown",
+            barangay: req.barangay || "Unknown",
+            program: alloc ? formatSeasonLabel(alloc.season) : "N/A",
+            items: itemText,
+            status: statusText
+          };
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
       // ── Set state ─────────────────────────────────────────
       setData({
         kpi,
@@ -441,6 +512,7 @@ export const useAdminDashboardStats = (
         barangayDensity,
         subsidyBreakdown,
         requestStats,
+        traceabilityLog,
         currentSeason,
         loading: false,
         error: null,

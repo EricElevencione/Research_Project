@@ -29,14 +29,15 @@ import JoRsbsaPage from "./screens/JO/JoRsbsaPage";
 import JoDistribution from "./screens/JO/JoDistribution";
 import JoLandRegistry from "./screens/JO/JoLandRegistry";
 import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
+import JoFarmerRegistry from "./screens/JO/JoFarmerRegistry";
+import JoLandownerRegistry from "./screens/JO/JoLandownerRegistry";
 import AuditTrail from "./screens/admin/AuditTrail";
 import InventoryPage from "./screens/admin/InventoryPage";
 import AdminCreateAllocation from "./screens/admin/AdminCreateAllocation";
+import ManageVarieties from "./screens/admin/ManageVarieties";
 import ShortagesSuggestions from "./screens/dss/ShortagesSuggestions.jsx";
 import JoRsbsaRegisLandowner from "./screens/JO/JoRsbsaRegisLandowner";
 import JoRsbsaRegisFarmer from "./screens/JO/JoRsbsaRegisFarmer";
-import JoFarmerRegistry from "./screens/JO/JoFarmerRegistry";
-import JoLandownerRegistry from "./screens/JO/JoLandownerRegistry";
 import "../src/assets/css/admin css/index.css";
 import Register from "./screens/auth/Register";
 
@@ -104,6 +105,14 @@ function App() {
           element={
             <ProtectedRoute>
               <InventoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manage-varieties"
+          element={
+            <ProtectedRoute>
+              <ManageVarieties />
             </ProtectedRoute>
           }
         />
