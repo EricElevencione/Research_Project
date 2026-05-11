@@ -35,6 +35,8 @@ import AdminCreateAllocation from "./screens/admin/AdminCreateAllocation";
 import ShortagesSuggestions from "./screens/dss/ShortagesSuggestions.jsx";
 import JoRsbsaRegisLandowner from "./screens/JO/JoRsbsaRegisLandowner";
 import JoRsbsaRegisFarmer from "./screens/JO/JoRsbsaRegisFarmer";
+import JoFarmerRegistry from "./screens/JO/JoFarmerRegistry";
+import JoLandownerRegistry from "./screens/JO/JoLandownerRegistry";
 import "../src/assets/css/admin css/index.css";
 import Register from "./screens/auth/Register";
 
@@ -262,6 +264,22 @@ function App() {
           element={
             <ProtectedRoute>
               <JoRsbsaRegisFarmer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jo-farmer-registry"
+          element={
+            <ProtectedRoute>
+              <JoFarmerRegistry />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jo-landowner-registry"
+          element={
+            <ProtectedRoute>
+              <JoLandownerRegistry />
             </ProtectedRoute>
           }
         />

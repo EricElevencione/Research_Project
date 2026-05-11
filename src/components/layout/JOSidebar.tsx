@@ -9,6 +9,8 @@ import {
   FaMap,
   FaScroll,
   FaSignOutAlt,
+  FaPersonBooth,
+  FaLandmark,
 } from "react-icons/fa";
 import { supabase } from "../../supabase";
 import "./sidebarStyle.css";
@@ -23,6 +25,8 @@ const navItems = [
   { path: "/jo-rsbsapage",           icon: <FaIdCard />,  text: "RSBSA" },
   { path: "/jo-incentives",          icon: <FaGift />,    text: "Subsidy" },
   { path: "/jo-masterlist",          icon: <FaListAlt />, text: "Masterlist" },
+  { path: "/jo-farmer-registry",     icon: <FaPersonBooth />,     text: "Farmers" },
+  { path: "/jo-landowner-registry",  icon: <FaLandmark />,     text: "Land Owners" },
   { path: "/jo-land-registry",       icon: <FaMap />,     text: "Land Registry" },
   { path: "/jo-land-history-report", icon: <FaScroll />,  text: "Land History" },
 ];

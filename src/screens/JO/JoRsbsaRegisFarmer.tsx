@@ -51,8 +51,6 @@ interface FormData {
   farmerPoultryText?: string;
 }
 
-import { useEffect } from "react";
-
 const BARANGAY_OPTIONS = [
   "Aurora-Del Pilar",
   "Bacay",

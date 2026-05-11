@@ -1169,7 +1169,7 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
   // Get all farm parcels with current ownership status
   const { data: parcelsData } = await supabase
     .from("rsbsa_farm_parcels")
-    .select("submission_id, is_current_owner, is_cultivating");
+    .select("submission_id, is_current_owner, is_farming");
 
   // Create a map of submission_id -> has any current parcels
   const currentOwnershipMap = new Map<number, boolean>();
@@ -1241,9 +1241,9 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
       all: initCultivationCounts(),
     };
 
-    updateCultivationCounts(entry.all, parcel.is_cultivating);
+    updateCultivationCounts(entry.all, parcel.is_farming);
     if (parcel.is_current_owner !== false) {
-      updateCultivationCounts(entry.current, parcel.is_cultivating);
+      updateCultivationCounts(entry.current, parcel.is_farming);
     }
 
     cultivationMap.set(subId, entry);

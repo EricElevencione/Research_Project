@@ -1,0 +1,2284 @@
+import { supabase } from "../../supabase";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  getRsbsaSubmissions,
+  getRsbsaSubmissionById,
+  getFarmParcels,
+  updateRsbsaSubmission,
+} from "../../api";
+import {
+  printRsbsaFormById,
+  printRsbsaFormsByIds,
+} from "../../utils/rsbsaPrint";
+import "../../assets/css/jo css/JoMasterlistStyle.css";
+import JOSidebar from "../../components/Layout/JOSidebar";
+import "../../assets/css/jo css/FarmerDetailModal.css";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
+
+// ─────────────────────────────────────────────
+// LANDOWNER REGISTRY
+// Shows only registered landowners. Purpose:
+//   • See who owns land in Dumangas
+//   • See who is working each parcel (tenant / lessee / owner-farmed)
+//   • Know the full land picture per landowner in one modal
+//   • Flag unlinked occupant names (text-only, no FFRS link)
+//   • Export and print RSBSA forms
+// Only Definition A landowners: OWNERSHIP_TYPE_REGISTERED_OWNER = true
+// ─────────────────────────────────────────────
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
+
+interface LandownerRecord {
+  id: string;
+  referenceNumber: string;
+  landownerName: string;
+  landownerAddress: string;
+  farmLocation: string;
+  barangay: string;
+  parcelArea: string;
+  parcelCount: number;
+  age: number | null;
+  dateSubmitted: string;
+  status: string;
+  // Relationship counts — fetched separately via supabase
+  tenantCount: number;
+  lesseeCount: number;
+  archivedAt?: string | null;
+  archiveReason?: string | null;
+}
+
+// One parcel in the modal — combined view of ownership + occupation
+interface OccupiedParcel {
+  id: string;
+  parcelNumber: string;
+  farmLocationBarangay: string;
+  farmLocationMunicipality: string;
+  totalFarmAreaHa: number;
+  // Occupation
+  occupationType: "owner-farmed" | "tenant" | "lessee" | "tenant+lessee";
+  occupants: OccupantInfo[];
+  // Parcel attributes
+  agrarianReformBeneficiary: string;
+  withinAncestralDomain: string;
+  ownershipDocumentNo: string;
+  isFarming: boolean | null;
+  farmingStatusReason: string | null;
+  farmingStatusUpdatedAt: string | null;
+}
+
+interface OccupantInfo {
+  submissionId: string;
+  name: string;
+  ffrsCode: string;
+  role: "tenant" | "lessee" | "tenant+lessee";
+  isLinked: boolean; // false = text-only name with no FFRS
+}
+
+interface LandownerDetail {
+  id: string;
+  referenceNumber: string;
+  dateSubmitted: string;
+  recordStatus: string;
+  birthdate: string | null;
+  archivedAt: string | null;
+  archiveReason: string | null;
+  landownerName: string;
+  landownerAddress: string;
+  age: number | string;
+  gender: string;
+  parcels: OccupiedParcel[];
+}
+
+interface EditFormData {
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  age?: string;
+  barangay?: string;
+  municipality?: string;
+}
+
+type SortKey = "landownerName" | "dateSubmitted" | "parcelArea" | "tenantCount";
+type SortDirection = "asc" | "desc";
+
+const DEFAULT_SORT_CONFIG: { key: SortKey; direction: SortDirection } = {
+  key: "landownerName",
+  direction: "asc",
+};
+const MAX_SORT_LEVELS = 2;
+
+const getDefaultSortDirection = (key: SortKey): SortDirection => {
+  if (key === "landownerName") return "asc";
+  return "desc";
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+const JoLandownerRegistry: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const barangays = [
+    "Aurora-Del Pilar",
+    "Bacay",
+    "Bacong",
+    "Balabag",
+    "Balud",
+    "Bantud",
+    "Bantud Fabrica",
+    "Baras",
+    "Barasan",
+    "Basa-Mabini Bonifacio",
+    "Bolilao",
+    "Buenaflor Embarkadero",
+    "Burgos-Regidor",
+    "Calao",
+    "Cali",
+    "Cansilayan",
+    "Capaliz",
+    "Cayos",
+    "Compayan",
+    "Dacutan",
+    "Ermita",
+    "Ilaya 1st",
+    "Ilaya 2nd",
+    "Ilaya 3rd",
+    "Jardin",
+    "Lacturan",
+    "Lopez Jaena - Rizal",
+    "Managuit",
+    "Maquina",
+    "Nanding Lopez",
+    "Pagdugue",
+    "Paloc Bigque",
+    "Paloc Sool",
+    "Patlad",
+    "Pd Monfort North",
+    "Pd Monfort South",
+    "Pulao",
+    "Rosario",
+    "Sapao",
+    "Sulangan",
+    "Tabucan",
+    "Talusan",
+    "Tambobo",
+    "Tamboilan",
+    "Victorias",
+  ].sort();
+
+  const [landownerRecords, setLandownerRecords] = useState<LandownerRecord[]>(
+    [],
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [selectedLandowner, setSelectedLandowner] =
+    useState<LandownerDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const [editingRecord, setEditingRecord] = useState<LandownerRecord | null>(
+    null,
+  );
+  const [editFormData, setEditFormData] = useState<EditFormData>({});
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const [updateNotification, setUpdateNotification] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({ show: false, type: "success", message: "" });
+
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [sortConfigs, setSortConfigs] = useState<
+    Array<{ key: SortKey; direction: SortDirection }>
+  >([{ ...DEFAULT_SORT_CONFIG }]);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
+  const [isModalPrinting, setIsModalPrinting] = useState(false);
+  const [isBulkPrinting, setIsBulkPrinting] = useState(false);
+  const [printingRecordIds, setPrintingRecordIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+
+  const VISIBLE_COLUMN_COUNT = 9;
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  const showUpdateNotification = (
+    message: string,
+    type: "success" | "error",
+  ) => {
+    setUpdateNotification({ show: true, type, message });
+    setTimeout(
+      () => setUpdateNotification((p) => ({ ...p, show: false })),
+      3200,
+    );
+  };
+
+  const formatDate = (iso: string) => {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleDateString();
+    } catch {
+      return "—";
+    }
+  };
+
+  const formatDateTime = (iso?: string | null) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
+  };
+
+  const formatArea = (area: string | number) => {
+    const tokens = String(area || "").match(/-?\d+(?:\.\d+)?/g);
+    if (tokens && tokens.length > 0) {
+      const total = tokens.reduce((s, t) => {
+        const n = Number(t);
+        return s + (Number.isFinite(n) ? n : 0);
+      }, 0);
+      if (Number.isFinite(total) && total > 0)
+        return `${total.toLocaleString(undefined, { minimumFractionDigits: total % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })} ha`;
+    }
+    return area && String(area) !== "—" ? String(area) : "—";
+  };
+
+  const formatRecordStatus = (status?: string | null) => {
+    const n = String(status || "")
+      .toLowerCase()
+      .trim();
+    const active = new Set([
+      "submitted",
+      "approved",
+      "active",
+      "active farmer",
+    ]);
+    const inactive = new Set([
+      "not submitted",
+      "not_active",
+      "not active",
+      "draft",
+      "pending",
+      "not approved",
+      "inactive",
+    ]);
+    if (active.has(n)) return "Active";
+    if (inactive.has(n)) return "Inactive";
+    return status || "Unknown";
+  };
+
+  const getInitials = (name: string) => {
+    const parts = (name || "")
+      .replace(/,/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "LO";
+  };
+
+  const normalizeAgeValue = (
+    ageValue: unknown,
+    birthdate?: string | null,
+  ): number | null => {
+    if (
+      ageValue !== null &&
+      ageValue !== undefined &&
+      String(ageValue).trim() !== ""
+    ) {
+      const p = Number(ageValue);
+      if (Number.isFinite(p) && p >= 0) return Math.floor(p);
+    }
+    if (!birthdate) return null;
+    const bd = new Date(birthdate);
+    if (Number.isNaN(bd.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - bd.getFullYear();
+    const md = today.getMonth() - bd.getMonth();
+    if (md < 0 || (md === 0 && today.getDate() < bd.getDate())) age--;
+    return age >= 0 ? age : null;
+  };
+
+  const parseName = (fullName: string) => {
+    if (!fullName) return { lastName: "", firstName: "", middleName: "" };
+    const parts = fullName
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length === 0)
+      return { lastName: "", firstName: "", middleName: "" };
+    if (parts.length === 1)
+      return { lastName: parts[0], firstName: "", middleName: "" };
+    const firstMiddle = (parts[1] || "")
+      .split(" ")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    return {
+      lastName: parts[0],
+      firstName: firstMiddle[0] || "",
+      middleName: firstMiddle.slice(1).join(" ") || "",
+    };
+  };
+
+  const normalizeText = (v: string) => v.trim().toLowerCase();
+
+  // ─── Fetch main list ────────────────────────────────────────────────────────
+
+  const fetchLandownerRecords = async () => {
+    try {
+      setLoading(true);
+
+      // Step 1: Get all submissions, filter to registered owners
+      const response = await getRsbsaSubmissions();
+      if (response.error) throw new Error(response.error);
+
+      const allRecords = (response.data || []) as any[];
+      const ownerRecords = allRecords.filter((item: any) => {
+        const flags = item.ownershipType;
+        return (
+          flags?.registeredOwner === true ||
+          flags?.category === "registeredOwner"
+        );
+      });
+
+      // Step 2: Fetch ALL tenant/lessee parcel links in one query
+      // This avoids N+1 calls — we get every parcel that references an owner
+      const { data: tlParcels, error: tlError } = await supabase
+        .from("rsbsa_farm_parcels")
+        .select(
+          "submission_id, tenant_land_owner_id, lessee_land_owner_id, ownership_type_tenant, ownership_type_lessee",
+        )
+        .or(
+          "tenant_land_owner_id.not.is.null,lessee_land_owner_id.not.is.null",
+        );
+
+      if (tlError)
+        console.warn(
+          "Tenant/lessee count fetch error (non-blocking):",
+          tlError.message,
+        );
+
+      // Step 3: Build count maps — ownerId → unique tenant submission IDs
+      const tenantsByOwner = new Map<number, Set<number>>();
+      const lesseesByOwner = new Map<number, Set<number>>();
+
+      (tlParcels || []).forEach((p: any) => {
+        const tenantOwnerId = Number(p.tenant_land_owner_id);
+        const lesseeOwnerId = Number(p.lessee_land_owner_id);
+        const farmerId = Number(p.submission_id);
+
+        if (
+          p.ownership_type_tenant &&
+          Number.isFinite(tenantOwnerId) &&
+          Number.isFinite(farmerId)
+        ) {
+          if (!tenantsByOwner.has(tenantOwnerId))
+            tenantsByOwner.set(tenantOwnerId, new Set());
+          tenantsByOwner.get(tenantOwnerId)!.add(farmerId);
+        }
+        if (
+          p.ownership_type_lessee &&
+          Number.isFinite(lesseeOwnerId) &&
+          Number.isFinite(farmerId)
+        ) {
+          if (!lesseesByOwner.has(lesseeOwnerId))
+            lesseesByOwner.set(lesseeOwnerId, new Set());
+          lesseesByOwner.get(lesseeOwnerId)!.add(farmerId);
+        }
+      });
+
+      // Step 4: Build the display records
+      const formatted: LandownerRecord[] = ownerRecords.map((item: any) => {
+        const ownerId = Number(item.id);
+        const landParcel = String(item.landParcel ?? "—");
+
+        const parcelArea = (() => {
+          const tokens = String(
+            item.totalFarmArea ?? item.parcelArea ?? "",
+          ).match(/-?\d+(?:\.\d+)?/g);
+          if (tokens && tokens.length > 0) {
+            const total = tokens.reduce((s: number, t: string) => {
+              const n = Number(t);
+              return s + (Number.isFinite(n) ? n : 0);
+            }, 0);
+            if (total > 0) return String(total);
+          }
+          const match = /\(([^)]+)\)/.exec(landParcel);
+          return match ? match[1] : "—";
+        })();
+
+        const barangay = (() => {
+          const fromAddress = String(item.farmerAddress || "")
+            .split(",")[0]
+            ?.trim();
+          if (fromAddress && fromAddress !== "—") return fromAddress;
+          const fromFarm = String(item.farmLocation || "")
+            .split(",")[0]
+            ?.trim();
+          return fromFarm || "—";
+        })();
+
+        return {
+          id: String(item.id),
+          referenceNumber: item.referenceNumber || `RSBSA-${item.id}`,
+          landownerName: item.farmerName || "—",
+          landownerAddress: item.farmerAddress || "—",
+          farmLocation: item.farmLocation || "—",
+          barangay,
+          parcelArea,
+          parcelCount: item.parcelCount || 0,
+          age: normalizeAgeValue(item.age, item.birthdate ?? null),
+          dateSubmitted: item.dateSubmitted
+            ? new Date(item.dateSubmitted).toISOString()
+            : item.createdAt
+              ? new Date(item.createdAt).toISOString()
+              : "",
+          status: String(item.status ?? "Not Submitted"),
+          tenantCount: Number.isFinite(ownerId)
+            ? (tenantsByOwner.get(ownerId)?.size ?? 0)
+            : 0,
+          lesseeCount: Number.isFinite(ownerId)
+            ? (lesseesByOwner.get(ownerId)?.size ?? 0)
+            : 0,
+          archivedAt: item.archivedAt ?? item.archived_at ?? null,
+          archiveReason: item.archiveReason ?? item.archive_reason ?? null,
+        };
+      });
+
+      setLandownerRecords(formatted);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message ?? "Failed to load landowner records");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLandownerRecords();
+  }, []);
+
+  // ─── Fetch detail for modal ─────────────────────────────────────────────────
+
+  const fetchLandownerDetails = async (
+    ownerId: string,
+    summaryRecord?: LandownerRecord,
+  ) => {
+    try {
+      setLoadingDetail(true);
+
+      const ownerNumId = Number(ownerId);
+
+      // Personal info
+      const farmerResponse = await getRsbsaSubmissionById(ownerId);
+      if (farmerResponse.error)
+        throw new Error("Failed to fetch landowner details");
+      const farmerData = farmerResponse.data;
+      const data = farmerData.data || farmerData;
+
+      const selectedRecord =
+        summaryRecord || landownerRecords.find((r) => r.id === ownerId);
+
+      const formattedDate = (() => {
+        if (!selectedRecord?.dateSubmitted) return "N/A";
+        const d = new Date(selectedRecord.dateSubmitted);
+        return Number.isNaN(d.getTime()) ? "N/A" : d.toLocaleDateString();
+      })();
+
+      const resolvedBirthdate = (() => {
+        const raw =
+          data.dateOfBirth ||
+          data.birthdate ||
+          data["DATE OF BIRTH"] ||
+          data.BIRTHDATE ||
+          null;
+        if (!raw) return null;
+        const d = new Date(raw);
+        return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString();
+      })();
+
+      const age = normalizeAgeValue(
+        farmerData.age ?? data.age ?? data.AGE,
+        data.dateOfBirth ||
+          data.birthdate ||
+          data["DATE OF BIRTH"] ||
+          data.BIRTHDATE ||
+          null,
+      );
+
+      // Step A: Own parcels (the land they legally own)
+      const ownedResponse = await getFarmParcels(ownerId, {
+        currentOwnerOnly: true,
+      });
+      const ownedParcels: any[] = ownedResponse.data || [];
+
+      // Step B: Parcels where this person is listed as landlord
+      // These come from OTHER farmers' parcel rows pointing back to this owner
+      const { data: occupiedByParcels, error: occupiedError } = await supabase
+        .from("rsbsa_farm_parcels")
+        .select(
+          `
+          id, submission_id, parcel_number,
+          farm_location_barangay, farm_location_municipality,
+          total_farm_area_ha, ownership_type_tenant, ownership_type_lessee,
+          tenant_land_owner_id, lessee_land_owner_id,
+          tenant_land_owner_name, lessee_land_owner_name,
+          is_farming, farming_status_reason, farming_status_updated_at,
+          agrarian_reform_beneficiary, within_ancestral_domain, ownership_document_no
+        `,
+        )
+        .or(
+          `tenant_land_owner_id.eq.${ownerNumId},lessee_land_owner_id.eq.${ownerNumId}`,
+        );
+
+      if (occupiedError)
+        console.warn("Occupied parcels fetch error:", occupiedError.message);
+
+      // Step C: Fetch farmer names for occupant submission IDs
+      const occupantIds = [
+        ...new Set((occupiedByParcels || []).map((p: any) => p.submission_id)),
+      ].filter(Boolean);
+      const occupantInfoMap = new Map<
+        number,
+        { name: string; ffrsCode: string }
+      >();
+
+      if (occupantIds.length > 0) {
+        const { data: occupantSubmissions } = await supabase
+          .from("rsbsa_submission")
+          .select(
+            'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "FFRS_CODE"',
+          )
+          .in("id", occupantIds);
+
+        (occupantSubmissions || []).forEach((row: any) => {
+          const last = row["LAST NAME"] || "";
+          const first = row["FIRST NAME"] || "";
+          const middle = row["MIDDLE NAME"] || "";
+          const ext = row["EXT NAME"] || "";
+          const parts = [
+            last,
+            [first, middle, ext].filter(Boolean).join(" "),
+          ].filter(Boolean);
+          occupantInfoMap.set(Number(row.id), {
+            name: parts.join(", ") || "Unknown",
+            ffrsCode: row["FFRS_CODE"] || "",
+          });
+        });
+      }
+
+      // Step D: Build occupation map keyed by parcel_number
+      // For each owned parcel, find who works it
+      const occupationByParcelNumber = new Map<string, OccupantInfo[]>();
+
+      (occupiedByParcels || []).forEach((p: any) => {
+        const parcelNum = String(p.parcel_number || "")
+          .trim()
+          .toUpperCase();
+        if (!parcelNum) return;
+
+        const occupantId = Number(p.submission_id);
+        const occupantData = occupantInfoMap.get(occupantId);
+        const isTenant = p.ownership_type_tenant === true;
+        const isLessee = p.ownership_type_lessee === true;
+
+        const occupant: OccupantInfo = {
+          submissionId: String(p.submission_id),
+          name:
+            occupantData?.name ||
+            p.tenant_land_owner_name ||
+            p.lessee_land_owner_name ||
+            "Unknown",
+          ffrsCode: occupantData?.ffrsCode || "",
+          role:
+            isTenant && isLessee
+              ? "tenant+lessee"
+              : isTenant
+                ? "tenant"
+                : "lessee",
+          isLinked: !!occupantData,
+        };
+
+        if (!occupationByParcelNumber.has(parcelNum))
+          occupationByParcelNumber.set(parcelNum, []);
+        occupationByParcelNumber.get(parcelNum)!.push(occupant);
+      });
+
+      // Step E: Build the combined parcel list
+      // Start with owned parcels as the authoritative list
+      const combinedParcels: OccupiedParcel[] = ownedParcels.map((p: any) => {
+        const parcelNum = String(p.parcel_number || "")
+          .trim()
+          .toUpperCase();
+        const occupants = occupationByParcelNumber.get(parcelNum) || [];
+
+        const occupationType = (() => {
+          if (occupants.length === 0) return "owner-farmed";
+          const hasTenant = occupants.some(
+            (o) => o.role === "tenant" || o.role === "tenant+lessee",
+          );
+          const hasLessee = occupants.some(
+            (o) => o.role === "lessee" || o.role === "tenant+lessee",
+          );
+          if (hasTenant && hasLessee) return "tenant+lessee";
+          if (hasTenant) return "tenant";
+          return "lessee";
+        })() as OccupiedParcel["occupationType"];
+
+        return {
+          id: String(p.id),
+          parcelNumber: p.parcel_number || "N/A",
+          farmLocationBarangay: p.farm_location_barangay || "N/A",
+          farmLocationMunicipality: p.farm_location_municipality || "N/A",
+          totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
+          occupationType,
+          occupants,
+          agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
+          withinAncestralDomain: p.within_ancestral_domain || "",
+          ownershipDocumentNo: p.ownership_document_no || "",
+          isFarming: typeof p.is_farming === "boolean" ? p.is_farming : null,
+          farmingStatusReason: p.farming_status_reason || null,
+          farmingStatusUpdatedAt: p.farming_status_updated_at || null,
+        };
+      });
+
+      // Step F: Also append any occupied parcels that didn't match an owned parcel
+      // (edge case — tenant references an owner who hasn't registered the parcel yet)
+      const ownedParcelNumbers = new Set(
+        ownedParcels.map((p: any) =>
+          String(p.parcel_number || "")
+            .trim()
+            .toUpperCase(),
+        ),
+      );
+
+      (occupiedByParcels || []).forEach((p: any) => {
+        const parcelNum = String(p.parcel_number || "")
+          .trim()
+          .toUpperCase();
+        if (ownedParcelNumbers.has(parcelNum)) return; // already handled above
+
+        const occupantId = Number(p.submission_id);
+        const occupantData = occupantInfoMap.get(occupantId);
+        const isTenant = p.ownership_type_tenant === true;
+        const isLessee = p.ownership_type_lessee === true;
+
+        const occupant: OccupantInfo = {
+          submissionId: String(p.submission_id),
+          name: occupantData?.name || "Unknown",
+          ffrsCode: occupantData?.ffrsCode || "",
+          role:
+            isTenant && isLessee
+              ? "tenant+lessee"
+              : isTenant
+                ? "tenant"
+                : "lessee",
+          isLinked: !!occupantData,
+        };
+
+        const occupationType = (
+          isTenant && isLessee
+            ? "tenant+lessee"
+            : isTenant
+              ? "tenant"
+              : "lessee"
+        ) as OccupiedParcel["occupationType"];
+
+        combinedParcels.push({
+          id: String(p.id),
+          parcelNumber: p.parcel_number || "N/A",
+          farmLocationBarangay: p.farm_location_barangay || "N/A",
+          farmLocationMunicipality: p.farm_location_municipality || "N/A",
+          totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
+          occupationType,
+          occupants: [occupant],
+          agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
+          withinAncestralDomain: p.within_ancestral_domain || "",
+          ownershipDocumentNo: p.ownership_document_no || "",
+          isFarming: typeof p.is_farming === "boolean" ? p.is_farming : null,
+          farmingStatusReason: p.farming_status_reason || null,
+          farmingStatusUpdatedAt: p.farming_status_updated_at || null,
+        });
+
+        ownedParcelNumbers.add(parcelNum);
+      });
+
+      const reformattedName = (() => {
+        const n = farmerData.farmerName || "";
+        if (!n || n === "N/A") return "N/A";
+        const parts = n
+          .split(",")
+          .map((p: string) => p.trim())
+          .filter(Boolean);
+        if (parts.length <= 1) return parts[0] || "N/A";
+        return `${parts[0]}, ${parts.slice(1).join(" ")}`;
+      })();
+
+      setSelectedLandowner({
+        id: ownerId,
+        referenceNumber: selectedRecord?.referenceNumber || "N/A",
+        dateSubmitted: formattedDate,
+        recordStatus: selectedRecord?.status || "N/A",
+        birthdate: resolvedBirthdate,
+        archivedAt: selectedRecord?.archivedAt ?? null,
+        archiveReason: selectedRecord?.archiveReason ?? null,
+        landownerName: reformattedName,
+        landownerAddress: farmerData.farmerAddress || "N/A",
+        age: age ?? "N/A",
+        gender: data.gender || data.GENDER || "N/A",
+        parcels: combinedParcels,
+      });
+      setShowModal(true);
+    } catch (err: any) {
+      console.error("Error fetching landowner details:", err);
+      alert("Failed to load landowner details");
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  // ─── Window click handler ───────────────────────────────────────────────────
+
+  useEffect(() => {
+    const handleWindowClick = () => {
+      setOpenMenuId(null);
+      setShowBulkExportMenu(false);
+    };
+    window.addEventListener("click", handleWindowClick);
+    return () => window.removeEventListener("click", handleWindowClick);
+  }, []);
+
+  useEffect(() => {
+    setSelectedRecordIds((prev) => {
+      const validIds = new Set(landownerRecords.map((r) => r.id));
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (validIds.has(id)) next.add(id);
+      });
+      return next;
+    });
+  }, [landownerRecords]);
+
+  // ─── Filtered + sorted records ─────────────────────────────────────────────
+
+  const filteredRecords = useMemo(() => {
+    return landownerRecords
+      .filter((record) => {
+        const normalizedStatus = (record.status || "").toLowerCase().trim();
+        const activeStatuses = new Set([
+          "submitted",
+          "approved",
+          "active",
+          "active farmer",
+        ]);
+        const notActiveStatuses = new Set([
+          "not submitted",
+          "not_active",
+          "not active",
+          "draft",
+          "pending",
+          "not approved",
+          "inactive",
+        ]);
+
+        let matchesRole = true;
+        if (selectedRole === "hasTenants") matchesRole = record.tenantCount > 0;
+        else if (selectedRole === "hasLessees")
+          matchesRole = record.lesseeCount > 0;
+        else if (selectedRole === "ownerCultivated")
+          matchesRole = record.tenantCount === 0 && record.lesseeCount === 0;
+        else if (selectedRole === "active")
+          matchesRole = activeStatuses.has(normalizedStatus);
+        else if (selectedRole === "notActive")
+          matchesRole = notActiveStatuses.has(normalizedStatus);
+
+        if (!matchesRole) return false;
+
+        if (selectedBarangay !== "all") {
+          if (
+            record.barangay.localeCompare(selectedBarangay, undefined, {
+              sensitivity: "base",
+            }) !== 0
+          )
+            return false;
+        }
+
+        const q = searchQuery.toLowerCase();
+        return (
+          record.landownerName.toLowerCase().includes(q) ||
+          record.referenceNumber.toLowerCase().includes(q) ||
+          record.landownerAddress.toLowerCase().includes(q) ||
+          record.barangay.toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        const parseArea = (v: string) => {
+          const tokens = String(v || "").match(/-?\d+(?:\.\d+)?/g);
+          if (!tokens) return 0;
+          return tokens.reduce((s, t) => {
+            const n = Number(t);
+            return s + (Number.isFinite(n) ? n : 0);
+          }, 0);
+        };
+
+        for (const config of sortConfigs) {
+          const factor = config.direction === "asc" ? 1 : -1;
+          if (config.key === "landownerName") {
+            const r =
+              a.landownerName.localeCompare(b.landownerName, undefined, {
+                sensitivity: "base",
+              }) * factor;
+            if (r !== 0) return r;
+          } else if (config.key === "dateSubmitted") {
+            const aT = Date.parse(a.dateSubmitted);
+            const bT = Date.parse(b.dateSubmitted);
+            const r =
+              ((Number.isNaN(aT) ? -Infinity : aT) -
+                (Number.isNaN(bT) ? -Infinity : bT)) *
+              factor;
+            if (r !== 0) return r;
+          } else if (config.key === "parcelArea") {
+            const r =
+              (parseArea(a.parcelArea) - parseArea(b.parcelArea)) * factor;
+            if (r !== 0) return r;
+          } else if (config.key === "tenantCount") {
+            const r =
+              (a.tenantCount +
+                a.lesseeCount -
+                (b.tenantCount + b.lesseeCount)) *
+              factor;
+            if (r !== 0) return r;
+          }
+        }
+        return 0;
+      });
+  }, [
+    landownerRecords,
+    selectedRole,
+    selectedBarangay,
+    searchQuery,
+    sortConfigs,
+  ]);
+
+  // ─── Summary cards ──────────────────────────────────────────────────────────
+
+  const landownerCounts = useMemo(() => {
+    const base = landownerRecords;
+    const activeStatuses = new Set([
+      "submitted",
+      "approved",
+      "active",
+      "active farmer",
+    ]);
+    return {
+      total: base.length,
+      active: base.filter((r) =>
+        activeStatuses.has((r.status || "").toLowerCase().trim()),
+      ).length,
+      withTenants: base.filter((r) => r.tenantCount > 0).length,
+      withLessees: base.filter((r) => r.lesseeCount > 0).length,
+      ownerCultivated: base.filter(
+        (r) => r.tenantCount === 0 && r.lesseeCount === 0,
+      ).length,
+    };
+  }, [landownerRecords]);
+
+  // ─── Sort helpers ───────────────────────────────────────────────────────────
+
+  const handleSortChange = (key: SortKey) => {
+    setSortConfigs((prev) => {
+      const defaultDir = getDefaultSortDirection(key);
+      const existingIndex = prev.findIndex((c) => c.key === key);
+      if (existingIndex >= 0) {
+        return prev.map((c) =>
+          c.key === key
+            ? { ...c, direction: c.direction === "asc" ? "desc" : "asc" }
+            : c,
+        );
+      }
+      const next = [...prev, { key, direction: defaultDir }];
+      if (next.length <= MAX_SORT_LEVELS) return next;
+      return next.slice(next.length - MAX_SORT_LEVELS);
+    });
+  };
+
+  const resetSortConfig = () => setSortConfigs([{ ...DEFAULT_SORT_CONFIG }]);
+
+  const isDefaultSortConfig =
+    sortConfigs.length === 1 &&
+    sortConfigs[0].key === DEFAULT_SORT_CONFIG.key &&
+    sortConfigs[0].direction === DEFAULT_SORT_CONFIG.direction;
+
+  const getSortIndicator = (key: SortKey) => {
+    const i = sortConfigs.findIndex((c) => c.key === key);
+    if (i === -1) return "↕";
+    return `${sortConfigs[i].direction === "asc" ? "▲" : "▼"}${i + 1}`;
+  };
+
+  const isSortActive = (key: SortKey) => sortConfigs.some((c) => c.key === key);
+
+  // ─── Selection helpers ──────────────────────────────────────────────────────
+
+  const selectedRecords = useMemo(
+    () => landownerRecords.filter((r) => selectedRecordIds.has(r.id)),
+    [landownerRecords, selectedRecordIds],
+  );
+
+  const allFilteredSelected =
+    filteredRecords.length > 0 &&
+    filteredRecords.every((r) => selectedRecordIds.has(r.id));
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected)
+        filteredRecords.forEach((r) => next.delete(r.id));
+      else filteredRecords.forEach((r) => next.add(r.id));
+      return next;
+    });
+  };
+
+  const toggleSelectRecord = (id: string) => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // ─── Print handlers ─────────────────────────────────────────────────────────
+
+  const handlePrintSingleRecord = async (record: LandownerRecord) => {
+    setPrintingRecordIds((prev) => {
+      const next = new Set(prev);
+      next.add(record.id);
+      return next;
+    });
+    const result = await printRsbsaFormById({
+      farmerId: record.id,
+      fallbackReferenceNumber: record.referenceNumber,
+      fallbackFarmerName: record.landownerName,
+    });
+    if (!result.success && !result.cancelled)
+      showUpdateNotification(
+        result.error || "Failed to print RSBSA form.",
+        "error",
+      );
+    if (result.success) {
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logExport(
+          { ...user, id: undefined },
+          AuditModule.FARMERS,
+          "RSBSA Form Print",
+          1,
+        );
+      } catch (e) {
+        console.error("Audit log failed:", e);
+      }
+    }
+    setPrintingRecordIds((prev) => {
+      const next = new Set(prev);
+      next.delete(record.id);
+      return next;
+    });
+  };
+
+  const handleBulkPrint = async () => {
+    if (selectedRecords.length === 0) {
+      showUpdateNotification("No records selected.", "error");
+      return;
+    }
+    setIsBulkPrinting(true);
+    const result = await printRsbsaFormsByIds(
+      selectedRecords.map((r) => ({
+        farmerId: r.id,
+        fallbackReferenceNumber: r.referenceNumber,
+        fallbackFarmerName: r.landownerName,
+      })),
+    );
+    setIsBulkPrinting(false);
+    setShowBulkExportMenu(false);
+    if (!result.success && !result.cancelled) {
+      showUpdateNotification(result.error || "Failed to print.", "error");
+      return;
+    }
+    showUpdateNotification("Selected RSBSA forms sent to print.", "success");
+    try {
+      const user = await getCurrentUserForAudit();
+      await getAuditLogger().logExport(
+        { ...user, id: undefined },
+        AuditModule.FARMERS,
+        "Bulk RSBSA Form Print",
+        selectedRecords.length,
+      );
+    } catch (e) {
+      console.error("Audit log failed:", e);
+    }
+  };
+
+  const handleModalPrint = async () => {
+    if (!selectedLandowner) return;
+    setIsModalPrinting(true);
+    const result = await printRsbsaFormById({
+      farmerId: selectedLandowner.id,
+      fallbackReferenceNumber: selectedLandowner.referenceNumber,
+      fallbackFarmerName: selectedLandowner.landownerName,
+    });
+    setIsModalPrinting(false);
+    if (!result.success && !result.cancelled)
+      showUpdateNotification(
+        result.error || "Failed to print RSBSA form.",
+        "error",
+      );
+  };
+
+  // ─── Edit handlers ───────────────────────────────────────────────────────────
+
+  const handleEdit = (recordId: string) => {
+    const record = landownerRecords.find((r) => r.id === recordId);
+    if (!record) return;
+    const { lastName, firstName, middleName } = parseName(
+      record.landownerName || "",
+    );
+    const parts = record.landownerAddress.split(",").map((p) => p.trim());
+    setEditingRecord(record);
+    setEditError(null);
+    setEditFormData({
+      firstName,
+      middleName,
+      lastName,
+      age: record.age !== null ? String(record.age) : "",
+      barangay: parts[0] || "",
+      municipality: parts[1] || "Dumangas",
+    });
+    setOpenMenuId(null);
+  };
+
+  const handleCancel = () => {
+    setEditingRecord(null);
+    setEditFormData({});
+    setEditError(null);
+  };
+
+  const handleInputChange = (field: keyof EditFormData, value: string) => {
+    setEditError(null);
+    setEditFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!editingRecord) return;
+    try {
+      setEditError(null);
+
+      const rawAge = (editFormData.age ?? "").trim();
+      const parsedAge = rawAge !== "" ? Number(rawAge) : null;
+      if (
+        rawAge !== "" &&
+        (!Number.isFinite(parsedAge) || (parsedAge ?? 0) < 18)
+      ) {
+        setEditError("Age must be a valid number and at least 18 years old");
+        showUpdateNotification(
+          "Age must be a valid number and at least 18 years old.",
+          "error",
+        );
+        return;
+      }
+
+      const last = (editFormData.lastName ?? "").trim();
+      const first = (editFormData.firstName ?? "").trim();
+      const middle = (editFormData.middleName ?? "").trim();
+      const composedName = [last, [first, middle].filter(Boolean).join(" ")]
+        .filter(Boolean)
+        .join(", ");
+      const b = (editFormData.barangay ?? "").trim();
+      const m = (editFormData.municipality ?? "").trim();
+      const composedAddress = [b, m].filter(Boolean).join(", ");
+
+      const response = await updateRsbsaSubmission(editingRecord.id, {
+        surname: last,
+        firstName: first,
+        middleName: middle,
+        addressBarangay: b,
+        addressMunicipality: m,
+        age: parsedAge,
+      });
+
+      if (response.error) throw new Error(response.error);
+
+      setLandownerRecords((prev) =>
+        prev.map((r) =>
+          r.id === editingRecord.id
+            ? {
+                ...r,
+                landownerName: composedName || r.landownerName,
+                landownerAddress: composedAddress || r.landownerAddress,
+                barangay: b || r.barangay,
+                age: parsedAge,
+              }
+            : r,
+        ),
+      );
+
+      setEditingRecord(null);
+      setEditFormData({});
+      setEditError(null);
+      showUpdateNotification(
+        "Landowner information updated successfully.",
+        "success",
+      );
+
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "UPDATE",
+          AuditModule.FARMERS,
+          "farmer_record",
+          editingRecord.id,
+          `Updated landowner: ${editingRecord.landownerName}`,
+          { landownerName: editingRecord.landownerName },
+          { updatedName: composedName },
+        );
+      } catch (e) {
+        console.error("Audit log failed:", e);
+      }
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to update record.";
+      setEditError(msg);
+      showUpdateNotification(msg, "error");
+    }
+  };
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="jo-masterlist-page-container">
+      <div className="jo-masterlist-page has-mobile-sidebar">
+        <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+        <div className="jo-masterlist-main-content">
+          <div className="tech-incent-mobile-header">
+            <button
+              className="tech-incent-hamburger"
+              onClick={() => setSidebarOpen((p) => !p)}
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div className="tech-incent-mobile-title">Landowner Registry</div>
+          </div>
+
+          <div className="jo-masterlist-dashboard-header">
+            <div>
+              <h2 className="jo-masterlist-page-title">Landowner Registry</h2>
+              <p className="jo-masterlist-page-subtitle">
+                Registered landowners in Dumangas, Iloilo — with their parcels
+                and occupants
+              </p>
+            </div>
+          </div>
+
+          {/* Summary cards */}
+          {!loading && !error && (
+            <div className="jo-masterlist-status-cards">
+              <div className="jo-masterlist-status-card jo-masterlist-card-total">
+                <div className="jo-masterlist-card-icon">🏡</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {landownerCounts.total}
+                  </span>
+                  <span className="jo-masterlist-card-label">
+                    Total Landowners
+                  </span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-active">
+                <div className="jo-masterlist-card-icon">✅</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {landownerCounts.active}
+                  </span>
+                  <span className="jo-masterlist-card-label">Active</span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
+                <div className="jo-masterlist-card-icon">🌾</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {landownerCounts.withTenants}
+                  </span>
+                  <span className="jo-masterlist-card-label">With Tenants</span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
+                <div className="jo-masterlist-card-icon">📋</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {landownerCounts.withLessees}
+                  </span>
+                  <span className="jo-masterlist-card-label">With Lessees</span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-total">
+                <div className="jo-masterlist-card-icon">👨‍🌾</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {landownerCounts.ownerCultivated}
+                  </span>
+                  <span className="jo-masterlist-card-label">Self-farming</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="jo-masterlist-content-card">
+            {/* Filters */}
+            <div className="jo-masterlist-filters-section">
+              <div className="jo-masterlist-search-filter">
+                <input
+                  type="text"
+                  placeholder="Search by name, FFRS code, or barangay..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="jo-masterlist-search-input"
+                />
+              </div>
+              <div className="jo-masterlist-status-filter">
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="jo-masterlist-status-select"
+                >
+                  <option value="all">All Landowners</option>
+                  <option value="hasTenants">Has Tenants</option>
+                  <option value="hasLessees">Has Lessees</option>
+                  <option value="ownerCultivated">Self-farming only</option>
+                  <option value="active">Active</option>
+                  <option value="notActive">Not Active</option>
+                </select>
+              </div>
+              <div className="jo-masterlist-status-filter">
+                <select
+                  value={selectedBarangay}
+                  onChange={(e) => setSelectedBarangay(e.target.value)}
+                  className="jo-masterlist-status-select"
+                >
+                  <option value="all">All Barangays</option>
+                  {barangays.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {!loading && !error && (
+              <div className="jo-masterlist-table-meta">
+                <span>
+                  Showing {filteredRecords.length} of {landownerCounts.total}{" "}
+                  landowners
+                </span>
+                <span>Tip: Sort up to 2 levels.</span>
+                {!isDefaultSortConfig && (
+                  <button
+                    type="button"
+                    className="jo-masterlist-sort-btn"
+                    onClick={resetSortConfig}
+                  >
+                    Reset Sort
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Bulk toolbar */}
+            {!loading && !error && selectedRecordIds.size > 0 && (
+              <div className="jo-masterlist-bulk-toolbar">
+                <span className="jo-masterlist-bulk-count">
+                  {selectedRecordIds.size} landowner
+                  {selectedRecordIds.size === 1 ? "" : "s"} selected
+                </span>
+                <div className="jo-masterlist-bulk-actions">
+                  <div
+                    className="jo-masterlist-bulk-export-wrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      className="jo-masterlist-bulk-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowBulkExportMenu((p) => !p);
+                      }}
+                    >
+                      Multi-Print ▾
+                    </button>
+                    {showBulkExportMenu && (
+                      <div className="jo-masterlist-bulk-menu">
+                        <button
+                          className="jo-masterlist-quick-item"
+                          onClick={handleBulkPrint}
+                          disabled={isBulkPrinting}
+                        >
+                          {isBulkPrinting
+                            ? "Preparing forms..."
+                            : "Print Selected RSBSA Forms"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-clear"
+                    onClick={() => setSelectedRecordIds(new Set())}
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Table */}
+            <div className="jo-masterlist-table-container">
+              <table className="jo-masterlist-farmers-table">
+                <thead>
+                  <tr>
+                    <th className="jo-masterlist-checkbox-col">
+                      <input
+                        type="checkbox"
+                        className="jo-masterlist-header-checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleSelectAllFiltered}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Select all"
+                      />
+                    </th>
+                    <th>
+                      <button
+                        className={`jo-masterlist-sort-btn ${isSortActive("landownerName") ? "is-active" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSortChange("landownerName");
+                        }}
+                      >
+                        Landowner{" "}
+                        <span>{getSortIndicator("landownerName")}</span>
+                      </button>
+                    </th>
+                    <th>Barangay</th>
+                    <th>
+                      <button
+                        className={`jo-masterlist-sort-btn ${isSortActive("parcelArea") ? "is-active" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSortChange("parcelArea");
+                        }}
+                      >
+                        Parcels <span>{getSortIndicator("parcelArea")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        className={`jo-masterlist-sort-btn ${isSortActive("parcelArea") ? "is-active" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSortChange("parcelArea");
+                        }}
+                      >
+                        Total Area <span>{getSortIndicator("parcelArea")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        className={`jo-masterlist-sort-btn ${isSortActive("tenantCount") ? "is-active" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSortChange("tenantCount");
+                        }}
+                      >
+                        Tenants <span>{getSortIndicator("tenantCount")}</span>
+                      </button>
+                    </th>
+                    <th>Lessees</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && (
+                    <tr>
+                      <td
+                        colSpan={VISIBLE_COLUMN_COUNT}
+                        className="jo-masterlist-loading-cell"
+                      >
+                        Loading...
+                      </td>
+                    </tr>
+                  )}
+                  {error && !loading && (
+                    <tr>
+                      <td
+                        colSpan={VISIBLE_COLUMN_COUNT}
+                        className="jo-masterlist-error-cell"
+                      >
+                        Error: {error}
+                      </td>
+                    </tr>
+                  )}
+
+                  {!loading &&
+                    !error &&
+                    filteredRecords.length > 0 &&
+                    filteredRecords.map((record) => (
+                      <tr
+                        key={record.id}
+                        className="jo-masterlist-table-row"
+                        onClick={() => fetchLandownerDetails(record.id, record)}
+                      >
+                        <td className="jo-masterlist-checkbox-col">
+                          <input
+                            type="checkbox"
+                            className="jo-masterlist-row-checkbox"
+                            checked={selectedRecordIds.has(record.id)}
+                            onChange={() => toggleSelectRecord(record.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`Select ${record.landownerName}`}
+                          />
+                        </td>
+
+                        {/* Landowner name + FFRS */}
+                        <td>
+                          <div className="jo-masterlist-farmer-cell">
+                            <div className="jo-masterlist-farmer-avatar">
+                              {getInitials(record.landownerName)}
+                            </div>
+                            <div className="jo-masterlist-farmer-meta">
+                              <span className="jo-masterlist-farmer-name">
+                                {record.landownerName}
+                              </span>
+                              <span className="jo-masterlist-farmer-ref">
+                                {record.referenceNumber}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Barangay */}
+                        <td>
+                          <span className="jo-masterlist-cultivation-text">
+                            {record.barangay}
+                          </span>
+                        </td>
+
+                        {/* No. of parcels */}
+                        <td>
+                          <span className="jo-masterlist-parcel-count">
+                            {record.parcelCount} parcel
+                            {record.parcelCount === 1 ? "" : "s"}
+                          </span>
+                        </td>
+
+                        {/* Total area */}
+                        <td>
+                          <span className="jo-masterlist-parcel-area">
+                            {formatArea(record.parcelArea)}
+                          </span>
+                        </td>
+
+                        {/* Tenant count */}
+                        <td>
+                          <span
+                            className={`jo-masterlist-ownership-pill ${record.tenantCount > 0 ? "jo-masterlist-ownership-tenant" : "jo-masterlist-ownership-unknown"}`}
+                          >
+                            {record.tenantCount > 0
+                              ? `${record.tenantCount} tenant${record.tenantCount === 1 ? "" : "s"}`
+                              : "None"}
+                          </span>
+                        </td>
+
+                        {/* Lessee count */}
+                        <td>
+                          <span
+                            className={`jo-masterlist-ownership-pill ${record.lesseeCount > 0 ? "jo-masterlist-ownership-lessee" : "jo-masterlist-ownership-unknown"}`}
+                          >
+                            {record.lesseeCount > 0
+                              ? `${record.lesseeCount} lessee${record.lesseeCount === 1 ? "" : "s"}`
+                              : "None"}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td>
+                          <span className="jo-masterlist-record-status">
+                            {formatRecordStatus(record.status)}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="jo-masterlist-actions-cell">
+                          <div
+                            className="jo-masterlist-quick-actions"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              className="jo-masterlist-view-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId((p) =>
+                                  p === record.id ? null : record.id,
+                                );
+                              }}
+                            >
+                              Quick Actions ▾
+                            </button>
+                            {openMenuId === record.id && (
+                              <div className="jo-masterlist-quick-menu">
+                                <button
+                                  className="jo-masterlist-quick-item"
+                                  onClick={() => {
+                                    fetchLandownerDetails(record.id, record);
+                                    setOpenMenuId(null);
+                                  }}
+                                >
+                                  View
+                                </button>
+                                <button
+                                  className="jo-masterlist-quick-item"
+                                  onClick={() => handleEdit(record.id)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="jo-masterlist-quick-item"
+                                  onClick={async () => {
+                                    setOpenMenuId(null);
+                                    await handlePrintSingleRecord(record);
+                                  }}
+                                  disabled={printingRecordIds.has(record.id)}
+                                >
+                                  {printingRecordIds.has(record.id)
+                                    ? "Preparing form..."
+                                    : "Print RSBSA Form"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+
+                  {!loading && !error && filteredRecords.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={VISIBLE_COLUMN_COUNT}
+                        className="jo-masterlist-empty-cell"
+                      >
+                        No landowners found for the selected filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Toast */}
+        {updateNotification.show && (
+          <div
+            className={`jo-masterlist-update-toast ${updateNotification.type}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="jo-masterlist-update-toast-message">
+              {updateNotification.message}
+            </span>
+            <button
+              className="jo-masterlist-update-toast-close"
+              onClick={() =>
+                setUpdateNotification((p) => ({ ...p, show: false }))
+              }
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* Edit Modal — personal info only */}
+        {editingRecord && (
+          <div className="jo-masterlist-edit-modal-overlay">
+            <div className="jo-masterlist-edit-modal">
+              <div className="jo-masterlist-edit-modal-header">
+                <div className="jo-masterlist-edit-modal-title">
+                  <h2>Edit Landowner Information</h2>
+                  <p>
+                    Update personal details only. Parcels are managed via the
+                    Land Registry.
+                  </p>
+                </div>
+                <button
+                  className="jo-masterlist-close-button"
+                  onClick={handleCancel}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="jo-masterlist-edit-modal-body">
+                {editError && (
+                  <div className="jo-masterlist-edit-error-banner" role="alert">
+                    {editError}
+                  </div>
+                )}
+                <div className="jo-masterlist-form-grid">
+                  <div className="jo-masterlist-form-group">
+                    <label>Last Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.lastName || ""}
+                      onChange={(e) =>
+                        handleInputChange("lastName", e.target.value)
+                      }
+                      placeholder="Last Name"
+                    />
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>First Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.firstName || ""}
+                      onChange={(e) =>
+                        handleInputChange("firstName", e.target.value)
+                      }
+                      placeholder="First Name"
+                    />
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>Middle Name:</label>
+                    <input
+                      type="text"
+                      value={editFormData.middleName || ""}
+                      onChange={(e) =>
+                        handleInputChange("middleName", e.target.value)
+                      }
+                      placeholder="Middle Name"
+                    />
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>Age:</label>
+                    <input
+                      type="text"
+                      value={editFormData.age || ""}
+                      onChange={(e) => handleInputChange("age", e.target.value)}
+                      placeholder="Age"
+                    />
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>Barangay:</label>
+                    <select
+                      value={editFormData.barangay || ""}
+                      onChange={(e) =>
+                        handleInputChange("barangay", e.target.value)
+                      }
+                      className="jo-masterlist-form-select"
+                    >
+                      <option value="">Select Barangay</option>
+                      {barangays.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="jo-masterlist-form-group">
+                    <label>Municipality:</label>
+                    <input
+                      type="text"
+                      value={editFormData.municipality || ""}
+                      onChange={(e) =>
+                        handleInputChange("municipality", e.target.value)
+                      }
+                      placeholder="Municipality"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="jo-masterlist-edit-modal-footer">
+                <button
+                  className="jo-masterlist-cancel-button"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="jo-masterlist-save-button"
+                  onClick={handleSave}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Landowner Detail Modal */}
+        {showModal && selectedLandowner && (
+          <div
+            className="farmer-modal-overlay"
+            onClick={() => setShowModal(false)}
+          >
+            <div
+              className="farmer-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="farmer-modal-header">
+                <h2>Landowner Details</h2>
+                <div className="farmer-modal-header-actions">
+                  <button
+                    className="farmer-modal-print-btn"
+                    onClick={handleModalPrint}
+                    disabled={isModalPrinting}
+                  >
+                    {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
+                  </button>
+                  <button
+                    className="farmer-modal-close"
+                    onClick={() => setShowModal(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <div className="farmer-modal-body">
+                {loadingDetail ? (
+                  <div className="farmer-modal-loading">
+                    Loading landowner details...
+                  </div>
+                ) : (
+                  <>
+                    {/* Record Overview */}
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">
+                        Record Overview
+                      </h3>
+                      <div className="farmer-modal-info-grid">
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">FFRS ID:</span>
+                          <span className="farmer-modal-value">
+                            {selectedLandowner.referenceNumber}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">
+                            Date Submitted:
+                          </span>
+                          <span className="farmer-modal-value">
+                            {selectedLandowner.dateSubmitted}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item farmer-modal-full-width">
+                          <span className="farmer-modal-label">Status:</span>
+                          <span className="farmer-modal-value">
+                            {selectedLandowner.recordStatus}
+                          </span>
+                        </div>
+                        {selectedLandowner.archivedAt && (
+                          <>
+                            <div className="farmer-modal-info-item">
+                              <span className="farmer-modal-label">
+                                Archived On:
+                              </span>
+                              <span
+                                className="farmer-modal-value"
+                                style={{
+                                  color: "var(--color-text-danger, #c0392b)",
+                                }}
+                              >
+                                {formatDateTime(selectedLandowner.archivedAt)}
+                              </span>
+                            </div>
+                            <div className="farmer-modal-info-item">
+                              <span className="farmer-modal-label">
+                                Archive Reason:
+                              </span>
+                              <span className="farmer-modal-value">
+                                {selectedLandowner.archiveReason ||
+                                  "Not specified"}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Personal Information */}
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">
+                        👤 Personal Information
+                      </h3>
+                      <div className="farmer-modal-info-grid">
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Full Name:</span>
+                          <span className="farmer-modal-value">
+                            {selectedLandowner.landownerName}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Address:</span>
+                          <span className="farmer-modal-value">
+                            {selectedLandowner.landownerAddress}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Age:</span>
+                          <span className="farmer-modal-value">
+                            {typeof selectedLandowner.age === "number"
+                              ? `${selectedLandowner.age} years old`
+                              : selectedLandowner.age}
+                            {selectedLandowner.birthdate && (
+                              <span
+                                style={{
+                                  marginLeft: 8,
+                                  fontSize: "0.85em",
+                                  color: "var(--color-text-secondary, #666)",
+                                }}
+                              >
+                                (Born: {selectedLandowner.birthdate})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="farmer-modal-info-item">
+                          <span className="farmer-modal-label">Gender:</span>
+                          <span className="farmer-modal-value">
+                            {selectedLandowner.gender}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Land Overview */}
+                    <div className="farmer-modal-section">
+                      <h3 className="farmer-modal-section-title">
+                        🏡 Land Overview
+                      </h3>
+
+                      {/* Summary banner */}
+                      {selectedLandowner.parcels.length > 0 &&
+                        (() => {
+                          const totalArea = selectedLandowner.parcels.reduce(
+                            (s, p) =>
+                              s +
+                              (typeof p.totalFarmAreaHa === "number"
+                                ? p.totalFarmAreaHa
+                                : parseFloat(String(p.totalFarmAreaHa || 0))),
+                            0,
+                          );
+                          const ownerCult = selectedLandowner.parcels.filter(
+                            (p) => p.occupationType === "owner-farmed",
+                          ).length;
+                          const occupied = selectedLandowner.parcels.filter(
+                            (p) => p.occupationType !== "owner-farmed",
+                          ).length;
+                          const totalTenants = new Set(
+                            selectedLandowner.parcels.flatMap((p) =>
+                              p.occupants
+                                .filter(
+                                  (o) =>
+                                    o.role === "tenant" ||
+                                    o.role === "tenant+lessee",
+                                )
+                                .map((o) => o.submissionId),
+                            ),
+                          ).size;
+                          const totalLessees = new Set(
+                            selectedLandowner.parcels.flatMap((p) =>
+                              p.occupants
+                                .filter(
+                                  (o) =>
+                                    o.role === "lessee" ||
+                                    o.role === "tenant+lessee",
+                                )
+                                .map((o) => o.submissionId),
+                            ),
+                          ).size;
+
+                          return (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 20,
+                                padding: "8px 12px",
+                                marginBottom: 12,
+                                background:
+                                  "var(--color-background-secondary, #f5f5f5)",
+                                borderRadius: 6,
+                                fontSize: "0.9em",
+                                color: "var(--color-text-secondary, #555)",
+                              }}
+                            >
+                              <span>
+                                <strong
+                                  style={{
+                                    color: "var(--color-text-primary, #222)",
+                                  }}
+                                >
+                                  {selectedLandowner.parcels.length}
+                                </strong>{" "}
+                                parcel
+                                {selectedLandowner.parcels.length === 1
+                                  ? ""
+                                  : "s"}
+                              </span>
+                              <span>
+                                <strong
+                                  style={{
+                                    color: "var(--color-text-primary, #222)",
+                                  }}
+                                >
+                                  {totalArea.toFixed(2)}
+                                </strong>{" "}
+                                ha total
+                              </span>
+                              <span>
+                                <strong
+                                  style={{
+                                    color: "var(--color-text-primary, #222)",
+                                  }}
+                                >
+                                  {ownerCult}
+                                </strong>{" "}
+                                self-farmed
+                              </span>
+                              <span>
+                                <strong
+                                  style={{
+                                    color: "var(--color-text-primary, #222)",
+                                  }}
+                                >
+                                  {occupied}
+                                </strong>{" "}
+                                occupied
+                              </span>
+                              {totalTenants > 0 && (
+                                <span>
+                                  <strong
+                                    style={{
+                                      color: "var(--color-text-primary, #222)",
+                                    }}
+                                  >
+                                    {totalTenants}
+                                  </strong>{" "}
+                                  tenant{totalTenants === 1 ? "" : "s"}
+                                </span>
+                              )}
+                              {totalLessees > 0 && (
+                                <span>
+                                  <strong
+                                    style={{
+                                      color: "var(--color-text-primary, #222)",
+                                    }}
+                                  >
+                                    {totalLessees}
+                                  </strong>{" "}
+                                  lessee{totalLessees === 1 ? "" : "s"}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                      {selectedLandowner.parcels.length === 0 ? (
+                        <p className="farmer-modal-no-data">
+                          No parcels found for this landowner.
+                        </p>
+                      ) : (
+                        <div className="farmer-modal-parcels-container">
+                          {selectedLandowner.parcels.map((parcel, index) => (
+                            <div
+                              key={parcel.id}
+                              className="farmer-modal-parcel-card"
+                            >
+                              <div className="farmer-modal-parcel-header">
+                                <h4>
+                                  {parcel.parcelNumber &&
+                                  parcel.parcelNumber !== "N/A"
+                                    ? `Parcel No. ${parcel.parcelNumber}`
+                                    : `Parcel #${index + 1}`}
+                                </h4>
+                                {/* Occupation badge */}
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    fontSize: "11px",
+                                    padding: "2px 10px",
+                                    borderRadius: 99,
+                                    marginLeft: 8,
+                                    background:
+                                      parcel.occupationType === "owner-farmed"
+                                        ? "var(--color-success-subtle, #eaf3de)"
+                                        : parcel.occupationType === "tenant"
+                                          ? "var(--color-info-subtle, #e6f1fb)"
+                                          : parcel.occupationType === "lessee"
+                                            ? "#EEEDFE"
+                                            : "#FFF3CD",
+                                    color:
+                                      parcel.occupationType === "owner-farmed"
+                                        ? "#27500A"
+                                        : parcel.occupationType === "tenant"
+                                          ? "#0C447C"
+                                          : parcel.occupationType === "lessee"
+                                            ? "#3C3489"
+                                            : "#633806",
+                                  }}
+                                >
+                                  {parcel.occupationType === "owner-farmed"
+                                    ? "Owner-farmed"
+                                    : parcel.occupationType === "tenant"
+                                      ? "Tenant-occupied"
+                                      : parcel.occupationType === "lessee"
+                                        ? "Lessee-occupied"
+                                        : "Tenant + Lessee"}
+                                </span>
+                              </div>
+
+                              <div className="farmer-modal-parcel-details">
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Location:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.farmLocationBarangay},{" "}
+                                    {parcel.farmLocationMunicipality}
+                                  </span>
+                                </div>
+
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Area:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {typeof parcel.totalFarmAreaHa === "number"
+                                      ? parcel.totalFarmAreaHa.toFixed(2)
+                                      : parseFloat(
+                                          String(parcel.totalFarmAreaHa || 0),
+                                        ).toFixed(2)}{" "}
+                                    ha
+                                  </span>
+                                </div>
+
+                                {/* Occupants — shown only when not owner-farmed */}
+                                {parcel.occupants.length > 0 && (
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      {parcel.occupants.length === 1
+                                        ? "Occupant:"
+                                        : "Occupants:"}
+                                    </span>
+                                    <span className="farmer-modal-value">
+                                      {parcel.occupants.map((occupant, oi) => (
+                                        <span
+                                          key={oi}
+                                          style={{
+                                            display: "block",
+                                            marginBottom:
+                                              oi < parcel.occupants.length - 1
+                                                ? 4
+                                                : 0,
+                                          }}
+                                        >
+                                          <strong>{occupant.name}</strong>
+                                          {occupant.ffrsCode && (
+                                            <span
+                                              style={{
+                                                marginLeft: 6,
+                                                fontSize: "0.85em",
+                                                color:
+                                                  "var(--color-text-secondary, #666)",
+                                              }}
+                                            >
+                                              {occupant.ffrsCode}
+                                            </span>
+                                          )}
+                                          <span
+                                            style={{
+                                              marginLeft: 8,
+                                              fontSize: "11px",
+                                              padding: "1px 7px",
+                                              borderRadius: 99,
+                                              background:
+                                                occupant.role === "tenant"
+                                                  ? "var(--color-info-subtle, #e6f1fb)"
+                                                  : occupant.role === "lessee"
+                                                    ? "#EEEDFE"
+                                                    : "#FFF3CD",
+                                              color:
+                                                occupant.role === "tenant"
+                                                  ? "#0C447C"
+                                                  : occupant.role === "lessee"
+                                                    ? "#3C3489"
+                                                    : "#633806",
+                                            }}
+                                          >
+                                            {occupant.role === "tenant"
+                                              ? "Tenant"
+                                              : occupant.role === "lessee"
+                                                ? "Lessee"
+                                                : "Tenant+Lessee"}
+                                          </span>
+                                          {!occupant.isLinked && (
+                                            <span
+                                              style={{
+                                                marginLeft: 6,
+                                                fontSize: "11px",
+                                                color: "#854F0B",
+                                              }}
+                                              title="This occupant name is text-only — no FFRS link found"
+                                            >
+                                              ⚠️ Unlinked
+                                            </span>
+                                          )}
+                                        </span>
+                                      ))}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {parcel.agrarianReformBeneficiary && (
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      Agrarian Reform Beneficiary:
+                                    </span>
+                                    <span className="farmer-modal-value">
+                                      {parcel.agrarianReformBeneficiary}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {parcel.withinAncestralDomain && (
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      Ancestral Domain:
+                                    </span>
+                                    <span className="farmer-modal-value">
+                                      {parcel.withinAncestralDomain}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {parcel.ownershipDocumentNo && (
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      Ownership Document No.:
+                                    </span>
+                                    <span className="farmer-modal-value">
+                                      {parcel.ownershipDocumentNo}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Cultivation status — relevant for owner-farmed parcels */}
+                                {parcel.occupationType === "owner-farmed" && (
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      Farming Status:
+                                    </span>
+                                    <span className="farmer-modal-value">
+                                      {parcel.isFarming === true ? (
+                                        <span
+                                          style={{
+                                            color: "green",
+                                            fontWeight: 500,
+                                          }}
+                                        >
+                                          ✅ Farming
+                                        </span>
+                                      ) : parcel.isFarming === false ? (
+                                        <span
+                                          style={{
+                                            color: "red",
+                                            fontWeight: 500,
+                                          }}
+                                        >
+                                          ❌ Not farming
+                                        </span>
+                                      ) : (
+                                        <span style={{ color: "#888" }}>
+                                          Not specified
+                                        </span>
+                                      )}
+                                      {parcel.isFarming === false &&
+                                        parcel.farmingStatusReason && (
+                                          <span className="farmer-modal-owner-name">
+                                            {" "}
+                                            — {parcel.farmingStatusReason}
+                                          </span>
+                                        )}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {parcel.farmingStatusUpdatedAt && (
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      Status Last Updated:
+                                    </span>
+                                    <span
+                                      className="farmer-modal-value"
+                                      style={{
+                                        fontSize: "0.85em",
+                                        color:
+                                          "var(--color-text-secondary, #666)",
+                                      }}
+                                    >
+                                      {formatDateTime(
+                                        parcel.farmingStatusUpdatedAt,
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default JoLandownerRegistry;

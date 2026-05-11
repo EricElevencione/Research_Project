@@ -1414,19 +1414,24 @@ const JoRsbsaPage: React.FC = () => {
                 </div>
               </div>
               <div className="jo-rsbsa-actions-right">
-                <button
+                {/* <button
                   className="jo-rsbsa-register-button"
                   onClick={() => navigate("/jo-rsbsa-farmer")}
                 >
                   Register Farmer
-                </button>
+                </button> */}
                 <button
                   className="jo-rsbsa-register-button"
                   onClick={() => navigate("/jo-rsbsa-landowner")}
                 >
                   Register Land Owner
                 </button>
-                
+                <button
+                  className="jo-rsbsa-register-button"
+                  onClick={() => navigate("/jo-rsbsa")}
+                >
+                  Register Farmer
+                </button>
               </div>
             </div>
             {loading ? (
