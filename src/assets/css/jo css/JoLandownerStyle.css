@@ -1,7 +1,7 @@
 /* ============================================
-   JO Masterlist Page — Redesigned Layout
-   Fix: compact stat strip + tight filters so
-   the farmer table fills the available height
+   JO Landowner Registry — Redesigned Layout
+   Unique prefix: jo-landowner-
+   Compact stat strip, single-row filters, table fills height
    ============================================ */
 
 /* ── Reset & Base ──────────────────────────── */
@@ -12,14 +12,14 @@
 }
 
 /* ── Page Shell ────────────────────────────── */
-.jo-masterlist-page-container {
+.jo-landowner-page-container {
   display: flex;
   height: 100vh;
   background-color: #f0f2f5;
   overflow: hidden;
 }
 
-.jo-masterlist-page {
+.jo-landowner-page {
   display: flex;
   width: 100%;
   height: 100%;
@@ -27,7 +27,7 @@
 }
 
 /* ── Main Column ───────────────────────────── */
-.jo-masterlist-main-content {
+.jo-landowner-main-content {
   flex: 1;
   min-width: 0;
   padding: 14px 18px 12px;
@@ -40,22 +40,22 @@
 }
 
 /* ── Page Header ───────────────────────────── */
-.jo-masterlist-dashboard-header {
+.jo-landowner-dashboard-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
 }
 
-.jo-masterlist-page-title {
+.jo-landowner-page-title {
   font-weight: 700;
   font-size: 22px;
-  color: #0f2d13;
+  color: #0f1d3a;
   margin: 0;
   line-height: 1.1;
 }
 
-.jo-masterlist-page-subtitle {
+.jo-landowner-page-subtitle {
   color: #6b7280;
   font-size: 12px;
   margin: 2px 0 0;
@@ -63,7 +63,7 @@
 
 /* ── Stat Strip ────────────────────────────── */
 /* 7 cards in ONE scrollable row — no wrapping */
-.jo-masterlist-status-cards {
+.jo-landowner-status-cards {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -72,18 +72,18 @@
   overflow-x: auto;
   padding-bottom: 2px; /* room for scrollbar on Windows */
   scrollbar-width: thin;
-  scrollbar-color: #c1d9bc transparent;
+  scrollbar-color: #bfdbfe transparent;
 }
 
-.jo-masterlist-status-cards::-webkit-scrollbar {
+.jo-landowner-status-cards::-webkit-scrollbar {
   height: 4px;
 }
-.jo-masterlist-status-cards::-webkit-scrollbar-thumb {
-  background: #c1d9bc;
+.jo-landowner-status-cards::-webkit-scrollbar-thumb {
+  background: #bfdbfe;
   border-radius: 4px;
 }
 
-.jo-masterlist-status-card {
+.jo-landowner-status-card {
   flex: 1 0 120px; /* shrinks nicely, min 120 px */
   max-width: 180px;
   background: white;
@@ -101,45 +101,45 @@
   white-space: nowrap;
 }
 
-.jo-masterlist-status-card:hover {
+.jo-landowner-status-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
-.jo-masterlist-card-total {
+.jo-landowner-card-total {
   border-left-color: #6366f1;
   background: linear-gradient(135deg, #f5f3ff, #fff);
 }
-.jo-masterlist-card-active {
+.jo-landowner-card-active {
   border-left-color: #22c55e;
   background: linear-gradient(135deg, #f0fdf4, #fff);
 }
-.jo-masterlist-card-inactive {
+.jo-landowner-card-inactive {
   border-left-color: #ef4444;
   background: linear-gradient(135deg, #fef2f2, #fff);
 }
 
-.jo-masterlist-card-icon {
+.jo-landowner-card-icon {
   font-size: 16px;
   line-height: 1;
   flex-shrink: 0;
 }
 
-.jo-masterlist-card-info {
+.jo-landowner-card-info {
   display: flex;
   flex-direction: column;
   gap: 0;
   min-width: 0;
 }
 
-.jo-masterlist-card-count {
+.jo-landowner-card-count {
   font-size: 18px;
   font-weight: 800;
   color: #111827;
   line-height: 1;
 }
 
-.jo-masterlist-card-label {
+.jo-landowner-card-label {
   font-size: 10px;
   color: #6b7280;
   font-weight: 600;
@@ -151,7 +151,7 @@
 }
 
 /* ── Content Card ──────────────────────────── */
-.jo-masterlist-content-card {
+.jo-landowner-content-card {
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
@@ -166,35 +166,28 @@
 
 /* ── Filter Bar ────────────────────────────── */
 /* Two-row layout: search on top, dropdowns below */
-.jo-masterlist-filters-section {
+.jo-landowner-filters-section {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-/* Row 1: search */
-.jo-masterlist-filters-row-1 {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-/* Row 2: selects + archived toggle */
-.jo-masterlist-filters-row-2 {
-  display: flex;
-  gap: 6px;
-  align-items: center;
+  flex-direction: row;
   flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* Row sub-divs (unused on this page but kept for consistency) */
+.jo-landowner-filters-row-1,
+.jo-landowner-filters-row-2 {
+  display: contents;
 }
 
 /* Search input */
-.jo-masterlist-search-filter {
+.jo-landowner-search-filter {
   flex: 1;
   min-width: 0;
 }
 
-.jo-masterlist-search-input {
+.jo-landowner-search-input {
   width: 100% !important;
   padding: 8px 12px !important;
   border: 1px solid #d1d5db !important;
@@ -207,20 +200,20 @@
   height: 36px !important;
 }
 
-.jo-masterlist-search-input:focus {
+.jo-landowner-search-input:focus {
   outline: none !important;
-  border-color: #4caf50 !important;
+  border-color: #3b82f6 !important;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.12) !important;
 }
 
 /* Select dropdowns — compact */
-.jo-masterlist-status-filter {
+.jo-landowner-status-filter {
   flex: 1 1 140px;
   min-width: 120px;
   max-width: 200px;
 }
 
-.jo-masterlist-status-select {
+.jo-landowner-status-select {
   width: 100%;
   padding: 6px 10px;
   border: 1px solid #d1d5db;
@@ -233,14 +226,14 @@
   color: #374151;
 }
 
-.jo-masterlist-status-select:focus {
+.jo-landowner-status-select:focus {
   outline: none;
-  border-color: #4caf50;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
 /* Archived toggle */
-.jo-masterlist-archived-toggle {
+.jo-landowner-archived-toggle {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -252,13 +245,13 @@
   flex-shrink: 0;
 }
 
-.jo-masterlist-archived-toggle input[type="checkbox"] {
+.jo-landowner-archived-toggle input[type="checkbox"] {
   accent-color: #0ea5e9;
   cursor: pointer;
 }
 
 /* ── Table Meta Row ────────────────────────── */
-.jo-masterlist-table-meta {
+.jo-landowner-table-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -271,38 +264,38 @@
 }
 
 /* ── Bulk Toolbar ──────────────────────────── */
-.jo-masterlist-bulk-toolbar {
+.jo-landowner-bulk-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   padding: 7px 10px;
   border-radius: 8px;
-  border: 1px solid #cde8cf;
-  background: #f4fbf3;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
   flex-shrink: 0;
 }
 
-.jo-masterlist-bulk-count {
-  color: #14532d;
+.jo-landowner-bulk-count {
+  color: #1e3a8a;
   font-size: 12px;
   font-weight: 700;
 }
 
-.jo-masterlist-bulk-actions {
+.jo-landowner-bulk-actions {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.jo-masterlist-bulk-export-wrap {
+.jo-landowner-bulk-export-wrap {
   position: relative;
 }
 
-.jo-masterlist-bulk-btn {
-  border: 1px solid #6aa661;
+.jo-landowner-bulk-btn {
+  border: 1px solid #60a5fa;
   background: #ffffff;
-  color: #1f4f2e;
+  color: #1e3a8a;
   border-radius: 7px;
   padding: 5px 10px;
   font-size: 11px;
@@ -312,31 +305,31 @@
   white-space: nowrap;
 }
 
-.jo-masterlist-bulk-btn:hover {
-  background: #edf9ea;
+.jo-landowner-bulk-btn:hover {
+  background: #eff6ff;
 }
 
-.jo-masterlist-bulk-btn-clear {
+.jo-landowner-bulk-btn-clear {
   border-color: #d1d5db;
   color: #374151;
 }
 
-.jo-masterlist-bulk-btn-restore {
+.jo-landowner-bulk-btn-restore {
   border-color: #14b8a6;
-  color: #0f766e;
+  color: #1e40af;
   background: #f0fdfa;
 }
-.jo-masterlist-bulk-btn-restore:hover {
+.jo-landowner-bulk-btn-restore:hover {
   background: #ccfbf1;
 }
 
-.jo-masterlist-bulk-menu {
+.jo-landowner-bulk-menu {
   position: absolute;
   top: calc(100% + 5px);
   right: 0;
   min-width: 180px;
   background: #fff;
-  border: 1px solid #dbe6cf;
+  border: 1px solid #dbeafe;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
   border-radius: 10px;
   padding: 5px;
@@ -344,17 +337,17 @@
 }
 
 /* ── Table Container ───────────────────────── */
-.jo-masterlist-table-container {
+.jo-landowner-table-container {
   flex: 1; /* ← THIS is what fills the card */
   min-height: 0;
   overflow: auto;
   border-radius: 10px;
-  border: 1px solid #dbe6cf;
+  border: 1px solid #dbeafe;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 /* ── Table ─────────────────────────────────── */
-.jo-masterlist-farmers-table {
+.jo-landowner-farmers-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
@@ -362,13 +355,13 @@
   min-width: 960px;
 }
 
-.jo-masterlist-farmers-table thead th {
+.jo-landowner-farmers-table thead th {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #ffffff;
   font-weight: 700;
   text-align: left;
   padding: 10px 11px;
-  border-bottom: 1px solid #b6d08f;
+  border-bottom: 1px solid #93c5fd;
   white-space: nowrap;
   position: sticky;
   top: 0;
@@ -378,34 +371,34 @@
   letter-spacing: 0.5px;
 }
 
-.jo-masterlist-farmers-table tbody td {
+.jo-landowner-farmers-table tbody td {
   padding: 10px 11px; /* reduced from 14px */
   border-bottom: 1px solid #edf2e8;
   vertical-align: middle;
 }
 
-.jo-masterlist-farmers-table tbody tr:last-child td {
+.jo-landowner-farmers-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.jo-masterlist-table-row {
+.jo-landowner-table-row {
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
 
-.jo-masterlist-table-row:hover {
+.jo-landowner-table-row:hover {
   background-color: #f3fbf0;
 }
 
 /* ── Checkbox Column ───────────────────────── */
-.jo-masterlist-checkbox-col {
+.jo-landowner-checkbox-col {
   width: 40px;
   min-width: 40px;
   text-align: center;
 }
 
-.jo-masterlist-header-checkbox,
-.jo-masterlist-row-checkbox {
+.jo-landowner-header-checkbox,
+.jo-landowner-row-checkbox {
   width: 15px;
   height: 15px;
   accent-color: #059669;
@@ -413,7 +406,7 @@
 }
 
 /* ── Sort Button ───────────────────────────── */
-.jo-masterlist-sort-btn {
+.jo-landowner-sort-btn {
   border: none;
   background: transparent;
   color: inherit;
@@ -428,20 +421,20 @@
   padding: 0;
 }
 
-.jo-masterlist-sort-btn.is-active {
+.jo-landowner-sort-btn.is-active {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 /* ── Farmer Cell ───────────────────────────── */
-.jo-masterlist-farmer-cell {
+.jo-landowner-farmer-cell {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 200px;
 }
 
-.jo-masterlist-farmer-avatar {
+.jo-landowner-farmer-avatar {
   width: 34px;
   height: 34px;
   border-radius: 9px;
@@ -455,46 +448,46 @@
   flex-shrink: 0;
 }
 
-.jo-masterlist-farmer-meta {
+.jo-landowner-farmer-meta {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.jo-masterlist-farmer-name {
+.jo-landowner-farmer-name {
   color: #111827;
   font-weight: 700;
   font-size: 13px;
   line-height: 1.2;
 }
 
-.jo-masterlist-farmer-ref {
+.jo-landowner-farmer-ref {
   color: #6b7280;
   font-size: 11px;
 }
 
-.jo-masterlist-cultivation-text {
-  color: #14532d;
+.jo-landowner-cultivation-text {
+  color: #1e3a8a;
   font-weight: 700;
   font-size: 12px;
 }
 
 /* ── Address / Parcel Cells ────────────────── */
-.jo-masterlist-address-cell,
-.jo-masterlist-parcel-cell {
+.jo-landowner-address-cell,
+.jo-landowner-parcel-cell {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 3px;
 }
 
-.jo-masterlist-address-primary {
+.jo-landowner-address-primary {
   color: #1f2937;
   font-weight: 600;
   font-size: 12.5px;
 }
 
-.jo-masterlist-address-secondary {
+.jo-landowner-address-secondary {
   color: #6b7280;
   font-size: 11px;
   max-width: 220px;
@@ -503,7 +496,7 @@
   text-overflow: ellipsis;
 }
 
-.jo-masterlist-parcel-count {
+.jo-landowner-parcel-count {
   display: inline-flex;
   align-items: center;
   padding: 2px 7px;
@@ -514,20 +507,20 @@
   font-weight: 700;
 }
 
-.jo-masterlist-parcel-area {
-  color: #14532d;
+.jo-landowner-parcel-area {
+  color: #1e3a8a;
   font-weight: 700;
   font-size: 12px;
 }
 
-.jo-masterlist-date {
+.jo-landowner-date {
   color: #334155;
   font-weight: 600;
   font-size: 12px;
 }
 
 /* ── Status Pills ──────────────────────────── */
-.jo-masterlist-status-pill {
+.jo-landowner-status-pill {
   display: inline-block;
   padding: 3px 7px;
   border-radius: 20px;
@@ -540,41 +533,41 @@
   max-width: 100%;
 }
 
-.jo-masterlist-status-cell {
+.jo-landowner-status-cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-items: flex-start;
 }
 
-.jo-masterlist-status-approved {
+.jo-landowner-status-approved {
   background: #d4edda;
   color: #155724;
   border: 1px solid #c3e6cb;
 }
-.jo-masterlist-status-not-approved {
+.jo-landowner-status-not-approved {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
 }
-.jo-masterlist-status-pending {
+.jo-landowner-status-pending {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
 }
-.jo-masterlist-status-draft {
+.jo-landowner-status-draft {
   background: #e2e3e5;
   color: #383d41;
   border: 1px solid #d6d8db;
 }
-.jo-masterlist-status-no-parcels {
+.jo-landowner-status-no-parcels {
   background: #fef3c7;
   color: #92400e;
   border: 1px solid #f59e0b;
 }
 
 /* ── Ownership Pills ───────────────────────── */
-.jo-masterlist-ownership-pill {
+.jo-landowner-ownership-pill {
   display: inline-block;
   padding: 3px 7px;
   border-radius: 20px;
@@ -587,41 +580,41 @@
   max-width: 100%;
 }
 
-.jo-masterlist-ownership-owner {
+.jo-landowner-ownership-owner {
   background: #1e3a8a;
   border: 1px solid #132a5f;
   color: #fff;
 }
-.jo-masterlist-ownership-tenant {
+.jo-landowner-ownership-tenant {
   background: #10b981;
   border: 1px solid #0a7e5e;
   color: #fff;
 }
-.jo-masterlist-ownership-lessee {
+.jo-landowner-ownership-lessee {
   background: #f59e0b;
   border: 1px solid #c47c08;
   color: #fff;
 }
-.jo-masterlist-ownership-mixed {
+.jo-landowner-ownership-mixed {
   background: linear-gradient(135deg, #1e3a8a, #10b981 50%, #f59e0b);
   border: 1px solid #0f172a;
   color: #fff;
 }
-.jo-masterlist-ownership-unknown {
+.jo-landowner-ownership-unknown {
   background: #64748b;
   border: 1px solid #475569;
   color: #fff;
 }
 
 /* ── Action Cells ──────────────────────────── */
-.jo-masterlist-actions-cell {
+.jo-landowner-actions-cell {
   width: 170px;
 }
 
-.jo-masterlist-view-btn {
-  border: 1px solid #9fc06e;
-  background: #f6fde9;
-  color: #35511a;
+.jo-landowner-view-btn {
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1e3a8a;
   border-radius: 7px;
   padding: 6px 10px;
   font-size: 11.5px;
@@ -630,30 +623,30 @@
   transition: all 0.2s ease;
 }
 
-.jo-masterlist-view-btn:hover {
-  background: #ebf8d6;
-  border-color: #84ac53;
+.jo-landowner-view-btn:hover {
+  background: #dbeafe;
+  border-color: #3b82f6;
 }
 
-.jo-masterlist-quick-actions {
+.jo-landowner-quick-actions {
   position: relative;
   display: inline-flex;
 }
 
-.jo-masterlist-quick-menu {
+.jo-landowner-quick-menu {
   position: absolute;
   top: calc(100% + 5px);
   right: 0;
   min-width: 200px;
   background: #fff;
-  border: 1px solid #dbe6cf;
+  border: 1px solid #dbeafe;
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
   border-radius: 10px;
   padding: 5px;
   z-index: 25;
 }
 
-.jo-masterlist-quick-item {
+.jo-landowner-quick-item {
   width: 100%;
   border: none;
   background: transparent;
@@ -666,20 +659,20 @@
   cursor: pointer;
 }
 
-.jo-masterlist-quick-item:hover {
-  background: #f3f9eb;
+.jo-landowner-quick-item:hover {
+  background: #eff6ff;
 }
 
-.jo-masterlist-quick-item-restore {
+.jo-landowner-quick-item-restore {
   color: #0f766e;
   font-weight: 700;
 }
-.jo-masterlist-quick-item-restore:hover {
+.jo-landowner-quick-item-restore:hover {
   background: #ecfeff;
 }
 
 /* ── Archive Meta ──────────────────────────── */
-.jo-masterlist-archive-meta {
+.jo-landowner-archive-meta {
   font-size: 10.5px;
   color: #7c2d12;
   background: #fff7ed;
@@ -690,24 +683,24 @@
   max-width: 220px;
 }
 
-.jo-masterlist-queue-archive-cell {
+.jo-landowner-queue-archive-cell {
   display: flex;
   flex-direction: column;
   gap: 3px;
   max-width: 220px;
 }
 
-.jo-masterlist-queue-archive-cell strong {
+.jo-landowner-queue-archive-cell strong {
   font-size: 11px;
   color: #7c2d12;
 }
-.jo-masterlist-queue-archive-cell span {
+.jo-landowner-queue-archive-cell span {
   font-size: 10px;
   color: #6b7280;
 }
 
 /* ── More / Hamburger Menu ─────────────────── */
-.jo-masterlist-more-button {
+.jo-landowner-more-button {
   background: #f8f9fa;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -718,12 +711,12 @@
   transition: all 0.2s ease;
 }
 
-.jo-masterlist-more-button:hover {
+.jo-landowner-more-button:hover {
   background: #e9ecef;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.jo-masterlist-more-menu {
+.jo-landowner-more-menu {
   position: absolute;
   min-width: 150px;
   background: #fff;
@@ -734,7 +727,7 @@
   padding: 6px;
 }
 
-.jo-masterlist-more-menu button {
+.jo-landowner-more-menu button {
   width: 100%;
   text-align: left;
   background: transparent;
@@ -746,29 +739,29 @@
   transition: background-color 0.2s ease;
 }
 
-.jo-masterlist-more-menu button:hover {
+.jo-landowner-more-menu button:hover {
   background-color: #f8f9fa;
 }
-.jo-masterlist-more-menu button.delete {
+.jo-landowner-more-menu button.delete {
   color: #d32f2f;
 }
 
 /* ── Empty / Loading / Error ───────────────── */
-.jo-masterlist-empty-cell,
-.jo-masterlist-loading-cell,
-.jo-masterlist-error-cell {
+.jo-landowner-empty-cell,
+.jo-landowner-loading-cell,
+.jo-landowner-error-cell {
   text-align: center;
   padding: 36px 20px;
   color: #6b7280;
   font-weight: 500;
 }
 
-.jo-masterlist-error-cell {
+.jo-landowner-error-cell {
   color: #dc3545;
 }
 
 /* ── Edit Modal ────────────────────────────── */
-.jo-masterlist-edit-modal-overlay {
+.jo-landowner-edit-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
@@ -778,7 +771,7 @@
   z-index: 9999;
 }
 
-.jo-masterlist-edit-modal {
+.jo-landowner-edit-modal {
   background: white;
   border-radius: 12px;
   width: 90%;
@@ -788,8 +781,8 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
-.jo-masterlist-edit-modal-header {
-  background: linear-gradient(135deg, #0f766e 0%, #10b981 55%, #34d399 100%);
+.jo-landowner-edit-modal-header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #60a5fa 100%);
   color: #fff;
   padding: 18px 22px;
   display: flex;
@@ -798,18 +791,18 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-.jo-masterlist-edit-modal-title h2 {
+.jo-landowner-edit-modal-title h2 {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
 }
-.jo-masterlist-edit-modal-title p {
+.jo-landowner-edit-modal-title p {
   margin: 3px 0 0;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.8);
 }
 
-.jo-masterlist-close-button {
+.jo-landowner-close-button {
   width: 32px;
   height: 32px;
   border: none;
@@ -826,16 +819,16 @@
   line-height: 1;
 }
 
-.jo-masterlist-close-button:hover {
+.jo-landowner-close-button:hover {
   background: rgba(255, 255, 255, 0.35);
 }
 
-.jo-masterlist-edit-modal-body {
+.jo-landowner-edit-modal-body {
   padding: 20px 22px 24px;
   background: #f8fafc;
 }
 
-.jo-masterlist-edit-error-banner {
+.jo-landowner-edit-error-banner {
   background: #fdecea;
   color: #b71c1c;
   border: 1px solid #f5c2c7;
@@ -846,11 +839,11 @@
   font-weight: 500;
 }
 
-.jo-masterlist-form-group {
+.jo-landowner-form-group {
   margin-bottom: 14px;
 }
 
-.jo-masterlist-form-group label {
+.jo-landowner-form-group label {
   display: block;
   margin-bottom: 5px;
   color: #333;
@@ -858,7 +851,7 @@
   font-size: 13px;
 }
 
-.jo-masterlist-form-group input {
+.jo-landowner-form-group input {
   width: 100% !important;
   padding: 9px 11px !important;
   border: 1px solid #ddd !important;
@@ -870,20 +863,20 @@
   box-sizing: border-box !important;
 }
 
-.jo-masterlist-form-group input:focus {
+.jo-landowner-form-group input:focus {
   outline: none !important;
-  border-color: #4caf50 !important;
+  border-color: #3b82f6 !important;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1) !important;
 }
 
-.jo-masterlist-form-grid {
+.jo-landowner-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 16px;
   margin-bottom: 8px;
 }
 
-.jo-masterlist-form-select {
+.jo-landowner-form-select {
   width: 100%;
   padding: 9px 11px;
   border: 1px solid #ddd;
@@ -897,25 +890,25 @@
   box-sizing: border-box;
 }
 
-.jo-masterlist-form-select:focus {
+.jo-landowner-form-select:focus {
   outline: none;
-  border-color: #4caf50;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
-.jo-masterlist-parcel-section {
+.jo-landowner-parcel-section {
   margin-top: 18px;
   border-top: 2px solid #e0e0e0;
   padding-top: 14px;
 }
 
-.jo-masterlist-parcel-section h4 {
+.jo-landowner-parcel-section h4 {
   margin-bottom: 12px;
   color: #0f172a;
   font-size: 14px;
 }
 
-.jo-masterlist-parcel-item {
+.jo-landowner-parcel-item {
   margin-bottom: 14px;
   padding: 14px;
   background: #fff;
@@ -926,39 +919,39 @@
   gap: 9px 14px;
 }
 
-.jo-masterlist-parcel-item.error {
+.jo-landowner-parcel-item.error {
   border: 2px solid #d32f2f;
 }
 
-.jo-masterlist-parcel-label {
+.jo-landowner-parcel-label {
   font-weight: 700;
-  color: #0f766e;
+  color: #1e40af;
   font-size: 13px;
 }
-.jo-masterlist-parcel-location {
+.jo-landowner-parcel-location {
   color: #64748b;
   font-size: 11px;
   display: block;
   margin-top: 5px;
 }
-.jo-masterlist-parcel-error {
+.jo-landowner-parcel-error {
   color: #d32f2f;
   font-size: 0.82em;
   display: block;
   margin-top: 4px;
   font-weight: 500;
 }
-.jo-masterlist-parcel-empty {
+.jo-landowner-parcel-empty {
   color: #64748b;
   font-style: italic;
 }
 
-.jo-masterlist-parcel-input[data-error="true"] {
+.jo-landowner-parcel-input[data-error="true"] {
   border: 2px solid #d32f2f !important;
   background-color: #ffebee !important;
 }
 
-.jo-masterlist-edit-modal-footer {
+.jo-landowner-edit-modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -966,7 +959,7 @@
   border-top: 1px solid #e0e0e0;
 }
 
-.jo-masterlist-cancel-button {
+.jo-landowner-cancel-button {
   background: #6c757d;
   color: white;
   border: none;
@@ -977,11 +970,11 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.jo-masterlist-cancel-button:hover {
+.jo-landowner-cancel-button:hover {
   background: #5a6268;
 }
 
-.jo-masterlist-save-button {
+.jo-landowner-save-button {
   background: #28a745;
   color: white;
   border: none;
@@ -992,12 +985,12 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.jo-masterlist-save-button:hover {
+.jo-landowner-save-button:hover {
   background: #218838;
 }
 
 /* ── Toast Notification ────────────────────── */
-.jo-masterlist-update-toast {
+.jo-landowner-update-toast {
   position: fixed;
   top: 16px;
   right: 16px;
@@ -1014,24 +1007,24 @@
   border: 1px solid transparent;
 }
 
-.jo-masterlist-update-toast.success {
+.jo-landowner-update-toast.success {
   background: #ecfdf3;
   border-color: #6ee7b7;
   color: #065f46;
 }
-.jo-masterlist-update-toast.error {
+.jo-landowner-update-toast.error {
   background: #fef2f2;
   border-color: #fca5a5;
   color: #991b1b;
 }
 
-.jo-masterlist-update-toast-message {
+.jo-landowner-update-toast-message {
   font-size: 13px;
   line-height: 1.4;
   font-weight: 500;
 }
 
-.jo-masterlist-update-toast-close {
+.jo-landowner-update-toast-close {
   border: none;
   background: transparent;
   color: inherit;
@@ -1041,82 +1034,82 @@
   padding: 0;
   min-width: 18px;
 }
-.jo-masterlist-update-toast-close:hover {
+.jo-landowner-update-toast-close:hover {
   opacity: 0.75;
 }
 
 /* ── Responsive ────────────────────────────── */
 @media (max-width: 768px) {
-  .jo-masterlist-page-container {
+  .jo-landowner-page-container {
     height: auto;
     min-height: 100vh;
     overflow: auto;
   }
 
-  .jo-masterlist-main-content {
+  .jo-landowner-main-content {
     padding: 10px;
     gap: 8px;
   }
 
-  .jo-masterlist-status-cards {
+  .jo-landowner-status-cards {
     /* still single-row, scroll horizontally on mobile */
     gap: 6px;
   }
 
-  .jo-masterlist-status-card {
+  .jo-landowner-status-card {
     flex: 0 0 110px;
   }
 
-  .jo-masterlist-filters-row-2 {
+  .jo-landowner-filters-row-2 {
     flex-wrap: wrap;
   }
 
-  .jo-masterlist-status-filter {
+  .jo-landowner-status-filter {
     flex: 1 1 calc(50% - 6px);
     max-width: none;
   }
 
-  .jo-masterlist-bulk-toolbar {
+  .jo-landowner-bulk-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .jo-masterlist-bulk-actions {
+  .jo-landowner-bulk-actions {
     justify-content: space-between;
   }
 
-  .jo-masterlist-form-grid {
+  .jo-landowner-form-grid {
     grid-template-columns: 1fr;
   }
-  .jo-masterlist-parcel-item {
+  .jo-landowner-parcel-item {
     grid-template-columns: 1fr;
   }
 
-  .jo-masterlist-farmers-table {
+  .jo-landowner-farmers-table {
     min-width: 860px;
   }
 
-  .jo-masterlist-farmers-table thead th,
-  .jo-masterlist-farmers-table tbody td {
+  .jo-landowner-farmers-table thead th,
+  .jo-landowner-farmers-table tbody td {
     padding: 7px 8px;
   }
 
-  .jo-masterlist-content-card {
+  .jo-landowner-content-card {
     padding: 10px 12px;
   }
 
-  .jo-masterlist-quick-menu,
-  .jo-masterlist-bulk-menu {
+  .jo-landowner-quick-menu,
+  .jo-landowner-bulk-menu {
     right: auto;
     left: 0;
   }
 
-  .jo-masterlist-edit-modal {
+  .jo-landowner-edit-modal {
     width: 96%;
     max-height: 96vh;
   }
 
-  .jo-masterlist-update-toast {
+  .jo-landowner-update-toast {
     top: 10px;
     right: 10px;
     left: 10px;

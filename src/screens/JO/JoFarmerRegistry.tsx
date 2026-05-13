@@ -1,4 +1,3 @@
-import { supabase } from "../../supabase";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -8,11 +7,7 @@ import {
   updateRsbsaSubmission,
   updateFarmParcel,
 } from "../../api";
-import {
-  printRsbsaFormById,
-  printRsbsaFormsByIds,
-} from "../../utils/rsbsaPrint";
-import "../../assets/css/jo css/JoMasterlistStyle.css";
+import "../../assets/css/jo css/JoFarmerStyle.css";
 import JOSidebar from "../../components/Layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import {
@@ -30,9 +25,9 @@ import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserFor
 // Excludes "No Parcels" records — those belong in the Masterlist queue.
 // Purpose:
 //   • Find and filter farmers by role, barangay, and farming status
-//   • See who is Farming vs not
+//   • See who is Farming vs not (X/Y parcels farming format)
 //   • Understand the farmer–landowner relationship per parcel
-//   • Export and print RSBSA forms
+//   • Review and manage farmer records
 // ─────────────────────────────────────────────
 
 interface RSBSARecord {
@@ -43,6 +38,10 @@ interface RSBSARecord {
   farmLocation: string;
   parcelArea: string;
   parcelCount: number;
+  // CHANGE: farmingParcelCount tracks how many parcels are actively farmed.
+  // Used to render the "X/Y farming" cultivation column.
+  // null means the API didn't return a count — we fall back to farmingStatus string.
+  farmingParcelCount?: number | null;
   age: number | null;
   dateSubmitted: string;
   status: string;
@@ -131,6 +130,9 @@ interface EditFormData {
   age?: string;
 }
 
+// CHANGE: dateSubmitted removed from SortKey — column is no longer visible.
+// It is still used as the DEFAULT_SORT_CONFIG so records load newest-first,
+// but staff no longer see a sortable date column in the table header.
 type SortKey = "farmerName" | "dateSubmitted" | "status" | "parcelArea";
 type SortDirection = "asc" | "desc";
 
@@ -200,12 +202,7 @@ const JoFarmerRegistry: React.FC = () => {
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // CHANGE 1: Role filter replaces the old status filter.
-  // Options: all, tenant, lessee, owner-farmer, active, notActive
-  // "noParcels" removed — those records are handled in the Masterlist.
   const [selectedRole, setSelectedRole] = useState<string>("all");
-
   const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
@@ -231,18 +228,10 @@ const JoFarmerRegistry: React.FC = () => {
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
     new Set(),
   );
-  const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
-  const [isModalPrinting, setIsModalPrinting] = useState(false);
-  const [isBulkPrinting, setIsBulkPrinting] = useState(false);
-  const [printingRecordIds, setPrintingRecordIds] = useState<Set<string>>(
-    new Set(),
-  );
   const [restoringRecordIds, setRestoringRecordIds] = useState<Set<string>>(
     new Set(),
   );
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-
-  // CHANGE 2: showArchived and noParcels toggle removed — not relevant here.
 
   const showUpdateNotification = (
     message: string,
@@ -503,6 +492,11 @@ const JoFarmerRegistry: React.FC = () => {
       if (response.error) throw new Error(response.error);
       const data = response.data || [];
       const allData = Array.isArray(data) ? data : [];
+      const parseNumberValue = (value: unknown): number | null => {
+        if (value === null || value === undefined || value === "") return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      };
 
       const formattedRecords: RSBSARecord[] = allData.map(
         (item: any, idx: number) => {
@@ -550,6 +544,37 @@ const JoFarmerRegistry: React.FC = () => {
             return match ? match[1] : "—";
           })();
 
+          const cultivationSummary =
+            item.cultivationSummary ||
+            item.cultivation_summary ||
+            item.cultivationCounts ||
+            item.cultivation_counts ||
+            null;
+          const cultivationTotal = parseNumberValue(cultivationSummary?.total);
+          const cultivationActive = parseNumberValue(cultivationSummary?.active);
+
+          const parcelCountValue = parseNumberValue(
+            item.parcelCount ??
+              item.parcel_count ??
+              item["PARCEL COUNT"] ??
+              cultivationTotal,
+          );
+          const parcelCount =
+            parcelCountValue !== null
+              ? Math.max(0, Math.floor(parcelCountValue))
+              : 0;
+
+          const farmingParcelCountValue = parseNumberValue(
+            item.farmingParcelCount ??
+              item.farming_parcel_count ??
+              item["FARMING_PARCEL_COUNT"] ??
+              cultivationActive,
+          );
+          const farmingParcelCount =
+            farmingParcelCountValue !== null
+              ? Math.max(0, Math.floor(farmingParcelCountValue))
+              : null;
+
           return {
             id: String(item.id),
             referenceNumber,
@@ -559,8 +584,11 @@ const JoFarmerRegistry: React.FC = () => {
             ),
             farmLocation: String(item.farmLocation ?? "—"),
             parcelArea,
-            parcelCount:
-              typeof item.parcelCount === "number" ? item.parcelCount : 0,
+            parcelCount,
+            // CHANGE: Extract farmingParcelCount from API if available.
+            // Falls back to null, which triggers the farmingStatus string fallback
+            // in formatCultivation().
+            farmingParcelCount,
             age: normalizeAgeValue(
               item.age,
               item.birthdate ??
@@ -576,7 +604,11 @@ const JoFarmerRegistry: React.FC = () => {
                 : "",
             status: String(item.status ?? "Not Submitted"),
             landParcel,
-            farmingStatus: String(item.farmingStatus || "Not specified"),
+            farmingStatus: String(
+              item.farmingStatus ||
+                item.cultivationStatus ||
+                "Not specified",
+            ),
             archivedAt:
               item.archivedAt ??
               item.archived_at ??
@@ -603,7 +635,6 @@ const JoFarmerRegistry: React.FC = () => {
   useEffect(() => {
     const handleWindowClick = () => {
       setOpenMenuId(null);
-      setShowBulkExportMenu(false);
     };
     window.addEventListener("click", handleWindowClick);
     return () => window.removeEventListener("click", handleWindowClick);
@@ -620,7 +651,6 @@ const JoFarmerRegistry: React.FC = () => {
     });
   }, [rsbsaRecords]);
 
-  // CHANGE 3: Helper to extract the barangay for display in its own column.
   const getRecordBarangay = (record: RSBSARecord): string => {
     const fromAddress = String(record.farmerAddress || "")
       .split(",")[0]
@@ -648,13 +678,10 @@ const JoFarmerRegistry: React.FC = () => {
     return { owner, tenant, lessee, tenantLessee, category };
   };
 
-  // CHANGE 4: filteredRecords — always excludes "no parcels" records.
-  // People who lost all parcels don't belong in the Farmer Registry.
   const filteredRecords = rsbsaRecords
     .filter((record) => {
       const normalizedStatus = (record.status || "").toLowerCase().trim();
 
-      // Always exclude No Parcels — they belong in the Masterlist queue
       if (normalizedStatus === "no parcels") return false;
 
       const activeStatuses = new Set([
@@ -688,14 +715,12 @@ const JoFarmerRegistry: React.FC = () => {
             flags.tenantLessee &&
             !flags.tenant);
       } else if (selectedRole === "owner") {
-        // Owner-farmers: registered owners who also actively farm
         matchesRole = flags.category === "registeredOwner" || flags.owner;
       } else if (selectedRole === "active") {
         matchesRole = activeStatuses.has(normalizedStatus);
       } else if (selectedRole === "notActive") {
         matchesRole = notActiveStatuses.has(normalizedStatus);
       }
-      // "all" — no role filter, just exclude no parcels (already done above)
 
       if (!matchesRole) return false;
 
@@ -761,14 +786,7 @@ const JoFarmerRegistry: React.FC = () => {
       return 0;
     });
 
-  const selectedRecords = useMemo(
-    () => rsbsaRecords.filter((r) => selectedRecordIds.has(r.id)),
-    [rsbsaRecords, selectedRecordIds],
-  );
-
-  // CHANGE 5: Summary cards — farmer-registry-specific counts.
   const farmerCounts = useMemo(() => {
-    // Base: exclude no parcels from all counts
     const base = rsbsaRecords.filter(
       (r) => (r.status || "").toLowerCase().trim() !== "no parcels",
     );
@@ -791,8 +809,9 @@ const JoFarmerRegistry: React.FC = () => {
     return { total, active, tenants, lessees, owners };
   }, [rsbsaRecords]);
 
-  // CHANGE 6: Column count updated — now 10 columns (added Barangay, split Parcels/Area).
-  const VISIBLE_COLUMN_COUNT = 10;
+  // CHANGE: Column count updated to 8 — Farmer, Barangay, Role, Parcels,
+  // Total Area, Cultivation, Status, Actions. Date Submitted removed.
+  const VISIBLE_COLUMN_COUNT = 8;
 
   const allFilteredSelected =
     filteredRecords.length > 0 &&
@@ -855,15 +874,6 @@ const JoFarmerRegistry: React.FC = () => {
 
   const isSortActive = (key: SortKey) => sortConfigs.some((c) => c.key === key);
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleDateString();
-    } catch {
-      return "—";
-    }
-  };
-
   const formatDateTime = (iso?: string | null) => {
     if (!iso) return "";
     const parsed = new Date(iso);
@@ -884,15 +894,38 @@ const JoFarmerRegistry: React.FC = () => {
     return parcelArea && parcelArea !== "—" ? parcelArea : "—";
   };
 
-  // CHANGE 7: Cultivation status formatter — cleaner labels for the dedicated column.
-  const formatFarmingStatus = (status?: string | null) => {
-    if (!status) return "Not specified";
-    const normalized = status.toLowerCase().trim();
-    if (normalized === "farming" || normalized === "Farming") return "Farming";
-    if (normalized === "not farming" || normalized === "not_farming")
-      return "Not farming";
-    if (normalized === "mixed") return "Mixed";
-    return status;
+  // CHANGE: formatCultivation replaces formatFarmingStatus for the table column.
+  // Returns "X/Y farming" using farmingParcelCount when available from the API.
+  // Falls back to inferring from the farmingStatus string when the API doesn't
+  // return a count (e.g. "Farming" → all parcels active, "Not farming" → none).
+  const formatCultivation = (record: RSBSARecord): string => {
+    const total = record.parcelCount;
+    const hasTotal = Number.isFinite(total) && total > 0;
+    if (!hasTotal && record.farmingParcelCount !== null &&
+      record.farmingParcelCount !== undefined) {
+      return `${record.farmingParcelCount}/? farming`;
+    }
+    if (!hasTotal) return "—";
+
+    // Preferred path: API returned an explicit count
+    if (
+      record.farmingParcelCount !== null &&
+      record.farmingParcelCount !== undefined
+    ) {
+      return `${record.farmingParcelCount}/${total} farming`;
+    }
+
+    // Fallback: infer from farmingStatus string
+    const status = (record.farmingStatus || "").toLowerCase().trim();
+    if (status === "farming" || status === "actively farming")
+      return `${total}/${total} farming`;
+    if (status === "not farming" || status === "not_farming")
+      return `0/${total} farming`;
+    // "Mixed" with no count — we know it's partial but not exactly how many.
+    // Show the total so staff know to open the modal for the breakdown.
+    if (status === "mixed") return `?/${total} farming`;
+
+    return "—";
   };
 
   const formatRecordStatus = (status?: string | null) => {
@@ -920,7 +953,6 @@ const JoFarmerRegistry: React.FC = () => {
     return status || "Not Submitted";
   };
 
-  // CHANGE 8: getOwnershipLabel — cleaner role labels for the Farmer Registry.
   const getOwnershipLabel = (record: RSBSARecord) => {
     const flags = getOwnershipFlags(record);
     if (flags.tenant && flags.lessee) return "Tenant + Lessee";
@@ -935,12 +967,12 @@ const JoFarmerRegistry: React.FC = () => {
   const getOwnershipClass = (record: RSBSARecord) => {
     const flags = getOwnershipFlags(record);
     if (flags.category === "registeredOwner" || flags.owner)
-      return "jo-masterlist-ownership-owner";
-    if (flags.tenant && flags.lessee) return "jo-masterlist-ownership-mixed";
-    if (flags.tenant) return "jo-masterlist-ownership-tenant";
-    if (flags.lessee) return "jo-masterlist-ownership-lessee";
-    if (flags.tenantLessee) return "jo-masterlist-ownership-tenant";
-    return "jo-masterlist-ownership-unknown";
+      return "jo-farmer-ownership-owner";
+    if (flags.tenant && flags.lessee) return "jo-farmer-ownership-mixed";
+    if (flags.tenant) return "jo-farmer-ownership-tenant";
+    if (flags.lessee) return "jo-farmer-ownership-lessee";
+    if (flags.tenantLessee) return "jo-farmer-ownership-tenant";
+    return "jo-farmer-ownership-unknown";
   };
 
   const getFarmerInitials = (fullName: string) => {
@@ -1116,6 +1148,12 @@ const JoFarmerRegistry: React.FC = () => {
     return "Not specified";
   };
 
+  // CHANGE: After saving, also recalculate farmingParcelCount from the edited
+  // parcels so the "X/Y farming" column stays accurate without a full refetch.
+  const deriveFarmingParcelCountFromParcels = (parcels: Parcel[]): number => {
+    return parcels.filter((p) => p.is_farming === true).length;
+  };
+
   const handleIndividualParcelChange = (
     parcelId: string,
     field: keyof Parcel,
@@ -1162,101 +1200,6 @@ const JoFarmerRegistry: React.FC = () => {
         prev.map((p) => (p.id === parcelId ? { ...p, [field]: value } : p)),
       );
     }
-  };
-
-  const handlePrintSingleRecord = async (record: RSBSARecord) => {
-    setPrintingRecordIds((prev) => {
-      const next = new Set(prev);
-      next.add(record.id);
-      return next;
-    });
-    const result = await printRsbsaFormById({
-      farmerId: record.id,
-      fallbackReferenceNumber: record.referenceNumber,
-      fallbackFarmerName: record.farmerName,
-    });
-    if (!result.success && !result.cancelled)
-      showUpdateNotification(
-        result.error || "Failed to print RSBSA form.",
-        "error",
-      );
-    if (result.success) {
-      try {
-        const user = await getCurrentUserForAudit();
-        await getAuditLogger().logExport(
-          { ...user, id: undefined },
-          AuditModule.FARMERS,
-          "RSBSA Form Print",
-          1,
-        );
-      } catch (e) {
-        console.error("Audit log failed:", e);
-      }
-    }
-    setPrintingRecordIds((prev) => {
-      const next = new Set(prev);
-      next.delete(record.id);
-      return next;
-    });
-  };
-
-  const handleBulkPrint = async () => {
-    if (selectedRecords.length === 0) {
-      showUpdateNotification("No records selected for printing.", "error");
-      return;
-    }
-    setIsBulkPrinting(true);
-    const result = await printRsbsaFormsByIds(
-      selectedRecords.map((r) => ({
-        farmerId: r.id,
-        fallbackReferenceNumber: r.referenceNumber,
-        fallbackFarmerName: r.farmerName,
-      })),
-    );
-    setIsBulkPrinting(false);
-    setShowBulkExportMenu(false);
-    if (!result.success && !result.cancelled) {
-      showUpdateNotification(
-        result.error || "Failed to print selected RSBSA forms.",
-        "error",
-      );
-      return;
-    }
-    if (result.success && (result.failedCount || 0) > 0) {
-      showUpdateNotification(
-        `Printed ${result.printedCount || 0} form(s), ${result.failedCount} failed.`,
-        "error",
-      );
-      return;
-    }
-    showUpdateNotification("Selected RSBSA forms sent to print.", "success");
-    try {
-      const user = await getCurrentUserForAudit();
-      await getAuditLogger().logExport(
-        { ...user, id: undefined },
-        AuditModule.FARMERS,
-        "Bulk RSBSA Form Print",
-        selectedRecords.length,
-      );
-    } catch (e) {
-      console.error("Audit log failed:", e);
-    }
-  };
-
-  const handleModalPrint = async () => {
-    if (!selectedFarmer) return;
-    setIsModalPrinting(true);
-    const result = await printRsbsaFormById({
-      farmerId: selectedFarmer.id,
-      fallbackReferenceNumber: selectedFarmer.referenceNumber,
-      fallbackFarmerName: selectedFarmer.farmerName,
-    });
-    setIsModalPrinting(false);
-    if (!result.success && !result.cancelled)
-      showUpdateNotification(
-        result.error || "Failed to print RSBSA form.",
-        "error",
-      );
   };
 
   const handleSave = async () => {
@@ -1389,6 +1332,12 @@ const JoFarmerRegistry: React.FC = () => {
                   editingParcels.length > 0
                     ? deriveFarmingStatusFromParcels(editingParcels)
                     : editingRecord.farmingStatus,
+                // CHANGE: Keep farmingParcelCount in sync after a save so the
+                // "X/Y farming" cell reflects the staff's edit immediately.
+                farmingParcelCount:
+                  editingParcels.length > 0
+                    ? deriveFarmingParcelCountFromParcels(editingParcels)
+                    : editingRecord.farmingParcelCount,
               }
             : r,
         ),
@@ -1433,11 +1382,11 @@ const JoFarmerRegistry: React.FC = () => {
   };
 
   return (
-    <div className="jo-masterlist-page-container">
-      <div className="jo-masterlist-page has-mobile-sidebar">
+    <div className="jo-farmer-page-container">
+      <div className="jo-farmer-page has-mobile-sidebar">
         <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-        <div className="jo-masterlist-main-content">
+        <div className="jo-farmer-main-content">
           <div className="tech-incent-mobile-header">
             <button
               className="tech-incent-hamburger"
@@ -1458,94 +1407,86 @@ const JoFarmerRegistry: React.FC = () => {
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            {/* CHANGE 9: Mobile header title updated */}
             <div className="tech-incent-mobile-title">Farmer Registry</div>
           </div>
 
-          <div className="jo-masterlist-dashboard-header">
+          <div className="jo-farmer-dashboard-header">
             <div>
-              {/* CHANGE 9: Page title and subtitle updated */}
-              <h2 className="jo-masterlist-page-title">Farmer Registry</h2>
-              <p className="jo-masterlist-page-subtitle">
+              <h2 className="jo-farmer-page-title">Farmer Registry</h2>
+              <p className="jo-farmer-page-subtitle">
                 Tenants, lessees, and owner-farmers registered under RSBSA in
                 Dumangas, Iloilo
               </p>
             </div>
           </div>
 
-          {/* CHANGE 5: Summary cards — farmer-registry-specific */}
           {!loading && !error && (
-            <div className="jo-masterlist-status-cards">
-              <div className="jo-masterlist-status-card jo-masterlist-card-total">
-                <div className="jo-masterlist-card-icon">👥</div>
-                <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">
+            <div className="jo-farmer-status-cards">
+              <div className="jo-farmer-status-card jo-farmer-card-total">
+                <div className="jo-farmer-card-icon">👥</div>
+                <div className="jo-farmer-card-info">
+                  <span className="jo-farmer-card-count">
                     {farmerCounts.total}
                   </span>
-                  <span className="jo-masterlist-card-label">
-                    Total Farmers
-                  </span>
+                  <span className="jo-farmer-card-label">Total Farmers</span>
                 </div>
               </div>
-              <div className="jo-masterlist-status-card jo-masterlist-card-active">
-                <div className="jo-masterlist-card-icon">✅</div>
-                <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">
+              <div className="jo-farmer-status-card jo-farmer-card-active">
+                <div className="jo-farmer-card-icon">✅</div>
+                <div className="jo-farmer-card-info">
+                  <span className="jo-farmer-card-count">
                     {farmerCounts.active}
                   </span>
-                  <span className="jo-masterlist-card-label">Active</span>
+                  <span className="jo-farmer-card-label">Active</span>
                 </div>
               </div>
-              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
-                <div className="jo-masterlist-card-icon">🌾</div>
-                <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">
+              <div className="jo-farmer-status-card jo-farmer-card-inactive">
+                <div className="jo-farmer-card-icon">🌾</div>
+                <div className="jo-farmer-card-info">
+                  <span className="jo-farmer-card-count">
                     {farmerCounts.tenants}
                   </span>
-                  <span className="jo-masterlist-card-label">Tenants</span>
+                  <span className="jo-farmer-card-label">Tenants</span>
                 </div>
               </div>
-              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
-                <div className="jo-masterlist-card-icon">📋</div>
-                <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">
+              <div className="jo-farmer-status-card jo-farmer-card-inactive">
+                <div className="jo-farmer-card-icon">📋</div>
+                <div className="jo-farmer-card-info">
+                  <span className="jo-farmer-card-count">
                     {farmerCounts.lessees}
                   </span>
-                  <span className="jo-masterlist-card-label">Lessees</span>
+                  <span className="jo-farmer-card-label">Lessees</span>
                 </div>
               </div>
-              <div className="jo-masterlist-status-card jo-masterlist-card-total">
-                <div className="jo-masterlist-card-icon">🏡</div>
-                <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">
+              <div className="jo-farmer-status-card jo-farmer-card-total">
+                <div className="jo-farmer-card-icon">🏡</div>
+                <div className="jo-farmer-card-info">
+                  <span className="jo-farmer-card-count">
                     {farmerCounts.owners}
                   </span>
-                  <span className="jo-masterlist-card-label">
-                    Owner-farmers
-                  </span>
+                  <span className="jo-farmer-card-label">Owner-farmers</span>
                 </div>
               </div>
             </div>
           )}
 
-          <div className="jo-masterlist-content-card">
-            <div className="jo-masterlist-filters-section">
-              <div className="jo-masterlist-search-filter">
+          <div className="jo-farmer-content-card">
+            <div className="jo-farmer-filters-section">
+              <div className="jo-farmer-search-filter">
                 <input
                   type="text"
                   placeholder="Search by name, FFRS code, or barangay..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="jo-masterlist-search-input"
+                  className="jo-farmer-search-input"
                 />
               </div>
 
-              {/* CHANGE 1: Role filter — focused on farmer roles, no "noParcels" option */}
-              <div className="jo-masterlist-status-filter">
+              <div className="jo-farmer-status-filter">
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="jo-masterlist-status-select"
+                  className="jo-farmer-status-select"
                 >
                   <option value="all">All Roles</option>
                   <option value="tenant">Tenant</option>
@@ -1556,11 +1497,11 @@ const JoFarmerRegistry: React.FC = () => {
                 </select>
               </div>
 
-              <div className="jo-masterlist-status-filter">
+              <div className="jo-farmer-status-filter">
                 <select
                   value={selectedBarangay}
                   onChange={(e) => setSelectedBarangay(e.target.value)}
-                  className="jo-masterlist-status-select"
+                  className="jo-farmer-status-select"
                 >
                   <option value="all">All Barangays</option>
                   {barangays.map((b) => (
@@ -1573,7 +1514,7 @@ const JoFarmerRegistry: React.FC = () => {
             </div>
 
             {!loading && !error && (
-              <div className="jo-masterlist-table-meta">
+              <div className="jo-farmer-table-meta">
                 <span>
                   Showing {filteredRecords.length} of {farmerCounts.total}{" "}
                   farmers
@@ -1582,7 +1523,7 @@ const JoFarmerRegistry: React.FC = () => {
                 {!isDefaultSortConfig && (
                   <button
                     type="button"
-                    className="jo-masterlist-sort-btn"
+                    className="jo-farmer-sort-btn"
                     onClick={resetSortConfig}
                   >
                     Reset Sort
@@ -1592,41 +1533,14 @@ const JoFarmerRegistry: React.FC = () => {
             )}
 
             {!loading && !error && selectedRecordIds.size > 0 && (
-              <div className="jo-masterlist-bulk-toolbar">
-                <span className="jo-masterlist-bulk-count">
+              <div className="jo-farmer-bulk-toolbar">
+                <span className="jo-farmer-bulk-count">
                   {selectedRecordIds.size} farmer
                   {selectedRecordIds.size === 1 ? "" : "s"} selected
                 </span>
-                <div className="jo-masterlist-bulk-actions">
-                  <div
-                    className="jo-masterlist-bulk-export-wrap"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      className="jo-masterlist-bulk-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowBulkExportMenu((prev) => !prev);
-                      }}
-                    >
-                      Multi-Print ▾
-                    </button>
-                    {showBulkExportMenu && (
-                      <div className="jo-masterlist-bulk-menu">
-                        <button
-                          className="jo-masterlist-quick-item"
-                          onClick={handleBulkPrint}
-                          disabled={isBulkPrinting}
-                        >
-                          {isBulkPrinting
-                            ? "Preparing forms..."
-                            : "Print Selected RSBSA Forms"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                <div className="jo-farmer-bulk-actions">
                   <button
-                    className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-clear"
+                    className="jo-farmer-bulk-btn jo-farmer-bulk-btn-clear"
                     onClick={() => setSelectedRecordIds(new Set())}
                   >
                     Clear Selection
@@ -1635,25 +1549,20 @@ const JoFarmerRegistry: React.FC = () => {
               </div>
             )}
 
-            <div className="jo-masterlist-table-container">
-              <table className="jo-masterlist-farmers-table">
+            <div className="jo-farmer-table-container">
+              <table className="jo-farmer-farmers-table">
                 <thead>
+                  {/*
+                    CHANGE: New column order — Farmer | Barangay | Role |
+                    Parcels | Total Area | Cultivation | Status | Actions
+                    - Role moved before Parcels (classification is a primary use case)
+                    - Cultivation now shows "X/Y farming" via formatCultivation()
+                    - Date Submitted removed (record audit detail, not a scanning column)
+                  */}
                   <tr>
-                    <th className="jo-masterlist-checkbox-col">
-                      <input
-                        type="checkbox"
-                        className="jo-masterlist-header-checkbox"
-                        checked={allFilteredSelected}
-                        onChange={toggleSelectAllFiltered}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="Select all visible farmers"
-                      />
-                    </th>
-
-                    {/* CHANGE 6: Table headers — Farmer, Barangay, No. of Parcels, Total Area, Cultivation, Role, Status, Date, Actions */}
                     <th>
                       <button
-                        className={`jo-masterlist-sort-btn ${isSortActive("farmerName") ? "is-active" : ""}`}
+                        className={`jo-farmer-sort-btn ${isSortActive("farmerName") ? "is-active" : ""}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSortChange("farmerName");
@@ -1663,10 +1572,11 @@ const JoFarmerRegistry: React.FC = () => {
                       </button>
                     </th>
                     <th>Barangay</th>
-                    <th>No. of Parcels</th>
+                    <th>Role</th>
+                    <th>Parcels</th>
                     <th>
                       <button
-                        className={`jo-masterlist-sort-btn ${isSortActive("parcelArea") ? "is-active" : ""}`}
+                        className={`jo-farmer-sort-btn ${isSortActive("parcelArea") ? "is-active" : ""}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSortChange("parcelArea");
@@ -1676,20 +1586,7 @@ const JoFarmerRegistry: React.FC = () => {
                       </button>
                     </th>
                     <th>Cultivation</th>
-                    <th>Role</th>
                     <th>Status</th>
-                    <th>
-                      <button
-                        className={`jo-masterlist-sort-btn ${isSortActive("dateSubmitted") ? "is-active" : ""}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSortChange("dateSubmitted");
-                        }}
-                      >
-                        Date Submitted{" "}
-                        <span>{getSortIndicator("dateSubmitted")}</span>
-                      </button>
-                    </th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -1698,7 +1595,7 @@ const JoFarmerRegistry: React.FC = () => {
                     <tr>
                       <td
                         colSpan={VISIBLE_COLUMN_COUNT}
-                        className="jo-masterlist-loading-cell"
+                        className="jo-farmer-loading-cell"
                       >
                         Loading...
                       </td>
@@ -1708,7 +1605,7 @@ const JoFarmerRegistry: React.FC = () => {
                     <tr>
                       <td
                         colSpan={VISIBLE_COLUMN_COUNT}
-                        className="jo-masterlist-error-cell"
+                        className="jo-farmer-error-cell"
                       >
                         Error: {error}
                       </td>
@@ -1721,101 +1618,81 @@ const JoFarmerRegistry: React.FC = () => {
                     filteredRecords.map((record) => (
                       <tr
                         key={record.id}
-                        className="jo-masterlist-table-row"
+                        className="jo-farmer-table-row"
                         onClick={() => fetchFarmerDetails(record.id, record)}
                       >
-                        <td className="jo-masterlist-checkbox-col">
-                          <input
-                            type="checkbox"
-                            className="jo-masterlist-row-checkbox"
-                            checked={selectedRecordIds.has(record.id)}
-                            onChange={() => toggleSelectRecord(record.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label={`Select ${record.farmerName}`}
-                          />
-                        </td>
-
-                        {/* Farmer name + FFRS */}
+                        {/* 1. Farmer name + FFRS ref */}
                         <td>
-                          <div className="jo-masterlist-farmer-cell">
-                            <div className="jo-masterlist-farmer-avatar">
+                          <div className="jo-farmer-farmer-cell">
+                            <div className="jo-farmer-farmer-avatar">
                               {getFarmerInitials(record.farmerName)}
                             </div>
-                            <div className="jo-masterlist-farmer-meta">
-                              <span className="jo-masterlist-farmer-name">
+                            <div className="jo-farmer-farmer-meta">
+                              <span className="jo-farmer-farmer-name">
                                 {record.farmerName}
                               </span>
-                              <span className="jo-masterlist-farmer-ref">
+                              <span className="jo-farmer-farmer-ref">
                                 {record.referenceNumber}
                               </span>
                             </div>
                           </div>
                         </td>
 
-                        {/* CHANGE 6a: Dedicated Barangay column */}
+                        {/* 2. Barangay */}
                         <td>
-                          <span className="jo-masterlist-cultivation-text">
+                          <span className="jo-farmer-cultivation-text">
                             {getRecordBarangay(record)}
                           </span>
                         </td>
 
-                        {/* CHANGE 6b: No. of Parcels — count only, no area */}
+                        {/* 3. Role — moved before Parcels for classification scanning */}
                         <td>
-                          <span className="jo-masterlist-parcel-count">
-                            {record.parcelCount} parcel
-                            {record.parcelCount === 1 ? "" : "s"}
-                          </span>
-                        </td>
-
-                        {/* CHANGE 6c: Total Area — area only, no count */}
-                        <td>
-                          <span className="jo-masterlist-parcel-area">
-                            {formatParcelArea(record.parcelArea)}
-                          </span>
-                        </td>
-
-                        {/* Cultivation status */}
-                        <td>
-                          <span className="jo-masterlist-cultivation-text">
-                            {formatFarmingStatus(
-                              record.farmingStatus || "Not specified",
-                            )}
-                          </span>
-                        </td>
-
-                        {/* CHANGE 8: Role — uses new farmer-focused labels */}
-                        <td>
-                          <div className="jo-masterlist-status-cell">
+                          <div className="jo-farmer-status-cell">
                             <span
-                              className={`jo-masterlist-ownership-pill ${getOwnershipClass(record)}`}
+                              className={`jo-farmer-ownership-pill ${getOwnershipClass(record)}`}
                             >
                               {getOwnershipLabel(record)}
                             </span>
                           </div>
                         </td>
 
-                        {/* Record status */}
+                        {/* 4. Parcel count */}
                         <td>
-                          <span className="jo-masterlist-record-status">
+                          <span className="jo-farmer-parcel-count">
+                            {record.parcelCount}{" "}
+                            {record.parcelCount === 1 ? "parcel" : "parcels"}
+                          </span>
+                        </td>
+
+                        {/* 5. Total area */}
+                        <td>
+                          <span className="jo-farmer-parcel-area">
+                            {formatParcelArea(record.parcelArea)}
+                          </span>
+                        </td>
+
+                        {/* 6. Cultivation — "X/Y farming" format */}
+                        <td>
+                          <span className="jo-farmer-cultivation-text">
+                            {formatCultivation(record)}
+                          </span>
+                        </td>
+
+                        {/* 7. Record status */}
+                        <td>
+                          <span className="jo-farmer-record-status">
                             {formatRecordStatus(record.status)}
                           </span>
                         </td>
 
-                        {/* Date submitted */}
-                        <td>
-                          <span className="jo-masterlist-date">
-                            {formatDate(record.dateSubmitted)}
-                          </span>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="jo-masterlist-actions-cell">
+                        {/* 8. Actions */}
+                        <td className="jo-farmer-actions-cell">
                           <div
-                            className="jo-masterlist-quick-actions"
+                            className="jo-farmer-quick-actions"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <button
-                              className="jo-masterlist-view-btn"
+                              className="jo-farmer-view-btn"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOpenMenuId((prev) =>
@@ -1826,9 +1703,9 @@ const JoFarmerRegistry: React.FC = () => {
                               Quick Actions ▾
                             </button>
                             {openMenuId === record.id && (
-                              <div className="jo-masterlist-quick-menu">
+                              <div className="jo-farmer-quick-menu">
                                 <button
-                                  className="jo-masterlist-quick-item"
+                                  className="jo-farmer-quick-item"
                                   onClick={() => {
                                     fetchFarmerDetails(record.id, record);
                                     setOpenMenuId(null);
@@ -1837,25 +1714,13 @@ const JoFarmerRegistry: React.FC = () => {
                                   View
                                 </button>
                                 <button
-                                  className="jo-masterlist-quick-item"
+                                  className="jo-farmer-quick-item"
                                   onClick={() => {
                                     handleEdit(record.id);
                                     setOpenMenuId(null);
                                   }}
                                 >
                                   Edit
-                                </button>
-                                <button
-                                  className="jo-masterlist-quick-item"
-                                  onClick={async () => {
-                                    setOpenMenuId(null);
-                                    await handlePrintSingleRecord(record);
-                                  }}
-                                  disabled={printingRecordIds.has(record.id)}
-                                >
-                                  {printingRecordIds.has(record.id)
-                                    ? "Preparing form..."
-                                    : "Print RSBSA Form"}
                                 </button>
                               </div>
                             )}
@@ -1868,7 +1733,7 @@ const JoFarmerRegistry: React.FC = () => {
                     <tr>
                       <td
                         colSpan={VISIBLE_COLUMN_COUNT}
-                        className="jo-masterlist-empty-cell"
+                        className="jo-farmer-empty-cell"
                       >
                         No farmers found for the selected filters.
                       </td>
@@ -1882,15 +1747,15 @@ const JoFarmerRegistry: React.FC = () => {
 
         {updateNotification.show && (
           <div
-            className={`jo-masterlist-update-toast ${updateNotification.type}`}
+            className={`jo-farmer-update-toast ${updateNotification.type}`}
             role="status"
             aria-live="polite"
           >
-            <span className="jo-masterlist-update-toast-message">
+            <span className="jo-farmer-update-toast-message">
               {updateNotification.message}
             </span>
             <button
-              className="jo-masterlist-update-toast-close"
+              className="jo-farmer-update-toast-close"
               onClick={() =>
                 setUpdateNotification((prev) => ({ ...prev, show: false }))
               }
@@ -1901,30 +1766,29 @@ const JoFarmerRegistry: React.FC = () => {
           </div>
         )}
 
-        {/* CHANGE 3 (edit modal): Title changed to "Edit Farmer Information" */}
         {editingRecord && (
-          <div className="jo-masterlist-edit-modal-overlay">
-            <div className="jo-masterlist-edit-modal">
-              <div className="jo-masterlist-edit-modal-header">
-                <div className="jo-masterlist-edit-modal-title">
+          <div className="jo-farmer-edit-modal-overlay">
+            <div className="jo-farmer-edit-modal">
+              <div className="jo-farmer-edit-modal-header">
+                <div className="jo-farmer-edit-modal-title">
                   <h2>Edit Farmer Information</h2>
                   <p>Update farmer details and parcel farming status.</p>
                 </div>
                 <button
-                  className="jo-masterlist-close-button"
+                  className="jo-farmer-close-button"
                   onClick={handleCancel}
                 >
                   ×
                 </button>
               </div>
-              <div className="jo-masterlist-edit-modal-body">
+              <div className="jo-farmer-edit-modal-body">
                 {editError && (
-                  <div className="jo-masterlist-edit-error-banner" role="alert">
+                  <div className="jo-farmer-edit-error-banner" role="alert">
                     {editError}
                   </div>
                 )}
-                <div className="jo-masterlist-form-grid">
-                  <div className="jo-masterlist-form-group">
+                <div className="jo-farmer-form-grid">
+                  <div className="jo-farmer-form-group">
                     <label>Last Name:</label>
                     <input
                       type="text"
@@ -1935,7 +1799,7 @@ const JoFarmerRegistry: React.FC = () => {
                       placeholder="Last Name"
                     />
                   </div>
-                  <div className="jo-masterlist-form-group">
+                  <div className="jo-farmer-form-group">
                     <label>First Name:</label>
                     <input
                       type="text"
@@ -1946,7 +1810,7 @@ const JoFarmerRegistry: React.FC = () => {
                       placeholder="First Name"
                     />
                   </div>
-                  <div className="jo-masterlist-form-group">
+                  <div className="jo-farmer-form-group">
                     <label>Middle Name:</label>
                     <input
                       type="text"
@@ -1957,7 +1821,7 @@ const JoFarmerRegistry: React.FC = () => {
                       placeholder="Middle Name"
                     />
                   </div>
-                  <div className="jo-masterlist-form-group">
+                  <div className="jo-farmer-form-group">
                     <label>Age:</label>
                     <input
                       type="text"
@@ -1966,14 +1830,14 @@ const JoFarmerRegistry: React.FC = () => {
                       placeholder="Age"
                     />
                   </div>
-                  <div className="jo-masterlist-form-group">
+                  <div className="jo-farmer-form-group">
                     <label>Barangay:</label>
                     <select
                       value={editFormData.barangay || ""}
                       onChange={(e) =>
                         handleInputChange("barangay", e.target.value)
                       }
-                      className="jo-masterlist-form-select"
+                      className="jo-farmer-form-select"
                     >
                       <option value="">Select Barangay</option>
                       {barangays.map((b) => (
@@ -1983,7 +1847,7 @@ const JoFarmerRegistry: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="jo-masterlist-form-group">
+                  <div className="jo-farmer-form-group">
                     <label>Municipality:</label>
                     <input
                       type="text"
@@ -1996,7 +1860,7 @@ const JoFarmerRegistry: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="jo-masterlist-parcel-section">
+                <div className="jo-farmer-parcel-section">
                   <h4>Parcels</h4>
                   {loadingParcels ? (
                     <p>Loading parcels...</p>
@@ -2004,10 +1868,10 @@ const JoFarmerRegistry: React.FC = () => {
                     editingParcels.map((parcel, index) => (
                       <div
                         key={parcel.id}
-                        className={`jo-masterlist-parcel-item ${parcelErrors[parcel.id] ? "error" : ""}`}
+                        className={`jo-farmer-parcel-item ${parcelErrors[parcel.id] ? "error" : ""}`}
                       >
-                        <div className="jo-masterlist-form-group">
-                          <label className="jo-masterlist-parcel-label">
+                        <div className="jo-farmer-form-group">
+                          <label className="jo-farmer-parcel-label">
                             Parcel {index + 1} —{" "}
                             {parcel.parcel_number !== "N/A"
                               ? `No. ${parcel.parcel_number}`
@@ -2024,22 +1888,22 @@ const JoFarmerRegistry: React.FC = () => {
                               )
                             }
                             placeholder="e.g., 2.5 (ha)"
-                            className="jo-masterlist-parcel-input"
+                            className="jo-farmer-parcel-input"
                             data-error={
                               parcelErrors[parcel.id] ? "true" : "false"
                             }
                           />
                           {parcelErrors[parcel.id] && (
-                            <small className="jo-masterlist-parcel-error">
+                            <small className="jo-farmer-parcel-error">
                               {parcelErrors[parcel.id]}
                             </small>
                           )}
-                          <small className="jo-masterlist-parcel-location">
+                          <small className="jo-farmer-parcel-location">
                             Location: {parcel.farm_location_barangay || "N/A"},{" "}
                             {parcel.farm_location_municipality || "N/A"}
                           </small>
                         </div>
-                        <div className="jo-masterlist-form-group">
+                        <div className="jo-farmer-form-group">
                           <label>Currently farming this parcel?</label>
                           <select
                             value={
@@ -2068,14 +1932,14 @@ const JoFarmerRegistry: React.FC = () => {
                                   null,
                                 );
                             }}
-                            className="jo-masterlist-form-select"
+                            className="jo-farmer-form-select"
                           >
                             <option value="true">Yes</option>
                             <option value="false">No</option>
                           </select>
                         </div>
                         {parcel.is_farming === false && (
-                          <div className="jo-masterlist-form-group">
+                          <div className="jo-farmer-form-group">
                             <label>Reason not farming:</label>
                             <input
                               type="text"
@@ -2094,23 +1958,20 @@ const JoFarmerRegistry: React.FC = () => {
                       </div>
                     ))
                   ) : (
-                    <p className="jo-masterlist-parcel-empty">
+                    <p className="jo-farmer-parcel-empty">
                       No parcels found for this farmer.
                     </p>
                   )}
                 </div>
               </div>
-              <div className="jo-masterlist-edit-modal-footer">
+              <div className="jo-farmer-edit-modal-footer">
                 <button
-                  className="jo-masterlist-cancel-button"
+                  className="jo-farmer-cancel-button"
                   onClick={handleCancel}
                 >
                   Cancel
                 </button>
-                <button
-                  className="jo-masterlist-save-button"
-                  onClick={handleSave}
-                >
+                <button className="jo-farmer-save-button" onClick={handleSave}>
                   Save Changes
                 </button>
               </div>
@@ -2118,7 +1979,7 @@ const JoFarmerRegistry: React.FC = () => {
           </div>
         )}
 
-        {/* Farmer Detail Modal */}
+        {/* Farmer Detail Modal — unchanged */}
         {showModal && selectedFarmer && (
           <div
             className="farmer-modal-overlay"
@@ -2131,13 +1992,6 @@ const JoFarmerRegistry: React.FC = () => {
               <div className="farmer-modal-header">
                 <h2>Farmer Details</h2>
                 <div className="farmer-modal-header-actions">
-                  <button
-                    className="farmer-modal-print-btn"
-                    onClick={handleModalPrint}
-                    disabled={isModalPrinting}
-                  >
-                    {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
-                  </button>
                   <button
                     className="farmer-modal-close"
                     onClick={() => setShowModal(false)}
@@ -2154,7 +2008,6 @@ const JoFarmerRegistry: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    {/* Record Overview */}
                     <div className="farmer-modal-section">
                       <h3 className="farmer-modal-section-title">
                         Record Overview
@@ -2209,7 +2062,6 @@ const JoFarmerRegistry: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Personal Information */}
                     <div className="farmer-modal-section">
                       <h3 className="farmer-modal-section-title">
                         👤 Personal Information
@@ -2265,7 +2117,6 @@ const JoFarmerRegistry: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Farm Information */}
                     <div className="farmer-modal-section">
                       <h3 className="farmer-modal-section-title">
                         🌾 Farm Information
@@ -2370,7 +2221,6 @@ const JoFarmerRegistry: React.FC = () => {
                                   </span>
                                 </div>
 
-                                {/* Landowner — only relevant for tenants/lessees */}
                                 {(parcel.ownershipTypeTenant ||
                                   parcel.ownershipTypeLessee) &&
                                   (parcel.tenantLandOwnerName ||

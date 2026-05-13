@@ -438,10 +438,10 @@ const JoRsbsaPage: React.FC = () => {
           data.farmLocation || data["FARM LOCATION"] || "";
         const submissionParcelArea = parseFloat(
           data.totalFarmArea ||
-            data["TOTAL FARM AREA"] ||
-            data.parcelArea ||
-            data["PARCEL AREA"] ||
-            "0",
+          data["TOTAL FARM AREA"] ||
+          data.parcelArea ||
+          data["PARCEL AREA"] ||
+          "0",
         );
         const submissionOwnership = data.ownershipType || {};
 
@@ -1465,9 +1465,8 @@ const JoRsbsaPage: React.FC = () => {
                     <tr>
                       <th>
                         <button
-                          className={`jo-rsbsa-sort-btn ${
-                            sortConfig.key === "farmer" ? "is-active" : ""
-                          }`}
+                          className={`jo-rsbsa-sort-btn ${sortConfig.key === "farmer" ? "is-active" : ""
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSortChange("farmer");
@@ -1478,9 +1477,8 @@ const JoRsbsaPage: React.FC = () => {
                       </th>
                       <th>
                         <button
-                          className={`jo-rsbsa-sort-btn ${
-                            sortConfig.key === "parcelArea" ? "is-active" : ""
-                          }`}
+                          className={`jo-rsbsa-sort-btn ${sortConfig.key === "parcelArea" ? "is-active" : ""
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSortChange("parcelArea");
@@ -1489,16 +1487,15 @@ const JoRsbsaPage: React.FC = () => {
                           Parcels <span>{getSortIndicator("parcelArea")}</span>
                         </button>
                       </th>
-                      <th>Cultivation</th>
+
                       <th>Ownership Status</th>
                       <th>Status</th>
                       <th>
                         <button
-                          className={`jo-rsbsa-sort-btn ${
-                            sortConfig.key === "dateSubmitted"
+                          className={`jo-rsbsa-sort-btn ${sortConfig.key === "dateSubmitted"
                               ? "is-active"
                               : ""
-                          }`}
+                            }`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSortChange("dateSubmitted");
@@ -1556,9 +1553,7 @@ const JoRsbsaPage: React.FC = () => {
                                 </span>
                               </div>
                             </td>
-                            <td>
-                              {record.cultivationStatus || "Not specified"}
-                            </td>
+
                             <td>
                               <span
                                 className={`jo-rsbsa-ownership-pill ${getOwnershipClass(record)}`}
@@ -1642,7 +1637,7 @@ const JoRsbsaPage: React.FC = () => {
               <div className="jo-rsbsa-edit-modal-header">
                 <div className="jo-rsbsa-edit-modal-title">
                   <h2>Edit Land Owner Information</h2>
-                  <p>Update farmer details and parcel cultivation status.</p>
+                  <p>Update farmer details.</p>
                 </div>
                 <button
                   className="jo-rsbsa-close-button"
@@ -2045,11 +2040,11 @@ const JoRsbsaPage: React.FC = () => {
                                     </span>
                                     <span className="farmer-modal-value">
                                       {typeof parcel.totalFarmAreaHa ===
-                                      "number"
+                                        "number"
                                         ? parcel.totalFarmAreaHa.toFixed(2)
                                         : parseFloat(
-                                            String(parcel.totalFarmAreaHa || 0),
-                                          ).toFixed(2)}{" "}
+                                          String(parcel.totalFarmAreaHa || 0),
+                                        ).toFixed(2)}{" "}
                                       hectares
                                     </span>
                                   </div>
