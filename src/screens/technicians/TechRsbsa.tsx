@@ -9,13 +9,8 @@ import {
 import "../../assets/css/technician css/TechRsbsaStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
 import { supabase } from "../../supabase";
+import TechSidebar from "../../components/layout/TechSidebar";
 
 interface RSBSARecord {
   id: string;
@@ -644,81 +639,8 @@ const TechRsbsa: React.FC = () => {
   return (
     <div className="tech-rsbsa-page-container">
       <div className="tech-rsbsa-page">
-        {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
+        <TechSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/technician-dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
-              onClick={() => navigate("/technician-rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
-              onClick={() => navigate("/technician-incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/technician-masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button className="sidebar-nav-item logout" onClick={handleLogout}>
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-          {currentUser && (
-            <div className="sidebar-current-user">
-              <div className="sidebar-current-user-avatar">
-                {currentUser.firstName.charAt(0).toUpperCase()}
-                {currentUser.lastName.charAt(0).toUpperCase()}
-              </div>
-              <div className="sidebar-current-user-info">
-                <span className="sidebar-current-user-name">
-                  {currentUser.firstName} {currentUser.lastName}
-                </span>
-                <span className="sidebar-current-user-label">Logged in</span>
-              </div>
-            </div>
-          )}
-        </div>
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
-
-        {/* Sidebar ends here */}
 
         {/* Main content starts here */}
         <div className="tech-rsbsa-main-content">

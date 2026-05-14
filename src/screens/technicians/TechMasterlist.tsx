@@ -11,13 +11,8 @@ import { printRsbsaFormById } from "../../utils/rsbsaPrint";
 import "../../assets/css/technician css/TechMasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
 import { supabase } from "../../supabase";
+import TechSidebar from "../../components/layout/TechSidebar";
 
 interface RSBSARecord {
   id: string;
@@ -503,6 +498,16 @@ const TechMasterlist: React.FC = () => {
 
   // Filter records by status, search, and ownership type
   const filteredRecords = rsbsaRecords.filter((record) => {
+    // EXCLUDE TENANTS FROM MASTERLIST - They have their own Tenant Registry page
+    const hasTenantOwnership =
+      record.ownershipType?.tenant === true ||
+      (record.ownershipType?.tenantLessee === true &&
+        record.ownershipType?.lessee !== true);
+    
+    if (hasTenantOwnership) {
+      return false; // Exclude pure tenants from masterlist
+    }
+
     const matchesStatus =
       selectedStatus === "all" || record.status === selectedStatus;
     const q = searchQuery.toLowerCase();
@@ -515,10 +520,6 @@ const TechMasterlist: React.FC = () => {
     // Ownership type filter
     let matchesOwnership = true;
     if (selectedOwnershipType !== "all" && record.ownershipType) {
-      const hasTenantOwnership =
-        record.ownershipType.tenant === true ||
-        (record.ownershipType.tenantLessee === true &&
-          record.ownershipType.lessee !== true);
       const hasLesseeOwnership =
         record.ownershipType.lessee === true ||
         (record.ownershipType.tenantLessee === true &&
@@ -527,9 +528,6 @@ const TechMasterlist: React.FC = () => {
       switch (selectedOwnershipType) {
         case "registeredOwner":
           matchesOwnership = record.ownershipType.registeredOwner === true;
-          break;
-        case "tenant":
-          matchesOwnership = hasTenantOwnership;
           break;
         case "lessee":
           matchesOwnership = hasLesseeOwnership;
@@ -979,82 +977,7 @@ const TechMasterlist: React.FC = () => {
   return (
     <div className="tech-masterlist-page-container">
       <div className="tech-masterlist-page">
-        {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/technician-dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
-              onClick={() => navigate("/technician-rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
-              onClick={() => navigate("/technician-incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/technician-masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button className="sidebar-nav-item logout" onClick={handleLogout}>
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-
-          </nav>
-          {currentUser && (
-            <div className="sidebar-current-user">
-              <div className="sidebar-current-user-avatar">
-                {currentUser.firstName.charAt(0).toUpperCase()}
-                {currentUser.lastName.charAt(0).toUpperCase()}
-              </div>
-              <div className="sidebar-current-user-info">
-                <span className="sidebar-current-user-name">
-                  {currentUser.firstName} {currentUser.lastName}
-                </span>
-                <span className="sidebar-current-user-label">Logged in</span>
-              </div>
-            </div>
-          )}
-        </div>
-        {/* Sidebar ends here */}
-
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <TechSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         <div className="tech-masterlist-main-content">
           <div className="tech-incent-mobile-header">
@@ -1125,7 +1048,6 @@ const TechMasterlist: React.FC = () => {
                 >
                   <option value="all">All Ownership Types</option>
                   <option value="registeredOwner">Registered Owner</option>
-                  <option value="tenant">Tenant</option>
                   <option value="lessee">Lessee</option>
                 </select>
               </div>
