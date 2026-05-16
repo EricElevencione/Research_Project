@@ -739,7 +739,12 @@ const TechManageRequests: React.FC = () => {
 
     // Status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter((req) => req.status === statusFilter);
+      filtered = filtered.filter((req) => {
+        if (statusFilter === "pending") {
+          return req.status === "pending" || req.status === "NOT_CLAIMED";
+        }
+        return req.status === statusFilter;
+      });
     }
 
     // Barangay filter
@@ -2429,7 +2434,7 @@ const TechManageRequests: React.FC = () => {
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
                             const approvedRequests = requests.filter(
-                              (r) => r.status === "Claimed" || r.status === "approved" || r.status === "NOT_CLAIMED",
+                              (r) => r.status === "Claimed" || r.status === "approved",
                             );
                             const total = approvedRequests.reduce((sum, r) => {
                               return (
@@ -2572,7 +2577,7 @@ const TechManageRequests: React.FC = () => {
                       <div className="tech-manage-card-count">
                         {
                           filteredRequests.filter(
-                            (r) => r.status === "Claimed" || r.status === "approved" || r.status === "NOT_CLAIMED",
+                            (r) => r.status === "Claimed" || r.status === "approved",
                           ).length
                         }
                       </div>
@@ -2662,9 +2667,9 @@ const TechManageRequests: React.FC = () => {
                                 <td>{request.barangay}</td>
                                 <td>
                                   <span
-                                    className={`tech-manage-requests-status-badge tech-manage-requests-status-${request.status}`}
+                                    className={`tech-manage-requests-status-badge tech-manage-requests-status-${request.status === "NOT_CLAIMED" ? "pending" : request.status}`}
                                   >
-                                    {request.status === "approved" || request.status === "NOT_CLAIMED" ? "Claimed" : request.status}
+                                    {request.status === "approved" ? "Claimed" : (request.status === "NOT_CLAIMED" ? "pending" : request.status)}
                                   </span>
                                 </td>
                                 <td>{totalFertilizer.toFixed(2)}</td>
@@ -2825,9 +2830,9 @@ const TechManageRequests: React.FC = () => {
               <span>
                 <strong>Status:</strong>{" "}
                 <span
-                  className={`tech-manage-requests-status-badge tech-manage-requests-status-${viewingRequest.status}`}
+                  className={`tech-manage-requests-status-badge tech-manage-requests-status-${viewingRequest.status === "NOT_CLAIMED" ? "pending" : viewingRequest.status}`}
                 >
-                  {viewingRequest.status === "approved" || viewingRequest.status === "NOT_CLAIMED" ? "Claimed" : viewingRequest.status}
+                  {viewingRequest.status === "approved" ? "Claimed" : (viewingRequest.status === "NOT_CLAIMED" ? "pending" : viewingRequest.status)}
                 </span>
               </span>
               <span>

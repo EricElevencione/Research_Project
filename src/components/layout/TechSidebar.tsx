@@ -49,7 +49,7 @@ const TechSidebar: React.FC<TechSidebarProps> = ({ sidebarOpen, setSidebarOpen }
   const navItems = [
     { path: "/technician-dashboard", label: "Dashboard", icon: HomeIcon },
     { path: "/technician-rsbsa", label: "RSBSA Registration", icon: RSBSAIcon },
-    { path: "/technician-incentives", label: "Incentives", icon: IncentivesIcon },
+    { path: "/technician-incentives", label: "Subsidy", icon: IncentivesIcon },
     { path: "/technician-masterlist", label: "Masterlist", icon: ApproveIcon },
     { path: "/technician-tenant-registry", label: "Tenant Registry", icon: ApproveIcon },
   ];

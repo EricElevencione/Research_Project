@@ -403,6 +403,7 @@ const TechAddFarmerRequest: React.FC = () => {
   const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [existingRequests, setExistingRequests] = useState<number[]>([]);
+  const [allFarmerRequests, setAllFarmerRequests] = useState<any[]>([]);
   const [showExceedConfirmModal, setShowExceedConfirmModal] = useState(false);
   const [liveExceedMessage, setLiveExceedMessage] = useState<string | null>(
     null,
@@ -549,6 +550,7 @@ const TechAddFarmerRequest: React.FC = () => {
       const response = await getFarmerRequests(allocationId, true);
       if (!response.error) {
         const requests = response.data || [];
+        setAllFarmerRequests(requests);
         const farmerIds = requests
           .map((req: any) => Number(req.farmer_id))
           .filter((id: number) => Number.isFinite(id) && id > 0);
@@ -672,12 +674,20 @@ const TechAddFarmerRequest: React.FC = () => {
   ): AllocationSummaryItem[] => {
     return items.map((item) => {
       const allocated = toSafeNumber(allocation?.[item.allocationField]);
-      const requested = Math.max(0, toSafeNumber(formData[item.requestField]));
+      
+      // Calculate total requested by all OTHER farmers
+      const alreadyRequestedByOthers = allFarmerRequests.reduce((sum, req) => {
+        return sum + toSafeNumber(req[item.requestField]);
+      }, 0);
+
+      const currentRequest = Math.max(0, toSafeNumber(formData[item.requestField]));
+      const totalRequested = alreadyRequestedByOthers + currentRequest;
+
       return {
         label: item.label,
         allocated,
-        requested,
-        remaining: allocated - requested,
+        requested: totalRequested,
+        remaining: allocated - totalRequested,
       };
     });
   };

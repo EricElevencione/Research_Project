@@ -106,8 +106,7 @@ const TechMasterlist: React.FC = () => {
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isModalPrinting, setIsModalPrinting] = useState(false);
-  const [selectedOwnershipType, setSelectedOwnershipType] =
-    useState<string>("all");
+
   const [updateNotification, setUpdateNotification] = useState<{
     show: boolean;
     type: "success" | "error";
@@ -517,27 +516,7 @@ const TechMasterlist: React.FC = () => {
       record.farmerAddress.toLowerCase().includes(q) ||
       record.farmLocation.toLowerCase().includes(q);
 
-    // Ownership type filter
-    let matchesOwnership = true;
-    if (selectedOwnershipType !== "all" && record.ownershipType) {
-      const hasLesseeOwnership =
-        record.ownershipType.lessee === true ||
-        (record.ownershipType.tenantLessee === true &&
-          record.ownershipType.tenant !== true);
-
-      switch (selectedOwnershipType) {
-        case "registeredOwner":
-          matchesOwnership = record.ownershipType.registeredOwner === true;
-          break;
-        case "lessee":
-          matchesOwnership = hasLesseeOwnership;
-          break;
-        default:
-          matchesOwnership = true;
-      }
-    }
-
-    return matchesStatus && matchesSearch && matchesOwnership;
+    return matchesStatus && matchesSearch;
   });
 
   const sortedFilteredRecords = [...filteredRecords].sort((a, b) => {
@@ -1040,17 +1019,7 @@ const TechMasterlist: React.FC = () => {
                   <option value="Not Active">Not Active</option>
                 </select>
               </div>
-              <div className="tech-masterlist-ownership-filter">
-                <select
-                  value={selectedOwnershipType}
-                  onChange={(e) => setSelectedOwnershipType(e.target.value)}
-                  className="tech-masterlist-status-select"
-                >
-                  <option value="all">All Ownership Types</option>
-                  <option value="registeredOwner">Registered Owner</option>
-                  <option value="lessee">Lessee</option>
-                </select>
-              </div>
+
             </div>
             <div className="tech-masterlist-table-container">
               <table className="tech-masterlist-farmers-table">

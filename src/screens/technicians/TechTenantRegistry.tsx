@@ -4,6 +4,8 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
+  updateRsbsaSubmission,
+  updateFarmParcel,
 } from "../../api";
 import { printRsbsaFormById } from "../../utils/rsbsaPrint";
 import "../../assets/css/technician css/TechMasterlistStyle.css";
@@ -32,6 +34,8 @@ interface TenantGroup {
   landOwnerId: string;
   landOwnerName: string;
   landOwnerRefNumber?: string;
+  landOwnerLocation?: string;
+  landOwnerDate?: string;
   tenants: TenantRecord[];
 }
 
@@ -100,6 +104,36 @@ const TechTenantRegistry: React.FC = () => {
     firstName: string;
     lastName: string;
   } | null>(null);
+
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusChangeTarget, setStatusChangeTarget] = useState<{
+    id: string;
+    newStatus: string;
+    farmerName?: string;
+  } | null>(null);
+  const [statusModalParcels, setStatusModalParcels] = useState<any[]>([]);
+  const [statusModalLoading, setStatusModalLoading] = useState(false);
+  const [statusChangeReason, setStatusChangeReason] = useState("");
+
+  const [updateNotification, setUpdateNotification] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const showUpdateNotification = (
+    message: string,
+    type: "success" | "error",
+  ) => {
+    setUpdateNotification({ show: true, type, message });
+    setTimeout(() => {
+      setUpdateNotification((prev) => ({ ...prev, show: false }));
+    }, 3200);
+  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -171,6 +205,8 @@ const TechTenantRegistry: React.FC = () => {
               landOwnerId,
               landOwnerName,
               landOwnerRefNumber: ownerRecord?.FFRS_CODE || ownerRecord?.["FFRS_CODE"] || "",
+              landOwnerLocation: ownerRecord?.farmLocation || ownerRecord?.farmerAddress || "—",
+              landOwnerDate: ownerRecord?.dateSubmitted || "",
               tenants: [],
             };
           }
@@ -359,6 +395,67 @@ const TechTenantRegistry: React.FC = () => {
     return "status-pending";
   };
 
+  const openStatusModal = async (tenant: TenantRecord) => {
+    setStatusChangeTarget({
+      id: tenant.id,
+      newStatus: tenant.status === "Active Farmer" ? "Not Active" : "Active Farmer",
+      farmerName: tenant.tenantName,
+    });
+    setStatusChangeReason("");
+    setStatusModalLoading(true);
+    setShowStatusModal(true);
+
+    try {
+      const parcelsResponse = await getFarmParcels(tenant.id);
+      const parcelsData = parcelsResponse.data || [];
+      setStatusModalParcels(parcelsData);
+    } catch (err) {
+      showUpdateNotification("Failed to load parcels.", "error");
+      setShowStatusModal(false);
+    } finally {
+      setStatusModalLoading(false);
+    }
+  };
+
+  const confirmStatusChange = async () => {
+    if (!statusChangeTarget) return;
+    if (!statusChangeReason.trim()) {
+      showUpdateNotification("Please provide a reason.", "error");
+      return;
+    }
+
+    try {
+      const isNowActive = statusChangeTarget.newStatus === "Active Farmer";
+
+      for (const parcel of statusModalParcels) {
+        await updateFarmParcel(parcel.id, {
+          is_cultivating: isNowActive,
+          cultivation_status_reason: isNowActive ? null : statusChangeReason.trim(),
+          cultivation_status_updated_at: new Date().toISOString(),
+        });
+      }
+
+      const newFarmerStatus = statusChangeTarget.newStatus;
+
+      await updateRsbsaSubmission(statusChangeTarget.id, {
+        status: newFarmerStatus,
+        statusChangeReason: statusChangeReason.trim(),
+      });
+
+      showUpdateNotification(`Tenant marked as ${newFarmerStatus}.`, "success");
+
+      // Refresh the table to reflect new status
+      fetchTenantRecords();
+    } catch (err: any) {
+      showUpdateNotification(`Failed to update: ${err.message}`, "error");
+    } finally {
+      setShowStatusModal(false);
+      setStatusChangeTarget(null);
+      setStatusModalParcels([]);
+      setStatusChangeReason("");
+    }
+  };
+
   const handlePrintModal = async () => {
     if (!selectedFarmer) return;
 
@@ -397,7 +494,7 @@ const TechTenantRegistry: React.FC = () => {
           height: "100vh",
         }}
       >
-        <div className="loader">Loading tenant registry...</div>
+        <div className="loader">Loading farmer registry...</div>
       </div>
     );
   }
@@ -432,12 +529,12 @@ const TechTenantRegistry: React.FC = () => {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </button>
-            <div className="tech-incent-mobile-title">Tenant Registry</div>
+            <div className="tech-incent-mobile-title">Farmer Registry</div>
           </div>
 
           <div className="tech-masterlist-dashboard-header">
             <div>
-              <h2 className="tech-masterlist-page-title">Tenant Registry</h2>
+              <h2 className="tech-masterlist-page-title">Farmer Registry</h2>
               <p className="tech-masterlist-page-subtitle">
                 Manage hierarchical relationship between landowners and their tenants
               </p>
@@ -477,6 +574,7 @@ const TechTenantRegistry: React.FC = () => {
                       <th>Parcel / Area</th>
                       <th>Location</th>
                       <th>Date</th>
+                      <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -488,20 +586,27 @@ const TechTenantRegistry: React.FC = () => {
                           className={`parent-row ${expandedGroups.has(group.landOwnerId) ? "expanded" : ""}`}
                           onClick={() => toggleGroup(group.landOwnerId)}
                         >
-                          <td colSpan={6}>
+                          <td>
                             <div className="landowner-info">
                               <span className="expand-icon">▶</span>
                               <span className="landowner-name">{group.landOwnerName}</span>
-                              {group.landOwnerRefNumber && (
-                                <span className="tenant-ref" style={{ fontSize: "0.7rem", opacity: 0.8 }}>
-                                  {group.landOwnerRefNumber}
-                                </span>
-                              )}
                               <span className="tenant-count-badge">
                                 {group.tenants.length} {group.tenants.length === 1 ? "Tenant" : "Tenants"}
                               </span>
                             </div>
                           </td>
+                          <td>
+                            <span className="tenant-ref">{group.landOwnerRefNumber || "—"}</span>
+                          </td>
+                          <td>—</td>
+                          <td>
+                            <span className="location-text">{group.landOwnerLocation || "—"}</span>
+                          </td>
+                          <td>
+                            <span className="date-text">{formatDate(group.landOwnerDate || "")}</span>
+                          </td>
+                          <td>—</td>
+                          <td>—</td>
                         </tr>
 
                         {/* Child Rows (Tenants) */}
@@ -531,6 +636,17 @@ const TechTenantRegistry: React.FC = () => {
                               </td>
                               <td>
                                 <button
+                                  className={`tech-masterlist-status-button tech-masterlist-${getStatusClass(tenant.status)}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openStatusModal(tenant);
+                                  }}
+                                >
+                                  {tenant.status}
+                                </button>
+                              </td>
+                              <td>
+                                <button
                                   className="view-action-btn"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -552,6 +668,132 @@ const TechTenantRegistry: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {updateNotification.show && (
+        <div
+          className={`tech-masterlist-update-toast ${updateNotification.type}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="tech-masterlist-update-toast-message">
+            {updateNotification.message}
+          </span>
+          <button
+            className="tech-masterlist-update-toast-close"
+            onClick={() =>
+              setUpdateNotification((prev) => ({ ...prev, show: false }))
+            }
+            aria-label="Close notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {showStatusModal && statusChangeTarget && (
+        <div className="tech-masterlist-print-modal-overlay">
+          <div
+            className="tech-masterlist-print-modal"
+            style={{ maxWidth: "520px" }}
+          >
+            <div className="tech-masterlist-print-modal-header">
+              <h3>Update Cultivation Status</h3>
+              <button
+                className="tech-masterlist-close-button"
+                onClick={() => {
+                  setShowStatusModal(false);
+                  setStatusChangeTarget(null);
+                  setStatusModalParcels([]);
+                  setStatusChangeReason("");
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="tech-masterlist-print-modal-body">
+              <p style={{ marginBottom: "16px" }}>
+                Tenant:{" "}
+                <strong>
+                  {statusChangeTarget.farmerName ?? "—"}
+                </strong>
+              </p>
+
+              {statusModalLoading ? (
+                <p>Loading...</p>
+              ) : (
+                <>
+                  <div className="tech-masterlist-print-filter-group" style={{ marginBottom: "16px" }}>
+                    <label>Update Status</label>
+                    <div style={{ display: "flex", gap: "16px", marginTop: "8px" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                        <input
+                          type="radio"
+                          name="farmerStatus"
+                          value="Active Farmer"
+                          checked={statusChangeTarget.newStatus === "Active Farmer"}
+                          onChange={(e) => setStatusChangeTarget(prev => prev ? { ...prev, newStatus: e.target.value } : null)}
+                        />
+                        Active Farmer
+                      </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                        <input
+                          type="radio"
+                          name="farmerStatus"
+                          value="Not Active"
+                          checked={statusChangeTarget.newStatus === "Not Active"}
+                          onChange={(e) => setStatusChangeTarget(prev => prev ? { ...prev, newStatus: e.target.value } : null)}
+                        />
+                        Not Active Farmer
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="tech-masterlist-print-filter-group">
+                    <label>
+                      Reason <span style={{ color: "red" }}>*</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Enter reason for cultivation status change..."
+                      value={statusChangeReason}
+                      onChange={(e) => setStatusChangeReason(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        border: "1px solid #ccc",
+                        resize: "vertical",
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="tech-masterlist-print-modal-footer">
+              <button
+                className="tech-masterlist-print-modal-cancel-button"
+                onClick={() => {
+                  setShowStatusModal(false);
+                  setStatusChangeTarget(null);
+                  setStatusModalParcels([]);
+                  setStatusChangeReason("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="tech-masterlist-print-modal-print-button"
+                onClick={confirmStatusChange}
+                disabled={statusModalLoading}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Farmer Detail Modal */}
       {showModal && selectedFarmer && (

@@ -9,7 +9,7 @@ import "../../assets/css/admin css/index.css";
 import "../../assets/css/jo css/JoIncentStyle.css";
 import "../../assets/css/jo css/JoCreateAllocationStyle.css";
 import "../../components/layout/sidebarStyle.css";
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 
 type NumericInput = number | "";
 
@@ -77,66 +77,66 @@ const FERTILIZER_FIELDS: Array<{
   key: AllocationNumericField;
   label: string;
 }> = [
-  { key: "urea_46_0_0_bags", label: "Urea (46-0-0)" },
-  { key: "complete_14_14_14_bags", label: "Complete (14-14-14)" },
-  { key: "ammonium_sulfate_21_0_0_bags", label: "Ammonium Sulfate (21-0-0)" },
-  { key: "np_16_20_0_bags", label: "16-20-0" },
-  { key: "muriate_potash_0_0_60_bags", label: "Muriate of Potash (0-0-60)" },
-  { key: "zinc_sulfate_bags", label: "Zinc Sulfate" },
-  { key: "vermicompost_bags", label: "Vermicompost" },
-  { key: "chicken_manure_bags", label: "Chicken Manure" },
-  { key: "rice_straw_kg", label: "Rice Straw (incorporated)" },
-  { key: "carbonized_rice_hull_bags", label: "Carbonized Rice Hull (CRH)" },
-  { key: "biofertilizer_liters", label: "Biofertilizer (Liquid Concentrate)" },
-  { key: "nanobiofertilizer_liters", label: "Nanobiofertilizer" },
-  { key: "organic_root_exudate_mix_liters", label: "Organic Root Exudate Mix" },
-  { key: "azolla_microphylla_kg", label: "Azolla microphylla" },
-  { key: "foliar_liquid_fertilizer_npk_liters", label: "Foliar Liquid Fertilizer (NPK)" },
-  { key: "complete_16_16_16_bags", label: "Complete (16-16-16)" },
-  { key: "ammonium_phosphate_16_20_0_bags", label: "Ammonium Phosphate" },
-];
+    { key: "urea_46_0_0_bags", label: "Urea (46-0-0)" },
+    { key: "complete_14_14_14_bags", label: "Complete (14-14-14)" },
+    { key: "ammonium_sulfate_21_0_0_bags", label: "Ammonium Sulfate (21-0-0)" },
+    { key: "np_16_20_0_bags", label: "16-20-0" },
+    { key: "muriate_potash_0_0_60_bags", label: "Muriate of Potash (0-0-60)" },
+    { key: "zinc_sulfate_bags", label: "Zinc Sulfate" },
+    { key: "vermicompost_bags", label: "Vermicompost" },
+    { key: "chicken_manure_bags", label: "Chicken Manure" },
+    { key: "rice_straw_kg", label: "Rice Straw (incorporated)" },
+    { key: "carbonized_rice_hull_bags", label: "Carbonized Rice Hull (CRH)" },
+    { key: "biofertilizer_liters", label: "Biofertilizer (Liquid Concentrate)" },
+    { key: "nanobiofertilizer_liters", label: "Nanobiofertilizer" },
+    { key: "organic_root_exudate_mix_liters", label: "Organic Root Exudate Mix" },
+    { key: "azolla_microphylla_kg", label: "Azolla microphylla" },
+    { key: "foliar_liquid_fertilizer_npk_liters", label: "Foliar Liquid Fertilizer (NPK)" },
+    { key: "complete_16_16_16_bags", label: "Complete (16-16-16)" },
+    { key: "ammonium_phosphate_16_20_0_bags", label: "Ammonium Phosphate" },
+  ];
 
 const SEED_FIELDS: Array<{
   key: AllocationNumericField;
   label: string;
 }> = [
-  { key: "rice_seeds_nsic_rc160_kg", label: "NSIC Rc 160" },
-  { key: "rice_seeds_nsic_rc222_kg", label: "NSIC Rc 222" },
-  { key: "jackpot_kg", label: "Jackpot" },
-  { key: "us88_kg", label: "US88" },
-  { key: "th82_kg", label: "TH82" },
-  { key: "rh9000_kg", label: "RH9000" },
-  { key: "lumping143_kg", label: "Lumping143" },
-  { key: "lp296_kg", label: "LP296" },
-  { key: "mestiso_1_kg", label: "Mestiso 1 (M1)" },
-  { key: "mestiso_20_kg", label: "Mestiso 20 (M20)" },
-  { key: "mestiso_29_kg", label: "Mestiso 29" },
-  { key: "mestiso_55_kg", label: "Mestiso 55" },
-  { key: "mestiso_73_kg", label: "Mestiso 73" },
-  { key: "mestiso_99_kg", label: "Mestiso 99" },
-  { key: "mestiso_103_kg", label: "Mestiso 103" },
-  { key: "nsic_rc402_kg", label: "NSIC Rc 402" },
-  { key: "nsic_rc480_kg", label: "NSIC Rc 480" },
-  { key: "nsic_rc216_kg", label: "NSIC Rc 216" },
-  { key: "nsic_rc218_kg", label: "NSIC Rc 218" },
-  { key: "nsic_rc506_kg", label: "NSIC Rc 506" },
-  { key: "nsic_rc508_kg", label: "NSIC Rc 508" },
-  { key: "nsic_rc512_kg", label: "NSIC Rc 512" },
-  { key: "nsic_rc534_kg", label: "NSIC Rc 534" },
-  { key: "tubigan_28_kg", label: "Tubigan 28" },
-  { key: "tubigan_30_kg", label: "Tubigan 30" },
-  { key: "tubigan_22_kg", label: "Tubigan 22" },
-  { key: "sahod_ulan_2_kg", label: "Sahod Ulan 2" },
-  { key: "sahod_ulan_10_kg", label: "Sahod Ulan 10" },
-  { key: "salinas_6_kg", label: "Salinas 6" },
-  { key: "salinas_7_kg", label: "Salinas 7" },
-  { key: "salinas_8_kg", label: "Salinas 8" },
-  { key: "malagkit_5_kg", label: "Malagkit 5" },
-  { key: "rice_seeds_nsic_rc440_kg", label: "NSIC Rc 440" },
-  { key: "corn_seeds_hybrid_kg", label: "Corn Seeds (Hybrid)" },
-  { key: "corn_seeds_opm_kg", label: "Corn Seeds (OPM)" },
-  { key: "vegetable_seeds_kg", label: "Vegetable Seeds" },
-];
+    { key: "rice_seeds_nsic_rc160_kg", label: "NSIC Rc 160" },
+    { key: "rice_seeds_nsic_rc222_kg", label: "NSIC Rc 222" },
+    { key: "jackpot_kg", label: "Jackpot" },
+    { key: "us88_kg", label: "US88" },
+    { key: "th82_kg", label: "TH82" },
+    { key: "rh9000_kg", label: "RH9000" },
+    { key: "lumping143_kg", label: "Lumping143" },
+    { key: "lp296_kg", label: "LP296" },
+    { key: "mestiso_1_kg", label: "Mestiso 1 (M1)" },
+    { key: "mestiso_20_kg", label: "Mestiso 20 (M20)" },
+    { key: "mestiso_29_kg", label: "Mestiso 29" },
+    { key: "mestiso_55_kg", label: "Mestiso 55" },
+    { key: "mestiso_73_kg", label: "Mestiso 73" },
+    { key: "mestiso_99_kg", label: "Mestiso 99" },
+    { key: "mestiso_103_kg", label: "Mestiso 103" },
+    { key: "nsic_rc402_kg", label: "NSIC Rc 402" },
+    { key: "nsic_rc480_kg", label: "NSIC Rc 480" },
+    { key: "nsic_rc216_kg", label: "NSIC Rc 216" },
+    { key: "nsic_rc218_kg", label: "NSIC Rc 218" },
+    { key: "nsic_rc506_kg", label: "NSIC Rc 506" },
+    { key: "nsic_rc508_kg", label: "NSIC Rc 508" },
+    { key: "nsic_rc512_kg", label: "NSIC Rc 512" },
+    { key: "nsic_rc534_kg", label: "NSIC Rc 534" },
+    { key: "tubigan_28_kg", label: "Tubigan 28" },
+    { key: "tubigan_30_kg", label: "Tubigan 30" },
+    { key: "tubigan_22_kg", label: "Tubigan 22" },
+    { key: "sahod_ulan_2_kg", label: "Sahod Ulan 2" },
+    { key: "sahod_ulan_10_kg", label: "Sahod Ulan 10" },
+    { key: "salinas_6_kg", label: "Salinas 6" },
+    { key: "salinas_7_kg", label: "Salinas 7" },
+    { key: "salinas_8_kg", label: "Salinas 8" },
+    { key: "malagkit_5_kg", label: "Malagkit 5" },
+    { key: "rice_seeds_nsic_rc440_kg", label: "NSIC Rc 440" },
+    { key: "corn_seeds_hybrid_kg", label: "Corn Seeds (Hybrid)" },
+    { key: "corn_seeds_opm_kg", label: "Corn Seeds (OPM)" },
+    { key: "vegetable_seeds_kg", label: "Vegetable Seeds" },
+  ];
 
 const FERTILIZER_CATALOG_ROWS: Array<{ name: string; category: string }> = [
   { name: "Urea (46-0-0)", category: "Solid" },
@@ -203,60 +203,60 @@ const AdminCreateAllocation: React.FC = () => {
   const { allocationId } = useParams<{ allocationId: string }>();
   const isEditMode = !!allocationId;
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [seedVarieties, setSeedVarieties] = useState<any[]>([]);
   const [fertVarieties, setFertVarieties] = useState<any[]>([]);
-
-  React.useEffect(() => {
-    const fetchVarieties = async () => {
-      try {
-        const [seedsRes, fertsRes] = await Promise.all([
-          getShortagesSeeds(),
-          getShortagesFertilizers()
-        ]);
-        
-        if (seedsRes.data) {
-          setSeedVarieties(seedsRes.data.filter((v: any) => v.is_active));
-        }
-        if (fertsRes.data) {
-          setFertVarieties(fertsRes.data.filter((v: any) => v.is_active));
-        }
-      } catch (err) {
-        console.error("Failed to fetch varieties for allocation form:", err);
-      }
-    };
-    fetchVarieties();
-  }, []);
-
-  // Map varieties to fields for selection
-  const dynamicFertFields = React.useMemo(() => {
-    if (fertVarieties.length === 0) return FERTILIZER_FIELDS;
-    return fertVarieties.map(v => ({
-      key: `${v.id}_bags` as AllocationNumericField, 
-      label: v.name,
-      category: v.category || "Solid"
-    }));
-  }, [fertVarieties]);
-
-  const dynamicSeedFields = React.useMemo(() => {
-    if (seedVarieties.length === 0) return SEED_FIELDS;
-    return seedVarieties.map(v => ({
-      key: `${v.id}_kg` as AllocationNumericField, 
-      label: v.name,
-      category: v.category || "Inbred"
-    }));
-  }, [seedVarieties]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdAllocationId, setCreatedAllocationId] = useState<number | null>(null);
+  const todayDate = new Date().toISOString().split("T")[0];
+  const [formData, setFormData] = useState({
+    season: "", // This will now store the "Program Name"
+    allocation_date: todayDate,
+    notes: "",
+  });
+  const [selectedFertilizers, setSelectedFertilizers] = useState<AllocationItem[]>([]);
+  const [selectedSeeds, setSelectedSeeds] = useState<AllocationItem[]>([]);
+
+  const fetchVarieties = async () => {
+    try {
+      const [seedsRes, fertsRes] = await Promise.all([
+        getShortagesSeeds(),
+        getShortagesFertilizers()
+      ]);
+
+      let seeds: any[] = [];
+      let ferts: any[] = [];
+
+      if (seedsRes.data) {
+        seeds = seedsRes.data.filter((v: any) => v.is_active);
+        setSeedVarieties(seeds);
+      }
+      if (fertsRes.data) {
+        ferts = fertsRes.data.filter((v: any) => v.is_active);
+        setFertVarieties(ferts);
+      }
+      return { seeds, ferts };
+    } catch (err) {
+      console.error("Failed to fetch varieties for allocation form:", err);
+      return { seeds: [], ferts: [] };
+    }
+  };
 
   React.useEffect(() => {
-    if (isEditMode) {
-      fetchAllocationData();
-    }
+    const init = async () => {
+      setLoading(true);
+      const varieties = await fetchVarieties();
+      if (isEditMode) {
+        await fetchAllocationData(varieties.seeds, varieties.ferts);
+      }
+      setLoading(false);
+    };
+    init();
   }, [allocationId]);
 
-  const fetchAllocationData = async () => {
+  const fetchAllocationData = async (currentSeedVarieties: any[] = [], currentFertVarieties: any[] = []) => {
     try {
-      setLoading(true);
       const response = await getAllocationById(allocationId!);
       if (response.error) throw new Error(response.error);
 
@@ -267,39 +267,85 @@ const AdminCreateAllocation: React.FC = () => {
         notes: data.notes || "",
       });
 
+      // Combine static and dynamic fields to check against the data
+      const allFertFields = [
+        ...FERTILIZER_FIELDS,
+        ...currentFertVarieties.map(v => ({
+          key: `${v.id}_bags` as AllocationNumericField,
+          label: v.name
+        }))
+      ];
+
       const ferts: AllocationItem[] = [];
-      FERTILIZER_FIELDS.forEach((field) => {
-        if (data[field.key] > 0) {
+      const seenFertKeys = new Set<string>();
+
+      allFertFields.forEach((field) => {
+        if (!seenFertKeys.has(field.key) && data[field.key] > 0) {
           ferts.push({ key: field.key, value: data[field.key] });
+          seenFertKeys.add(field.key);
         }
       });
       setSelectedFertilizers(ferts);
 
+      const allSeedFields = [
+        ...SEED_FIELDS,
+        ...currentSeedVarieties.map(v => ({
+          key: `${v.id}_kg` as AllocationNumericField,
+          label: v.name
+        }))
+      ];
+
       const sds: AllocationItem[] = [];
-      SEED_FIELDS.forEach((field) => {
-        if (data[field.key] > 0) {
+      const seenSeedKeys = new Set<string>();
+
+      allSeedFields.forEach((field) => {
+        if (!seenSeedKeys.has(field.key) && data[field.key] > 0) {
           sds.push({ key: field.key, value: data[field.key] });
+          seenSeedKeys.add(field.key);
         }
       });
       setSelectedSeeds(sds);
     } catch (err: any) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
-  const [createdAllocationId, setCreatedAllocationId] = useState<number | null>(null);
 
-  const todayDate = new Date().toISOString().split("T")[0];
-  
-  const [formData, setFormData] = useState({
-    season: "", // This will now store the "Program Name"
-    allocation_date: todayDate,
-    notes: "",
-  });
+  // Map varieties to fields for selection
+  const dynamicFertFields = React.useMemo(() => {
+    if (fertVarieties.length === 0) return FERTILIZER_FIELDS;
+    const dynamic = fertVarieties.map(v => ({
+      key: `${v.id}_bags` as AllocationNumericField,
+      label: v.name,
+      category: v.category || "Solid"
+    }));
+    // Merge while avoiding duplicates
+    const combined = [...FERTILIZER_FIELDS];
+    dynamic.forEach(df => {
+      if (!combined.some(f => f.key === df.key)) {
+        combined.push(df);
+      }
+    });
+    return combined;
+  }, [fertVarieties]);
 
-  const [selectedFertilizers, setSelectedFertilizers] = useState<AllocationItem[]>([]);
-  const [selectedSeeds, setSelectedSeeds] = useState<AllocationItem[]>([]);
+  const dynamicSeedFields = React.useMemo(() => {
+    if (seedVarieties.length === 0) return SEED_FIELDS;
+    const dynamic = seedVarieties.map(v => ({
+      key: `${v.id}_kg` as AllocationNumericField,
+      label: v.name,
+      category: v.category || "Inbred"
+    }));
+    // Merge while avoiding duplicates
+    const combined = [...SEED_FIELDS];
+    dynamic.forEach(ds => {
+      if (!combined.some(s => s.key === ds.key)) {
+        combined.push(ds);
+      }
+    });
+    return combined;
+  }, [seedVarieties]);
+
+
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -428,13 +474,13 @@ const AdminCreateAllocation: React.FC = () => {
                   </div>
                   <div className="jo-allocation-field">
                     <label className="jo-allocation-label">Program Name <span className="jo-allocation-required">*</span></label>
-                    <input 
-                      type="text" 
-                      name="season" 
-                      value={formData.season} 
-                      onChange={handleInputChange} 
-                      required 
-                      className="jo-allocation-input" 
+                    <input
+                      type="text"
+                      name="season"
+                      value={formData.season}
+                      onChange={handleInputChange}
+                      required
+                      className="jo-allocation-input"
                       placeholder="e.g. Rice Subsidy 2024"
                     />
                   </div>
@@ -445,8 +491,8 @@ const AdminCreateAllocation: React.FC = () => {
               <div className="jo-allocation-section">
                 <h3 className="jo-allocation-section-title">🌱 Fertilizer Allocation (bags)</h3>
                 <div className="jo-allocation-dynamic-controls">
-                  <select 
-                    className="jo-allocation-input" 
+                  <select
+                    className="jo-allocation-input"
                     onChange={(e) => {
                       addItem('fertilizer', e.target.value);
                       e.target.value = "";
@@ -466,17 +512,17 @@ const AdminCreateAllocation: React.FC = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div className="jo-allocation-dynamic-list">
                   {selectedFertilizers.map((item, index) => {
                     const label = dynamicFertFields.find(f => f.key === item.key)?.label || FERTILIZER_FIELDS.find(f => f.key === item.key)?.label;
                     return (
                       <div key={item.key} className="jo-allocation-dynamic-row">
                         <div className="jo-allocation-row-label">{label}</div>
-                        <input 
-                          type="number" 
-                          className="jo-allocation-input row-input" 
-                          value={item.value} 
+                        <input
+                          type="number"
+                          className="jo-allocation-input row-input"
+                          value={item.value}
                           onChange={(e) => updateItemValue('fertilizer', index, Number(e.target.value))}
                           placeholder="Amount in bags"
                         />
@@ -492,8 +538,8 @@ const AdminCreateAllocation: React.FC = () => {
               <div className="jo-allocation-section">
                 <h3 className="jo-allocation-section-title">🌾 Seed Allocation (kg)</h3>
                 <div className="jo-allocation-dynamic-controls">
-                  <select 
-                    className="jo-allocation-input" 
+                  <select
+                    className="jo-allocation-input"
                     onChange={(e) => {
                       addItem('seed', e.target.value);
                       e.target.value = "";
@@ -513,17 +559,17 @@ const AdminCreateAllocation: React.FC = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div className="jo-allocation-dynamic-list">
                   {selectedSeeds.map((item, index) => {
                     const label = dynamicSeedFields.find(s => s.key === item.key)?.label || SEED_FIELDS.find(s => s.key === item.key)?.label;
                     return (
                       <div key={item.key} className="jo-allocation-dynamic-row">
                         <div className="jo-allocation-row-label">{label}</div>
-                        <input 
-                          type="number" 
-                          className="jo-allocation-input row-input" 
-                          value={item.value} 
+                        <input
+                          type="number"
+                          className="jo-allocation-input row-input"
+                          value={item.value}
                           onChange={(e) => updateItemValue('seed', index, Number(e.target.value))}
                           placeholder="Amount in kg"
                           step="any"

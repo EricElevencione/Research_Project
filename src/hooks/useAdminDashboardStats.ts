@@ -219,7 +219,7 @@ export const useAdminDashboardStats = (
 
       // Fulfillment rate: all-time — approved+distributed / all requests ever
       const fulfilledRequests = requests.filter(
-        (r: any) => r.status === "approved" || r.status === "Claimed" || r.status === "NOT_CLAIMED" || r.status === "distributed",
+        (r: any) => r.status === "approved" || r.status === "Claimed" || r.status === "distributed",
       ).length;
       const fulfillmentRate =
         requests.length > 0
@@ -307,7 +307,7 @@ export const useAdminDashboardStats = (
             totalDistributed: fertilizerDistributed + seedsDistributed,
             totalRequests: allocReqs.length,
             approvedRequests: allocReqs.filter(
-              (r: any) => r.status === "approved" || r.status === "Claimed" || r.status === "NOT_CLAIMED" || r.status === "distributed",
+              (r: any) => r.status === "approved" || r.status === "Claimed" || r.status === "distributed",
             ).length,
             distributedRequests: allocReqs.filter(
               (r: any) => r.status === "distributed",
@@ -382,8 +382,8 @@ export const useAdminDashboardStats = (
 
       // ── Subsidy & Request Stats ───────────────────────────
       const requestStats: RequestStats = {
-        pending: requests.filter((r: any) => r.status === "pending").length,
-        approved: requests.filter((r: any) => r.status === "approved" || r.status === "Claimed" || r.status === "NOT_CLAIMED").length,
+        pending: requests.filter((r: any) => r.status === "pending" || r.status === "NOT_CLAIMED").length,
+        approved: requests.filter((r: any) => r.status === "approved" || r.status === "Claimed").length,
         distributed: requests.filter((r: any) => r.status === "distributed")
           .length,
         rejected: requests.filter((r: any) => r.status === "rejected").length,
@@ -436,7 +436,7 @@ export const useAdminDashboardStats = (
 
             // Add to distributed if status is claimed/distributed (given)
             const status = (req.status || "").toLowerCase();
-            if (status === 'distributed' || status === 'claimed' || status === 'not_claimed') {
+            if (status === 'distributed' || status === 'claimed') {
               current.distributed += val;
             }
             
