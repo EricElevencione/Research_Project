@@ -48,19 +48,37 @@
 }
 
 .jo-masterlist-page-title {
-  font-weight: 700;
-  font-size: 22px;
-  color: #0f2d13;
+  font-weight: 600;
+  font-size: 28px;
+  color: #111827;
   margin: 0;
   line-height: 1.1;
 }
 
 .jo-masterlist-page-subtitle {
   color: #6b7280;
-  font-size: 12px;
-  margin: 2px 0 0;
+  font-size: 14px;
+  margin-top: 4px;
+  margin-bottom: 0;
 }
 
+.jo-masterlist-header-print-btn {
+  border: 2px solid rgba(5, 150, 105, 0.35);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.jo-masterlist-header-print-btn:hover {
+  filter: brightness(1.05);
+}
 /* ── Stat Strip ────────────────────────────── */
 /* 7 cards in ONE scrollable row — no wrapping */
 .jo-masterlist-status-cards {
@@ -1058,6 +1076,11 @@
     gap: 8px;
   }
 
+  .jo-masterlist-dashboard-header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
   .jo-masterlist-status-cards {
     /* still single-row, scroll horizontally on mobile */
     gap: 6px;
@@ -1123,4 +1146,170 @@
     min-width: unset;
     max-width: unset;
   }
+}
+
+/* ══════════════════════════════════════════════
+   Tenant / Lessee Sub-Row Feature
+   ══════════════════════════════════════════════ */
+
+/* ── Tenant badge button (sits below the ref code in the farmer cell) ── */
+.jo-masterlist-tenant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #a78bfa;
+  background: linear-gradient(135deg, #ede9fe, #f5f3ff);
+  color: #5b21b6;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.12s ease;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.jo-masterlist-tenant-badge:hover {
+  background: linear-gradient(135deg, #ddd6fe, #ede9fe);
+  border-color: #7c3aed;
+  transform: translateY(-1px);
+}
+
+/* ── Expanded sub-row (the <tr> wrapper) ── */
+.jo-masterlist-tenant-subrow {
+  background: #faf8ff;
+  border-bottom: 1px solid #e0d9fc;
+}
+
+.jo-masterlist-tenant-subrow > td {
+  padding: 0 !important;
+  border-bottom: 2px solid #c4b5fd !important;
+}
+
+/* ── Panel container ── */
+.jo-masterlist-tenant-panel {
+  padding: 10px 14px 12px;
+  animation: tenantPanelIn 0.18s ease;
+}
+
+@keyframes tenantPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Panel header row ── */
+.jo-masterlist-tenant-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.jo-masterlist-tenant-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4c1d95;
+}
+
+.jo-masterlist-tenant-panel-title strong {
+  color: #3730a3;
+}
+
+.jo-masterlist-tenant-panel-note {
+  font-size: 10px;
+  color: #7c3aed;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* ── Inner tenant table ── */
+.jo-masterlist-tenant-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ddd6fe;
+}
+
+.jo-masterlist-tenant-table thead tr {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+}
+
+.jo-masterlist-tenant-table thead th {
+  color: #fff;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.jo-masterlist-tenant-table tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #ede9fe;
+  vertical-align: middle;
+  color: #374151;
+}
+
+.jo-masterlist-tenant-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Individual tenant row ── */
+.jo-masterlist-tenant-row {
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.jo-masterlist-tenant-row:hover {
+  background: #f5f3ff;
+}
+
+/* ── Farmer cell inside the tenant table ── */
+.jo-masterlist-tenant-farmer-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jo-masterlist-tenant-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #ddd6fe, #a78bfa);
+  color: #3b0764;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.jo-masterlist-tenant-name {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 12px;
+}
+
+.jo-masterlist-tenant-ref,
+.jo-masterlist-tenant-barangay {
+  color: #6b7280;
+  font-size: 11px;
 }

@@ -21,20 +21,25 @@ interface JOSidebarProps {
 }
 
 const navItems = [
-  { path: "/jo-dashboard",           icon: <FaHome />,    text: "Home" },
-  { path: "/jo-rsbsapage",           icon: <FaIdCard />,  text: "RSBSA" },
-  { path: "/jo-incentives",          icon: <FaGift />,    text: "Subsidy" },
-  { path: "/jo-masterlist",          icon: <FaListAlt />, text: "Masterlist" },
-  { path: "/jo-farmer-registry",     icon: <FaPersonBooth />,     text: "Farmers" },
-  { path: "/jo-landowner-registry",  icon: <FaLandmark />,     text: "Land Owners" },
-  { path: "/jo-land-registry",       icon: <FaMap />,     text: "Land Registry" },
-  { path: "/jo-land-history-report", icon: <FaScroll />,  text: "Land History" },
+  { path: "/jo-dashboard", icon: <FaHome />, text: "Home" },
+  { path: "/jo-rsbsapage", icon: <FaIdCard />, text: "RSBSA" },
+  { path: "/jo-incentives", icon: <FaGift />, text: "Subsidy" },
+  { path: "/jo-masterlist", icon: <FaListAlt />, text: "Masterlist" },
+  { path: "/jo-farmer-registry", icon: <FaPersonBooth />, text: "Farmers" },
+  { path: "/jo-land-registry", icon: <FaMap />, text: "Land Registry" },
+  { path: "/jo-land-history-report", icon: <FaScroll />, text: "Land History" },
 ];
 
-const JOSidebar: React.FC<JOSidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
+const JOSidebar: React.FC<JOSidebarProps> = ({
+  sidebarOpen,
+  setSidebarOpen,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState<{ firstName: string; lastName: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -65,7 +70,6 @@ const JOSidebar: React.FC<JOSidebarProps> = ({ sidebarOpen, setSidebarOpen }) =>
   return (
     <>
       <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-
         {/* Logo */}
         <div className="sidebar-logo">
           <img src={LogoImage} alt="DA Logo" />
@@ -91,7 +95,9 @@ const JOSidebar: React.FC<JOSidebarProps> = ({ sidebarOpen, setSidebarOpen }) =>
 
           {/* Logout */}
           <button className="sidebar-nav-item logout" onClick={handleLogout}>
-            <span className="nav-icon"><FaSignOutAlt /></span>
+            <span className="nav-icon">
+              <FaSignOutAlt />
+            </span>
             <span className="nav-text">Logout</span>
           </button>
         </nav>

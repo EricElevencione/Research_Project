@@ -1,4 +1,4 @@
-﻿import { supabase } from "../../supabase";
+import { supabase } from "../../supabase";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -284,7 +284,11 @@ const JoMasterlist: React.FC = () => {
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
     new Set(),
   );
+  const [expandedOwnerIds, setExpandedOwnerIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
+  const [showPrintMasterlistModal, setShowPrintMasterlistModal] = useState(false);
   const [isModalPrinting, setIsModalPrinting] = useState(false);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
   const [printingRecordIds, setPrintingRecordIds] = useState<Set<string>>(
@@ -1052,6 +1056,55 @@ const JoMasterlist: React.FC = () => {
     () => rsbsaRecords.filter((r) => selectedRecordIds.has(r.id)),
     [rsbsaRecords, selectedRecordIds],
   );
+
+  // ─── Tenant map: normalised owner name → tenant records ────────────────────
+  // Uses only the already-loaded rsbsaRecords so no extra queries are needed.
+  // Name normalisation: split into tokens → sort alphabetically → join.
+  // This makes "Eric Solano Elevencione" and "Elevencione, Eric Solano"
+  // produce the same key regardless of word order or comma placement.
+  const tenantsByOwnerName = useMemo(() => {
+    const normTokenSort = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/,/g, " ")
+        .split(/\s+/)
+        .filter(Boolean)
+        .sort()
+        .join(" ");
+
+    const map = new Map<string, RSBSARecord[]>();
+    rsbsaRecords.forEach((r) => {
+      const f = getOwnershipFlags(r);
+      const isTenantOrLessee = f.tenant || f.lessee || f.tenantLessee;
+      if (!isTenantOrLessee || !r.landownerName) return;
+      const key = normTokenSort(r.landownerName);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    });
+    return map;
+  }, [rsbsaRecords]);
+
+
+
+  const toggleOwnerExpanded = (id: string) => {
+    setExpandedOwnerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const normName = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/,/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+      .sort()
+      .join(" ");
+
+
   const VISIBLE_COLUMN_COUNT = 10;
 
   const allFilteredSelected =
@@ -1115,8 +1168,11 @@ const JoMasterlist: React.FC = () => {
 
   // ─── Print: DA Masterlist Format ───────────────────────────────────────────
 
-  const handlePrintMasterlist = () => {
-    const records = filteredRecords;
+  const handlePrintMasterlist = (scope: "all" | "selected") => {
+    const records =
+      scope === "selected"
+        ? filteredRecords.filter((r) => selectedRecordIds.has(r.id))
+        : filteredRecords;
     const filterLabel = (() => {
       const parts: string[] = [];
       if (selectedBarangay !== "all")
@@ -1639,7 +1695,7 @@ const JoMasterlist: React.FC = () => {
           {/* Page header */}
           <div className="jo-masterlist-dashboard-header">
             <div>
-              <h2 className="jo-masterlist-page-title">Masterlist</h2>
+              <h1 className="jo-masterlist-page-title">Masterlist</h1>
               <p className="jo-masterlist-page-subtitle">
                 Universal registry — find any farmer, owner, or tenant ·
                 Municipality of Dumangas, Iloilo
@@ -1647,13 +1703,6 @@ const JoMasterlist: React.FC = () => {
             </div>
           </div>
 
-          <button
-            className="jo-masterlist-bulk-btn"
-            style={{ alignSelf: "flex-end" }}
-            onClick={handlePrintMasterlist}
-          >
-            🖨 Print Masterlist
-          </button>
 
           {/* ── Summary Cards ─────────────────────────────────────────────── */}
           {!loading && !error && (
@@ -1842,13 +1891,16 @@ const JoMasterlist: React.FC = () => {
             )}
 
             {/* ── Bulk toolbar ─────────────────────────────────────────── */}
-            {!loading && !error && selectedRecordIds.size > 0 && (
+            {!loading && !error && (
               <div className="jo-masterlist-bulk-toolbar">
-                <span className="jo-masterlist-bulk-count">
-                  {selectedRecordIds.size} record
-                  {selectedRecordIds.size === 1 ? "" : "s"} selected
-                </span>
+                {selectedRecordIds.size > 0 && (
+                  <span className="jo-masterlist-bulk-count">
+                    {selectedRecordIds.size} record
+                    {selectedRecordIds.size === 1 ? "" : "s"} selected
+                  </span>
+                )}
                 <div className="jo-masterlist-bulk-actions">
+                  {/* ── Always-visible Print Masterlist ── */}
                   <div
                     className="jo-masterlist-bulk-export-wrap"
                     onClick={(e) => e.stopPropagation()}
@@ -1857,31 +1909,97 @@ const JoMasterlist: React.FC = () => {
                       className="jo-masterlist-bulk-btn"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setShowBulkExportMenu((p) => !p);
+                        setShowPrintMasterlistModal((p) => !p);
                       }}
                     >
-                      Multi-Print ▾
+                      🖨 Print Masterlist
                     </button>
-                    {showBulkExportMenu && (
+                    {showPrintMasterlistModal && (
                       <div className="jo-masterlist-bulk-menu">
+                        <div
+                          style={{
+                            padding: "6px 12px 4px",
+                            fontSize: "11px",
+                            color: "var(--color-text-secondary, #888)",
+                            fontWeight: 600,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            borderBottom: "0.5px solid var(--color-border-tertiary, #e0e0e0)",
+                            marginBottom: 2,
+                          }}
+                        >
+                          Print scope
+                        </div>
                         <button
                           className="jo-masterlist-quick-item"
-                          onClick={handleBulkPrint}
-                          disabled={isBulkPrinting}
+                          onClick={() => {
+                            setShowPrintMasterlistModal(false);
+                            handlePrintMasterlist("all");
+                          }}
                         >
-                          {isBulkPrinting
-                            ? "Preparing forms..."
-                            : "Print Selected RSBSA Forms"}
+                          🗂 Print All ({filteredRecords.length})
+                        </button>
+                        <button
+                          className="jo-masterlist-quick-item"
+                          disabled={selectedRecordIds.size === 0}
+                          style={{
+                            opacity: selectedRecordIds.size === 0 ? 0.45 : 1,
+                            cursor: selectedRecordIds.size === 0 ? "not-allowed" : "pointer",
+                          }}
+                          onClick={() => {
+                            if (selectedRecordIds.size === 0) return;
+                            setShowPrintMasterlistModal(false);
+                            handlePrintMasterlist("selected");
+                          }}
+                        >
+                          ✅ Print Selected Only
+                          {selectedRecordIds.size > 0
+                            ? ` (${selectedRecordIds.size})`
+                            : " — pick rows first"}
                         </button>
                       </div>
                     )}
                   </div>
-                  <button
-                    className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-clear"
-                    onClick={() => setSelectedRecordIds(new Set())}
-                  >
-                    Clear Selection
-                  </button>
+
+                  {/* ── Multi-Print (RSBSA forms) — only when rows selected ── */}
+                  {selectedRecordIds.size > 0 && (
+                    <div
+                      className="jo-masterlist-bulk-export-wrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        className="jo-masterlist-bulk-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowBulkExportMenu((p) => !p);
+                        }}
+                      >
+                        Multi-Print ▾
+                      </button>
+                      {showBulkExportMenu && (
+                        <div className="jo-masterlist-bulk-menu">
+                          <button
+                            className="jo-masterlist-quick-item"
+                            onClick={handleBulkPrint}
+                            disabled={isBulkPrinting}
+                          >
+                            {isBulkPrinting
+                              ? "Preparing forms..."
+                              : "Print Selected RSBSA Forms"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedRecordIds.size > 0 && (
+                    <button
+                      className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-clear"
+                      onClick={() => setSelectedRecordIds(new Set())}
+                    >
+                      Clear Selection
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -1926,7 +2044,7 @@ const JoMasterlist: React.FC = () => {
                     </th>
                     <th>Farming Status</th>
                     <th>Role</th>
-                    <th>Landowner</th>
+                    
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${isSortActive("status") ? "is-active" : ""}`}
@@ -1983,149 +2101,257 @@ const JoMasterlist: React.FC = () => {
                       const isTenantOrLessee =
                         flags.tenant || flags.lessee || flags.tenantLessee;
 
+                      // Look up tenants/lessees farming under this owner
+                      const tenants =
+                        tenantsByOwnerName.get(normName(record.farmerName)) ??
+                        [];
+                      const hasTenants = tenants.length > 0;
+                      const isExpanded = expandedOwnerIds.has(record.id);
+
+                      const getTenantRoleLabel = (t: RSBSARecord) => {
+                        const f = getOwnershipFlags(t);
+                        if (f.tenant && f.lessee) return "Tenant + Lessee";
+                        if (f.tenant) return "Tenant";
+                        if (f.lessee) return "Lessee";
+                        return "Tenant/Lessee";
+                      };
+
                       return (
-                        <tr
-                          key={record.id}
-                          className="jo-masterlist-table-row"
-                          onClick={() => fetchFarmerDetails(record.id, record)}
-                        >
-                          <td className="jo-masterlist-checkbox-col">
-                            <input
-                              type="checkbox"
-                              className="jo-masterlist-row-checkbox"
-                              checked={selectedRecordIds.has(record.id)}
-                              onChange={() => toggleSelectRecord(record.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              aria-label={`Select ${record.farmerName}`}
-                            />
-                          </td>
-                          <td>
-                            <div className="jo-masterlist-farmer-cell">
-                              <div className="jo-masterlist-farmer-avatar">
-                                {getFarmerInitials(record.farmerName)}
-                              </div>
-                              <div className="jo-masterlist-farmer-meta">
-                                <span className="jo-masterlist-farmer-name">
-                                  {record.farmerName}
-                                </span>
-                                <span className="jo-masterlist-farmer-ref">
-                                  {record.referenceNumber}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="jo-masterlist-cultivation-text">
-                              {record.farmBarangay || "—"}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="jo-masterlist-parcel-cell">
-                              <span className="jo-masterlist-parcel-count">
-                                {record.parcelCount} parcel
-                                {record.parcelCount === 1 ? "" : "s"}
-                              </span>
-                              <span className="jo-masterlist-parcel-area">
-                                {formatParcelArea(record.parcelArea)}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="jo-masterlist-cultivation-text">
-                              {formatFarmingStatus(record.farmingStatus)}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="jo-masterlist-status-cell">
-                              <span
-                                className={`jo-masterlist-ownership-pill ${getOwnershipClass(record)}`}
-                              >
-                                {getOwnershipLabel(record)}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            {isTenantOrLessee && record.landownerName ? (
-                              <span
-                                className="jo-masterlist-cultivation-text"
-                                style={{ fontSize: "0.85em" }}
-                              >
-                                {record.landownerName}
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  color: "var(--color-text-secondary,#888)",
-                                  fontSize: "0.85em",
-                                }}
-                              >
-                                —
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            <span className="jo-masterlist-record-status">
-                              {formatRecordStatus(record.status)}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="jo-masterlist-date">
-                              {formatDate(record.dateSubmitted)}
-                            </span>
-                          </td>
-                          <td className="jo-masterlist-actions-cell">
-                            <div
-                              className="jo-masterlist-quick-actions"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                className="jo-masterlist-view-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenuId((p) =>
-                                    p === record.id ? null : record.id,
-                                  );
-                                }}
-                              >
-                                Quick Actions ▾
-                              </button>
-                              {openMenuId === record.id && (
-                                <div className="jo-masterlist-quick-menu">
-                                  <button
-                                    className="jo-masterlist-quick-item"
-                                    onClick={() => {
-                                      fetchFarmerDetails(record.id, record);
-                                      setOpenMenuId(null);
-                                    }}
-                                  >
-                                    View
-                                  </button>
-                                  <button
-                                    className="jo-masterlist-quick-item"
-                                    onClick={() => {
-                                      handleEdit(record.id);
-                                      setOpenMenuId(null);
-                                    }}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    className="jo-masterlist-quick-item"
-                                    onClick={async () => {
-                                      setOpenMenuId(null);
-                                      await handlePrintSingleRecord(record);
-                                    }}
-                                    disabled={printingRecordIds.has(record.id)}
-                                  >
-                                    {printingRecordIds.has(record.id)
-                                      ? "Preparing..."
-                                      : "Print RSBSA Form"}
-                                  </button>
+                        <React.Fragment key={record.id}>
+                          {/* ── Main owner row ── */}
+                          <tr
+                            className="jo-masterlist-table-row"
+                            onClick={() =>
+                              fetchFarmerDetails(record.id, record)
+                            }
+                          >
+                            <td className="jo-masterlist-checkbox-col">
+                              <input
+                                type="checkbox"
+                                className="jo-masterlist-row-checkbox"
+                                checked={selectedRecordIds.has(record.id)}
+                                onChange={() => toggleSelectRecord(record.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`Select ${record.farmerName}`}
+                              />
+                            </td>
+                            <td>
+                              <div className="jo-masterlist-farmer-cell">
+                                <div className="jo-masterlist-farmer-avatar">
+                                  {getFarmerInitials(record.farmerName)}
                                 </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+                                <div className="jo-masterlist-farmer-meta">
+                                  <span className="jo-masterlist-farmer-name">
+                                    {record.farmerName}
+                                  </span>
+                                  <span className="jo-masterlist-farmer-ref">
+                                    {record.referenceNumber}
+                                  </span>
+                                  {/* Tenant badge — only shown when tenants exist */}
+                                  {hasTenants && (
+                                    <button
+                                      className="jo-masterlist-tenant-badge"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleOwnerExpanded(record.id);
+                                      }}
+                                      aria-expanded={isExpanded}
+                                      aria-label={`${isExpanded ? "Collapse" : "Expand"} tenants for ${record.farmerName}`}
+                                    >
+                                      {isExpanded ? "▲" : "▼"}{" "}
+                                      {tenants.length} tenant
+                                      {tenants.length === 1 ? "" : "s"}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="jo-masterlist-cultivation-text">
+                                {record.farmBarangay || "—"}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="jo-masterlist-parcel-cell">
+                                <span className="jo-masterlist-parcel-count">
+                                  {record.parcelCount} parcel
+                                  {record.parcelCount === 1 ? "" : "s"}
+                                </span>
+                                <span className="jo-masterlist-parcel-area">
+                                  {formatParcelArea(record.parcelArea)}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="jo-masterlist-cultivation-text">
+                                {formatFarmingStatus(record.farmingStatus)}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="jo-masterlist-status-cell">
+                                <span
+                                  className={`jo-masterlist-ownership-pill ${getOwnershipClass(record)}`}
+                                >
+                                  {getOwnershipLabel(record)}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="jo-masterlist-record-status">
+                                {formatRecordStatus(record.status)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="jo-masterlist-date">
+                                {formatDate(record.dateSubmitted)}
+                              </span>
+                            </td>
+                            <td className="jo-masterlist-actions-cell">
+                              <div
+                                className="jo-masterlist-quick-actions"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  className="jo-masterlist-view-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId((p) =>
+                                      p === record.id ? null : record.id,
+                                    );
+                                  }}
+                                >
+                                  Quick Actions ▾
+                                </button>
+                                {openMenuId === record.id && (
+                                  <div className="jo-masterlist-quick-menu">
+                                    <button
+                                      className="jo-masterlist-quick-item"
+                                      onClick={() => {
+                                        fetchFarmerDetails(record.id, record);
+                                        setOpenMenuId(null);
+                                      }}
+                                    >
+                                      View
+                                    </button>
+                                    <button
+                                      className="jo-masterlist-quick-item"
+                                      onClick={() => {
+                                        handleEdit(record.id);
+                                        setOpenMenuId(null);
+                                      }}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      className="jo-masterlist-quick-item"
+                                      onClick={async () => {
+                                        setOpenMenuId(null);
+                                        await handlePrintSingleRecord(record);
+                                      }}
+                                      disabled={printingRecordIds.has(
+                                        record.id,
+                                      )}
+                                    >
+                                      {printingRecordIds.has(record.id)
+                                        ? "Preparing..."
+                                        : "Print RSBSA Form"}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* ── Expandable tenant sub-row ── */}
+                          {hasTenants && isExpanded && (
+                            <tr className="jo-masterlist-tenant-subrow">
+                              <td />
+                              <td colSpan={VISIBLE_COLUMN_COUNT - 1}>
+                                <div className="jo-masterlist-tenant-panel">
+                                  <div className="jo-masterlist-tenant-panel-header">
+                                    <span className="jo-masterlist-tenant-panel-title">
+                                      🌾 Farmers under{" "}
+                                      <strong>{record.farmerName}</strong>
+                                    </span>
+                                    <span className="jo-masterlist-tenant-panel-note">
+                                      Showing RSBSA-registered tenants/lessees
+                                      only
+                                    </span>
+                                  </div>
+                                  <table className="jo-masterlist-tenant-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Farmer</th>
+                                        <th>FFRS Code</th>
+                                        <th>Farm Barangay</th>
+                                        <th>Parcel / Area</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {tenants.map((t) => (
+                                        <tr
+                                          key={t.id}
+                                          className="jo-masterlist-tenant-row"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            fetchFarmerDetails(t.id, t);
+                                          }}
+                                          title="Click to view farmer details"
+                                        >
+                                          <td>
+                                            <div className="jo-masterlist-tenant-farmer-cell">
+                                              <div className="jo-masterlist-tenant-avatar">
+                                                {getFarmerInitials(
+                                                  t.farmerName,
+                                                )}
+                                              </div>
+                                              <span className="jo-masterlist-tenant-name">
+                                                {t.farmerName}
+                                              </span>
+                                            </div>
+                                          </td>
+                                          <td className="jo-masterlist-tenant-ref">
+                                            {t.referenceNumber || "—"}
+                                          </td>
+                                          <td className="jo-masterlist-tenant-barangay">
+                                            {t.farmBarangay || "—"}
+                                          </td>
+                                          <td>
+                                            <div className="jo-masterlist-parcel-cell">
+                                              <span className="jo-masterlist-parcel-count">
+                                                {t.parcelCount} parcel
+                                                {t.parcelCount === 1
+                                                  ? ""
+                                                  : "s"}
+                                              </span>
+                                              <span className="jo-masterlist-parcel-area">
+                                                {formatParcelArea(t.parcelArea)}
+                                              </span>
+                                            </div>
+                                          </td>
+                                          <td>
+                                            <span
+                                              className={`jo-masterlist-ownership-pill ${getOwnershipClass(t)}`}
+                                            >
+                                              {getTenantRoleLabel(t)}
+                                            </span>
+                                          </td>
+                                          <td>
+                                            <span className="jo-masterlist-record-status">
+                                              {formatRecordStatus(t.status)}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
 
@@ -2419,58 +2645,6 @@ const JoMasterlist: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    {/* ── Quick Navigation Buttons ─────────────────────── */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        marginBottom: 16,
-                      }}
-                    >
-                      <button
-                        onClick={goToFarmerRegistry}
-                        style={{
-                          fontSize: "12px",
-                          padding: "5px 12px",
-                          border: "0.5px solid var(--color-border-secondary)",
-                          borderRadius: "var(--border-radius-md)",
-                          background: "var(--color-background-secondary)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        🌾 Farmer Registry →
-                      </button>
-                      {selectedFarmer.ownershipRole === "Registered Owner" && (
-                        <button
-                          onClick={goToLandownerRegistry}
-                          style={{
-                            fontSize: "12px",
-                            padding: "5px 12px",
-                            border: "0.5px solid var(--color-border-secondary)",
-                            borderRadius: "var(--border-radius-md)",
-                            background: "var(--color-background-secondary)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          🏡 Landowner Registry →
-                        </button>
-                      )}
-                      <button
-                        onClick={goToLandRegistry}
-                        style={{
-                          fontSize: "12px",
-                          padding: "5px 12px",
-                          border: "0.5px solid var(--color-border-secondary)",
-                          borderRadius: "var(--border-radius-md)",
-                          background: "var(--color-background-secondary)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        🗺️ Land Registry →
-                      </button>
-                    </div>
-
                     {/* ── Record Overview ──────────────────────────────── */}
                     <div className="farmer-modal-section">
                       <h3 className="farmer-modal-section-title">
