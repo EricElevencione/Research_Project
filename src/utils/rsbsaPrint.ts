@@ -157,50 +157,7 @@ const parseSupportedGeometry = (raw: unknown): SupportedGeometry | null => {
   };
 };
 
-const geometryToRings = (geometry: SupportedGeometry): CoordinatePair[][] => {
-  const rings: CoordinatePair[][] = [];
 
-  if (geometry.type === "Polygon") {
-    for (const ring of geometry.coordinates as number[][][]) {
-      if (!Array.isArray(ring)) continue;
-      const normalizedRing: CoordinatePair[] = ring
-        .map((point) => {
-          if (!Array.isArray(point) || point.length < 2) return null;
-          const x = Number(point[0]);
-          const y = Number(point[1]);
-          if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-          return [x, y] as CoordinatePair;
-        })
-        .filter((point): point is CoordinatePair => point !== null);
-
-      if (normalizedRing.length >= 3) {
-        rings.push(normalizedRing);
-      }
-    }
-  } else {
-    for (const polygon of geometry.coordinates as number[][][][]) {
-      if (!Array.isArray(polygon)) continue;
-      for (const ring of polygon) {
-        if (!Array.isArray(ring)) continue;
-        const normalizedRing: CoordinatePair[] = ring
-          .map((point) => {
-            if (!Array.isArray(point) || point.length < 2) return null;
-            const x = Number(point[0]);
-            const y = Number(point[1]);
-            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-            return [x, y] as CoordinatePair;
-          })
-          .filter((point): point is CoordinatePair => point !== null);
-
-        if (normalizedRing.length >= 3) {
-          rings.push(normalizedRing);
-        }
-      }
-    }
-  }
-
-  return rings;
-};
 
 const findParcelGeometry = (
   parcel: NormalizedParcel,
@@ -265,71 +222,32 @@ const findParcelGeometry = (
   );
 };
 
-const renderGeometrySvg = (geometry: SupportedGeometry): string | null => {
-  const rings = geometryToRings(geometry);
-  if (rings.length === 0) return null;
-
-  const points = rings.flat();
-  const xValues = points.map((point) => point[0]);
-  const yValues = points.map((point) => point[1]);
-
-  const minX = Math.min(...xValues);
-  const maxX = Math.max(...xValues);
-  const minY = Math.min(...yValues);
-  const maxY = Math.max(...yValues);
-
-  const width = 220;
-  const height = 140;
-  const padding = 10;
-
-  const spanX = Math.max(maxX - minX, Number.EPSILON);
-  const spanY = Math.max(maxY - minY, Number.EPSILON);
-  const scale = Math.min(
-    (width - padding * 2) / spanX,
-    (height - padding * 2) / spanY,
-  );
-
-  const scaledWidth = spanX * scale;
-  const scaledHeight = spanY * scale;
-  const offsetX = (width - scaledWidth) / 2;
-  const offsetY = (height - scaledHeight) / 2;
-
-  const pathData = rings
-    .map((ring) => {
-      const pointsPath = ring
-        .map(([x, y], index) => {
-          const mappedX = offsetX + (x - minX) * scale;
-          const mappedY = offsetY + (maxY - y) * scale;
-          const command = index === 0 ? "M" : "L";
-          return `${command} ${mappedX.toFixed(2)} ${mappedY.toFixed(2)}`;
-        })
-        .join(" ");
-
-      return `${pointsPath} Z`;
-    })
-    .join(" ");
-
-  return `
-    <svg class="parcel-footprint-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Parcel geometry footprint" preserveAspectRatio="xMidYMid meet">
-      <path d="${pathData}" fill="rgba(33, 74, 55, 0.25)" stroke="#214a37" stroke-width="2" fill-rule="evenodd"></path>
-    </svg>
-  `;
-};
-
 const renderParcelGeometryCard = (
   parcel: NormalizedParcel,
   index: number,
+  formIndex: number,
 ): string => {
-  const geometrySvg = parcel.geometry
-    ? renderGeometrySvg(parcel.geometry)
-    : null;
   const parcelLabel = parcel.parcelNumber || String(index + 1);
+  const mapId = `print-map-${formIndex}-${index}`;
+  
+  const geometryHtml = parcel.geometry
+    ? `
+      <div id="${mapId}" class="parcel-print-map" style="width: 100%; height: 150px; z-index: 1; background: #ddd;"></div>
+      <script>
+        window.printMaps = window.printMaps || [];
+        window.printMaps.push({
+          id: "${mapId}",
+          geometry: ${JSON.stringify(parcel.geometry)}
+        });
+      </script>
+    `
+    : null;
 
   return `
     <div class="parcel-geometry-card">
       <div class="parcel-geometry-title">Parcel ${escapeHtml(parcelLabel)}</div>
-      <div class="parcel-geometry-box">
-        ${geometrySvg || '<div class="parcel-geometry-empty">No geometry</div>'}
+      <div class="parcel-geometry-box" style="padding: 0; overflow: hidden; position: relative;">
+        ${geometryHtml || '<div class="parcel-geometry-empty">No geometry</div>'}
       </div>
     </div>
   `;
@@ -607,7 +525,7 @@ const renderFarmerFormSection = (
     .join("");
 
   const parcelGeometryHtml = form.parcels
-    .map((parcel, parcelIndex) => renderParcelGeometryCard(parcel, parcelIndex))
+    .map((parcel, parcelIndex) => renderParcelGeometryCard(parcel, parcelIndex, index))
     .join("");
 
   return `
@@ -692,6 +610,8 @@ const buildFormsDocument = (forms: NormalizedFarmerForm[]): string => {
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>RSBSA Simplified Forms</title>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
         <style>
           * { box-sizing: border-box; }
           body {
@@ -854,6 +774,7 @@ const buildFormsDocument = (forms: NormalizedFarmerForm[]): string => {
             width: 100%;
             height: 100%;
           }
+          .leaflet-control-container { display: none !important; }
           .parcel-geometry-empty {
             color: #4f5660;
             font-size: 11px;
@@ -932,6 +853,83 @@ const buildFormsDocument = (forms: NormalizedFarmerForm[]): string => {
           ${sections}
         </div>
         <script>
+          function initMaps() {
+            if (!window.printMaps || !window.printMaps.length) return;
+            
+            window.printMaps.forEach(function(item) {
+              var map = L.map(item.id, {
+                zoomControl: false,
+                attributionControl: false,
+                dragging: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                keyboard: false
+              });
+              
+              // Add Satellite Hybrid Layers
+              L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19
+              }).addTo(map);
+              
+              L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19
+              }).addTo(map);
+              
+              L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19
+              }).addTo(map);
+              
+              var geojsonFeature = {
+                type: "Feature",
+                geometry: item.geometry
+              };
+              
+              var geojsonLayer = L.geoJSON(geojsonFeature, {
+                style: function() {
+                  return {
+                    color: '#3b82f6', // blue polygonal lines
+                    weight: 3,
+                    opacity: 1,
+                    fillColor: '#60a5fa', // lighter blue fill
+                    fillOpacity: 0.3
+                  };
+                },
+                pointToLayer: function(geoJsonPoint, latlng) {
+                  return L.circleMarker(latlng, {
+                    radius: 4,
+                    fillColor: '#3b82f6',
+                    color: '#fff',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                  });
+                },
+                onEachFeature: function(feature, layer) {
+                  if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+                    // Add dots on vertices
+                    var coords = feature.geometry.type === 'Polygon' 
+                      ? feature.geometry.coordinates[0] 
+                      : feature.geometry.coordinates[0][0];
+                      
+                    coords.forEach(function(coord) {
+                      L.circleMarker([coord[1], coord[0]], {
+                        radius: 4,
+                        fillColor: '#1d4ed8', // dark blue dot
+                        color: '#fff',
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 1
+                      }).addTo(map);
+                    });
+                  }
+                }
+              }).addTo(map);
+              
+              map.fitBounds(geojsonLayer.getBounds(), { padding: [10, 10] });
+            });
+          }
+
           let hasAutoPrinted = false;
           function triggerPrint() {
             window.focus();
@@ -943,11 +941,13 @@ const buildFormsDocument = (forms: NormalizedFarmerForm[]): string => {
           }
 
           window.addEventListener("load", () => {
+            initMaps();
             if (hasAutoPrinted) return;
             hasAutoPrinted = true;
+            // Wait longer for tiles to load completely before printing
             setTimeout(() => {
               triggerPrint();
-            }, 250);
+            }, 1500);
           });
         </script>
       </body>
