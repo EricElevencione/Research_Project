@@ -795,7 +795,7 @@ const JoDashboard: React.FC = () => {
                         <span className="no-data-hint">
                           Add farmer requests through
                           <br />
-                          Incentives → Create Allocation → Add Farmer Request
+                          Subsidy → Create Allocation → Add Farmer Request
                         </span>
                       </div>
                     )}

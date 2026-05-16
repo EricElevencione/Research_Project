@@ -9,6 +9,7 @@ import ManageRequests from "./screens/admin/ManageRequest";
 import ViewAllocation from "./screens/admin/ViewAllocation";
 import TechnicianDashboard from "./screens/technicians/TechnicianDashboard";
 import TechMasterlist from "./screens/technicians/TechMasterlist";
+import TechTenantRegistry from "./screens/technicians/TechTenantRegistry";
 import TechRsbsa from "./screens/technicians/TechRsbsa";
 import TechPickLandParcel from "./screens/technicians/TechPickLandParcel";
 import TechLandPlottingPage from "./screens/technicians/TechLandPlottingPage";
@@ -169,6 +170,14 @@ function App() {
           element={
             <ProtectedRoute>
               <TechMasterlist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/technician-tenant-registry"
+          element={
+            <ProtectedRoute>
+              <TechTenantRegistry />
             </ProtectedRoute>
           }
         />

@@ -30,6 +30,7 @@
   flex-direction: column;
   overflow: auto;
   min-height: 0;
+  padding-bottom: 80px; /* Prevent content from being cut off at bottom */
   background: linear-gradient(
     135deg,
     #e8f5e9 0%,

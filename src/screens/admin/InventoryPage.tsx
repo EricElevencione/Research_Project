@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAdminDashboardStats, SubsidyStock } from "../../hooks/useAdminDashboardStats";
 import AdminSidebar from "../../components/Layout/AdminSidebar";
 import { 
@@ -21,6 +22,7 @@ import {
 import "../../assets/css/admin css/AdminViewAllocation.css";
 
 const InventoryPage: React.FC = () => {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAllocationId, setSelectedAllocationId] = useState<number | undefined>(undefined);

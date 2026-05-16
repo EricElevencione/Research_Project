@@ -17,13 +17,8 @@ import {
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/technician css/TechManageRequestsStyle.css";
 import "../../components/layout/sidebarStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
 import { supabase } from "../../supabase";
+import TechSidebar from "../../components/layout/TechSidebar";
 import {
   getAuditLogger,
   AuditModule,
@@ -744,7 +739,12 @@ const TechManageRequests: React.FC = () => {
 
     // Status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter((req) => req.status === statusFilter);
+      filtered = filtered.filter((req) => {
+        if (statusFilter === "pending") {
+          return req.status === "pending" || req.status === "NOT_CLAIMED";
+        }
+        return req.status === statusFilter;
+      });
     }
 
     // Barangay filter
@@ -2195,81 +2195,7 @@ const TechManageRequests: React.FC = () => {
   return (
     <div className="page-container">
       <div className="page">
-        {/* Sidebar */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/technician-dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
-              onClick={() => navigate("/technician-rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
-              onClick={() => navigate("/technician-incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/technician-masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button className="sidebar-nav-item logout" onClick={handleLogout}>
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-          {/* Current User — inside nav, at the bottom */}
-          {currentUser && (
-            <div className="sidebar-current-user">
-              <div className="sidebar-current-user-avatar">
-                {currentUser.firstName.charAt(0).toUpperCase()}
-                {currentUser.lastName.charAt(0).toUpperCase()}
-              </div>
-              <div className="sidebar-current-user-info">
-                <span className="sidebar-current-user-name">
-                  {currentUser.firstName} {currentUser.lastName}
-                </span>
-                <span className="sidebar-current-user-label">Logged in</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <TechSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Main Content */}
         <div className="tech-main-content">
@@ -2508,7 +2434,7 @@ const TechManageRequests: React.FC = () => {
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
                             const approvedRequests = requests.filter(
-                              (r) => r.status === "Claimed" || r.status === "approved" || r.status === "NOT_CLAIMED",
+                              (r) => r.status === "Claimed" || r.status === "approved",
                             );
                             const total = approvedRequests.reduce((sum, r) => {
                               return (
@@ -2651,7 +2577,7 @@ const TechManageRequests: React.FC = () => {
                       <div className="tech-manage-card-count">
                         {
                           filteredRequests.filter(
-                            (r) => r.status === "Claimed" || r.status === "approved" || r.status === "NOT_CLAIMED",
+                            (r) => r.status === "Claimed" || r.status === "approved",
                           ).length
                         }
                       </div>
@@ -2741,9 +2667,9 @@ const TechManageRequests: React.FC = () => {
                                 <td>{request.barangay}</td>
                                 <td>
                                   <span
-                                    className={`tech-manage-requests-status-badge tech-manage-requests-status-${request.status}`}
+                                    className={`tech-manage-requests-status-badge tech-manage-requests-status-${request.status === "NOT_CLAIMED" ? "pending" : request.status}`}
                                   >
-                                    {request.status === "approved" || request.status === "NOT_CLAIMED" ? "Claimed" : request.status}
+                                    {request.status === "approved" ? "Claimed" : (request.status === "NOT_CLAIMED" ? "pending" : request.status)}
                                   </span>
                                 </td>
                                 <td>{totalFertilizer.toFixed(2)}</td>
@@ -2904,9 +2830,9 @@ const TechManageRequests: React.FC = () => {
               <span>
                 <strong>Status:</strong>{" "}
                 <span
-                  className={`tech-manage-requests-status-badge tech-manage-requests-status-${viewingRequest.status}`}
+                  className={`tech-manage-requests-status-badge tech-manage-requests-status-${viewingRequest.status === "NOT_CLAIMED" ? "pending" : viewingRequest.status}`}
                 >
-                  {viewingRequest.status === "approved" || viewingRequest.status === "NOT_CLAIMED" ? "Claimed" : viewingRequest.status}
+                  {viewingRequest.status === "approved" ? "Claimed" : (viewingRequest.status === "NOT_CLAIMED" ? "pending" : viewingRequest.status)}
                 </span>
               </span>
               <span>

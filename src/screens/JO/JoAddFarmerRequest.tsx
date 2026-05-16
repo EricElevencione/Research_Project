@@ -204,7 +204,8 @@ const JoAddFarmerRequest: React.FC = () => {
   const [liveExceedMessage, setLiveExceedMessage] = useState<string | null>(
     null,
   );
-   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [allFarmerRequests, setAllFarmerRequests] = useState<any[]>([]);
 
   const [formData, setFormData] = useState<FarmerRequestForm>({
     farmer_id: 0,
@@ -403,6 +404,7 @@ const JoAddFarmerRequest: React.FC = () => {
       const response = await getFarmerRequests(allocationId, true);
       if (!response.error) {
         const requests = response.data || [];
+        setAllFarmerRequests(requests);
         const farmerIds = requests.map((req: any) => Number(req.farmer_id));
         setExistingRequests(farmerIds);
       }
@@ -499,12 +501,24 @@ const JoAddFarmerRequest: React.FC = () => {
   ): AllocationSummaryItem[] => {
     return items.map((item) => {
       const allocated = toSafeNumber(allocation?.[item.allocationField]);
-      const requested = Math.max(0, toSafeNumber(formData[item.requestField]));
+      
+      // Calculate total requested by all OTHER farmers (excluding current form data)
+      // We filter out any existing request from the SAME farmer if they already have one,
+      // but usually the UI prevents duplicate requests.
+      const alreadyRequestedByOthers = allFarmerRequests.reduce((sum, req) => {
+        // We only sum up if it's NOT the current farmer being edited (if any)
+        // or just sum all since we are adding a NEW request
+        return sum + toSafeNumber(req[item.requestField]);
+      }, 0);
+
+      const currentRequest = Math.max(0, toSafeNumber(formData[item.requestField]));
+      const totalRequested = alreadyRequestedByOthers + currentRequest;
+      
       return {
         label: item.label,
         allocated,
-        requested,
-        remaining: allocated - requested,
+        requested: totalRequested,
+        remaining: allocated - totalRequested,
       };
     });
   };
