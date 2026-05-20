@@ -150,6 +150,7 @@ interface FarmerGroup {
   has_registered_owner: boolean;
   has_tenant: boolean;
   has_lessee: boolean;
+  archived_at?: string | null;
 }
 
 type TransferMode = "voluntary" | "inheritance";
@@ -1940,6 +1941,7 @@ const JoLandRegistry: React.FC = () => {
     aggregatedFarmers.forEach((group) => {
       if (!group || !Array.isArray(group.parcels) || group.parcels.length === 0)
         return;
+      if (group.archived_at) return;
 
       rows.push(buildRow(group));
     });
