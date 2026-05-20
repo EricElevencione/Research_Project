@@ -288,7 +288,8 @@ const JoMasterlist: React.FC = () => {
     new Set(),
   );
   const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
-  const [showPrintMasterlistModal, setShowPrintMasterlistModal] = useState(false);
+  const [showPrintMasterlistModal, setShowPrintMasterlistModal] =
+    useState(false);
   const [isModalPrinting, setIsModalPrinting] = useState(false);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
   const [printingRecordIds, setPrintingRecordIds] = useState<Set<string>>(
@@ -1084,8 +1085,6 @@ const JoMasterlist: React.FC = () => {
     return map;
   }, [rsbsaRecords]);
 
-
-
   const toggleOwnerExpanded = (id: string) => {
     setExpandedOwnerIds((prev) => {
       const next = new Set(prev);
@@ -1103,7 +1102,6 @@ const JoMasterlist: React.FC = () => {
       .filter(Boolean)
       .sort()
       .join(" ");
-
 
   const VISIBLE_COLUMN_COUNT = 10;
 
@@ -1703,7 +1701,6 @@ const JoMasterlist: React.FC = () => {
             </div>
           </div>
 
-
           {/* ── Summary Cards ─────────────────────────────────────────────── */}
           {!loading && !error && (
             <div className="jo-masterlist-status-cards">
@@ -1873,11 +1870,6 @@ const JoMasterlist: React.FC = () => {
 
             {!loading && !error && (
               <div className="jo-masterlist-table-meta">
-                <span>
-                  Showing {filteredRecords.length} of {rsbsaRecords.length}{" "}
-                  records
-                </span>
-                <span>Tip: Sort up to 2 levels.</span>
                 {!isDefaultSortConfig && (
                   <button
                     type="button"
@@ -1924,7 +1916,8 @@ const JoMasterlist: React.FC = () => {
                             fontWeight: 600,
                             letterSpacing: "0.04em",
                             textTransform: "uppercase",
-                            borderBottom: "0.5px solid var(--color-border-tertiary, #e0e0e0)",
+                            borderBottom:
+                              "0.5px solid var(--color-border-tertiary, #e0e0e0)",
                             marginBottom: 2,
                           }}
                         >
@@ -1944,7 +1937,10 @@ const JoMasterlist: React.FC = () => {
                           disabled={selectedRecordIds.size === 0}
                           style={{
                             opacity: selectedRecordIds.size === 0 ? 0.45 : 1,
-                            cursor: selectedRecordIds.size === 0 ? "not-allowed" : "pointer",
+                            cursor:
+                              selectedRecordIds.size === 0
+                                ? "not-allowed"
+                                : "pointer",
                           }}
                           onClick={() => {
                             if (selectedRecordIds.size === 0) return;
@@ -2042,9 +2038,9 @@ const JoMasterlist: React.FC = () => {
                         Parcels <span>{getSortIndicator("parcelArea")}</span>
                       </button>
                     </th>
-                    <th>Farming Status</th>
+
                     <th>Role</th>
-                    
+
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${isSortActive("status") ? "is-active" : ""}`}
@@ -2158,8 +2154,8 @@ const JoMasterlist: React.FC = () => {
                                       aria-expanded={isExpanded}
                                       aria-label={`${isExpanded ? "Collapse" : "Expand"} tenants for ${record.farmerName}`}
                                     >
-                                      {isExpanded ? "▲" : "▼"}{" "}
-                                      {tenants.length} tenant
+                                      {isExpanded ? "▲" : "▼"} {tenants.length}{" "}
+                                      tenant
                                       {tenants.length === 1 ? "" : "s"}
                                     </button>
                                   )}
@@ -2182,11 +2178,7 @@ const JoMasterlist: React.FC = () => {
                                 </span>
                               </div>
                             </td>
-                            <td>
-                              <span className="jo-masterlist-cultivation-text">
-                                {formatFarmingStatus(record.farmingStatus)}
-                              </span>
-                            </td>
+
                             <td>
                               <div className="jo-masterlist-status-cell">
                                 <span
@@ -2322,9 +2314,7 @@ const JoMasterlist: React.FC = () => {
                                             <div className="jo-masterlist-parcel-cell">
                                               <span className="jo-masterlist-parcel-count">
                                                 {t.parcelCount} parcel
-                                                {t.parcelCount === 1
-                                                  ? ""
-                                                  : "s"}
+                                                {t.parcelCount === 1 ? "" : "s"}
                                               </span>
                                               <span className="jo-masterlist-parcel-area">
                                                 {formatParcelArea(t.parcelArea)}

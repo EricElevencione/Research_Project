@@ -7,11 +7,27 @@
   font-family: var(--font-family) !important;
 }
 
+:root {
+  --jo-reg-bg-page: #f1f9e7;
+  --jo-reg-bg-main-start: #fcfff8;
+  --jo-reg-bg-main-mid: #f1fbdf;
+  --jo-reg-bg-main-end: #e4f4c7;
+  --jo-reg-accent-start: #5dbb4b;
+  --jo-reg-accent-end: #7acb58;
+  --jo-reg-accent-hover-start: #4aa13e;
+  --jo-reg-accent-hover-end: #68b34f;
+  --jo-reg-accent-text: #ffffff;
+  --jo-reg-soft-btn-bg: #f7ffe9;
+  --jo-reg-soft-btn-bg-hover: #edfbd2;
+  --jo-reg-soft-btn-border: #a9cf75;
+}
+
 /* Main Layout */
 .jo-registration-page-container {
   display: flex;
   min-height: 100vh;
-  background-color: #f0f0f0;
+  background: var(--jo-reg-bg-page);
+  color: #1f2937;
 }
 
 .jo-registration-page {
@@ -23,76 +39,78 @@
 .jo-registration-main-content {
   width: 100%;
   flex-grow: 1;
-  padding: 20px;
+  padding: 28px 32px;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    135deg,
-    #e8f5e9 0%,
-    #f1f8e9 25%,
-    #ffffff 50%,
-    #e8f5e9 75%,
-    #c8e6c9 100%
-  );
+  background:linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
+  position: relative;
+  overflow-y: auto;
 }
 
 .jo-registration-main-content h2 {
-  font-weight: 600;
-  font-size: 28px;
-  color: #111827;
-  margin: 0 0 20px 0;
+  font-weight: 700;
+  font-size: 26px;
+  color: #2e3d27;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.3px;
+}
+
+.jo-registration-main-content > p {
+  color: #6b7280 !important;
+  font-size: 13px !important;
+  margin-bottom: 16px !important;
 }
 
 /* Back Button */
 .jo-registration-back-button {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
-.jo-registration-btn-back {
-  padding: 10px 20px !important;
-  background-color: #6c757d !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 5px !important;
+.jo-registration-back-button .app-back-button {
+  background: var(--jo-reg-soft-btn-bg) !important;
+  color: #2d5a1d !important;
+  border: 1px solid var(--jo-reg-soft-btn-border) !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
   cursor: pointer !important;
-  font-size: 14px !important;
-  transition: background-color 0.3s !important;
+  transition: all 0.2s !important;
+  font-size: 13px !important;
 }
 
-.jo-registration-btn-back:hover {
-  background-color: #5a6268 !important;
-}
-
-.jo-registration-btn-back::before {
-  content: "← Back" !important;
+.jo-registration-back-button .app-back-button:hover {
+  background: var(--jo-reg-soft-btn-bg-hover) !important;
+  color: #1a4013 !important;
 }
 
 /* Form Container */
 .jo-registration-form-container {
-  background: white;
-  border-radius: 8px;
-  padding: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 32px;
   max-height: 696px;
   overflow: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
 /* Form Steps Progress Indicator */
 .jo-registration-form-steps {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 40px;
+  margin-bottom: 36px;
   position: relative;
+  padding: 0 16px;
 }
 
 .jo-registration-form-steps::before {
   content: "";
   position: absolute;
   top: 20px;
-  left: 0;
-  right: 0;
+  left: 40px;
+  right: 40px;
   height: 2px;
-  background: #e0e0e0;
+  background: #dbe6cf;
   z-index: 0;
 }
 
@@ -109,68 +127,91 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #e0e0e0;
-  color: #666;
+  background: #f3f4f6;
+  border: 2px solid #d1d5db;
+  color: #9ca3af;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 14px;
   margin-bottom: 8px;
-  transition: all 0.3s;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .jo-registration-step.jo-registration-active .jo-registration-dot {
-  background: #2c5f2d;
-  color: white;
-  transform: scale(1.1);
+  background: linear-gradient(
+    135deg,
+    var(--jo-reg-accent-start),
+    var(--jo-reg-accent-end)
+  );
+  border-color: #5dbb4b;
+  color: #fff;
+  transform: scale(1.12);
+  box-shadow: 0 0 16px rgba(76, 175, 80, 0.3);
 }
 
 .jo-registration-step.jo-registration-completed .jo-registration-dot {
-  background: #4caf50;
-  color: white;
+  background: linear-gradient(135deg, #6dbe52, #8dd767);
+  border-color: #8dd767;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
 }
 
 .jo-registration-step .jo-registration-label {
-  font-size: 12px;
-  color: #666;
+  font-size: 11px;
+  color: #9ca3af;
   text-align: center;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: all 0.3s;
 }
 
 .jo-registration-step.jo-registration-active .jo-registration-label {
-  color: #2c5f2d;
-  font-weight: bold;
+  color: #2d6a1e;
+  font-weight: 700;
+}
+
+.jo-registration-step.jo-registration-completed .jo-registration-label {
+  color: #6b7280;
 }
 
 /* Form Sections */
 .jo-registration-form-section {
-  margin-bottom: 30px;
+  margin-bottom: 28px;
 }
 
 .jo-registration-form-section h3 {
-  font-size: 20px;
+  font-size: 17px;
   color: #2c5f2d;
   margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #2c5f2d;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #dbe6cf;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .jo-registration-form-section h4 {
-  font-size: 16px;
-  color: #333;
-  margin: 20px 0 15px 0;
+  font-size: 14px;
+  color: #3a7d3e;
+  margin: 20px 0 12px 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 /* Form Grid Layout */
 .jo-registration-form-grid {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .jo-registration-form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  gap: 18px;
 }
 
 /* Form Group */
@@ -180,48 +221,68 @@
 }
 
 .jo-registration-form-group label {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 8px;
-  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
 }
 
 .jo-registration-form-group input,
 .jo-registration-form-group select,
 .jo-registration-form-group textarea {
-  padding: 10px 12px !important;
-  border: 1px solid #ccc !important;
-  border-radius: 4px !important;
+  padding: 11px 14px !important;
+  border: 2px solid #dee2e6 !important;
+  border-radius: 10px !important;
   font-size: 14px !important;
-  transition: border-color 0.3s !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  background: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+.jo-registration-form-group input::placeholder {
+  color: #9ca3af !important;
+}
+
+.jo-registration-form-group select option {
+  background: #ffffff;
+  color: #1f2937;
 }
 
 .jo-registration-form-group input:focus,
 .jo-registration-form-group select:focus,
 .jo-registration-form-group textarea:focus {
   outline: none !important;
-  border-color: #2c5f2d !important;
-  box-shadow: 0 0 0 2px rgba(44, 95, 45, 0.1) !important;
+  border-color: #5dbb4b !important;
+  box-shadow:
+    0 0 0 3px rgba(93, 187, 75, 0.12),
+    0 0 12px rgba(93, 187, 75, 0.06) !important;
+  background: #ffffff !important;
 }
 
-.jo-registration-form-group input.jo-registration-input-error {
-  border-color: #dc3545 !important;
+.jo-registration-form-group input.jo-registration-input-error,
+.jo-registration-form-group select.jo-registration-input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
 }
 
 .jo-registration-form-group .jo-registration-error {
-  color: #dc3545;
+  color: #dc2626;
   font-size: 12px;
   margin-top: 4px;
+  font-weight: 500;
 }
 
 /* Address Section */
 .jo-registration-address-section {
   margin-top: 20px;
   padding: 20px;
-  background: #f8f9fa;
-  border-radius: 6px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
 }
 
 .jo-registration-address-section h4 {
@@ -231,7 +292,7 @@
 .jo-registration-address-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  gap: 18px;
 }
 
 /* Livelihood Section */
@@ -241,9 +302,10 @@
 
 .jo-registration-livelihood-details {
   margin-top: 15px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 6px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
 }
 
 .jo-registration-checkbox-group {
@@ -258,6 +320,10 @@
   align-items: center;
   font-weight: normal;
   cursor: pointer;
+  color: #374151;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .jo-registration-checkbox-group input[type="checkbox"] {
@@ -265,6 +331,7 @@
   width: 18px !important;
   height: 18px !important;
   cursor: pointer !important;
+  accent-color: #66bb6a;
 }
 
 .jo-registration-checkbox-group input[type="text"] {
@@ -276,14 +343,14 @@
 .jo-registration-ownership-category {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 2px solid #dee2e6;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
 }
 
 .jo-registration-ownership-category h4 {
   margin-bottom: 1rem;
-  color: #2c3e50;
+  color: #2c5f2d;
 }
 
 .jo-registration-ownership-options {
@@ -296,54 +363,57 @@
   flex: 1;
   min-width: 200px;
   padding: 1rem;
-  border: 2px solid;
-  border-radius: 6px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
   cursor: pointer;
   text-align: center;
-  font-weight: bold;
+  font-weight: 600;
+  color: #6b7280;
+  background: #ffffff;
   transition: all 0.3s;
 }
 
 .jo-registration-ownership-label input[type="radio"] {
   margin-right: 0.5rem !important;
+  accent-color: #66bb6a;
 }
 
 .jo-registration-ownership-label.jo-registration-owner-selected {
-  background-color: #007bff;
-  color: white;
-  border-color: #007bff;
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #3b82f6;
 }
 
 .jo-registration-ownership-label.jo-registration-tenant-selected {
-  background-color: #28a745;
-  color: white;
-  border-color: #28a745;
+  background: #dcfce7;
+  color: #166534;
+  border-color: #22c55e;
 }
 
 .jo-registration-ownership-label.jo-registration-lessee-selected {
-  background-color: #ffc107;
-  color: #2c3e50;
-  border-color: #ffc107;
+  background: #fef9c3;
+  color: #854d0e;
+  border-color: #eab308;
 }
 
 .jo-registration-ownership-note {
   margin-top: 1rem;
   font-size: 0.9rem;
-  color: #6c757d;
+  color: #9ca3af;
 }
 
 /* Land Owner Search */
 .jo-registration-landowner-search {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background-color: #fff8e1;
-  border-radius: 8px;
-  border: 2px solid #ffc107;
+  background: #fffbeb;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
 }
 
 .jo-registration-landowner-search h4 {
   margin-bottom: 1rem;
-  color: #2c3e50;
+  color: #92400e;
 }
 
 .jo-registration-landowner-input-wrapper {
@@ -354,8 +424,10 @@
   width: 100% !important;
   padding: 0.75rem !important;
   font-size: 1rem !important;
-  border: 2px solid #ffc107 !important;
-  border-radius: 6px !important;
+  border: 2px solid #fde68a !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  color: #1f2937 !important;
 }
 
 .jo-registration-landowner-dropdown {
@@ -363,70 +435,72 @@
   top: 100%;
   left: 0;
   right: 0;
-  background-color: white;
-  border: 2px solid #ffc107;
+  background: #ffffff;
+  border: 1px solid #fde68a;
   border-top: none;
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 10px 10px;
   max-height: 200px;
   overflow-y: auto;
   z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .jo-registration-landowner-item {
   padding: 0.75rem;
   cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  transition: background-color 0.2s;
+  border-bottom: 1px solid #f3f4f6;
+  color: #4b5563;
+  transition: all 0.2s;
 }
 
 .jo-registration-landowner-item:hover {
-  background-color: #f8f9fa;
+  background: #f9fafb;
+  color: #111827;
 }
 
 .jo-registration-landowner-selected-info {
   margin-top: 1rem;
   padding: 1rem;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  border-radius: 6px;
-  color: #155724;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  color: #166534;
 }
 
 /* Parcel Selection */
 .jo-registration-parcel-selection {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background-color: #e8f5e9;
-  border-radius: 8px;
-  border: 2px solid #4caf50;
+  background: #f0fdf4;
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
 }
 
 .jo-registration-parcel-selection h4 {
   margin-bottom: 1rem;
-  color: #2c3e50;
+  color: #166534;
 }
 
 .jo-registration-parcel-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .jo-registration-parcel-item {
   display: flex;
   align-items: flex-start;
   padding: 1rem;
-  border: 2px solid #dee2e6;
-  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s;
-  background-color: white;
+  background: #ffffff;
 }
 
 .jo-registration-parcel-item.jo-registration-selected {
-  background-color: #c8e6c9;
-  border-color: #4caf50;
+  background: #dcfce7;
+  border-color: #86efac;
 }
 
 .jo-registration-parcel-item input[type="checkbox"] {
@@ -435,6 +509,7 @@
   width: 18px !important;
   height: 18px !important;
   cursor: pointer !important;
+  accent-color: #66bb6a;
 }
 
 .jo-registration-parcel-details {
@@ -442,8 +517,8 @@
 }
 
 .jo-registration-parcel-header {
-  font-weight: bold;
-  color: #2c3e50;
+  font-weight: 700;
+  color: #111827;
   margin-bottom: 0.5rem;
 }
 
@@ -452,7 +527,7 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: #495057;
+  color: #6b7280;
 }
 
 .jo-registration-parcel-actions {
@@ -464,53 +539,70 @@
 
 .jo-registration-parcel-count {
   font-size: 0.9rem;
-  color: #6c757d;
+  color: #9ca3af;
 }
 
 .jo-registration-btn-confirm-parcels {
   padding: 0.75rem 1.5rem !important;
-  background-color: #4caf50 !important;
-  color: white !important;
+  background: linear-gradient(
+    135deg,
+    var(--jo-reg-accent-start),
+    var(--jo-reg-accent-end)
+  ) !important;
+  color: var(--jo-reg-accent-text) !important;
   border: none !important;
-  border-radius: 6px !important;
-  font-weight: bold !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
   cursor: pointer !important;
   transition: all 0.3s !important;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+}
+
+.jo-registration-btn-confirm-parcels:hover {
+  background: linear-gradient(
+    135deg,
+    var(--jo-reg-accent-hover-start),
+    var(--jo-reg-accent-hover-end)
+  ) !important;
+  box-shadow: 0 6px 18px rgba(102, 187, 90, 0.4) !important;
 }
 
 .jo-registration-btn-confirm-parcels:disabled {
-  background-color: #6c757d !important;
+  background: #e5e7eb !important;
+  color: #9ca3af !important;
   cursor: not-allowed !important;
+  box-shadow: none !important;
 }
 
 .jo-registration-parcel-warning {
   margin-top: 1rem;
   padding: 0.75rem;
-  background-color: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: 6px;
-  color: #856404;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  color: #92400e;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 13px;
 }
 
 .jo-registration-parcel-confirmed {
   margin-bottom: 2rem;
   padding: 1rem;
-  background-color: #d1ecf1;
-  border: 1px solid #bee5eb;
-  border-radius: 6px;
-  color: #0c5460;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  color: #1e40af;
 }
 
 /* Parcel Card */
 .jo-registration-parcel-card {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
   padding: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .jo-registration-parcel-card-header {
@@ -519,12 +611,12 @@
   align-items: center;
   margin-bottom: 15px;
   padding-bottom: 10px;
-  border-bottom: 2px solid #2c5f2d;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .jo-registration-parcel-no {
-  font-weight: bold;
-  font-size: 16px;
+  font-weight: 700;
+  font-size: 15px;
   color: #2c5f2d;
 }
 
@@ -534,18 +626,20 @@
 }
 
 .jo-registration-btn-small {
-  padding: 5px 15px !important;
-  background-color: #dc3545 !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 4px !important;
+  padding: 6px 14px !important;
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border: 1px solid #fca5a5 !important;
+  border-radius: 8px !important;
   cursor: pointer !important;
   font-size: 12px !important;
-  transition: background-color 0.3s !important;
+  font-weight: 600 !important;
+  transition: all 0.2s !important;
 }
 
 .jo-registration-btn-small:hover {
-  background-color: #c82333 !important;
+  background: #fecaca !important;
+  color: #b91c1c !important;
 }
 
 .jo-registration-parcel-actions-bar {
@@ -560,76 +654,78 @@
 }
 
 .jo-registration-compilation h4 {
-  font-size: 18px;
+  font-size: 17px;
   color: #2c5f2d;
   margin-bottom: 20px;
   text-align: center;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .jo-registration-summary-section {
-  background: #f8f9fa;
-  border-radius: 8px;
+  background: #f9fafb;
+  border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
-  border: 1px solid #dee2e6;
+  border: 1px solid #e5e7eb;
 }
 
 .jo-registration-summary-section h3 {
-  font-size: 18px;
+  font-size: 16px;
   color: #2c5f2d;
   margin: 0 0 15px 0;
   padding-bottom: 10px;
-  border-bottom: 2px solid #2c5f2d;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .jo-registration-summary-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .jo-registration-summary-item {
   display: flex;
-  padding: 10px;
-  background: white;
-  border-radius: 4px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-radius: 8px;
 }
 
 .jo-registration-summary-label {
-  font-weight: bold;
-  color: #555;
+  font-weight: 600;
+  color: #6b7280;
   min-width: 180px;
   margin-right: 15px;
+  font-size: 13px;
 }
 
 .jo-registration-summary-value {
-  color: #333;
+  color: #111827;
   flex: 1;
+  font-size: 13px;
 }
 
 .jo-registration-parcel-summary {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   padding: 15px;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .jo-registration-parcel-summary h6 {
-  font-size: 14px;
+  font-size: 13px;
   color: #2c5f2d;
   margin: 0 0 10px 0;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 /* Form Errors */
 .jo-registration-form-errors {
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  color: #721c24;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
   padding: 15px;
-  border-radius: 6px;
+  border-radius: 10px;
   margin-bottom: 20px;
 }
 
@@ -644,39 +740,53 @@
   gap: 15px;
   margin-top: 30px;
   padding-top: 20px;
-  border-top: 2px solid #dee2e6;
+  border-top: 1px solid #e5e7eb;
 }
 
 .jo-registration-btn-save {
-  padding: 12px 30px !important;
-  background-color: #6c757d !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 5px !important;
+  padding: 12px 28px !important;
+  background: var(--jo-reg-soft-btn-bg) !important;
+  color: #2d5a1d !important;
+  border: 1px solid var(--jo-reg-soft-btn-border) !important;
+  border-radius: 10px !important;
   cursor: pointer !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
-  transition: background-color 0.3s !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .jo-registration-btn-save:hover {
-  background-color: #5a6268 !important;
+  background: var(--jo-reg-soft-btn-bg-hover) !important;
+  border-color: #87aa5c !important;
+  color: #1a4013 !important;
 }
 
 .jo-registration-btn-submit {
-  padding: 12px 30px !important;
-  background-color: #2c5f2d !important;
-  color: white !important;
+  padding: 12px 32px !important;
+  background: linear-gradient(
+    135deg,
+    var(--jo-reg-accent-start),
+    var(--jo-reg-accent-end)
+  ) !important;
+  color: var(--jo-reg-accent-text) !important;
   border: none !important;
-  border-radius: 5px !important;
+  border-radius: 10px !important;
   cursor: pointer !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
-  transition: background-color 0.3s !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3) !important;
+  letter-spacing: 0.3px !important;
 }
 
 .jo-registration-btn-submit:hover {
-  background-color: #1f4320 !important;
+  background: linear-gradient(
+    135deg,
+    var(--jo-reg-accent-hover-start),
+    var(--jo-reg-accent-hover-end)
+  ) !important;
+  box-shadow: 0 6px 24px rgba(76, 175, 80, 0.4) !important;
+  transform: translateY(-1px) !important;
 }
 
 /* Responsive Design */
@@ -934,7 +1044,7 @@
   align-items: center;
   gap: 16px;
   padding: 22px 24px 18px;
-  background: linear-gradient(135deg, #2c5f2d 0%, #3a7d3c 100%);
+  background: linear-gradient(135deg, #3f7b3f 0%, #59a249 100%);
   color: #fff;
 }
 
@@ -1081,25 +1191,33 @@
   padding: 9px 22px;
   border-radius: 7px;
   border: none;
-  background: linear-gradient(135deg, #2c5f2d 0%, #3a7d3c 100%);
-  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--jo-reg-accent-start) 0%,
+    var(--jo-reg-accent-end) 100%
+  );
+  color: var(--jo-reg-accent-text);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   letter-spacing: 0.3px;
   transition: all 0.18s ease;
-  box-shadow: 0 2px 8px rgba(13, 43, 85, 0.35);
+  box-shadow: 0 2px 8px rgba(88, 158, 66, 0.35);
 }
 
 .jo-confirm-modal-btn-confirm:hover {
-  background: linear-gradient(135deg, #1e4080 0%, #112f60 100%);
-  box-shadow: 0 4px 14px rgba(13, 43, 85, 0.45);
+  background: linear-gradient(
+    135deg,
+    var(--jo-reg-accent-hover-start) 0%,
+    var(--jo-reg-accent-hover-end) 100%
+  );
+  box-shadow: 0 4px 14px rgba(88, 158, 66, 0.45);
   transform: translateY(-1px);
 }
 
 .jo-confirm-modal-btn-confirm:active {
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(13, 43, 85, 0.3);
+  box-shadow: 0 2px 6px rgba(88, 158, 66, 0.3);
 }
 
 /* Mobile responsiveness for confirmation modal */

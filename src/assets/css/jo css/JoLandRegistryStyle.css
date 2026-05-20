@@ -173,68 +173,61 @@
 
 /* Table Container */
 .jo-land-registry-table-container {
-  overflow-x: auto;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 /* Table Styles */
 .jo-land-registry-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
   background: white;
   font-size: 13px;
-  min-width: 860px;
+  min-width: 960px;
 }
 
 .jo-land-registry-table thead th {
-  background: #a0c878;
-  color: #000;
-  font-weight: 600;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-weight: 700;
   text-align: left;
-  padding: 10px 9px;
-  font-size: 12px;
+  padding: 10px 11px;
+  border-bottom: 1px solid #b6d08f;
+  white-space: nowrap;
   text-transform: uppercase;
-  letter-spacing: 0.35px;
-  white-space: normal;
-  line-height: 1.3;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.5px;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 2;
+  font-size: 11px;
 }
 
 .jo-land-registry-table tbody td {
-  padding: 10px 9px;
+  padding: 10px 11px;
   color: #374151;
-  line-height: 1.35;
-  white-space: normal;
-  word-break: break-word;
-  font-weight: 700;
-  border-right: 1px solid #f3f4f6;
+  border-bottom: 1px solid #edf2e8;
   vertical-align: middle;
 }
 
 .jo-land-registry-table tbody tr {
   cursor: pointer;
-  transition: background-color 0.2s ease;
-  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.15s ease;
 }
 
 .jo-land-registry-table tbody tr:hover {
-  background-color: #f9fafb;
+  background-color: #f3fbf0;
 }
 
 .jo-land-registry-table tbody tr.selected {
-  background-color: #dff3e4;
+  background-color: #e7f6ec;
 }
 
 .jo-land-registry-table tbody tr:nth-child(even) {
-  background-color: #fafafa;
+  background-color: transparent;
 }
 
 .jo-land-registry-table tbody tr:last-child {
@@ -278,6 +271,12 @@
 
 .jo-land-registry-table td.jo-land-registry-ownership-cell {
   white-space: normal;
+}
+.jo-land-registry-farmer-name {
+  color: #111827;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 .jo-land-registry-ownership-stack {
@@ -533,6 +532,12 @@
   background-color: #ede9fe;
   color: #5b21b6;
   border: 1px solid #c4b5fd;
+}
+
+.jo-land-registry-ownership-multiple {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
 }
 
 /* Loading and Empty States */
@@ -1640,12 +1645,12 @@
   }
 
   .jo-land-registry-table {
-    min-width: 780px;
+    min-width: 860px;
   }
 
   .jo-land-registry-table thead th,
   .jo-land-registry-table tbody td {
-    padding: 8px 10px;
+    padding: 7px 8px;
   }
 
   .jo-land-registry-main-content {

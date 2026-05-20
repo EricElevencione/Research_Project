@@ -3,11 +3,29 @@
    Unique class names to avoid conflicts
    ============================================ */
 
+:root {
+  --jo-rsbsa-bg-page: #f1f9e7;
+  --jo-rsbsa-bg-main-start: #fcfff8;
+  --jo-rsbsa-bg-main-mid: #f1fbdf;
+  --jo-rsbsa-bg-main-end: #dff4bf;
+  --jo-rsbsa-btn-primary-start: #5dbb4b;
+  --jo-rsbsa-btn-primary-end: #7acb58;
+  --jo-rsbsa-btn-primary-hover-start: #4aa13e;
+  --jo-rsbsa-btn-primary-hover-end: #68b34f;
+  --jo-rsbsa-btn-primary-text: #14351a;
+  --jo-rsbsa-btn-soft-bg: #f7ffe9;
+  --jo-rsbsa-btn-soft-border: #a9cf75;
+  --jo-rsbsa-btn-soft-hover: #edfbd2;
+  --jo-rsbsa-btn-soft-text: #2d5a1d;
+  --jo-rsbsa-btn-secondary: #6d7d66;
+  --jo-rsbsa-btn-secondary-hover: #5c6b56;
+}
+
 /* Main Layout */
 .jo-rsbsa-page-container {
   display: flex;
   height: 100vh;
-  background-color: #f0f0f0;
+  background-color: var(--jo-rsbsa-bg-page);
   overflow: hidden;
 }
 
@@ -31,14 +49,7 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    #e8f5e9 0%,
-    #f1f8e9 25%,
-    #ffffff 50%,
-    #e8f5e9 75%,
-    #c8e6c9 100%
-  );
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 25%, #ffffff 50%, #e8f5e9 75%, #c8e6c9 100%);
   width: 100%;
   flex-grow: 1;
   padding: 20px;
@@ -48,11 +59,9 @@
   overflow: auto;
   background: linear-gradient(
     135deg,
-    #e8f5e9 0%,
-    #f1f8e9 25%,
-    #ffffff 50%,
-    #e8f5e9 75%,
-    #c8e6c9 100%
+    var(--jo-rsbsa-bg-main-start) 0%,
+    var(--jo-rsbsa-bg-main-mid) 55%,
+    var(--jo-rsbsa-bg-main-end) 100%
   );
 }
 
@@ -286,8 +295,12 @@
 }
 
 .jo-rsbsa-register-button {
-  background: linear-gradient(135deg, #667eea 0%, #4ba260 100%);
-  color: white;
+  background: linear-gradient(
+    135deg,
+    var(--jo-rsbsa-btn-primary-start) 0%,
+    var(--jo-rsbsa-btn-primary-end) 100%
+  );
+  color: var(--jo-rsbsa-btn-primary-text);
   font-size: 14px;
   padding: 8px 16px;
   border: none;
@@ -316,8 +329,13 @@
 }
 
 .jo-rsbsa-register-button:hover {
+  background: linear-gradient(
+    135deg,
+    var(--jo-rsbsa-btn-primary-hover-start) 0%,
+    var(--jo-rsbsa-btn-primary-hover-end) 100%
+  );
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 6px 12px rgba(80, 151, 62, 0.35);
 }
 
 .jo-rsbsa-register-button:active {
@@ -570,9 +588,9 @@
 }
 
 .jo-rsbsa-action-btn {
-  border: 1px solid #9fc06e;
-  background: #f6fde9;
-  color: #35511a;
+  border: 1px solid var(--jo-rsbsa-btn-soft-border);
+  background: var(--jo-rsbsa-btn-soft-bg);
+  color: var(--jo-rsbsa-btn-soft-text);
   border-radius: 8px;
   padding: 7px 10px;
   font-size: 12px;
@@ -582,19 +600,19 @@
 }
 
 .jo-rsbsa-action-btn:hover {
-  background: #ebf8d6;
-  border-color: #84ac53;
+  background: var(--jo-rsbsa-btn-soft-hover);
+  border-color: #87aa5c;
 }
 
 .jo-rsbsa-action-btn-edit {
-  border-color: #d1d5db;
-  color: #374151;
-  background: #ffffff;
+  border-color: #b8c7ad;
+  color: #365136;
+  background: #fbfdf8;
 }
 
 .jo-rsbsa-action-btn-edit:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: #f0f6e9;
+  border-color: #97ad88;
 }
 
 .jo-rsbsa-ffrs-id-value {
@@ -624,8 +642,8 @@
 }
 
 .jo-rsbsa-retry-button {
-  background: #2563eb;
-  color: white;
+  background: var(--jo-rsbsa-btn-primary-start);
+  color: var(--jo-rsbsa-btn-primary-text);
   border: none;
   padding: 10px 20px;
   border-radius: 6px;
@@ -636,7 +654,7 @@
 }
 
 .jo-rsbsa-retry-button:hover {
-  background: #1d4ed8;
+  background: var(--jo-rsbsa-btn-primary-hover-start);
 }
 
 .jo-rsbsa-no-data {
@@ -803,8 +821,8 @@
   height: 34px;
   border: none;
   border-radius: 8px;
-  background: #f3f4f6;
-  color: #374151;
+  background: #e9f4dd;
+  color: #2f5a31;
   font-size: 22px;
   cursor: pointer;
   display: flex;
@@ -816,13 +834,13 @@
 }
 
 .jo-rsbsa-close-button:hover {
-  background: #e5e7eb;
+  background: #d9eac7;
   transform: translateY(-1px);
 }
 
 .jo-rsbsa-edit-modal-body {
   padding: 24px 28px 28px;
-  background: #f8fafc;
+  background: #f5f9f0;
 }
 
 .jo-rsbsa-edit-error-banner {
@@ -962,7 +980,7 @@
 }
 
 .jo-rsbsa-cancel-button {
-  background: #6c757d;
+  background: var(--jo-rsbsa-btn-secondary);
   color: #ffffff;
   border: none;
   padding: 10px 20px;
@@ -974,12 +992,12 @@
 }
 
 .jo-rsbsa-cancel-button:hover {
-  background: #5a6268;
+  background: var(--jo-rsbsa-btn-secondary-hover);
 }
 
 .jo-rsbsa-save-button {
-  background: #28a745;
-  color: #ffffff;
+  background: var(--jo-rsbsa-btn-primary-start);
+  color: var(--jo-rsbsa-btn-primary-text);
   border: none;
   padding: 10px 20px;
   border-radius: 6px;
@@ -990,7 +1008,7 @@
 }
 
 .jo-rsbsa-save-button:hover {
-  background: #218838;
+  background: var(--jo-rsbsa-btn-primary-hover-start);
 }
 
 /* Update Notification Toast */

@@ -311,17 +311,7 @@ const JoDashboard: React.FC = () => {
   const hasChartData = pieChartData.some((item) => item.value > 0);
 
   // Bar chart colors
-
-  if (loading) {
-    return (
-      <div className="jo-dashboard-page-container">
-        <div className="jo-dashboard-loading">
-          <div className="loading-spinner"></div>
-          <p>Loading Executive Dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  const showLoadingState = loading && !dashboardStats;
 
   return (
     <div className="jo-dashboard-page-container">
@@ -363,38 +353,44 @@ const JoDashboard: React.FC = () => {
               </p>
             </div>
           </div>
-
-          {/* Map Section */}
-          <div className="dashboard-card map-card">
-            <div className="card-header">
-              <h3>🗺️ Farmland Coverage Map</h3>
-              <span className="card-subtitle">
-                Municipal Agricultural Land Plots
-              </span>
+          {showLoadingState ? (
+            <div className="jo-dashboard-loading jo-dashboard-loading--content">
+              <div className="loading-spinner"></div>
+              <p>Loading Executive Dashboard...</p>
             </div>
-            <div className="card-content map-content">
-              <div className="dashboard-map-container">
-                <FarmlandMap dashboardMode hideLegend />
-              </div>
-            </div>
-          </div>
-
-          {/* KPI Cards Section */}
-          <div className="kpi-cards-section">
-            {/* Top Row - Farmer Stats */}
-            <div className="kpi-cards-row kpi-top-row">
-              {/* Total Farmers */}
-              <div className="kpi-card kpi-farmers">
-                <div className="kpi-icon-wrapper">
-                  <span className="kpi-icon">👨‍🌾</span>
-                </div>
-                <div className="kpi-details">
-                  <span className="kpi-value">
-                    {(dashboardStats?.farmers.total || 0).toLocaleString()}
+          ) : (
+            <>
+              {/* Map Section */}
+              <div className="dashboard-card map-card">
+                <div className="card-header">
+                  <h3>🗺️ Farmland Coverage Map</h3>
+                  <span className="card-subtitle">
+                    Municipal Agricultural Land Plots
                   </span>
-                  <span className="kpi-label">Total Farmers</span>
+                </div>
+                <div className="card-content map-content">
+                  <div className="dashboard-map-container">
+                    <FarmlandMap dashboardMode hideLegend />
+                  </div>
                 </div>
               </div>
+
+              {/* KPI Cards Section */}
+              <div className="kpi-cards-section">
+                {/* Top Row - Farmer Stats */}
+                <div className="kpi-cards-row kpi-top-row">
+                  {/* Total Farmers */}
+                  <div className="kpi-card kpi-farmers">
+                    <div className="kpi-icon-wrapper">
+                      <span className="kpi-icon">👨‍🌾</span>
+                    </div>
+                    <div className="kpi-details">
+                      <span className="kpi-value">
+                        {(dashboardStats?.farmers.total || 0).toLocaleString()}
+                      </span>
+                      <span className="kpi-label">Total Farmers</span>
+                    </div>
+                  </div>
 
               {/* Total Lessee/Tenant */}
               <div className="kpi-card kpi-lessee">
@@ -811,6 +807,8 @@ const JoDashboard: React.FC = () => {
               Agriculture Office
             </p>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

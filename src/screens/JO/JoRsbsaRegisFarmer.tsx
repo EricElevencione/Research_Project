@@ -1,10 +1,11 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createRsbsaSubmission } from "../../api";
 import { getAuditLogger } from "../../components/Audit/auditLogger";
 import "../../assets/css/jo css/JoRsbsaRegistrationStyle.css";
 import JOSidebar from "../../components/Layout/JOSidebar";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
+import BirthDatePicker from "../../components/common/BirthDatePicker";
 
 // ─────────────────────────────────────────────
 // KEY DISTINCTION FROM LAND OWNER FORM:
@@ -627,13 +628,12 @@ const JoRsbsaRegisFarmer: React.FC = () => {
                   <div className="jo-registration-form-row">
                     <div className="jo-registration-form-group">
                       <label>DATE OF BIRTH *</label>
-                      <input
-                        type="date"
+                      <BirthDatePicker
                         value={formData.dateOfBirth}
-                        onChange={(e) => {
-                          handleInputChange("dateOfBirth", e.target.value);
-                          if (e.target.value) {
-                            const birthDate = new Date(e.target.value);
+                        onChange={(val) => {
+                          handleInputChange("dateOfBirth", val);
+                          if (val) {
+                            const birthDate = new Date(val + "T00:00:00");
                             const today = new Date();
                             let age =
                               today.getFullYear() - birthDate.getFullYear();
@@ -653,11 +653,7 @@ const JoRsbsaRegisFarmer: React.FC = () => {
                             setFormData((prev) => ({ ...prev, age: "" }));
                           }
                         }}
-                        className={
-                          errors.dateOfBirth
-                            ? "jo-registration-input-error"
-                            : ""
-                        }
+                        hasError={!!errors.dateOfBirth}
                       />
                       {errors.dateOfBirth && (
                         <div className="jo-registration-error">
@@ -670,12 +666,16 @@ const JoRsbsaRegisFarmer: React.FC = () => {
                       <input
                         type="number"
                         value={formData.age}
-                        onChange={(e) =>
-                          handleInputChange("age", e.target.value)
-                        }
+                        readOnly
+                        disabled
                         min="0"
                         max="120"
                         placeholder="Auto-calculated from birthdate"
+                        style={{
+                          backgroundColor: "#f3f4f6",
+                          color: "#6b7280",
+                          cursor: "not-allowed",
+                        }}
                         className={
                           errors.age ? "jo-registration-input-error" : ""
                         }

@@ -1585,7 +1585,7 @@ const JoFarmerRegistry: React.FC = () => {
                         Total Area <span>{getSortIndicator("parcelArea")}</span>
                       </button>
                     </th>
-                    <th>Cultivation</th>
+                    <th>Farming</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
