@@ -618,12 +618,20 @@ const JoIncentives: React.FC = () => {
                     {/* Card Footer Buttons */}
                     <div className="jo-incent-card-actions">
                       <button
-                        className="jo-incent-btn-view"
+                        className="jo-incent-btn-action jo-incent-btn-view"
                         onClick={() =>
                           navigate(`/jo-manage-requests/${allocation.id}`)
                         }
                       >
                         👁️ View Requests
+                      </button>
+                      <button
+                        className="jo-incent-btn-action jo-incent-btn-add"
+                        onClick={() =>
+                          navigate(`/jo-add-farmer-request/${allocation.id}`)
+                        }
+                      >
+                        ➕ Add Farmer Request
                       </button>
                     </div>
                   </div>
