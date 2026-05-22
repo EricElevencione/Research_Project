@@ -31,9 +31,18 @@ interface RSBSARecord {
   status: string;
   landParcel: string;
   parcelArea: number | string | null;
-  totalFarmArea: number;
+  totalFarmArea: number | string;
   parcelCount: number;
   cultivationStatus?: string;
+  mainLivelihood?: string;
+  farmerRice?: boolean;
+  farmerCorn?: boolean;
+  farmerOtherCrops?: boolean;
+  farmerOtherCropsText?: string;
+  farmerLivestock?: boolean;
+  farmerLivestockText?: string;
+  farmerPoultry?: boolean;
+  farmerPoultryText?: string;
   ownershipType: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -171,7 +180,9 @@ const JoRsbsaPage: React.FC = () => {
     "Unknown",
   ];
 
-  const [_activeTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<"registry" | "analytics">(
+    "registry",
+  );
   const [_rsbsaRecords, _setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [registeredOwners, setRegisteredOwners] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,7 +216,6 @@ const JoRsbsaPage: React.FC = () => {
   }>({ key: "dateSubmitted", direction: "desc" });
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [originalParcels, setOriginalParcels] = useState<Parcel[]>([]);
-
 
   const showUpdateNotification = (
     message: string,
@@ -438,10 +448,10 @@ const JoRsbsaPage: React.FC = () => {
           data.farmLocation || data["FARM LOCATION"] || "";
         const submissionParcelArea = parseFloat(
           data.totalFarmArea ||
-          data["TOTAL FARM AREA"] ||
-          data.parcelArea ||
-          data["PARCEL AREA"] ||
-          "0",
+            data["TOTAL FARM AREA"] ||
+            data.parcelArea ||
+            data["PARCEL AREA"] ||
+            "0",
         );
         const submissionOwnership = data.ownershipType || {};
 
@@ -563,6 +573,161 @@ const JoRsbsaPage: React.FC = () => {
       total,
       active,
       inactive,
+    };
+  }, [registeredOwners]);
+
+  const registrationStats = React.useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfTomorrow = new Date(startOfToday);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+    const startOfWeek = new Date(startOfToday);
+    const day = startOfWeek.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    startOfWeek.setDate(startOfWeek.getDate() + diffToMonday);
+
+    const startOfNextWeek = new Date(startOfWeek);
+    startOfNextWeek.setDate(startOfNextWeek.getDate() + 7);
+
+    let today = 0;
+    let week = 0;
+
+    registeredOwners.forEach((record) => {
+      const parsed = Date.parse(record.dateSubmitted || "");
+      if (Number.isNaN(parsed)) return;
+      if (
+        parsed >= startOfToday.getTime() &&
+        parsed < startOfTomorrow.getTime()
+      )
+        today += 1;
+      if (parsed >= startOfWeek.getTime() && parsed < startOfNextWeek.getTime())
+        week += 1;
+    });
+
+    return { today, week };
+  }, [registeredOwners]);
+
+  const latestRegistrants = React.useMemo(() => {
+    const sorted = [...registeredOwners].sort((a, b) => {
+      const dateA = Date.parse(a.dateSubmitted || "");
+      const dateB = Date.parse(b.dateSubmitted || "");
+      const safeA = Number.isNaN(dateA) ? -Infinity : dateA;
+      const safeB = Number.isNaN(dateB) ? -Infinity : dateB;
+      if (safeA !== safeB) return safeB - safeA;
+      return String(b.id || "").localeCompare(String(a.id || ""));
+    });
+
+    return sorted.slice(0, 5);
+  }, [registeredOwners]);
+
+  const topBarangays = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    registeredOwners.forEach((record) => {
+      const barangay = getBarangayFromAddress(record.farmerAddress);
+      if (!barangay || barangay === "N/A") return;
+      counts.set(barangay, (counts.get(barangay) ?? 0) + 1);
+    });
+
+    const total = registeredOwners.length;
+    const entries = Array.from(counts.entries()).map(([barangay, count]) => ({
+      barangay,
+      count,
+      share: total > 0 ? (count / total) * 100 : 0,
+    }));
+
+    entries.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.barangay.localeCompare(b.barangay);
+    });
+
+    return entries.slice(0, 5);
+  }, [registeredOwners]);
+
+  const landParcelSummary = React.useMemo(() => {
+    const cropCounts = new Map<string, number>();
+    const tenureCounts = new Map<string, number>();
+    let totalArea = 0;
+    let totalParcels = 0;
+
+    registeredOwners.forEach((record) => {
+      const parsedArea =
+        typeof record.totalFarmArea === "number"
+          ? record.totalFarmArea
+          : parseFloat(
+              String(record.totalFarmArea ?? "").replace(/[^0-9.-]/g, ""),
+            );
+      if (Number.isFinite(parsedArea)) totalArea += parsedArea;
+
+      const parsedParcels =
+        typeof record.parcelCount === "number"
+          ? record.parcelCount
+          : parseInt(String(record.parcelCount ?? "0"), 10);
+      if (Number.isFinite(parsedParcels)) totalParcels += parsedParcels;
+
+      if (record.ownershipType?.registeredOwner) {
+        tenureCounts.set(
+          "Registered Owner",
+          (tenureCounts.get("Registered Owner") ?? 0) + 1,
+        );
+      }
+      if (record.ownershipType?.tenant) {
+        tenureCounts.set("Tenant", (tenureCounts.get("Tenant") ?? 0) + 1);
+      }
+      if (record.ownershipType?.lessee) {
+        tenureCounts.set("Lessee", (tenureCounts.get("Lessee") ?? 0) + 1);
+      }
+
+      const crops = new Set<string>();
+      if (record.farmerRice) crops.add("Rice");
+      if (record.farmerCorn) crops.add("Corn");
+      if (record.farmerOtherCrops) crops.add("Other Crops");
+      if (record.farmerLivestock) crops.add("Livestock");
+      if (record.farmerPoultry) crops.add("Poultry");
+
+      if (crops.size === 0 && record.mainLivelihood) {
+        const normalized = String(record.mainLivelihood).trim();
+        if (normalized && normalized.toLowerCase() !== "n/a") {
+          crops.add(normalized);
+        }
+      }
+
+      crops.forEach((crop) => {
+        cropCounts.set(crop, (cropCounts.get(crop) ?? 0) + 1);
+      });
+    });
+
+    const cropBreakdown = Array.from(cropCounts.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.label.localeCompare(b.label);
+      })
+      .slice(0, 6);
+
+    const tenureBreakdown = Array.from(tenureCounts.entries())
+      .map(([label, count]) => ({
+        label,
+        count,
+        share:
+          registeredOwners.length > 0
+            ? (count / registeredOwners.length) * 100
+            : 0,
+      }))
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.label.localeCompare(b.label);
+      });
+
+    return {
+      totalArea,
+      totalParcels,
+      cropBreakdown,
+      tenureBreakdown,
     };
   }, [registeredOwners]);
 
@@ -870,11 +1035,22 @@ const JoRsbsaPage: React.FC = () => {
 
   const formatDate = (iso: string) => {
     if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleDateString();
-    } catch {
-      return "—";
-    }
+    const parsed = new Date(iso);
+    if (Number.isNaN(parsed.getTime())) return "—";
+    return parsed.toLocaleDateString();
+  };
+
+  const formatDateTime = (iso?: string) => {
+    if (!iso) return "—";
+    const parsed = new Date(iso);
+    if (Number.isNaN(parsed.getTime())) return "—";
+    return parsed.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const formatParcelArea = (value: number | string | null | undefined) => {
@@ -882,6 +1058,11 @@ const JoRsbsaPage: React.FC = () => {
       typeof value === "number" ? value : parseFloat(String(value ?? ""));
     if (!Number.isFinite(parsed) || parsed <= 0) return "N/A";
     return `${parsed.toFixed(2)} ha`;
+  };
+
+  const formatAreaSummary = (value: number) => {
+    if (!Number.isFinite(value) || value < 0) return "0.00 ha";
+    return `${value.toFixed(2)} ha`;
   };
 
   const formatRecordStatus = (status?: string | null) => {
@@ -911,6 +1092,23 @@ const JoRsbsaPage: React.FC = () => {
     if (inactiveStatuses.has(normalized)) return "Inactive Farmer";
     return status || "Not Submitted";
   };
+
+  const getStatusPillClass = (status?: string | null) => {
+    const normalized = String(status || "")
+      .toLowerCase()
+      .trim();
+    if (!normalized) return "jo-rsbsa-status-inactive";
+    if (normalized === "no parcels") return "jo-rsbsa-status-no-parcels";
+    if (isActiveFarmerStatus(normalized)) return "jo-rsbsa-status-active";
+    return "jo-rsbsa-status-inactive";
+  };
+
+  function getBarangayFromAddress(address?: string | null) {
+    const barangay = String(address || "")
+      .split(",")[0]
+      ?.trim();
+    return barangay || "N/A";
+  }
 
   const getOwnershipFlags = (record: RSBSARecord) => {
     const owner = record.ownershipType?.registeredOwner === true;
@@ -1328,6 +1526,58 @@ const JoRsbsaPage: React.FC = () => {
                   <span className="jo-rsbsa-card-label">TOTAL FARMERS</span>
                 </div>
               </div>
+              <div className="jo-rsbsa-status-card jo-rsbsa-card-today">
+                <div className="jo-rsbsa-card-icon">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </div>
+                <div className="jo-rsbsa-card-info">
+                  <span className="jo-rsbsa-card-count">
+                    {registrationStats.today}
+                  </span>
+                  <span className="jo-rsbsa-card-label">TODAY</span>
+                </div>
+              </div>
+              <div className="jo-rsbsa-status-card jo-rsbsa-card-week">
+                <div className="jo-rsbsa-card-icon">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                    <path d="M7 14h10" />
+                    <path d="M7 18h6" />
+                  </svg>
+                </div>
+                <div className="jo-rsbsa-card-info">
+                  <span className="jo-rsbsa-card-count">
+                    {registrationStats.week}
+                  </span>
+                  <span className="jo-rsbsa-card-label">THIS WEEK</span>
+                </div>
+              </div>
               <div className="jo-rsbsa-status-card jo-rsbsa-card-active">
                 <div className="jo-rsbsa-card-icon">
                   <svg
@@ -1377,228 +1627,555 @@ const JoRsbsaPage: React.FC = () => {
             </div>
           )}
 
+          {/* ── Tab Navigation ── */}
+          <div className="jo-rsbsa-tab-nav">
+            <button
+              className={`jo-rsbsa-tab-btn${activeTab === "registry" ? " jo-rsbsa-tab-btn-active" : ""}`}
+              onClick={() => setActiveTab("registry")}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+              Registry
+            </button>
+            <button
+              className={`jo-rsbsa-tab-btn${activeTab === "analytics" ? " jo-rsbsa-tab-btn-active" : ""}`}
+              onClick={() => setActiveTab("analytics")}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+              Analytics
+            </button>
+          </div>
+
           <div className="jo-rsbsa-content-card">
-            <div className="jo-rsbsa-actions-bar">
-              <div className="jo-rsbsa-actions-left">
-                <div className="jo-rsbsa-search-container">
-                  <input
-                    type="text"
-                    placeholder="Search by FFRS ID, name, address, gender..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="jo-rsbsa-search-input"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="jo-rsbsa-clear-search-button"
-                      title="Clear search"
-                    >
-                      ×
-                    </button>
+            {/* ══ ANALYTICS TAB ══ */}
+            {activeTab === "analytics" && (
+              <>
+                <div className="jo-rsbsa-latest-section">
+                  <div className="jo-rsbsa-latest-header">
+                    <div>
+                      <h3 className="jo-rsbsa-latest-title">
+                        Latest Registrants
+                      </h3>
+                      <p className="jo-rsbsa-latest-subtitle">
+                        Most recent RSBSA submissions
+                      </p>
+                    </div>
+                    <span className="jo-rsbsa-latest-meta">
+                      {!loading && !error
+                        ? `Showing ${latestRegistrants.length} of ${registeredOwners.length}`
+                        : "Latest submissions"}
+                    </span>
+                  </div>
+                  {loading ? (
+                    <div className="jo-rsbsa-no-data">
+                      Loading latest registrants...
+                    </div>
+                  ) : error ? (
+                    <div className="jo-rsbsa-no-data">
+                      Unable to load latest registrants.
+                    </div>
+                  ) : (
+                    <div className="jo-rsbsa-table-container jo-rsbsa-latest-table-container">
+                      <table className="jo-rsbsa-owners-table jo-rsbsa-latest-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Barangay</th>
+                            <th>Date/Time</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {latestRegistrants.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="jo-rsbsa-no-data">
+                                No recent registrants found
+                              </td>
+                            </tr>
+                          ) : (
+                            latestRegistrants.map((record) => (
+                              <tr
+                                key={record.id}
+                                className="jo-rsbsa-clickable-row jo-rsbsa-table-row"
+                                onClick={() =>
+                                  fetchFarmerDetails(record.id, record)
+                                }
+                              >
+                                <td>
+                                  <div className="jo-rsbsa-farmer-cell">
+                                    <div className="jo-rsbsa-farmer-avatar">
+                                      {getFarmerInitials(record.farmerName)}
+                                    </div>
+                                    <div className="jo-rsbsa-farmer-meta">
+                                      <span className="jo-rsbsa-farmer-name">
+                                        {record.farmerName || "N/A"}
+                                      </span>
+                                      <span className="jo-rsbsa-farmer-ref">
+                                        Ref: {record.referenceNumber || "N/A"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  {getBarangayFromAddress(record.farmerAddress)}
+                                </td>
+                                <td>
+                                  <span className="jo-rsbsa-date">
+                                    {formatDateTime(record.dateSubmitted)}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span
+                                    className={`jo-rsbsa-status-pill ${getStatusPillClass(record.status)}`}
+                                  >
+                                    {formatRecordStatus(record.status)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
-                <div className="jo-rsbsa-filter-container">
-                  <select
-                    value={selectedBarangay}
-                    onChange={(e) => setSelectedBarangay(e.target.value)}
-                    className="jo-rsbsa-filter-select"
-                  >
-                    <option value="all">All Barangays</option>
-                    {uniqueBarangays.map((barangay) => (
-                      <option key={barangay} value={barangay}>
-                        {barangay}
-                      </option>
-                    ))}
-                  </select>
+
+                <div className="jo-rsbsa-leaderboard-section">
+                  <div className="jo-rsbsa-latest-header">
+                    <div>
+                      <h3 className="jo-rsbsa-latest-title">Top Barangays</h3>
+                      <p className="jo-rsbsa-latest-subtitle">
+                        Highest number of registrations
+                      </p>
+                    </div>
+                    <span className="jo-rsbsa-latest-meta">
+                      {!loading && !error
+                        ? `Top ${topBarangays.length} barangays`
+                        : "Barangay rankings"}
+                    </span>
+                  </div>
+                  {loading ? (
+                    <div className="jo-rsbsa-no-data">
+                      Loading barangay stats...
+                    </div>
+                  ) : error ? (
+                    <div className="jo-rsbsa-no-data">
+                      Unable to load barangay stats.
+                    </div>
+                  ) : (
+                    <div className="jo-rsbsa-table-container jo-rsbsa-leaderboard-table-container">
+                      <table className="jo-rsbsa-owners-table jo-rsbsa-leaderboard-table">
+                        <thead>
+                          <tr>
+                            <th>Rank</th>
+                            <th>Barangay</th>
+                            <th>Registrations</th>
+                            <th>Share</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topBarangays.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="jo-rsbsa-no-data">
+                                No barangay data available
+                              </td>
+                            </tr>
+                          ) : (
+                            topBarangays.map((item, index) => (
+                              <tr
+                                key={item.barangay}
+                                className="jo-rsbsa-table-row"
+                              >
+                                <td>
+                                  <span className="jo-rsbsa-leaderboard-rank">
+                                    #{index + 1}
+                                  </span>
+                                </td>
+                                <td>{item.barangay}</td>
+                                <td>
+                                  <span className="jo-rsbsa-leaderboard-count">
+                                    {item.count}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="jo-rsbsa-leaderboard-share">
+                                    {item.share.toFixed(1)}%
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="jo-rsbsa-actions-right">
-                {/* <button
+
+                <div className="jo-rsbsa-summary-section">
+                  <div className="jo-rsbsa-latest-header">
+                    <div>
+                      <h3 className="jo-rsbsa-latest-title">
+                        Land Parcel Summary
+                      </h3>
+                      <p className="jo-rsbsa-latest-subtitle">
+                        Total area, crop types, and tenure overview
+                      </p>
+                    </div>
+                    <span className="jo-rsbsa-latest-meta">
+                      {!loading && !error
+                        ? `Based on ${registeredOwners.length} registered owners`
+                        : "Land parcel overview"}
+                    </span>
+                  </div>
+                  {loading ? (
+                    <div className="jo-rsbsa-no-data">
+                      Loading land parcel summary...
+                    </div>
+                  ) : error ? (
+                    <div className="jo-rsbsa-no-data">
+                      Unable to load land parcel summary.
+                    </div>
+                  ) : (
+                    <div className="jo-rsbsa-summary-body">
+                      <div className="jo-rsbsa-summary-grid">
+                        <div className="jo-rsbsa-summary-card">
+                          <span className="jo-rsbsa-summary-label">
+                            Total Area
+                          </span>
+                          <span className="jo-rsbsa-summary-value">
+                            {formatAreaSummary(landParcelSummary.totalArea)}
+                          </span>
+                        </div>
+                        <div className="jo-rsbsa-summary-card">
+                          <span className="jo-rsbsa-summary-label">
+                            Total Parcels
+                          </span>
+                          <span className="jo-rsbsa-summary-value">
+                            {landParcelSummary.totalParcels}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="jo-rsbsa-summary-details">
+                        <div className="jo-rsbsa-summary-block">
+                          <h4>Crop Types</h4>
+                          {landParcelSummary.cropBreakdown.length === 0 ? (
+                            <span className="jo-rsbsa-summary-empty">
+                              No crop data available
+                            </span>
+                          ) : (
+                            <div className="jo-rsbsa-summary-chips">
+                              {landParcelSummary.cropBreakdown.map((item) => (
+                                <span
+                                  key={item.label}
+                                  className="jo-rsbsa-summary-chip"
+                                >
+                                  <span className="jo-rsbsa-summary-chip-label">
+                                    {item.label}
+                                  </span>
+                                  <span className="jo-rsbsa-summary-chip-count">
+                                    {item.count}
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="jo-rsbsa-summary-block">
+                          <h4>Tenure</h4>
+                          {landParcelSummary.tenureBreakdown.length === 0 ? (
+                            <span className="jo-rsbsa-summary-empty">
+                              No tenure data available
+                            </span>
+                          ) : (
+                            <div className="jo-rsbsa-summary-chips">
+                              {landParcelSummary.tenureBreakdown.map((item) => (
+                                <span
+                                  key={item.label}
+                                  className="jo-rsbsa-summary-chip"
+                                >
+                                  <span className="jo-rsbsa-summary-chip-label">
+                                    {item.label}
+                                  </span>
+                                  <span className="jo-rsbsa-summary-chip-count">
+                                    {item.count}
+                                    <span className="jo-rsbsa-summary-chip-share">
+                                      {item.share.toFixed(1)}%
+                                    </span>
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ══ REGISTRY TAB ══ */}
+            {activeTab === "registry" && (
+              <>
+                <div className="jo-rsbsa-actions-bar">
+                  <div className="jo-rsbsa-actions-left">
+                    <div className="jo-rsbsa-search-container">
+                      <input
+                        type="text"
+                        placeholder="Search by FFRS ID, name, address, gender..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="jo-rsbsa-search-input"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          className="jo-rsbsa-clear-search-button"
+                          title="Clear search"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                    <div className="jo-rsbsa-filter-container">
+                      <select
+                        value={selectedBarangay}
+                        onChange={(e) => setSelectedBarangay(e.target.value)}
+                        className="jo-rsbsa-filter-select"
+                      >
+                        <option value="all">All Barangays</option>
+                        {uniqueBarangays.map((barangay) => (
+                          <option key={barangay} value={barangay}>
+                            {barangay}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="jo-rsbsa-actions-right">
+                    {/* <button
                   className="jo-rsbsa-register-button"
                   onClick={() => navigate("/jo-rsbsa-farmer")}
                 >
                   Register Farmer
                 </button> */}
-                <button
-                  className="jo-rsbsa-register-button"
-                  onClick={() => navigate("/jo-rsbsa-landowner")}
-                >
-                  Register Land Owner
-                </button>
-                <button
-                  className="jo-rsbsa-register-button"
-                  onClick={() => navigate("/jo-rsbsa")}
-                >
-                  Register Farmer
-                </button>
-              </div>
-            </div>
-            {loading ? (
-              <div className="jo-rsbsa-loading-container">
-                <p>Loading registered land owners...</p>
-              </div>
-            ) : error ? (
-              <div className="jo-rsbsa-error-container">
-                <p>Error: {error}</p>
-                <button
-                  onClick={fetchRSBSARecords}
-                  className="jo-rsbsa-retry-button"
-                >
-                  Retry
-                </button>
-              </div>
-            ) : (
-              <div className="jo-rsbsa-table-container">
-                {searchQuery && (
-                  <div className="jo-rsbsa-search-results-info">
-                    <p>
-                      Found <strong>{filteredOwners.length}</strong> result
-                      {filteredOwners.length !== 1 ? "s" : ""}
-                      {filteredOwners.length < registeredOwners.length &&
-                        ` out of ${registeredOwners.length} total registered owners`}
-                    </p>
+                    <button
+                      className="jo-rsbsa-register-button"
+                      onClick={() => navigate("/jo-rsbsa-landowner")}
+                    >
+                      Register Land Owner
+                    </button>
+                    <button
+                      className="jo-rsbsa-register-button"
+                      onClick={() => navigate("/jo-rsbsa")}
+                    >
+                      Register Farmer
+                    </button>
                   </div>
-                )}
-                <table className="jo-rsbsa-owners-table">
-                  <thead>
-                    <tr>
-                      <th>
-                        <button
-                          className={`jo-rsbsa-sort-btn ${sortConfig.key === "farmer" ? "is-active" : ""
-                            }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSortChange("farmer");
-                          }}
-                        >
-                          Farmer <span>{getSortIndicator("farmer")}</span>
-                        </button>
-                      </th>
-                      <th>
-                        <button
-                          className={`jo-rsbsa-sort-btn ${sortConfig.key === "parcelArea" ? "is-active" : ""
-                            }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSortChange("parcelArea");
-                          }}
-                        >
-                          Parcels <span>{getSortIndicator("parcelArea")}</span>
-                        </button>
-                      </th>
-
-                      <th>Ownership Status</th>
-                      <th>Status</th>
-                      <th>
-                        <button
-                          className={`jo-rsbsa-sort-btn ${sortConfig.key === "dateSubmitted"
-                              ? "is-active"
-                              : ""
-                            }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSortChange("dateSubmitted");
-                          }}
-                        >
-                          Date Submitted{" "}
-                          <span>{getSortIndicator("dateSubmitted")}</span>
-                        </button>
-                      </th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredOwners.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="jo-rsbsa-no-data">
-                          {searchQuery
-                            ? "No results found for your search"
-                            : "No registered owners found"}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredOwners.map((record) => {
-                        return (
-                          <tr
-                            key={record.id}
-                            className="jo-rsbsa-clickable-row jo-rsbsa-table-row"
-                            onClick={() =>
-                              fetchFarmerDetails(record.id, record)
-                            }
-                          >
-                            <td>
-                              <div className="jo-rsbsa-farmer-cell">
-                                <div className="jo-rsbsa-farmer-avatar">
-                                  {getFarmerInitials(record.farmerName)}
-                                </div>
-                                <div className="jo-rsbsa-farmer-meta">
-                                  <span className="jo-rsbsa-farmer-name">
-                                    {record.farmerName || "N/A"}
-                                  </span>
-                                  <span className="jo-rsbsa-farmer-ref">
-                                    Ref: {record.referenceNumber || "N/A"}
-                                  </span>
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="jo-rsbsa-parcel-cell">
-                                <span className="jo-rsbsa-parcel-count">
-                                  {record.parcelCount || 0} parcel
-                                  {record.parcelCount === 1 ? "" : "s"}
-                                </span>
-                                <span className="jo-rsbsa-parcel-area">
-                                  {formatParcelArea(record.totalFarmArea)}
-                                </span>
-                              </div>
-                            </td>
-
-                            <td>
-                              <span
-                                className={`jo-rsbsa-ownership-pill ${getOwnershipClass(record)}`}
-                              >
-                                {getOwnershipLabel(record)}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="jo-rsbsa-record-status">
-                                {formatRecordStatus(record.status)}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="jo-rsbsa-date">
-                                {formatDate(record.dateSubmitted)}
-                              </span>
-                            </td>
-                            <td
-                              className="jo-rsbsa-actions-cell"
-                              onClick={(e) => e.stopPropagation()}
+                </div>
+                {loading ? (
+                  <div className="jo-rsbsa-loading-container">
+                    <p>Loading registered land owners...</p>
+                  </div>
+                ) : error ? (
+                  <div className="jo-rsbsa-error-container">
+                    <p>Error: {error}</p>
+                    <button
+                      onClick={fetchRSBSARecords}
+                      className="jo-rsbsa-retry-button"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <div className="jo-rsbsa-table-container">
+                    {searchQuery && (
+                      <div className="jo-rsbsa-search-results-info">
+                        <p>
+                          Found <strong>{filteredOwners.length}</strong> result
+                          {filteredOwners.length !== 1 ? "s" : ""}
+                          {filteredOwners.length < registeredOwners.length &&
+                            ` out of ${registeredOwners.length} total registered owners`}
+                        </p>
+                      </div>
+                    )}
+                    <table className="jo-rsbsa-owners-table">
+                      <thead>
+                        <tr>
+                          <th>
+                            <button
+                              className={`jo-rsbsa-sort-btn ${
+                                sortConfig.key === "farmer" ? "is-active" : ""
+                              }`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSortChange("farmer");
+                              }}
                             >
-                              <div className="jo-rsbsa-actions-wrap">
-                                <button
-                                  className="jo-rsbsa-action-btn"
-                                  onClick={() =>
-                                    fetchFarmerDetails(record.id, record)
-                                  }
-                                >
-                                  View
-                                </button>
-                                <button
-                                  className="jo-rsbsa-action-btn jo-rsbsa-action-btn-edit"
-                                  onClick={() => handleEditFromRsbsa(record.id)}
-                                >
-                                  Edit
-                                </button>
-                              </div>
+                              Farmer <span>{getSortIndicator("farmer")}</span>
+                            </button>
+                          </th>
+                          <th>
+                            <button
+                              className={`jo-rsbsa-sort-btn ${
+                                sortConfig.key === "parcelArea"
+                                  ? "is-active"
+                                  : ""
+                              }`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSortChange("parcelArea");
+                              }}
+                            >
+                              Parcels{" "}
+                              <span>{getSortIndicator("parcelArea")}</span>
+                            </button>
+                          </th>
+
+                          <th>Ownership Status</th>
+                          <th>Status</th>
+                          <th>
+                            <button
+                              className={`jo-rsbsa-sort-btn ${
+                                sortConfig.key === "dateSubmitted"
+                                  ? "is-active"
+                                  : ""
+                              }`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSortChange("dateSubmitted");
+                              }}
+                            >
+                              Date Submitted{" "}
+                              <span>{getSortIndicator("dateSubmitted")}</span>
+                            </button>
+                          </th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredOwners.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="jo-rsbsa-no-data">
+                              {searchQuery
+                                ? "No results found for your search"
+                                : "No registered owners found"}
                             </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                        ) : (
+                          filteredOwners.map((record) => {
+                            return (
+                              <tr
+                                key={record.id}
+                                className="jo-rsbsa-clickable-row jo-rsbsa-table-row"
+                                onClick={() =>
+                                  fetchFarmerDetails(record.id, record)
+                                }
+                              >
+                                <td>
+                                  <div className="jo-rsbsa-farmer-cell">
+                                    <div className="jo-rsbsa-farmer-avatar">
+                                      {getFarmerInitials(record.farmerName)}
+                                    </div>
+                                    <div className="jo-rsbsa-farmer-meta">
+                                      <span className="jo-rsbsa-farmer-name">
+                                        {record.farmerName || "N/A"}
+                                      </span>
+                                      <span className="jo-rsbsa-farmer-ref">
+                                        Ref: {record.referenceNumber || "N/A"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="jo-rsbsa-parcel-cell">
+                                    <span className="jo-rsbsa-parcel-count">
+                                      {record.parcelCount || 0} parcel
+                                      {record.parcelCount === 1 ? "" : "s"}
+                                    </span>
+                                    <span className="jo-rsbsa-parcel-area">
+                                      {formatParcelArea(record.totalFarmArea)}
+                                    </span>
+                                  </div>
+                                </td>
+
+                                <td>
+                                  <span
+                                    className={`jo-rsbsa-ownership-pill ${getOwnershipClass(record)}`}
+                                  >
+                                    {getOwnershipLabel(record)}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="jo-rsbsa-record-status">
+                                    {formatRecordStatus(record.status)}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="jo-rsbsa-date">
+                                    {formatDate(record.dateSubmitted)}
+                                  </span>
+                                </td>
+                                <td
+                                  className="jo-rsbsa-actions-cell"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="jo-rsbsa-actions-wrap">
+                                    <button
+                                      className="jo-rsbsa-action-btn"
+                                      onClick={() =>
+                                        fetchFarmerDetails(record.id, record)
+                                      }
+                                    >
+                                      View
+                                    </button>
+                                    <button
+                                      className="jo-rsbsa-action-btn jo-rsbsa-action-btn-edit"
+                                      onClick={() =>
+                                        handleEditFromRsbsa(record.id)
+                                      }
+                                    >
+                                      Edit
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -2040,11 +2617,11 @@ const JoRsbsaPage: React.FC = () => {
                                     </span>
                                     <span className="farmer-modal-value">
                                       {typeof parcel.totalFarmAreaHa ===
-                                        "number"
+                                      "number"
                                         ? parcel.totalFarmAreaHa.toFixed(2)
                                         : parseFloat(
-                                          String(parcel.totalFarmAreaHa || 0),
-                                        ).toFixed(2)}{" "}
+                                            String(parcel.totalFarmAreaHa || 0),
+                                          ).toFixed(2)}{" "}
                                       hectares
                                     </span>
                                   </div>

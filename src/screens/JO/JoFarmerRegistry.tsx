@@ -551,7 +551,9 @@ const JoFarmerRegistry: React.FC = () => {
             item.cultivation_counts ||
             null;
           const cultivationTotal = parseNumberValue(cultivationSummary?.total);
-          const cultivationActive = parseNumberValue(cultivationSummary?.active);
+          const cultivationActive = parseNumberValue(
+            cultivationSummary?.active,
+          );
 
           const parcelCountValue = parseNumberValue(
             item.parcelCount ??
@@ -605,9 +607,7 @@ const JoFarmerRegistry: React.FC = () => {
             status: String(item.status ?? "Not Submitted"),
             landParcel,
             farmingStatus: String(
-              item.farmingStatus ||
-                item.cultivationStatus ||
-                "Not specified",
+              item.farmingStatus || item.cultivationStatus || "Not specified",
             ),
             archivedAt:
               item.archivedAt ??
@@ -901,8 +901,11 @@ const JoFarmerRegistry: React.FC = () => {
   const formatCultivation = (record: RSBSARecord): string => {
     const total = record.parcelCount;
     const hasTotal = Number.isFinite(total) && total > 0;
-    if (!hasTotal && record.farmingParcelCount !== null &&
-      record.farmingParcelCount !== undefined) {
+    if (
+      !hasTotal &&
+      record.farmingParcelCount !== null &&
+      record.farmingParcelCount !== undefined
+    ) {
       return `${record.farmingParcelCount}/? farming`;
     }
     if (!hasTotal) return "—";
@@ -955,6 +958,10 @@ const JoFarmerRegistry: React.FC = () => {
 
   const getOwnershipLabel = (record: RSBSARecord) => {
     const flags = getOwnershipFlags(record);
+    if (flags.owner && flags.tenant && flags.lessee)
+      return "Owner + Tenant + Lessee";
+    if (flags.owner && flags.tenant) return "Owner + Tenant";
+    if (flags.owner && flags.lessee) return "Owner + Lessee";
     if (flags.tenant && flags.lessee) return "Tenant + Lessee";
     if (flags.tenant) return "Tenant";
     if (flags.lessee) return "Lessee";
@@ -966,6 +973,8 @@ const JoFarmerRegistry: React.FC = () => {
 
   const getOwnershipClass = (record: RSBSARecord) => {
     const flags = getOwnershipFlags(record);
+    if (flags.owner && (flags.tenant || flags.lessee))
+      return "jo-farmer-ownership-mixed";
     if (flags.category === "registeredOwner" || flags.owner)
       return "jo-farmer-ownership-owner";
     if (flags.tenant && flags.lessee) return "jo-farmer-ownership-mixed";
