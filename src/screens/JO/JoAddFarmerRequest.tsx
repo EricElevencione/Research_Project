@@ -429,7 +429,15 @@ const JoAddFarmerRequest: React.FC = () => {
               "approved",
               "active",
             ];
-            return status !== "no parcels" && allowedStatuses.includes(status);
+            const ownershipType = item.ownershipType;
+            const isLandowner =
+              ownershipType?.registeredOwner === true ||
+              ownershipType?.category === "registeredOwner";
+            return (
+              status !== "no parcels" &&
+              allowedStatuses.includes(status) &&
+              isLandowner
+            );
           })
           .map((item: any) => {
             const nameParts = (item.farmerName || "").split(", ");
@@ -501,7 +509,7 @@ const JoAddFarmerRequest: React.FC = () => {
   ): AllocationSummaryItem[] => {
     return items.map((item) => {
       const allocated = toSafeNumber(allocation?.[item.allocationField]);
-      
+
       // Calculate total requested by all OTHER farmers (excluding current form data)
       // We filter out any existing request from the SAME farmer if they already have one,
       // but usually the UI prevents duplicate requests.
@@ -511,9 +519,12 @@ const JoAddFarmerRequest: React.FC = () => {
         return sum + toSafeNumber(req[item.requestField]);
       }, 0);
 
-      const currentRequest = Math.max(0, toSafeNumber(formData[item.requestField]));
+      const currentRequest = Math.max(
+        0,
+        toSafeNumber(formData[item.requestField]),
+      );
       const totalRequested = alreadyRequestedByOthers + currentRequest;
-      
+
       return {
         label: item.label,
         allocated,
@@ -745,7 +756,7 @@ const JoAddFarmerRequest: React.FC = () => {
 
   const runSubmitRequest = async () => {
     if (!formData.farmer_id) {
-      setError("Please select a farmer");
+      setError("Please select a landowner");
       return;
     }
 
@@ -774,7 +785,7 @@ const JoAddFarmerRequest: React.FC = () => {
       (f) => Number(f.id) === Number(formData.farmer_id),
     );
     if (!selectedFarmer) {
-      setError("Selected farmer not found");
+      setError("Selected landowner not found");
       return;
     }
 
@@ -1113,7 +1124,9 @@ const JoAddFarmerRequest: React.FC = () => {
               )}
 
               <div className="jo-add-farmer-section">
-                <h3 className="jo-add-farmer-section-title">Select Farmer</h3>
+                <h3 className="jo-add-farmer-section-title">
+                  Select Landowner
+                </h3>
                 <div className="jo-add-farmer-search-container">
                   <input
                     type="text"
@@ -1126,7 +1139,7 @@ const JoAddFarmerRequest: React.FC = () => {
                     <div className="jo-add-farmer-info-box">
                       <span>ℹ️</span>
                       <span>
-                        {existingRequests.length} farmer
+                        {existingRequests.length} landowner
                         {existingRequests.length !== 1 ? "s" : ""} hidden
                         (already have request
                         {existingRequests.length !== 1 ? "s" : ""} for this
@@ -1138,7 +1151,7 @@ const JoAddFarmerRequest: React.FC = () => {
                 <div className="jo-add-farmer-list-container">
                   {filteredFarmers.length === 0 ? (
                     <div className="jo-add-farmer-empty-state">
-                      No farmers found
+                      No landowners found
                     </div>
                   ) : (
                     filteredFarmers.map((farmer) => (
