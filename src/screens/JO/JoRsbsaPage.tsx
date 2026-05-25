@@ -2157,14 +2157,6 @@ const JoRsbsaPage: React.FC = () => {
                                     >
                                       View
                                     </button>
-                                    <button
-                                      className="jo-rsbsa-action-btn jo-rsbsa-action-btn-edit"
-                                      onClick={() =>
-                                        handleEditFromRsbsa(record.id)
-                                      }
-                                    >
-                                      Edit
-                                    </button>
                                   </div>
                                 </td>
                               </tr>

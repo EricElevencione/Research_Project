@@ -2925,7 +2925,10 @@ export const addShortageSeed = async (seedData: any): Promise<ApiResponse> => {
   return createResponse(data, null, 201);
 };
 
-export const updateShortageSeed = async (id: string, updateData: any): Promise<ApiResponse> => {
+export const updateShortageSeed = async (
+  id: string,
+  updateData: any,
+): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("shortages_seeds")
     .update(updateData)
@@ -2947,7 +2950,9 @@ export const deleteShortageSeed = async (id: string): Promise<ApiResponse> => {
   return createResponse({ success: true }, null, 200);
 };
 
-export const addShortageFertilizer = async (fertData: any): Promise<ApiResponse> => {
+export const addShortageFertilizer = async (
+  fertData: any,
+): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("shortages_fertilizers")
     .insert(fertData)
@@ -2958,7 +2963,10 @@ export const addShortageFertilizer = async (fertData: any): Promise<ApiResponse>
   return createResponse(data, null, 201);
 };
 
-export const updateShortageFertilizer = async (id: string, updateData: any): Promise<ApiResponse> => {
+export const updateShortageFertilizer = async (
+  id: string,
+  updateData: any,
+): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("shortages_fertilizers")
     .update(updateData)
@@ -2970,7 +2978,9 @@ export const updateShortageFertilizer = async (id: string, updateData: any): Pro
   return createResponse(data, null, 200);
 };
 
-export const deleteShortageFertilizer = async (id: string): Promise<ApiResponse> => {
+export const deleteShortageFertilizer = async (
+  id: string,
+): Promise<ApiResponse> => {
   const { error } = await supabase
     .from("shortages_fertilizers")
     .delete()
@@ -3323,6 +3333,7 @@ interface LandHistoryReportQueryOptions {
   dateTo?: string;
   page?: number;
   pageSize?: number;
+  currentOnly?: boolean;
 }
 
 export const getLandHistoryReportRows = async (
@@ -3348,6 +3359,7 @@ export const getLandHistoryReportRows = async (
     5000,
     Math.max(1, Number(queryOptions.pageSize || fallbackPageSize || 50)),
   );
+  const currentOnly = queryOptions.currentOnly === true;
 
   let query = supabase
     .from("land_history")
@@ -3379,6 +3391,10 @@ export const getLandHistoryReportRows = async (
   }
   if (dateTo) {
     query = query.lte("period_start_date", dateTo);
+  }
+
+  if (currentOnly) {
+    query = query.eq("is_current", true);
   }
 
   if (searchTerm.length > 0) {
@@ -3414,6 +3430,27 @@ export const getLandHistoryReportRows = async (
     null,
     200,
   );
+};
+
+export const getLandHistoryParcelHistory = async (
+  parcelNumber: string,
+): Promise<ApiResponse> => {
+  const normalizedParcelNumber = String(parcelNumber || "").trim();
+  if (!normalizedParcelNumber) {
+    return createResponse([], null, 200);
+  }
+
+  const { data, error } = await supabase
+    .from("land_history")
+    .select(
+      "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
+    )
+    .eq("parcel_number", normalizedParcelNumber)
+    .order("period_start_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data || [], null, 200);
 };
 
 export const getLandHistoryBarangays = async (): Promise<ApiResponse> => {
@@ -3717,6 +3754,7 @@ export default {
   // Land History
   getLandHistory,
   getLandHistoryReportRows,
+  getLandHistoryParcelHistory,
   getLandHistoryBarangays,
   getLandHistoryFarmers,
   getLandHistoryAssociationRows,

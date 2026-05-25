@@ -10,7 +10,6 @@ import {
   FaScroll,
   FaSignOutAlt,
   FaPersonBooth,
-  FaLandmark,
 } from "react-icons/fa";
 import { supabase } from "../../supabase";
 import "./sidebarStyle.css";
