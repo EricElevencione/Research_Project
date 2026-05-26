@@ -18,7 +18,10 @@ interface AdminSidebarProps {
 const AdminSidebar = ({ sidebarOpen, setSidebarOpen }: AdminSidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState<{ firstName: string; lastName: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -68,7 +71,9 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen }: AdminSidebarProps) => {
               }}
             >
               <span className="nav-icon">
-                {typeof item.icon === "string" && !item.icon.includes("/") && !item.icon.includes(".") ? (
+                {typeof item.icon === "string" &&
+                !item.icon.includes("/") &&
+                !item.icon.includes(".") ? (
                   <span style={{ fontSize: "20px" }}>{item.icon}</span>
                 ) : (
                   <img src={item.icon as string} alt={item.text} />

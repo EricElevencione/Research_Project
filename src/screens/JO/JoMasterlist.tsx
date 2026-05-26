@@ -1695,8 +1695,7 @@ const JoMasterlist: React.FC = () => {
             <div>
               <h1 className="jo-masterlist-page-title">Masterlist</h1>
               <p className="jo-masterlist-page-subtitle">
-                Universal registry — find any farmer, owner, or tenant ·
-                Municipality of Dumangas, Iloilo
+                Masterlist Registry in Municipality of Dumangas, Iloilo
               </p>
             </div>
           </div>
@@ -1838,19 +1837,7 @@ const JoMasterlist: React.FC = () => {
                     ))}
                   </select>
                 </div>
-                <div className="jo-masterlist-status-filter">
-                  <select
-                    value={selectedFarmingStatus}
-                    onChange={(e) => setSelectedFarmingStatus(e.target.value)}
-                    className="jo-masterlist-status-select"
-                  >
-                    <option value="all">All Farming Status</option>
-                    <option value="farming">Farming</option>
-                    <option value="notFarming">Not Farming</option>
-                    <option value="mixed">Mixed</option>
-                    <option value="notSpecified">Not Specified</option>
-                  </select>
-                </div>
+
                 <div className="jo-masterlist-status-filter">
                   <select
                     value={selectedCrop}
