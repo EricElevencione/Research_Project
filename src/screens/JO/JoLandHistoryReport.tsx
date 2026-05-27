@@ -1,11 +1,10 @@
-import { supabase } from "../../supabase";
 import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
   getLandHistoryBarangays,
-  getLandHistoryAssociationRows,
+  getLandHistoryParcelHistory,
   getLandHistoryReportRows,
 } from "../../api";
 import "../../assets/css/jo css/JoLandHistoryReport.css";
@@ -36,39 +35,19 @@ type RelationshipFilter =
   | "tenant"
   | "lessee"
   | "tenantLessee";
-type OwnershipCategory = "registeredOwner" | "tenantLessee" | "unknown";
-
-interface FarmerDefaultRow {
-  farmerName: string;
-  farmerLookupName: string | null;
-  currentRole: string;
-  underOwner: string;
+interface ParcelRow {
+  id: number;
+  parcelNumber: string | null;
   barangay: string;
+  occupantName: string;
+  farmerName: string;
+  roleLabel: string;
   currentAreaHa: number;
   lastChangeDate: string | null;
   isCurrent: boolean;
-  hasCurrentTenantLessee: boolean;
-  hasCurrentTenant: boolean;
-  hasCurrentLessee: boolean;
-}
-
-interface FarmerTimelineEvent {
-  id: string;
-  eventDate: string | null;
-  fromName: string;
-  toName: string;
-  parcelNumber: string;
-  barangay: string;
-  relationship: string;
-  status: "Current" | "Past";
-  changeType: string;
-  changeReason: string;
 }
 
 const JoLandHistoryReport: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   const [rows, setRows] = useState<LandHistoryReportRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -83,78 +62,46 @@ const JoLandHistoryReport: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [barangayOptions, setBarangayOptions] = useState<string[]>([]);
-  const [farmerModalOpen, setFarmerModalOpen] = useState(false);
-  const [farmerModalFarmerName, setFarmerModalFarmerName] = useState("");
-  const [farmerModalRows, setFarmerModalRows] = useState<
+  const [parcelModalOpen, setParcelModalOpen] = useState(false);
+  const [parcelModalParcelNumber, setParcelModalParcelNumber] = useState<
+    string | null
+  >(null);
+  const [parcelModalRows, setParcelModalRows] = useState<
     LandHistoryReportRow[]
   >([]);
-  const [farmerModalAssociationRows, setFarmerModalAssociationRows] = useState<
-    LandHistoryReportRow[]
-  >([]);
-  const [farmerModalLoading, setFarmerModalLoading] = useState(false);
-  const [farmerModalError, setFarmerModalError] = useState<string | null>(null);
-  const [showOwnerLinkDetails, setShowOwnerLinkDetails] = useState(true);
-  const [showCounterpartLinkDetails, setShowCounterpartLinkDetails] =
-    useState(true);
-  const [showAdvancedRelationshipSummary, setShowAdvancedRelationshipSummary] =
-    useState(false);
+  const [parcelModalLoading, setParcelModalLoading] = useState(false);
+  const [parcelModalError, setParcelModalError] = useState<string | null>(null);
+  const [selectedHistoryRow, setSelectedHistoryRow] =
+    useState<LandHistoryReportRow | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
+  const formatName = (value?: string | null) =>
+    String(value || "").trim() || "-";
 
-  const normalizeOwnershipCategory = (value: unknown): OwnershipCategory => {
-    const normalized = String(value ?? "")
-      .trim()
-      .toLowerCase();
-
-    if (!normalized) return "unknown";
-
-    if (
-      normalized === "registeredowner" ||
-      normalized === "registered_owner" ||
-      normalized === "registered owner" ||
-      normalized === "owner"
-    ) {
-      return "registeredOwner";
-    }
-
-    if (
-      normalized === "tenantlessee" ||
-      normalized === "tenant_lessee" ||
-      normalized === "tenant/lessee" ||
-      normalized === "tenant-lessee" ||
-      normalized === "tenant" ||
-      normalized === "lessee"
-    ) {
-      return "tenantLessee";
-    }
-
-    return "unknown";
-  };
-
-  const getOwnershipCategory = (
-    row: LandHistoryReportRow,
-  ): OwnershipCategory => {
-    const explicitCategory = normalizeOwnershipCategory(row.ownership_category);
-    if (explicitCategory !== "unknown") return explicitCategory;
-
-    if (row.is_registered_owner) return "registeredOwner";
-    if (row.is_tenant || row.is_lessee) return "tenantLessee";
-    return "unknown";
-  };
-
-  const getTenantLesseeRoleLabel = (row: LandHistoryReportRow) => {
-    if (row.is_tenant && row.is_lessee) return "Tenant + Lessee";
+  const getFarmingRoleLabel = (row: LandHistoryReportRow) => {
+    if (row.is_registered_owner) return "Owner";
     if (row.is_tenant) return "Tenant";
     if (row.is_lessee) return "Lessee";
-    return "Tenant or Lessee";
+    return "Unknown";
   };
 
-  const getRelationship = (row: LandHistoryReportRow) => {
-    const category = getOwnershipCategory(row);
-    if (category === "registeredOwner") return "Registered Owner";
-    if (category === "tenantLessee") return getTenantLesseeRoleLabel(row);
-    return "Unknown";
+  const getChangeTypeColor = (
+    changeType?: string | null,
+  ): { dotClass: string; label: string } => {
+    const ct = String(changeType || "").trim().toLowerCase();
+    if (ct.includes("transfer") || ct.includes("ownership"))
+      return { dotClass: "dot-transfer", label: "Transfer" };
+    if (ct.includes("update") || ct.includes("modif") || ct.includes("edit"))
+      return { dotClass: "dot-update", label: "Update" };
+    if (
+      ct.includes("remov") ||
+      ct.includes("expir") ||
+      ct.includes("delet") ||
+      ct.includes("terminat")
+    )
+      return { dotClass: "dot-removal", label: "Removal" };
+    return { dotClass: "dot-default", label: changeType || "Change" };
   };
 
   const formatDate = (value: string | null | undefined) => {
@@ -162,305 +109,6 @@ const JoLandHistoryReport: React.FC = () => {
     const parsed = new Date(value);
     if (!Number.isFinite(parsed.getTime())) return "-";
     return parsed.toLocaleDateString();
-  };
-
-  const toTitleCase = (value: string) =>
-    value
-      .toLowerCase()
-      .split(" ")
-      .filter(Boolean)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-
-  const formatChangeTypeLabel = (
-    changeType?: string | null,
-    changeReason?: string | null,
-    options?: { selfFlow?: boolean },
-  ) => {
-    const normalizedType = String(changeType || "")
-      .trim()
-      .toUpperCase();
-    const reason = String(changeReason || "")
-      .trim()
-      .toLowerCase();
-    const isSelfFlow = Boolean(options?.selfFlow);
-
-    if (!normalizedType) return "Status Update";
-
-    if (normalizedType === "NEW") {
-      return "Newly Registered";
-    }
-
-    if (normalizedType === "TRANSFER_PARTIAL") {
-      if (reason.startsWith("inheritance")) {
-        return isSelfFlow
-          ? "Inheritance (Retained Share)"
-          : "Inheritance (Partial Transfer)";
-      }
-
-      return isSelfFlow
-        ? "Partial Transfer (Retained Share)"
-        : "Partial Transfer";
-    }
-
-    if (normalizedType === "TRANSFER") {
-      return reason.startsWith("inheritance")
-        ? "Inheritance Transfer"
-        : "Ownership Transfer";
-    }
-
-    if (normalizedType.includes("_")) {
-      return toTitleCase(normalizedType.replace(/_/g, " "));
-    }
-
-    return toTitleCase(normalizedType);
-  };
-
-  const pluralize = (count: number, singular: string, plural?: string) =>
-    count === 1 ? singular : plural || `${singular}s`;
-
-  const getInitials = (value?: string | null) => {
-    const parts = String(value || "")
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-
-    if (parts.length === 0) return "NA";
-    if (parts.length === 1) {
-      return String(parts[0] || "")
-        .slice(0, 2)
-        .toUpperCase();
-    }
-
-    return `${parts[0]?.charAt(0) || ""}${parts[1]?.charAt(0) || ""}`.toUpperCase();
-  };
-
-  const getLinkedOwnerRoleLabel = (owner: {
-    asTenant: number;
-    asLessee: number;
-  }) => {
-    if (owner.asTenant > 0 && owner.asLessee > 0) return "Tenant + Lessee";
-    if (owner.asTenant > 0) return "Tenant";
-    if (owner.asLessee > 0) return "Lessee";
-    return "Linked Role";
-  };
-
-  const getLinkedCounterpartRoleLabel = (counterpart: {
-    tenantRows: number;
-    lesseeRows: number;
-  }) => {
-    if (counterpart.tenantRows > 0 && counterpart.lesseeRows > 0) {
-      return "Tenant + Lessee";
-    }
-    if (counterpart.tenantRows > 0) return "Tenant";
-    if (counterpart.lesseeRows > 0) return "Lessee";
-    return "Linked Role";
-  };
-
-  const getAssociationLinkStatusLabel = (currentRows: number) =>
-    currentRows > 0 ? "Current Link" : "Past Link";
-
-  const buildLinkRoleMixText = (tenantRows: number, lesseeRows: number) => {
-    const safeTenantRows = Math.max(0, tenantRows);
-    const safeLesseeRows = Math.max(0, lesseeRows);
-    const parts: string[] = [];
-
-    if (safeTenantRows > 0) {
-      parts.push(
-        `${safeTenantRows} tenant ${pluralize(safeTenantRows, "record")}`,
-      );
-    }
-
-    if (safeLesseeRows > 0) {
-      parts.push(
-        `${safeLesseeRows} lessee ${pluralize(safeLesseeRows, "record")}`,
-      );
-    }
-
-    if (parts.length === 0) return "no tenant or lessee records";
-    return parts.join(", ");
-  };
-
-  const buildAssociationSnapshotText = ({
-    currentRows,
-    relationshipRows,
-    parcelCount,
-    tenantRows,
-    lesseeRows,
-  }: {
-    currentRows: number;
-    relationshipRows: number;
-    parcelCount: number;
-    tenantRows: number;
-    lesseeRows: number;
-  }) => {
-    const safeCurrentRows = Math.max(0, currentRows);
-    const safeRelationshipRows = Math.max(0, relationshipRows);
-    const safeParcelCount = Math.max(0, parcelCount);
-    const parcelText = `${safeParcelCount} ${pluralize(safeParcelCount, "parcel")}`;
-    const roleMixText = buildLinkRoleMixText(tenantRows, lesseeRows);
-
-    if (safeCurrentRows > 0) {
-      return `Active now on ${parcelText}. Role mix: ${roleMixText}.`;
-    }
-
-    if (safeRelationshipRows > 0) {
-      return `No active link now. Historical records found on ${parcelText}. Role mix: ${roleMixText}.`;
-    }
-
-    return "No relationship records found.";
-  };
-
-  const buildAssociationLinkActivityText = (
-    currentRows: number,
-    relationshipRows: number,
-  ) => {
-    const safeRelationshipRows = Math.max(0, relationshipRows);
-    const safeCurrentRows = Math.max(0, currentRows);
-    const pastRows = Math.max(0, safeRelationshipRows - safeCurrentRows);
-
-    if (safeCurrentRows > 0 && pastRows > 0) {
-      return `Status: Current (${safeCurrentRows} active, ${pastRows} past).`;
-    }
-
-    if (safeCurrentRows > 0) {
-      return `Status: Current (${safeCurrentRows} active).`;
-    }
-
-    if (pastRows > 0) {
-      return `Status: Past (${pastRows} ${pluralize(pastRows, "record")}).`;
-    }
-
-    return "Status: No record.";
-  };
-
-  const buildOwnerLinkExplanation = (
-    owner: {
-      ownerName: string;
-      asTenant: number;
-      asLessee: number;
-      relationshipRows: number;
-      currentRows: number;
-      parcels: Set<string>;
-    },
-    scopedFarmerName?: string,
-  ) => {
-    const farmerName = String(scopedFarmerName || "This farmer").trim();
-    const activityText = buildAssociationLinkActivityText(
-      owner.currentRows,
-      owner.relationshipRows,
-    );
-
-    if (owner.asTenant > 0 && owner.asLessee > 0) {
-      return `${farmerName} uses land from ${owner.ownerName} as Tenant and Lessee. ${activityText}`;
-    }
-
-    if (owner.asTenant > 0) {
-      return `${farmerName} uses land from ${owner.ownerName} as Tenant. ${activityText}`;
-    }
-
-    if (owner.asLessee > 0) {
-      return `${farmerName} uses land from ${owner.ownerName} as Lessee. ${activityText}`;
-    }
-
-    return `${farmerName} has a land-use link with ${owner.ownerName}. ${activityText}`;
-  };
-
-  const buildCounterpartLinkExplanation = (
-    counterpart: {
-      farmerName: string;
-      tenantRows: number;
-      lesseeRows: number;
-      relationshipRows: number;
-      currentRows: number;
-      parcels: Set<string>;
-    },
-    scopedFarmerName?: string,
-  ) => {
-    const ownerName = String(scopedFarmerName || "this farmer").trim();
-    const counterpartName = String(
-      counterpart.farmerName || "This farmer",
-    ).trim();
-    const activityText = buildAssociationLinkActivityText(
-      counterpart.currentRows,
-      counterpart.relationshipRows,
-    );
-
-    if (counterpart.tenantRows > 0 && counterpart.lesseeRows > 0) {
-      return `${counterpartName} uses land from ${ownerName} as Tenant and Lessee. ${activityText}`;
-    }
-
-    if (counterpart.tenantRows > 0) {
-      return `${counterpartName} uses land from ${ownerName} as Tenant. ${activityText}`;
-    }
-
-    if (counterpart.lesseeRows > 0) {
-      return `${counterpartName} uses land from ${ownerName} as Lessee. ${activityText}`;
-    }
-
-    return `${counterpartName} has a land-use link with ${ownerName}. ${activityText}`;
-  };
-
-  const getTimelineTypeBadgeLabel = (changeType?: string | null) => {
-    const value = String(changeType || "").trim();
-    const normalized = value.toLowerCase();
-
-    if (!value) return "Status";
-    if (normalized.includes("inheritance")) return "Inheritance";
-    if (normalized.includes("partial")) return "Partial Transfer";
-    if (normalized.includes("transfer")) return "Transfer";
-    return value;
-  };
-
-  const parseOwnershipTransferParties = (reason?: string | null) => {
-    const text = String(reason || "").trim();
-    if (!text) return null;
-
-    const match = text.match(
-      /^ownership transfer from\s+(.+?)\s+to\s+(.+?)(?:[.;]|$)/i,
-    );
-    if (!match) return null;
-
-    const fromName = String(match[1] || "").trim();
-    const toName = String(match[2] || "").trim();
-    if (!fromName || !toName) return null;
-
-    return { fromName, toName };
-  };
-
-  const isAssociationRoleRow = (row: LandHistoryReportRow) =>
-    getOwnershipCategory(row) === "tenantLessee";
-
-  const formatAssociationReasonText = (
-    role: string,
-    ownerName?: string | null,
-    rawReason?: string | null,
-  ) => {
-    const cleanedReason = String(rawReason || "").trim();
-    const normalizedRole = String(role || "").toLowerCase();
-    const owner = String(ownerName || "").trim() || "land owner";
-    const hasOwnershipTransferWording =
-      parseOwnershipTransferParties(cleanedReason) !== null;
-
-    if (!cleanedReason || hasOwnershipTransferWording) {
-      return `Current land use: ${normalizedRole || "association"} under ${owner}.`;
-    }
-
-    return cleanedReason;
-  };
-
-  const isAssociationTimelineRow = (row: LandHistoryReportRow) => {
-    if (isAssociationRoleRow(row)) return true;
-    if (!row.is_tenant && !row.is_lessee) return false;
-
-    const changeType = String(row.change_type || "").toLowerCase();
-    const hasOwnershipReason =
-      parseOwnershipTransferParties(row.change_reason) !== null;
-
-    // Keep this rule aligned with association timeline semantics.
-    if (changeType.includes("transfer") || hasOwnershipReason) return false;
-
-    return true;
   };
 
   const parseReportPayload = (payload: any) => {
@@ -492,6 +140,7 @@ const JoLandHistoryReport: React.FC = () => {
         dateTo,
         page: targetPage,
         pageSize,
+        currentOnly: true,
       });
       if (response.error) {
         throw new Error(response.error);
@@ -524,7 +173,6 @@ const JoLandHistoryReport: React.FC = () => {
     fetchBarangayOptions();
   }, []);
 
-
   useEffect(() => {
     fetchReportRows();
   }, [
@@ -542,445 +190,57 @@ const JoLandHistoryReport: React.FC = () => {
     [barangayOptions],
   );
 
-  const normalizeName = (value?: string | null) =>
-    String(value || "")
-      .toLowerCase()
-      .replace(/\s+/g, " ")
-      .replace(/[,.-]/g, " ")
-      .trim();
-
-  const namesLikelyMatch = (left?: string | null, right?: string | null) => {
-    const a = normalizeName(left);
-    const b = normalizeName(right);
-    if (!a || !b) return false;
-    return a === b;
+  const closeParcelHistoryModal = () => {
+    setParcelModalOpen(false);
   };
 
-  const toSortableTimestamp = (value?: string | null) => {
-    if (!value) return 0;
-    const parsed = new Date(value).getTime();
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
+  const openParcelHistoryModal = async (rawParcelNumber?: string | null) => {
+    const parcelNumber = String(rawParcelNumber || "").trim();
+    if (!parcelNumber) return;
 
-  const getAssociationCurrentGroupingKey = (row: LandHistoryReportRow) => {
-    const parcel = String(row.parcel_number || "")
-      .trim()
-      .toLowerCase();
-    const barangay = String(row.farm_location_barangay || "")
-      .trim()
-      .toLowerCase();
+    setParcelModalOpen(true);
+    setParcelModalParcelNumber(parcelNumber);
+    setParcelModalRows([]);
+    setParcelModalError(null);
+    setParcelModalLoading(true);
 
-    if (!parcel) return `row:${row.id}`;
-    return `parcel:${parcel}|barangay:${barangay}`;
-  };
-
-  const buildLatestAssociationCurrentRowIdSet = (
-    associationRows: LandHistoryReportRow[],
-  ) => {
-    const latestByKey = new Map<
-      string,
-      {
-        id: number;
-        eventTimestamp: number;
-        createdTimestamp: number;
-      }
-    >();
-
-    associationRows.forEach((row) => {
-      if (!row.is_tenant && !row.is_lessee) return;
-
-      const groupingKey = getAssociationCurrentGroupingKey(row);
-      const eventTimestamp = toSortableTimestamp(
-        row.period_start_date || row.created_at || row.period_end_date || null,
+    const response = await getLandHistoryParcelHistory(parcelNumber);
+    if (response.error) {
+      setParcelModalRows([]);
+      setParcelModalError(
+        response.error || "Failed to load parcel history records.",
       );
-      const createdTimestamp = toSortableTimestamp(row.created_at);
-
-      const existing = latestByKey.get(groupingKey);
-      if (!existing) {
-        latestByKey.set(groupingKey, {
-          id: row.id,
-          eventTimestamp,
-          createdTimestamp,
-        });
-        return;
-      }
-
-      const isNewerRow =
-        eventTimestamp > existing.eventTimestamp ||
-        (eventTimestamp === existing.eventTimestamp &&
-          createdTimestamp > existing.createdTimestamp) ||
-        (eventTimestamp === existing.eventTimestamp &&
-          createdTimestamp === existing.createdTimestamp &&
-          row.id > existing.id);
-
-      if (isNewerRow) {
-        latestByKey.set(groupingKey, {
-          id: row.id,
-          eventTimestamp,
-          createdTimestamp,
-        });
-      }
-    });
-
-    return new Set<number>(
-      Array.from(latestByKey.values()).map((entry) => entry.id),
-    );
-  };
-
-  const buildFarmerAssociations = (
-    scopedFarmerName: string,
-    scopedRows: LandHistoryReportRow[],
-    scopedAssociationRows: LandHistoryReportRow[],
-  ) => {
-    if (!scopedFarmerName) {
-      return {
-        linkedOwners: [],
-        linkedTenantsLessees: [],
-      };
-    }
-
-    const ownerMap = new Map<
-      string,
-      {
-        ownerName: string;
-        asTenant: number;
-        asLessee: number;
-        relationshipRows: number;
-        currentRows: number;
-        parcels: Set<string>;
-      }
-    >();
-
-    const ownerRows = scopedRows.filter((row) => {
-      const farmerName = String(row.farmer_name || "").trim();
-      const ownerName = String(row.land_owner_name || "").trim();
-      if (!farmerName || !namesLikelyMatch(farmerName, scopedFarmerName)) {
-        return false;
-      }
-      if (!ownerName || namesLikelyMatch(ownerName, scopedFarmerName)) {
-        return false;
-      }
-      return row.is_tenant || row.is_lessee;
-    });
-
-    const ownerCurrentRowIds = buildLatestAssociationCurrentRowIdSet(ownerRows);
-
-    ownerRows.forEach((row) => {
-      const ownerName = String(row.land_owner_name || "").trim();
-      const key = normalizeName(ownerName);
-      if (!ownerMap.has(key)) {
-        ownerMap.set(key, {
-          ownerName,
-          asTenant: 0,
-          asLessee: 0,
-          relationshipRows: 0,
-          currentRows: 0,
-          parcels: new Set<string>(),
-        });
-      }
-
-      const existing = ownerMap.get(key)!;
-      if (row.is_tenant) existing.asTenant += 1;
-      if (row.is_lessee) existing.asLessee += 1;
-      existing.relationshipRows += 1;
-      if (ownerCurrentRowIds.has(row.id)) existing.currentRows += 1;
-      if (row.parcel_number) existing.parcels.add(String(row.parcel_number));
-    });
-
-    const counterpartMap = new Map<
-      string,
-      {
-        farmerName: string;
-        tenantRows: number;
-        lesseeRows: number;
-        relationshipRows: number;
-        currentRows: number;
-        parcels: Set<string>;
-      }
-    >();
-
-    const counterpartRows = scopedAssociationRows.filter((row) => {
-      const ownerName = String(row.land_owner_name || "").trim();
-      const farmerName = String(row.farmer_name || "").trim();
-      if (!ownerName || !farmerName) return false;
-      if (!namesLikelyMatch(ownerName, scopedFarmerName)) return false;
-      if (namesLikelyMatch(farmerName, scopedFarmerName)) return false;
-      return row.is_tenant || row.is_lessee;
-    });
-
-    const counterpartCurrentRowIds =
-      buildLatestAssociationCurrentRowIdSet(counterpartRows);
-
-    counterpartRows.forEach((row) => {
-      const farmerName = String(row.farmer_name || "").trim();
-      const key = normalizeName(farmerName);
-      if (!counterpartMap.has(key)) {
-        counterpartMap.set(key, {
-          farmerName,
-          tenantRows: 0,
-          lesseeRows: 0,
-          relationshipRows: 0,
-          currentRows: 0,
-          parcels: new Set<string>(),
-        });
-      }
-
-      const existing = counterpartMap.get(key)!;
-      if (row.is_tenant) existing.tenantRows += 1;
-      if (row.is_lessee) existing.lesseeRows += 1;
-      existing.relationshipRows += 1;
-      if (counterpartCurrentRowIds.has(row.id)) existing.currentRows += 1;
-      if (row.parcel_number) existing.parcels.add(String(row.parcel_number));
-    });
-
-    return {
-      linkedOwners: Array.from(ownerMap.values()).sort((a, b) =>
-        a.ownerName.localeCompare(b.ownerName),
-      ),
-      linkedTenantsLessees: Array.from(counterpartMap.values()).sort((a, b) =>
-        a.farmerName.localeCompare(b.farmerName),
-      ),
-    };
-  };
-
-  const buildOwnershipTransferTimeline = (
-    scopedFarmerName: string,
-    scopedAssociationRows: LandHistoryReportRow[],
-  ): FarmerTimelineEvent[] => {
-    if (!scopedFarmerName) return [];
-
-    const toTimestamp = (value?: string | null) => {
-      if (!value) return 0;
-      const parsed = new Date(value).getTime();
-      return Number.isFinite(parsed) ? parsed : 0;
-    };
-
-    const timelineRows = scopedAssociationRows.filter((row) => {
-      const changeType = String(row.change_type || "").toLowerCase();
-      const hasOwnershipReason =
-        parseOwnershipTransferParties(row.change_reason) !== null;
-
-      // Tenant/lessee relationship rows stay in association timeline,
-      // even if old data was saved with transfer wording.
-      if (isAssociationRoleRow(row)) {
-        return false;
-      }
-
-      return changeType.includes("transfer") || hasOwnershipReason;
-    });
-
-    const events: FarmerTimelineEvent[] = timelineRows.map((row, index) => {
-      const ownerName = String(row.land_owner_name || "").trim();
-      const farmerName = String(row.farmer_name || "").trim();
-      const parsedParties = parseOwnershipTransferParties(row.change_reason);
-
-      let fromName = parsedParties?.fromName || ownerName || "Unknown";
-      let toName = parsedParties?.toName || farmerName || scopedFarmerName;
-
-      if (
-        !parsedParties &&
-        ownerName &&
-        farmerName &&
-        namesLikelyMatch(ownerName, scopedFarmerName) &&
-        !namesLikelyMatch(farmerName, scopedFarmerName)
-      ) {
-        fromName = scopedFarmerName;
-        toName = farmerName;
-      } else if (
-        !parsedParties &&
-        ownerName &&
-        farmerName &&
-        namesLikelyMatch(farmerName, scopedFarmerName) &&
-        !namesLikelyMatch(ownerName, scopedFarmerName)
-      ) {
-        fromName = ownerName;
-        toName = scopedFarmerName;
-      }
-
-      const isSelfFlow = namesLikelyMatch(fromName, toName);
-      const isSelfRetainedPartial =
-        isSelfFlow &&
-        row.is_registered_owner &&
-        String(row.change_type || "")
-          .trim()
-          .toUpperCase() === "TRANSFER_PARTIAL";
-
-      if (isSelfRetainedPartial) {
-        fromName = scopedFarmerName;
-        toName = "Retained Portion";
-      }
-
-      const relationship = getRelationship(row);
-
-      const eventDate =
-        row.period_start_date || row.created_at || row.period_end_date || null;
-
-      return {
-        id: `${row.id}-${eventDate || "none"}-${index}`,
-        eventDate,
-        fromName,
-        toName,
-        parcelNumber: String(row.parcel_number || "").trim(),
-        barangay: String(row.farm_location_barangay || "").trim(),
-        relationship,
-        status: row.is_current ? "Current" : "Past",
-        changeType: formatChangeTypeLabel(row.change_type, row.change_reason, {
-          selfFlow: isSelfFlow,
-        }),
-        changeReason: String(row.change_reason || "").trim(),
-      };
-    });
-
-    events.sort((a, b) => toTimestamp(b.eventDate) - toTimestamp(a.eventDate));
-    return events;
-  };
-
-  const buildAssociationTimeline = (
-    scopedFarmerName: string,
-    scopedAssociationRows: LandHistoryReportRow[],
-  ): FarmerTimelineEvent[] => {
-    if (!scopedFarmerName) return [];
-
-    const toTimestamp = (value?: string | null) => {
-      if (!value) return 0;
-      const parsed = new Date(value).getTime();
-      return Number.isFinite(parsed) ? parsed : 0;
-    };
-
-    const relationRows = scopedAssociationRows.filter((row) =>
-      isAssociationTimelineRow(row),
-    );
-
-    const effectiveCurrentRowIds =
-      buildLatestAssociationCurrentRowIdSet(relationRows);
-
-    const events: FarmerTimelineEvent[] = relationRows.map((row, index) => {
-      const ownerName = String(row.land_owner_name || "").trim();
-      const farmerName = String(row.farmer_name || "").trim();
-
-      const relationship = getRelationship(row);
-      const isTenantOrLesseeRelationship =
-        relationship.includes("Tenant") || relationship.includes("Lessee");
-
-      let fromName = ownerName || "Unknown Owner";
-      let toName = farmerName || scopedFarmerName || "Unknown Farmer";
-
-      if (namesLikelyMatch(fromName, toName)) {
-        toName = isTenantOrLesseeRelationship
-          ? `${relationship} Role`
-          : "Association Role";
-      }
-
-      const eventDate =
-        row.period_start_date || row.created_at || row.period_end_date || null;
-
-      const normalizedReason = formatAssociationReasonText(
-        relationship,
-        ownerName,
-        row.change_reason,
-      );
-
-      return {
-        id: `assoc-${row.id}-${eventDate || "none"}-${index}`,
-        eventDate,
-        fromName,
-        toName,
-        parcelNumber: String(row.parcel_number || "").trim(),
-        barangay: String(row.farm_location_barangay || "").trim(),
-        relationship,
-        status: effectiveCurrentRowIds.has(row.id) ? "Current" : "Past",
-        changeType: isTenantOrLesseeRelationship
-          ? `${relationship} Association`
-          : "Association Update",
-        changeReason: normalizedReason,
-      };
-    });
-
-    events.sort((a, b) => toTimestamp(b.eventDate) - toTimestamp(a.eventDate));
-    return events;
-  };
-
-  const closeFarmerHistoryModal = () => {
-    setFarmerModalOpen(false);
-  };
-
-  const openFarmerHistoryModal = async (rawFarmerName?: string | null) => {
-    const scopedFarmerName = String(rawFarmerName || "").trim();
-    if (!scopedFarmerName) return;
-
-    setFarmerModalOpen(true);
-    setFarmerModalFarmerName(scopedFarmerName);
-    setFarmerModalRows([]);
-    setFarmerModalAssociationRows([]);
-    setFarmerModalError(null);
-    setFarmerModalLoading(true);
-    setShowOwnerLinkDetails(true);
-    setShowCounterpartLinkDetails(true);
-    setShowAdvancedRelationshipSummary(false);
-
-    const [reportResponse, associationResponse] = await Promise.all([
-      getLandHistoryReportRows({
-        searchTerm: "",
-        farmerName: scopedFarmerName,
-        barangay: "all",
-        relationship: "all",
-        dateFrom: "",
-        dateTo: "",
-        page: 1,
-        pageSize: 5000,
-      }),
-      getLandHistoryAssociationRows({
-        farmerName: scopedFarmerName,
-        barangay: "all",
-        dateFrom: "",
-        dateTo: "",
-        limit: 5000,
-      }),
-    ]);
-
-    if (reportResponse.error || associationResponse.error) {
-      setFarmerModalRows([]);
-      setFarmerModalAssociationRows([]);
-      setFarmerModalError(
-        reportResponse.error ||
-          associationResponse.error ||
-          "Failed to load farmer history.",
-      );
-      setFarmerModalLoading(false);
+      setParcelModalLoading(false);
       return;
     }
 
-    const parsedPayload = parseReportPayload(reportResponse.data);
-    setFarmerModalRows(parsedPayload.rows);
-    setFarmerModalAssociationRows(
-      (associationResponse.data as LandHistoryReportRow[]) || [],
-    );
-    setFarmerModalError(null);
-    setFarmerModalLoading(false);
+    setParcelModalRows((response.data as LandHistoryReportRow[]) || []);
+    setParcelModalError(null);
+    setParcelModalLoading(false);
   };
 
   const handleReportRowKeyDown = (
     event: React.KeyboardEvent<HTMLTableRowElement>,
-    farmerName?: string | null,
+    parcelNumber?: string | null,
   ) => {
-    const scopedFarmerName = String(farmerName || "").trim();
-    if (!scopedFarmerName) return;
+    const scopedParcelNumber = String(parcelNumber || "").trim();
+    if (!scopedParcelNumber) return;
 
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      openFarmerHistoryModal(scopedFarmerName);
+      openParcelHistoryModal(scopedParcelNumber);
     }
   };
 
   useEffect(() => {
-    if (!farmerModalOpen) return;
+    if (!parcelModalOpen) return;
 
     const priorOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closeFarmerHistoryModal();
+        closeParcelHistoryModal();
       }
     };
 
@@ -989,272 +249,88 @@ const JoLandHistoryReport: React.FC = () => {
       document.body.style.overflow = priorOverflow;
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [farmerModalOpen]);
+  }, [parcelModalOpen]);
 
-  const farmerModalSummary = useMemo(() => {
-    const currentRecords = farmerModalRows.filter((row) => row.is_current);
-    const hasCurrentOwner = currentRecords.some(
-      (row) => getOwnershipCategory(row) === "registeredOwner",
-    );
-    const hasCurrentTenant = currentRecords.some((row) => row.is_tenant);
-    const hasCurrentLessee = currentRecords.some((row) => row.is_lessee);
-    const hasCurrentTenantLessee = currentRecords.some(
-      (row) => getOwnershipCategory(row) === "tenantLessee",
-    );
+  const getRowEventDate = (row: LandHistoryReportRow) =>
+    row.period_start_date || row.created_at || row.period_end_date || null;
 
-    const roleLabels = [
-      hasCurrentOwner ? "Registered Owner" : null,
-      hasCurrentTenant ? "Tenant" : null,
-      hasCurrentLessee ? "Lessee" : null,
-      !hasCurrentTenant && !hasCurrentLessee && hasCurrentTenantLessee
-        ? "Tenant or Lessee"
-        : null,
-    ].filter(Boolean) as string[];
+  const toSortableTimestamp = (value?: string | null) => {
+    if (!value) return 0;
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
 
-    const transferRows = farmerModalRows.filter((row) => {
-      const type = String(row.change_type || "").toLowerCase();
-      return type.includes("transfer") || type.includes("change");
-    }).length;
+  const parcelRows = useMemo<ParcelRow[]>(() => {
+    return rows
+      .filter((row) => row.is_current)
+      .map((row) => ({
+        id: row.id,
+        parcelNumber: row.parcel_number
+          ? String(row.parcel_number).trim()
+          : null,
+        barangay: formatName(row.farm_location_barangay),
+        occupantName: formatName(row.land_owner_name),
+        farmerName: formatName(row.farmer_name),
+        roleLabel: getFarmingRoleLabel(row),
+        currentAreaHa: Number(row.total_farm_area_ha) || 0,
+        lastChangeDate: getRowEventDate(row),
+        isCurrent: row.is_current,
+      }));
+  }, [rows]);
 
-    const totalAreaHa = farmerModalRows.reduce(
-      (sum, row) => sum + (Number(row.total_farm_area_ha) || 0),
-      0,
-    );
-
-    return {
-      totalRecords: farmerModalRows.length,
-      currentRecords: currentRecords.length,
-      transferRows,
-      totalAreaHa,
-      roleLabels,
-    };
-  }, [farmerModalRows]);
-
-  const farmerModalAssociations = useMemo(
-    () =>
-      buildFarmerAssociations(
-        farmerModalFarmerName,
-        farmerModalRows,
-        farmerModalAssociationRows,
-      ),
-    [farmerModalAssociationRows, farmerModalFarmerName, farmerModalRows],
-  );
-
-  const farmerModalTransferTimeline = useMemo(
-    () =>
-      buildOwnershipTransferTimeline(
-        farmerModalFarmerName,
-        farmerModalAssociationRows,
-      ),
-    [farmerModalAssociationRows, farmerModalFarmerName],
-  );
-
-  const farmerModalAssociationTimeline = useMemo(
-    () =>
-      buildAssociationTimeline(
-        farmerModalFarmerName,
-        farmerModalAssociationRows,
-      ),
-    [farmerModalAssociationRows, farmerModalFarmerName],
-  );
-
-  const farmerModalDetailedRows = useMemo(() => {
-    const mergedById = new Map<number, LandHistoryReportRow>();
-
-    farmerModalRows.forEach((row) => {
-      mergedById.set(row.id, row);
-    });
-
-    farmerModalAssociationRows.forEach((row) => {
-      if (!mergedById.has(row.id)) {
-        mergedById.set(row.id, row);
-      }
-    });
-
-    const mergedRows = Array.from(mergedById.values());
-
-    mergedRows.sort((a, b) => {
-      const aTimestamp = toSortableTimestamp(
-        a.period_start_date || a.created_at || a.period_end_date || null,
-      );
-      const bTimestamp = toSortableTimestamp(
-        b.period_start_date || b.created_at || b.period_end_date || null,
-      );
-
+  const parcelModalTimelineRows = useMemo(() => {
+    const sorted = [...parcelModalRows];
+    sorted.sort((a, b) => {
+      const aTimestamp = toSortableTimestamp(getRowEventDate(a));
+      const bTimestamp = toSortableTimestamp(getRowEventDate(b));
       if (bTimestamp !== aTimestamp) return bTimestamp - aTimestamp;
       return b.id - a.id;
     });
+    return sorted;
+  }, [parcelModalRows]);
 
-    return mergedRows;
-  }, [farmerModalAssociationRows, farmerModalRows]);
-
-  const farmerModalTableAssociationCurrentRowIds = useMemo(() => {
-    const relationRows = farmerModalDetailedRows.filter((row) =>
-      isAssociationTimelineRow(row),
-    );
-    return buildLatestAssociationCurrentRowIdSet(relationRows);
-  }, [farmerModalDetailedRows]);
-
-  const farmerDefaultRows = useMemo<FarmerDefaultRow[]>(() => {
-    const toTimestamp = (value?: string | null) => {
-      if (!value) return 0;
-      const parsed = new Date(value).getTime();
-      return Number.isFinite(parsed) ? parsed : 0;
-    };
-
-    const getRowTimestamp = (row?: LandHistoryReportRow) =>
-      toTimestamp(
-        row?.period_start_date || row?.created_at || row?.period_end_date,
-      );
-
-    const groupedByFarmer = new Map<
-      string,
-      {
-        farmerNameDisplay: string;
-        farmerLookupName: string | null;
-        rows: LandHistoryReportRow[];
-      }
-    >();
-
-    rows.forEach((row) => {
-      const farmerName = String(row.farmer_name || "").trim();
-      const key = farmerName ? normalizeName(farmerName) : `unknown-${row.id}`;
-
-      if (!groupedByFarmer.has(key)) {
-        groupedByFarmer.set(key, {
-          farmerNameDisplay: farmerName || "-",
-          farmerLookupName: farmerName || null,
-          rows: [],
-        });
-      }
-
-      groupedByFarmer.get(key)!.rows.push(row);
-    });
-
-    const groupedRows = Array.from(groupedByFarmer.values()).map((group) => {
-      const sortedRows = [...group.rows].sort(
-        (a, b) => getRowTimestamp(b) - getRowTimestamp(a),
-      );
-
-      const latestRow = sortedRows[0];
-      const currentRows = group.rows.filter((row) => row.is_current);
-
-      const hasCurrentOwner = currentRows.some(
-        (row) => getOwnershipCategory(row) === "registeredOwner",
-      );
-      const hasCurrentTenant = currentRows.some((row) => row.is_tenant);
-      const hasCurrentLessee = currentRows.some((row) => row.is_lessee);
-      const hasCurrentTenantLessee = currentRows.some(
-        (row) => getOwnershipCategory(row) === "tenantLessee",
-      );
-
-      let currentRole = "No Active Role";
-      if (hasCurrentOwner) {
-        currentRole = "Registered Owner";
-      } else if (hasCurrentTenant && hasCurrentLessee) {
-        currentRole = "Tenant + Lessee";
-      } else if (hasCurrentTenant) {
-        currentRole = "Tenant";
-      } else if (hasCurrentLessee) {
-        currentRole = "Lessee";
-      } else if (hasCurrentTenantLessee) {
-        currentRole = "Tenant or Lessee";
-      } else if (currentRows.length > 0) {
-        currentRole = "Current";
-      }
-
-      const ownerSet = new Set<string>();
-      currentRows.forEach((row) => {
-        if (!row.is_tenant && !row.is_lessee) return;
-        const ownerName = String(row.land_owner_name || "").trim();
-        if (!ownerName) return;
-
-        if (
-          group.farmerLookupName &&
-          namesLikelyMatch(ownerName, group.farmerLookupName)
-        ) {
-          return;
-        }
-
-        ownerSet.add(ownerName);
-      });
-
-      const areaRows =
-        currentRows.length > 0 ? currentRows : latestRow ? [latestRow] : [];
-      const currentAreaHa = areaRows.reduce(
-        (sum, row) => sum + (Number(row.total_farm_area_ha) || 0),
-        0,
-      );
-
-      return {
-        farmerName: group.farmerNameDisplay,
-        farmerLookupName: group.farmerLookupName,
-        currentRole,
-        underOwner: hasCurrentTenantLessee
-          ? ownerSet.size > 0
-            ? Array.from(ownerSet)
-                .sort((a, b) => a.localeCompare(b))
-                .join(" | ")
-            : "Not specified"
-          : "-",
-        barangay:
-          String(latestRow?.farm_location_barangay || "-").trim() || "-",
-        currentAreaHa,
-        lastChangeDate:
-          latestRow?.period_start_date ||
-          latestRow?.created_at ||
-          latestRow?.period_end_date ||
-          null,
-        isCurrent: currentRows.length > 0,
-        hasCurrentTenantLessee,
-        hasCurrentTenant,
-        hasCurrentLessee,
-        lastChangeTimestamp: getRowTimestamp(latestRow),
-      };
-    });
-
-    return groupedRows
-      .sort(
-        (a, b) =>
-          b.lastChangeTimestamp - a.lastChangeTimestamp ||
-          a.farmerName.localeCompare(b.farmerName),
-      )
-      .map(({ lastChangeTimestamp, ...rest }) => rest);
-  }, [rows, namesLikelyMatch, normalizeName]);
+  // Auto-select the most recent (current) row when modal data loads
+  useEffect(() => {
+    if (parcelModalTimelineRows.length > 0) {
+      const currentRow =
+        parcelModalTimelineRows.find((r) => r.is_current) ||
+        parcelModalTimelineRows[0];
+      setSelectedHistoryRow(currentRow);
+    } else {
+      setSelectedHistoryRow(null);
+    }
+  }, [parcelModalTimelineRows]);
 
   const summary = useMemo(() => {
-    const currentFarmers = farmerDefaultRows.filter((row) => row.isCurrent);
-
-    const currentTenantFarmers = farmerDefaultRows.filter(
-      (row) => row.hasCurrentTenant,
+    const tenantParcels = parcelRows.filter(
+      (row) => row.roleLabel === "Tenant",
     ).length;
 
-    const currentLesseeFarmers = farmerDefaultRows.filter(
-      (row) => row.hasCurrentLessee,
+    const lesseeParcels = parcelRows.filter(
+      (row) => row.roleLabel === "Lessee",
     ).length;
 
-    const totalCurrentAreaHa = farmerDefaultRows.reduce(
+    const totalCurrentAreaHa = parcelRows.reduce(
       (sum, row) => sum + (Number(row.currentAreaHa) || 0),
       0,
     );
 
     return {
       totalHistoryRows: totalCount,
-      farmersOnPage: farmerDefaultRows.length,
-      currentFarmers: currentFarmers.length,
-      currentTenantFarmers,
-      currentLesseeFarmers,
+      parcelsOnPage: parcelRows.length,
+      currentParcels: parcelRows.length,
+      tenantParcels,
+      lesseeParcels,
       totalCurrentAreaHa,
     };
-  }, [farmerDefaultRows, totalCount]);
+  }, [parcelRows, totalCount]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pageStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const pageEnd = Math.min(totalCount, page * pageSize);
-  const farmerModalTimelineLimit = 30;
 
   const handleExportPdf = () => {
-    if (farmerDefaultRows.length === 0) return;
+    if (parcelRows.length === 0) return;
 
     const relationshipLabelMap: Record<RelationshipFilter, string> = {
       all: "All Relationships",
@@ -1286,7 +362,7 @@ const JoLandHistoryReport: React.FC = () => {
     doc.setFontSize(10);
     doc.text(`Generated: ${generatedAt.toLocaleString()}`, 40, 60);
     doc.text(
-      `Page Snapshot: ${farmerDefaultRows.length} farmers shown (UI page ${page} of ${totalPages})`,
+      `Page Snapshot: ${parcelRows.length} parcels shown (UI page ${page} of ${totalPages})`,
       40,
       76,
     );
@@ -1304,30 +380,30 @@ const JoLandHistoryReport: React.FC = () => {
         overflow: "linebreak",
       },
       columnStyles: {
-        0: { cellWidth: 140 },
-        1: { cellWidth: 90 },
-        2: { cellWidth: 180 },
-        3: { cellWidth: 90 },
-        4: { cellWidth: 75, halign: "right" },
+        0: { cellWidth: 80 },
+        1: { cellWidth: 140 },
+        2: { cellWidth: 140 },
+        3: { cellWidth: 80 },
+        4: { cellWidth: 70, halign: "right" },
         5: { cellWidth: 80 },
         6: { cellWidth: 60 },
       },
       head: [
         [
+          "Parcel",
+          "Occupant (Owner)",
           "Farmer",
-          "Current Role",
-          "Under Owner",
-          "Barangay",
-          "Current Area (ha)",
+          "Role",
+          "Area (ha)",
           "Last Change",
           "Status",
         ],
       ],
-      body: farmerDefaultRows.map((row) => [
+      body: parcelRows.map((row) => [
+        row.parcelNumber || "-",
+        row.occupantName,
         row.farmerName,
-        row.currentRole,
-        row.underOwner,
-        row.barangay,
+        row.roleLabel,
         Number(row.currentAreaHa || 0).toFixed(2),
         formatDate(row.lastChangeDate),
         row.isCurrent ? "Active" : "Inactive",
@@ -1346,7 +422,7 @@ const JoLandHistoryReport: React.FC = () => {
     setPage(1);
   };
 
-  const noRowsMessage = "No farmers found with the current filters.";
+  const noRowsMessage = "No parcels found with the current filters.";
 
   return (
     <div className="jo-land-history-report-page-container">
@@ -1367,9 +443,8 @@ const JoLandHistoryReport: React.FC = () => {
           <div className="jo-land-history-report-header">
             <h1>Land History Report</h1>
             <p>
-              Farmer-first default view: one row per farmer with role context.
-              Ownership categories are normalized to Registered Owner or Tenant
-              and Lessee. Click a row to open complete history details.
+              Parcel-first view: one row per current parcel with occupant and
+              farmer details. Click a row to open full parcel history.
             </p>
           </div>
 
@@ -1426,7 +501,7 @@ const JoLandHistoryReport: React.FC = () => {
               <button
                 className="jo-land-history-report-btn primary"
                 onClick={handleExportPdf}
-                disabled={farmerDefaultRows.length === 0}
+                disabled={parcelRows.length === 0}
               >
                 Export PDF
               </button>
@@ -1434,16 +509,16 @@ const JoLandHistoryReport: React.FC = () => {
 
             <div className="jo-land-history-report-kpis">
               <div className="jo-land-history-report-kpi-card">
-                <span className="label">Current Farmers</span>
-                <strong>{summary.currentFarmers}</strong>
+                <span className="label">Current Parcels</span>
+                <strong>{summary.currentParcels}</strong>
               </div>
               <div className="jo-land-history-report-kpi-card">
-                <span className="label">Current Tenant</span>
-                <strong>{summary.currentTenantFarmers}</strong>
+                <span className="label">Tenant Parcels</span>
+                <strong>{summary.tenantParcels}</strong>
               </div>
               <div className="jo-land-history-report-kpi-card">
-                <span className="label">Current Lessee</span>
-                <strong>{summary.currentLesseeFarmers}</strong>
+                <span className="label">Lessee Parcels</span>
+                <strong>{summary.lesseeParcels}</strong>
               </div>
               <div className="jo-land-history-report-kpi-card wide">
                 <span className="label">Total Current Area (ha, Page)</span>
@@ -1453,8 +528,8 @@ const JoLandHistoryReport: React.FC = () => {
 
             <div className="jo-land-history-report-page-meta">
               <span>
-                Showing {farmerDefaultRows.length} farmers on this page (
-                {pageStart}-{pageEnd} of {totalCount} history rows)
+                Showing {parcelRows.length} parcels on this page ({pageStart}-
+                {pageEnd} of {totalCount} parcels)
               </span>
               <label>
                 Rows per page:
@@ -1480,7 +555,7 @@ const JoLandHistoryReport: React.FC = () => {
               </div>
             ) : error ? (
               <div className="jo-land-history-report-state error">{error}</div>
-            ) : farmerDefaultRows.length === 0 ? (
+            ) : parcelRows.length === 0 ? (
               <div className="jo-land-history-report-state">
                 {noRowsMessage}
               </div>
@@ -1489,40 +564,40 @@ const JoLandHistoryReport: React.FC = () => {
                 <table className="jo-land-history-report-table">
                   <thead>
                     <tr>
+                      <th>Parcel</th>
+                      <th>Occupant (Owner)</th>
                       <th>Farmer</th>
-                      <th>Current Role</th>
-                      <th>Under Owner</th>
-                      <th>Barangay</th>
-                      <th>Current Area (ha)</th>
+                      <th>Role</th>
+                      <th>Area (ha)</th>
                       <th>Last Change</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {farmerDefaultRows.map((row, index) => (
+                    {parcelRows.map((row, index) => (
                       <tr
-                        key={`${row.farmerLookupName || "unknown"}-${index}`}
-                        className={`jo-land-history-report-row ${row.farmerLookupName ? "is-clickable" : ""}`}
-                        role={row.farmerLookupName ? "button" : undefined}
-                        tabIndex={row.farmerLookupName ? 0 : undefined}
+                        key={`${row.parcelNumber || "unknown"}-${index}`}
+                        className={`jo-land-history-report-row ${row.parcelNumber ? "is-clickable" : ""}`}
+                        role={row.parcelNumber ? "button" : undefined}
+                        tabIndex={row.parcelNumber ? 0 : undefined}
                         aria-label={
-                          row.farmerLookupName
-                            ? `View history for farmer ${row.farmerName}`
+                          row.parcelNumber
+                            ? `View history for parcel ${row.parcelNumber}`
                             : undefined
                         }
                         onClick={() =>
-                          row.farmerLookupName
-                            ? openFarmerHistoryModal(row.farmerLookupName)
+                          row.parcelNumber
+                            ? openParcelHistoryModal(row.parcelNumber)
                             : undefined
                         }
                         onKeyDown={(event) =>
-                          handleReportRowKeyDown(event, row.farmerLookupName)
+                          handleReportRowKeyDown(event, row.parcelNumber)
                         }
                       >
+                        <td>{row.parcelNumber || "-"}</td>
+                        <td>{row.occupantName}</td>
                         <td>{row.farmerName}</td>
-                        <td>{row.currentRole}</td>
-                        <td>{row.underOwner}</td>
-                        <td>{row.barangay}</td>
+                        <td>{row.roleLabel}</td>
                         <td>{row.currentAreaHa.toFixed(2)}</td>
                         <td>{formatDate(row.lastChangeDate)}</td>
                         <td>{row.isCurrent ? "Active" : "Inactive"}</td>
@@ -1557,6 +632,250 @@ const JoLandHistoryReport: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {parcelModalOpen && (
+        <div
+          className="jo-land-history-modal-overlay"
+          role="presentation"
+          onClick={closeParcelHistoryModal}
+        >
+          <div
+            className="jo-land-history-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Parcel history"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="jo-land-history-modal-header">
+              <div>
+                <h2>Parcel {parcelModalParcelNumber || "-"}</h2>
+                <p>History timeline for this parcel.</p>
+              </div>
+              <button
+                className="jo-land-history-report-btn"
+                onClick={closeParcelHistoryModal}
+              >
+                X
+              </button>
+            </div>
+            <div className="jo-land-history-modal-block">
+              {parcelModalLoading ? (
+                <div className="jo-land-history-report-state">
+                  Loading parcel history...
+                </div>
+              ) : parcelModalError ? (
+                <div className="jo-land-history-report-state error">
+                  {parcelModalError}
+                </div>
+              ) : parcelModalTimelineRows.length === 0 ? (
+                <div className="jo-land-history-report-state">
+                  No history records found for this parcel.
+                </div>
+              ) : (
+                <div className="jo-land-history-modal-split">
+                  {/* ===== LEFT PANEL: Details ===== */}
+                  <div className="jo-land-history-modal-details-panel">
+                    <div className="jo-land-history-modal-detail-card">
+                      <h3 className="jo-land-history-modal-detail-title">
+                        <span className="jo-land-history-modal-detail-icon">📋</span>
+                        Parcel Details
+                      </h3>
+                      <div className="jo-land-history-modal-detail-row">
+                        <span className="jo-land-history-modal-detail-label">Parcel No.</span>
+                        <span className="jo-land-history-modal-detail-value">
+                          {parcelModalParcelNumber || "-"}
+                        </span>
+                      </div>
+                      <div className="jo-land-history-modal-detail-row">
+                        <span className="jo-land-history-modal-detail-label">Barangay</span>
+                        <span className="jo-land-history-modal-detail-value">
+                          {formatName(
+                            selectedHistoryRow?.farm_location_barangay,
+                          )}
+                        </span>
+                      </div>
+                      <div className="jo-land-history-modal-detail-row">
+                        <span className="jo-land-history-modal-detail-label">Area (ha)</span>
+                        <span className="jo-land-history-modal-detail-value">
+                          {selectedHistoryRow?.total_farm_area_ha != null
+                            ? Number(selectedHistoryRow.total_farm_area_ha).toFixed(2)
+                            : "-"}
+                        </span>
+                      </div>
+                      <div className="jo-land-history-modal-detail-row">
+                        <span className="jo-land-history-modal-detail-label">Status</span>
+                        <span
+                          className={`jo-land-history-modal-status-badge ${
+                            selectedHistoryRow?.is_current
+                              ? "is-current"
+                              : "is-past"
+                          }`}
+                        >
+                          {selectedHistoryRow?.is_current ? "Current" : "Past"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="jo-land-history-modal-detail-card">
+                      <h3 className="jo-land-history-modal-detail-title">
+                        <span className="jo-land-history-modal-detail-icon">👤</span>
+                        Owner / Farmer Details
+                      </h3>
+                      <div className="jo-land-history-modal-detail-row">
+                        <span className="jo-land-history-modal-detail-label">Owner</span>
+                        <span className="jo-land-history-modal-detail-value">
+                          {formatName(selectedHistoryRow?.land_owner_name)}
+                        </span>
+                      </div>
+                      <div className="jo-land-history-modal-detail-row">
+                        <span className="jo-land-history-modal-detail-label">Farmer</span>
+                        <span className="jo-land-history-modal-detail-value">
+                          {formatName(selectedHistoryRow?.farmer_name)}
+                        </span>
+                      </div>
+                      <div className="jo-land-history-modal-detail-row">
+                        <span className="jo-land-history-modal-detail-label">Role</span>
+                        <span className="jo-land-history-modal-detail-value jo-land-history-modal-role-chip">
+                          {selectedHistoryRow
+                            ? getFarmingRoleLabel(selectedHistoryRow)
+                            : "-"}
+                        </span>
+                      </div>
+                      {selectedHistoryRow?.period_start_date && (
+                        <div className="jo-land-history-modal-detail-row">
+                          <span className="jo-land-history-modal-detail-label">Period Start</span>
+                          <span className="jo-land-history-modal-detail-value">
+                            {formatDate(selectedHistoryRow.period_start_date)}
+                          </span>
+                        </div>
+                      )}
+                      {selectedHistoryRow?.period_end_date && (
+                        <div className="jo-land-history-modal-detail-row">
+                          <span className="jo-land-history-modal-detail-label">Period End</span>
+                          <span className="jo-land-history-modal-detail-value">
+                            {formatDate(selectedHistoryRow.period_end_date)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedHistoryRow?.change_reason && (
+                      <div className="jo-land-history-modal-detail-card">
+                        <h3 className="jo-land-history-modal-detail-title">
+                          <span className="jo-land-history-modal-detail-icon">📝</span>
+                          Change Reason
+                        </h3>
+                        <p className="jo-land-history-modal-reason-text">
+                          {selectedHistoryRow.change_reason}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ===== RIGHT PANEL: Timeline ===== */}
+                  <div className="jo-land-history-modal-timeline-panel">
+                    <h3 className="jo-land-history-modal-timeline-heading">
+                      Timeline
+                    </h3>
+                    <p className="jo-land-history-modal-timeline-subtitle">
+                      {parcelModalTimelineRows.length} history{" "}
+                      {parcelModalTimelineRows.length === 1
+                        ? "record"
+                        : "records"}{" "}
+                      — click an entry to view its details
+                    </p>
+                    <ul className="jo-land-history-modal-timeline-list">
+                      {parcelModalTimelineRows.map((row, idx) => {
+                        const { dotClass } = getChangeTypeColor(
+                          row.change_type,
+                        );
+                        const isSelected =
+                          selectedHistoryRow?.id === row.id;
+                        const isLast =
+                          idx === parcelModalTimelineRows.length - 1;
+
+                        return (
+                          <li
+                            key={`timeline-${row.id}`}
+                            className={`jo-land-history-modal-tl-item ${
+                              isSelected ? "selected" : ""
+                            } ${isLast ? "is-last" : ""}`}
+                            onClick={() => setSelectedHistoryRow(row)}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`View details for ${
+                              row.change_type || "change"
+                            } on ${formatDate(getRowEventDate(row))}`}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setSelectedHistoryRow(row);
+                              }
+                            }}
+                          >
+                            <div className="jo-land-history-modal-tl-rail">
+                              <div
+                                className={`jo-land-history-modal-tl-dot ${dotClass}`}
+                              >
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              </div>
+                              {!isLast && (
+                                <div className="jo-land-history-modal-tl-line" />
+                              )}
+                            </div>
+                            <div className="jo-land-history-modal-tl-content">
+                              <div className="jo-land-history-modal-tl-header">
+                                <strong className="jo-land-history-modal-tl-title">
+                                  {String(
+                                    row.change_type || "Record",
+                                  )}
+                                </strong>
+                                {row.is_current && (
+                                  <span className="jo-land-history-modal-tl-current-badge">
+                                    Current
+                                  </span>
+                                )}
+                              </div>
+                              <span className="jo-land-history-modal-tl-date">
+                                {formatDate(getRowEventDate(row))}
+                              </span>
+                              <p className="jo-land-history-modal-tl-desc">
+                                {row.change_reason
+                                  ? row.change_reason
+                                  : "No additional details"}
+                              </p>
+                              <div className="jo-land-history-modal-tl-meta">
+                                <span>
+                                  {formatName(row.land_owner_name)} →{" "}
+                                  {formatName(row.farmer_name)}
+                                </span>
+                                <span className="jo-land-history-modal-tl-role">
+                                  {getFarmingRoleLabel(row)}
+                                </span>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -425,6 +425,151 @@
   overflow-x: auto;
 }
 
+/* Print Toolbar */
+.jo-manage-requests-print-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.jo-manage-requests-print-toolbar-left,
+.jo-manage-requests-print-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.jo-manage-requests-selected-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.jo-manage-requests-print-btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+.jo-manage-requests-print-clear-btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jo-manage-requests-print-clear-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Print Layout */
+.jo-manage-requests-print-area {
+  display: none;
+}
+
+.jo-manage-requests-print-header {
+  margin-bottom: 16px;
+}
+
+.jo-manage-requests-print-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.jo-manage-requests-print-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: #374151;
+  margin-top: 6px;
+}
+
+.jo-manage-requests-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.jo-manage-requests-print-table th,
+.jo-manage-requests-print-table td {
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.jo-manage-requests-print-table th {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.jo-manage-requests-print-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-manage-requests-print-empty {
+  font-size: 12px;
+  color: #64748b;
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  .page-container,
+  .jo-manage-notification-toast,
+  .jo-manage-requests-modal-overlay,
+  .jo-manage-delete-modal-overlay {
+    display: none !important;
+  }
+
+  .jo-manage-requests-print-area,
+  .jo-manage-requests-print-area * {
+    visibility: visible !important;
+  }
+
+  .jo-manage-requests-print-area {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 24px;
+  }
+
+  .jo-manage-requests-print-table tr {
+    page-break-inside: avoid;
+  }
+}
+
 /* Edit Modal */
 @keyframes fadeIn {
   from {

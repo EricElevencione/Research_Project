@@ -221,14 +221,12 @@ const JoFarmerRegistry: React.FC = () => {
     type: "success" | "error";
     message: string;
   }>({ show: false, type: "success", message: "" });
+  const [showPrintFarmerModal, setShowPrintFarmerModal] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [sortConfigs, setSortConfigs] = useState<
     Array<{ key: SortKey; direction: SortDirection }>
   >([{ ...DEFAULT_SORT_CONFIG }]);
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [restoringRecordIds, setRestoringRecordIds] = useState<Set<string>>(
     new Set(),
   );
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -635,6 +633,7 @@ const JoFarmerRegistry: React.FC = () => {
   useEffect(() => {
     const handleWindowClick = () => {
       setOpenMenuId(null);
+      setShowPrintFarmerModal(false);
     };
     window.addEventListener("click", handleWindowClick);
     return () => window.removeEventListener("click", handleWindowClick);
@@ -809,9 +808,9 @@ const JoFarmerRegistry: React.FC = () => {
     return { total, active, tenants, lessees, owners };
   }, [rsbsaRecords]);
 
-  // CHANGE: Column count updated to 8 — Farmer, Barangay, Role, Parcels,
-  // Total Area, Cultivation, Status, Actions. Date Submitted removed.
-  const VISIBLE_COLUMN_COUNT = 8;
+  // CHANGE: Column count updated to 9 — checkbox + Farmer, Barangay, Role,
+  // Parcels, Total Area, Cultivation, Status, Actions.
+  const VISIBLE_COLUMN_COUNT = 9;
 
   const allFilteredSelected =
     filteredRecords.length > 0 &&
@@ -954,6 +953,145 @@ const JoFarmerRegistry: React.FC = () => {
     if (activeStatuses.has(normalized)) return "Active";
     if (inactiveStatuses.has(normalized)) return "Inactive";
     return status || "Not Submitted";
+  };
+
+  const buildPrintFilterLabel = () => {
+    const parts: string[] = [];
+    if (selectedBarangay !== "all") parts.push(`Barangay: ${selectedBarangay}`);
+    if (selectedRole !== "all") {
+      const roleLabelMap: Record<string, string> = {
+        tenant: "Tenant",
+        lessee: "Lessee",
+        owner: "Owner-farmer",
+        active: "Active",
+        notActive: "Not Active",
+      };
+      parts.push(`Role: ${roleLabelMap[selectedRole] || selectedRole}`);
+    }
+    if (searchQuery.trim()) parts.push(`Search: ${searchQuery.trim()}`);
+    return parts.length > 0 ? parts.join(" · ") : "All Records";
+  };
+
+  const resolveLandownerNames = async (record: RSBSARecord) => {
+    const response = await getFarmParcels(record.id);
+    if (response.error) return "—";
+    const parcels = (response.data || []) as Parcel[];
+    const names = new Set<string>();
+
+    parcels.forEach((parcel) => {
+      if (parcel.ownership_type_registered_owner) {
+        if (record.farmerName) names.add(record.farmerName);
+      }
+
+      if (parcel.ownership_type_tenant && parcel.tenant_land_owner_name) {
+        names.add(parcel.tenant_land_owner_name);
+      }
+
+      if (parcel.ownership_type_lessee && parcel.lessee_land_owner_name) {
+        names.add(parcel.lessee_land_owner_name);
+      }
+
+      if (
+        !parcel.ownership_type_registered_owner &&
+        !parcel.ownership_type_tenant &&
+        !parcel.ownership_type_lessee
+      ) {
+        if (parcel.tenant_land_owner_name)
+          names.add(parcel.tenant_land_owner_name);
+        if (parcel.lessee_land_owner_name)
+          names.add(parcel.lessee_land_owner_name);
+      }
+    });
+
+    if (names.size === 0) return "—";
+    return Array.from(names)
+      .map((name) => String(name).trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b))
+      .join(" | ");
+  };
+
+  const handlePrintFarmer = async (
+    scope: "all" | "selected",
+    singleRecord?: RSBSARecord,
+  ) => {
+    const records = singleRecord
+      ? [singleRecord]
+      : scope === "selected"
+        ? filteredRecords.filter((r) => selectedRecordIds.has(r.id))
+        : filteredRecords;
+
+    if (records.length === 0) {
+      showUpdateNotification("No records to print.", "error");
+      return;
+    }
+
+    const filterLabel = singleRecord
+      ? `Farmer: ${singleRecord.farmerName}`
+      : buildPrintFilterLabel();
+
+    const landownerNames = await Promise.all(
+      records.map(async (record) => resolveLandownerNames(record)),
+    );
+
+    const rows = records
+      .map((r, index) => {
+        const barangay = getRecordBarangay(r) || "—";
+        const role = getOwnershipLabel(r) || "—";
+        const landownerName = landownerNames[index] || "—";
+        const parcels = `${r.parcelCount} ${r.parcelCount === 1 ? "parcel" : "parcels"}`;
+        const area = formatParcelArea(r.parcelArea || "—");
+        const farmingStatus = formatCultivation(r) || "—";
+        return `<tr>
+          <td>${index + 1}</td>
+          <td>${r.farmerName}</td>
+          <td>${barangay}</td>
+          <td>${role}</td>
+          <td>${landownerName}</td>
+          <td>${parcels}</td>
+          <td>${area}</td>
+          <td>${farmingStatus}</td>
+        </tr>`;
+      })
+      .join("");
+
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document
+      .write(`<!DOCTYPE html><html><head><title>Who Farms This Land? — Farmer Registry</title><style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Arial,sans-serif;font-size:10px;padding:10mm;color:#111827}
+      .farmer-print-header{text-align:center;margin-bottom:8px}
+      .farmer-print-header h1{font-size:14px;font-weight:700}
+      .farmer-print-header p{font-size:10px;color:#475569}
+      table{width:100%;border-collapse:collapse;font-size:9px}
+      th{background:#0f766e;color:#fff;padding:4px 6px;text-align:left;font-weight:700;border:.5px solid #cbd5e1}
+      td{padding:3px 6px;border:.5px solid #e2e8f0;vertical-align:top}
+      tr:nth-child(even) td{background:#f8fafc}
+      .farmer-print-footer{margin-top:10px;font-size:9px;color:#475569;text-align:center}
+    </style></head><body>
+    <div class="farmer-print-header">
+      <h1>Who Farms This Land? — Farmer Registry</h1>
+      <p>Municipality of Dumangas, Iloilo</p>
+    </div>
+    <table class="farmer-print-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Farmer Name</th>
+          <th>Barangay</th>
+          <th>Role</th>
+          <th>Landowner Name</th>
+          <th>Parcels</th>
+          <th>Total Area</th>
+          <th>Farming Status</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="farmer-print-footer">Filter: ${filterLabel} · Total: ${records.length} · Printed: ${new Date().toLocaleString()}</div>
+    <script>window.onload=function(){window.print()}<\/script></body></html>`);
+    w.document.close();
   };
 
   const getOwnershipLabel = (record: RSBSARecord) => {
@@ -1541,19 +1679,86 @@ const JoFarmerRegistry: React.FC = () => {
               </div>
             )}
 
-            {!loading && !error && selectedRecordIds.size > 0 && (
+            {!loading && !error && (
               <div className="jo-farmer-bulk-toolbar">
-                <span className="jo-farmer-bulk-count">
-                  {selectedRecordIds.size} farmer
-                  {selectedRecordIds.size === 1 ? "" : "s"} selected
-                </span>
+                {selectedRecordIds.size > 0 && (
+                  <span className="jo-farmer-bulk-count">
+                    {selectedRecordIds.size} farmer
+                    {selectedRecordIds.size === 1 ? "" : "s"} selected
+                  </span>
+                )}
                 <div className="jo-farmer-bulk-actions">
-                  <button
-                    className="jo-farmer-bulk-btn jo-farmer-bulk-btn-clear"
-                    onClick={() => setSelectedRecordIds(new Set())}
+                  <div
+                    className="jo-farmer-bulk-export-wrap"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    Clear Selection
-                  </button>
+                    <button
+                      className="jo-farmer-bulk-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPrintFarmerModal((prev) => !prev);
+                      }}
+                    >
+                      🌾 Print Farmer
+                    </button>
+                    {showPrintFarmerModal && (
+                      <div className="jo-farmer-bulk-menu">
+                        <div
+                          style={{
+                            padding: "6px 12px 4px",
+                            fontSize: "11px",
+                            color: "var(--color-text-secondary, #888)",
+                            fontWeight: 600,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            borderBottom:
+                              "0.5px solid var(--color-border-tertiary, #e0e0e0)",
+                            marginBottom: 2,
+                          }}
+                        >
+                          Print scope
+                        </div>
+                        <button
+                          className="jo-farmer-quick-item"
+                          onClick={() => {
+                            setShowPrintFarmerModal(false);
+                            void handlePrintFarmer("all");
+                          }}
+                        >
+                          📋 Print All ({filteredRecords.length})
+                        </button>
+                        <button
+                          className="jo-farmer-quick-item"
+                          disabled={selectedRecordIds.size === 0}
+                          style={{
+                            opacity: selectedRecordIds.size === 0 ? 0.45 : 1,
+                            cursor:
+                              selectedRecordIds.size === 0
+                                ? "not-allowed"
+                                : "pointer",
+                          }}
+                          onClick={() => {
+                            if (selectedRecordIds.size === 0) return;
+                            setShowPrintFarmerModal(false);
+                            void handlePrintFarmer("selected");
+                          }}
+                        >
+                          ✅ Print Selected Only
+                          {selectedRecordIds.size > 0
+                            ? ` (${selectedRecordIds.size})`
+                            : " — pick rows first"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {selectedRecordIds.size > 0 && (
+                    <button
+                      className="jo-farmer-bulk-btn jo-farmer-bulk-btn-clear"
+                      onClick={() => setSelectedRecordIds(new Set())}
+                    >
+                      Clear Selection
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -1562,13 +1767,21 @@ const JoFarmerRegistry: React.FC = () => {
               <table className="jo-farmer-farmers-table">
                 <thead>
                   {/*
-                    CHANGE: New column order — Farmer | Barangay | Role |
-                    Parcels | Total Area | Cultivation | Status | Actions
-                    - Role moved before Parcels (classification is a primary use case)
-                    - Cultivation now shows "X/Y farming" via formatCultivation()
-                    - Date Submitted removed (record audit detail, not a scanning column)
+                    CHANGE: New column order — checkbox | Farmer | Barangay |
+                    Role | Parcels | Total Area | Cultivation | Status | Actions
                   */}
                   <tr>
+                    <th className="jo-farmer-checkbox-col">
+                      <input
+                        type="checkbox"
+                        className="jo-farmer-header-checkbox"
+                        checked={allFilteredSelected}
+                        disabled={filteredRecords.length === 0}
+                        onChange={toggleSelectAllFiltered}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Select all filtered farmers"
+                      />
+                    </th>
                     <th>
                       <button
                         className={`jo-farmer-sort-btn ${isSortActive("farmerName") ? "is-active" : ""}`}
@@ -1630,7 +1843,20 @@ const JoFarmerRegistry: React.FC = () => {
                         className="jo-farmer-table-row"
                         onClick={() => fetchFarmerDetails(record.id, record)}
                       >
-                        {/* 1. Farmer name + FFRS ref */}
+                        <td
+                          className="jo-farmer-checkbox-col"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            className="jo-farmer-row-checkbox"
+                            checked={selectedRecordIds.has(record.id)}
+                            onChange={() => toggleSelectRecord(record.id)}
+                            aria-label={`Select ${record.farmerName}`}
+                          />
+                        </td>
+
+                        {/* Farmer name + FFRS ref */}
                         <td>
                           <div className="jo-farmer-farmer-cell">
                             <div className="jo-farmer-farmer-avatar">
@@ -1647,14 +1873,14 @@ const JoFarmerRegistry: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* 2. Barangay */}
+                        {/* Barangay */}
                         <td>
                           <span className="jo-farmer-cultivation-text">
                             {getRecordBarangay(record)}
                           </span>
                         </td>
 
-                        {/* 3. Role — moved before Parcels for classification scanning */}
+                        {/* Role */}
                         <td>
                           <div className="jo-farmer-status-cell">
                             <span
@@ -1665,7 +1891,7 @@ const JoFarmerRegistry: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* 4. Parcel count */}
+                        {/* Parcel count */}
                         <td>
                           <span className="jo-farmer-parcel-count">
                             {record.parcelCount}{" "}
@@ -1673,28 +1899,28 @@ const JoFarmerRegistry: React.FC = () => {
                           </span>
                         </td>
 
-                        {/* 5. Total area */}
+                        {/* Total area */}
                         <td>
                           <span className="jo-farmer-parcel-area">
                             {formatParcelArea(record.parcelArea)}
                           </span>
                         </td>
 
-                        {/* 6. Cultivation — "X/Y farming" format */}
+                        {/* Cultivation */}
                         <td>
                           <span className="jo-farmer-cultivation-text">
                             {formatCultivation(record)}
                           </span>
                         </td>
 
-                        {/* 7. Record status */}
+                        {/* Record status */}
                         <td>
                           <span className="jo-farmer-record-status">
                             {formatRecordStatus(record.status)}
                           </span>
                         </td>
 
-                        {/* 8. Actions */}
+                        {/* Actions */}
                         <td className="jo-farmer-actions-cell">
                           <div
                             className="jo-farmer-quick-actions"
@@ -1730,6 +1956,15 @@ const JoFarmerRegistry: React.FC = () => {
                                   }}
                                 >
                                   Edit
+                                </button>
+                                <button
+                                  className="jo-farmer-quick-item"
+                                  onClick={() => {
+                                    void handlePrintFarmer("all", record);
+                                    setOpenMenuId(null);
+                                  }}
+                                >
+                                  Print Farmer Info
                                 </button>
                               </div>
                             )}

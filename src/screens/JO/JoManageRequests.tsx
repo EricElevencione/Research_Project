@@ -1,5 +1,5 @@
 import { supabase } from "../../supabase";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   getAllocationById,
@@ -429,6 +429,29 @@ const FERTILIZER_REQUEST_FIELDS: RequestField[] = [
 const SEED_REQUEST_FIELDS: RequestField[] = SEED_ITEMS.map(
   (item) => item.requestField,
 );
+const PRINTABLE_REQUEST_ITEMS: Array<{
+  label: string;
+  requestField: RequestField;
+}> = (() => {
+  const items: Array<{ label: string; requestField: RequestField }> = [
+    ...FERTILIZER_ITEMS.map((item) => ({
+      label: item.label,
+      requestField: item.requestField,
+    })),
+    ...EXTRA_FERTILIZER_FIELDS,
+    ...SEED_ITEMS.map((item) => ({
+      label: item.label,
+      requestField: item.requestField,
+    })),
+  ];
+
+  const seen = new Set<RequestField>();
+  return items.filter((item) => {
+    if (seen.has(item.requestField)) return false;
+    seen.add(item.requestField);
+    return true;
+  });
+})();
 
 const sumRequestFields = (
   request: Partial<FarmerRequest>,
@@ -469,6 +492,16 @@ const JoManageRequests: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [barangayFilter, setBarangayFilter] = useState<string>("all");
+  const [selectedRequestIds, setSelectedRequestIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [printRequests, setPrintRequests] = useState<FarmerRequest[]>([]);
+  const [printMeta, setPrintMeta] = useState<{
+    generatedAt: string;
+    total: number;
+  } | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   // DSS Feature: Alternative suggestions
   const [, setShowAlternatives] = useState<{ [key: number]: boolean }>({});
@@ -510,18 +543,29 @@ const JoManageRequests: React.FC = () => {
     id: number;
     name: string;
   } | null>(null);
-   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchAllocation();
     fetchRequests();
   }, [allocationId]);
 
-
   useEffect(() => {
     filterRequests();
   }, [requests, searchTerm, statusFilter, barangayFilter]);
+
+  useEffect(() => {
+    setSelectedRequestIds((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set<number>();
+      requests.forEach((request) => {
+        if (prev.has(request.id)) {
+          next.add(request.id);
+        }
+      });
+      return next;
+    });
+  }, [requests]);
 
   const fetchAllocation = async () => {
     try {
@@ -700,6 +744,57 @@ const JoManageRequests: React.FC = () => {
     }
 
     setFilteredRequests(filtered);
+  };
+
+  const toggleRequestSelection = (requestId: number) => {
+    setSelectedRequestIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(requestId)) {
+        next.delete(requestId);
+      } else {
+        next.add(requestId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllFiltered = (checked: boolean) => {
+    setSelectedRequestIds((prev) => {
+      const next = new Set(prev);
+      filteredRequests.forEach((request) => {
+        if (checked) {
+          next.add(request.id);
+        } else {
+          next.delete(request.id);
+        }
+      });
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedRequestIds(new Set());
+  };
+
+  const handlePrintRequests = () => {
+    const printableRequests = requests.filter((request) =>
+      selectedRequestIds.has(request.id),
+    );
+    if (printableRequests.length === 0) {
+      alert("Select at least one request to print.");
+      return;
+    }
+    if (printableRequests.length === 0) {
+      alert("No requests available to print.");
+      return;
+    }
+
+    setPrintRequests(printableRequests);
+    setPrintMeta({
+      generatedAt: new Date().toLocaleString(),
+      total: printableRequests.length,
+    });
+    setIsPrinting(true);
   };
 
   const handleDelete = (id: number, farmerName: string) => {
@@ -962,6 +1057,13 @@ const JoManageRequests: React.FC = () => {
     return season;
   };
 
+  const formatStatusLabel = (status: string) => {
+    if (status === "approved") {
+      return "CLAIMED";
+    }
+    return status.toUpperCase();
+  };
+
   // Edit request functionality
   const handleEdit = (request: FarmerRequest) => {
     setEditingRequest(request.id);
@@ -1064,7 +1166,9 @@ const JoManageRequests: React.FC = () => {
       const alreadyRequested = requestsList
         .filter(
           (r) =>
-            (r.status === "Claimed" || r.status === "approved" || r.status === "pending") &&
+            (r.status === "Claimed" ||
+              r.status === "approved" ||
+              r.status === "pending") &&
             r.id !== request.id,
         )
         .reduce((sum, r) => sum + (Number(r[item.requestField]) || 0), 0);
@@ -1127,6 +1231,22 @@ const JoManageRequests: React.FC = () => {
       return "kg";
     }
     return "bags";
+  };
+
+  const formatRequestValue = (value: number, unit: string) => {
+    if (unit === "bags") {
+      return Number(value).toFixed(0);
+    }
+    return Number(value).toFixed(2);
+  };
+
+  const getPrintableItemsForRequest = (request: FarmerRequest) => {
+    return PRINTABLE_REQUEST_ITEMS.map((item) => {
+      const value = Number(request[item.requestField] || 0);
+      if (value <= 0) return null;
+      const unit = getUnitForRequestField(item.requestField);
+      return `${item.label}: ${formatRequestValue(value, unit)} ${unit}`;
+    }).filter(Boolean) as string[];
   };
 
   const getEditFieldRiskData = (field: RequestField) => {
@@ -1268,1065 +1388,1055 @@ const JoManageRequests: React.FC = () => {
     !!editingRequestData &&
     editableRequestFields.some((field) => getEditFieldRiskData(field)?.hasRisk);
 
+  const selectedCount = selectedRequestIds.size;
+  const filteredCount = filteredRequests.length;
+  const allCount = requests.length;
+  const isAllFilteredSelected =
+    filteredRequests.length > 0 &&
+    filteredRequests.every((request) => selectedRequestIds.has(request.id));
+  const isSomeFilteredSelected =
+    filteredRequests.some((request) => selectedRequestIds.has(request.id)) &&
+    !isAllFilteredSelected;
+
+  useEffect(() => {
+    if (!selectAllRef.current) return;
+    selectAllRef.current.indeterminate = isSomeFilteredSelected;
+  }, [isSomeFilteredSelected]);
+
+  useEffect(() => {
+    if (!isPrinting) return;
+    const timer = setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [isPrinting, printRequests]);
+
   return (
-    <div className="page-container">
-      {/* Notification Toast */}
-      {showNotification && (
-        <div
-          className={`jo-manage-notification-toast jo-manage-notification-${notificationType}`}
-        >
-          <div className="jo-manage-notification-content">
-            <span className="jo-manage-notification-icon">
-              {notificationType === "success"
-                ? "✅"
-                : notificationType === "warning"
-                  ? "⚠️"
-                  : "❌"}
-            </span>
-            <span className="jo-manage-notification-message">
-              {notificationMessage}
-            </span>
-          </div>
-          <button
-            className="jo-manage-notification-close"
-            onClick={() => setShowNotification(false)}
+    <>
+      <div className="page-container">
+        {/* Notification Toast */}
+        {showNotification && (
+          <div
+            className={`jo-manage-notification-toast jo-manage-notification-${notificationType}`}
           >
-            ×
-          </button>
-        </div>
-      )}
-
-      <div className="page">
-        {/* Sidebar */}
-        <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-        {/* Main Content */}
-        <div className="main-content">
-          <div className="jo-manage-dashboard-header-incent">
-            <div className="jo-manage-header-sub">
-              <h2 className="jo-manage-title">Manage Requests</h2>
-              <p className="jo-manage-subtitle">
-                {formatSeasonName(allocation?.season ?? "")} · Regional Program
-              </p>
+            <div className="jo-manage-notification-content">
+              <span className="jo-manage-notification-icon">
+                {notificationType === "success"
+                  ? "✅"
+                  : notificationType === "warning"
+                    ? "⚠️"
+                    : "❌"}
+              </span>
+              <span className="jo-manage-notification-message">
+                {notificationMessage}
+              </span>
             </div>
-            <div className="jo-manage-requests-back-create-section">
-              <button
-                className="app-back-button"
-                onClick={() => navigate("/jo-incentives")}
-              >
-                ← Back
-              </button>
-              <button
-                className="jo-manage-requests-add-btn"
-                onClick={() =>
-                  navigate(`/jo-add-farmer-request/${allocationId}`)
-                }
-              >
-                ➕ Add Farmer Request
-              </button>
-            </div>
-          </div>
-
-          <div className="jo-manage-content-card-incent">
-            {/* Filters */}
-            <div className="jo-manage-requests-filters">
-              <input
-                type="text"
-                placeholder="🔍 Search by farmer name or barangay..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="jo-manage-requests-search-input"
-              />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="jo-manage-requests-filter-select"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="Claimed">Claimed</option>
-                <option value="rejected">Rejected</option>
-              </select>
-              <select
-                value={barangayFilter}
-                onChange={(e) => setBarangayFilter(e.target.value)}
-                className="jo-manage-requests-filter-select"
-              >
-                <option value="all">All Barangays</option>
-                {getUniqueBarangays().map((barangay) => (
-                  <option key={barangay} value={barangay}>
-                    {barangay}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Allocation vs Requests Comparison */}
-            <div className="jo-manage-requests-comparison-grid">
-              {/* Regional Allocation Card */}
-              <div className="jo-manage-requests-comparison-card jo-manage-requests-allocation-card">
-                <h3 className="jo-manage-requests-card-header allocation">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-                    <path d="m3.3 7 8.7 5 8.7-5" />
-                    <path d="M12 22V12" />
-                  </svg>
-                  Regional Allocation
-                </h3>
-                <div className="jo-manage-requests-card-content">
-                  <div className="jo-manage-requests-stat-box fertilizers">
-                    <span className="jo-manage-requests-stat-label fertilizers">
-                      Total Fertilizers
-                    </span>
-                    <span className="jo-manage-requests-stat-value fertilizers">
-                      {sumAllocationFields(
-                        allocation,
-                        FERTILIZER_ITEMS,
-                      ).toFixed(2)}{" "}
-                      bags
-                    </span>
-                  </div>
-                  <div className="jo-manage-requests-stat-box seeds">
-                    <span className="jo-manage-requests-stat-label seeds">
-                      Total Seeds
-                    </span>
-                    <span className="jo-manage-requests-stat-value seeds">
-                      {sumAllocationFields(allocation, SEED_ITEMS).toFixed(2)}{" "}
-                      kg
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Total Farmer Requests Card */}
-              <div className="jo-manage-requests-comparison-card jo-manage-requests-total-requests-card">
-                <h3 className="jo-manage-requests-card-header total-requests">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="18" y1="20" x2="18" y2="10" />
-                    <line x1="12" y1="20" x2="12" y2="4" />
-                    <line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                  Total Requests
-                </h3>
-                <div className="jo-manage-requests-card-content">
-                  <div className="jo-manage-requests-stat-box fertilizers">
-                    <span className="jo-manage-requests-stat-label fertilizers">
-                      Fertilizers Requested
-                    </span>
-                    <span className="jo-manage-requests-stat-value fertilizers">
-                      {sumRequestFieldsForList(
-                        filteredRequests,
-                        FERTILIZER_REQUEST_FIELDS,
-                      ).toFixed(2)}{" "}
-                      bags
-                    </span>
-                  </div>
-                  <div className="jo-manage-requests-stat-box seeds">
-                    <span className="jo-manage-requests-stat-label seeds">
-                      Seeds Requested
-                    </span>
-                    <span className="jo-manage-requests-stat-value seeds">
-                      {sumRequestFieldsForList(
-                        filteredRequests,
-                        SEED_REQUEST_FIELDS,
-                      ).toFixed(2)}{" "}
-                      kg
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Approved Farmer Requests Card */}
-              <div className="jo-manage-requests-comparison-card jo-manage-requests-Claimed-card">
-                <h3 className="jo-manage-requests-card-header farmer-requests">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Claimed Requests
-                </h3>
-                <div className="jo-manage-requests-card-content">
-                  <div className="jo-manage-requests-stat-box fertilizers">
-                    <span className="jo-manage-requests-stat-label fertilizers">
-                      Total Fertilizers
-                    </span>
-                    <span className="jo-manage-requests-stat-value fertilizers">
-                      {getStatusTotals("Claimed").fertilizer.toFixed(2)} bags
-                    </span>
-                  </div>
-                  <div className="jo-manage-requests-stat-box seeds">
-                    <span className="jo-manage-requests-stat-label seeds">
-                      Total Seeds
-                    </span>
-                    <span className="jo-manage-requests-stat-value seeds">
-                      {getStatusTotals("Claimed").seeds.toFixed(2)} kg
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rejected Farmer Requests Card */}
-            </div>
-
-            {/* Summary Cards */}
-            <div className="jo-manage-requests-summary-grid">
-              {/* Total Requests */}
-              <div className="jo-manage-requests-summary-card jo-manage-card-total">
-                <div className="jo-manage-card-icon">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                </div>
-                <div className="jo-manage-card-info">
-                  <div className="jo-manage-card-count">
-                    {filteredRequests.length}
-                  </div>
-                  <div className="jo-manage-card-label">Total Requests</div>
-                </div>
-              </div>
-
-              {/* Pending Requests */}
-              <div className="jo-manage-requests-summary-card jo-manage-card-pending">
-                <div className="jo-manage-card-icon">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                </div>
-                <div className="jo-manage-card-info">
-                  <div className="jo-manage-card-count">
-                    {
-                      filteredRequests.filter((r) => r.status === "pending")
-                        .length
-                    }
-                  </div>
-                  <div className="jo-manage-card-label">Pending Requests</div>
-                </div>
-              </div>
-
-              {/* Approved Requests */}
-              <div className="jo-manage-requests-summary-card jo-manage-card-Claimed">
-                <div className="jo-manage-card-icon">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="9 11 12 14 22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                  </svg>
-                </div>
-                <div className="jo-manage-card-info">
-                  <div className="jo-manage-card-count">
-                    {
-                        filteredRequests.filter((r) => r.status === "Claimed" || r.status === "approved")
-                          .length
-                    }
-                  </div>
-                  <div className="jo-manage-card-label">Claimed Requests</div>
-                </div>
-              </div>
-
-              {/* Rejected Requests */}
-
-              {/* Combined Shortage & Suggestions Card */}
-            </div>
-
-            {loading ? (
-              <div className="loading-message">Loading requests...</div>
-            ) : error ? (
-              <div className="error-state">
-                <div className="error-icon">⚠️</div>
-                <h3>Error Loading Requests</h3>
-                <p>{error}</p>
-              </div>
-            ) : filteredRequests.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">📝</div>
-                <h3>No Farmer Requests</h3>
-                <p>No requests found matching your filters</p>
-              </div>
-            ) : (
-              <>
-                {/* Info Box for Visual Indicators */}
-                {filteredRequests.filter(
-                  (r) => r.status === "pending" && checkPotentialShortage(r),
-                ).length > 0 && (
-                  <div className="jo-manage-requests-info-box">
-                    <span style={{ fontSize: "24px" }}>💡</span>
-                    <div style={{ flex: 1 }}>
-                      <strong style={{ color: "#92400e", fontSize: "14px" }}>
-                        Alternatives Auto-Loaded & Available
-                      </strong>
-                      <p
-                        style={{
-                          margin: "4px 0 0 0",
-                          fontSize: "13px",
-                          color: "#78350f",
-                        }}
-                      >
-                        Rows highlighted in yellow (⚠️) have detected shortages.
-                        Alternative fertilizer options have been automatically
-                        loaded based on agronomic equivalency. Click the "💡
-                        Suggestions" card above to view and apply alternatives.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="jo-manage-requests-table-container">
-                  <table
-                    style={{
-                      width: "100%",
-                      borderCollapse: "collapse",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <thead>
-                      <tr
-                        style={{
-                          background: "#f9fafb",
-                          borderBottom: "2px solid #e5e7eb",
-                        }}
-                      >
-                        <th
-                          style={{
-                            padding: "12px",
-                            textAlign: "left",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Farmer Name
-                        </th>
-                        <th
-                          style={{
-                            padding: "12px",
-                            textAlign: "left",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Barangay
-                        </th>
-                        <th
-                          style={{
-                            padding: "12px",
-                            textAlign: "center",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Fertilizers (bags)
-                        </th>
-                        <th
-                          style={{
-                            padding: "12px",
-                            textAlign: "center",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Seeds (kg)
-                        </th>
-                        <th
-                          style={{
-                            padding: "12px",
-                            textAlign: "center",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Status
-                        </th>
-                        <th
-                          style={{
-                            padding: "12px",
-                            textAlign: "center",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRequests.map((request) => {
-                        const totals = getRequestTotals(request);
-
-                        // Check if this request might have shortages
-                        const hasShortage =
-                          request.status === "pending" &&
-                          checkPotentialShortage(request);
-
-                        return (
-                          <React.Fragment key={request.id}>
-                            <tr
-                              style={{
-                                borderBottom: "1px solid #e5e7eb",
-                                background: hasShortage
-                                  ? "#fef3c7"
-                                  : "transparent",
-                              }}
-                            >
-                              <td style={{ padding: "12px" }}>
-                                {hasShortage && (
-                                  <span
-                                    title="Potential shortage - alternatives auto-loaded"
-                                    style={{
-                                      marginRight: "8px",
-                                      fontSize: "16px",
-                                    }}
-                                  ></span>
-                                )}
-                                {hasShortage && alternatives[request.id] && (
-                                  <span title="Alternatives ready - click to view"></span>
-                                )}
-                                {request.farmer_name}
-                              </td>
-                              <td style={{ padding: "12px" }}>
-                                {request.barangay}
-                              </td>
-                              <td
-                                style={{ padding: "12px", textAlign: "center" }}
-                              >
-                                {totals.fertilizer.toFixed(2)}
-                                {hasShortage && (
-                                  <span title="Alternatives auto-displayed below"></span>
-                                )}
-                              </td>
-                              <td
-                                style={{ padding: "12px", textAlign: "center" }}
-                              >
-                                {totals.seeds.toFixed(2)}
-                              </td>
-                              <td
-                                style={{ padding: "12px", textAlign: "center" }}
-                              >
-                                <span className={`jo-manage-requests-status-badge ${request.status}`}>
-                                  {request.status === "approved" ? "CLAIMED" : request.status.toUpperCase()}
-                                </span>
-                              </td>
-                              <td
-                                style={{ padding: "12px", textAlign: "center" }}
-                              >
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    gap: "8px",
-                                    justifyContent: "center",
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  {request.status === "pending" && (
-                                    <>
-                                      <button
-                                        onClick={() => handleEdit(request)}
-                                        style={{
-                                          padding: "6px 12px",
-                                          background: "#f59e0b",
-                                          color: "white",
-                                          border: "none",
-                                          borderRadius: "4px",
-                                          cursor: "pointer",
-                                          fontSize: "12px",
-                                        }}
-                                      >
-                                        ✏️ Edit
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr
-                        style={{
-                          background: "#f9fafb",
-                          borderTop: "2px solid #e5e7eb",
-                          fontWeight: "600",
-                        }}
-                      >
-                        <td colSpan={2} style={{ padding: "12px" }}>
-                          TOTALS
-                        </td>
-                        <td style={{ padding: "12px", textAlign: "center" }}>
-                          {sumRequestFieldsForList(
-                            filteredRequests,
-                            FERTILIZER_REQUEST_FIELDS,
-                          ).toFixed(2)}
-                        </td>
-                        <td style={{ padding: "12px", textAlign: "center" }}>
-                          {sumRequestFieldsForList(
-                            filteredRequests,
-                            SEED_REQUEST_FIELDS,
-                          ).toFixed(2)}
-                        </td>
-                        <td colSpan={3}></td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Edit Request Modal */}
-      {editingRequest && (
-        <div className="jo-manage-requests-modal-overlay jo-manage-requests-edit-modal-overlay">
-          <div className="jo-manage-requests-modal-content jo-manage-requests-edit-modal">
             <button
-              type="button"
-              onClick={handleCancelEdit}
-              className="jo-manage-requests-edit-close"
+              className="jo-manage-notification-close"
+              onClick={() => setShowNotification(false)}
             >
               ×
             </button>
+          </div>
+        )}
 
-            <h3 className="jo-manage-requests-modal-title">
-              Edit Farmer Request
-            </h3>
+        <div className="page">
+          {/* Sidebar */}
+          <JOSidebar
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
 
-            {editingRequestData && (
-              <div className="jo-manage-requests-edit-request-info">
-                <span>
-                  <strong>Farmer:</strong> {editingRequestData.farmer_name}
-                </span>
-                <span>
-                  <strong>Barangay:</strong> {editingRequestData.barangay}
-                </span>
+          {/* Main Content */}
+          <div className="main-content">
+            <div className="jo-manage-dashboard-header-incent">
+              <div className="jo-manage-header-sub">
+                <h2 className="jo-manage-title">Manage Requests</h2>
+                <p className="jo-manage-subtitle">
+                  {formatSeasonName(allocation?.season ?? "")} · Regional
+                  Program
+                </p>
               </div>
-            )}
-
-            {hasAnyEditRisk && (
-              <div className="jo-manage-requests-modal-risk jo-manage-requests-modal-risk-danger">
-                Warning: one or more edited quantities exceed current available
-                allocation. Adjust the highlighted fields before saving.
-              </div>
-            )}
-
-            <div className="jo-manage-requests-modal-body">
-              {/* Fertilizers Section */}
-              <div className="jo-manage-requests-modal-section">
-                <h4 className="jo-manage-requests-modal-section-title">
-                  Fertilizers (bags)
-                </h4>
-                <div className="jo-manage-requests-modal-grid">
-                  {visibleExtraFertilizerFields.map((item) => {
-                    const hasRisk =
-                      getEditFieldRiskData(item.requestField)?.hasRisk || false;
-                    return (
-                      <div
-                        key={item.requestField}
-                        className={`jo-manage-requests-modal-field ${
-                          hasRisk ? "jo-manage-requests-modal-field-danger" : ""
-                        }`}
-                      >
-                        <label className="jo-manage-requests-modal-label">
-                          {item.label}
-                        </label>
-                        {renderEditFieldMeta(item.requestField)}
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={Number(editFormData[item.requestField]) || 0}
-                          onChange={(e) =>
-                            updateEditQuantity(
-                              item.requestField,
-                              e.target.value,
-                              false,
-                            )
-                          }
-                          className="jo-manage-requests-modal-input"
-                        />
-                      </div>
-                    );
-                  })}
-                  {visibleFertilizerFields.map((item) => {
-                    const hasRisk =
-                      getEditFieldRiskData(item.requestField)?.hasRisk || false;
-                    return (
-                      <div
-                        key={item.requestField}
-                        className={`jo-manage-requests-modal-field ${
-                          hasRisk ? "jo-manage-requests-modal-field-danger" : ""
-                        }`}
-                      >
-                        <label className="jo-manage-requests-modal-label">
-                          {item.label}
-                        </label>
-                        {renderEditFieldMeta(item.requestField)}
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={Number(editFormData[item.requestField]) || 0}
-                          onChange={(e) =>
-                            updateEditQuantity(
-                              item.requestField,
-                              e.target.value,
-                              false,
-                            )
-                          }
-                          className="jo-manage-requests-modal-input"
-                        />
-                      </div>
-                    );
-                  })}
-                  {visibleExtraFertilizerFields.length === 0 &&
-                    visibleFertilizerFields.length === 0 && (
-                      <p className="jo-manage-requests-modal-empty-message">
-                        No fertilizer request values were submitted.
-                      </p>
-                    )}
-                </div>
-              </div>
-
-              {/* Seeds Section */}
-              <div className="jo-manage-requests-modal-section">
-                <h4 className="jo-manage-requests-modal-section-title">
-                  Seeds (kg)
-                </h4>
-                <div className="jo-manage-requests-modal-grid">
-                  {visibleSeedFields.map((item) => {
-                    const hasRisk =
-                      getEditFieldRiskData(item.requestField)?.hasRisk || false;
-                    return (
-                      <div
-                        key={item.requestField}
-                        className={`jo-manage-requests-modal-field ${
-                          hasRisk ? "jo-manage-requests-modal-field-danger" : ""
-                        }`}
-                      >
-                        <label className="jo-manage-requests-modal-label">
-                          {item.label}
-                        </label>
-                        {renderEditFieldMeta(item.requestField)}
-                        <input
-                          type="number"
-                          min="0"
-                          step="any"
-                          inputMode="decimal"
-                          value={Number(editFormData[item.requestField]) || 0}
-                          onChange={(e) =>
-                            updateEditQuantity(
-                              item.requestField,
-                              e.target.value,
-                              true,
-                            )
-                          }
-                          className="jo-manage-requests-modal-input"
-                        />
-                      </div>
-                    );
-                  })}
-                  {visibleSeedFields.length === 0 && (
-                    <p className="jo-manage-requests-modal-empty-message">
-                      No seed request values were submitted.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Notes Section */}
-              <div className="jo-manage-requests-modal-section">
-                <h4 className="jo-manage-requests-modal-section-title">
-                  Notes
-                </h4>
-                <textarea
-                  value={editFormData.request_notes || ""}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      request_notes: e.target.value,
-                    })
+              <div className="jo-manage-requests-back-create-section">
+                <button
+                  className="app-back-button"
+                  onClick={() => navigate("/jo-incentives")}
+                >
+                  ← Back
+                </button>
+                <button
+                  className="jo-manage-requests-add-btn"
+                  onClick={() =>
+                    navigate(`/jo-add-farmer-request/${allocationId}`)
                   }
-                  rows={3}
-                  className="jo-manage-requests-modal-textarea"
-                  placeholder="Add any notes about this request"
+                >
+                  ➕ Add Farmer Request
+                </button>
+              </div>
+            </div>
+
+            <div className="jo-manage-content-card-incent">
+              {/* Filters */}
+              <div className="jo-manage-requests-filters">
+                <input
+                  type="text"
+                  placeholder="🔍 Search by farmer name or barangay..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="jo-manage-requests-search-input"
                 />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="jo-manage-requests-filter-select"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="Claimed">Claimed</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <select
+                  value={barangayFilter}
+                  onChange={(e) => setBarangayFilter(e.target.value)}
+                  className="jo-manage-requests-filter-select"
+                >
+                  <option value="all">All Barangays</option>
+                  {getUniqueBarangays().map((barangay) => (
+                    <option key={barangay} value={barangay}>
+                      {barangay}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Action Buttons */}
-              <div className="jo-manage-requests-modal-actions">
-                <button
-                  onClick={handleCancelEdit}
-                  className="jo-manage-requests-modal-btn cancel"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="jo-manage-requests-modal-btn save"
-                >
-                  Save Changes
-                </button>
+              <div className="jo-manage-requests-print-toolbar">
+                <div className="jo-manage-requests-print-toolbar-left">
+                  <span className="jo-manage-requests-selected-count">
+                    {selectedCount} selected
+                  </span>
+                  <button
+                    type="button"
+                    className="jo-manage-requests-print-clear-btn"
+                    onClick={clearSelection}
+                    disabled={selectedCount === 0}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="jo-manage-requests-print-toolbar-right">
+                  <button
+                    type="button"
+                    className="jo-manage-requests-print-btn"
+                    onClick={handlePrintRequests}
+                    disabled={selectedCount === 0}
+                  >
+                    🖨️ Print Requests
+                  </button>
+                </div>
               </div>
+
+              {/* Allocation vs Requests Comparison */}
+              <div className="jo-manage-requests-comparison-grid">
+                {/* Regional Allocation Card */}
+                <div className="jo-manage-requests-comparison-card jo-manage-requests-allocation-card">
+                  <h3 className="jo-manage-requests-card-header allocation">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                      <path d="m3.3 7 8.7 5 8.7-5" />
+                      <path d="M12 22V12" />
+                    </svg>
+                    Regional Allocation
+                  </h3>
+                  <div className="jo-manage-requests-card-content">
+                    <div className="jo-manage-requests-stat-box fertilizers">
+                      <span className="jo-manage-requests-stat-label fertilizers">
+                        Total Fertilizers
+                      </span>
+                      <span className="jo-manage-requests-stat-value fertilizers">
+                        {sumAllocationFields(
+                          allocation,
+                          FERTILIZER_ITEMS,
+                        ).toFixed(2)}{" "}
+                        bags
+                      </span>
+                    </div>
+                    <div className="jo-manage-requests-stat-box seeds">
+                      <span className="jo-manage-requests-stat-label seeds">
+                        Total Seeds
+                      </span>
+                      <span className="jo-manage-requests-stat-value seeds">
+                        {sumAllocationFields(allocation, SEED_ITEMS).toFixed(2)}{" "}
+                        kg
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Farmer Requests Card */}
+                <div className="jo-manage-requests-comparison-card jo-manage-requests-total-requests-card">
+                  <h3 className="jo-manage-requests-card-header total-requests">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="20" x2="18" y2="10" />
+                      <line x1="12" y1="20" x2="12" y2="4" />
+                      <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                    Total Requests
+                  </h3>
+                  <div className="jo-manage-requests-card-content">
+                    <div className="jo-manage-requests-stat-box fertilizers">
+                      <span className="jo-manage-requests-stat-label fertilizers">
+                        Fertilizers Requested
+                      </span>
+                      <span className="jo-manage-requests-stat-value fertilizers">
+                        {sumRequestFieldsForList(
+                          filteredRequests,
+                          FERTILIZER_REQUEST_FIELDS,
+                        ).toFixed(2)}{" "}
+                        bags
+                      </span>
+                    </div>
+                    <div className="jo-manage-requests-stat-box seeds">
+                      <span className="jo-manage-requests-stat-label seeds">
+                        Seeds Requested
+                      </span>
+                      <span className="jo-manage-requests-stat-value seeds">
+                        {sumRequestFieldsForList(
+                          filteredRequests,
+                          SEED_REQUEST_FIELDS,
+                        ).toFixed(2)}{" "}
+                        kg
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Approved Farmer Requests Card */}
+                <div className="jo-manage-requests-comparison-card jo-manage-requests-Claimed-card">
+                  <h3 className="jo-manage-requests-card-header farmer-requests">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Claimed Requests
+                  </h3>
+                  <div className="jo-manage-requests-card-content">
+                    <div className="jo-manage-requests-stat-box fertilizers">
+                      <span className="jo-manage-requests-stat-label fertilizers">
+                        Total Fertilizers
+                      </span>
+                      <span className="jo-manage-requests-stat-value fertilizers">
+                        {getStatusTotals("Claimed").fertilizer.toFixed(2)} bags
+                      </span>
+                    </div>
+                    <div className="jo-manage-requests-stat-box seeds">
+                      <span className="jo-manage-requests-stat-label seeds">
+                        Total Seeds
+                      </span>
+                      <span className="jo-manage-requests-stat-value seeds">
+                        {getStatusTotals("Claimed").seeds.toFixed(2)} kg
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rejected Farmer Requests Card */}
+              </div>
+
+              {/* Summary Cards */}
+              <div className="jo-manage-requests-summary-grid">
+                {/* Total Requests */}
+                <div className="jo-manage-requests-summary-card jo-manage-card-total">
+                  <div className="jo-manage-card-icon">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </div>
+                  <div className="jo-manage-card-info">
+                    <div className="jo-manage-card-count">
+                      {filteredRequests.length}
+                    </div>
+                    <div className="jo-manage-card-label">Total Requests</div>
+                  </div>
+                </div>
+
+                {/* Pending Requests */}
+                <div className="jo-manage-requests-summary-card jo-manage-card-pending">
+                  <div className="jo-manage-card-icon">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </div>
+                  <div className="jo-manage-card-info">
+                    <div className="jo-manage-card-count">
+                      {
+                        filteredRequests.filter((r) => r.status === "pending")
+                          .length
+                      }
+                    </div>
+                    <div className="jo-manage-card-label">Pending Requests</div>
+                  </div>
+                </div>
+
+                {/* Approved Requests */}
+                <div className="jo-manage-requests-summary-card jo-manage-card-Claimed">
+                  <div className="jo-manage-card-icon">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="9 11 12 14 22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                  </div>
+                  <div className="jo-manage-card-info">
+                    <div className="jo-manage-card-count">
+                      {
+                        filteredRequests.filter(
+                          (r) =>
+                            r.status === "Claimed" || r.status === "approved",
+                        ).length
+                      }
+                    </div>
+                    <div className="jo-manage-card-label">Claimed Requests</div>
+                  </div>
+                </div>
+
+                {/* Rejected Requests */}
+
+                {/* Combined Shortage & Suggestions Card */}
+              </div>
+
+              {loading ? (
+                <div className="loading-message">Loading requests...</div>
+              ) : error ? (
+                <div className="error-state">
+                  <div className="error-icon">⚠️</div>
+                  <h3>Error Loading Requests</h3>
+                  <p>{error}</p>
+                </div>
+              ) : filteredRequests.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📝</div>
+                  <h3>No Farmer Requests</h3>
+                  <p>No requests found matching your filters</p>
+                </div>
+              ) : (
+                <>
+                  {/* Info Box for Visual Indicators */}
+                  {filteredRequests.filter(
+                    (r) => r.status === "pending" && checkPotentialShortage(r),
+                  ).length > 0 && (
+                    <div className="jo-manage-requests-info-box">
+                      <span style={{ fontSize: "24px" }}>💡</span>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ color: "#92400e", fontSize: "14px" }}>
+                          Alternatives Auto-Loaded & Available
+                        </strong>
+                        <p
+                          style={{
+                            margin: "4px 0 0 0",
+                            fontSize: "13px",
+                            color: "#78350f",
+                          }}
+                        >
+                          Rows highlighted in yellow (⚠️) have detected
+                          shortages. Alternative fertilizer options have been
+                          automatically loaded based on agronomic equivalency.
+                          Click the "💡 Suggestions" card above to view and
+                          apply alternatives.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="jo-manage-requests-table-container">
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <thead>
+                        <tr
+                          style={{
+                            background: "#f9fafb",
+                            borderBottom: "2px solid #e5e7eb",
+                          }}
+                        >
+                          <th
+                            style={{
+                              padding: "12px",
+                              textAlign: "center",
+                              fontWeight: "600",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              ref={selectAllRef}
+                              checked={isAllFilteredSelected}
+                              onChange={(e) =>
+                                toggleSelectAllFiltered(e.target.checked)
+                              }
+                              aria-label="Select all filtered requests"
+                            />
+                          </th>
+                          <th
+                            style={{
+                              padding: "12px",
+                              textAlign: "left",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Farmer Name
+                          </th>
+                          <th
+                            style={{
+                              padding: "12px",
+                              textAlign: "left",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Barangay
+                          </th>
+                          <th
+                            style={{
+                              padding: "12px",
+                              textAlign: "center",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Fertilizers (bags)
+                          </th>
+                          <th
+                            style={{
+                              padding: "12px",
+                              textAlign: "center",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Seeds (kg)
+                          </th>
+                          <th
+                            style={{
+                              padding: "12px",
+                              textAlign: "center",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Status
+                          </th>
+                          <th
+                            style={{
+                              padding: "12px",
+                              textAlign: "center",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRequests.map((request) => {
+                          const totals = getRequestTotals(request);
+
+                          // Check if this request might have shortages
+                          const hasShortage =
+                            request.status === "pending" &&
+                            checkPotentialShortage(request);
+
+                          return (
+                            <React.Fragment key={request.id}>
+                              <tr
+                                style={{
+                                  borderBottom: "1px solid #e5e7eb",
+                                  background: hasShortage
+                                    ? "#fef3c7"
+                                    : "transparent",
+                                }}
+                              >
+                                <td
+                                  style={{
+                                    padding: "12px",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRequestIds.has(request.id)}
+                                    onChange={() =>
+                                      toggleRequestSelection(request.id)
+                                    }
+                                    aria-label={`Select request from ${request.farmer_name}`}
+                                  />
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                  {hasShortage && (
+                                    <span
+                                      title="Potential shortage - alternatives auto-loaded"
+                                      style={{
+                                        marginRight: "8px",
+                                        fontSize: "16px",
+                                      }}
+                                    ></span>
+                                  )}
+                                  {hasShortage && alternatives[request.id] && (
+                                    <span title="Alternatives ready - click to view"></span>
+                                  )}
+                                  {request.farmer_name}
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                  {request.barangay}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "12px",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  {totals.fertilizer.toFixed(2)}
+                                  {hasShortage && (
+                                    <span title="Alternatives auto-displayed below"></span>
+                                  )}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "12px",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  {totals.seeds.toFixed(2)}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "12px",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  <span
+                                    className={`jo-manage-requests-status-badge ${request.status}`}
+                                  >
+                                    {request.status === "approved"
+                                      ? "CLAIMED"
+                                      : request.status.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "12px",
+                                    textAlign: "center",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      gap: "8px",
+                                      justifyContent: "center",
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
+                                    {request.status === "pending" && (
+                                      <>
+                                        <button
+                                          onClick={() => handleEdit(request)}
+                                          style={{
+                                            padding: "6px 12px",
+                                            background: "#f59e0b",
+                                            color: "white",
+                                            border: "none",
+                                            borderRadius: "4px",
+                                            cursor: "pointer",
+                                            fontSize: "12px",
+                                          }}
+                                        >
+                                          ✏️ Edit
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr
+                          style={{
+                            background: "#f9fafb",
+                            borderTop: "2px solid #e5e7eb",
+                            fontWeight: "600",
+                          }}
+                        >
+                          <td colSpan={3} style={{ padding: "12px" }}>
+                            TOTALS
+                          </td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>
+                            {sumRequestFieldsForList(
+                              filteredRequests,
+                              FERTILIZER_REQUEST_FIELDS,
+                            ).toFixed(2)}
+                          </td>
+                          <td style={{ padding: "12px", textAlign: "center" }}>
+                            {sumRequestFieldsForList(
+                              filteredRequests,
+                              SEED_REQUEST_FIELDS,
+                            ).toFixed(2)}
+                          </td>
+                          <td colSpan={2}></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
-      )}
 
-      {/* Suggestions Modal */}
-      {showSuggestionsModal && (
-        <div className="jo-manage-requests-modal-overlay">
-          <div
-            className="jo-manage-requests-modal-content"
-            style={{ maxWidth: "900px", maxHeight: "85vh", width: "90%" }}
-          >
-            <div className="jo-manage-requests-modal-header">
-              <h2>💡 Suggestions Overview</h2>
-            </div>
+        {/* Edit Request Modal */}
+        {editingRequest && (
+          <div className="jo-manage-requests-modal-overlay jo-manage-requests-edit-modal-overlay">
+            <div className="jo-manage-requests-modal-content jo-manage-requests-edit-modal">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="jo-manage-requests-edit-close"
+              >
+                ×
+              </button>
 
-            <div
-              style={{
-                overflowY: "auto",
-                maxHeight: "calc(80vh - 140px)",
-                padding: "20px",
-              }}
-            >
-              {Object.keys(alternatives).length === 0 ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "60px 20px",
-                    color: "#6b7280",
-                  }}
-                >
-                  <div style={{ fontSize: "64px", marginBottom: "20px" }}>
-                    📋
+              <h3 className="jo-manage-requests-modal-title">
+                Edit Farmer Request
+              </h3>
+
+              {editingRequestData && (
+                <div className="jo-manage-requests-edit-request-info">
+                  <span>
+                    <strong>Farmer:</strong> {editingRequestData.farmer_name}
+                  </span>
+                  <span>
+                    <strong>Barangay:</strong> {editingRequestData.barangay}
+                  </span>
+                </div>
+              )}
+
+              {hasAnyEditRisk && (
+                <div className="jo-manage-requests-modal-risk jo-manage-requests-modal-risk-danger">
+                  Warning: one or more edited quantities exceed current
+                  available allocation. Adjust the highlighted fields before
+                  saving.
+                </div>
+              )}
+
+              <div className="jo-manage-requests-modal-body">
+                {/* Fertilizers Section */}
+                <div className="jo-manage-requests-modal-section">
+                  <h4 className="jo-manage-requests-modal-section-title">
+                    Fertilizers (bags)
+                  </h4>
+                  <div className="jo-manage-requests-modal-grid">
+                    {visibleExtraFertilizerFields.map((item) => {
+                      const hasRisk =
+                        getEditFieldRiskData(item.requestField)?.hasRisk ||
+                        false;
+                      return (
+                        <div
+                          key={item.requestField}
+                          className={`jo-manage-requests-modal-field ${
+                            hasRisk
+                              ? "jo-manage-requests-modal-field-danger"
+                              : ""
+                          }`}
+                        >
+                          <label className="jo-manage-requests-modal-label">
+                            {item.label}
+                          </label>
+                          {renderEditFieldMeta(item.requestField)}
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={Number(editFormData[item.requestField]) || 0}
+                            onChange={(e) =>
+                              updateEditQuantity(
+                                item.requestField,
+                                e.target.value,
+                                false,
+                              )
+                            }
+                            className="jo-manage-requests-modal-input"
+                          />
+                        </div>
+                      );
+                    })}
+                    {visibleFertilizerFields.map((item) => {
+                      const hasRisk =
+                        getEditFieldRiskData(item.requestField)?.hasRisk ||
+                        false;
+                      return (
+                        <div
+                          key={item.requestField}
+                          className={`jo-manage-requests-modal-field ${
+                            hasRisk
+                              ? "jo-manage-requests-modal-field-danger"
+                              : ""
+                          }`}
+                        >
+                          <label className="jo-manage-requests-modal-label">
+                            {item.label}
+                          </label>
+                          {renderEditFieldMeta(item.requestField)}
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={Number(editFormData[item.requestField]) || 0}
+                            onChange={(e) =>
+                              updateEditQuantity(
+                                item.requestField,
+                                e.target.value,
+                                false,
+                              )
+                            }
+                            className="jo-manage-requests-modal-input"
+                          />
+                        </div>
+                      );
+                    })}
+                    {visibleExtraFertilizerFields.length === 0 &&
+                      visibleFertilizerFields.length === 0 && (
+                        <p className="jo-manage-requests-modal-empty-message">
+                          No fertilizer request values were submitted.
+                        </p>
+                      )}
                   </div>
-                  <h4
+                </div>
+
+                {/* Seeds Section */}
+                <div className="jo-manage-requests-modal-section">
+                  <h4 className="jo-manage-requests-modal-section-title">
+                    Seeds (kg)
+                  </h4>
+                  <div className="jo-manage-requests-modal-grid">
+                    {visibleSeedFields.map((item) => {
+                      const hasRisk =
+                        getEditFieldRiskData(item.requestField)?.hasRisk ||
+                        false;
+                      return (
+                        <div
+                          key={item.requestField}
+                          className={`jo-manage-requests-modal-field ${
+                            hasRisk
+                              ? "jo-manage-requests-modal-field-danger"
+                              : ""
+                          }`}
+                        >
+                          <label className="jo-manage-requests-modal-label">
+                            {item.label}
+                          </label>
+                          {renderEditFieldMeta(item.requestField)}
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            inputMode="decimal"
+                            value={Number(editFormData[item.requestField]) || 0}
+                            onChange={(e) =>
+                              updateEditQuantity(
+                                item.requestField,
+                                e.target.value,
+                                true,
+                              )
+                            }
+                            className="jo-manage-requests-modal-input"
+                          />
+                        </div>
+                      );
+                    })}
+                    {visibleSeedFields.length === 0 && (
+                      <p className="jo-manage-requests-modal-empty-message">
+                        No seed request values were submitted.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes Section */}
+                <div className="jo-manage-requests-modal-section">
+                  <h4 className="jo-manage-requests-modal-section-title">
+                    Notes
+                  </h4>
+                  <textarea
+                    value={editFormData.request_notes || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        request_notes: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className="jo-manage-requests-modal-textarea"
+                    placeholder="Add any notes about this request"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="jo-manage-requests-modal-actions">
+                  <button
+                    onClick={handleCancelEdit}
+                    className="jo-manage-requests-modal-btn cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    className="jo-manage-requests-modal-btn save"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Suggestions Modal */}
+        {showSuggestionsModal && (
+          <div className="jo-manage-requests-modal-overlay">
+            <div
+              className="jo-manage-requests-modal-content"
+              style={{ maxWidth: "900px", maxHeight: "85vh", width: "90%" }}
+            >
+              <div className="jo-manage-requests-modal-header">
+                <h2>💡 Suggestions Overview</h2>
+              </div>
+
+              <div
+                style={{
+                  overflowY: "auto",
+                  maxHeight: "calc(80vh - 140px)",
+                  padding: "20px",
+                }}
+              >
+                {Object.keys(alternatives).length === 0 ? (
+                  <div
                     style={{
-                      margin: "0 0 12px 0",
-                      color: "#374151",
-                      fontSize: "20px",
-                      fontWeight: 600,
+                      textAlign: "center",
+                      padding: "60px 20px",
+                      color: "#6b7280",
                     }}
                   >
-                    No Suggestions Available
-                  </h4>
-                  <p style={{ margin: 0, color: "#9ca3af", fontSize: "15px" }}>
-                    There are no shortage-based suggestions at this time.
-                  </p>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "20px",
-                  }}
-                >
-                  {Object.keys(alternatives).map((key) => {
-                    const requestId = parseInt(key);
-                    const altData = alternatives[requestId];
-                    const request = requests.find((r) => r.id === requestId);
+                    <div style={{ fontSize: "64px", marginBottom: "20px" }}>
+                      📋
+                    </div>
+                    <h4
+                      style={{
+                        margin: "0 0 12px 0",
+                        color: "#374151",
+                        fontSize: "20px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      No Suggestions Available
+                    </h4>
+                    <p
+                      style={{ margin: 0, color: "#9ca3af", fontSize: "15px" }}
+                    >
+                      There are no shortage-based suggestions at this time.
+                    </p>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "20px",
+                    }}
+                  >
+                    {Object.keys(alternatives).map((key) => {
+                      const requestId = parseInt(key);
+                      const altData = alternatives[requestId];
+                      const request = requests.find((r) => r.id === requestId);
 
-                    if (
-                      !altData?.suggestions?.suggestions?.length ||
-                      !request ||
-                      request.status !== "pending"
-                    ) {
-                      return null;
-                    }
+                      if (
+                        !altData?.suggestions?.suggestions?.length ||
+                        !request ||
+                        request.status !== "pending"
+                      ) {
+                        return null;
+                      }
 
-                    const isExpanded = expandedFarmerInModal === requestId;
+                      const isExpanded = expandedFarmerInModal === requestId;
 
-                    return (
-                      <div
-                        key={requestId}
-                        style={{
-                          background: "white",
-                          border: "2px solid #e5e7eb",
-                          borderRadius: "12px",
-                          overflow: "hidden",
-                          transition: "all 0.3s ease",
-                          boxShadow: isExpanded
-                            ? "0 10px 30px rgba(0,0,0,0.15)"
-                            : "0 2px 8px rgba(0,0,0,0.08)",
-                        }}
-                      >
-                        {/* Farmer Header */}
+                      return (
                         <div
-                          onClick={() =>
-                            setExpandedFarmerInModal(
-                              isExpanded ? null : requestId,
-                            )
-                          }
+                          key={requestId}
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "16px",
-                            padding: "20px",
-                            background:
-                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            cursor: "pointer",
-                            transition: "all 0.2s ease",
+                            background: "white",
+                            border: "2px solid #e5e7eb",
+                            borderRadius: "12px",
+                            overflow: "hidden",
+                            transition: "all 0.3s ease",
+                            boxShadow: isExpanded
+                              ? "0 10px 30px rgba(0,0,0,0.15)"
+                              : "0 2px 8px rgba(0,0,0,0.08)",
                           }}
                         >
-                          {/* Farmer Info */}
+                          {/* Farmer Header */}
                           <div
+                            onClick={() =>
+                              setExpandedFarmerInModal(
+                                isExpanded ? null : requestId,
+                              )
+                            }
                             style={{
-                              flex: 1,
                               display: "flex",
-                              flexDirection: "column",
-                              gap: "6px",
+                              alignItems: "center",
+                              gap: "16px",
+                              padding: "20px",
+                              background:
+                                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              cursor: "pointer",
+                              transition: "all 0.2s ease",
                             }}
                           >
-                            <span
+                            {/* Farmer Info */}
+                            <div
                               style={{
-                                fontSize: "18px",
-                                fontWeight: 700,
-                                color: "white",
-                                letterSpacing: "0.3px",
-                              }}
-                            >
-                              Farmer:{" "}
-                              {altData.farmer_name || request.farmer_name}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: "14px",
-                                color: "rgba(255,255,255,0.9)",
+                                flex: 1,
                                 display: "flex",
-                                alignItems: "center",
+                                flexDirection: "column",
                                 gap: "6px",
                               }}
                             >
-                              📍 Farm: Barangay {request.barangay}
-                            </span>
+                              <span
+                                style={{
+                                  fontSize: "18px",
+                                  fontWeight: 700,
+                                  color: "white",
+                                  letterSpacing: "0.3px",
+                                }}
+                              >
+                                Farmer:{" "}
+                                {altData.farmer_name || request.farmer_name}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "14px",
+                                  color: "rgba(255,255,255,0.9)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                }}
+                              >
+                                📍 Farm: Barangay {request.barangay}
+                              </span>
+                            </div>
+
+                            {/* Toggle Icon */}
+                            <div
+                              style={{
+                                fontSize: "24px",
+                                color: "white",
+                                transition: "transform 0.3s ease",
+                                transform: isExpanded
+                                  ? "rotate(180deg)"
+                                  : "rotate(0deg)",
+                              }}
+                            >
+                              ▼
+                            </div>
                           </div>
 
-                          {/* Toggle Icon */}
-                          <div
-                            style={{
-                              fontSize: "24px",
-                              color: "white",
-                              transition: "transform 0.3s ease",
-                              transform: isExpanded
-                                ? "rotate(180deg)"
-                                : "rotate(0deg)",
-                            }}
-                          >
-                            ▼
-                          </div>
-                        </div>
+                          {/* Expandable Details */}
+                          {isExpanded && (
+                            <div style={{ padding: "24px" }}>
+                              {altData.suggestions.suggestions.map(
+                                (suggestion: any, idx: number) => {
+                                  const selectedAlt =
+                                    selectedAlternative[requestId]
+                                      ?.suggestionIdx === idx
+                                      ? suggestion.alternatives[
+                                          selectedAlternative[requestId]
+                                            .alternativeIdx
+                                        ]
+                                      : null;
 
-                        {/* Expandable Details */}
-                        {isExpanded && (
-                          <div style={{ padding: "24px" }}>
-                            {altData.suggestions.suggestions.map(
-                              (suggestion: any, idx: number) => {
-                                const selectedAlt =
-                                  selectedAlternative[requestId]
-                                    ?.suggestionIdx === idx
-                                    ? suggestion.alternatives[
-                                        selectedAlternative[requestId]
-                                          .alternativeIdx
-                                      ]
-                                    : null;
-
-                                return (
-                                  <div
-                                    key={idx}
-                                    style={{
-                                      marginBottom:
-                                        idx <
-                                        altData.suggestions.suggestions.length -
-                                          1
-                                          ? "24px"
-                                          : "0",
-                                    }}
-                                  >
-                                    {/* Farm Input Summary */}
-                                    <div style={{ marginBottom: "20px" }}>
-                                      <h4
-                                        style={{
-                                          margin: "0 0 16px 0",
-                                          fontSize: "15px",
-                                          fontWeight: 600,
-                                          color: "#374151",
-                                          textTransform: "uppercase",
-                                          letterSpacing: "0.5px",
-                                        }}
-                                      >
-                                        Farm Input Summary:
-                                      </h4>
-                                      <div
-                                        style={{
-                                          display: "grid",
-                                          gridTemplateColumns: "1fr 1fr",
-                                          gap: "16px",
-                                        }}
-                                      >
-                                        {/* Shortage Box */}
-                                        <div
-                                          style={{
-                                            background:
-                                              "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
-                                            border: "2px solid #fca5a5",
-                                            borderRadius: "10px",
-                                            padding: "18px",
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            gap: "8px",
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              fontSize: "13px",
-                                              fontWeight: 600,
-                                              color: "#991b1b",
-                                              textTransform: "uppercase",
-                                              letterSpacing: "0.5px",
-                                            }}
-                                          >
-                                            ❌ Shortage:
-                                          </div>
-                                          <div
-                                            style={{
-                                              fontSize: "18px",
-                                              fontWeight: 700,
-                                              color: "#dc2626",
-                                            }}
-                                          >
-                                            {suggestion.original_fertilizer_name ||
-                                              suggestion.original_seed_name}
-                                          </div>
-                                          <div
-                                            style={{
-                                              fontSize: "14px",
-                                              color: "#7f1d1d",
-                                              marginTop: "4px",
-                                            }}
-                                          >
-                                            Missing:{" "}
-                                            <strong>
-                                              {suggestion.shortage_bags ||
-                                                suggestion.shortage_kg}{" "}
-                                              {suggestion.category === "seed"
-                                                ? "kg"
-                                                : "bags"}
-                                            </strong>
-                                          </div>
-                                        </div>
-
-                                        {/* Requested Box */}
-                                        <div
-                                          style={{
-                                            background:
-                                              "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
-                                            border: "2px solid #93c5fd",
-                                            borderRadius: "10px",
-                                            padding: "18px",
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            gap: "8px",
-                                          }}
-                                        >
-                                          <div
-                                            style={{
-                                              fontSize: "13px",
-                                              fontWeight: 600,
-                                              color: "#1e3a8a",
-                                              textTransform: "uppercase",
-                                              letterSpacing: "0.5px",
-                                            }}
-                                          >
-                                            📝 Requested:
-                                          </div>
-                                          <div
-                                            style={{
-                                              fontSize: "18px",
-                                              fontWeight: 700,
-                                              color: "#2563eb",
-                                            }}
-                                          >
-                                            {suggestion.original_fertilizer_name ||
-                                              suggestion.original_seed_name}
-                                          </div>
-                                          <div
-                                            style={{
-                                              fontSize: "14px",
-                                              color: "#1e40af",
-                                              marginTop: "4px",
-                                            }}
-                                          >
-                                            Total:{" "}
-                                            <strong>
-                                              {suggestion.requested_bags ||
-                                                suggestion.requested_kg}{" "}
-                                              {suggestion.category === "seed"
-                                                ? "kg"
-                                                : "bags"}
-                                            </strong>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Suggested Substitutes */}
-                                    {suggestion.alternatives &&
-                                    suggestion.alternatives.length > 0 ? (
-                                      <div>
+                                  return (
+                                    <div
+                                      key={idx}
+                                      style={{
+                                        marginBottom:
+                                          idx <
+                                          altData.suggestions.suggestions
+                                            .length -
+                                            1
+                                            ? "24px"
+                                            : "0",
+                                      }}
+                                    >
+                                      {/* Farm Input Summary */}
+                                      <div style={{ marginBottom: "20px" }}>
                                         <h4
                                           style={{
-                                            margin: "0 0 12px 0",
+                                            margin: "0 0 16px 0",
                                             fontSize: "15px",
                                             fontWeight: 600,
                                             color: "#374151",
@@ -2334,336 +2444,540 @@ const JoManageRequests: React.FC = () => {
                                             letterSpacing: "0.5px",
                                           }}
                                         >
-                                          Suggested Substitutes:
+                                          Farm Input Summary:
                                         </h4>
-
                                         <div
                                           style={{
-                                            display: "flex",
-                                            gap: "10px",
-                                            alignItems: "flex-start",
+                                            display: "grid",
+                                            gridTemplateColumns: "1fr 1fr",
+                                            gap: "16px",
                                           }}
                                         >
-                                          {/* Dropdown */}
-                                          <select
-                                            value={
-                                              selectedAlternative[requestId]
-                                                ?.suggestionIdx === idx
-                                                ? selectedAlternative[requestId]
-                                                    .alternativeIdx
-                                                : ""
-                                            }
-                                            onChange={(e) => {
-                                              const altIdx = parseInt(
-                                                e.target.value,
-                                              );
-                                              if (!isNaN(altIdx)) {
-                                                setSelectedAlternative(
-                                                  (prev) => ({
-                                                    ...prev,
-                                                    [requestId]: {
-                                                      suggestionIdx: idx,
-                                                      alternativeIdx: altIdx,
-                                                    },
-                                                  }),
-                                                );
-                                              }
-                                            }}
-                                            style={{
-                                              flex: 1,
-                                              padding: "10px 12px",
-                                              border: "2px solid #d1d5db",
-                                              borderRadius: "6px",
-                                              fontSize: "13px",
-                                              background: "white",
-                                              cursor: "pointer",
-                                              color: "#374151",
-                                              fontWeight: 500,
-                                              transition: "all 0.2s ease",
-                                              outline: "none",
-                                            }}
-                                          >
-                                            <option
-                                              value=""
-                                              style={{ color: "#9ca3af" }}
-                                            >
-                                              ▼ Select a substitute...
-                                            </option>
-                                            {suggestion.alternatives.map(
-                                              (alt: any, altIdx: number) => (
-                                                <option
-                                                  key={altIdx}
-                                                  value={altIdx}
-                                                  style={{ padding: "8px 0" }}
-                                                >
-                                                  {alt.substitute_name} -{" "}
-                                                  {alt.needed_bags ||
-                                                    alt.needed_kg}{" "}
-                                                  {suggestion.category ===
-                                                  "seed"
-                                                    ? "kg"
-                                                    : "bags"}
-                                                  (Avail:{" "}
-                                                  {alt.available_bags ||
-                                                    alt.available_kg}
-                                                  ,
-                                                  {(
-                                                    alt.confidence_score * 100
-                                                  ).toFixed(0)}
-                                                  %)
-                                                  {alt.can_fulfill
-                                                    ? " ✅"
-                                                    : " ⚠️"}
-                                                </option>
-                                              ),
-                                            )}
-                                          </select>
-
-                                          {/* Submit Button */}
-                                          <button
-                                            onClick={() =>
-                                              applyAlternative(requestId)
-                                            }
-                                            disabled={
-                                              !selectedAlternative[requestId] ||
-                                              selectedAlternative[requestId]
-                                                ?.suggestionIdx !== idx ||
-                                              applyingAlternative[requestId]
-                                            }
-                                            style={{
-                                              padding: "10px 16px",
-                                              background:
-                                                selectedAlternative[requestId]
-                                                  ?.suggestionIdx === idx &&
-                                                !applyingAlternative[requestId]
-                                                  ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
-                                                  : "#d1d5db",
-                                              color: "white",
-                                              border: "none",
-                                              borderRadius: "6px",
-                                              cursor:
-                                                selectedAlternative[requestId]
-                                                  ?.suggestionIdx === idx &&
-                                                !applyingAlternative[requestId]
-                                                  ? "pointer"
-                                                  : "not-allowed",
-                                              fontSize: "13px",
-                                              fontWeight: 600,
-                                              transition: "all 0.2s ease",
-                                              whiteSpace: "nowrap",
-                                              boxShadow:
-                                                selectedAlternative[requestId]
-                                                  ?.suggestionIdx === idx
-                                                  ? "0 4px 12px rgba(16, 185, 129, 0.3)"
-                                                  : "none",
-                                            }}
-                                          >
-                                            {applyingAlternative[requestId]
-                                              ? "⏳ Applying..."
-                                              : "✅ Submit"}
-                                          </button>
-                                        </div>
-
-                                        {/* Selected Alternative Details */}
-                                        {selectedAlt && (
+                                          {/* Shortage Box */}
                                           <div
                                             style={{
-                                              marginTop: "16px",
-                                              padding: "16px",
                                               background:
-                                                "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
-                                              border: "2px solid #86efac",
-                                              borderRadius: "8px",
+                                                "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
+                                              border: "2px solid #fca5a5",
+                                              borderRadius: "10px",
+                                              padding: "18px",
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              gap: "8px",
                                             }}
                                           >
                                             <div
                                               style={{
                                                 fontSize: "13px",
                                                 fontWeight: 600,
-                                                color: "#166534",
-                                                marginBottom: "12px",
+                                                color: "#991b1b",
                                                 textTransform: "uppercase",
                                                 letterSpacing: "0.5px",
                                               }}
                                             >
-                                              ✨ Selected Substitute Details:
+                                              ❌ Shortage:
                                             </div>
                                             <div
                                               style={{
-                                                display: "grid",
-                                                gridTemplateColumns: "1fr 1fr",
-                                                gap: "12px",
-                                                fontSize: "14px",
-                                                color: "#15803d",
+                                                fontSize: "18px",
+                                                fontWeight: 700,
+                                                color: "#dc2626",
                                               }}
                                             >
-                                              <div>
-                                                <strong>Name:</strong>{" "}
-                                                {selectedAlt.substitute_name}
-                                              </div>
-                                              <div>
-                                                <strong>Needed:</strong>{" "}
-                                                {selectedAlt.needed_bags ||
-                                                  selectedAlt.needed_kg}{" "}
-                                                {suggestion.category === "seed"
-                                                  ? "kg"
-                                                  : "bags"}
-                                              </div>
-                                              <div>
-                                                <strong>Available:</strong>{" "}
-                                                {selectedAlt.available_bags ||
-                                                  selectedAlt.available_kg}{" "}
-                                                {suggestion.category === "seed"
-                                                  ? "kg"
-                                                  : "bags"}
-                                              </div>
-                                              <div>
-                                                <strong>Confidence:</strong>{" "}
-                                                {(
-                                                  selectedAlt.confidence_score *
-                                                  100
-                                                ).toFixed(0)}
-                                                %
-                                              </div>
+                                              {suggestion.original_fertilizer_name ||
+                                                suggestion.original_seed_name}
                                             </div>
-                                            {selectedAlt.explanation && (
-                                              <div
-                                                style={{
-                                                  marginTop: "12px",
-                                                  padding: "12px",
-                                                  background: "white",
-                                                  borderRadius: "6px",
-                                                  fontSize: "13px",
-                                                  color: "#166534",
-                                                  fontStyle: "italic",
-                                                  lineHeight: "1.6",
-                                                }}
-                                              >
-                                                💡{" "}
-                                                <strong>
-                                                  Why this suggestion?
-                                                </strong>{" "}
-                                                {selectedAlt.explanation}
-                                              </div>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div
-                                        style={{
-                                          padding: "20px",
-                                          background:
-                                            "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)",
-                                          border: "2px solid #fca5a5",
-                                          borderRadius: "10px",
-                                          color: "#991b1b",
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            fontSize: "15px",
-                                            fontWeight: 700,
-                                            marginBottom: "12px",
-                                          }}
-                                        >
-                                          ❌ No Suitable Alternatives Available
-                                        </div>
-                                        {suggestion.recommendation
-                                          ?.next_steps && (
-                                          <div style={{ fontSize: "14px" }}>
-                                            <strong>
-                                              Recommended Actions:
-                                            </strong>
-                                            <ul
+                                            <div
                                               style={{
-                                                margin: "8px 0 0 0",
-                                                paddingLeft: "24px",
-                                                lineHeight: "1.8",
+                                                fontSize: "14px",
+                                                color: "#7f1d1d",
+                                                marginTop: "4px",
                                               }}
                                             >
-                                              {suggestion.recommendation.next_steps.map(
-                                                (
-                                                  step: string,
-                                                  stepIdx: number,
-                                                ) => (
-                                                  <li key={stepIdx}>{step}</li>
+                                              Missing:{" "}
+                                              <strong>
+                                                {suggestion.shortage_bags ||
+                                                  suggestion.shortage_kg}{" "}
+                                                {suggestion.category === "seed"
+                                                  ? "kg"
+                                                  : "bags"}
+                                              </strong>
+                                            </div>
+                                          </div>
+
+                                          {/* Requested Box */}
+                                          <div
+                                            style={{
+                                              background:
+                                                "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
+                                              border: "2px solid #93c5fd",
+                                              borderRadius: "10px",
+                                              padding: "18px",
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              gap: "8px",
+                                            }}
+                                          >
+                                            <div
+                                              style={{
+                                                fontSize: "13px",
+                                                fontWeight: 600,
+                                                color: "#1e3a8a",
+                                                textTransform: "uppercase",
+                                                letterSpacing: "0.5px",
+                                              }}
+                                            >
+                                              📝 Requested:
+                                            </div>
+                                            <div
+                                              style={{
+                                                fontSize: "18px",
+                                                fontWeight: 700,
+                                                color: "#2563eb",
+                                              }}
+                                            >
+                                              {suggestion.original_fertilizer_name ||
+                                                suggestion.original_seed_name}
+                                            </div>
+                                            <div
+                                              style={{
+                                                fontSize: "14px",
+                                                color: "#1e40af",
+                                                marginTop: "4px",
+                                              }}
+                                            >
+                                              Total:{" "}
+                                              <strong>
+                                                {suggestion.requested_bags ||
+                                                  suggestion.requested_kg}{" "}
+                                                {suggestion.category === "seed"
+                                                  ? "kg"
+                                                  : "bags"}
+                                              </strong>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Suggested Substitutes */}
+                                      {suggestion.alternatives &&
+                                      suggestion.alternatives.length > 0 ? (
+                                        <div>
+                                          <h4
+                                            style={{
+                                              margin: "0 0 12px 0",
+                                              fontSize: "15px",
+                                              fontWeight: 600,
+                                              color: "#374151",
+                                              textTransform: "uppercase",
+                                              letterSpacing: "0.5px",
+                                            }}
+                                          >
+                                            Suggested Substitutes:
+                                          </h4>
+
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              gap: "10px",
+                                              alignItems: "flex-start",
+                                            }}
+                                          >
+                                            {/* Dropdown */}
+                                            <select
+                                              value={
+                                                selectedAlternative[requestId]
+                                                  ?.suggestionIdx === idx
+                                                  ? selectedAlternative[
+                                                      requestId
+                                                    ].alternativeIdx
+                                                  : ""
+                                              }
+                                              onChange={(e) => {
+                                                const altIdx = parseInt(
+                                                  e.target.value,
+                                                );
+                                                if (!isNaN(altIdx)) {
+                                                  setSelectedAlternative(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      [requestId]: {
+                                                        suggestionIdx: idx,
+                                                        alternativeIdx: altIdx,
+                                                      },
+                                                    }),
+                                                  );
+                                                }
+                                              }}
+                                              style={{
+                                                flex: 1,
+                                                padding: "10px 12px",
+                                                border: "2px solid #d1d5db",
+                                                borderRadius: "6px",
+                                                fontSize: "13px",
+                                                background: "white",
+                                                cursor: "pointer",
+                                                color: "#374151",
+                                                fontWeight: 500,
+                                                transition: "all 0.2s ease",
+                                                outline: "none",
+                                              }}
+                                            >
+                                              <option
+                                                value=""
+                                                style={{ color: "#9ca3af" }}
+                                              >
+                                                ▼ Select a substitute...
+                                              </option>
+                                              {suggestion.alternatives.map(
+                                                (alt: any, altIdx: number) => (
+                                                  <option
+                                                    key={altIdx}
+                                                    value={altIdx}
+                                                    style={{ padding: "8px 0" }}
+                                                  >
+                                                    {alt.substitute_name} -{" "}
+                                                    {alt.needed_bags ||
+                                                      alt.needed_kg}{" "}
+                                                    {suggestion.category ===
+                                                    "seed"
+                                                      ? "kg"
+                                                      : "bags"}
+                                                    (Avail:{" "}
+                                                    {alt.available_bags ||
+                                                      alt.available_kg}
+                                                    ,
+                                                    {(
+                                                      alt.confidence_score * 100
+                                                    ).toFixed(0)}
+                                                    %)
+                                                    {alt.can_fulfill
+                                                      ? " ✅"
+                                                      : " ⚠️"}
+                                                  </option>
                                                 ),
                                               )}
-                                            </ul>
+                                            </select>
+
+                                            {/* Submit Button */}
+                                            <button
+                                              onClick={() =>
+                                                applyAlternative(requestId)
+                                              }
+                                              disabled={
+                                                !selectedAlternative[
+                                                  requestId
+                                                ] ||
+                                                selectedAlternative[requestId]
+                                                  ?.suggestionIdx !== idx ||
+                                                applyingAlternative[requestId]
+                                              }
+                                              style={{
+                                                padding: "10px 16px",
+                                                background:
+                                                  selectedAlternative[requestId]
+                                                    ?.suggestionIdx === idx &&
+                                                  !applyingAlternative[
+                                                    requestId
+                                                  ]
+                                                    ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                                                    : "#d1d5db",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                cursor:
+                                                  selectedAlternative[requestId]
+                                                    ?.suggestionIdx === idx &&
+                                                  !applyingAlternative[
+                                                    requestId
+                                                  ]
+                                                    ? "pointer"
+                                                    : "not-allowed",
+                                                fontSize: "13px",
+                                                fontWeight: 600,
+                                                transition: "all 0.2s ease",
+                                                whiteSpace: "nowrap",
+                                                boxShadow:
+                                                  selectedAlternative[requestId]
+                                                    ?.suggestionIdx === idx
+                                                    ? "0 4px 12px rgba(16, 185, 129, 0.3)"
+                                                    : "none",
+                                              }}
+                                            >
+                                              {applyingAlternative[requestId]
+                                                ? "⏳ Applying..."
+                                                : "✅ Submit"}
+                                            </button>
                                           </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
-            {/* Modal Footer */}
-            <div className="jo-manage-requests-modal-actions">
-              <button
-                onClick={() => {
-                  setShowSuggestionsModal(false);
-                  setExpandedFarmerInModal(null);
-                }}
-                style={{
-                  padding: "10px 24px",
-                  background: "#6b7280",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                }}
-              >
-                Close
-              </button>
+                                          {/* Selected Alternative Details */}
+                                          {selectedAlt && (
+                                            <div
+                                              style={{
+                                                marginTop: "16px",
+                                                padding: "16px",
+                                                background:
+                                                  "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+                                                border: "2px solid #86efac",
+                                                borderRadius: "8px",
+                                              }}
+                                            >
+                                              <div
+                                                style={{
+                                                  fontSize: "13px",
+                                                  fontWeight: 600,
+                                                  color: "#166534",
+                                                  marginBottom: "12px",
+                                                  textTransform: "uppercase",
+                                                  letterSpacing: "0.5px",
+                                                }}
+                                              >
+                                                ✨ Selected Substitute Details:
+                                              </div>
+                                              <div
+                                                style={{
+                                                  display: "grid",
+                                                  gridTemplateColumns:
+                                                    "1fr 1fr",
+                                                  gap: "12px",
+                                                  fontSize: "14px",
+                                                  color: "#15803d",
+                                                }}
+                                              >
+                                                <div>
+                                                  <strong>Name:</strong>{" "}
+                                                  {selectedAlt.substitute_name}
+                                                </div>
+                                                <div>
+                                                  <strong>Needed:</strong>{" "}
+                                                  {selectedAlt.needed_bags ||
+                                                    selectedAlt.needed_kg}{" "}
+                                                  {suggestion.category ===
+                                                  "seed"
+                                                    ? "kg"
+                                                    : "bags"}
+                                                </div>
+                                                <div>
+                                                  <strong>Available:</strong>{" "}
+                                                  {selectedAlt.available_bags ||
+                                                    selectedAlt.available_kg}{" "}
+                                                  {suggestion.category ===
+                                                  "seed"
+                                                    ? "kg"
+                                                    : "bags"}
+                                                </div>
+                                                <div>
+                                                  <strong>Confidence:</strong>{" "}
+                                                  {(
+                                                    selectedAlt.confidence_score *
+                                                    100
+                                                  ).toFixed(0)}
+                                                  %
+                                                </div>
+                                              </div>
+                                              {selectedAlt.explanation && (
+                                                <div
+                                                  style={{
+                                                    marginTop: "12px",
+                                                    padding: "12px",
+                                                    background: "white",
+                                                    borderRadius: "6px",
+                                                    fontSize: "13px",
+                                                    color: "#166534",
+                                                    fontStyle: "italic",
+                                                    lineHeight: "1.6",
+                                                  }}
+                                                >
+                                                  💡{" "}
+                                                  <strong>
+                                                    Why this suggestion?
+                                                  </strong>{" "}
+                                                  {selectedAlt.explanation}
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div
+                                          style={{
+                                            padding: "20px",
+                                            background:
+                                              "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)",
+                                            border: "2px solid #fca5a5",
+                                            borderRadius: "10px",
+                                            color: "#991b1b",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              fontSize: "15px",
+                                              fontWeight: 700,
+                                              marginBottom: "12px",
+                                            }}
+                                          >
+                                            ❌ No Suitable Alternatives
+                                            Available
+                                          </div>
+                                          {suggestion.recommendation
+                                            ?.next_steps && (
+                                            <div style={{ fontSize: "14px" }}>
+                                              <strong>
+                                                Recommended Actions:
+                                              </strong>
+                                              <ul
+                                                style={{
+                                                  margin: "8px 0 0 0",
+                                                  paddingLeft: "24px",
+                                                  lineHeight: "1.8",
+                                                }}
+                                              >
+                                                {suggestion.recommendation.next_steps.map(
+                                                  (
+                                                    step: string,
+                                                    stepIdx: number,
+                                                  ) => (
+                                                    <li key={stepIdx}>
+                                                      {step}
+                                                    </li>
+                                                  ),
+                                                )}
+                                              </ul>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                },
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="jo-manage-requests-modal-actions">
+                <button
+                  onClick={() => {
+                    setShowSuggestionsModal(false);
+                    setExpandedFarmerInModal(null);
+                  }}
+                  style={{
+                    padding: "10px 24px",
+                    background: "#6b7280",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                  }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && deleteTarget && (
-        <div className="jo-manage-delete-modal-overlay">
-          <div className="jo-manage-delete-modal">
-            <div className="jo-manage-delete-modal-icon">⚠️</div>
-            <h3 className="jo-manage-delete-modal-title">Confirm Delete</h3>
-            <p className="jo-manage-delete-modal-message">
-              Are you sure you want to delete the request from{" "}
-              <strong>{deleteTarget.name}</strong>?
-            </p>
-            <p className="jo-manage-delete-modal-warning">
-              This action cannot be undone.
-            </p>
-            <div className="jo-manage-delete-modal-actions">
-              <button
-                className="jo-manage-delete-modal-btn cancel"
-                onClick={cancelDelete}
-              >
-                Cancel
-              </button>
-              <button
-                className="jo-manage-delete-modal-btn delete"
-                onClick={confirmDelete}
-              >
-                Delete Request
-              </button>
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && deleteTarget && (
+          <div className="jo-manage-delete-modal-overlay">
+            <div className="jo-manage-delete-modal">
+              <div className="jo-manage-delete-modal-icon">⚠️</div>
+              <h3 className="jo-manage-delete-modal-title">Confirm Delete</h3>
+              <p className="jo-manage-delete-modal-message">
+                Are you sure you want to delete the request from{" "}
+                <strong>{deleteTarget.name}</strong>?
+              </p>
+              <p className="jo-manage-delete-modal-warning">
+                This action cannot be undone.
+              </p>
+              <div className="jo-manage-delete-modal-actions">
+                <button
+                  className="jo-manage-delete-modal-btn cancel"
+                  onClick={cancelDelete}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="jo-manage-delete-modal-btn delete"
+                  onClick={confirmDelete}
+                >
+                  Delete Request
+                </button>
+              </div>
             </div>
           </div>
+        )}
+      </div>
+
+      <div className="jo-manage-requests-print-area">
+        <div className="jo-manage-requests-print-header">
+          <h1 className="jo-manage-requests-print-title">
+            Farmer Request Printout
+          </h1>
+          <div className="jo-manage-requests-print-meta">
+            <span>Season: {formatSeasonName(allocation?.season ?? "N/A")}</span>
+            <span>Scope: Selected</span>
+            <span>Generated: {printMeta?.generatedAt ?? "N/A"}</span>
+            <span>Total requests: {printMeta?.total ?? 0}</span>
+          </div>
         </div>
-      )}
-    </div>
+
+        {printRequests.length === 0 ? (
+          <div className="jo-manage-requests-print-empty">
+            No requests selected for printing.
+          </div>
+        ) : (
+          <table className="jo-manage-requests-print-table">
+            <thead>
+              <tr>
+                <th>Farmer</th>
+                <th>Barangay</th>
+                <th>Status</th>
+                <th>Fertilizers (bags)</th>
+                <th>Seeds (kg)</th>
+                <th>Requested Items</th>
+              </tr>
+            </thead>
+            <tbody>
+              {printRequests.map((request) => {
+                const totals = getRequestTotals(request);
+                const items = getPrintableItemsForRequest(request);
+                return (
+                  <tr key={request.id}>
+                    <td>{request.farmer_name}</td>
+                    <td>{request.barangay}</td>
+                    <td>{formatStatusLabel(request.status)}</td>
+                    <td>{totals.fertilizer.toFixed(2)}</td>
+                    <td>{totals.seeds.toFixed(2)}</td>
+                    <td>
+                      {items.length === 0 ? (
+                        <span className="jo-manage-requests-print-empty">
+                          No item quantities
+                        </span>
+                      ) : (
+                        <ul className="jo-manage-requests-print-items">
+                          {items.map((item, idx) => (
+                            <li key={`${request.id}-item-${idx}`}>{item}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
   );
 };
 
