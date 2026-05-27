@@ -270,40 +270,14 @@ const JoRsbsaPage: React.FC = () => {
 
       // Use the data directly from backend - it already has totalFarmArea and parcelCount calculated
       _setRsbsaRecords(formattedData);
-      const registeredOwnersData = filterRegisteredOwners(formattedData);
-      console.log(
-        "Filtered registered owners:",
-        JSON.stringify(registeredOwnersData, null, 2),
-      );
-      setRegisteredOwners(registeredOwnersData);
+      setRegisteredOwners(formattedData);
       setError(null);
     } catch (err: any) {
       console.error("Error fetching RSBSA records:", err);
-      setError("Failed to load registered land owners data");
+      setError("Failed to load RSBSA submissions data");
     } finally {
       setLoading(false);
     }
-  };
-
-  // Function to filter registered owners only
-  const filterRegisteredOwners = (records: RSBSARecord[]) => {
-    console.log("Total records to filter:", records.length);
-    const filtered = records.filter((record: any) => {
-      // Keep only farmers with current parcels.
-      // hasCurrentParcels: true = has current parcels, false = all transferred, undefined = no parcels yet.
-      if (record.hasCurrentParcels !== true) {
-        console.log(`Excluding ${record.farmerName}: no current parcels`);
-        return false;
-      }
-
-      if (!record.ownershipType) {
-        console.warn(`Missing ownershipType for ${record.farmerName}`, record);
-        return false;
-      }
-      return record.ownershipType.registeredOwner === true;
-    });
-    console.log("Filtered registered owners count:", filtered.length);
-    return filtered;
   };
 
   // Fetch farmer details when row is clicked
@@ -526,10 +500,10 @@ const JoRsbsaPage: React.FC = () => {
     fetchRSBSARecords();
   }, []);
 
-  // Re-filter registered owners when source records change.
+  // Keep list in sync with source records.
   useEffect(() => {
     if (_rsbsaRecords.length > 0) {
-      setRegisteredOwners(filterRegisteredOwners(_rsbsaRecords));
+      setRegisteredOwners(_rsbsaRecords);
     } else {
       setRegisteredOwners([]);
     }
@@ -1851,7 +1825,7 @@ const JoRsbsaPage: React.FC = () => {
                     </div>
                     <span className="jo-rsbsa-latest-meta">
                       {!loading && !error
-                        ? `Based on ${registeredOwners.length} registered owners`
+                        ? `Based on ${registeredOwners.length} submissions`
                         : "Land parcel overview"}
                     </span>
                   </div>
@@ -2023,7 +1997,7 @@ const JoRsbsaPage: React.FC = () => {
                           Found <strong>{filteredOwners.length}</strong> result
                           {filteredOwners.length !== 1 ? "s" : ""}
                           {filteredOwners.length < registeredOwners.length &&
-                            ` out of ${registeredOwners.length} total registered owners`}
+                            ` out of ${registeredOwners.length} total submissions`}
                         </p>
                       </div>
                     )}
@@ -2087,7 +2061,7 @@ const JoRsbsaPage: React.FC = () => {
                             <td colSpan={7} className="jo-rsbsa-no-data">
                               {searchQuery
                                 ? "No results found for your search"
-                                : "No registered owners found"}
+                                : "No submissions found"}
                             </td>
                           </tr>
                         ) : (

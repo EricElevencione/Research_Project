@@ -104,6 +104,7 @@ interface Parcel {
   tenant_land_owner_name: string;
   lessee_land_owner_name: string;
   ownership_others_specify: string;
+  contract_end_date?: string | null;
   is_farming?: boolean | null;
   farming_status_reason?: string | null;
   farming_status_updated_at?: string | null;
@@ -144,6 +145,7 @@ interface ParcelDetail {
   ownershipDocumentNo: string;
   agrarianReformBeneficiary: string;
   ownershipOthersSpecify: string;
+  contractEndDate?: string | null;
   isFarming?: boolean | null;
   farmingStatusReason?: string | null;
   farmingStatusUpdatedAt?: string | null;
@@ -711,6 +713,7 @@ const JoMasterlist: React.FC = () => {
         ownershipDocumentNo: p.ownership_document_no || "",
         agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
         ownershipOthersSpecify: p.ownership_others_specify || "",
+        contractEndDate: p.contract_end_date || p.contractEndDate || null,
         isFarming: typeof p.is_farming === "boolean" ? p.is_farming : null,
         farmingStatusReason: p.farming_status_reason || null,
         farmingStatusUpdatedAt: p.farming_status_updated_at || null,
@@ -746,6 +749,7 @@ const JoMasterlist: React.FC = () => {
               ownershipDocumentNo: "",
               agrarianReformBeneficiary: "",
               ownershipOthersSpecify: "",
+              contractEndDate: null,
             },
           ];
         }
@@ -2838,6 +2842,26 @@ const JoMasterlist: React.FC = () => {
                               parcel.lesseeLandOwnerId;
                             const isUnlinked =
                               isTL && hasOwnerName && !hasOwnerLink;
+                            const parsedContractEnd = parcel.contractEndDate
+                              ? new Date(parcel.contractEndDate)
+                              : null;
+                            const contractDateLabel =
+                              parsedContractEnd &&
+                              !Number.isNaN(parsedContractEnd.getTime())
+                                ? parsedContractEnd.toLocaleDateString()
+                                : "Not specified";
+                            const contractStatus = (() => {
+                              if (
+                                !parsedContractEnd ||
+                                Number.isNaN(parsedContractEnd.getTime())
+                              )
+                                return null;
+                              const endDate = new Date(parsedContractEnd);
+                              const today = new Date();
+                              endDate.setHours(0, 0, 0, 0);
+                              today.setHours(0, 0, 0, 0);
+                              return endDate < today ? "Ended" : "Active";
+                            })();
                             return (
                               <div
                                 key={parcel.id}
@@ -3005,6 +3029,19 @@ const JoMasterlist: React.FC = () => {
                                       </span>
                                     </div>
                                   )}
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      Contract End Date:
+                                    </span>
+                                    <span className="farmer-modal-value">
+                                      {contractDateLabel}
+                                      {contractStatus && (
+                                        <span className="farmer-modal-owner-name">
+                                          {` · ${contractStatus}`}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
                                   {parcel.ownershipOthersSpecify && (
                                     <div className="farmer-modal-parcel-item">
                                       <span className="farmer-modal-label">

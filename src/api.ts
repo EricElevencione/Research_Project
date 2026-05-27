@@ -1385,6 +1385,7 @@ export const createRsbsaSubmission = async (
         parcelNo: p.parcelNo || "",
         existingParcelId: p.existingParcelId || null,
         existingParcelNumber: p.existingParcelNumber || null,
+        contractEndDate: p.contractEndDate || null,
         withinAncestralDomain:
           p.withinAncestralDomain === "Yes" || p.withinAncestralDomain === true
             ? "Yes"

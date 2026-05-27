@@ -27,6 +27,7 @@ create table public.rsbsa_farm_parcels (
   is_cultivating boolean not null default true,
   cultivation_status_updated_at timestamp with time zone null,
   cultivation_status_reason text null,
+  contract_end_date date null,
   constraint rsbsa_farm_parcels_pkey primary key (id),
   constraint fk_rsbsa_farm_parcels_lessee_land_owner_id foreign KEY (lessee_land_owner_id) references rsbsa_submission (id) on delete set null,
   constraint fk_rsbsa_farm_parcels_tenant_land_owner_id foreign KEY (tenant_land_owner_id) references rsbsa_submission (id) on delete set null,

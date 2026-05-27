@@ -21,6 +21,7 @@ interface Parcel {
   farmLocationBarangay: string;
   farmLocationMunicipality: string;
   totalFarmAreaHa: string;
+  contractEndDate: string;
   withinAncestralDomain: string; // 'Yes' | 'No'
   ownershipDocumentNo: string;
   agrarianReformBeneficiary: string; // 'Yes' | 'No'
@@ -166,7 +167,6 @@ const toTitleCase = (text: string): string => {
 
 const JoRsbsa: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   type OwnershipCategory = "tenant" | "lessee";
 
@@ -196,7 +196,6 @@ const JoRsbsa: React.FC = () => {
   const [useExistingParcel, setUseExistingParcel] = useState<boolean>(false);
   const [selectedExistingParcel, setSelectedExistingParcel] =
     useState<ExistingParcel | null>(null);
-
   // Toast notification state
   const [toast, setToast] = useState<{
     show: boolean;
@@ -222,6 +221,9 @@ const JoRsbsa: React.FC = () => {
     parcelCount: 0,
     landOwnerName: "",
   });
+  const [contractEndDates, setContractEndDates] = useState<
+    Record<string, string>
+  >({});
 
   // Show toast notification
   const showToast = (
@@ -312,26 +314,6 @@ const JoRsbsa: React.FC = () => {
     fetchRegisteredOwners();
   }, []);
 
-  // Clear existing parcel selection
-  const clearExistingParcelSelection = () => {
-    setFormData((prev) => {
-      const parcels = [...prev.farmlandParcels];
-      parcels[0] = {
-        ...parcels[0],
-        existingParcelId: undefined,
-        existingParcelNumber: undefined,
-        farmLocationBarangay: "",
-        farmLocationMunicipality: "Dumangas",
-        totalFarmAreaHa: "",
-        isCultivating: true,
-      };
-      return { ...prev, farmlandParcels: parcels };
-    });
-    setSelectedExistingParcel(null);
-    setExistingParcelFilter("");
-    setUseExistingParcel(false);
-  };
-
   // Fetch landowners from the database
   useEffect(() => {
     const fetchLandowners = async () => {
@@ -373,6 +355,7 @@ const JoRsbsa: React.FC = () => {
         farmLocationBarangay: "",
         farmLocationMunicipality: "",
         totalFarmAreaHa: "",
+        contractEndDate: "",
         withinAncestralDomain: "",
         isCultivating: true,
         ownershipDocumentNo: "",
@@ -439,53 +422,10 @@ const JoRsbsa: React.FC = () => {
     setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
-  const handleParcelChange = (idx: number, field: keyof Parcel, value: any) => {
-    setFormData((prev) => {
-      const parcels = [...prev.farmlandParcels];
-      parcels[idx] = { ...parcels[idx], [field]: value };
-      return { ...prev, farmlandParcels: parcels };
-    });
-    // clear parcel-related errors when user edits parcels
-    setErrors((prev) => ({ ...prev, farmland: "" }));
-  };
-
   const toggleBool = (field: keyof FormData) => {
     setFormData((prev) => ({ ...prev, [field]: !prev[field] }));
     // Clear farmingActivity error when any activity checkbox is toggled
     setErrors((prev) => ({ ...prev, farmingActivity: "" }));
-  };
-
-  const addParcel = () => {
-    setFormData((prev) => {
-      const nextNo = String(prev.farmlandParcels.length + 1);
-      const parcels = [...prev.farmlandParcels];
-      parcels.push({
-        parcelNo: nextNo,
-        farmLocationBarangay: "",
-        farmLocationMunicipality: "",
-        totalFarmAreaHa: "",
-        withinAncestralDomain: "",
-        ownershipDocumentNo: "",
-        agrarianReformBeneficiary: "",
-        isCultivating: true, // ✅ always true
-        ownershipTypeRegisteredOwner: false, // ✅ always false
-        ownershipTypeTenant: true,
-        ownershipTypeLessee: ownershipCategory === "lessee",
-        ownershipTypeOthers: false,
-        tenantLandOwnerName: "",
-        lesseeLandOwnerName: "",
-        ownershipOthersSpecify: "",
-      });
-      return { ...prev, farmlandParcels: parcels };
-    });
-  };
-
-  const removeParcel = (idx: number) => {
-    setFormData((prev) => {
-      const parcels = [...prev.farmlandParcels];
-      parcels.splice(idx, 1);
-      return { ...prev, farmlandParcels: parcels };
-    });
   };
 
   // Handle ownership category change (Registered Owner, Tenant, Lessee)
@@ -519,6 +459,7 @@ const JoRsbsa: React.FC = () => {
       })) as Parcel[]; // ✅ add this cast
       return { ...prev, farmlandParcels: parcels };
     });
+    setContractEndDates({});
   };
 
   // Handle land owner selection for tenant/lessee
@@ -527,6 +468,7 @@ const JoRsbsa: React.FC = () => {
     setLandOwnerSearchTerm(owner.name);
     setShowLandOwnerDropdown(false);
     setSelectedParcelIds(new Set());
+    setContractEndDates({});
     setErrors((prev) => ({ ...prev, landOwner: "", parcelSelection: "" }));
 
     // Fetch the land owner's parcels to show for selection
@@ -575,6 +517,18 @@ const JoRsbsa: React.FC = () => {
     setErrors((prev) => ({ ...prev, parcelSelection: "" }));
   };
 
+  const handleContractEndDateChange = (
+    parcelId: string | number,
+    value: string,
+  ) => {
+    const normalizedParcelId = String(parcelId);
+    setContractEndDates((prev) => ({
+      ...prev,
+      [normalizedParcelId]: value,
+    }));
+    setErrors((prev) => ({ ...prev, contractEndDate: "" }));
+  };
+
   // Apply selected parcels to form data (called internally after confirmation)
   const applySelectedParcels = () => {
     const selectedParcels = ownerParcels.filter((p) =>
@@ -593,6 +547,7 @@ const JoRsbsa: React.FC = () => {
           farmLocationMunicipality:
             ownerParcel.farm_location_municipality || "Dumangas",
           totalFarmAreaHa: String(ownerParcel.total_farm_area_ha || ""),
+          contractEndDate: contractEndDates[String(ownerParcel.id)] || "",
           withinAncestralDomain: ownerParcel.within_ancestral_domain || "",
           ownershipDocumentNo: ownerParcel.ownership_document_no || "",
           agrarianReformBeneficiary:
@@ -696,6 +651,14 @@ const JoRsbsa: React.FC = () => {
           "The selected land owner has no registered parcels. Please choose a different land owner.";
       } else if (selectedParcelIds.size === 0) {
         newErrors.parcelSelection = "Please select at least one parcel";
+      } else {
+        const missingContractDates = Array.from(selectedParcelIds).filter(
+          (parcelId) => !contractEndDates[String(parcelId)],
+        );
+        if (missingContractDates.length > 0) {
+          newErrors.contractEndDate =
+            "Please set contract end date for all selected parcels";
+        }
       }
 
       setErrors(newErrors);
@@ -770,6 +733,7 @@ const JoRsbsa: React.FC = () => {
           totalFarmAreaHa: parcel.totalFarmAreaHa
             ? parseFloat(parcel.totalFarmAreaHa)
             : 0,
+          contractEndDate: parcel.contractEndDate || null,
           withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
           agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
           isCultivating: parcel.isCultivating ?? true,
@@ -834,6 +798,7 @@ const JoRsbsa: React.FC = () => {
         withinAncestralDomain: parcel.withinAncestralDomain || null,
         ownershipDocumentNo: parcel.ownershipDocumentNo || null,
         agrarianReformBeneficiary: parcel.agrarianReformBeneficiary || null,
+        contractEndDate: parcel.contractEndDate || null,
         isCultivating: parcel.isCultivating ?? null,
         ownershipType: {
           registeredOwner: !!parcel.ownershipTypeRegisteredOwner,
@@ -1810,6 +1775,48 @@ const JoRsbsa: React.FC = () => {
                                     &nbsp;&nbsp;|&nbsp;&nbsp; 🌾{" "}
                                     {parcel.total_farm_area_ha ?? "—"} ha
                                   </div>
+                                  <div
+                                    style={{
+                                      marginTop: "0.5rem",
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: "0.25rem",
+                                    }}
+                                  >
+                                    <label
+                                      style={{
+                                        fontSize: "0.8rem",
+                                        color: "#374151",
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      Contract end date *
+                                    </label>
+                                    <input
+                                      type="date"
+                                      value={
+                                        contractEndDates[String(parcel.id)] ||
+                                        ""
+                                      }
+                                      onChange={(e) =>
+                                        handleContractEndDateChange(
+                                          parcel.id,
+                                          e.target.value,
+                                        )
+                                      }
+                                      onClick={(e) => e.stopPropagation()}
+                                      disabled={!isSelected}
+                                      style={{
+                                        padding: "0.4rem 0.5rem",
+                                        border: "1px solid #ced4da",
+                                        borderRadius: "4px",
+                                        fontSize: "0.85rem",
+                                        backgroundColor: isSelected
+                                          ? "white"
+                                          : "#f3f4f6",
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                                 {isSelected && (
                                   <span
@@ -1852,6 +1859,14 @@ const JoRsbsa: React.FC = () => {
                         style={{ marginTop: "0.5rem" }}
                       >
                         {errors.parcelSelection}
+                      </div>
+                    )}
+                    {errors.contractEndDate && (
+                      <div
+                        className="jo-registration-error"
+                        style={{ marginTop: "0.5rem" }}
+                      >
+                        {errors.contractEndDate}
                       </div>
                     )}
                   </div>
@@ -2089,6 +2104,18 @@ const JoRsbsa: React.FC = () => {
                                 : parcel.isCultivating === false
                                   ? "No"
                                   : "Not specified"}
+                            </span>
+                          </div>
+                          <div className="jo-registration-summary-item">
+                            <span className="jo-registration-summary-label">
+                              Contract End Date:
+                            </span>
+                            <span className="jo-registration-summary-value">
+                              {parcel.contractEndDate
+                                ? new Date(
+                                    parcel.contractEndDate,
+                                  ).toLocaleDateString()
+                                : "Not specified"}
                             </span>
                           </div>
                         </div>

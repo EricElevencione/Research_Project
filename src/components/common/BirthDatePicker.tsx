@@ -10,12 +10,32 @@ interface BirthDatePickerProps {
 }
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 const MONTH_SHORT = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -56,7 +76,10 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
         setViewMode("calendar");
       }
@@ -89,14 +112,24 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
 
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
-      if (viewYear > minYear) { setViewYear(viewYear - 1); setViewMonth(11); }
-    } else { setViewMonth(viewMonth - 1); }
+      if (viewYear > minYear) {
+        setViewYear(viewYear - 1);
+        setViewMonth(11);
+      }
+    } else {
+      setViewMonth(viewMonth - 1);
+    }
   };
 
   const handleNextMonth = () => {
     if (viewMonth === 11) {
-      if (viewYear < effectiveMaxYear) { setViewYear(viewYear + 1); setViewMonth(0); }
-    } else { setViewMonth(viewMonth + 1); }
+      if (viewYear < effectiveMaxYear) {
+        setViewYear(viewYear + 1);
+        setViewMonth(0);
+      }
+    } else {
+      setViewMonth(viewMonth + 1);
+    }
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -118,10 +151,14 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
   };
 
   const isSelected = (day: number) =>
-    selectedYear === viewYear && selectedMonth === viewMonth && selectedDay === day;
+    selectedYear === viewYear &&
+    selectedMonth === viewMonth &&
+    selectedDay === day;
 
   const isToday = (day: number) =>
-    viewYear === today.getFullYear() && viewMonth === today.getMonth() && day === today.getDate();
+    viewYear === today.getFullYear() &&
+    viewMonth === today.getMonth() &&
+    day === today.getDate();
 
   // Display text
   const displayValue = parsedDate
@@ -130,7 +167,11 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
 
   // Year grid for year picker
   const yearGrid: number[] = [];
-  for (let y = yearRangeStart; y < yearRangeStart + 20 && y <= effectiveMaxYear; y++) {
+  for (
+    let y = yearRangeStart;
+    y < yearRangeStart + 20 && y <= effectiveMaxYear;
+    y++
+  ) {
     if (y >= minYear) yearGrid.push(y);
   }
 
@@ -142,25 +183,59 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="jo-bdp-trigger-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
         </div>
-        <span className={`jo-bdp-text${!displayValue ? " jo-bdp-placeholder" : ""}`}>
+        <span
+          className={`jo-bdp-text${!displayValue ? " jo-bdp-placeholder" : ""}`}
+        >
           {displayValue || "Select date of birth"}
         </span>
         {value && (
-          <button className="jo-bdp-clear-btn" onClick={handleClear} title="Clear">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          <button
+            className="jo-bdp-clear-btn"
+            onClick={handleClear}
+            title="Clear"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         )}
         <div className="jo-bdp-chevron">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="6 9 12 15 18 9"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
       </div>
@@ -174,12 +249,22 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
               className="jo-bdp-arrow"
               onClick={() => {
                 if (viewMode === "calendar") handlePrevMonth();
-                else if (viewMode === "years") setYearRangeStart(Math.max(minYear, yearRangeStart - 20));
+                else if (viewMode === "years")
+                  setYearRangeStart(Math.max(minYear, yearRangeStart - 20));
               }}
               disabled={viewMode === "months"}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
 
@@ -190,19 +275,32 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                 else if (viewMode === "months") {
                   setYearRangeStart(Math.floor(viewYear / 20) * 20);
                   setViewMode("years");
-                }
-                else setViewMode("calendar");
+                } else setViewMode("calendar");
               }}
             >
               {viewMode === "calendar" && (
-                <span>{MONTH_NAMES[viewMonth]} {viewYear}</span>
+                <span>
+                  {MONTH_NAMES[viewMonth]} {viewYear}
+                </span>
               )}
               {viewMode === "months" && <span>{viewYear}</span>}
               {viewMode === "years" && (
-                <span>{yearRangeStart} – {Math.min(yearRangeStart + 19, effectiveMaxYear)}</span>
+                <span>
+                  {yearRangeStart} –{" "}
+                  {Math.min(yearRangeStart + 19, effectiveMaxYear)}
+                </span>
               )}
-              <svg className="jo-bdp-header-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                <polyline points="6 9 12 15 18 9"/>
+              <svg
+                className="jo-bdp-header-chevron"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
 
@@ -210,12 +308,24 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
               className="jo-bdp-arrow"
               onClick={() => {
                 if (viewMode === "calendar") handleNextMonth();
-                else if (viewMode === "years") setYearRangeStart(Math.min(effectiveMaxYear - 19, yearRangeStart + 20));
+                else if (viewMode === "years")
+                  setYearRangeStart(
+                    Math.min(effectiveMaxYear - 19, yearRangeStart + 20),
+                  );
               }}
               disabled={viewMode === "months"}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
           </div>
@@ -224,7 +334,9 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
           {viewMode === "calendar" && (
             <>
               <div className="jo-bdp-weekdays">
-                {DAY_LABELS.map((d) => <span key={d}>{d}</span>)}
+                {DAY_LABELS.map((d) => (
+                  <span key={d}>{d}</span>
+                ))}
               </div>
               <div className="jo-bdp-days">
                 {calendarDays.map((day, idx) =>
@@ -239,7 +351,9 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                         isSelected(day) && "jo-bdp-day--selected",
                         isToday(day) && !isSelected(day) && "jo-bdp-day--today",
                         isFutureDay(day) && "jo-bdp-day--disabled",
-                      ].filter(Boolean).join(" ")}
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                       onClick={() => !isFutureDay(day) && handleDayClick(day)}
                     >
                       {day}
@@ -257,7 +371,10 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                 <button
                   key={m}
                   className={`jo-bdp-month-cell${viewMonth === idx ? " jo-bdp-month--active" : ""}`}
-                  onClick={() => { setViewMonth(idx); setViewMode("calendar"); }}
+                  onClick={() => {
+                    setViewMonth(idx);
+                    setViewMode("calendar");
+                  }}
                 >
                   {m}
                 </button>
@@ -273,7 +390,10 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
                   key={y}
                   className={`jo-bdp-year-cell${viewYear === y ? " jo-bdp-year--active" : ""}${y > currentYear ? " jo-bdp-year--disabled" : ""}`}
                   disabled={y > currentYear}
-                  onClick={() => { setViewYear(y); setViewMode("months"); }}
+                  onClick={() => {
+                    setViewYear(y);
+                    setViewMode("months");
+                  }}
                 >
                   {y}
                 </button>
@@ -285,12 +405,19 @@ const BirthDatePicker: React.FC<BirthDatePickerProps> = ({
           <div className="jo-bdp-footer">
             <button
               className="jo-bdp-footer-btn"
-              onClick={() => { setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); setViewMode("calendar"); }}
+              onClick={() => {
+                setViewYear(today.getFullYear());
+                setViewMonth(today.getMonth());
+                setViewMode("calendar");
+              }}
             >
               Today
             </button>
             {value && (
-              <button className="jo-bdp-footer-btn jo-bdp-footer-clear" onClick={handleClear}>
+              <button
+                className="jo-bdp-footer-btn jo-bdp-footer-clear"
+                onClick={handleClear}
+              >
                 Clear
               </button>
             )}

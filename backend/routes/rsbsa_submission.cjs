@@ -184,6 +184,13 @@ router.post("/", async (req, res) => {
           SELECT 1
           FROM information_schema.columns
           WHERE table_schema = 'public'
+            AND table_name = 'rsbsa_farm_parcels'
+            AND column_name = 'contract_end_date'
+        ) AS has_contract_end_date_column,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
             AND table_name = 'land_history'
             AND column_name = 'ownership_category'
         ) AS has_land_history_ownership_category_column
@@ -211,6 +218,8 @@ router.post("/", async (req, res) => {
       dependencyCheck.rows[0]?.has_cultivation_status_reason_column === true;
     const hasCultivatorSubmissionIdColumn =
       dependencyCheck.rows[0]?.has_cultivator_submission_id_column === true;
+    const hasContractEndDateColumn =
+      dependencyCheck.rows[0]?.has_contract_end_date_column === true;
     const hasLandHistoryOwnershipCategoryColumn =
       dependencyCheck.rows[0]?.has_land_history_ownership_category_column ===
       true;
@@ -388,6 +397,10 @@ router.post("/", async (req, res) => {
 
       if (hasCultivatorSubmissionIdColumn) {
         parcelInsertColumns.push("cultivator_submission_id");
+      }
+
+      if (hasContractEndDateColumn) {
+        parcelInsertColumns.push("contract_end_date");
       }
 
       const parcelInsertPlaceholders = parcelInsertColumns
@@ -599,6 +612,10 @@ router.post("/", async (req, res) => {
 
           if (hasCultivatorSubmissionIdColumn) {
             parcelInsertValues.push(cultivatorSubmissionId);
+          }
+
+          if (hasContractEndDateColumn) {
+            parcelInsertValues.push(parcel.contractEndDate || null);
           }
 
           const parcelResult = await client.query(

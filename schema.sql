@@ -455,6 +455,7 @@ CREATE TABLE public.rsbsa_farm_parcels (
   is_cultivating boolean NOT NULL DEFAULT true,
   cultivation_status_updated_at timestamp with time zone,
   cultivation_status_reason text,
+  contract_end_date date,
   CONSTRAINT rsbsa_farm_parcels_pkey PRIMARY KEY (id),
   CONSTRAINT rsbsa_farm_parcels_cultivator_submission_id_fkey FOREIGN KEY (cultivator_submission_id) REFERENCES public.rsbsa_submission(id),
   CONSTRAINT fk_lessee_land_owner FOREIGN KEY (lessee_land_owner_id) REFERENCES public.rsbsa_submission(id),
