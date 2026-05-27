@@ -48,6 +48,7 @@ interface FarmerDetail {
   mainLivelihood: string;
   farmingActivities: string[];
   parcels: ParcelDetail[];
+  statusChangeReason?: string | null;
 }
 
 interface ParcelDetail {
@@ -273,9 +274,9 @@ const TechMasterlist: React.FC = () => {
         lesseeLandOwnerName: p.lessee_land_owner_name || "",
         // ✅ Make sure these are read correctly from DB
         isCultivating:
-          typeof p.is_cultivating === "boolean" ? p.is_cultivating : null,
-        cultivationStatusReason: p.cultivation_status_reason || null,
-        cultivationStatusUpdatedAt: p.cultivation_status_updated_at || null,
+          typeof p.is_farming === "boolean" ? p.is_farming : null,
+        cultivationStatusReason: p.farming_status_reason || null,
+        cultivationStatusUpdatedAt: p.farming_status_updated_at || null,
         cultivatorSubmissionId: p.cultivator_submission_id || null,
       }));
 
@@ -347,6 +348,7 @@ const TechMasterlist: React.FC = () => {
         mainLivelihood: data.mainLivelihood || "N/A",
         farmingActivities: activities,
         parcels: mappedParcels,
+        statusChangeReason: selectedRecord?.statusChangeReason || data.statusChangeReason || data.archive_reason || null,
       };
 
       setSelectedFarmer(farmerDetail);
@@ -569,29 +571,64 @@ const TechMasterlist: React.FC = () => {
 
   const confirmStatusChange = async () => {
     if (!statusChangeTarget) return;
-    if (!statusChangeReason.trim()) {
-      showUpdateNotification("Please provide a reason.", "error");
-      return;
+
+    // Validation
+    if (statusModalParcels.length === 0) {
+      if (!statusChangeReason.trim()) {
+        showUpdateNotification("Please provide a reason.", "error");
+        return;
+      }
+    } else {
+      const missingReason = statusModalParcels.some(p => p.isCultivating === false && !(p.cultivationStatusReason || "").trim());
+      if (missingReason) {
+        showUpdateNotification("Please provide a reason for all inactive parcels.", "error");
+        return;
+      }
+      // Also ensure that every parcel has explicitly been set to true or false (not null)
+      const unselectedParcel = statusModalParcels.some(p => p.isCultivating === null || p.isCultivating === undefined);
+      if (unselectedParcel) {
+        showUpdateNotification("Please select a status for all parcels.", "error");
+        return;
+      }
     }
 
     try {
-      const isNowActive = statusChangeTarget.newStatus === "Active Farmer";
+      let newFarmerStatus = "";
+      let newCultivationStatus = "";
+      let finalReason = "";
 
-      // Update each parcel's cultivation status in DB based on the new farmer status
-      for (const parcel of statusModalParcels) {
-        await updateFarmParcel(parcel.id, {
-          is_cultivating: isNowActive,
-          cultivation_status_reason: isNowActive ? null : statusChangeReason.trim(),
-          cultivation_status_updated_at: new Date().toISOString(),
-        });
+      if (statusModalParcels.length === 0) {
+        const isNowActive = statusChangeTarget.newStatus === "Active Farmer";
+        newFarmerStatus = statusChangeTarget.newStatus;
+        newCultivationStatus = isNowActive ? "Actively farming" : "Not farming";
+        finalReason = statusChangeReason.trim();
+      } else {
+        let isNowActive = false;
+
+        // Update each parcel's cultivation status in DB
+        for (const parcel of statusModalParcels) {
+          if (parcel.isCultivating === true) {
+            isNowActive = true;
+          }
+          await updateFarmParcel(parcel.id, {
+            is_farming: parcel.isCultivating === true,
+            farming_status_reason: parcel.isCultivating === true ? null : (parcel.cultivationStatusReason || "").trim(),
+            farming_status_updated_at: new Date().toISOString(),
+          });
+        }
+
+        newFarmerStatus = isNowActive ? "Active Farmer" : "Not Active";
+        newCultivationStatus = isNowActive ? "Actively farming" : "Not farming";
+        
+        finalReason = statusModalParcels
+          .filter(p => p.isCultivating === false && (p.cultivationStatusReason || "").trim())
+          .map(p => `Parcel ${p.parcelNumber !== "N/A" ? p.parcelNumber : p.id}: ${(p.cultivationStatusReason || "").trim()}`)
+          .join("; ");
       }
-
-      const newFarmerStatus = statusChangeTarget.newStatus;
-      const newCultivationStatus = isNowActive ? "Actively farming" : "Not farming";
 
       await updateRsbsaSubmission(statusChangeTarget.id, {
         status: newFarmerStatus,
-        statusChangeReason: statusChangeReason.trim(),
+        statusChangeReason: finalReason,
       });
 
       // ✅ Update local rsbsaRecords with new status AND cultivationStatus
@@ -1275,7 +1312,7 @@ const TechMasterlist: React.FC = () => {
           <div className="tech-masterlist-print-modal-overlay">
             <div
               className="tech-masterlist-print-modal"
-              style={{ maxWidth: "520px" }}
+              style={{ maxWidth: "600px", maxHeight: "90vh", display: "flex", flexDirection: "column" }}
             >
               <div className="tech-masterlist-print-modal-header">
                 <h3>Update Cultivation Status</h3>
@@ -1292,7 +1329,7 @@ const TechMasterlist: React.FC = () => {
                 </button>
               </div>
 
-              <div className="tech-masterlist-print-modal-body">
+              <div className="tech-masterlist-print-modal-body" style={{ overflowY: "auto", padding: "20px" }}>
                 <p style={{ marginBottom: "16px" }}>
                   Farmer:{" "}
                   <strong>
@@ -1302,11 +1339,11 @@ const TechMasterlist: React.FC = () => {
                 </p>
 
                 {statusModalLoading ? (
-                  <p>Loading...</p>
-                ) : (
+                  <p>Loading parcels...</p>
+                ) : statusModalParcels.length === 0 ? (
                   <>
                     <div className="tech-masterlist-print-filter-group" style={{ marginBottom: "16px" }}>
-                      <label>Update Status</label>
+                      <label>Update Status (No Parcels Found)</label>
                       <div style={{ display: "flex", gap: "16px", marginTop: "8px" }}>
                         <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
                           <input 
@@ -1350,10 +1387,76 @@ const TechMasterlist: React.FC = () => {
                       />
                     </div>
                   </>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                    <p style={{ fontSize: "14px", color: "#666" }}>
+                      Please update the cultivation status for each parcel. The farmer will be marked as "Active" if at least one parcel is actively being farmed.
+                    </p>
+                    {statusModalParcels.map((parcel, index) => (
+                      <div key={parcel.id} style={{ border: "1px solid #e2e8f0", borderRadius: "8px", padding: "16px", background: "#f8fafc" }}>
+                        <div style={{ marginBottom: "12px", borderBottom: "1px solid #cbd5e1", paddingBottom: "8px" }}>
+                          <strong>Parcel #{parcel.parcelNumber !== "N/A" ? parcel.parcelNumber : index + 1}</strong>
+                          <span style={{ fontSize: "13px", color: "#64748b", marginLeft: "8px" }}>
+                            ({parcel.totalFarmAreaHa} ha - {parcel.farmLocationBarangay})
+                          </span>
+                        </div>
+                        
+                        <div style={{ display: "flex", gap: "16px", marginBottom: "12px" }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                            <input 
+                              type="radio" 
+                              name={`parcelStatus-${parcel.id}`}
+                              checked={parcel.isCultivating === true}
+                              onChange={() => setStatusModalParcels(prev => prev.map(p => 
+                                p.id === parcel.id ? { ...p, isCultivating: true, cultivationStatusReason: "" } : p
+                              ))}
+                            />
+                            Actively farming
+                          </label>
+                          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                            <input 
+                              type="radio" 
+                              name={`parcelStatus-${parcel.id}`}
+                              checked={parcel.isCultivating === false}
+                              onChange={() => setStatusModalParcels(prev => prev.map(p => 
+                                p.id === parcel.id ? { ...p, isCultivating: false } : p
+                              ))}
+                            />
+                            Not farming
+                          </label>
+                        </div>
+                        
+                        {parcel.isCultivating === false && (
+                          <div className="tech-masterlist-print-filter-group" style={{ marginTop: "12px" }}>
+                            <label style={{ fontSize: "13px" }}>
+                              Reason for inactivity <span style={{ color: "red" }}>*</span>
+                            </label>
+                            <textarea
+                              rows={2}
+                              placeholder="Enter reason why this parcel is not being farmed..."
+                              value={parcel.cultivationStatusReason || ""}
+                              onChange={(e) => setStatusModalParcels(prev => prev.map(p => 
+                                p.id === parcel.id ? { ...p, cultivationStatusReason: e.target.value } : p
+                              ))}
+                              style={{
+                                width: "100%",
+                                padding: "8px",
+                                borderRadius: "6px",
+                                border: "1px solid #cbd5e1",
+                                resize: "vertical",
+                                marginTop: "6px",
+                                fontSize: "13px"
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              <div className="tech-masterlist-print-modal-footer">
+              <div className="tech-masterlist-print-modal-footer" style={{ marginTop: "auto", borderTop: "1px solid #e2e8f0", padding: "16px 20px" }}>
                 <button
                   className="tech-masterlist-print-modal-cancel-button"
                   onClick={() => {
@@ -1368,10 +1471,7 @@ const TechMasterlist: React.FC = () => {
                 <button
                   className="tech-masterlist-print-modal-print-button"
                   onClick={confirmStatusChange}
-                  disabled={
-                    !statusChangeReason.trim() ||
-                    statusModalLoading
-                  }
+                  disabled={statusModalLoading}
                 >
                   Confirm
                 </button>
@@ -1441,6 +1541,14 @@ const TechMasterlist: React.FC = () => {
                             {selectedFarmer.recordStatus}
                           </span>
                         </div>
+                        {selectedFarmer.recordStatus === "Not Active" && selectedFarmer.statusChangeReason && (
+                          <div className="farmer-modal-info-item farmer-modal-full-width" style={{ marginTop: "8px" }}>
+                            <span className="farmer-modal-label" style={{ color: "#d32f2f" }}>Reason for Inactivity:</span>
+                            <span className="farmer-modal-value">
+                              {selectedFarmer.statusChangeReason}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 

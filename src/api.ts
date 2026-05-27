@@ -146,6 +146,7 @@ const transformRsbsaRecord = (item: any) => {
     parcelArea: String(parcelArea),
     dateSubmitted,
     status,
+    statusChangeReason: item.archive_reason || item.status_change_reason || "",
     landParcel: farmLocation,
     ownershipCategory: ownershipType.category,
     ownershipType,
@@ -1642,7 +1643,7 @@ const normalizeRsbsaSubmissionUpdateData = (raw: any): Record<string, any> => {
     }
   }
   if (hasMeaningfulValue(raw.statusChangeReason)) {
-    normalized["status_change_reason"] = String(raw.statusChangeReason).trim();
+    normalized["archive_reason"] = String(raw.statusChangeReason).trim();
   }
 
   return normalized;
