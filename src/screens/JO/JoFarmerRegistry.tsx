@@ -1062,7 +1062,7 @@ const JoFarmerRegistry: React.FC = () => {
     const w = window.open("", "_blank");
     if (!w) return;
     w.document
-      .write(`<!DOCTYPE html><html><head><title>Who Farms This Land? — Farmer Registry</title><style>
+      .write(`<!DOCTYPE html><html><head><title>Farmers — Farmer Registry</title><style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:Arial,sans-serif;font-size:10px;padding:10mm;color:#111827}
       .farmer-print-header{text-align:center;margin-bottom:8px}
@@ -1075,7 +1075,7 @@ const JoFarmerRegistry: React.FC = () => {
       .farmer-print-footer{margin-top:10px;font-size:9px;color:#475569;text-align:center}
     </style></head><body>
     <div class="farmer-print-header">
-      <h1>Who Farms This Land? — Farmer Registry</h1>
+      <h1>Farmers — Farmer Registry</h1>
       <p>Municipality of Dumangas, Iloilo</p>
     </div>
     <table class="farmer-print-table">

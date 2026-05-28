@@ -485,6 +485,22 @@
   line-height: 1.2;
 }
 
+.jo-masterlist-idle-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
 .jo-masterlist-farmer-ref {
   color: #6b7280;
   font-size: 11px;
