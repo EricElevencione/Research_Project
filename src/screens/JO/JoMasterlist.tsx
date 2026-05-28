@@ -248,6 +248,7 @@ const JoMasterlist: React.FC = () => {
   });
   const [loadingStats, setLoadingStats] = useState(true);
 
+  const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
   const [selectedFarmBarangay, setSelectedFarmBarangay] =
@@ -939,8 +940,14 @@ const JoMasterlist: React.FC = () => {
         if (ns === "no parcels" || record.archivedAt) return false;
 
         const f = getOwnershipFlags(record);
-        const isOwner = f.category === "registeredOwner" || f.owner;
-        if (!isOwner) return false;
+        if (
+          selectedRole === "owner" &&
+          !(f.category === "registeredOwner" || f.owner)
+        )
+          return false;
+        if (selectedRole === "tenant" && !f.tenant) return false;
+        if (selectedRole === "lessee" && !f.lessee) return false;
+
         let matchesStatus = true;
         if (selectedStatus === "active") matchesStatus = active.has(ns);
         else if (selectedStatus === "notActive")
@@ -1049,6 +1056,7 @@ const JoMasterlist: React.FC = () => {
   }, [
     rsbsaRecords,
     selectedStatus,
+    selectedRole,
     selectedBarangay,
     selectedFarmBarangay,
     selectedFarmingStatus,
@@ -1181,7 +1189,10 @@ const JoMasterlist: React.FC = () => {
         parts.push(`Home Brgy: ${selectedBarangay}`);
       if (selectedFarmBarangay !== "all")
         parts.push(`Farm Brgy: ${selectedFarmBarangay}`);
-      parts.push("Role: Registered Owner");
+      if (selectedRole === "owner") parts.push("Role: Registered Owner");
+      else if (selectedRole === "tenant") parts.push("Role: Tenant");
+      else if (selectedRole === "lessee") parts.push("Role: Lessee");
+      else parts.push("Role: All");
       if (selectedStatus === "active") parts.push("Status: Active");
       else if (selectedStatus === "notActive") parts.push("Status: Not Active");
       if (selectedFarmingStatus !== "all")
@@ -1800,15 +1811,27 @@ const JoMasterlist: React.FC = () => {
                   />
                 </div>
               </div>
-              {/* Row 2 — Dropdowns + Archived toggle */}
+              {/* Row 2 — Dropdowns */}
               <div className="jo-masterlist-filters-row-2">
+                <div className="jo-masterlist-status-filter">
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="jo-masterlist-status-select"
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="owner">Registered Owner</option>
+                    <option value="tenant">Tenant</option>
+                    <option value="lessee">Lessee</option>
+                  </select>
+                </div>
                 <div className="jo-masterlist-status-filter">
                   <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
                     className="jo-masterlist-status-select"
                   >
-                    <option value="all">All Owners</option>
+                    <option value="all">All Status</option>
                     <option value="active">Active</option>
                     <option value="notActive">Not Active</option>
                   </select>
