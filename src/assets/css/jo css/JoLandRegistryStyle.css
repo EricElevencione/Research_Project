@@ -1444,6 +1444,17 @@
   color: #475569;
 }
 
+.jo-land-registry-step1-holder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
 .jo-land-registry-transfer-review {
   margin-top: 10px;
   border: 1px solid #e2e8f0;

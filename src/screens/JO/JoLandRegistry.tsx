@@ -3712,7 +3712,7 @@ const JoLandRegistry: React.FC = () => {
 
                 {/* Parcel Details Section */}
                 <div className="jo-land-registry-detail-section">
-                  <h4>🌾 Parcel Details</h4>
+                  <h4>🌾 Land Parcels</h4>
                   {cultivationLoading ? (
                     <p>Loading parcel details...</p>
                   ) : parcelDetailRows.length === 0 ? (
@@ -5067,23 +5067,23 @@ const JoLandRegistry: React.FC = () => {
 
                   <div className="jo-land-registry-transfer-section-card">
                     <h4>Step 1: Current Context</h4>
-                    <div className="jo-land-registry-transfer-kv">
-                      <span>Holder</span>
-                      <strong>{selectedFarmer.farmer_name || "—"}</strong>
-                    </div>
-                    <div className="jo-land-registry-transfer-kv">
-                      <span>Role</span>
-                      <strong>{ownerAffiliationRoleLabel}</strong>
-                    </div>
-                    <div className="jo-land-registry-transfer-kv">
-                      <span>FFRS Code</span>
-                      <strong>{selectedFarmer.ffrs_code || "—"}</strong>
+
+                    <div className="jo-land-registry-step1-holder-row">
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Holder</span>
+                        <strong>{selectedFarmer.farmer_name || "—"}</strong>
+                      </div>
+                      <span
+                        className={`jo-land-registry-ownership-pill jo-land-registry-ownership-${ownerAffiliationRole}`}
+                      >
+                        {ownerAffiliationRoleLabel}
+                      </span>
                     </div>
 
                     {!ownerAffiliationLoading &&
                     ownerAffiliationHasSingleSourceContext ? (
                       <div className="jo-land-registry-transfer-kv">
-                        <span>Current Linked Landowner</span>
+                        <span>Current Landowner</span>
                         <strong>
                           {selectedOwnerAffiliationSource?.ownerName || "—"}
                         </strong>
@@ -5091,7 +5091,7 @@ const JoLandRegistry: React.FC = () => {
                     ) : (
                       <>
                         <label className="jo-land-registry-transfer-label">
-                          Current Linked Landowner
+                          Current Landowner
                         </label>
                         <select
                           className="jo-land-registry-transfer-select"
@@ -5127,46 +5127,20 @@ const JoLandRegistry: React.FC = () => {
 
                     {ownerAffiliationLoading && (
                       <div className="jo-land-registry-transfer-mini-note">
-                        Loading active {ownerAffiliationRoleLabel.toLowerCase()}{" "}
-                        parcel links...
+                        Loading parcel links...
                       </div>
                     )}
 
                     {!ownerAffiliationLoading &&
-                      ownerAffiliationHasSingleSourceContext && (
-                        <div className="jo-land-registry-transfer-mini-note">
-                          Auto-selected current linked landowner based on the
-                          active {ownerAffiliationRoleLabel.toLowerCase()}{" "}
-                          parcel context.
-                        </div>
-                      )}
-
-                    {!ownerAffiliationLoading &&
                       selectedOwnerAffiliationSource && (
-                        <>
-                          <div className="jo-land-registry-transfer-mini-note">
-                            Linked owner:{" "}
-                            {selectedOwnerAffiliationSource.ownerName}
-                          </div>
-                          <div className="jo-land-registry-transfer-mini-note">
-                            Current holder links:{" "}
-                            {selectedOwnerAffiliationSource.parcelCount} parcel
-                            {selectedOwnerAffiliationSource.parcelCount === 1
-                              ? ""
-                              : "s"}{" "}
-                            • Total area{" "}
-                            {selectedOwnerAffiliationAreaHa.toFixed(2)} ha
-                          </div>
-                          <div className="jo-land-registry-transfer-mini-note">
-                            Selectable in Step 2:{" "}
-                            {ownerAffiliationStep3Parcels.length} parcel
-                            {ownerAffiliationStep3Parcels.length === 1
-                              ? ""
-                              : "s"}{" "}
-                            • Total area{" "}
-                            {ownerAffiliationSelectableAreaHa.toFixed(2)} ha
-                          </div>
-                        </>
+                        <div className="jo-land-registry-transfer-mini-note">
+                          {selectedOwnerAffiliationSource.parcelCount} parcel
+                          {selectedOwnerAffiliationSource.parcelCount === 1
+                            ? ""
+                            : "s"}{" "}
+                          · {selectedOwnerAffiliationAreaHa.toFixed(2)} ha under
+                          this agreement
+                        </div>
                       )}
                   </div>
 

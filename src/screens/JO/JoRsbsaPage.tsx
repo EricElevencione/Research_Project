@@ -2035,7 +2035,7 @@ const JoRsbsaPage: React.FC = () => {
                           </th>
 
                           <th>Ownership Status</th>
-                          <th>Status</th>
+
                           <th>
                             <button
                               className={`jo-rsbsa-sort-btn ${
@@ -2108,11 +2108,7 @@ const JoRsbsaPage: React.FC = () => {
                                     {getOwnershipLabel(record)}
                                   </span>
                                 </td>
-                                <td>
-                                  <span className="jo-rsbsa-record-status">
-                                    {formatRecordStatus(record.status)}
-                                  </span>
-                                </td>
+
                                 <td>
                                   <span className="jo-rsbsa-date">
                                     {formatDate(record.dateSubmitted)}
