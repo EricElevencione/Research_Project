@@ -30,6 +30,7 @@ import JoRsbsaPage from "./screens/JO/JoRsbsaPage";
 import JoDistribution from "./screens/JO/JoDistribution";
 import JoLandRegistry from "./screens/JO/JoLandRegistry";
 import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
+import JoAuditTrail from "./screens/JO/JoAuditTrail";
 import JoFarmerRegistry from "./screens/JO/JoFarmerRegistry";
 import JoLandownerRegistry from "./screens/JO/JoLandownerRegistry";
 import AuditTrail from "./screens/admin/AuditTrail";
@@ -370,6 +371,14 @@ function App() {
           element={
             <ProtectedRoute>
               <JoLandHistoryReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jo-audit-trail"
+          element={
+            <ProtectedRoute>
+              <JoAuditTrail />
             </ProtectedRoute>
           }
         />

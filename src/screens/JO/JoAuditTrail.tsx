@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../../components/layout/sidebarStyle.css";
-import "../../assets/css/admin css/AdminAuditTrail.css";
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import "../../assets/css/jo css/JoAuditTrail.css";
+import JOSidebar from "../../components/Layout/JOSidebar";
 import { AuditAPI } from "../../components/Audit/auditAPI";
 import { supabase } from "../../supabase";
 
@@ -567,27 +567,27 @@ const AuditTrail: React.FC = () => {
   const getActionBadgeClass = (action: string) => {
     switch (action) {
       case "CREATE":
-        return "admin-audit-badge-create";
+        return "jo-audit-badge-create";
       case "UPDATE":
-        return "admin-audit-badge-update";
+        return "jo-audit-badge-update";
       case "DELETE":
-        return "admin-audit-badge-delete";
+        return "jo-audit-badge-delete";
       case "LOGIN":
-        return "admin-audit-badge-login";
+        return "jo-audit-badge-login";
       case "LOGOUT":
-        return "admin-audit-badge-logout";
+        return "jo-audit-badge-logout";
       case "LOGIN_FAILED":
-        return "admin-audit-badge-failed";
+        return "jo-audit-badge-failed";
       case "APPROVE":
-        return "admin-audit-badge-approve";
+        return "jo-audit-badge-approve";
       case "REJECT":
-        return "admin-audit-badge-reject";
+        return "jo-audit-badge-reject";
       case "EXPORT":
-        return "admin-audit-badge-export";
+        return "jo-audit-badge-export";
       case "DISTRIBUTE":
-        return "admin-audit-badge-distribute";
+        return "jo-audit-badge-distribute";
       default:
-        return "admin-audit-badge-default";
+        return "jo-audit-badge-default";
     }
   };
 
@@ -889,19 +889,17 @@ const AuditTrail: React.FC = () => {
 
     if (enteredFields.length === 0) {
       return (
-        <div className="admin-audit-allocation-row">
-          <span className="admin-audit-allocation-label">
-            No inputs recorded
-          </span>
-          <span className="admin-audit-allocation-value">-</span>
+        <div className="jo-audit-allocation-row">
+          <span className="jo-audit-allocation-label">No inputs recorded</span>
+          <span className="jo-audit-allocation-value">-</span>
         </div>
       );
     }
 
     return enteredFields.map((field) => (
-      <div className="admin-audit-allocation-row" key={field.key}>
-        <span className="admin-audit-allocation-label">{field.label}</span>
-        <span className="admin-audit-allocation-value">
+      <div className="jo-audit-allocation-row" key={field.key}>
+        <span className="jo-audit-allocation-label">{field.label}</span>
+        <span className="jo-audit-allocation-value">
           {formatAllocationAmount(payload[field.key], field.unit)}
         </span>
       </div>
@@ -937,11 +935,11 @@ const AuditTrail: React.FC = () => {
 
     return (
       <div
-        className={`admin-audit-allocation-payload admin-audit-allocation-payload--${section}`}
+        className={`jo-audit-allocation-payload jo-audit-allocation-payload--${section}`}
       >
-        <div className="admin-audit-allocation-header">
-          <span className="admin-audit-allocation-title">{sectionLabel}</span>
-          <span className="admin-audit-allocation-tag">
+        <div className="jo-audit-allocation-header">
+          <span className="jo-audit-allocation-title">{sectionLabel}</span>
+          <span className="jo-audit-allocation-tag">
             {section === "metadata"
               ? "Metadata"
               : section === "old"
@@ -950,49 +948,47 @@ const AuditTrail: React.FC = () => {
           </span>
         </div>
 
-        <div className="admin-audit-allocation-summary">
-          <div className="admin-audit-allocation-summary-item">
-            <span className="admin-audit-allocation-summary-label">Season</span>
-            <span className="admin-audit-allocation-summary-value">
+        <div className="jo-audit-allocation-summary">
+          <div className="jo-audit-allocation-summary-item">
+            <span className="jo-audit-allocation-summary-label">Season</span>
+            <span className="jo-audit-allocation-summary-value">
               {formatAllocationSeason(payload.season)}
             </span>
           </div>
-          <div className="admin-audit-allocation-summary-item">
-            <span className="admin-audit-allocation-summary-label">
+          <div className="jo-audit-allocation-summary-item">
+            <span className="jo-audit-allocation-summary-label">
               Allocation Date
             </span>
-            <span className="admin-audit-allocation-summary-value">
+            <span className="jo-audit-allocation-summary-value">
               {formatAllocationDate(payload.allocation_date)}
             </span>
           </div>
         </div>
 
-        <div className="admin-audit-allocation-totals-strip">
-          <span className="admin-audit-allocation-pill">
+        <div className="jo-audit-allocation-totals-strip">
+          <span className="jo-audit-allocation-pill">
             Fertilizer Total: {formatAllocationAmount(totalFertilizer, "bags")}
           </span>
-          <span className="admin-audit-allocation-pill">
+          <span className="jo-audit-allocation-pill">
             Seed Total: {formatAllocationAmount(totalSeeds, "kg")}
           </span>
         </div>
 
-        <div className="admin-audit-allocation-grid">
-          <div className="admin-audit-allocation-group">
+        <div className="jo-audit-allocation-grid">
+          <div className="jo-audit-allocation-group">
             <h5>Fertilizer Allocation</h5>
             {renderAllocationFieldRows(payload, ALLOCATION_FERTILIZER_FIELDS)}
           </div>
 
-          <div className="admin-audit-allocation-group">
+          <div className="jo-audit-allocation-group">
             <h5>Seed Allocation</h5>
             {renderAllocationFieldRows(payload, ALLOCATION_SEED_FIELDS)}
           </div>
         </div>
 
-        <div className="admin-audit-allocation-notes">
-          <span className="admin-audit-allocation-summary-label">Notes</span>
-          <span className="admin-audit-allocation-notes-value">
-            {notesText}
-          </span>
+        <div className="jo-audit-allocation-notes">
+          <span className="jo-audit-allocation-summary-label">Notes</span>
+          <span className="jo-audit-allocation-notes-value">{notesText}</span>
         </div>
       </div>
     );
@@ -1039,13 +1035,13 @@ const AuditTrail: React.FC = () => {
     }
 
     return (
-      <div className="admin-audit-detail-section">
+      <div className="jo-audit-detail-section">
         <h4>Seed/Fertilizer Change Tracking</h4>
-        <div className="admin-audit-simple-grid">
+        <div className="jo-audit-simple-grid">
           {changedFields.map((field) => (
-            <div key={field.key} className="admin-audit-simple-item">
-              <span className="admin-audit-simple-label">{field.label}</span>
-              <span className="admin-audit-simple-value">
+            <div key={field.key} className="jo-audit-simple-item">
+              <span className="jo-audit-simple-label">{field.label}</span>
+              <span className="jo-audit-simple-value">
                 {formatAllocationAmount(field.oldValue, field.unit)} {" -> "}
                 {formatAllocationAmount(field.newValue, field.unit)} (
                 {field.delta > 0 ? "+" : ""}
@@ -1191,115 +1187,109 @@ const AuditTrail: React.FC = () => {
       }));
 
     return (
-      <div className="admin-audit-farmer-payload">
-        <div className="admin-audit-farmer-header">
-          <span className="admin-audit-farmer-title">
+      <div className="jo-audit-farmer-payload">
+        <div className="jo-audit-farmer-header">
+          <span className="jo-audit-farmer-title">
             Farmer Registration Details
           </span>
           {payload.farmerName && (
-            <span className="admin-audit-farmer-name">
-              {payload.farmerName}
-            </span>
+            <span className="jo-audit-farmer-name">{payload.farmerName}</span>
           )}
         </div>
 
-        <div className="admin-audit-farmer-summary">
-          <div className="admin-audit-farmer-summary-item">
-            <span className="admin-audit-farmer-summary-label">
+        <div className="jo-audit-farmer-summary">
+          <div className="jo-audit-farmer-summary-item">
+            <span className="jo-audit-farmer-summary-label">
               Ownership Category
             </span>
-            <span className="admin-audit-farmer-summary-value">
+            <span className="jo-audit-farmer-summary-value">
               {formatTitleText(details.ownershipCategory)}
             </span>
           </div>
-          <div className="admin-audit-farmer-summary-item">
-            <span className="admin-audit-farmer-summary-label">
-              Total Parcels
-            </span>
-            <span className="admin-audit-farmer-summary-value">
+          <div className="jo-audit-farmer-summary-item">
+            <span className="jo-audit-farmer-summary-label">Total Parcels</span>
+            <span className="jo-audit-farmer-summary-value">
               {totalParcels.toLocaleString("en-US")}
             </span>
           </div>
-          <div className="admin-audit-farmer-summary-item">
-            <span className="admin-audit-farmer-summary-label">
+          <div className="jo-audit-farmer-summary-item">
+            <span className="jo-audit-farmer-summary-label">
               Total Farm Area
             </span>
-            <span className="admin-audit-farmer-summary-value">
+            <span className="jo-audit-farmer-summary-value">
               {formatAreaHectares(totalFarmArea)}
             </span>
           </div>
-          <div className="admin-audit-farmer-summary-item">
-            <span className="admin-audit-farmer-summary-label">
+          <div className="jo-audit-farmer-summary-item">
+            <span className="jo-audit-farmer-summary-label">
               Selected Parcel IDs
             </span>
-            <span className="admin-audit-farmer-summary-value">
+            <span className="jo-audit-farmer-summary-value">
               {selectedParcelIds.length || "N/A"}
             </span>
           </div>
         </div>
 
-        <div className="admin-audit-farmer-grid">
-          <div className="admin-audit-farmer-group">
+        <div className="jo-audit-farmer-grid">
+          <div className="jo-audit-farmer-group">
             <h5>Farm Location</h5>
-            <div className="admin-audit-farmer-row">
-              <span className="admin-audit-farmer-label">Barangay</span>
-              <span className="admin-audit-farmer-value">
+            <div className="jo-audit-farmer-row">
+              <span className="jo-audit-farmer-label">Barangay</span>
+              <span className="jo-audit-farmer-value">
                 {formatTitleText(farmLocation.barangay)}
               </span>
             </div>
-            <div className="admin-audit-farmer-row">
-              <span className="admin-audit-farmer-label">Municipality</span>
-              <span className="admin-audit-farmer-value">
+            <div className="jo-audit-farmer-row">
+              <span className="jo-audit-farmer-label">Municipality</span>
+              <span className="jo-audit-farmer-value">
                 {formatTitleText(farmLocation.municipality)}
               </span>
             </div>
-            <div className="admin-audit-farmer-row">
-              <span className="admin-audit-farmer-label">Province</span>
-              <span className="admin-audit-farmer-value">
+            <div className="jo-audit-farmer-row">
+              <span className="jo-audit-farmer-label">Province</span>
+              <span className="jo-audit-farmer-value">
                 {formatTitleText(farmLocation.province)}
               </span>
             </div>
           </div>
 
-          <div className="admin-audit-farmer-group">
+          <div className="jo-audit-farmer-group">
             <h5>Selected Land Owner</h5>
             {selectedLandOwner ? (
               <>
-                <div className="admin-audit-farmer-row">
-                  <span className="admin-audit-farmer-label">Name</span>
-                  <span className="admin-audit-farmer-value">
+                <div className="jo-audit-farmer-row">
+                  <span className="jo-audit-farmer-label">Name</span>
+                  <span className="jo-audit-farmer-value">
                     {formatTitleText(selectedLandOwner.name)}
                   </span>
                 </div>
-                <div className="admin-audit-farmer-row">
-                  <span className="admin-audit-farmer-label">Barangay</span>
-                  <span className="admin-audit-farmer-value">
+                <div className="jo-audit-farmer-row">
+                  <span className="jo-audit-farmer-label">Barangay</span>
+                  <span className="jo-audit-farmer-value">
                     {formatTitleText(selectedLandOwner.barangay)}
                   </span>
                 </div>
-                <div className="admin-audit-farmer-row">
-                  <span className="admin-audit-farmer-label">Municipality</span>
-                  <span className="admin-audit-farmer-value">
+                <div className="jo-audit-farmer-row">
+                  <span className="jo-audit-farmer-label">Municipality</span>
+                  <span className="jo-audit-farmer-value">
                     {formatTitleText(selectedLandOwner.municipality)}
                   </span>
                 </div>
               </>
             ) : (
-              <div className="admin-audit-farmer-empty">
-                No linked land owner
-              </div>
+              <div className="jo-audit-farmer-empty">No linked land owner</div>
             )}
           </div>
         </div>
 
         {activityTags.length > 0 && (
-          <div className="admin-audit-farmer-group">
+          <div className="jo-audit-farmer-group">
             <h5>Farm Activities</h5>
-            <div className="admin-audit-farmer-tags">
+            <div className="jo-audit-farmer-tags">
               {activityTags.map((activity, idx) => (
                 <span
                   key={`${activity}-${idx}`}
-                  className="admin-audit-farmer-tag"
+                  className="jo-audit-farmer-tag"
                 >
                   {activity}
                 </span>
@@ -1309,47 +1299,47 @@ const AuditTrail: React.FC = () => {
         )}
 
         {activityNotes.length > 0 && (
-          <div className="admin-audit-farmer-group">
+          <div className="jo-audit-farmer-group">
             <h5>Activity Notes</h5>
             {activityNotes.map((note) => (
-              <div className="admin-audit-farmer-row" key={note.key}>
-                <span className="admin-audit-farmer-label">{note.label}</span>
-                <span className="admin-audit-farmer-value">{note.value}</span>
+              <div className="jo-audit-farmer-row" key={note.key}>
+                <span className="jo-audit-farmer-label">{note.label}</span>
+                <span className="jo-audit-farmer-value">{note.value}</span>
               </div>
             ))}
           </div>
         )}
 
         {parcels.length > 0 && (
-          <div className="admin-audit-farmer-group">
+          <div className="jo-audit-farmer-group">
             <h5>Farmland Parcels</h5>
-            <div className="admin-audit-farmer-parcels">
+            <div className="jo-audit-farmer-parcels">
               {parcels.map((parcel: any, idx: number) => (
                 <div
-                  className="admin-audit-farmer-parcel-card"
+                  className="jo-audit-farmer-parcel-card"
                   key={`${parcel?.parcelNo || idx}-${idx}`}
                 >
-                  <div className="admin-audit-farmer-parcel-title">
+                  <div className="jo-audit-farmer-parcel-title">
                     Parcel {parcel?.parcelNo || idx + 1}
                   </div>
-                  <div className="admin-audit-farmer-row">
-                    <span className="admin-audit-farmer-label">Location</span>
-                    <span className="admin-audit-farmer-value">
+                  <div className="jo-audit-farmer-row">
+                    <span className="jo-audit-farmer-label">Location</span>
+                    <span className="jo-audit-farmer-value">
                       {formatTitleText(parcel?.farmLocationBarangay)}
                       {parcel?.farmLocationMunicipality
                         ? `, ${formatTitleText(parcel.farmLocationMunicipality)}`
                         : ""}
                     </span>
                   </div>
-                  <div className="admin-audit-farmer-row">
-                    <span className="admin-audit-farmer-label">Area</span>
-                    <span className="admin-audit-farmer-value">
+                  <div className="jo-audit-farmer-row">
+                    <span className="jo-audit-farmer-label">Area</span>
+                    <span className="jo-audit-farmer-value">
                       {formatAreaHectares(parcel?.totalFarmAreaHa)}
                     </span>
                   </div>
-                  <div className="admin-audit-farmer-row">
-                    <span className="admin-audit-farmer-label">Ownership</span>
-                    <span className="admin-audit-farmer-value">
+                  <div className="jo-audit-farmer-row">
+                    <span className="jo-audit-farmer-label">Ownership</span>
+                    <span className="jo-audit-farmer-value">
                       {parcel?.ownershipType?.registeredOwner
                         ? "Registered Owner"
                         : parcel?.ownershipType?.tenant &&
@@ -1577,15 +1567,15 @@ const AuditTrail: React.FC = () => {
 
     return (
       <div
-        className={`admin-audit-allocation-ref admin-audit-allocation-ref--${section}`}
+        className={`jo-audit-allocation-ref jo-audit-allocation-ref--${section}`}
       >
-        <div className="admin-audit-allocation-ref-header">
-          <span className="admin-audit-allocation-ref-title">
+        <div className="jo-audit-allocation-ref-header">
+          <span className="jo-audit-allocation-ref-title">
             {isAddedFarmerRequest
               ? "Farmer Request Allocation"
               : "Allocation Reference"}
           </span>
-          <span className="admin-audit-allocation-ref-badge">
+          <span className="jo-audit-allocation-ref-badge">
             {section === "metadata"
               ? "Metadata"
               : section === "old"
@@ -1594,32 +1584,32 @@ const AuditTrail: React.FC = () => {
           </span>
         </div>
 
-        <div className="admin-audit-allocation-ref-grid">
-          <div className="admin-audit-allocation-ref-item">
-            <span className="admin-audit-allocation-ref-label">Farmer</span>
-            <span className="admin-audit-allocation-ref-value">
+        <div className="jo-audit-allocation-ref-grid">
+          <div className="jo-audit-allocation-ref-item">
+            <span className="jo-audit-allocation-ref-label">Farmer</span>
+            <span className="jo-audit-allocation-ref-value">
               {payload.farmerName || "N/A"}
             </span>
           </div>
-          <div className="admin-audit-allocation-ref-item">
-            <span className="admin-audit-allocation-ref-label">Allocation</span>
-            <span className="admin-audit-allocation-ref-value">
+          <div className="jo-audit-allocation-ref-item">
+            <span className="jo-audit-allocation-ref-label">Allocation</span>
+            <span className="jo-audit-allocation-ref-value">
               {allocationSummary}
             </span>
           </div>
         </div>
 
         {payload.extraFields.length > 0 && (
-          <div className="admin-audit-allocation-ref-extra">
+          <div className="jo-audit-allocation-ref-extra">
             {payload.extraFields.map((field, index) => (
               <div
-                className="admin-audit-allocation-ref-row"
+                className="jo-audit-allocation-ref-row"
                 key={`${field.label}-${index}`}
               >
-                <span className="admin-audit-allocation-ref-label">
+                <span className="jo-audit-allocation-ref-label">
                   {field.label}
                 </span>
-                <span className="admin-audit-allocation-ref-value">
+                <span className="jo-audit-allocation-ref-value">
                   {field.value}
                 </span>
               </div>
@@ -1665,29 +1655,27 @@ const AuditTrail: React.FC = () => {
       : "Unknown Page";
 
     return (
-      <div className="admin-audit-route-metadata">
-        <div className="admin-audit-route-metadata-header">
-          <span className="admin-audit-route-metadata-title">
-            Route Metadata
-          </span>
-          <span className="admin-audit-route-metadata-page">{pageLabel}</span>
+      <div className="jo-audit-route-metadata">
+        <div className="jo-audit-route-metadata-header">
+          <span className="jo-audit-route-metadata-title">Route Metadata</span>
+          <span className="jo-audit-route-metadata-page">{pageLabel}</span>
         </div>
-        <div className="admin-audit-route-metadata-rows">
-          <div className="admin-audit-route-row">
-            <span className="admin-audit-route-label">Route URL</span>
-            <span className="admin-audit-route-value">
+        <div className="jo-audit-route-metadata-rows">
+          <div className="jo-audit-route-row">
+            <span className="jo-audit-route-label">Route URL</span>
+            <span className="jo-audit-route-value">
               {payload.routeUrl || "N/A"}
             </span>
           </div>
-          <div className="admin-audit-route-row">
-            <span className="admin-audit-route-label">Route Full Path</span>
-            <span className="admin-audit-route-value">
+          <div className="jo-audit-route-row">
+            <span className="jo-audit-route-label">Route Full Path</span>
+            <span className="jo-audit-route-value">
               {payload.routeFullPath || "N/A"}
             </span>
           </div>
-          <div className="admin-audit-route-row">
-            <span className="admin-audit-route-label">Route Path</span>
-            <span className="admin-audit-route-value">
+          <div className="jo-audit-route-row">
+            <span className="jo-audit-route-label">Route Path</span>
+            <span className="jo-audit-route-value">
               {payload.routePath || "N/A"}
             </span>
           </div>
@@ -1799,11 +1787,11 @@ const AuditTrail: React.FC = () => {
 
     return (
       <div
-        className={`admin-audit-land-plot-payload admin-audit-land-plot-payload--${section}`}
+        className={`jo-audit-land-plot-payload jo-audit-land-plot-payload--${section}`}
       >
-        <div className="admin-audit-land-plot-header">
-          <span className="admin-audit-land-plot-title">Land Plot Summary</span>
-          <span className="admin-audit-land-plot-tag">
+        <div className="jo-audit-land-plot-header">
+          <span className="jo-audit-land-plot-title">Land Plot Summary</span>
+          <span className="jo-audit-land-plot-tag">
             {section === "metadata"
               ? "Metadata"
               : section === "old"
@@ -1812,11 +1800,11 @@ const AuditTrail: React.FC = () => {
           </span>
         </div>
 
-        <div className="admin-audit-land-plot-grid">
+        <div className="jo-audit-land-plot-grid">
           {rows.map((row) => (
-            <div key={row.label} className="admin-audit-land-plot-item">
-              <span className="admin-audit-land-plot-label">{row.label}</span>
-              <span className="admin-audit-land-plot-value">{row.value}</span>
+            <div key={row.label} className="jo-audit-land-plot-item">
+              <span className="jo-audit-land-plot-label">{row.label}</span>
+              <span className="jo-audit-land-plot-value">{row.value}</span>
             </div>
           ))}
         </div>
@@ -1856,15 +1844,13 @@ const AuditTrail: React.FC = () => {
 
     return (
       <div
-        className={`admin-audit-simple-payload admin-audit-simple-payload--${section}`}
+        className={`jo-audit-simple-payload jo-audit-simple-payload--${section}`}
       >
-        <div className="admin-audit-simple-grid">
+        <div className="jo-audit-simple-grid">
           {entries.map(([key, fieldValue]) => (
-            <div key={key} className="admin-audit-simple-item">
-              <span className="admin-audit-simple-label">
-                {toKeyLabel(key)}
-              </span>
-              <span className="admin-audit-simple-value">
+            <div key={key} className="jo-audit-simple-item">
+              <span className="jo-audit-simple-label">{toKeyLabel(key)}</span>
+              <span className="jo-audit-simple-value">
                 {formatSimpleFieldValue(key, fieldValue)}
               </span>
             </div>
@@ -1917,7 +1903,7 @@ const AuditTrail: React.FC = () => {
     }
 
     return (
-      <pre className="admin-audit-json-block">
+      <pre className="jo-audit-json-block">
         {JSON.stringify(parseJsonLikeValue(value), null, 2)}
       </pre>
     );
@@ -1928,27 +1914,27 @@ const AuditTrail: React.FC = () => {
     : null;
 
   return (
-    <div className="admin-audit-page-container">
+    <div className="jo-audit-page-container">
       {showNotification && (
         <div
-          className={`admin-audit-toast admin-audit-toast-${notificationType}`}
+          className={`jo-audit-toast jo-audit-toast-${notificationType}`}
           role="status"
           aria-live="polite"
         >
-          <div className="admin-audit-toast-content">
-            <span className="admin-audit-toast-icon">
+          <div className="jo-audit-toast-content">
+            <span className="jo-audit-toast-icon">
               {notificationType === "success"
                 ? "✅"
                 : notificationType === "warning"
                   ? "⚠️"
                   : "❌"}
             </span>
-            <span className="admin-audit-toast-message">
+            <span className="jo-audit-toast-message">
               {notificationMessage}
             </span>
           </div>
           <button
-            className="admin-audit-toast-close"
+            className="jo-audit-toast-close"
             onClick={() => setShowNotification(false)}
             aria-label="Close notification"
           >
@@ -1957,14 +1943,12 @@ const AuditTrail: React.FC = () => {
         </div>
       )}
 
-      <div className="admin-audit-main-page">
-        <AdminSidebar
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-        />
+      <div className="jo-audit-main-page">
+        {/* Sidebar */}
+        <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Main Content */}
-        <div className="admin-audit-main-content">
+        <div className="jo-audit-main-content">
           <div className="tech-incent-mobile-header">
             <button
               className="tech-incent-hamburger"
@@ -1988,22 +1972,22 @@ const AuditTrail: React.FC = () => {
             <div className="tech-incent-mobile-title">Audit Trail</div>
           </div>
           {/* Header */}
-          <div className="admin-audit-header">
-            <div className="admin-audit-header-left">
+          <div className="jo-audit-header">
+            <div className="jo-audit-header-left">
               <h2>📋 System Audit Trail</h2>
               <p>Track all system activities, changes, and user actions</p>
             </div>
           </div>
           <div className="audit-header-right">
-            <div className="admin-audit-view-toggle">
+            <div className="jo-audit-view-toggle">
               <button
-                className={`admin-audit-toggle-btn ${viewMode === "list" ? "active" : ""}`}
+                className={`jo-audit-toggle-btn ${viewMode === "list" ? "active" : ""}`}
                 onClick={() => setViewMode("list")}
               >
                 📃 Log List
               </button>
               <button
-                className={`admin-audit-toggle-btn ${viewMode === "stats" ? "active" : ""}`}
+                className={`jo-audit-toggle-btn ${viewMode === "stats" ? "active" : ""}`}
                 onClick={() => setViewMode("stats")}
               >
                 📊 Statistics
@@ -2014,9 +1998,9 @@ const AuditTrail: React.FC = () => {
           {viewMode === "list" ? (
             <>
               {/* Filters */}
-              <div className="admin-audit-filters">
-                <div className="admin-audit-time-filter-row">
-                  <div className="admin-audit-filter-group admin-audit-filter-group-range">
+              <div className="jo-audit-filters">
+                <div className="jo-audit-time-filter-row">
+                  <div className="jo-audit-filter-group jo-audit-filter-group-range">
                     <label>Time Range</label>
                     <select
                       value={timeRangeMonths}
@@ -2028,16 +2012,16 @@ const AuditTrail: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    <span className="admin-audit-filter-note">
+                    <span className="jo-audit-filter-note">
                       Filters logs by the selected period.
                     </span>
                   </div>
-                  <div className="admin-audit-filters-actions">
-                    <div className="admin-audit-export-dropdown">
-                      <button className="admin-audit-btn admin-audit-btn-export">
+                  <div className="jo-audit-filters-actions">
+                    <div className="jo-audit-export-dropdown">
+                      <button className="jo-audit-btn jo-audit-btn-export">
                         Export
                       </button>
-                      <div className="admin-audit-export-menu">
+                      <div className="jo-audit-export-menu">
                         <button onClick={() => handleExport("json")}>
                           Export JSON
                         </button>
@@ -2049,8 +2033,8 @@ const AuditTrail: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="admin-audit-filters-row">
-                  <div className="admin-audit-filter-group">
+                <div className="jo-audit-filters-row">
+                  <div className="jo-audit-filter-group">
                     <label>Search</label>
                     <input
                       type="text"
@@ -2066,34 +2050,32 @@ const AuditTrail: React.FC = () => {
               </div>
 
               {/* Stats Summary */}
-              <div className="admin-audit-stats-summary">
-                <div className="admin-audit-stat-card">
-                  <span className="admin-audit-stat-value">
+              <div className="jo-audit-stats-summary">
+                <div className="jo-audit-stat-card">
+                  <span className="jo-audit-stat-value">
                     {pagination.totalCount}
                   </span>
-                  <span className="admin-audit-stat-label">Total Records</span>
+                  <span className="jo-audit-stat-label">Total Records</span>
                 </div>
-                <div className="admin-audit-stat-card">
-                  <span className="admin-audit-stat-value">
+                <div className="jo-audit-stat-card">
+                  <span className="jo-audit-stat-value">
                     {pagination.page}/{pagination.totalPages || 1}
                   </span>
-                  <span className="admin-audit-stat-label">Current Page</span>
+                  <span className="jo-audit-stat-label">Current Page</span>
                 </div>
               </div>
 
               {/* Logs Table */}
-              <div className="admin-audit-table-container">
+              <div className="jo-audit-table-container">
                 {loading ? (
-                  <div className="admin-audit-loading">
-                    Loading audit logs...
-                  </div>
+                  <div className="jo-audit-loading">Loading audit logs...</div>
                 ) : logs.length === 0 ? (
-                  <div className="admin-audit-empty">
+                  <div className="jo-audit-empty">
                     <p>📭 No audit logs found</p>
                     <p>Adjust your filters or check back later</p>
                   </div>
                 ) : (
-                  <table className="admin-audit-table">
+                  <table className="jo-audit-table">
                     <thead>
                       <tr>
                         <th>Timestamp</th>
@@ -2111,48 +2093,48 @@ const AuditTrail: React.FC = () => {
                         );
                         return (
                           <tr key={log.id}>
-                            <td className="admin-audit-td-timestamp">
-                              <div className="admin-audit-timestamp">
-                                <span className="admin-audit-time-ago">
+                            <td className="jo-audit-td-timestamp">
+                              <div className="jo-audit-timestamp">
+                                <span className="jo-audit-time-ago">
                                   {formatTimeAgo(log.timestamp)}
                                 </span>
-                                <span className="admin-audit-time-full">
+                                <span className="jo-audit-time-full">
                                   {log.formatted_timestamp}
                                 </span>
                               </div>
                             </td>
-                            <td className="admin-audit-td-page">
-                              <div className="admin-audit-page">
-                                <span className="admin-audit-page-name">
+                            <td className="jo-audit-td-page">
+                              <div className="jo-audit-page">
+                                <span className="jo-audit-page-name">
                                   {tablePageLabel}
                                 </span>
                               </div>
                             </td>
                             <td>
                               <span
-                                className={`admin-audit-action-badge ${getActionBadgeClass(log.action)}`}
+                                className={`jo-audit-action-badge ${getActionBadgeClass(log.action)}`}
                               >
                                 {getActionIcon(log.action)} {log.action}
                               </span>
                             </td>
                             <td>
-                              <span className="admin-audit-module-badge">
+                              <span className="jo-audit-module-badge">
                                 {log.module}
                               </span>
                             </td>
-                            <td className="admin-audit-td-description">
-                              <span className="admin-audit-description">
+                            <td className="jo-audit-td-description">
+                              <span className="jo-audit-description">
                                 {log.description}
                               </span>
                               {log.record_id && (
-                                <span className="admin-audit-record-id">
+                                <span className="jo-audit-record-id">
                                   ID: {log.record_id}
                                 </span>
                               )}
                             </td>
                             <td>
                               <button
-                                className="admin-audit-btn-details"
+                                className="jo-audit-btn-details"
                                 onClick={() => viewLogDetails(log)}
                               >
                                 👁️ View
@@ -2168,7 +2150,7 @@ const AuditTrail: React.FC = () => {
 
               {/* Pagination */}
               {pagination.totalPages > 1 && (
-                <div className="admin-audit-pagination">
+                <div className="jo-audit-pagination">
                   <button
                     disabled={pagination.page === 1}
                     onClick={() =>
@@ -2180,7 +2162,7 @@ const AuditTrail: React.FC = () => {
                   >
                     ← Previous
                   </button>
-                  <span className="admin-audit-page-info">
+                  <span className="jo-audit-page-info">
                     Page {pagination.page} of {pagination.totalPages}
                   </span>
                   <button
@@ -2199,22 +2181,22 @@ const AuditTrail: React.FC = () => {
             </>
           ) : (
             /* Statistics View */
-            <div className="admin-audit-stats-view">
+            <div className="jo-audit-stats-view">
               {stats ? (
                 <>
                   {/* Stats Cards */}
-                  <div className="admin-audit-stats-cards">
-                    <div className="admin-audit-stats-card admin-audit-stats-total">
+                  <div className="jo-audit-stats-cards">
+                    <div className="jo-audit-stats-card jo-audit-stats-total">
                       <h3>Total Activity</h3>
-                      <p className="admin-audit-stats-number">{stats.total}</p>
+                      <p className="jo-audit-stats-number">{stats.total}</p>
                       <span>Last {stats.period}</span>
                     </div>
                   </div>
 
                   {/* Charts Row */}
-                  <div className="admin-audit-charts-row">
+                  <div className="jo-audit-charts-row">
                     {/* Activity Timeline */}
-                    <div className="admin-audit-chart-card admin-audit-chart-wide">
+                    <div className="jo-audit-chart-card jo-audit-chart-wide">
                       <h4>📈 Activity Timeline</h4>
                       <ResponsiveContainer width="100%" height={250}>
                         <AreaChart data={stats.timeline}>
@@ -2261,9 +2243,9 @@ const AuditTrail: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="admin-audit-charts-row">
+                  <div className="jo-audit-charts-row">
                     {/* Actions Distribution */}
-                    <div className="admin-audit-chart-card">
+                    <div className="jo-audit-chart-card">
                       <h4>🎯 Actions Distribution</h4>
                       <ResponsiveContainer width="100%" height={250}>
                         <PieChart>
@@ -2291,7 +2273,7 @@ const AuditTrail: React.FC = () => {
                     </div>
 
                     {/* Module Distribution */}
-                    <div className="admin-audit-chart-card">
+                    <div className="jo-audit-chart-card">
                       <h4>📦 By Module</h4>
                       <ResponsiveContainer width="100%" height={250}>
                         <BarChart data={stats.byModule} layout="vertical">
@@ -2315,9 +2297,9 @@ const AuditTrail: React.FC = () => {
                   </div>
 
                   {/* Top Users */}
-                  <div className="admin-audit-chart-card">
+                  <div className="jo-audit-chart-card">
                     <h4>👥 Most Active Users</h4>
-                    <div className="admin-audit-top-users">
+                    <div className="jo-audit-top-users">
                       {stats.byUser.map((user, idx) => {
                         const displayName =
                           user.user_name &&
@@ -2327,19 +2309,19 @@ const AuditTrail: React.FC = () => {
                         const displayRole = user.user_role || "anonymous";
                         const roleClass = displayRole.toLowerCase();
                         return (
-                          <div key={idx} className="admin-audit-user-row">
-                            <span className="admin-audit-user-rank">
+                          <div key={idx} className="jo-audit-user-row">
+                            <span className="jo-audit-user-rank">
                               {idx + 1}
                             </span>
-                            <span className="admin-audit-user-name">
+                            <span className="jo-audit-user-name">
                               {displayName}
                             </span>
                             <span
-                              className={`admin-audit-role-badge admin-audit-role-${roleClass}`}
+                              className={`jo-audit-role-badge jo-audit-role-${roleClass}`}
                             >
                               {displayRole}
                             </span>
-                            <span className="admin-audit-user-count">
+                            <span className="jo-audit-user-count">
                               {user.count} actions
                             </span>
                           </div>
@@ -2349,7 +2331,7 @@ const AuditTrail: React.FC = () => {
                   </div>
                 </>
               ) : (
-                <div className="admin-audit-loading">Loading statistics...</div>
+                <div className="jo-audit-loading">Loading statistics...</div>
               )}
             </div>
           )}
@@ -2359,117 +2341,115 @@ const AuditTrail: React.FC = () => {
       {/* Details Modal */}
       {showDetailsModal && selectedLog && (
         <div
-          className="admin-audit-modal-overlay"
+          className="jo-audit-modal-overlay"
           onClick={() => setShowDetailsModal(false)}
         >
           <div
-            className="admin-audit-modal-content"
+            className="jo-audit-modal-content"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="admin-audit-modal-header">
+            <div className="jo-audit-modal-header">
               <h3>📋 Audit Log Details</h3>
               <button
-                className="admin-audit-modal-close"
+                className="jo-audit-modal-close"
                 onClick={() => setShowDetailsModal(false)}
               >
                 ✕
               </button>
             </div>
-            <div className="admin-audit-modal-body">
-              <div className="admin-audit-detail-section">
+            <div className="jo-audit-modal-body">
+              <div className="jo-audit-detail-section">
                 <h4>General Information</h4>
-                <div className="admin-audit-detail-grid">
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">ID</span>
-                    <span className="admin-audit-detail-value">
+                <div className="jo-audit-detail-grid">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">ID</span>
+                    <span className="jo-audit-detail-value">
                       {selectedLog.id}
                     </span>
                   </div>
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">Timestamp</span>
-                    <span className="admin-audit-detail-value">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">Timestamp</span>
+                    <span className="jo-audit-detail-value">
                       {selectedLog.formatted_timestamp}
                     </span>
                   </div>
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">Page</span>
-                    <span className="admin-audit-detail-value">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">Page</span>
+                    <span className="jo-audit-detail-value">
                       {selectedLogPageContext?.label || "Unknown Page"}
                     </span>
                   </div>
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">IP Address</span>
-                    <span className="admin-audit-detail-value">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">IP Address</span>
+                    <span className="jo-audit-detail-value">
                       {selectedLog.ip_address || "N/A"}
                     </span>
                   </div>
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">Route</span>
-                    <span className="admin-audit-detail-value">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">Route</span>
+                    <span className="jo-audit-detail-value">
                       {selectedLogPageContext?.path
                         ? formatRouteLabel(selectedLogPageContext.path)
                         : "Not captured"}
                     </span>
                   </div>
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">Actor Role</span>
-                    <span className="admin-audit-detail-value">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">Actor Role</span>
+                    <span className="jo-audit-detail-value">
                       {selectedLog.user_role || "anonymous"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="admin-audit-detail-section">
+              <div className="jo-audit-detail-section">
                 <h4>Action Details</h4>
-                <div className="admin-audit-detail-grid">
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">Action</span>
+                <div className="jo-audit-detail-grid">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">Action</span>
                     <span
-                      className={`admin-audit-action-badge ${getActionBadgeClass(selectedLog.action)}`}
+                      className={`jo-audit-action-badge ${getActionBadgeClass(selectedLog.action)}`}
                     >
                       {getActionIcon(selectedLog.action)} {selectedLog.action}
                     </span>
                   </div>
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">Module</span>
-                    <span className="admin-audit-module-badge">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">Module</span>
+                    <span className="jo-audit-module-badge">
                       {selectedLog.module}
                     </span>
                   </div>
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">
-                      Record Type
-                    </span>
-                    <span className="admin-audit-detail-value">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">Record Type</span>
+                    <span className="jo-audit-detail-value">
                       {selectedLog.record_type || "N/A"}
                     </span>
                   </div>
-                  <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">Record ID</span>
-                    <span className="admin-audit-detail-value">
+                  <div className="jo-audit-detail-item">
+                    <span className="jo-audit-detail-label">Record ID</span>
+                    <span className="jo-audit-detail-value">
                       {selectedLog.record_id || "N/A"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="admin-audit-detail-section">
+              <div className="jo-audit-detail-section">
                 <h4>Description</h4>
-                <p className="admin-audit-detail-description">
+                <p className="jo-audit-detail-description">
                   {selectedLog.description}
                 </p>
               </div>
 
               {selectedLog.old_values && (
-                <div className="admin-audit-detail-section">
+                <div className="jo-audit-detail-section">
                   <h4>Previous Values</h4>
                   {renderValueBlock(selectedLog.old_values, "old", selectedLog)}
                 </div>
               )}
 
               {selectedLog.new_values && (
-                <div className="admin-audit-detail-section">
+                <div className="jo-audit-detail-section">
                   <h4>New Values</h4>
                   {renderValueBlock(selectedLog.new_values, "new", selectedLog)}
                 </div>

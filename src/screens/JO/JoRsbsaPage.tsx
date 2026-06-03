@@ -1648,7 +1648,9 @@ const JoRsbsaPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="jo-rsbsa-content-card">
+          <div
+            className={`jo-rsbsa-content-card${activeTab === "analytics" ? " jo-rsbsa-analytics-mode" : ""}`}
+          >
             {/* ══ ANALYTICS TAB ══ */}
             {activeTab === "analytics" && (
               <>

@@ -89,7 +89,9 @@ const JoLandHistoryReport: React.FC = () => {
   const getChangeTypeColor = (
     changeType?: string | null,
   ): { dotClass: string; label: string } => {
-    const ct = String(changeType || "").trim().toLowerCase();
+    const ct = String(changeType || "")
+      .trim()
+      .toLowerCase();
     if (ct.includes("transfer") || ct.includes("ownership"))
       return { dotClass: "dot-transfer", label: "Transfer" };
     if (ct.includes("update") || ct.includes("modif") || ct.includes("edit"))
@@ -655,7 +657,7 @@ const JoLandHistoryReport: React.FC = () => {
                 className="jo-land-history-report-btn"
                 onClick={closeParcelHistoryModal}
               >
-                X
+                ×
               </button>
             </div>
             <div className="jo-land-history-modal-block">
@@ -677,17 +679,23 @@ const JoLandHistoryReport: React.FC = () => {
                   <div className="jo-land-history-modal-details-panel">
                     <div className="jo-land-history-modal-detail-card">
                       <h3 className="jo-land-history-modal-detail-title">
-                        <span className="jo-land-history-modal-detail-icon">📋</span>
+                        <span className="jo-land-history-modal-detail-icon">
+                          📋
+                        </span>
                         Parcel Details
                       </h3>
                       <div className="jo-land-history-modal-detail-row">
-                        <span className="jo-land-history-modal-detail-label">Parcel No.</span>
+                        <span className="jo-land-history-modal-detail-label">
+                          Parcel No.
+                        </span>
                         <span className="jo-land-history-modal-detail-value">
                           {parcelModalParcelNumber || "-"}
                         </span>
                       </div>
                       <div className="jo-land-history-modal-detail-row">
-                        <span className="jo-land-history-modal-detail-label">Barangay</span>
+                        <span className="jo-land-history-modal-detail-label">
+                          Barangay
+                        </span>
                         <span className="jo-land-history-modal-detail-value">
                           {formatName(
                             selectedHistoryRow?.farm_location_barangay,
@@ -695,15 +703,21 @@ const JoLandHistoryReport: React.FC = () => {
                         </span>
                       </div>
                       <div className="jo-land-history-modal-detail-row">
-                        <span className="jo-land-history-modal-detail-label">Area (ha)</span>
+                        <span className="jo-land-history-modal-detail-label">
+                          Area (ha)
+                        </span>
                         <span className="jo-land-history-modal-detail-value">
                           {selectedHistoryRow?.total_farm_area_ha != null
-                            ? Number(selectedHistoryRow.total_farm_area_ha).toFixed(2)
+                            ? Number(
+                                selectedHistoryRow.total_farm_area_ha,
+                              ).toFixed(2)
                             : "-"}
                         </span>
                       </div>
                       <div className="jo-land-history-modal-detail-row">
-                        <span className="jo-land-history-modal-detail-label">Status</span>
+                        <span className="jo-land-history-modal-detail-label">
+                          Status
+                        </span>
                         <span
                           className={`jo-land-history-modal-status-badge ${
                             selectedHistoryRow?.is_current
@@ -718,23 +732,31 @@ const JoLandHistoryReport: React.FC = () => {
 
                     <div className="jo-land-history-modal-detail-card">
                       <h3 className="jo-land-history-modal-detail-title">
-                        <span className="jo-land-history-modal-detail-icon">👤</span>
+                        <span className="jo-land-history-modal-detail-icon">
+                          👤
+                        </span>
                         Owner / Farmer Details
                       </h3>
                       <div className="jo-land-history-modal-detail-row">
-                        <span className="jo-land-history-modal-detail-label">Owner</span>
+                        <span className="jo-land-history-modal-detail-label">
+                          Owner
+                        </span>
                         <span className="jo-land-history-modal-detail-value">
                           {formatName(selectedHistoryRow?.land_owner_name)}
                         </span>
                       </div>
                       <div className="jo-land-history-modal-detail-row">
-                        <span className="jo-land-history-modal-detail-label">Farmer</span>
+                        <span className="jo-land-history-modal-detail-label">
+                          Farmer
+                        </span>
                         <span className="jo-land-history-modal-detail-value">
                           {formatName(selectedHistoryRow?.farmer_name)}
                         </span>
                       </div>
                       <div className="jo-land-history-modal-detail-row">
-                        <span className="jo-land-history-modal-detail-label">Role</span>
+                        <span className="jo-land-history-modal-detail-label">
+                          Role
+                        </span>
                         <span className="jo-land-history-modal-detail-value jo-land-history-modal-role-chip">
                           {selectedHistoryRow
                             ? getFarmingRoleLabel(selectedHistoryRow)
@@ -743,7 +765,9 @@ const JoLandHistoryReport: React.FC = () => {
                       </div>
                       {selectedHistoryRow?.period_start_date && (
                         <div className="jo-land-history-modal-detail-row">
-                          <span className="jo-land-history-modal-detail-label">Period Start</span>
+                          <span className="jo-land-history-modal-detail-label">
+                            Period Start
+                          </span>
                           <span className="jo-land-history-modal-detail-value">
                             {formatDate(selectedHistoryRow.period_start_date)}
                           </span>
@@ -751,7 +775,9 @@ const JoLandHistoryReport: React.FC = () => {
                       )}
                       {selectedHistoryRow?.period_end_date && (
                         <div className="jo-land-history-modal-detail-row">
-                          <span className="jo-land-history-modal-detail-label">Period End</span>
+                          <span className="jo-land-history-modal-detail-label">
+                            Period End
+                          </span>
                           <span className="jo-land-history-modal-detail-value">
                             {formatDate(selectedHistoryRow.period_end_date)}
                           </span>
@@ -762,7 +788,9 @@ const JoLandHistoryReport: React.FC = () => {
                     {selectedHistoryRow?.change_reason && (
                       <div className="jo-land-history-modal-detail-card">
                         <h3 className="jo-land-history-modal-detail-title">
-                          <span className="jo-land-history-modal-detail-icon">📝</span>
+                          <span className="jo-land-history-modal-detail-icon">
+                            📝
+                          </span>
                           Change Reason
                         </h3>
                         <p className="jo-land-history-modal-reason-text">
@@ -789,8 +817,7 @@ const JoLandHistoryReport: React.FC = () => {
                         const { dotClass } = getChangeTypeColor(
                           row.change_type,
                         );
-                        const isSelected =
-                          selectedHistoryRow?.id === row.id;
+                        const isSelected = selectedHistoryRow?.id === row.id;
                         const isLast =
                           idx === parcelModalTimelineRows.length - 1;
 
@@ -837,9 +864,7 @@ const JoLandHistoryReport: React.FC = () => {
                             <div className="jo-land-history-modal-tl-content">
                               <div className="jo-land-history-modal-tl-header">
                                 <strong className="jo-land-history-modal-tl-title">
-                                  {String(
-                                    row.change_type || "Record",
-                                  )}
+                                  {String(row.change_type || "Record")}
                                 </strong>
                                 {row.is_current && (
                                   <span className="jo-land-history-modal-tl-current-badge">

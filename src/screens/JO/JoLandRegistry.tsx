@@ -479,6 +479,8 @@ const JoLandRegistry: React.FC = () => {
     useState("");
   const [ownerAffiliationSubmitSuccess, setOwnerAffiliationSubmitSuccess] =
     useState("");
+  const [ownerAffiliationContextNote, setOwnerAffiliationContextNote] =
+    useState("");
 
   const {
     parcelScope,
@@ -850,6 +852,7 @@ const JoLandRegistry: React.FC = () => {
     setIsSubmittingOwnerAffiliation(false);
     setOwnerAffiliationSubmitError("");
     setOwnerAffiliationSubmitSuccess("");
+    setOwnerAffiliationContextNote("");
   };
 
   const loadOwnerAffiliationSourceOptions = async (
@@ -859,6 +862,7 @@ const JoLandRegistry: React.FC = () => {
     setOwnerAffiliationLoading(true);
     setOwnerAffiliationSubmitError("");
     setOwnerAffiliationSubmitSuccess("");
+    setOwnerAffiliationContextNote("");
 
     const roleColumn = role === "tenant" ? "is_tenant" : "is_lessee";
     const roleParcelFlagColumn =
@@ -1158,9 +1162,12 @@ const JoLandRegistry: React.FC = () => {
           excludedRows > 0
             ? ` ${excludedRows} row${excludedRows === 1 ? " was" : "s were"} excluded.`
             : "";
-        setOwnerAffiliationSubmitError(
-          `No active linked landowner found for this ${role}.` + extraNote,
+        setOwnerAffiliationContextNote(
+          `No active linked landowner found for this ${role}. You can create the first link below.` +
+            extraNote,
         );
+      } else {
+        setOwnerAffiliationContextNote("");
       }
     } catch (error: any) {
       setOwnerAffiliationSourceOptions([]);
@@ -1171,6 +1178,7 @@ const JoLandRegistry: React.FC = () => {
         error?.message ||
           `Failed to load linked landowner context for ${role}.`,
       );
+      setOwnerAffiliationContextNote("");
     } finally {
       setOwnerAffiliationLoading(false);
     }
@@ -1224,6 +1232,7 @@ const JoLandRegistry: React.FC = () => {
     setOwnerAffiliationNewOwnerId(parsedId);
     setOwnerAffiliationTakeoverMode("full_parcel");
     setOwnerAffiliationSpecificLotInputs({});
+    setOwnerAffiliationSelectedParcelIds([]);
     setOwnerAffiliationSubmitError("");
     setOwnerAffiliationSubmitSuccess("");
   };
@@ -2259,6 +2268,8 @@ const JoLandRegistry: React.FC = () => {
 
   const ownerAffiliationHasSingleSourceContext =
     ownerAffiliationSourceOptions.length === 1;
+  const ownerAffiliationHasExistingLink =
+    ownerAffiliationSourceOptions.length > 0;
 
   const activeOwnerAffiliationNewOwnerId = (() => {
     const candidate =
@@ -2339,6 +2350,10 @@ const JoLandRegistry: React.FC = () => {
       });
     }
 
+    if (!ownerAffiliationHasExistingLink) {
+      return [];
+    }
+
     // Fallback (no new owner selected yet): show the holder's current contract
     // parcels from land_history, filtered to the selected source owner only.
     const validOwnerIds = new Set(
@@ -2377,6 +2392,7 @@ const JoLandRegistry: React.FC = () => {
     ownerAffiliationSourceOptions,
     activeOwnerAffiliationSourceOwnerId,
     selectedOwnerAffiliationNewOwnerAvailableParcels,
+    ownerAffiliationHasExistingLink,
   ]);
 
   const handleOwnerAffiliationSelectAllParcels = useCallback(() => {
@@ -5038,10 +5054,14 @@ const JoLandRegistry: React.FC = () => {
               <div className="jo-land-registry-modal-body">
                 <div className="jo-land-registry-replacement-flow">
                   <div className="jo-land-registry-replacement-note">
-                    <strong>Affiliation Update Only:</strong> This keeps the
-                    same {ownerAffiliationRoleLabel.toLowerCase()} holder and
-                    updates only the linked landowner on selected parcel(s).
-                    Legal ownership is not transferred.
+                    <strong>
+                      {ownerAffiliationHasExistingLink
+                        ? "Affiliation Update Only:"
+                        : "Create First Link:"}
+                    </strong>{" "}
+                    {ownerAffiliationHasExistingLink
+                      ? `This keeps the same ${ownerAffiliationRoleLabel.toLowerCase()} holder and updates only the linked landowner on selected parcel(s). Legal ownership is not transferred.`
+                      : `No linked landowner exists yet for this ${ownerAffiliationRoleLabel.toLowerCase()} holder. Select a landowner and parcel(s) below to create the first official link. Legal ownership is not transferred.`}
                   </div>
 
                   {ownerAffiliationSubmitError && (
@@ -5088,6 +5108,11 @@ const JoLandRegistry: React.FC = () => {
                           {selectedOwnerAffiliationSource?.ownerName || "—"}
                         </strong>
                       </div>
+                    ) : !ownerAffiliationHasExistingLink ? (
+                      <div className="jo-land-registry-transfer-kv">
+                        <span>Current Landowner</span>
+                        <strong>None (no active link)</strong>
+                      </div>
                     ) : (
                       <>
                         <label className="jo-land-registry-transfer-label">
@@ -5132,6 +5157,13 @@ const JoLandRegistry: React.FC = () => {
                     )}
 
                     {!ownerAffiliationLoading &&
+                      ownerAffiliationContextNote && (
+                        <div className="jo-land-registry-transfer-mini-note">
+                          {ownerAffiliationContextNote}
+                        </div>
+                      )}
+
+                    {!ownerAffiliationLoading &&
                       selectedOwnerAffiliationSource && (
                         <div className="jo-land-registry-transfer-mini-note">
                           {selectedOwnerAffiliationSource.parcelCount} parcel
@@ -5168,11 +5200,9 @@ const JoLandRegistry: React.FC = () => {
                       ))}
                     </select>
                     <div className="jo-land-registry-transfer-mini-note">
-                      The parcels listed below are the <strong>holder's</strong>{" "}
-                      parcels currently linked to the selected landowner above
-                      (Step 1). After selecting a new owner, Step 2 can also
-                      include that owner's available owner parcels so they can
-                      be assigned to this holder under the same role.
+                      {ownerAffiliationHasExistingLink
+                        ? "The parcels listed below are the holder's parcels currently linked to the selected landowner above (Step 1). After selecting a new owner, Step 2 can also include that owner's available owner parcels so they can be assigned to this holder under the same role."
+                        : "No existing link found for this holder. Select the landowner and then choose from that owner's parcels to create the first link."}
                     </div>
 
                     {ownerAffiliationNewOwnerId === "" ? (
@@ -5281,7 +5311,7 @@ const JoLandRegistry: React.FC = () => {
 
                         <div className="jo-land-registry-transfer-mini-note">
                           Selected parcel count:{" "}
-                          {ownerAffiliationSelectedParcelIds.length}
+                          {ownerAffiliationTakeoverPlan.selectedParcelCount}
                         </div>
 
                         <div className="jo-land-registry-transfer-subheading">
@@ -5468,9 +5498,9 @@ const JoLandRegistry: React.FC = () => {
 
                     {!ownerAffiliationReadyForProofUpload && (
                       <div className="jo-land-registry-transfer-mini-note">
-                        Select current linked owner, new linked owner, and at
-                        least one scoped parcel before uploading proof
-                        documents.
+                        {ownerAffiliationHasExistingLink
+                          ? "Select current linked owner, new linked owner, and at least one scoped parcel before uploading proof documents."
+                          : "Select a new linked landowner and at least one scoped parcel before uploading proof documents."}
                       </div>
                     )}
 
@@ -5523,7 +5553,9 @@ const JoLandRegistry: React.FC = () => {
                           </span>
                           <strong className="jo-land-registry-transfer-party-name">
                             {selectedOwnerAffiliationSource?.ownerName ||
-                              "Not selected"}
+                              (ownerAffiliationHasExistingLink
+                                ? "Not selected"
+                                : "None (new link)")}
                           </strong>
                         </div>
                         <div className="jo-land-registry-transfer-arrow">→</div>
@@ -5603,9 +5635,9 @@ const JoLandRegistry: React.FC = () => {
                   </div>
 
                   <div className="jo-land-registry-transfer-mini-note">
-                    This action updates owner affiliation only. The current{" "}
-                    {ownerAffiliationRoleLabel.toLowerCase()} holder remains
-                    unchanged.
+                    {ownerAffiliationHasExistingLink
+                      ? `This action updates owner affiliation only. The current ${ownerAffiliationRoleLabel.toLowerCase()} holder remains unchanged.`
+                      : `This action creates the first owner link for this ${ownerAffiliationRoleLabel.toLowerCase()} holder. The holder remains unchanged.`}
                   </div>
                 </div>
               </div>

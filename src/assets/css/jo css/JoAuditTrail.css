@@ -1,0 +1,1947 @@
+/* ============================================
+   JO AUDIT TRAIL - UNIQUE STYLING
+   All class names prefixed with jo-audit-
+   ============================================ */
+
+.jo-audit-page-container {
+  display: flex;
+  height: 100vh;
+  background-color: #f0f0f0;
+  overflow: hidden;
+}
+.jo-audit-main-page {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Main Content Area */
+.jo-audit-main-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background: linear-gradient(
+    135deg,
+    #e8f5e9 0%,
+    #f1f8e9 25%,
+    #ffffff 50%,
+    #e8f5e9 75%,
+    #c8e6c9 100%
+  );
+}
+
+/* Header */
+.jo-audit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.jo-audit-header-left h2 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.jo-audit-header-left p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.jo-audit-view-toggle {
+  display: flex;
+  gap: 8px;
+  background: #e2e8f0;
+  padding: 4px;
+  border-radius: 8px;
+  width: fit-content;
+  margin-bottom: 12px;
+}
+
+.jo-audit-toggle-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jo-audit-toggle-btn.active {
+  background: white;
+  color: #1e293b;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.jo-audit-toggle-btn:hover:not(.active) {
+  color: #1e293b;
+}
+
+/* Filters Section */
+.jo-audit-filters {
+  padding: 20px 20px 0px 0;
+  margin-bottom: 20px;
+}
+
+.jo-audit-filters-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #dbe6ef;
+  background: linear-gradient(135deg, #f8fbff 0%, #f1f8f2 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.jo-audit-time-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.jo-audit-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jo-audit-filters-row .jo-audit-filter-group {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.jo-audit-filters-row .jo-audit-filter-group:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 8px 18px rgba(59, 130, 246, 0.12);
+  transform: translateY(-1px);
+}
+
+.jo-audit-filter-group-range {
+  min-width: 260px;
+  min-width: 260px;
+  background: white;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.jo-audit-filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.jo-audit-filters-row .jo-audit-filter-group label {
+  color: #475569;
+  letter-spacing: 0.45px;
+}
+
+.jo-audit-filter-group input,
+.jo-audit-filter-group select {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e293b;
+  transition: border-color 0.2s ease;
+}
+
+.jo-audit-filters-row .jo-audit-filter-group input,
+.jo-audit-filters-row .jo-audit-filter-group select {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid #d6e0ea;
+  background: #f8fafc;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.jo-audit-filters-row .jo-audit-filter-group input::placeholder {
+  color: #94a3b8;
+}
+
+.jo-audit-filter-group input:focus,
+.jo-audit-filter-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.jo-audit-filters-row .jo-audit-filter-group:focus-within {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.25);
+}
+
+.jo-audit-filters-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: auto;
+  background: white;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.jo-audit-filter-note {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Toast Notification */
+.jo-audit-toast {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1100;
+  min-width: 320px;
+  max-width: 520px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+  animation: jo-audit-toast-in 0.2s ease;
+}
+
+.jo-audit-toast-success {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #86efac;
+  color: #065f46;
+}
+
+.jo-audit-toast-error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.jo-audit-toast-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.jo-audit-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jo-audit-toast-icon {
+  font-size: 16px;
+}
+
+.jo-audit-toast-message {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.jo-audit-toast-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.jo-audit-toast-close:hover {
+  opacity: 0.8;
+}
+
+@keyframes jo-audit-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Buttons */
+.jo-audit-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jo-audit-btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.jo-audit-btn-primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+}
+
+.jo-audit-btn-secondary {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.jo-audit-btn-secondary:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.jo-audit-btn-export {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.jo-audit-export-dropdown {
+  position: relative;
+}
+
+.jo-audit-export-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 100;
+  min-width: 150px;
+}
+
+.jo-audit-export-dropdown:hover .jo-audit-export-menu {
+  display: block;
+}
+
+.jo-audit-export-menu button {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.jo-audit-export-menu button:hover {
+  background: #f1f5f9;
+}
+
+/* Stats Summary */
+.jo-audit-stats-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.jo-audit-stat-card {
+  background: white;
+  padding: 16px 24px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.jo-audit-stat-label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+/* Table Container */
+.jo-audit-table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.jo-audit-loading,
+.jo-audit-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.jo-audit-empty p:first-child {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+/* Audit Table */
+.jo-audit-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.jo-audit-table thead {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.jo-audit-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.jo-audit-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.jo-audit-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* Timestamp Cell */
+.jo-audit-td-timestamp {
+  min-width: 140px;
+}
+
+.jo-audit-timestamp {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-time-ago {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 13px;
+}
+
+.jo-audit-time-full {
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: "Consolas", monospace;
+}
+
+/* User Cell */
+.jo-audit-td-user {
+  min-width: 150px;
+}
+
+.jo-audit-user {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-username {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.jo-audit-td-page {
+  min-width: 220px;
+}
+
+.jo-audit-page {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-page-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.jo-audit-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.jo-audit-role-admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.jo-audit-role-technician {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.jo-audit-role-jo {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jo-audit-role-unknown,
+.jo-audit-role-system {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Action Badges */
+.jo-audit-action-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.jo-audit-badge-create {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jo-audit-badge-update {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.jo-audit-badge-delete {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.jo-audit-badge-login {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.jo-audit-badge-logout {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.jo-audit-badge-failed {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #dc2626;
+}
+
+.jo-audit-badge-approve {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.jo-audit-badge-reject {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.jo-audit-badge-export {
+  background: #cffafe;
+  color: #0e7490;
+}
+
+.jo-audit-badge-distribute {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.jo-audit-badge-default {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Module Badge */
+.jo-audit-module-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  font-family: "Consolas", monospace;
+}
+
+/* Description Cell */
+.jo-audit-td-description {
+  max-width: 300px;
+}
+
+.jo-audit-description {
+  display: block;
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jo-audit-record-id {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: "Consolas", monospace;
+  margin-top: 4px;
+}
+
+/* View Details Button */
+.jo-audit-btn-details {
+  padding: 6px 12px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jo-audit-btn-details:hover {
+  background: #1e3a5f;
+  color: white;
+  border-color: #1e3a5f;
+}
+
+/* Pagination */
+.jo-audit-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.jo-audit-pagination button {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jo-audit-pagination button:hover:not(:disabled) {
+  background: #1e3a5f;
+  color: white;
+  border-color: #1e3a5f;
+}
+
+.jo-audit-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.jo-audit-page-info {
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* Statistics View */
+.jo-audit-stats-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.jo-audit-stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.jo-audit-stats-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.jo-audit-stats-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.jo-audit-stats-number {
+  font-size: 48px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.jo-audit-stats-card span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.jo-audit-stats-total {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%);
+}
+
+.jo-audit-stats-total h3,
+.jo-audit-stats-total span {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.jo-audit-stats-total .jo-audit-stats-number {
+  color: white;
+}
+
+/* Charts */
+.jo-audit-charts-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.jo-audit-chart-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.jo-audit-chart-card h4 {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  color: #1e293b;
+}
+
+.jo-audit-chart-wide {
+  grid-column: 1 / -1;
+}
+
+/* Top Users */
+.jo-audit-top-users {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jo-audit-user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.jo-audit-user-rank {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e3a5f;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.jo-audit-user-name {
+  flex: 1;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.jo-audit-user-count {
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+/* Modal */
+.jo-audit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.jo-audit-modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 700px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.jo-audit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.jo-audit-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.jo-audit-modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.jo-audit-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.jo-audit-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.jo-audit-detail-section {
+  margin-bottom: 24px;
+}
+
+.jo-audit-detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.jo-audit-detail-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #1e3a5f;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.jo-audit-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.jo-audit-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-detail-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.jo-audit-detail-value {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.jo-audit-detail-description {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  color: #374151;
+  line-height: 1.6;
+  border-left: 4px solid #3b82f6;
+}
+
+.jo-audit-json-block {
+  background: #1e293b;
+  color: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: "Consolas", "Monaco", monospace;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Allocation Payload View */
+.jo-audit-allocation-payload {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+/* Farmer Request Payload View */
+.jo-audit-request-payload {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.jo-audit-request-payload--new {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f6fff9 0%, #f8fafc 100%);
+}
+
+.jo-audit-request-payload--metadata {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #f3f8ff 0%, #f8fafc 100%);
+}
+
+.jo-audit-request-payload--old {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #f8fafc 100%);
+}
+
+.jo-audit-request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-request-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-request-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-request-payload--new .jo-audit-request-tag {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jo-audit-request-payload--metadata .jo-audit-request-tag {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.jo-audit-request-payload--old .jo-audit-request-tag {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.jo-audit-allocation-payload--new {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f6fff9 0%, #f8fafc 100%);
+}
+
+.jo-audit-allocation-payload--metadata {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #f3f8ff 0%, #f8fafc 100%);
+}
+
+.jo-audit-allocation-payload--old {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #f8fafc 100%);
+}
+
+.jo-audit-allocation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-allocation-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-allocation-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-allocation-payload--new .jo-audit-allocation-tag {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jo-audit-allocation-payload--metadata .jo-audit-allocation-tag {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.jo-audit-allocation-payload--old .jo-audit-allocation-tag {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.jo-audit-allocation-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-allocation-summary-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-allocation-summary-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.jo-audit-allocation-summary-value {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.jo-audit-allocation-totals-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-allocation-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.jo-audit-allocation-payload--new .jo-audit-allocation-pill {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jo-audit-allocation-payload--metadata .jo-audit-allocation-pill {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.jo-audit-allocation-payload--old .jo-audit-allocation-pill {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.jo-audit-allocation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.jo-audit-allocation-group {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.jo-audit-allocation-group h5 {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-allocation-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.jo-audit-allocation-row:last-of-type {
+  border-bottom: none;
+}
+
+.jo-audit-allocation-label {
+  font-size: 12px;
+  color: #334155;
+}
+
+.jo-audit-allocation-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+/* Land Plot Payload View */
+.jo-audit-land-plot-payload,
+.jo-audit-simple-payload {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.jo-audit-land-plot-payload--new,
+.jo-audit-simple-payload--new {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f6fff9 0%, #f8fafc 100%);
+}
+
+.jo-audit-land-plot-payload--metadata,
+.jo-audit-simple-payload--metadata {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #f3f8ff 0%, #f8fafc 100%);
+}
+
+.jo-audit-land-plot-payload--old,
+.jo-audit-simple-payload--old {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #f8fafc 100%);
+}
+
+.jo-audit-land-plot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-land-plot-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-land-plot-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-land-plot-payload--new .jo-audit-land-plot-tag {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jo-audit-land-plot-payload--metadata .jo-audit-land-plot-tag {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.jo-audit-land-plot-payload--old .jo-audit-land-plot-tag {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.jo-audit-land-plot-grid,
+.jo-audit-simple-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.jo-audit-land-plot-item,
+.jo-audit-simple-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-land-plot-label,
+.jo-audit-simple-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-land-plot-value,
+.jo-audit-simple-value {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+/* Land Owner Parcel Payload */
+.jo-audit-landowner-payload {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.jo-audit-landowner-update {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jo-audit-landowner-payload--new {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f6fff9 0%, #f8fafc 100%);
+}
+
+.jo-audit-landowner-payload--metadata {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #f3f8ff 0%, #f8fafc 100%);
+}
+
+.jo-audit-landowner-payload--old {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #f8fafc 100%);
+}
+
+.jo-audit-landowner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-landowner-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-landowner-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-landowner-payload--new .jo-audit-landowner-tag {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jo-audit-landowner-payload--metadata .jo-audit-landowner-tag {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.jo-audit-landowner-payload--old .jo-audit-landowner-tag {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.jo-audit-landowner-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-landowner-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.jo-audit-landowner-meta-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-landowner-meta-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-landowner-meta-value {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.jo-audit-landowner-summary-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-landowner-summary-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-landowner-summary-value {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.jo-audit-landowner-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.jo-audit-landowner-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jo-audit-landowner-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.jo-audit-landowner-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.jo-audit-landowner-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-landowner-status--yes {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.jo-audit-landowner-status--no {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.jo-audit-landowner-status--unknown {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.jo-audit-landowner-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.jo-audit-landowner-row:last-child {
+  border-bottom: none;
+}
+
+.jo-audit-landowner-label {
+  font-size: 12px;
+  color: #334155;
+}
+
+.jo-audit-landowner-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+}
+
+.jo-audit-allocation-notes {
+  margin-top: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-allocation-notes-value {
+  font-size: 13px;
+  color: #1f2937;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* Farmer Registration Payload */
+.jo-audit-farmer-payload {
+  background: #f8fafc;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.jo-audit-farmer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.jo-audit-farmer-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1d4ed8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.jo-audit-farmer-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.jo-audit-farmer-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-farmer-summary-item {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-farmer-summary-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-farmer-summary-value {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.jo-audit-farmer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-farmer-group {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-farmer-group:last-child {
+  margin-bottom: 0;
+}
+
+.jo-audit-farmer-group h5 {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1d4ed8;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-farmer-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #dbeafe;
+}
+
+.jo-audit-farmer-row:last-child {
+  border-bottom: none;
+}
+
+.jo-audit-farmer-label {
+  font-size: 12px;
+  color: #334155;
+}
+
+.jo-audit-farmer-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+}
+
+.jo-audit-farmer-empty {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.jo-audit-farmer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.jo-audit-farmer-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.jo-audit-farmer-parcels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.jo-audit-farmer-parcel-card {
+  background: #f8fafc;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.jo-audit-farmer-parcel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 6px;
+}
+
+/* Allocation Reference Payload */
+.jo-audit-allocation-ref {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.jo-audit-allocation-ref--new {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f6fff9 0%, #f8fafc 100%);
+}
+
+.jo-audit-allocation-ref--metadata {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #f3f8ff 0%, #f8fafc 100%);
+}
+
+.jo-audit-allocation-ref--old {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #f8fafc 100%);
+}
+
+.jo-audit-allocation-ref-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-allocation-ref-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-allocation-ref-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.jo-audit-allocation-ref-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.jo-audit-allocation-ref-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jo-audit-allocation-ref-extra {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.jo-audit-allocation-ref-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.jo-audit-allocation-ref-row:last-child {
+  border-bottom: none;
+}
+
+.jo-audit-allocation-ref-label {
+  font-size: 12px;
+  color: #334155;
+}
+
+.jo-audit-allocation-ref-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+}
+
+/* Route Metadata Payload */
+.jo-audit-route-metadata {
+  background: #f8fafc;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.jo-audit-route-metadata-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.jo-audit-route-metadata-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1d4ed8;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.jo-audit-route-metadata-page {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.jo-audit-route-metadata-rows {
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.jo-audit-route-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #dbeafe;
+}
+
+.jo-audit-route-row:last-child {
+  border-bottom: none;
+}
+
+.jo-audit-route-label {
+  font-size: 12px;
+  color: #334155;
+}
+
+.jo-audit-route-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+  word-break: break-word;
+}
+
+.jo-audit-td-user {
+  min-width: 140px;
+}
+
+.jo-audit-user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jo-audit-user-display-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+
+.jo-audit-user-role-badge {
+  font-size: 11px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 8px;
+  display: inline-block;
+  width: fit-content;
+  text-transform: capitalize;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .jo-audit-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .jo-audit-main-content {
+    padding: 16px;
+  }
+
+  .jo-audit-header {
+    flex-direction: column;
+  }
+
+  .jo-audit-filters-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .jo-audit-filters-actions {
+    flex-direction: column;
+  }
+
+  .jo-audit-filter-group-range,
+  .jo-audit-filters-actions {
+    width: 100%;
+  }
+
+  .jo-audit-toast {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .jo-audit-table-container {
+    overflow-x: auto;
+  }
+
+  .jo-audit-table {
+    min-width: 800px;
+  }
+
+  .jo-audit-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jo-audit-allocation-summary,
+  .jo-audit-allocation-grid,
+  .jo-audit-allocation-ref-grid,
+  .jo-audit-landowner-summary,
+  .jo-audit-landowner-meta,
+  .jo-audit-landowner-grid,
+  .jo-audit-farmer-summary,
+  .jo-audit-farmer-grid,
+  .jo-audit-farmer-parcels {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .jo-audit-filters,
+  .jo-audit-view-toggle,
+  .jo-audit-pagination,
+  .jo-audit-btn-details {
+    display: none !important;
+  }
+
+  .jo-audit-main-content {
+    padding: 0;
+  }
+
+  .jo-audit-table-container {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}

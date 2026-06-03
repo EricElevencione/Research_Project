@@ -1083,22 +1083,20 @@
 }
 
 .jo-land-history-modal-header .jo-land-history-report-btn {
-  background: #f3f4f6;
-  border: none;
-  color: #374151;
-  border-radius: 8px;
   width: 34px;
   height: 34px;
-  min-width: 34px;
-  min-height: 34px;
-  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
   font-size: 22px;
-  line-height: 1;
-  display: inline-flex;
+  cursor: pointer;
+  display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
 }
 
 .jo-land-history-modal-header .jo-land-history-report-btn:hover:not(:disabled) {
@@ -1141,7 +1139,9 @@
   border-radius: 14px;
   padding: 18px 20px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
-  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .jo-land-history-modal-detail-card:hover {
@@ -1321,7 +1321,9 @@
   justify-content: center;
   flex-shrink: 0;
   color: #ffffff;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .jo-land-history-modal-tl-item:hover .jo-land-history-modal-tl-dot {

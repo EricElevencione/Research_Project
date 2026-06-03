@@ -279,6 +279,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding: 14px 16px 12px;
 }
 
 /* ── Section wrappers inside content card ─────── */
@@ -296,6 +297,19 @@
 .jo-rsbsa-leaderboard-section:last-child,
 .jo-rsbsa-summary-section:last-child {
   border-bottom: none;
+}
+
+/* ── Analytics Mode: Reorder sections (Summary on top) ─ */
+.jo-rsbsa-analytics-mode .jo-rsbsa-summary-section {
+  order: -1; /* Moves to top */
+}
+
+.jo-rsbsa-analytics-mode .jo-rsbsa-latest-section {
+  order: 0; /* Stays in place */
+}
+
+.jo-rsbsa-analytics-mode .jo-rsbsa-leaderboard-section {
+  order: 1; /* After latest */
 }
 
 /* ── Section Header ───────────────────────────── */
@@ -391,7 +405,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
-  background: linear-gradient(135deg, #065f46 0%, #059669 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: rgba(255, 255, 255, 0.95);
   border-bottom: 2px solid rgba(255, 255, 255, 0.12);
   position: sticky;
@@ -473,7 +487,7 @@
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #bbf7d0 0%, #6ee7b7 100%);
+  background: linear-gradient(145deg, #e4f3d8, #b8d98d);
   color: #065f46;
   display: inline-flex;
   align-items: center;
@@ -481,7 +495,6 @@
   font-weight: 800;
   font-size: 11.5px;
   flex-shrink: 0;
-  border: 1.5px solid #a7f3d0;
 }
 
 .jo-rsbsa-farmer-meta {
@@ -491,9 +504,9 @@
 }
 
 .jo-rsbsa-farmer-name {
-  color: var(--slate-900);
-  font-weight: 650;
-  font-size: 14px;
+  color: #111827;
+  font-weight: 700;
+  font-size: 13px;
   line-height: 1.2;
 }
 
