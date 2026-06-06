@@ -1232,7 +1232,6 @@ const JoLandRegistry: React.FC = () => {
     setOwnerAffiliationNewOwnerId(parsedId);
     setOwnerAffiliationTakeoverMode("full_parcel");
     setOwnerAffiliationSpecificLotInputs({});
-    setOwnerAffiliationSelectedParcelIds([]);
     setOwnerAffiliationSubmitError("");
     setOwnerAffiliationSubmitSuccess("");
   };
@@ -3916,7 +3915,8 @@ const JoLandRegistry: React.FC = () => {
                             ).toUpperCase();
                             const isOwnerAffiliationChange =
                               normalizedChangeType ===
-                              "OWNER_AFFILIATION_CHANGE";
+                                "OWNER_AFFILIATION_CHANGE" ||
+                              normalizedChangeType === "OWNERSHIP_CHANGE";
                             const isPartial =
                               normalizedChangeType === "TRANSFER_PARTIAL";
                             const isTransfer = /TRANSFER/i.test(
@@ -3956,6 +3956,15 @@ const JoLandRegistry: React.FC = () => {
                                   "Unknown"
                                 );
                               }
+                              // For OWNERSHIP_CHANGE the "new owner" is land_owner_name,
+                              // not the farmer/lessee who stays as holder
+                              if (normalizedChangeType === "OWNERSHIP_CHANGE") {
+                                return (
+                                  record.land_owner_name ||
+                                  record.farmer_name ||
+                                  "Unknown"
+                                );
+                              }
                               return (
                                 record.farmer_name ||
                                 record.land_owner_name ||
@@ -3984,11 +3993,29 @@ const JoLandRegistry: React.FC = () => {
                                 null;
                             }
                             // Fallback: extract donor from change_reason sentence
+                            // Fallback: extract donor from change_reason sentence
                             if (!donorName && record.change_reason) {
                               const crMatch = record.change_reason.match(
                                 /^Ownership transfer from (.+?) to .+$/i,
                               );
                               if (crMatch) donorName = crMatch[1].trim();
+                            }
+                            // For OWNERSHIP_CHANGE, trace the previous owner via
+                            // previous_history_id — parcelHistory already has that row
+                            if (
+                              !donorName &&
+                              normalizedChangeType === "OWNERSHIP_CHANGE" &&
+                              record.previous_history_id
+                            ) {
+                              const previousRecord = parcelHistory.find(
+                                (r) => r.id === record.previous_history_id,
+                              );
+                              if (previousRecord) {
+                                donorName =
+                                  previousRecord.land_owner_name ||
+                                  previousRecord.farmer_name ||
+                                  null;
+                              }
                             }
 
                             // Clean transfer type label for the header
@@ -5311,7 +5338,7 @@ const JoLandRegistry: React.FC = () => {
 
                         <div className="jo-land-registry-transfer-mini-note">
                           Selected parcel count:{" "}
-                          {ownerAffiliationTakeoverPlan.selectedParcelCount}
+                          {ownerAffiliationSelectedParcelIds.length}
                         </div>
 
                         <div className="jo-land-registry-transfer-subheading">

@@ -2524,7 +2524,10 @@ const JoFarmerRegistry: React.FC = () => {
 
                                   <div className="farmer-modal-parcel-item">
                                     <span className="farmer-modal-label">
-                                      Area:
+                                      {parcel.ownershipTypeTenant ||
+                                      parcel.ownershipTypeLessee
+                                        ? "Area Occupied:"
+                                        : "Total Area:"}
                                     </span>
                                     <span className="farmer-modal-value">
                                       {typeof parcel.totalFarmAreaHa ===
