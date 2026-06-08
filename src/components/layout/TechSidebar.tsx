@@ -51,7 +51,7 @@ const TechSidebar: React.FC<TechSidebarProps> = ({ sidebarOpen, setSidebarOpen }
     { path: "/technician-rsbsa", label: "RSBSA Registration", icon: RSBSAIcon },
     { path: "/technician-incentives", label: "Subsidy", icon: IncentivesIcon },
     { path: "/technician-masterlist", label: "Masterlist", icon: ApproveIcon },
-    { path: "/technician-tenant-registry", label: "Tenant Registry", icon: ApproveIcon },
+    { path: "/technician-tenant-registry", label: "Farmer Registry", icon: ApproveIcon },
   ];
 
   return (
