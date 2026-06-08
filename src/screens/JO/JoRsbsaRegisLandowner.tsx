@@ -1,16 +1,9 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import {
-  getLandOwners,
-  createRsbsaSubmission,
-} from "../../api";
-import { supabase } from "../../supabase";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getLandOwners, createRsbsaSubmission } from "../../api";
 import BirthDatePicker from "../../components/common/BirthDatePicker";
-import {
-  getAuditLogger,
-  AuditAction,
-  AuditModule,
-} from "../../components/Audit/auditLogger";
+import { getAuditLogger } from "../../components/Audit/auditLogger";
 import "../../assets/css/jo css/JoRsbsaRegistrationStyle.css";
 import JOSidebar from "../../components/Layout/JOSidebar";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
@@ -22,6 +15,7 @@ interface Parcel {
   totalFarmAreaHa: string;
   withinAncestralDomain: string; // 'Yes' | 'No'
   isCultivating?: boolean | null;
+  cultivatingStatus?: "yes" | "no" | "no-other" | "";
   ownershipDocumentNo: string;
   agrarianReformBeneficiary: string; // 'Yes' | 'No'
   ownershipTypeRegisteredOwner: boolean;
@@ -34,13 +28,6 @@ interface Parcel {
   // New field for linking to existing land_parcels
   existingParcelId?: number;
   existingParcelNumber?: string;
-}
-
-interface LandOwner {
-  id: number;
-  name: string;
-  barangay?: string;
-  municipality?: string;
 }
 
 interface FormData {
@@ -95,7 +82,12 @@ interface FormData {
   ayOthersText?: string;
 }
 
-import { useEffect } from "react";
+interface LandOwner {
+  id: number;
+  name: string;
+  barangay?: string;
+  municipality?: string;
+}
 
 // Utility function to convert text to Title Case with special handling
 const toTitleCase = (text: string): string => {
@@ -154,13 +146,11 @@ const toTitleCase = (text: string): string => {
 
 const JoRsbsaRegisLandowner: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [_activeTab] = useState("overview");
-
+  const [landowners, setLandowners] = useState<LandOwner[]>([]);
   const [draftId, _setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [landowners, setLandowners] = useState<LandOwner[]>([]);
 
   // Toast notification state
   const [toast, setToast] = useState<{
@@ -197,11 +187,8 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     const fetchLandowners = async () => {
       try {
         const response = await getLandOwners();
-        if (response.error) {
-          throw new Error("Failed to fetch landowners");
-        }
-        const data = response.data || [];
-        setLandowners(data);
+        if (response.error) throw new Error("Failed to fetch landowners");
+        setLandowners(response.data || []);
       } catch (error) {
         console.error("Error fetching landowners:", error);
       }
@@ -209,6 +196,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
     fetchLandowners();
   }, []);
+
   const [formData, setFormData] = useState<FormData>({
     surname: "",
     firstName: "",
@@ -235,6 +223,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         totalFarmAreaHa: "",
         withinAncestralDomain: "",
         isCultivating: null,
+        cultivatingStatus: "",
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
         ownershipTypeRegisteredOwner: true, // Default to registered owner
@@ -328,6 +317,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
         isCultivating: null, // Land owner decides later
+        cultivatingStatus: "",
         ownershipTypeRegisteredOwner: true, // Always true
         ownershipTypeTenant: false,
         ownershipTypeLessee: false,
@@ -1383,31 +1373,61 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                     <div className="jo-registration-form-group">
                       <label>Are you farming this parcel?</label>
                       <select
-                        value={
-                          p.isCultivating === true
-                            ? "Yes"
-                            : p.isCultivating === false
-                              ? "No"
-                              : ""
-                        }
-                        onChange={(e) =>
+                        value={p.cultivatingStatus || ""}
+                        onChange={(e) => {
+                          const val = e.target.value as
+                            | "yes"
+                            | "no"
+                            | "no-other"
+                            | "";
+                          handleParcelChange(idx, "cultivatingStatus", val);
                           handleParcelChange(
                             idx,
                             "isCultivating",
-                            e.target.value === ""
-                              ? null
-                              : e.target.value === "Yes",
-                          )
-                        }
+                            val === "yes" ? true : val === "" ? null : false,
+                          );
+                          if (val !== "no-other") {
+                            handleParcelChange(idx, "tenantLandOwnerName", "");
+                          }
+                        }}
                       >
                         <option value="">Select</option>
-                        <option value="Yes">
+                        <option value="yes">
                           Yes — I am actively farming this
                         </option>
-                        <option value="No">
-                          No — someone else is farming this (tenant/lessee)
+                        <option value="no">No — I am not farming this</option>
+                        <option value="no-other">
+                          No — Someone else is farming it
                         </option>
                       </select>
+
+                      {/* Tenant/Lessee picker — only shows for "no-other" */}
+                      {p.cultivatingStatus === "no-other" && (
+                        <div
+                          className="jo-registration-form-group"
+                          style={{ marginTop: "10px" }}
+                        >
+                          <label>Select Tenant / Lessee</label>
+                          <select
+                            value={p.tenantLandOwnerName || ""}
+                            onChange={(e) =>
+                              handleParcelChange(
+                                idx,
+                                "tenantLandOwnerName",
+                                e.target.value,
+                              )
+                            }
+                          >
+                            <option value="">-- Select a person --</option>
+                            {landowners.map((lo) => (
+                              <option key={lo.id} value={lo.name}>
+                                {lo.name}
+                                {lo.barangay ? ` — ${lo.barangay}` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1645,14 +1665,20 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                           </div>
                           <div className="jo-registration-summary-item">
                             <span className="jo-registration-summary-label">
-                              Currently Cultivating:
+                              Are you farming this parcel?
                             </span>
                             <span className="jo-registration-summary-value">
-                              {parcel.isCultivating === true
-                                ? "Yes"
-                                : parcel.isCultivating === false
+                              {parcel.cultivatingStatus === "yes"
+                                ? "Yes — Actively farming"
+                                : parcel.cultivatingStatus === "no"
                                   ? "No"
-                                  : "Not specified"}
+                                  : parcel.cultivatingStatus === "no-other"
+                                    ? `No — Someone else is farming it${
+                                        parcel.tenantLandOwnerName
+                                          ? ` (${parcel.tenantLandOwnerName})`
+                                          : " (no tenant selected)"
+                                      }`
+                                    : "Not specified"}
                             </span>
                           </div>
                         </div>
