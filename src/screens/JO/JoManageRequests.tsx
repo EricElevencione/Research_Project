@@ -1389,8 +1389,6 @@ const JoManageRequests: React.FC = () => {
     editableRequestFields.some((field) => getEditFieldRiskData(field)?.hasRisk);
 
   const selectedCount = selectedRequestIds.size;
-  const filteredCount = filteredRequests.length;
-  const allCount = requests.length;
   const isAllFilteredSelected =
     filteredRequests.length > 0 &&
     filteredRequests.every((request) => selectedRequestIds.has(request.id));

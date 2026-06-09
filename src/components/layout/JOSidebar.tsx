@@ -22,7 +22,7 @@ interface JOSidebarProps {
 
 const navItems = [
   { path: "/jo-dashboard", icon: <FaHome />, text: "Home" },
-  { path: "/jo-rsbsapage", icon: <FaIdCard />, text: "RSBSA" },
+  { path: "/jo-rsbsapage", icon: <FaIdCard />, text: "Registration" },
   { path: "/jo-incentives", icon: <FaGift />, text: "Subsidy" },
   { path: "/jo-masterlist", icon: <FaListAlt />, text: "Masterlist" },
   { path: "/jo-farmer-registry", icon: <FaPersonBooth />, text: "Farmers" },
