@@ -1797,16 +1797,16 @@ const JoLandownerRegistry: React.FC = () => {
                             fetchLandownerDetails(record.id, ownerRecord)
                           }
                         >
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedRecordIds.has(record.id)}
+                              onChange={() => toggleSelectRecord(record.id)}
+                              aria-label={`Select ${record.landownerName}`}
+                            />
+                          </td>
                           {/* Landowner */}
                           <td>
-                            <td onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={selectedRecordIds.has(record.id)}
-                                onChange={() => toggleSelectRecord(record.id)}
-                                aria-label={`Select ${record.landownerName}`}
-                              />
-                            </td>
                             <div className="jo-landowner-farmer-cell">
                               <div className="jo-landowner-farmer-avatar">
                                 {getInitials(record.landownerName)}

@@ -271,8 +271,8 @@
   gap: 10px;
   padding: 7px 10px;
   border-radius: 8px;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
+  border: 1px solid #cde8cf;
+  background: #f4fbf3;
   flex-shrink: 0;
 }
 
@@ -293,9 +293,9 @@
 }
 
 .jo-landowner-bulk-btn {
-  border: 1px solid #60a5fa;
+  border: 1px solid #6aa661;
   background: #ffffff;
-  color: #1e3a8a;
+  color: #1f4f2e;
   border-radius: 7px;
   padding: 5px 10px;
   font-size: 11px;
