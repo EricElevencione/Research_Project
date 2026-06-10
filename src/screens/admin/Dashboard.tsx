@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import "../../assets/css/admin css/DashStyle.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import "../../components/Dashboard/AdminDashboardCharts.css";
 import FarmlandMap from "../../components/Map/FarmlandMap";
 import {
