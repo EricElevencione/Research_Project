@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAllocations, getFarmerRequests } from "../../api";
-import { FERTILIZER_FIELD_MAPS, SEED_FIELD_MAPS } from "../../constants/shortageFieldMaps";
+import {
+  FERTILIZER_FIELD_MAPS,
+  SEED_FIELD_MAPS,
+} from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminIncentives.css";
 import "../../components/layout/sidebarStyle.css";
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 
 interface RegionalAllocation {
   id: number;
@@ -62,7 +65,7 @@ const Incentives: React.FC = () => {
       const sortedAllocations = allocationsWithCounts.sort((a, b) => {
         const dateA = new Date(a.allocation_date).getTime();
         const dateB = new Date(b.allocation_date).getTime();
-        
+
         if (dateB !== dateA) {
           return dateB - dateA;
         }
@@ -98,7 +101,10 @@ const Incentives: React.FC = () => {
   return (
     <div className="admin-incent-page-container">
       <div className="admin-incent-page has-mobile-sidebar">
-        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <AdminSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         <div className="admin-incent-main-content">
           <div className="tech-incent-mobile-header">
@@ -106,7 +112,20 @@ const Incentives: React.FC = () => {
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
             <div className="tech-incent-mobile-title">Admin Incentives</div>
           </div>
@@ -114,10 +133,17 @@ const Incentives: React.FC = () => {
           <div className="admin-incent-dashboard-header">
             <div className="admin-incent-dashboard-header-left">
               <h2 className="admin-incent-page-header">Farmer Allocations</h2>
-              <p className="jo-incent-page-subtitle">View Farmer Requests & Regional Allocations</p>
+              <p className="jo-incent-page-subtitle">
+                View Farmer Requests & Regional Allocations
+              </p>
             </div>
             <div className="admin-incent-dashboard-header-right">
-              <button className="jo-incent-btn-create" onClick={() => navigate("/admin-create-allocation")}>➕ New Regional Allocation</button>
+              <button
+                className="jo-incent-btn-create"
+                onClick={() => navigate("/admin-create-allocation")}
+              >
+                ➕ New Regional Allocation
+              </button>
             </div>
           </div>
 
@@ -129,7 +155,12 @@ const Incentives: React.FC = () => {
                 <div className="admin-incent-error-icon">⚠️</div>
                 <h3>Unable to Connect to Server</h3>
                 <p>{error}</p>
-                <button className="admin-incent-btn-retry" onClick={fetchAllocations}>🔄 Retry Connection</button>
+                <button
+                  className="admin-incent-btn-retry"
+                  onClick={fetchAllocations}
+                >
+                  🔄 Retry Connection
+                </button>
               </div>
             ) : allocations.length === 0 ? (
               <div className="admin-incent-empty-state">
@@ -142,28 +173,40 @@ const Incentives: React.FC = () => {
                 {allocations.map((allocation) => (
                   <div key={allocation.id} className="admin-incent-card">
                     <div className="admin-incent-card-header">
-                      <h3 className="admin-incent-card-season">{formatSeasonName(allocation.season)}</h3>
+                      <h3 className="admin-incent-card-season">
+                        {formatSeasonName(allocation.season)}
+                      </h3>
                       <p className="admin-incent-card-date">
-                        {new Date(allocation.allocation_date).toLocaleDateString("en-US", { 
-                          year: "numeric", 
-                          month: "long", 
-                          day: "numeric" 
+                        {new Date(
+                          allocation.allocation_date,
+                        ).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
                         })}
                       </p>
                     </div>
-                    
+
                     <div className="admin-incent-card-body">
                       <div className="admin-incent-stat-grid">
                         <div className="admin-incent-stat-box">
                           <label>TOTAL FERTILIZER</label>
-                          <strong>{getTotalFertilizer(allocation).toLocaleString()} bags</strong>
+                          <strong>
+                            {getTotalFertilizer(allocation).toLocaleString()}{" "}
+                            bags
+                          </strong>
                         </div>
                         <div className="admin-incent-stat-box">
                           <label>TOTAL SEEDS</label>
-                          <strong>{getTotalSeeds(allocation).toLocaleString("en-US", { minimumFractionDigits: 2 })} kg</strong>
+                          <strong>
+                            {getTotalSeeds(allocation).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                            })}{" "}
+                            kg
+                          </strong>
                         </div>
                       </div>
-                      
+
                       <div className="admin-incent-stat-box farmer-box">
                         <label>FARMER REQUESTS</label>
                         <strong>{allocation.farmer_count || 0} farmers</strong>
@@ -171,21 +214,27 @@ const Incentives: React.FC = () => {
                     </div>
 
                     <div className="admin-incent-card-actions">
-                      <button 
-                        className="admin-incent-btn-view" 
-                        onClick={() => navigate(`/view-allocation/${allocation.id}`)}
+                      <button
+                        className="admin-incent-btn-view"
+                        onClick={() =>
+                          navigate(`/view-allocation/${allocation.id}`)
+                        }
                       >
                         View
                       </button>
-                      <button 
-                        className="admin-incent-btn-edit" 
-                        onClick={() => navigate(`/admin-edit-allocation/${allocation.id}`)}
+                      <button
+                        className="admin-incent-btn-edit"
+                        onClick={() =>
+                          navigate(`/admin-edit-allocation/${allocation.id}`)
+                        }
                       >
                         Edit
                       </button>
-                      <button 
-                        className="admin-incent-btn-manage" 
-                        onClick={() => navigate(`/manage-requests/${allocation.id}`)}
+                      <button
+                        className="admin-incent-btn-manage"
+                        onClick={() =>
+                          navigate(`/manage-requests/${allocation.id}`)
+                        }
                       >
                         Manage
                       </button>

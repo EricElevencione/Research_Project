@@ -11,7 +11,7 @@ import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
 import Analytics from "./Analytics";
 
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 
 interface ParcelDetail {
   id: string;
@@ -70,7 +70,6 @@ interface RSBSARecord {
 }
 
 const RsbsaAdminPage: React.FC = () => {
-
   const [activePage, setActivePage] = useState<"farmers" | "analytics">(
     "farmers",
   );
@@ -87,7 +86,6 @@ const RsbsaAdminPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [barangayFilter, setBarangayFilter] = useState<string>("all");
   const [printingRecordId, setPrintingRecordId] = useState<string | null>(null);
-
 
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
     return records.filter(
@@ -508,7 +506,10 @@ const RsbsaAdminPage: React.FC = () => {
   return (
     <div className="rsbsa-admin-page-container">
       <div className="rsbsa-admin-page">
-        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <AdminSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         <div className="rsbsa-admin-main-content">
           <div className="tech-incent-mobile-header">
@@ -773,9 +774,7 @@ const RsbsaAdminPage: React.FC = () => {
                     const matchedRecord = rsbsaRecords.find(
                       (r) => r.id === selectedFarmer.id,
                     );
-                    const farmerStatus = (
-                      (matchedRecord as any)?.status || ""
-                    )
+                    const farmerStatus = ((matchedRecord as any)?.status || "")
                       .toLowerCase()
                       .trim();
                     if (farmerStatus === "no parcels") {
@@ -824,9 +823,7 @@ const RsbsaAdminPage: React.FC = () => {
                     </h3>
                     <div className="farmer-modal-info-grid">
                       <div className="farmer-modal-info-item">
-                        <span className="farmer-modal-label">
-                          Farmer Name:
-                        </span>
+                        <span className="farmer-modal-label">Farmer Name:</span>
                         <span className="farmer-modal-value">
                           {selectedFarmer.farmerName}
                         </span>

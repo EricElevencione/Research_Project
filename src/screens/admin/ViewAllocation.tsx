@@ -12,7 +12,7 @@ import {
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminViewAllocation.css";
 import "../../components/layout/sidebarStyle.css";
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 import { FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
 
 interface FarmerRequest extends Record<
@@ -165,8 +165,9 @@ const ViewAllocation: React.FC = () => {
         const s = (request.status || "").toLowerCase();
         return s === "approved" || s === "claimed" || s === "distributed";
       }).length,
-      pending: requests.filter((request) => (request.status || "").toLowerCase() === "pending")
-        .length,
+      pending: requests.filter(
+        (request) => (request.status || "").toLowerCase() === "pending",
+      ).length,
       totalFertilizerAllocated: FERTILIZER_FIELD_MAPS.reduce(
         (sum, fertilizer) => {
           if (fertilizer.unit !== "bags") return sum;
@@ -286,7 +287,10 @@ const ViewAllocation: React.FC = () => {
   return (
     <div className="admin-viewalloc-page-container">
       <div className="admin-viewalloc-page has-mobile-sidebar">
-        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <AdminSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         <div className="admin-viewalloc-main-content">
           <div className="tech-incent-mobile-header">
@@ -315,8 +319,7 @@ const ViewAllocation: React.FC = () => {
           <div className="admin-viewalloc-header">
             <h2 className="admin-viewalloc-title">View Allocation</h2>
             <p className="admin-viewalloc-subtitle">
-              {formatSeasonName(allocation.season)} · Regional Program
-              Details
+              {formatSeasonName(allocation.season)} · Regional Program Details
             </p>
           </div>
 

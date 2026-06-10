@@ -17,7 +17,7 @@ import {
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminManageRequest.css";
 import "../../components/layout/sidebarStyle.css";
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 
 // ─── Main Component ────────────────────────────────────────
 
@@ -101,7 +101,6 @@ const ManageRequests: React.FC = () => {
   const [, setAutoSuggestionsCount] = useState<number>(0);
   const [, setNewSuggestionsCount] = useState<number>(0);
 
-
   const normalizeStatus = (status: string | null | undefined) =>
     String(status ?? "")
       .trim()
@@ -137,7 +136,6 @@ const ManageRequests: React.FC = () => {
     () => requests.filter((r) => hasStatus(r, "rejected")),
     [requests],
   );
-
 
   useEffect(() => {
     fetchAllocation();
@@ -427,9 +425,9 @@ const ManageRequests: React.FC = () => {
       // Calculate totals
       const totalFertilizer = Math.round(
         (Number(request.requested_urea_bags) || 0) +
-        (Number(request.requested_complete_14_bags) || 0) +
-        (Number(request.requested_ammonium_sulfate_bags) || 0) +
-        (Number(request.requested_muriate_potash_bags) || 0),
+          (Number(request.requested_complete_14_bags) || 0) +
+          (Number(request.requested_ammonium_sulfate_bags) || 0) +
+          (Number(request.requested_muriate_potash_bags) || 0),
       );
 
       const totalSeeds = Number(
@@ -492,11 +490,11 @@ const ManageRequests: React.FC = () => {
     if (!alternative.can_fulfill) {
       const confirmed = confirm(
         `⚠️ WARNING: Partial Substitution\n\n` +
-        `This alternative can only partially cover the shortage:\n` +
-        `- Original shortage: ${suggestion.shortage_bags} bags\n` +
-        `- Can cover: ${alternative.partial_coverage || 0} bags\n` +
-        `- Remaining shortage: ${alternative.remaining_shortage || 0} bags\n\n` +
-        `Do you want to continue with this partial substitution?`,
+          `This alternative can only partially cover the shortage:\n` +
+          `- Original shortage: ${suggestion.shortage_bags} bags\n` +
+          `- Can cover: ${alternative.partial_coverage || 0} bags\n` +
+          `- Remaining shortage: ${alternative.remaining_shortage || 0} bags\n\n` +
+          `Do you want to continue with this partial substitution?`,
       );
       if (!confirmed) return;
     }
@@ -927,7 +925,10 @@ const ManageRequests: React.FC = () => {
                 }
             `}</style>
       <div className="admin-req-page has-mobile-sidebar">
-        <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <AdminSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         {/* Main Content */}
         <div className="admin-req-main-content">
@@ -1008,7 +1009,20 @@ const ManageRequests: React.FC = () => {
               {/* Regional Allocation Card */}
               <div className="admin-req-comparison-card admin-req-card-allocation">
                 <h3 className="admin-req-card-header allocation">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                    <path d="m3.3 7 8.7 5 8.7-5" />
+                    <path d="M12 22V12" />
+                  </svg>
                   Regional Allocation
                 </h3>
                 <div className="admin-req-card-content">
@@ -1019,8 +1033,13 @@ const ManageRequests: React.FC = () => {
                     <span className="admin-req-stat-value fertilizers">
                       {allocation
                         ? FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
-                          return sum + (Number((allocation as any)[map.allocationField]) || 0);
-                        }, 0).toFixed(2)
+                            return (
+                              sum +
+                              (Number(
+                                (allocation as any)[map.allocationField],
+                              ) || 0)
+                            );
+                          }, 0).toFixed(2)
                         : "0.00"}{" "}
                       bags
                     </span>
@@ -1032,8 +1051,13 @@ const ManageRequests: React.FC = () => {
                     <span className="admin-req-stat-value seeds">
                       {allocation
                         ? SEED_FIELD_MAPS.reduce((sum, map) => {
-                          return sum + (Number((allocation as any)[map.allocationField]) || 0);
-                        }, 0).toFixed(2)
+                            return (
+                              sum +
+                              (Number(
+                                (allocation as any)[map.allocationField],
+                              ) || 0)
+                            );
+                          }, 0).toFixed(2)
                         : "0.00"}{" "}
                       kg
                     </span>
@@ -1044,7 +1068,20 @@ const ManageRequests: React.FC = () => {
               {/* Total Farmer Requests Card */}
               <div className="admin-req-comparison-card admin-req-card-total-requests">
                 <h3 className="admin-req-card-header total-requests">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                  </svg>
                   Total Requests
                 </h3>
                 <div className="admin-req-card-content">
@@ -1071,7 +1108,18 @@ const ManageRequests: React.FC = () => {
               {/* Farmer Requests Card */}
               <div className="admin-req-comparison-card admin-req-card-approved">
                 <h3 className="admin-req-card-header approved">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
                   Approved Requests
                 </h3>
                 <div className="admin-req-card-content">
@@ -1096,7 +1144,6 @@ const ManageRequests: React.FC = () => {
               </div>
 
               {/* Rejected Farmer Requests Card */}
-
             </div>
 
             {/* Summary Cards */}
@@ -1104,7 +1151,16 @@ const ManageRequests: React.FC = () => {
               {/* Total Requests */}
               <div className="admin-req-summary-card admin-req-card-total">
                 <div className="admin-req-card-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -1122,14 +1178,26 @@ const ManageRequests: React.FC = () => {
               {/* Pending Requests */}
               <div className="admin-req-summary-card admin-req-card-pending">
                 <div className="admin-req-card-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
                 </div>
                 <div className="admin-req-card-info">
                   <div className="admin-req-card-count">
-                    {filteredRequests.filter((r) => hasStatus(r, "pending")).length}
+                    {
+                      filteredRequests.filter((r) => hasStatus(r, "pending"))
+                        .length
+                    }
                   </div>
                   <div className="admin-req-card-label">Pending Requests</div>
                 </div>
@@ -1138,14 +1206,26 @@ const ManageRequests: React.FC = () => {
               {/* Approved Requests */}
               <div className="admin-req-summary-card admin-req-card-approved">
                 <div className="admin-req-card-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <polyline points="9 11 12 14 22 4" />
                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                   </svg>
                 </div>
                 <div className="admin-req-card-info">
                   <div className="admin-req-card-count">
-                    {filteredRequests.filter((r) => hasStatus(r, "approved")).length}
+                    {
+                      filteredRequests.filter((r) => hasStatus(r, "approved"))
+                        .length
+                    }
                   </div>
                   <div className="admin-req-card-label">Approved Requests</div>
                 </div>
@@ -1154,7 +1234,16 @@ const ManageRequests: React.FC = () => {
               {/* Rejected Requests */}
               <div className="admin-req-summary-card admin-req-card-rejected">
                 <div className="admin-req-card-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <line x1="15" y1="9" x2="9" y2="15" />
                     <line x1="9" y1="9" x2="15" y2="15" />
@@ -1162,7 +1251,10 @@ const ManageRequests: React.FC = () => {
                 </div>
                 <div className="admin-req-card-info">
                   <div className="admin-req-card-count">
-                    {filteredRequests.filter((r) => hasStatus(r, "rejected")).length}
+                    {
+                      filteredRequests.filter((r) => hasStatus(r, "rejected"))
+                        .length
+                    }
                   </div>
                   <div className="admin-req-card-label">Rejected Requests</div>
                 </div>
@@ -1191,26 +1283,26 @@ const ManageRequests: React.FC = () => {
                 {filteredRequests.filter(
                   (r) => hasStatus(r, "pending") && checkPotentialShortage(r),
                 ).length > 0 && (
-                    <div className="admin-req-info-box">
-                      <span style={{ fontSize: "24px" }}>💡</span>
-                      <div style={{ flex: 1 }}>
-                        <strong style={{ color: "#92400e", fontSize: "14px" }}>
-                          Alternatives Auto-Loaded & Available
-                        </strong>
-                        <p
-                          style={{
-                            margin: "4px 0 0 0",
-                            fontSize: "13px",
-                            color: "#78350f",
-                          }}
-                        >
-                          Rows highlighted in yellow (⚠️) have detected shortages.
-                          Alternative fertilizer and seed options have been
-                          automatically loaded based on agronomic equivalency.
-                        </p>
-                      </div>
+                  <div className="admin-req-info-box">
+                    <span style={{ fontSize: "24px" }}>💡</span>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ color: "#92400e", fontSize: "14px" }}>
+                        Alternatives Auto-Loaded & Available
+                      </strong>
+                      <p
+                        style={{
+                          margin: "4px 0 0 0",
+                          fontSize: "13px",
+                          color: "#78350f",
+                        }}
+                      >
+                        Rows highlighted in yellow (⚠️) have detected shortages.
+                        Alternative fertilizer and seed options have been
+                        automatically loaded based on agronomic equivalency.
+                      </p>
                     </div>
-                  )}
+                  </div>
+                )}
 
                 <div style={{ overflowX: "auto" }}>
                   <table
@@ -2071,9 +2163,9 @@ const ManageRequests: React.FC = () => {
                                   selectedAlternative[requestId]
                                     ?.suggestionIdx === idx
                                     ? suggestion.alternatives[
-                                    selectedAlternative[requestId]
-                                      .alternativeIdx
-                                    ]
+                                        selectedAlternative[requestId]
+                                          .alternativeIdx
+                                      ]
                                     : null;
 
                                 return (
@@ -2082,7 +2174,7 @@ const ManageRequests: React.FC = () => {
                                     style={{
                                       marginBottom:
                                         idx <
-                                          altData.suggestions.suggestions.length -
+                                        altData.suggestions.suggestions.length -
                                           1
                                           ? "24px"
                                           : "0",
@@ -2217,7 +2309,7 @@ const ManageRequests: React.FC = () => {
 
                                     {/* Suggested Substitutes */}
                                     {suggestion.alternatives &&
-                                      suggestion.alternatives.length > 0 ? (
+                                    suggestion.alternatives.length > 0 ? (
                                       <div>
                                         <h4
                                           style={{
@@ -2245,7 +2337,7 @@ const ManageRequests: React.FC = () => {
                                               selectedAlternative[requestId]
                                                 ?.suggestionIdx === idx
                                                 ? selectedAlternative[requestId]
-                                                  .alternativeIdx
+                                                    .alternativeIdx
                                                 : ""
                                             }
                                             onChange={(e) => {
@@ -2295,7 +2387,7 @@ const ManageRequests: React.FC = () => {
                                                   {alt.needed_bags ||
                                                     alt.needed_kg}{" "}
                                                   {suggestion.category ===
-                                                    "seed"
+                                                  "seed"
                                                     ? "kg"
                                                     : "bags"}
                                                   (Avail:{" "}
@@ -2330,7 +2422,7 @@ const ManageRequests: React.FC = () => {
                                               background:
                                                 selectedAlternative[requestId]
                                                   ?.suggestionIdx === idx &&
-                                                  !applyingAlternative[requestId]
+                                                !applyingAlternative[requestId]
                                                   ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
                                                   : "#d1d5db",
                                               color: "white",
@@ -2339,7 +2431,7 @@ const ManageRequests: React.FC = () => {
                                               cursor:
                                                 selectedAlternative[requestId]
                                                   ?.suggestionIdx === idx &&
-                                                  !applyingAlternative[requestId]
+                                                !applyingAlternative[requestId]
                                                   ? "pointer"
                                                   : "not-allowed",
                                               fontSize: "13px",
@@ -2466,28 +2558,28 @@ const ManageRequests: React.FC = () => {
                                         </div>
                                         {suggestion.recommendation
                                           ?.next_steps && (
-                                            <div style={{ fontSize: "14px" }}>
-                                              <strong>
-                                                Recommended Actions:
-                                              </strong>
-                                              <ul
-                                                style={{
-                                                  margin: "8px 0 0 0",
-                                                  paddingLeft: "24px",
-                                                  lineHeight: "1.8",
-                                                }}
-                                              >
-                                                {suggestion.recommendation.next_steps.map(
-                                                  (
-                                                    step: string,
-                                                    stepIdx: number,
-                                                  ) => (
-                                                    <li key={stepIdx}>{step}</li>
-                                                  ),
-                                                )}
-                                              </ul>
-                                            </div>
-                                          )}
+                                          <div style={{ fontSize: "14px" }}>
+                                            <strong>
+                                              Recommended Actions:
+                                            </strong>
+                                            <ul
+                                              style={{
+                                                margin: "8px 0 0 0",
+                                                paddingLeft: "24px",
+                                                lineHeight: "1.8",
+                                              }}
+                                            >
+                                              {suggestion.recommendation.next_steps.map(
+                                                (
+                                                  step: string,
+                                                  stepIdx: number,
+                                                ) => (
+                                                  <li key={stepIdx}>{step}</li>
+                                                ),
+                                              )}
+                                            </ul>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                   </div>
