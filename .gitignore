@@ -26,3 +26,4 @@ dist-electron
 .vercel
 .env
 
+.env*

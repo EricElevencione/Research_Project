@@ -7,7 +7,7 @@ import {
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminIncentives.css";
 import "../../components/layout/sidebarStyle.css";
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import AdminSidebar from "../../components/Layout/AdminSidebar";
 
 interface RegionalAllocation {
   id: number;

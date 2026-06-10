@@ -10,7 +10,7 @@ import {
   deleteShortageSeed,
   deleteShortageFertilizer,
 } from "../../api";
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import AdminSidebar from "../../components/Layout/AdminSidebar";
 import {
   Plus,
   Search,

@@ -11,7 +11,7 @@ import {
 import "../../assets/css/admin css/MasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import AdminSidebar from "../../components/Layout/AdminSidebar";
 
 interface FarmerDetailModal {
   id: string;
