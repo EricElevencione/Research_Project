@@ -7,7 +7,7 @@ import {
   updateAllocation,
 } from "../../api";
 import "../../assets/css/jo css/JoIncentStyle.css";
-import JOSidebar from "../../components/layout/JOSidebar";
+import JOSidebar from "../../components/Layout/JOSidebar";
 import {
   EDIT_REGIONAL_FERTILIZER_FIELDS,
   EDIT_REGIONAL_SEED_FIELDS,

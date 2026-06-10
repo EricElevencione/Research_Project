@@ -6,7 +6,7 @@ import {
 } from "../../components/LandRegistry/usePartialTransfer";
 import { PartialParcelTransferSection } from "../../components/LandRegistry/PartialParcelTransferSection";
 import "../../assets/css/jo css/JoLandRegistryStyle.css";
-import JOSidebar from "../../components/layout/JOSidebar";
+import JOSidebar from "../../components/Layout/JOSidebar";
 import {
   getAuditLogger,
   AuditModule,

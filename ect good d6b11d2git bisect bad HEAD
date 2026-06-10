@@ -153,7 +153,7 @@ src/components/FarmerParcelsManager.tsx
 src/components/LandRegistry/JoLandRegistry_integration_guide.tsx
 src/components/LandRegistry/PartialParcelTransferSection.tsx
 src/components/LandRegistry/usePartialTransfer.ts
-src/components/layout/JOSidebar.tsx
+src/components/Layout/JOSidebar.tsx
 src/index.css
 src/index.tsx
 src/screens/JO/JoAddFarmerRequest.tsx

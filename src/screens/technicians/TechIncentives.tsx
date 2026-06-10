@@ -8,9 +8,9 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import "../../assets/css/jo css/JoIncentStyle.css";
 import "../../assets/css/technician css/TechIncentStyle.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import { supabase } from "../../supabase";
-import TechSidebar from "../../components/layout/TechSidebar";
+import TechSidebar from "../../components/Layout/TechSidebar";
 
 interface RegionalAllocation {
   id: number;

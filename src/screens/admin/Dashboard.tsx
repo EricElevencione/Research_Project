@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import "../../assets/css/admin css/DashStyle.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import "../../components/Dashboard/AdminDashboardCharts.css";
 import FarmlandMap from "../../components/Map/FarmlandMap";
 import {
@@ -14,7 +14,7 @@ import {
   useAdminDashboardStats,
   formatSeasonLabel,
 } from "../../hooks/useAdminDashboardStats";
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import AdminSidebar from "../../components/Layout/AdminSidebar";
 
 const Dashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

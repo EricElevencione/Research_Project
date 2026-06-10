@@ -8,7 +8,7 @@ import {
   getLandHistoryReportRows,
 } from "../../api";
 import "../../assets/css/jo css/JoLandHistoryReport.css";
-import JOSidebar from "../../components/layout/JOSidebar";
+import JOSidebar from "../../components/Layout/JOSidebar";
 
 interface LandHistoryReportRow {
   id: number;

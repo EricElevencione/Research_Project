@@ -8,9 +8,9 @@ import {
 } from "../../api";
 import "../../assets/css/technician css/TechRsbsaStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import { supabase } from "../../supabase";
-import TechSidebar from "../../components/layout/TechSidebar";
+import TechSidebar from "../../components/Layout/TechSidebar";
 
 interface RSBSARecord {
   id: string;

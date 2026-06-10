@@ -12,7 +12,7 @@ import {
   calculateRemainingStock,
 } from "../../services/alternativeEngine";
 import "../../assets/css/jo css/JoManageRequests.css";
-import JOSidebar from "../../components/layout/JOSidebar";
+import JOSidebar from "../../components/Layout/JOSidebar";
 import {
   getAuditLogger,
   AuditModule,

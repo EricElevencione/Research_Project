@@ -20,7 +20,7 @@ import {
   AuditModule,
 } from "../../components/Audit/auditLogger";
 import "../../assets/css/jo css/JoAddFarmerRequestStyle.css";
-import JOSidebar from "../../components/layout/JOSidebar";
+import JOSidebar from "../../components/Layout/JOSidebar";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 interface Farmer {
