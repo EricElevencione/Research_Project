@@ -14,8 +14,8 @@ import {
 import "../../assets/css/admin css/index.css";
 import "../../assets/css/jo css/JoIncentStyle.css";
 import "../../assets/css/jo css/JoCreateAllocationStyle.css";
-import "../../components/Layout/sidebarStyle.css";
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import "../../components/layout/sidebarStyle.css";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 
 type NumericInput = number | "";
 

@@ -9,7 +9,7 @@ import {
 } from "../../api";
 import LandRecsIcon from "../../assets/images/landrecord.png";
 import "../../assets/css/jo css/JoDistribution.css";
-import JOSidebar from "../../components/Layout/JOSidebar";
+import JOSidebar from "../../components/layout/JOSidebar";
 import {
   EDIT_REGIONAL_FERTILIZER_FIELDS,
   EDIT_REGIONAL_SEED_FIELDS,

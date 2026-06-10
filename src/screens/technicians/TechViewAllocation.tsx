@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getAllocationById, getFarmerRequests } from "../../api";
 import "../../assets/css/jo css/JoViewAllocationStyle.css";
-import "../../components/Layout/sidebarStyle.css";
+import "../../components/layout/sidebarStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
 import HomeIcon from "../../assets/images/home.png";
 import RSBSAIcon from "../../assets/images/rsbsa.png";

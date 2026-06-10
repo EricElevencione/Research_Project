@@ -12,7 +12,7 @@ import {
   AuditModule,
 } from "../../components/Audit/auditLogger";
 import "../../assets/css/jo css/JoRsbsaRegistrationStyle.css";
-import JOSidebar from "../../components/Layout/JOSidebar";
+import JOSidebar from "../../components/layout/JOSidebar";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 import BirthDatePicker from "../../components/common/BirthDatePicker";
 

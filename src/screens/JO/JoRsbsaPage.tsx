@@ -10,7 +10,7 @@ import {
 } from "../../api";
 import { printRsbsaFormById } from "../../utils/rsbsaPrint";
 import "../../assets/css/jo css/JoRsbsaPageStyle.css";
-import JOSidebar from "../../components/Layout/JOSidebar";
+import JOSidebar from "../../components/layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import {
   getAuditLogger,
