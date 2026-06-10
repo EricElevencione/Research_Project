@@ -14,7 +14,7 @@ import {
   printRsbsaFormsByIds,
 } from "../../utils/rsbsaPrint";
 import "../../assets/css/jo css/JoMasterlistStyle.css";
-import JOSidebar from "../../components/Layout/JOSidebar";
+import JOSidebar from "../../components/layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import {
   getAuditLogger,

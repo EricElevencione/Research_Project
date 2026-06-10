@@ -8,7 +8,7 @@ import {
   updateFarmParcel,
 } from "../../api";
 import "../../assets/css/jo css/JoFarmerStyle.css";
-import JOSidebar from "../../components/Layout/JOSidebar";
+import JOSidebar from "../../components/layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import {
   getAuditLogger,

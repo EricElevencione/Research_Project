@@ -7,7 +7,7 @@ import {
   getAvailableSeasons,
 } from "../../api";
 import "../../assets/css/jo css/JoDashboardStyle.css";
-import JOSidebar from "../../components/Layout/JOSidebar";
+import JOSidebar from "../../components/layout/JOSidebar";
 import FarmlandMap from "../../components/Map/FarmlandMap";
 
 // Recharts imports (already installed in project)

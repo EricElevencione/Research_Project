@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getAllocationById, getFarmerRequests } from "../../api";
 import "../../assets/css/jo css/JoViewAllocationStyle.css";
-import JOSidebar from "../../components/Layout/JOSidebar";
+import JOSidebar from "../../components/layout/JOSidebar";
 
 interface FarmerRequest {
   id: number;

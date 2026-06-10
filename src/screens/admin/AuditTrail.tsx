@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import "../../components/Layout/sidebarStyle.css";
+import "../../components/layout/sidebarStyle.css";
 import "../../assets/css/admin css/AdminAuditTrail.css";
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 import { AuditAPI } from "../../components/Audit/auditAPI";
 import { supabase } from "../../supabase";
 import {

@@ -16,8 +16,8 @@ import {
   SEED_FIELD_MAPS,
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminManageRequest.css";
-import "../../components/Layout/sidebarStyle.css";
-import AdminSidebar from "../../components/Layout/AdminSidebar";
+import "../../components/layout/sidebarStyle.css";
+import AdminSidebar from "../../components/layout/AdminSidebar";
 
 // ─── Main Component ────────────────────────────────────────
 

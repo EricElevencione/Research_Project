@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAllocationBySeason, createAllocation } from "../../api";
 import "../../assets/css/jo css/JoRegionAll.css";
-import JOSidebar from "../../components/Layout/JOSidebar";
+import JOSidebar from "../../components/layout/JOSidebar";
 
 type NumericInput = number | "";
 
