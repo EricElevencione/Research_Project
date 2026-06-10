@@ -16,9 +16,9 @@ import {
   SEED_FIELD_MAPS,
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/technician css/TechManageRequestsStyle.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import { supabase } from "../../supabase";
-import TechSidebar from "../../components/layout/TechSidebar";
+import TechSidebar from "../../components/Layout/TechSidebar";
 import {
   getAuditLogger,
   AuditModule,
@@ -898,9 +898,9 @@ const TechManageRequests: React.FC = () => {
       // Calculate totals
       const totalFertilizer = Math.round(
         (Number(request.requested_urea_bags) || 0) +
-        (Number(request.requested_complete_14_bags) || 0) +
-        (Number(request.requested_ammonium_sulfate_bags) || 0) +
-        (Number(request.requested_muriate_potash_bags) || 0),
+          (Number(request.requested_complete_14_bags) || 0) +
+          (Number(request.requested_ammonium_sulfate_bags) || 0) +
+          (Number(request.requested_muriate_potash_bags) || 0),
       );
 
       const totalSeeds = Number(
@@ -1204,8 +1204,9 @@ const TechManageRequests: React.FC = () => {
       <div className="tech-manage-requests-modal-meta-panel">
         <div className="tech-manage-requests-modal-meta-top">
           <span
-            className={`tech-manage-requests-modal-meta-status ${hasRisk ? "is-danger" : "is-safe"
-              }`}
+            className={`tech-manage-requests-modal-meta-status ${
+              hasRisk ? "is-danger" : "is-safe"
+            }`}
           >
             {hasRisk ? "Exceeded" : "Within limit"}
           </span>
@@ -1247,8 +1248,9 @@ const TechManageRequests: React.FC = () => {
         </div>
         <div className="tech-manage-requests-modal-meta-bar-track">
           <div
-            className={`tech-manage-requests-modal-meta-bar-fill ${hasRisk ? "is-danger" : "is-safe"
-              }`}
+            className={`tech-manage-requests-modal-meta-bar-fill ${
+              hasRisk ? "is-danger" : "is-safe"
+            }`}
             style={{ width: `${usagePercent}%` }}
           />
         </div>
@@ -1462,9 +1464,9 @@ const TechManageRequests: React.FC = () => {
 
   const pendingAlternativeDetails = pendingAlternativeConfirmation
     ? getAlternativeSelectionDetails(
-      pendingAlternativeConfirmation.requestId,
-      pendingAlternativeConfirmation,
-    )
+        pendingAlternativeConfirmation.requestId,
+        pendingAlternativeConfirmation,
+      )
     : null;
 
   const pendingSuggestion = pendingAlternativeDetails?.suggestion;
@@ -2033,10 +2035,11 @@ const TechManageRequests: React.FC = () => {
             <td class="text-center">${escapeHtml(formatRequestDateForPrint(request))}</td>
             <td class="text-right">${fertilizerTotal.toFixed(2)}</td>
             <td class="text-right">${seedTotal.toFixed(2)}</td>
-            <td class="text-center">${hasShortage
-            ? '<span class="badge shortage">Yes</span>'
-            : '<span class="badge approved">No</span>'
-          }</td>
+            <td class="text-center">${
+              hasShortage
+                ? '<span class="badge shortage">Yes</span>'
+                : '<span class="badge approved">No</span>'
+            }</td>
           </tr>
         `;
       })
@@ -2044,10 +2047,10 @@ const TechManageRequests: React.FC = () => {
 
     const detailsSection = includeDetails
       ? requestsToPrint
-        .map((request, index) => {
-          const { totalFertilizer: fertilizerTotal, totalSeeds: seedTotal } =
-            getRequestTotalsForPrint(request);
-          return `
+          .map((request, index) => {
+            const { totalFertilizer: fertilizerTotal, totalSeeds: seedTotal } =
+              getRequestTotalsForPrint(request);
+            return `
               <div class="request-section">
                 <div class="request-head">
                   <strong>${index + 1}. ${escapeHtml(request.farmer_name || "N/A")}</strong>
@@ -2097,8 +2100,8 @@ const TechManageRequests: React.FC = () => {
                 <div class="notes-block">${escapeHtml(request.request_notes?.trim() || "No notes provided.")}</div>
               </div>
             `;
-        })
-        .join("")
+          })
+          .join("")
       : "";
 
     return buildPrintDocument(
@@ -2195,7 +2198,10 @@ const TechManageRequests: React.FC = () => {
   return (
     <div className="page-container">
       <div className="page">
-        <TechSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <TechSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         {/* Main Content */}
         <div className="tech-main-content">
@@ -2324,15 +2330,15 @@ const TechManageRequests: React.FC = () => {
                         <span className="tech-manage-requests-stat-value">
                           {allocation
                             ? FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
-                              return (
-                                sum +
-                                (Number(
-                                  allocation[
-                                  map.allocationField as keyof AllocationDetails
-                                  ],
-                                ) || 0)
-                              );
-                            }, 0).toFixed(2)
+                                return (
+                                  sum +
+                                  (Number(
+                                    allocation[
+                                      map.allocationField as keyof AllocationDetails
+                                    ],
+                                  ) || 0)
+                                );
+                              }, 0).toFixed(2)
                             : "0.00"}{" "}
                           bags
                         </span>
@@ -2344,15 +2350,15 @@ const TechManageRequests: React.FC = () => {
                         <span className="tech-manage-requests-stat-value">
                           {allocation
                             ? SEED_FIELD_MAPS.reduce((sum, map) => {
-                              return (
-                                sum +
-                                (Number(
-                                  allocation[
-                                  map.allocationField as keyof AllocationDetails
-                                  ],
-                                ) || 0)
-                              );
-                            }, 0).toFixed(2)
+                                return (
+                                  sum +
+                                  (Number(
+                                    allocation[
+                                      map.allocationField as keyof AllocationDetails
+                                    ],
+                                  ) || 0)
+                                );
+                              }, 0).toFixed(2)
                             : "0.00"}{" "}
                           kg
                         </span>
@@ -2434,7 +2440,9 @@ const TechManageRequests: React.FC = () => {
                         <span className="tech-manage-requests-stat-value">
                           {(() => {
                             const approvedRequests = requests.filter(
-                              (r) => r.status === "Claimed" || r.status === "approved",
+                              (r) =>
+                                r.status === "Claimed" ||
+                                r.status === "approved",
                             );
                             const total = approvedRequests.reduce((sum, r) => {
                               return (
@@ -2445,7 +2453,7 @@ const TechManageRequests: React.FC = () => {
                                       innerSum +
                                       (Number(
                                         r[
-                                        map.requestField as keyof FarmerRequest
+                                          map.requestField as keyof FarmerRequest
                                         ],
                                       ) || 0)
                                     );
@@ -2476,7 +2484,7 @@ const TechManageRequests: React.FC = () => {
                                     innerSum +
                                     (Number(
                                       r[
-                                      map.requestField as keyof FarmerRequest
+                                        map.requestField as keyof FarmerRequest
                                       ],
                                     ) || 0)
                                   );
@@ -2492,7 +2500,6 @@ const TechManageRequests: React.FC = () => {
                   </div>
 
                   {/* Rejected Farmer Requests Card */}
-
                 </div>
 
                 {/* Summary Stats */}
@@ -2577,7 +2584,8 @@ const TechManageRequests: React.FC = () => {
                       <div className="tech-manage-card-count">
                         {
                           filteredRequests.filter(
-                            (r) => r.status === "Claimed" || r.status === "approved",
+                            (r) =>
+                              r.status === "Claimed" || r.status === "approved",
                           ).length
                         }
                       </div>
@@ -2590,31 +2598,30 @@ const TechManageRequests: React.FC = () => {
                   {/* Rejected Requests */}
 
                   {/* Combined Shortage & Suggestions Card */}
-
                 </div>
 
                 {/* Info Box for Visual Indicators */}
                 {filteredRequests.filter(
                   (r) => r.status === "pending" && checkPotentialShortage(r),
                 ).length > 0 && (
-                    <div className="tech-manage-requests-info-box">
-                      <span className="tech-manage-requests-info-box-icon">
-                        ⚠️
-                      </span>
-                      <div className="tech-manage-requests-info-box-content">
-                        <strong className="tech-manage-requests-info-box-title">
-                          Alternatives Auto-Loaded & Displayed
-                        </strong>
-                        <p className="tech-manage-requests-info-box-text">
-                          Rows highlighted in yellow (⚠️) show automatic
-                          suggestions. Alternative fertilizer options are
-                          displayed automatically based on agronomic equivalency.
-                          Click the "⚠️ Suggestions" card above to view and apply
-                          alternatives.
-                        </p>
-                      </div>
+                  <div className="tech-manage-requests-info-box">
+                    <span className="tech-manage-requests-info-box-icon">
+                      ⚠️
+                    </span>
+                    <div className="tech-manage-requests-info-box-content">
+                      <strong className="tech-manage-requests-info-box-title">
+                        Alternatives Auto-Loaded & Displayed
+                      </strong>
+                      <p className="tech-manage-requests-info-box-text">
+                        Rows highlighted in yellow (⚠️) show automatic
+                        suggestions. Alternative fertilizer options are
+                        displayed automatically based on agronomic equivalency.
+                        Click the "⚠️ Suggestions" card above to view and apply
+                        alternatives.
+                      </p>
                     </div>
-                  )}
+                  </div>
+                )}
 
                 {/* Requests Table */}
                 {filteredRequests.length === 0 ? (
@@ -2669,7 +2676,11 @@ const TechManageRequests: React.FC = () => {
                                   <span
                                     className={`tech-manage-requests-status-badge tech-manage-requests-status-${request.status === "NOT_CLAIMED" ? "pending" : request.status}`}
                                   >
-                                    {request.status === "approved" ? "Claimed" : (request.status === "NOT_CLAIMED" ? "pending" : request.status)}
+                                    {request.status === "approved"
+                                      ? "Claimed"
+                                      : request.status === "NOT_CLAIMED"
+                                        ? "pending"
+                                        : request.status}
                                   </span>
                                 </td>
                                 <td>{totalFertilizer.toFixed(2)}</td>
@@ -2714,13 +2725,13 @@ const TechManageRequests: React.FC = () => {
                                             triggerRect.right - menuWidth,
                                           ),
                                           window.innerWidth -
-                                          menuWidth -
-                                          viewportMargin,
+                                            menuWidth -
+                                            viewportMargin,
                                         );
                                         const openUpward =
                                           triggerRect.bottom +
-                                          estimatedMenuHeight +
-                                          viewportMargin >
+                                            estimatedMenuHeight +
+                                            viewportMargin >
                                           window.innerHeight;
                                         const menuTop = openUpward
                                           ? triggerRect.top - 8
@@ -2832,7 +2843,11 @@ const TechManageRequests: React.FC = () => {
                 <span
                   className={`tech-manage-requests-status-badge tech-manage-requests-status-${viewingRequest.status === "NOT_CLAIMED" ? "pending" : viewingRequest.status}`}
                 >
-                  {viewingRequest.status === "approved" ? "Claimed" : (viewingRequest.status === "NOT_CLAIMED" ? "pending" : viewingRequest.status)}
+                  {viewingRequest.status === "approved"
+                    ? "Claimed"
+                    : viewingRequest.status === "NOT_CLAIMED"
+                      ? "pending"
+                      : viewingRequest.status}
                 </span>
               </span>
               <span>
@@ -2952,8 +2967,9 @@ const TechManageRequests: React.FC = () => {
                   return (
                     <div
                       key={String(item.requestField)}
-                      className={`tech-manage-requests-modal-field ${hasRisk ? "tech-manage-requests-modal-field-danger" : ""
-                        }`}
+                      className={`tech-manage-requests-modal-field ${
+                        hasRisk ? "tech-manage-requests-modal-field-danger" : ""
+                      }`}
                     >
                       <label className="tech-manage-requests-modal-label">
                         {item.label}
@@ -2996,8 +3012,9 @@ const TechManageRequests: React.FC = () => {
                   return (
                     <div
                       key={String(item.requestField)}
-                      className={`tech-manage-requests-modal-field ${hasRisk ? "tech-manage-requests-modal-field-danger" : ""
-                        }`}
+                      className={`tech-manage-requests-modal-field ${
+                        hasRisk ? "tech-manage-requests-modal-field-danger" : ""
+                      }`}
                     >
                       <label className="tech-manage-requests-modal-label">
                         {item.label}
@@ -3342,9 +3359,9 @@ const TechManageRequests: React.FC = () => {
                                   selectedAlternative[requestId]
                                     ?.suggestionIdx === idx
                                     ? suggestion.alternatives?.[
-                                    selectedAlternative[requestId]
-                                      .alternativeIdx
-                                    ]
+                                        selectedAlternative[requestId]
+                                          .alternativeIdx
+                                      ]
                                     : null;
 
                                 return (
@@ -3363,7 +3380,7 @@ const TechManageRequests: React.FC = () => {
                                     </div>
 
                                     {suggestion.alternatives &&
-                                      suggestion.alternatives.length > 0 ? (
+                                    suggestion.alternatives.length > 0 ? (
                                       <div className="tech-manage-requests-alternatives-section">
                                         <label className="tech-manage-requests-alternatives-label">
                                           Available alternatives
@@ -3400,20 +3417,22 @@ const TechManageRequests: React.FC = () => {
                                                       }),
                                                     )
                                                   }
-                                                  className={`tech-manage-requests-alternative-card ${isSelected
+                                                  className={`tech-manage-requests-alternative-card ${
+                                                    isSelected
                                                       ? "is-selected"
                                                       : ""
-                                                    }`}
+                                                  }`}
                                                 >
                                                   <div className="tech-manage-requests-alternative-card-top">
                                                     <span className="tech-manage-requests-alternative-name">
                                                       {alt.substitute_name}
                                                     </span>
                                                     <span
-                                                      className={`tech-manage-requests-alternative-fit-badge ${alt.can_fulfill
+                                                      className={`tech-manage-requests-alternative-fit-badge ${
+                                                        alt.can_fulfill
                                                           ? "is-full"
                                                           : "is-partial"
-                                                        }`}
+                                                      }`}
                                                     >
                                                       {alt.can_fulfill
                                                         ? "Full cover"
@@ -3459,10 +3478,11 @@ const TechManageRequests: React.FC = () => {
                                                 Selected substitute
                                               </span>
                                               <span
-                                                className={`tech-manage-requests-alternative-fit-badge ${selectedForShortage.can_fulfill
+                                                className={`tech-manage-requests-alternative-fit-badge ${
+                                                  selectedForShortage.can_fulfill
                                                     ? "is-full"
                                                     : "is-partial"
-                                                  }`}
+                                                }`}
                                               >
                                                 {selectedForShortage.can_fulfill
                                                   ? "Full cover"
@@ -3501,7 +3521,7 @@ const TechManageRequests: React.FC = () => {
                                                   {Math.round(
                                                     Number(
                                                       selectedForShortage.confidence_score ||
-                                                      0,
+                                                        0,
                                                     ) * 100,
                                                   )}
                                                   %
@@ -3514,7 +3534,7 @@ const TechManageRequests: React.FC = () => {
                                                 Remaining shortage:{" "}
                                                 {Number(
                                                   selectedForShortage.remaining_shortage ||
-                                                  0,
+                                                    0,
                                                 )}{" "}
                                                 bags
                                               </p>
@@ -3527,20 +3547,20 @@ const TechManageRequests: React.FC = () => {
                                         No suitable alternatives available
                                         {suggestion.recommendation
                                           ?.next_steps && (
-                                            <div className="tech-manage-requests-recommendation">
-                                              <strong>Recommendation:</strong>
-                                              <ul>
-                                                {suggestion.recommendation.next_steps.map(
-                                                  (
-                                                    step: string,
-                                                    stepIdx: number,
-                                                  ) => (
-                                                    <li key={stepIdx}>{step}</li>
-                                                  ),
-                                                )}
-                                              </ul>
-                                            </div>
-                                          )}
+                                          <div className="tech-manage-requests-recommendation">
+                                            <strong>Recommendation:</strong>
+                                            <ul>
+                                              {suggestion.recommendation.next_steps.map(
+                                                (
+                                                  step: string,
+                                                  stepIdx: number,
+                                                ) => (
+                                                  <li key={stepIdx}>{step}</li>
+                                                ),
+                                              )}
+                                            </ul>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                   </div>
@@ -3605,8 +3625,9 @@ const TechManageRequests: React.FC = () => {
                 {pendingAlternativeDetails.altData.farmer_name}
               </span>
               <span
-                className={`tech-manage-requests-substitution-badge ${pendingAlternative?.can_fulfill ? "is-full" : "is-partial"
-                  }`}
+                className={`tech-manage-requests-substitution-badge ${
+                  pendingAlternative?.can_fulfill ? "is-full" : "is-partial"
+                }`}
               >
                 {pendingAlternative?.can_fulfill
                   ? "Full substitution"

@@ -12,7 +12,7 @@ import {
 } from "../../components/Audit/auditLogger";
 import "../../assets/css/technician css/TechAddFarmerRequestStyle.css";
 import "../../assets/css/jo css/JoIncentStyle.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
 import HomeIcon from "../../assets/images/home.png";
 import RSBSAIcon from "../../assets/images/rsbsa.png";
@@ -674,13 +674,16 @@ const TechAddFarmerRequest: React.FC = () => {
   ): AllocationSummaryItem[] => {
     return items.map((item) => {
       const allocated = toSafeNumber(allocation?.[item.allocationField]);
-      
+
       // Calculate total requested by all OTHER farmers
       const alreadyRequestedByOthers = allFarmerRequests.reduce((sum, req) => {
         return sum + toSafeNumber(req[item.requestField]);
       }, 0);
 
-      const currentRequest = Math.max(0, toSafeNumber(formData[item.requestField]));
+      const currentRequest = Math.max(
+        0,
+        toSafeNumber(formData[item.requestField]),
+      );
       const totalRequested = alreadyRequestedByOthers + currentRequest;
 
       return {
@@ -1145,7 +1148,6 @@ const TechAddFarmerRequest: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
           </nav>
           {currentUser && (
             <div className="sidebar-current-user">

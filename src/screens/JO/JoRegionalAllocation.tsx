@@ -189,9 +189,9 @@ const NUMERIC_FIELDS: AllocationNumericField[] = [
 ];
 
 function syncAddedItemsFromMerged(merged: RegionalAllocation) {
-  const ferts = FERTILIZER_FIELDS.filter(
-    (f) => Number(merged[f.key]) > 0,
-  ).map((f) => f.key);
+  const ferts = FERTILIZER_FIELDS.filter((f) => Number(merged[f.key]) > 0).map(
+    (f) => f.key,
+  );
   const seeds = SEED_FIELDS.filter((s) => Number(merged[s.key]) > 0).map(
     (s) => s.key,
   );
@@ -267,7 +267,6 @@ const JoRegionalAllocation: React.FC = () => {
     salinas_8_kg: 0,
     malagkit_5_kg: 0,
   });
-
 
   useEffect(() => {
     if (!formData.season?.trim()) return;
@@ -463,8 +462,7 @@ const JoRegionalAllocation: React.FC = () => {
                   <optgroup key={category} label={`${category} Fertilizers`}>
                     {FERTILIZER_FIELDS.filter(
                       (f) =>
-                        f.category === category &&
-                        !addedFertilizers.has(f.key),
+                        f.category === category && !addedFertilizers.has(f.key),
                     ).map((f) => (
                       <option key={f.key} value={f.key}>
                         {f.label}
@@ -552,8 +550,7 @@ const JoRegionalAllocation: React.FC = () => {
                 {(["Hybrid", "Inbred"] as const).map((category) => (
                   <optgroup key={category} label={`${category} Seeds`}>
                     {SEED_FIELDS.filter(
-                      (s) =>
-                        s.category === category && !addedSeeds.has(s.key),
+                      (s) => s.category === category && !addedSeeds.has(s.key),
                     ).map((s) => (
                       <option key={s.key} value={s.key}>
                         {s.label}

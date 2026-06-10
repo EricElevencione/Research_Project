@@ -11,7 +11,7 @@ import {
   SEED_FIELD_MAPS,
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminViewAllocation.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import AdminSidebar from "../../components/Layout/AdminSidebar";
 import { FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
 

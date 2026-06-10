@@ -12,7 +12,7 @@ import "../../assets/css/technician css/TechMasterlistStyle.css";
 import "../../assets/css/technician css/TechTenantRegistry.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import { supabase } from "../../supabase";
-import TechSidebar from "../../components/layout/TechSidebar";
+import TechSidebar from "../../components/Layout/TechSidebar";
 
 interface TenantRecord {
   id: string;
@@ -91,9 +91,7 @@ const TechTenantRegistry: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
     null,
   );
@@ -168,7 +166,7 @@ const TechTenantRegistry: React.FC = () => {
         getFarmParcels(record.id).catch((err) => {
           console.error(`Error fetching parcels for ${record.id}:`, err);
           return { error: err, data: [] };
-        })
+        }),
       );
 
       const allParcelsResponses = await Promise.all(parcelPromises);
@@ -195,17 +193,24 @@ const TechTenantRegistry: React.FC = () => {
           // Get landowner info from parcels
           const tenantParcel = parcels.find((p) => p.ownership_type_tenant);
           const landOwnerName = tenantParcel?.tenant_land_owner_name || "";
-          const landOwnerId = tenantParcel?.tenant_land_owner_id || landOwnerName;
+          const landOwnerId =
+            tenantParcel?.tenant_land_owner_id || landOwnerName;
 
           if (!tenantsByOwner[landOwnerId]) {
             // Try to find the landowner's own record to get their reference number
-            const ownerRecord = allRecords.find(r => r.id === landOwnerId || (r.FFRS_CODE && r.FFRS_CODE === landOwnerId));
+            const ownerRecord = allRecords.find(
+              (r) =>
+                r.id === landOwnerId ||
+                (r.FFRS_CODE && r.FFRS_CODE === landOwnerId),
+            );
 
             tenantsByOwner[landOwnerId] = {
               landOwnerId,
               landOwnerName,
-              landOwnerRefNumber: ownerRecord?.FFRS_CODE || ownerRecord?.["FFRS_CODE"] || "",
-              landOwnerLocation: ownerRecord?.farmLocation || ownerRecord?.farmerAddress || "—",
+              landOwnerRefNumber:
+                ownerRecord?.FFRS_CODE || ownerRecord?.["FFRS_CODE"] || "",
+              landOwnerLocation:
+                ownerRecord?.farmLocation || ownerRecord?.farmerAddress || "—",
               landOwnerDate: ownerRecord?.dateSubmitted || "",
               tenants: [],
             };
@@ -398,7 +403,8 @@ const TechTenantRegistry: React.FC = () => {
   const openStatusModal = async (tenant: TenantRecord) => {
     setStatusChangeTarget({
       id: tenant.id,
-      newStatus: tenant.status === "Active Farmer" ? "Not Active" : "Active Farmer",
+      newStatus:
+        tenant.status === "Active Farmer" ? "Not Active" : "Active Farmer",
       farmerName: tenant.tenantName,
     });
     setStatusChangeReason("");
@@ -430,7 +436,9 @@ const TechTenantRegistry: React.FC = () => {
       for (const parcel of statusModalParcels) {
         await updateFarmParcel(parcel.id, {
           is_cultivating: isNowActive,
-          cultivation_status_reason: isNowActive ? null : statusChangeReason.trim(),
+          cultivation_status_reason: isNowActive
+            ? null
+            : statusChangeReason.trim(),
           cultivation_status_updated_at: new Date().toISOString(),
         });
       }
@@ -464,7 +472,7 @@ const TechTenantRegistry: React.FC = () => {
       const result = await printRsbsaFormById({
         farmerId: selectedFarmer.id,
         fallbackReferenceNumber: selectedFarmer.referenceNumber,
-        fallbackFarmerName: selectedFarmer.farmerName
+        fallbackFarmerName: selectedFarmer.farmerName,
       });
 
       if (!result.success) {
@@ -472,7 +480,9 @@ const TechTenantRegistry: React.FC = () => {
       }
     } catch (err) {
       console.error("Error printing:", err);
-      alert("Error printing: " + (err instanceof Error ? err.message : String(err)));
+      alert(
+        "Error printing: " + (err instanceof Error ? err.message : String(err)),
+      );
     } finally {
       setIsModalPrinting(false);
     }
@@ -503,12 +513,16 @@ const TechTenantRegistry: React.FC = () => {
     <div className="tech-masterlist-page-container">
       <div className="tech-masterlist-page">
         {/* Sidebar */}
-        <TechSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-
+        <TechSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         {/* Main content */}
-        <div className="tech-masterlist-main-content" style={{ height: '100vh', overflowY: 'auto' }}>
+        <div
+          className="tech-masterlist-main-content"
+          style={{ height: "100vh", overflowY: "auto" }}
+        >
           <div className="tech-incent-mobile-header">
             <button
               className="tech-incent-hamburger"
@@ -536,7 +550,8 @@ const TechTenantRegistry: React.FC = () => {
             <div>
               <h2 className="tech-masterlist-page-title">Farmer Registry</h2>
               <p className="tech-masterlist-page-subtitle">
-                Manage hierarchical relationship between landowners and their tenants
+                Manage hierarchical relationship between landowners and their
+                tenants
               </p>
             </div>
           </div>
@@ -553,11 +568,7 @@ const TechTenantRegistry: React.FC = () => {
             </div>
           </div>
 
-          {error && (
-            <div className="error-message">
-              Error: {error}
-            </div>
-          )}
+          {error && <div className="error-message">Error: {error}</div>}
 
           <div className="tech-masterlist-content-card">
             {filteredGroups.length === 0 ? (
@@ -589,21 +600,32 @@ const TechTenantRegistry: React.FC = () => {
                           <td>
                             <div className="landowner-info">
                               <span className="expand-icon">▶</span>
-                              <span className="landowner-name">{group.landOwnerName}</span>
+                              <span className="landowner-name">
+                                {group.landOwnerName}
+                              </span>
                               <span className="tenant-count-badge">
-                                {group.tenants.length} {group.tenants.length === 1 ? "Tenant" : "Tenants"}
+                                {group.tenants.length}{" "}
+                                {group.tenants.length === 1
+                                  ? "Tenant"
+                                  : "Tenants"}
                               </span>
                             </div>
                           </td>
                           <td>
-                            <span className="tenant-ref">{group.landOwnerRefNumber || "—"}</span>
+                            <span className="tenant-ref">
+                              {group.landOwnerRefNumber || "—"}
+                            </span>
                           </td>
                           <td>—</td>
                           <td>
-                            <span className="location-text">{group.landOwnerLocation || "—"}</span>
+                            <span className="location-text">
+                              {group.landOwnerLocation || "—"}
+                            </span>
                           </td>
                           <td>
-                            <span className="date-text">{formatDate(group.landOwnerDate || "")}</span>
+                            <span className="date-text">
+                              {formatDate(group.landOwnerDate || "")}
+                            </span>
                           </td>
                           <td>—</td>
                           <td>—</td>
@@ -612,27 +634,51 @@ const TechTenantRegistry: React.FC = () => {
                         {/* Child Rows (Tenants) */}
                         {expandedGroups.has(group.landOwnerId) &&
                           group.tenants.map((tenant, idx) => (
-                            <tr key={`${group.landOwnerId}-tenant-${idx}`} className="child-row">
+                            <tr
+                              key={`${group.landOwnerId}-tenant-${idx}`}
+                              className="child-row"
+                            >
                               <td>
-                                <span className="tenant-name">{tenant.tenantName}</span>
-                                <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "2px" }}>
+                                <span className="tenant-name">
+                                  {tenant.tenantName}
+                                </span>
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "#64748b",
+                                    marginTop: "2px",
+                                  }}
+                                >
                                   {tenant.tenantAddress}
                                 </div>
                               </td>
                               <td>
-                                <span className="tenant-ref">{tenant.referenceNumber}</span>
+                                <span className="tenant-ref">
+                                  {tenant.referenceNumber}
+                                </span>
                               </td>
                               <td>
-                                <span className="area-val">{parseFloat(tenant.parcelArea).toFixed(2)} Ha</span>
-                                <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                                <span className="area-val">
+                                  {parseFloat(tenant.parcelArea).toFixed(2)} Ha
+                                </span>
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "#64748b",
+                                  }}
+                                >
                                   Parcel: {tenant.landParcel}
                                 </div>
                               </td>
                               <td>
-                                <span className="location-text">{tenant.farmLocation}</span>
+                                <span className="location-text">
+                                  {tenant.farmLocation}
+                                </span>
                               </td>
                               <td>
-                                <span className="date-text">{formatDate(tenant.dateSubmitted)}</span>
+                                <span className="date-text">
+                                  {formatDate(tenant.dateSubmitted)}
+                                </span>
                               </td>
                               <td>
                                 <button
@@ -713,36 +759,68 @@ const TechTenantRegistry: React.FC = () => {
 
             <div className="tech-masterlist-print-modal-body">
               <p style={{ marginBottom: "16px" }}>
-                Tenant:{" "}
-                <strong>
-                  {statusChangeTarget.farmerName ?? "—"}
-                </strong>
+                Tenant: <strong>{statusChangeTarget.farmerName ?? "—"}</strong>
               </p>
 
               {statusModalLoading ? (
                 <p>Loading...</p>
               ) : (
                 <>
-                  <div className="tech-masterlist-print-filter-group" style={{ marginBottom: "16px" }}>
+                  <div
+                    className="tech-masterlist-print-filter-group"
+                    style={{ marginBottom: "16px" }}
+                  >
                     <label>Update Status</label>
-                    <div style={{ display: "flex", gap: "16px", marginTop: "8px" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                    <div
+                      style={{ display: "flex", gap: "16px", marginTop: "8px" }}
+                    >
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
                         <input
                           type="radio"
                           name="farmerStatus"
                           value="Active Farmer"
-                          checked={statusChangeTarget.newStatus === "Active Farmer"}
-                          onChange={(e) => setStatusChangeTarget(prev => prev ? { ...prev, newStatus: e.target.value } : null)}
+                          checked={
+                            statusChangeTarget.newStatus === "Active Farmer"
+                          }
+                          onChange={(e) =>
+                            setStatusChangeTarget((prev) =>
+                              prev
+                                ? { ...prev, newStatus: e.target.value }
+                                : null,
+                            )
+                          }
                         />
                         Active Farmer
                       </label>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
                         <input
                           type="radio"
                           name="farmerStatus"
                           value="Not Active"
-                          checked={statusChangeTarget.newStatus === "Not Active"}
-                          onChange={(e) => setStatusChangeTarget(prev => prev ? { ...prev, newStatus: e.target.value } : null)}
+                          checked={
+                            statusChangeTarget.newStatus === "Not Active"
+                          }
+                          onChange={(e) =>
+                            setStatusChangeTarget((prev) =>
+                              prev
+                                ? { ...prev, newStatus: e.target.value }
+                                : null,
+                            )
+                          }
                         />
                         Not Active Farmer
                       </label>
@@ -814,7 +892,9 @@ const TechTenantRegistry: React.FC = () => {
                 <h3>Personal Information</h3>
                 <div className="detail-row">
                   <span className="detail-label">Name:</span>
-                  <span className="detail-value">{selectedFarmer.farmerName}</span>
+                  <span className="detail-value">
+                    {selectedFarmer.farmerName}
+                  </span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Reference Number:</span>
@@ -890,7 +970,9 @@ const TechTenantRegistry: React.FC = () => {
                 <h3>Record Information</h3>
                 <div className="detail-row">
                   <span className="detail-label">Status:</span>
-                  <span className="detail-value">{selectedFarmer.recordStatus}</span>
+                  <span className="detail-value">
+                    {selectedFarmer.recordStatus}
+                  </span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Date Submitted:</span>

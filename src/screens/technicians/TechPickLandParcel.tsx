@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import "../../assets/css/technician css/PickLandStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
 import HomeIcon from "../../assets/images/home.png";
@@ -295,7 +295,6 @@ const TechPickLandParcel: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
           </nav>
           {currentUser && (
             <div className="sidebar-current-user">

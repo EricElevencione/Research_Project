@@ -6,7 +6,7 @@ import {
   SEED_FIELD_MAPS,
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminIncentives.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import AdminSidebar from "../../components/Layout/AdminSidebar";
 
 interface RegionalAllocation {

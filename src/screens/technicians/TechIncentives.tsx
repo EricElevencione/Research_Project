@@ -8,9 +8,9 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import "../../assets/css/jo css/JoIncentStyle.css";
 import "../../assets/css/technician css/TechIncentStyle.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import { supabase } from "../../supabase";
-import TechSidebar from "../../components/layout/TechSidebar";
+import TechSidebar from "../../components/Layout/TechSidebar";
 
 interface RegionalAllocation {
   id: number;
@@ -224,7 +224,7 @@ const TechIncentives: React.FC = () => {
       const sortedAllocations = allocationsWithCounts.sort((a, b) => {
         const dateA = new Date(a.allocation_date).getTime();
         const dateB = new Date(b.allocation_date).getTime();
-        
+
         if (dateB !== dateA) {
           return dateB - dateA;
         }
@@ -360,9 +360,10 @@ const TechIncentives: React.FC = () => {
   return (
     <div className="jo-incent-page-container">
       <div className="jo-incent-page">
-        <TechSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-
+        <TechSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         <div className="jo-incent-main-content">
           <div className="tech-incent-mobile-header">

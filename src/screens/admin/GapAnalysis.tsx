@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAllocations } from "../../api";
 import "../../assets/css/jo css/JoGapAnalysis.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import AdminSidebar from "../../components/Layout/AdminSidebar";
 import ApproveIcon from "../../assets/images/approve.png";
 

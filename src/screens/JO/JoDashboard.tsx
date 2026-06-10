@@ -392,421 +392,427 @@ const JoDashboard: React.FC = () => {
                     </div>
                   </div>
 
-              {/* Total Lessee/Tenant */}
-              <div className="kpi-card kpi-lessee">
-                <div className="kpi-icon-wrapper">
-                  <span className="kpi-icon">📋</span>
-                </div>
-                <div className="kpi-details">
-                  <span className="kpi-value">
-                    {(dashboardStats?.farmers.lessee || 0).toLocaleString()}
-                  </span>
-                  <span className="kpi-label">Total Lessee/Tenant</span>
-                </div>
-              </div>
-
-              {/* Total Active Farmers */}
-              <div className="kpi-card kpi-active">
-                <div className="kpi-icon-wrapper">
-                  <span className="kpi-icon">✅ </span>
-                </div>
-                <div className="kpi-details">
-                  <span className="kpi-value">
-                    {(dashboardStats?.farmers.active || 0).toLocaleString()}
-                  </span>
-                  <span className="kpi-label">Total Active Farmer</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Seasonal Content Section with unified background */}
-            <div className="seasonal-content-wrapper">
-              {/* Season Selector Row */}
-              <div className="kpi-season-row">
-                <div className="season-selector">
-                  <label htmlFor="season-select">📅 View Program:</label>
-                  <select
-                    id="season-select"
-                    value={selectedAllocationId}
-                    onChange={handleSeasonChange}
-                    className="season-dropdown"
-                  >
-                    {/* All allocations */}
-                    {availableSeasons.map((allocation) => {
-                      const dateStr = new Date(
-                        allocation.allocation_date,
-                      ).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      });
-                      const notesPreview = allocation.notes
-                        ? ` - ${allocation.notes.substring(0, 30)}${allocation.notes.length > 30 ? "..." : ""}`
-                        : "";
-                      const isCurrent =
-                        String(allocation.id) === currentAllocationId &&
-                        allocation.status === "active";
-                      return (
-                        <option
-                          key={allocation.id}
-                          value={String(allocation.id)}
-                        >
-                          {formatSeason(allocation.season)} ({dateStr})
-                          {notesPreview}
-                          {isCurrent ? " (Current)" : ""}
-                          {allocation.status === "completed" ? " ✓" : ""}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
-
-              {/* Bottom Row - Distribution Stats */}
-              <div className="kpi-cards-row kpi-bottom-row">
-                {/* Seeds Distributed */}
-                <div className="kpi-card kpi-seeds">
-                  <div className="kpi-icon-wrapper">
-                    <span className="kpi-icon">🌾</span>
-                  </div>
-                  <div className="kpi-details">
-                    <span className="kpi-value">
-                      {(
-                        dashboardStats?.distribution.seeds.distributed || 0
-                      ).toLocaleString()}{" "}
-                      kg
-                    </span>
-                    <span className="kpi-label">Seeds Distributed</span>
-                    <span className="kpi-trend positive">
-                      {dashboardStats?.distribution.seeds.progress || 0}% of
-                      goal
-                    </span>
-                  </div>
-                </div>
-
-                {/* Fertilizer Distributed */}
-                <div className="kpi-card kpi-fertilizer">
-                  <div className="kpi-icon-wrapper">
-                    <span className="kpi-icon">🧪</span>
-                  </div>
-                  <div className="kpi-details">
-                    <span className="kpi-value">
-                      {(
-                        dashboardStats?.distribution.fertilizer.distributed || 0
-                      ).toLocaleString()}{" "}
-                      bags
-                    </span>
-                    <span className="kpi-label">Fert. Distributed</span>
-                    <span className="kpi-trend positive">
-                      {dashboardStats?.distribution.fertilizer.progress || 0}%
-                      of goal
-                    </span>
-                  </div>
-                </div>
-
-                {/* Active Requests */}
-                <div className="kpi-card kpi-requests">
-                  <div className="kpi-icon-wrapper">
-                    <span className="kpi-icon">📝</span>
-                  </div>
-                  <div className="kpi-details">
-                    <span className="kpi-value">
-                      {dashboardStats?.requests.currentSeason.total || 0}
-                    </span>
-                    <span className="kpi-label">Active Requests</span>
-                    <span className="kpi-trend warning">
-                      {dashboardStats?.requests.currentSeason.pending || 0}{" "}
-                      pending
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Middle Section: Progress + Status */}
-              <div className="dashboard-middle-row">
-                {/* Distribution Progress Card */}
-                <div className="dashboard-card progress-card">
-                  <div className="card-header">
-                    <h3>Distribution Progress</h3>
-                    <span className="card-badge">
-                      {formatSeason(dashboardStats?.currentSeason || "")}
-                    </span>
-                  </div>
-                  <div className="card-content">
-                    <div className="overall-progress">
-                      <div className="progress-circle-container">
-                        <div className="progress-circle">
-                          <svg viewBox="0 0 100 100">
-                            <circle
-                              className="progress-bg"
-                              cx="50"
-                              cy="50"
-                              r="45"
-                            />
-                            <circle
-                              className="progress-fill-circle"
-                              cx="50"
-                              cy="50"
-                              r="45"
-                              style={{
-                                strokeDasharray: `${(dashboardStats?.distribution.overall?.progress || 0) * 2.83} 283`,
-                              }}
-                            />
-                          </svg>
-                          <div className="progress-text">
-                            <span className="progress-value">
-                              {dashboardStats?.distribution.overall?.progress ||
-                                0}
-                              %
-                            </span>
-                            <span className="progress-label">Complete</span>
-                          </div>
-                        </div>
-                      </div>
+                  {/* Total Lessee/Tenant */}
+                  <div className="kpi-card kpi-lessee">
+                    <div className="kpi-icon-wrapper">
+                      <span className="kpi-icon">📋</span>
                     </div>
-
-                    <div className="progress-details">
-                      <div className="progress-item">
-                        <div className="progress-item-header">
-                          <span className="item-label">🧪 Fertilizer</span>
-                          <span className="item-value">
-                            {dashboardStats?.distribution.fertilizer.progress ||
-                              0}
-                            %
-                          </span>
-                        </div>
-                        <div className="progress-bar-container">
-                          <div
-                            className="progress-bar fertilizer"
-                            style={{
-                              width: `${dashboardStats?.distribution.fertilizer.progress || 0}%`,
-                            }}
-                          ></div>
-                        </div>
-                        <span className="item-detail">
-                          {dashboardStats?.distribution.fertilizer.remaining?.toLocaleString() ||
-                            0}{" "}
-                          bags remaining
-                        </span>
-                      </div>
-
-                      <div className="progress-item">
-                        <div className="progress-item-header">
-                          <span className="item-label">🌾 Seeds</span>
-                          <span className="item-value">
-                            {dashboardStats?.distribution.seeds.progress || 0}%
-                          </span>
-                        </div>
-                        <div className="progress-bar-container">
-                          <div
-                            className="progress-bar seeds"
-                            style={{
-                              width: `${dashboardStats?.distribution.seeds.progress || 0}%`,
-                            }}
-                          ></div>
-                        </div>
-                        <span className="item-detail">
-                          {dashboardStats?.distribution.seeds.remaining?.toLocaleString() ||
-                            0}{" "}
-                          kg remaining
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="progress-footer">
-                      <span className="target-date">
-                        📅 Target:{" "}
-                        {dashboardStats?.seasonEndDate || "End of Season"}
+                    <div className="kpi-details">
+                      <span className="kpi-value">
+                        {(dashboardStats?.farmers.lessee || 0).toLocaleString()}
                       </span>
+                      <span className="kpi-label">Total Lessee/Tenant</span>
+                    </div>
+                  </div>
+
+                  {/* Total Active Farmers */}
+                  <div className="kpi-card kpi-active">
+                    <div className="kpi-icon-wrapper">
+                      <span className="kpi-icon">✅ </span>
+                    </div>
+                    <div className="kpi-details">
+                      <span className="kpi-value">
+                        {(dashboardStats?.farmers.active || 0).toLocaleString()}
+                      </span>
+                      <span className="kpi-label">Total Active Farmer</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Request Status Breakdown Card */}
-                <div className="dashboard-card status-card">
-                  <div className="card-header">
-                    <h3>Request Status Breakdown</h3>
-                    <span className="card-subtitle">
-                      {dashboardStats?.requests.currentSeason?.total || 0} total
-                      requests
-                    </span>
+                {/* Seasonal Content Section with unified background */}
+                <div className="seasonal-content-wrapper">
+                  {/* Season Selector Row */}
+                  <div className="kpi-season-row">
+                    <div className="season-selector">
+                      <label htmlFor="season-select">📅 View Program:</label>
+                      <select
+                        id="season-select"
+                        value={selectedAllocationId}
+                        onChange={handleSeasonChange}
+                        className="season-dropdown"
+                      >
+                        {/* All allocations */}
+                        {availableSeasons.map((allocation) => {
+                          const dateStr = new Date(
+                            allocation.allocation_date,
+                          ).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          });
+                          const notesPreview = allocation.notes
+                            ? ` - ${allocation.notes.substring(0, 30)}${allocation.notes.length > 30 ? "..." : ""}`
+                            : "";
+                          const isCurrent =
+                            String(allocation.id) === currentAllocationId &&
+                            allocation.status === "active";
+                          return (
+                            <option
+                              key={allocation.id}
+                              value={String(allocation.id)}
+                            >
+                              {formatSeason(allocation.season)} ({dateStr})
+                              {notesPreview}
+                              {isCurrent ? " (Current)" : ""}
+                              {allocation.status === "completed" ? " ✓" : ""}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
                   </div>
-                  <div className="card-content">
-                    {hasChartData ? (
-                      <>
-                        {/* Pie Chart Circle - Matching Distribution Progress Style */}
-                        <div className="status-circle-section">
-                          <div className="status-circle-container">
-                            <ResponsiveContainer width={120} height={120}>
-                              <PieChart>
-                                <Pie
-                                  data={pieChartData}
-                                  cx="50%"
-                                  cy="50%"
-                                  innerRadius={35}
-                                  outerRadius={55}
-                                  paddingAngle={2}
-                                  dataKey="value"
-                                >
-                                  {pieChartData.map((entry, index) => (
-                                    <Cell
-                                      key={`cell-${index}`}
-                                      fill={entry.color}
-                                    />
-                                  ))}
-                                </Pie>
-                                <Tooltip
-                                  formatter={(
-                                    value: number,
-                                    name: string,
-                                    props: { payload?: { count?: number } },
-                                  ) => [
-                                    `${value}% (${props.payload?.count || 0})`,
-                                    name,
-                                  ]}
-                                />
-                              </PieChart>
-                            </ResponsiveContainer>
-                            <div className="status-circle-label">
-                              <span className="status-total-value">
-                                {dashboardStats?.requests.currentSeason
-                                  ?.total || 0}
-                              </span>
-                              <span className="status-total-label">Total</span>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Status Progress Bars - Like Distribution Progress */}
-                        <div className="status-details">
-                          <div className="status-progress-item">
-                            <div className="status-progress-header">
-                              <span className="status-item-label">
-                                ✅ Approved
-                              </span>
-                              <span className="status-item-value">
-                                {dashboardStats?.requests.statusBreakdown
-                                  ?.approved || 0}
-                                %
-                              </span>
-                            </div>
-                            <div className="status-progress-bar-container">
-                              <div
-                                className="status-progress-bar approved"
-                                style={{
-                                  width: `${dashboardStats?.requests.statusBreakdown?.approved || 0}%`,
-                                }}
-                              ></div>
-                            </div>
-                            <span className="status-item-detail">
-                              {dashboardStats?.requests.currentSeason
-                                ?.approved || 0}{" "}
-                              requests
-                            </span>
-                          </div>
-
-                          <div className="status-progress-item">
-                            <div className="status-progress-header">
-                              <span className="status-item-label">
-                                ⏳ Pending
-                              </span>
-                              <span className="status-item-value">
-                                {dashboardStats?.requests.statusBreakdown
-                                  ?.pending || 0}
-                                %
-                              </span>
-                            </div>
-                            <div className="status-progress-bar-container">
-                              <div
-                                className="status-progress-bar pending"
-                                style={{
-                                  width: `${dashboardStats?.requests.statusBreakdown?.pending || 0}%`,
-                                }}
-                              ></div>
-                            </div>
-                            <span className="status-item-detail">
-                              {dashboardStats?.requests.currentSeason
-                                ?.pending || 0}{" "}
-                              requests
-                            </span>
-                          </div>
-
-                          <div className="status-progress-item">
-                            <div className="status-progress-header">
-                              <span className="status-item-label">
-                                ❌ Rejected
-                              </span>
-                              <span className="status-item-value">
-                                {dashboardStats?.requests.statusBreakdown
-                                  ?.rejected || 0}
-                                %
-                              </span>
-                            </div>
-                            <div className="status-progress-bar-container">
-                              <div
-                                className="status-progress-bar rejected"
-                                style={{
-                                  width: `${dashboardStats?.requests.statusBreakdown?.rejected || 0}%`,
-                                }}
-                              ></div>
-                            </div>
-                            <span className="status-item-detail">
-                              {dashboardStats?.requests.currentSeason
-                                ?.rejected || 0}{" "}
-                              requests
-                            </span>
-                          </div>
-
-                          <div className="status-progress-item">
-                            <div className="status-progress-header">
-                              <span className="status-item-label">
-                                🚚 Distributed
-                              </span>
-                              <span className="status-item-value">
-                                {dashboardStats?.requests.statusBreakdown
-                                  ?.distributed || 0}
-                                %
-                              </span>
-                            </div>
-                            <div className="status-progress-bar-container">
-                              <div
-                                className="status-progress-bar distributed"
-                                style={{
-                                  width: `${dashboardStats?.requests.statusBreakdown?.distributed || 0}%`,
-                                }}
-                              ></div>
-                            </div>
-                            <span className="status-item-detail">
-                              {dashboardStats?.requests.currentSeason
-                                ?.distributed || 0}{" "}
-                              requests
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="no-chart-data">
-                        <span className="no-data-icon">📊</span>
-                        <p>No request data available</p>
-                        <span className="no-data-hint">
-                          Add farmer requests through
-                          <br />
-                          Subsidy → Create Allocation → Add Farmer Request
+                  {/* Bottom Row - Distribution Stats */}
+                  <div className="kpi-cards-row kpi-bottom-row">
+                    {/* Seeds Distributed */}
+                    <div className="kpi-card kpi-seeds">
+                      <div className="kpi-icon-wrapper">
+                        <span className="kpi-icon">🌾</span>
+                      </div>
+                      <div className="kpi-details">
+                        <span className="kpi-value">
+                          {(
+                            dashboardStats?.distribution.seeds.distributed || 0
+                          ).toLocaleString()}{" "}
+                          kg
+                        </span>
+                        <span className="kpi-label">Seeds Distributed</span>
+                        <span className="kpi-trend positive">
+                          {dashboardStats?.distribution.seeds.progress || 0}% of
+                          goal
                         </span>
                       </div>
-                    )}
+                    </div>
+
+                    {/* Fertilizer Distributed */}
+                    <div className="kpi-card kpi-fertilizer">
+                      <div className="kpi-icon-wrapper">
+                        <span className="kpi-icon">🧪</span>
+                      </div>
+                      <div className="kpi-details">
+                        <span className="kpi-value">
+                          {(
+                            dashboardStats?.distribution.fertilizer
+                              .distributed || 0
+                          ).toLocaleString()}{" "}
+                          bags
+                        </span>
+                        <span className="kpi-label">Fert. Distributed</span>
+                        <span className="kpi-trend positive">
+                          {dashboardStats?.distribution.fertilizer.progress ||
+                            0}
+                          % of goal
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Active Requests */}
+                    <div className="kpi-card kpi-requests">
+                      <div className="kpi-icon-wrapper">
+                        <span className="kpi-icon">📝</span>
+                      </div>
+                      <div className="kpi-details">
+                        <span className="kpi-value">
+                          {dashboardStats?.requests.currentSeason.total || 0}
+                        </span>
+                        <span className="kpi-label">Active Requests</span>
+                        <span className="kpi-trend warning">
+                          {dashboardStats?.requests.currentSeason.pending || 0}{" "}
+                          pending
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle Section: Progress + Status */}
+                  <div className="dashboard-middle-row">
+                    {/* Distribution Progress Card */}
+                    <div className="dashboard-card progress-card">
+                      <div className="card-header">
+                        <h3>Distribution Progress</h3>
+                        <span className="card-badge">
+                          {formatSeason(dashboardStats?.currentSeason || "")}
+                        </span>
+                      </div>
+                      <div className="card-content">
+                        <div className="overall-progress">
+                          <div className="progress-circle-container">
+                            <div className="progress-circle">
+                              <svg viewBox="0 0 100 100">
+                                <circle
+                                  className="progress-bg"
+                                  cx="50"
+                                  cy="50"
+                                  r="45"
+                                />
+                                <circle
+                                  className="progress-fill-circle"
+                                  cx="50"
+                                  cy="50"
+                                  r="45"
+                                  style={{
+                                    strokeDasharray: `${(dashboardStats?.distribution.overall?.progress || 0) * 2.83} 283`,
+                                  }}
+                                />
+                              </svg>
+                              <div className="progress-text">
+                                <span className="progress-value">
+                                  {dashboardStats?.distribution.overall
+                                    ?.progress || 0}
+                                  %
+                                </span>
+                                <span className="progress-label">Complete</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="progress-details">
+                          <div className="progress-item">
+                            <div className="progress-item-header">
+                              <span className="item-label">🧪 Fertilizer</span>
+                              <span className="item-value">
+                                {dashboardStats?.distribution.fertilizer
+                                  .progress || 0}
+                                %
+                              </span>
+                            </div>
+                            <div className="progress-bar-container">
+                              <div
+                                className="progress-bar fertilizer"
+                                style={{
+                                  width: `${dashboardStats?.distribution.fertilizer.progress || 0}%`,
+                                }}
+                              ></div>
+                            </div>
+                            <span className="item-detail">
+                              {dashboardStats?.distribution.fertilizer.remaining?.toLocaleString() ||
+                                0}{" "}
+                              bags remaining
+                            </span>
+                          </div>
+
+                          <div className="progress-item">
+                            <div className="progress-item-header">
+                              <span className="item-label">🌾 Seeds</span>
+                              <span className="item-value">
+                                {dashboardStats?.distribution.seeds.progress ||
+                                  0}
+                                %
+                              </span>
+                            </div>
+                            <div className="progress-bar-container">
+                              <div
+                                className="progress-bar seeds"
+                                style={{
+                                  width: `${dashboardStats?.distribution.seeds.progress || 0}%`,
+                                }}
+                              ></div>
+                            </div>
+                            <span className="item-detail">
+                              {dashboardStats?.distribution.seeds.remaining?.toLocaleString() ||
+                                0}{" "}
+                              kg remaining
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="progress-footer">
+                          <span className="target-date">
+                            📅 Target:{" "}
+                            {dashboardStats?.seasonEndDate || "End of Season"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Request Status Breakdown Card */}
+                    <div className="dashboard-card status-card">
+                      <div className="card-header">
+                        <h3>Request Status Breakdown</h3>
+                        <span className="card-subtitle">
+                          {dashboardStats?.requests.currentSeason?.total || 0}{" "}
+                          total requests
+                        </span>
+                      </div>
+                      <div className="card-content">
+                        {hasChartData ? (
+                          <>
+                            {/* Pie Chart Circle - Matching Distribution Progress Style */}
+                            <div className="status-circle-section">
+                              <div className="status-circle-container">
+                                <ResponsiveContainer width={120} height={120}>
+                                  <PieChart>
+                                    <Pie
+                                      data={pieChartData}
+                                      cx="50%"
+                                      cy="50%"
+                                      innerRadius={35}
+                                      outerRadius={55}
+                                      paddingAngle={2}
+                                      dataKey="value"
+                                    >
+                                      {pieChartData.map((entry, index) => (
+                                        <Cell
+                                          key={`cell-${index}`}
+                                          fill={entry.color}
+                                        />
+                                      ))}
+                                    </Pie>
+                                    <Tooltip
+                                      formatter={(
+                                        value: number,
+                                        name: string,
+                                        props: { payload?: { count?: number } },
+                                      ) => [
+                                        `${value}% (${props.payload?.count || 0})`,
+                                        name,
+                                      ]}
+                                    />
+                                  </PieChart>
+                                </ResponsiveContainer>
+                                <div className="status-circle-label">
+                                  <span className="status-total-value">
+                                    {dashboardStats?.requests.currentSeason
+                                      ?.total || 0}
+                                  </span>
+                                  <span className="status-total-label">
+                                    Total
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Status Progress Bars - Like Distribution Progress */}
+                            <div className="status-details">
+                              <div className="status-progress-item">
+                                <div className="status-progress-header">
+                                  <span className="status-item-label">
+                                    ✅ Approved
+                                  </span>
+                                  <span className="status-item-value">
+                                    {dashboardStats?.requests.statusBreakdown
+                                      ?.approved || 0}
+                                    %
+                                  </span>
+                                </div>
+                                <div className="status-progress-bar-container">
+                                  <div
+                                    className="status-progress-bar approved"
+                                    style={{
+                                      width: `${dashboardStats?.requests.statusBreakdown?.approved || 0}%`,
+                                    }}
+                                  ></div>
+                                </div>
+                                <span className="status-item-detail">
+                                  {dashboardStats?.requests.currentSeason
+                                    ?.approved || 0}{" "}
+                                  requests
+                                </span>
+                              </div>
+
+                              <div className="status-progress-item">
+                                <div className="status-progress-header">
+                                  <span className="status-item-label">
+                                    ⏳ Pending
+                                  </span>
+                                  <span className="status-item-value">
+                                    {dashboardStats?.requests.statusBreakdown
+                                      ?.pending || 0}
+                                    %
+                                  </span>
+                                </div>
+                                <div className="status-progress-bar-container">
+                                  <div
+                                    className="status-progress-bar pending"
+                                    style={{
+                                      width: `${dashboardStats?.requests.statusBreakdown?.pending || 0}%`,
+                                    }}
+                                  ></div>
+                                </div>
+                                <span className="status-item-detail">
+                                  {dashboardStats?.requests.currentSeason
+                                    ?.pending || 0}{" "}
+                                  requests
+                                </span>
+                              </div>
+
+                              <div className="status-progress-item">
+                                <div className="status-progress-header">
+                                  <span className="status-item-label">
+                                    ❌ Rejected
+                                  </span>
+                                  <span className="status-item-value">
+                                    {dashboardStats?.requests.statusBreakdown
+                                      ?.rejected || 0}
+                                    %
+                                  </span>
+                                </div>
+                                <div className="status-progress-bar-container">
+                                  <div
+                                    className="status-progress-bar rejected"
+                                    style={{
+                                      width: `${dashboardStats?.requests.statusBreakdown?.rejected || 0}%`,
+                                    }}
+                                  ></div>
+                                </div>
+                                <span className="status-item-detail">
+                                  {dashboardStats?.requests.currentSeason
+                                    ?.rejected || 0}{" "}
+                                  requests
+                                </span>
+                              </div>
+
+                              <div className="status-progress-item">
+                                <div className="status-progress-header">
+                                  <span className="status-item-label">
+                                    🚚 Distributed
+                                  </span>
+                                  <span className="status-item-value">
+                                    {dashboardStats?.requests.statusBreakdown
+                                      ?.distributed || 0}
+                                    %
+                                  </span>
+                                </div>
+                                <div className="status-progress-bar-container">
+                                  <div
+                                    className="status-progress-bar distributed"
+                                    style={{
+                                      width: `${dashboardStats?.requests.statusBreakdown?.distributed || 0}%`,
+                                    }}
+                                  ></div>
+                                </div>
+                                <span className="status-item-detail">
+                                  {dashboardStats?.requests.currentSeason
+                                    ?.distributed || 0}{" "}
+                                  requests
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="no-chart-data">
+                            <span className="no-data-icon">📊</span>
+                            <p>No request data available</p>
+                            <span className="no-data-hint">
+                              Add farmer requests through
+                              <br />
+                              Subsidy → Create Allocation → Add Farmer Request
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-          {/* Footer */}
-          <div className="dashboard-footer">
-            <p>
-              © 2026 Agricultural Distribution Management System • Municipal
-              Agriculture Office
-            </p>
-          </div>
+              {/* Footer */}
+              <div className="dashboard-footer">
+                <p>
+                  © 2026 Agricultural Distribution Management System • Municipal
+                  Agriculture Office
+                </p>
+              </div>
             </>
           )}
         </div>

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import "../../assets/css/technician css/TechnicianDashboardStyle.css";
 import FarmlandMap from "../../components/Map/FarmlandMap";
 import { getTechDashboardData } from "../../api";
 import { supabase } from "../../supabase";
-import TechSidebar from "../../components/layout/TechSidebar";
+import TechSidebar from "../../components/Layout/TechSidebar";
 
 interface BarangayRow {
   barangay: string;
@@ -93,9 +93,10 @@ const TechnicianDashboard: React.FC = () => {
   return (
     <div className="tech-dashboard-page-container">
       <div className="tech-dashboard-page">
-        <TechSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-
+        <TechSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         {/* Main content */}
         <div className="tech-dashboard-main-content">

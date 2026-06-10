@@ -8,7 +8,7 @@ import {
 import { printRsbsaFormById } from "../../utils/rsbsaPrint";
 import "../../assets/css/admin css/RSBSAStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import Analytics from "./Analytics";
 
 import AdminSidebar from "../../components/Layout/AdminSidebar";

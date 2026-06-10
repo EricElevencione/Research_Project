@@ -193,7 +193,6 @@ const JoDistribution: React.FC = () => {
     farmers: { filled: "#f59e0b", empty: "#e5e7eb" },
   };
 
-
   useEffect(() => {
     fetchAllocations();
   }, []);
@@ -668,8 +667,9 @@ const JoDistribution: React.FC = () => {
       ...Object.fromEntries(
         EDIT_ALLOCATION_NUMERIC_KEYS.map((key) => [
           key,
-          Number((currentAllocation as Record<string, unknown>)[key as string]) ||
-            0,
+          Number(
+            (currentAllocation as Record<string, unknown>)[key as string],
+          ) || 0,
         ]),
       ),
     };
@@ -742,9 +742,7 @@ const JoDistribution: React.FC = () => {
     setEditFormData({
       ...editFormData,
       [name]:
-        name.includes("bags") ||
-        name.includes("kg") ||
-        name.includes("liters")
+        name.includes("bags") || name.includes("kg") || name.includes("liters")
           ? parseFloat(value) || 0
           : value,
     });
@@ -786,7 +784,7 @@ const JoDistribution: React.FC = () => {
   return (
     <div className="distribution-container has-mobile-sidebar">
       {/* Sidebar */}
-        <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* Main Content */}
       <div className="main-content distribution-main-content">
@@ -795,7 +793,20 @@ const JoDistribution: React.FC = () => {
             className="tech-incent-hamburger"
             onClick={() => setSidebarOpen((prev) => !prev)}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
           </button>
           <div className="tech-incent-mobile-title">JO Distribution</div>
         </div>
@@ -1299,13 +1310,14 @@ const JoDistribution: React.FC = () => {
                                       cursor: "pointer",
                                     }}
                                   >
-                                    {Array.from({ length: 31 }, (_, i) => i + 1).map(
-                                      (day) => (
-                                        <option key={day} value={day}>
-                                          {day}
-                                        </option>
-                                      ),
-                                    )}
+                                    {Array.from(
+                                      { length: 31 },
+                                      (_, i) => i + 1,
+                                    ).map((day) => (
+                                      <option key={day} value={day}>
+                                        {day}
+                                      </option>
+                                    ))}
                                   </select>
 
                                   {/* Year Dropdown */}
@@ -1379,27 +1391,29 @@ const JoDistribution: React.FC = () => {
                                 <option value="" disabled>
                                   Select Fertilizer to Add...
                                 </option>
-                                {(["Solid", "Liquid"] as const).map((category) => (
-                                  <optgroup
-                                    key={category}
-                                    label={`${category} Fertilizers`}
-                                  >
-                                    {EDIT_FERTILIZER_FIELDS.filter(
-                                      (f) =>
-                                        f.category === category &&
-                                        !visibleEditFertilizerFields.some(
-                                          (vf) => vf.key === f.key,
-                                        ),
-                                    ).map((f) => (
-                                      <option
-                                        key={f.key as string}
-                                        value={f.key as string}
-                                      >
-                                        {f.label}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                ))}
+                                {(["Solid", "Liquid"] as const).map(
+                                  (category) => (
+                                    <optgroup
+                                      key={category}
+                                      label={`${category} Fertilizers`}
+                                    >
+                                      {EDIT_FERTILIZER_FIELDS.filter(
+                                        (f) =>
+                                          f.category === category &&
+                                          !visibleEditFertilizerFields.some(
+                                            (vf) => vf.key === f.key,
+                                          ),
+                                      ).map((f) => (
+                                        <option
+                                          key={f.key as string}
+                                          value={f.key as string}
+                                        >
+                                          {f.label}
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  ),
+                                )}
                               </select>
                             </div>
                             {visibleEditFertilizerFields.length === 0 ? (
@@ -1410,8 +1424,8 @@ const JoDistribution: React.FC = () => {
                                   fontSize: "14px",
                                 }}
                               >
-                                No fertilizer inputs in this allocation. Add rows
-                                from the dropdown above.
+                                No fertilizer inputs in this allocation. Add
+                                rows from the dropdown above.
                               </p>
                             ) : (
                               (["Solid", "Liquid"] as const).map((category) => {
@@ -1559,7 +1573,10 @@ const JoDistribution: React.FC = () => {
                                   Select Seed to Add...
                                 </option>
                                 {["Hybrid", "Inbred"].map((category) => (
-                                  <optgroup key={category} label={`${category} Seeds`}>
+                                  <optgroup
+                                    key={category}
+                                    label={`${category} Seeds`}
+                                  >
                                     {EDIT_SEED_FIELDS.filter(
                                       (s) =>
                                         s.category === category &&
@@ -1567,7 +1584,10 @@ const JoDistribution: React.FC = () => {
                                           (vs) => vs.key === s.key,
                                         ),
                                     ).map((s) => (
-                                      <option key={s.key as string} value={s.key as string}>
+                                      <option
+                                        key={s.key as string}
+                                        value={s.key as string}
+                                      >
                                         {s.label}
                                       </option>
                                     ))}
@@ -1587,106 +1607,109 @@ const JoDistribution: React.FC = () => {
                                 the dropdown above.
                               </p>
                             ) : (
-                              (["Hybrid", "Inbred"] as const).map((category) => {
-                                const categoryFields = visibleEditSeedFields.filter(
-                                  (field) => field.category === category,
-                                );
+                              (["Hybrid", "Inbred"] as const).map(
+                                (category) => {
+                                  const categoryFields =
+                                    visibleEditSeedFields.filter(
+                                      (field) => field.category === category,
+                                    );
 
-                                if (categoryFields.length === 0) return null;
+                                  if (categoryFields.length === 0) return null;
 
-                                return (
-                                  <div
-                                    key={category}
-                                    style={{ marginBottom: "16px" }}
-                                  >
-                                    <h5
-                                      style={{
-                                        margin: "0 0 8px 0",
-                                        fontSize: "14px",
-                                        fontWeight: 600,
-                                        color: "#374151",
-                                      }}
-                                    >
-                                      {category} Seeds
-                                    </h5>
+                                  return (
                                     <div
-                                      style={{
-                                        display: "grid",
-                                        gridTemplateColumns: "repeat(2, 1fr)",
-                                        gap: "12px",
-                                      }}
+                                      key={category}
+                                      style={{ marginBottom: "16px" }}
                                     >
-                                      {categoryFields.map((field) => (
-                                        <div key={field.key as string}>
-                                          <label
-                                            style={{
-                                              display: "block",
-                                              marginBottom: "6px",
-                                              fontSize: "14px",
-                                            }}
-                                          >
-                                            {field.label}
-                                          </label>
-                                          <div
-                                            style={{
-                                              display: "flex",
-                                              gap: "8px",
-                                              alignItems: "center",
-                                            }}
-                                          >
-                                            <input
-                                              type="number"
-                                              name={field.key as string}
-                                              value={
-                                                Number(
-                                                  (editFormData as any)[
-                                                    field.key
-                                                  ],
-                                                ) || 0
-                                              }
-                                              onChange={handleEditInputChange}
-                                              min="0"
-                                              step="0.01"
+                                      <h5
+                                        style={{
+                                          margin: "0 0 8px 0",
+                                          fontSize: "14px",
+                                          fontWeight: 600,
+                                          color: "#374151",
+                                        }}
+                                      >
+                                        {category} Seeds
+                                      </h5>
+                                      <div
+                                        style={{
+                                          display: "grid",
+                                          gridTemplateColumns: "repeat(2, 1fr)",
+                                          gap: "12px",
+                                        }}
+                                      >
+                                        {categoryFields.map((field) => (
+                                          <div key={field.key as string}>
+                                            <label
                                               style={{
-                                                flex: 1,
-                                                padding: "8px 12px",
-                                                border: "1px solid #d1d5db",
-                                                borderRadius: "6px",
+                                                display: "block",
+                                                marginBottom: "6px",
                                                 fontSize: "14px",
                                               }}
-                                            />
-                                            <button
-                                              type="button"
-                                              aria-label={`Remove ${field.label}`}
-                                              onClick={() =>
-                                                removeAllocationLineItem(
-                                                  field.key as string,
-                                                )
-                                              }
-                                              title="Remove (sets amount to 0)"
+                                            >
+                                              {field.label}
+                                            </label>
+                                            <div
                                               style={{
-                                                flexShrink: 0,
-                                                padding: "0 10px",
-                                                alignSelf: "stretch",
-                                                minHeight: "38px",
-                                                background: "#fee2e2",
-                                                color: "#ef4444",
-                                                border: "none",
-                                                borderRadius: "4px",
-                                                cursor: "pointer",
-                                                fontSize: "16px",
-                                                lineHeight: 1,
+                                                display: "flex",
+                                                gap: "8px",
+                                                alignItems: "center",
                                               }}
                                             >
-                                              ✕
-                                            </button>
+                                              <input
+                                                type="number"
+                                                name={field.key as string}
+                                                value={
+                                                  Number(
+                                                    (editFormData as any)[
+                                                      field.key
+                                                    ],
+                                                  ) || 0
+                                                }
+                                                onChange={handleEditInputChange}
+                                                min="0"
+                                                step="0.01"
+                                                style={{
+                                                  flex: 1,
+                                                  padding: "8px 12px",
+                                                  border: "1px solid #d1d5db",
+                                                  borderRadius: "6px",
+                                                  fontSize: "14px",
+                                                }}
+                                              />
+                                              <button
+                                                type="button"
+                                                aria-label={`Remove ${field.label}`}
+                                                onClick={() =>
+                                                  removeAllocationLineItem(
+                                                    field.key as string,
+                                                  )
+                                                }
+                                                title="Remove (sets amount to 0)"
+                                                style={{
+                                                  flexShrink: 0,
+                                                  padding: "0 10px",
+                                                  alignSelf: "stretch",
+                                                  minHeight: "38px",
+                                                  background: "#fee2e2",
+                                                  color: "#ef4444",
+                                                  border: "none",
+                                                  borderRadius: "4px",
+                                                  cursor: "pointer",
+                                                  fontSize: "16px",
+                                                  lineHeight: 1,
+                                                }}
+                                              >
+                                                ✕
+                                              </button>
+                                            </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                );
-                              })
+                                  );
+                                },
+                              )
                             )}
                           </div>
 

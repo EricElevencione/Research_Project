@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getAllocationById, getFarmerRequests } from "../../api";
 import "../../assets/css/jo css/JoViewAllocationStyle.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import LogoImage from "../../assets/images/Logo.png";
 import HomeIcon from "../../assets/images/home.png";
 import RSBSAIcon from "../../assets/images/rsbsa.png";
@@ -437,10 +437,9 @@ const TechViewAllocation: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{
-      firstName: string;
-      lastName: string;
-    } | null>(null);
-  
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -630,7 +629,6 @@ const TechViewAllocation: React.FC = () => {
               </span>
               <span className="nav-text">Logout</span>
             </button>
-
           </nav>
           {currentUser && (
             <div className="sidebar-current-user">
@@ -669,9 +667,7 @@ const TechViewAllocation: React.FC = () => {
               <h2 className="jo-view-alloc-title">
                 {formatSeasonName(allocation.season)}
               </h2>
-              <p className="jo-view-alloc-subtitle">
-                Regional Program Details
-              </p>
+              <p className="jo-view-alloc-subtitle">Regional Program Details</p>
             </div>
           </div>
 

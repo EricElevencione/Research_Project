@@ -8,9 +8,9 @@ import {
 } from "../../api";
 import "../../assets/css/technician css/TechRsbsaStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
-import "../../components/layout/sidebarStyle.css";
+import "../../components/Layout/sidebarStyle.css";
 import { supabase } from "../../supabase";
-import TechSidebar from "../../components/layout/TechSidebar";
+import TechSidebar from "../../components/Layout/TechSidebar";
 
 interface RSBSARecord {
   id: string;
@@ -639,8 +639,10 @@ const TechRsbsa: React.FC = () => {
   return (
     <div className="tech-rsbsa-page-container">
       <div className="tech-rsbsa-page">
-        <TechSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
+        <TechSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
 
         {/* Main content starts here */}
         <div className="tech-rsbsa-main-content">
