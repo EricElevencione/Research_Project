@@ -1202,6 +1202,36 @@
 }
 
 .jo-masterlist-tenant-subrow > td {
+
+/* ── Flag Warning Styles ──────────────────── */
+.jo-flag-warning-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #b45309;        /* amber-700 */
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* "Pending Review" badge variant */
+.jo-status-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+/* "Inactive – No Land" badge variant */
+.jo-status-badge--no-land {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* Flagged row subtle highlight */
+tr.jo-row--flagged td {
+  background: rgba(251, 191, 36, 0.04);
+}
   padding: 0 !important;
   border-bottom: 2px solid #c4b5fd !important;
 }
@@ -1328,3 +1358,34 @@
   color: #6b7280;
   font-size: 11px;
 }
+
+/* Flag warning sub-text */
+.jo-flag-warning-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #b45309;        /* amber-700 */
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* "Pending Review" badge variant */
+.jo-status-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+/* "Inactive – No Land" badge variant */
+.jo-status-badge--no-land {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* Flagged row subtle highlight */
+tr.jo-row--flagged td {
+  background: rgba(251, 191, 36, 0.04) !important;
+}
+

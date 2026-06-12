@@ -1,3 +1,4 @@
+import { supabase } from "../../supabase";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -23,6 +24,7 @@ import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserFor
 //   • Lessees
 //   • Owner-farmers (registered owners who farm their own land)
 // Excludes "No Parcels" records — those belong in the Masterlist queue.
+// CHANGE: No Parcels records are now shown with a ⚠️ flag instead of being hidden.
 // Purpose:
 //   • Find and filter farmers by role, barangay, and farming status
 //   • See who is Farming vs not (X/Y parcels farming format)
@@ -49,6 +51,8 @@ interface RSBSARecord {
   farmingStatus?: string;
   archivedAt?: string | null;
   archiveReason?: string | null;
+  needsPendingReview?: boolean;
+  hasNoParcels?: boolean;
   ownershipType?: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -488,6 +492,26 @@ const JoFarmerRegistry: React.FC = () => {
     fetchRSBSARecords();
   }, []);
 
+  // Fire-and-forget: write-once status update for pending-review farmers.
+  // Only runs if status is not already pending/inactive/archived.
+  useEffect(() => {
+    if (rsbsaRecords.length === 0) return;
+    const toFlag = rsbsaRecords.filter((r) => {
+      if (!r.needsPendingReview) return false;
+      const s = (r.status || "").toLowerCase().trim();
+      return s !== "pending" && s !== "inactive" && s !== "archived";
+    });
+    if (toFlag.length === 0) return;
+    const ids = toFlag.map((r) => r.id);
+    supabase
+      .from("rsbsa_submission")
+      .update({ status: "inactive" })
+      .in("id", ids)
+      .then(({ error }) => {
+        if (error) console.error("No-land flag status update error:", error);
+      });
+  }, [rsbsaRecords]);
+
   const fetchRSBSARecords = async () => {
     try {
       const response = await getRsbsaSubmissions();
@@ -500,7 +524,7 @@ const JoFarmerRegistry: React.FC = () => {
         return Number.isFinite(parsed) ? parsed : null;
       };
 
-      const formattedRecords: RSBSARecord[] = allData.map(
+      let formattedRecords: RSBSARecord[] = allData.map(
         (item: any, idx: number) => {
           const referenceNumber = String(
             item.referenceNumber ?? `RSBSA-${idx + 1}`,
@@ -622,9 +646,45 @@ const JoFarmerRegistry: React.FC = () => {
               item._raw?.archive_reason ??
               null,
             ownershipType: item.ownershipType,
+            hasNoParcels:
+              (item.status || "").toLowerCase().trim() === "no parcels",
           };
         },
       );
+
+      // Batch query land_history_association for tenant/lessee transfer detection.
+      // A record is flagged needsPendingReview if it has a history entry where
+      // is_current = false and change_type contains 'transfer', meaning their
+      // parcel's ownership has changed hands.
+      // NOTE: column is 'farmer_id' per schema — update if it differs.
+      const tenantLesseeIds = formattedRecords
+        .filter((r) => {
+          const ot = r.ownershipType;
+          return (
+            ot?.tenant === true ||
+            ot?.lessee === true ||
+            ot?.tenantLessee === true
+          );
+        })
+        .map((r) => r.id);
+
+      if (tenantLesseeIds.length > 0) {
+        const { data: transferHistory } = await supabase
+          .from("land_history_association")
+          .select("farmer_id")
+          .in("farmer_id", tenantLesseeIds)
+          .eq("is_current", false)
+          .ilike("change_type", "%transfer%");
+
+        const transferredIds = new Set(
+          (transferHistory || []).map((h: any) => String(h.farmer_id)),
+        );
+
+        formattedRecords = formattedRecords.map((r) => ({
+          ...r,
+          needsPendingReview: transferredIds.has(r.id),
+        }));
+      }
 
       setRsbsaRecords(formattedRecords);
       setLoading(false);
@@ -685,8 +745,6 @@ const JoFarmerRegistry: React.FC = () => {
     .filter((record) => {
       const normalizedStatus = (record.status || "").toLowerCase().trim();
 
-      if (normalizedStatus === "no parcels") return false;
-
       const activeStatuses = new Set([
         "submitted",
         "approved",
@@ -723,6 +781,10 @@ const JoFarmerRegistry: React.FC = () => {
         matchesRole = activeStatuses.has(normalizedStatus);
       } else if (selectedRole === "notActive") {
         matchesRole = notActiveStatuses.has(normalizedStatus);
+      } else if (selectedRole === "pendingReview") {
+        matchesRole = record.needsPendingReview === true;
+      } else if (selectedRole === "noParcels") {
+        matchesRole = record.hasNoParcels === true;
       }
 
       if (!matchesRole) return false;
@@ -746,6 +808,11 @@ const JoFarmerRegistry: React.FC = () => {
       );
     })
     .sort((a, b) => {
+      // Flagged rows always sink to the bottom regardless of other sort keys
+      const aFlag = a.needsPendingReview || a.hasNoParcels ? 1 : 0;
+      const bFlag = b.needsPendingReview || b.hasNoParcels ? 1 : 0;
+      if (aFlag !== bFlag) return aFlag - bFlag;
+
       const parseAreaValue = (value: string) => {
         const tokens = String(value || "").match(/-?\d+(?:\.\d+)?/g);
         if (!tokens || tokens.length === 0) return 0;
@@ -790,9 +857,7 @@ const JoFarmerRegistry: React.FC = () => {
     });
 
   const farmerCounts = useMemo(() => {
-    const base = rsbsaRecords.filter(
-      (r) => (r.status || "").toLowerCase().trim() !== "no parcels",
-    );
+    const base = rsbsaRecords;
     const activeStatuses = new Set([
       "submitted",
       "approved",
@@ -809,7 +874,10 @@ const JoFarmerRegistry: React.FC = () => {
       const f = getOwnershipFlags(r);
       return f.category === "registeredOwner" || f.owner;
     }).length;
-    return { total, active, tenants, lessees, owners };
+    const noParcels = base.filter(
+      (r) => (r.status || "").toLowerCase().trim() === "no parcels",
+    ).length;
+    return { total, active, tenants, lessees, owners, noParcels };
   }, [rsbsaRecords]);
 
   // CHANGE: Column count updated to 9 — checkbox + Farmer, Barangay, Role,
@@ -1618,6 +1686,22 @@ const JoFarmerRegistry: React.FC = () => {
                   <span className="jo-farmer-card-label">Owner-farmers</span>
                 </div>
               </div>
+              {farmerCounts.noParcels > 0 && (
+                <div
+                  className="jo-farmer-status-card jo-farmer-card-inactive"
+                  style={{ borderLeft: "3px solid #d97706", cursor: "pointer" }}
+                  onClick={() => setSelectedRole("noParcels")}
+                  title="Click to filter No Parcels records"
+                >
+                  <div className="jo-farmer-card-icon">⚠️</div>
+                  <div className="jo-farmer-card-info">
+                    <span className="jo-farmer-card-count">
+                      {farmerCounts.noParcels}
+                    </span>
+                    <span className="jo-farmer-card-label">No Parcels</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1645,6 +1729,7 @@ const JoFarmerRegistry: React.FC = () => {
                   <option value="owner">Owner-farmer</option>
                   <option value="active">Active</option>
                   <option value="notActive">Not Active</option>
+                  <option value="noParcels">No Parcels</option>
                 </select>
               </div>
 
@@ -1844,7 +1929,7 @@ const JoFarmerRegistry: React.FC = () => {
                     filteredRecords.map((record) => (
                       <tr
                         key={record.id}
-                        className="jo-farmer-table-row"
+                        className={`jo-farmer-table-row${record.needsPendingReview || record.hasNoParcels ? " jo-row--flagged" : ""}`}
                         onClick={() => fetchFarmerDetails(record.id, record)}
                       >
                         <td
@@ -1873,6 +1958,37 @@ const JoFarmerRegistry: React.FC = () => {
                               <span className="jo-farmer-farmer-ref">
                                 {record.referenceNumber}
                               </span>
+                              {record.needsPendingReview && (
+                                <span
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                    fontSize: 11,
+                                    color: "#b45309",
+                                    marginTop: 2,
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  ⚠️ Land transferred — Pending JO Review
+                                </span>
+                              )}
+                              {record.hasNoParcels &&
+                                !record.needsPendingReview && (
+                                  <span
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 4,
+                                      fontSize: 11,
+                                      color: "#b45309",
+                                      marginTop: 2,
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    ⚠️ No parcels on record
+                                  </span>
+                                )}
                             </div>
                           </div>
                         </td>
@@ -1919,8 +2035,39 @@ const JoFarmerRegistry: React.FC = () => {
 
                         {/* Record status */}
                         <td>
-                          <span className="jo-farmer-record-status">
-                            {formatRecordStatus(record.status)}
+                          <span
+                            className="jo-farmer-record-status"
+                            style={
+                              record.hasNoParcels
+                                ? {
+                                    background: "#fee2e2",
+                                    color: "#991b1b",
+                                    border: "1px solid #fca5a5",
+                                    borderRadius: 4,
+                                    padding: "2px 8px",
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    whiteSpace: "nowrap",
+                                  }
+                                : record.needsPendingReview
+                                  ? {
+                                      background: "#fef3c7",
+                                      color: "#92400e",
+                                      border: "1px solid #fcd34d",
+                                      borderRadius: 4,
+                                      padding: "2px 8px",
+                                      fontSize: 12,
+                                      fontWeight: 500,
+                                      whiteSpace: "nowrap",
+                                    }
+                                  : undefined
+                            }
+                          >
+                            {record.hasNoParcels
+                              ? "No Parcels"
+                              : record.needsPendingReview
+                                ? "Pending Review"
+                                : formatRecordStatus(record.status)}
                           </span>
                         </td>
 

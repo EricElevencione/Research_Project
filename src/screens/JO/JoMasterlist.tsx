@@ -52,6 +52,7 @@ interface RSBSARecord {
   landownerName: string;
   archivedAt?: string | null;
   archiveReason?: string | null;
+  hasNoActiveLand?: boolean;
   farmerRice: boolean;
   farmerCorn: boolean;
   farmerOtherCrops: boolean;
@@ -579,17 +580,33 @@ const JoMasterlist: React.FC = () => {
       if (response.error) throw new Error(response.error);
       const allData = Array.isArray(response.data) ? response.data : [];
 
-      // One batch query for landowner names — avoids N+1
-      const { data: tlParcels } = await supabase
-        .from("rsbsa_farm_parcels")
-        .select("submission_id, tenant_land_owner_name, lessee_land_owner_name")
-        .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true");
+      // Batch queries — avoids N+1
+      const [tlResult, parcelOwnerResult] = await Promise.all([
+        supabase
+          .from("rsbsa_farm_parcels")
+          .select(
+            "submission_id, tenant_land_owner_name, lessee_land_owner_name",
+          )
+          .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true"),
+        supabase
+          .from("rsbsa_farm_parcels")
+          .select("submission_id, is_current_owner"),
+      ]);
 
       const landownerMap = new Map<string, string>();
-      (tlParcels || []).forEach((p: any) => {
+      (tlResult.data || []).forEach((p: any) => {
         const name = p.tenant_land_owner_name || p.lessee_land_owner_name || "";
         if (name && p.submission_id)
           landownerMap.set(String(p.submission_id), name);
+      });
+
+      // Submissions that have at least one parcel where is_current_owner is not false
+      // (null = not set, which applies to tenants/lessees — they pass through correctly)
+      const submissionsWithActiveParcels = new Set<string>();
+      (parcelOwnerResult.data || []).forEach((p: any) => {
+        if (p.is_current_owner !== false) {
+          submissionsWithActiveParcels.add(String(p.submission_id));
+        }
       });
 
       const formatted: RSBSARecord[] = allData.map((item: any, idx: number) => {
@@ -687,13 +704,15 @@ const JoMasterlist: React.FC = () => {
             item.farmerLivestock || item["FARMER_LIVESTOCK"] || false,
           farmerPoultry: item.farmerPoultry || item["FARMER_POULTRY"] || false,
           ownershipType: item.ownershipType,
+          hasNoActiveLand:
+            (item.status || "").toLowerCase().trim() === "no parcels" ||
+            typeof item.parcelCount !== "number" ||
+            item.parcelCount === 0 ||
+            !submissionsWithActiveParcels.has(String(item.id)),
         };
       });
 
-      const cleaned = formatted.filter((record) => {
-        const status = (record.status || "").toLowerCase().trim();
-        return !record.archivedAt && status !== "no parcels";
-      });
+      const cleaned = formatted.filter((record) => !record.archivedAt);
       setRsbsaRecords(cleaned);
       setLoading(false);
     } catch (err: any) {
@@ -924,6 +943,27 @@ const JoMasterlist: React.FC = () => {
     fetchSummaryStats();
   }, []);
 
+  // Fire-and-forget: write-once status update for no-land records.
+  // Only runs if status is not already inactive/archived, so a JO's manual
+  // status change won't be clobbered until the parcel situation changes.
+  useEffect(() => {
+    if (rsbsaRecords.length === 0) return;
+    const toFlag = rsbsaRecords.filter((r) => {
+      if (!r.hasNoActiveLand) return false;
+      const s = (r.status || "").toLowerCase().trim();
+      return s !== "inactive" && s !== "archived" && s !== "no parcels";
+    });
+    if (toFlag.length === 0) return;
+    const ids = toFlag.map((r) => r.id);
+    supabase
+      .from("rsbsa_submission")
+      .update({ status: "inactive" })
+      .in("id", ids)
+      .then(({ error }) => {
+        if (error) console.error("No-land flag status update error:", error);
+      });
+  }, [rsbsaRecords]);
+
   useEffect(() => {
     const h = () => {
       setOpenMenuId(null);
@@ -943,21 +983,6 @@ const JoMasterlist: React.FC = () => {
       return next;
     });
   }, [rsbsaRecords]);
-
-  // ─── Navigation ─────────────────────────────────────────────────────────────
-
-  const goToFarmerRegistry = () => {
-    setShowModal(false);
-    navigate("/jo-farmer-registry");
-  };
-  const goToLandownerRegistry = () => {
-    setShowModal(false);
-    navigate("/jo-landowner-registry");
-  };
-  const goToLandRegistry = () => {
-    setShowModal(false);
-    navigate("/jo-land-registry");
-  };
 
   // ─── Status counts ─────────────────────────────────────────────────────────
 
@@ -985,6 +1010,9 @@ const JoMasterlist: React.FC = () => {
       inactive: rsbsaRecords.filter((r) =>
         inactive.has((r.status || "").toLowerCase().trim()),
       ).length,
+      noParcels: rsbsaRecords.filter(
+        (r) => (r.status || "").toLowerCase().trim() === "no parcels",
+      ).length,
     };
   }, [rsbsaRecords]);
 
@@ -1009,7 +1037,7 @@ const JoMasterlist: React.FC = () => {
           "not approved",
           "inactive",
         ]);
-        if (ns === "no parcels" || record.archivedAt) return false;
+        if (record.archivedAt) return false;
 
         const f = getOwnershipFlags(record);
         if (
@@ -1024,6 +1052,8 @@ const JoMasterlist: React.FC = () => {
         if (selectedStatus === "active") matchesStatus = active.has(ns);
         else if (selectedStatus === "notActive")
           matchesStatus = inactive.has(ns);
+        else if (selectedStatus === "flaggedNoLand")
+          matchesStatus = record.hasNoActiveLand === true;
         if (!matchesStatus) return false;
 
         if (selectedBarangay !== "all") {
@@ -1090,6 +1120,11 @@ const JoMasterlist: React.FC = () => {
         return true;
       })
       .sort((a, b) => {
+        // Flagged rows always sink to the bottom regardless of other sort keys
+        const aFlag = a.hasNoActiveLand ? 1 : 0;
+        const bFlag = b.hasNoActiveLand ? 1 : 0;
+        if (aFlag !== bFlag) return aFlag - bFlag;
+
         const parseArea = (v: string) => {
           const tokens = String(v || "").match(/-?\d+(?:\.\d+)?/g);
           if (!tokens) return 0;
@@ -1821,6 +1856,22 @@ const JoMasterlist: React.FC = () => {
                   <span className="jo-masterlist-card-label">Inactive</span>
                 </div>
               </div>
+              {statusCounts.noParcels > 0 && (
+                <div
+                  className="jo-masterlist-status-card jo-masterlist-card-inactive"
+                  style={{ borderLeft: "3px solid #d97706", cursor: "pointer" }}
+                  onClick={() => setSelectedStatus("flaggedNoLand")}
+                  title="Click to filter No Parcels records"
+                >
+                  <div className="jo-masterlist-card-icon">⚠️</div>
+                  <div className="jo-masterlist-card-info">
+                    <span className="jo-masterlist-card-count">
+                      {statusCounts.noParcels}
+                    </span>
+                    <span className="jo-masterlist-card-label">No Parcels</span>
+                  </div>
+                </div>
+              )}
               <div className="jo-masterlist-status-card jo-masterlist-card-total">
                 <div className="jo-masterlist-card-icon">🌾</div>
                 <div className="jo-masterlist-card-info">
@@ -1906,6 +1957,7 @@ const JoMasterlist: React.FC = () => {
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
                     <option value="notActive">Not Active</option>
+                    <option value="flaggedNoLand">Flagged (No Land)</option>
                   </select>
                 </div>
                 <div className="jo-masterlist-status-filter">
@@ -2206,7 +2258,7 @@ const JoMasterlist: React.FC = () => {
                         <React.Fragment key={record.id}>
                           {/* ── Main owner row ── */}
                           <tr
-                            className="jo-masterlist-table-row"
+                            className={`jo-masterlist-table-row${record.hasNoActiveLand ? " jo-row--flagged" : ""}`}
                             onClick={() =>
                               fetchFarmerDetails(record.id, record)
                             }
@@ -2242,6 +2294,25 @@ const JoMasterlist: React.FC = () => {
                                   <span className="jo-masterlist-farmer-ref">
                                     {record.referenceNumber}
                                   </span>
+                                  {record.hasNoActiveLand && (
+                                    <span
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                        fontSize: 11,
+                                        color: "#b45309",
+                                        marginTop: 2,
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      {(record.status || "")
+                                        .toLowerCase()
+                                        .trim() === "no parcels"
+                                        ? "⚠️ No parcels on record"
+                                        : "⚠️ No active land — marked Inactive"}
+                                    </span>
+                                  )}
                                   {/* Tenant badge — only shown when tenants exist */}
                                   {hasTenants && (
                                     <button
@@ -2288,8 +2359,30 @@ const JoMasterlist: React.FC = () => {
                               </div>
                             </td>
                             <td>
-                              <span className="jo-masterlist-record-status">
-                                {formatRecordStatus(record.status)}
+                              <span
+                                className="jo-masterlist-record-status"
+                                style={
+                                  record.hasNoActiveLand
+                                    ? {
+                                        background: "#fee2e2",
+                                        color: "#991b1b",
+                                        border: "1px solid #fca5a5",
+                                        borderRadius: 4,
+                                        padding: "2px 8px",
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        whiteSpace: "nowrap",
+                                      }
+                                    : undefined
+                                }
+                              >
+                                {record.hasNoActiveLand
+                                  ? (record.status || "")
+                                      .toLowerCase()
+                                      .trim() === "no parcels"
+                                    ? "No Parcels"
+                                    : "Inactive — No Land"
+                                  : formatRecordStatus(record.status)}
                               </span>
                             </td>
                             <td>
