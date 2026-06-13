@@ -97,6 +97,7 @@ const LandPlottingPage: React.FC = () => {
   const [, setFarmerParcels] = useState<any[]>([]);
   // State to track the actual parcel barangay (from RSBSA form)
   const [parcelBarangay, setParcelBarangay] = useState<string>("");
+  const [geometryWarning, setGeometryWarning] = useState<string | null>(null);
 
   const [landAttributes, setLandAttributes] = useState<LandAttributes>({
     name: "",
@@ -245,8 +246,18 @@ const LandPlottingPage: React.FC = () => {
     return null;
   }, [currentParcel, rsbsaRecord]);
 
+  const isParcelTransferredOrInactive = (parcel: any): boolean => {
+    if (!parcel) return false;
+    return (
+      parcel.is_current_owner === false ||
+      parcel.isCurrentOwner === false ||
+      String(parcel.status || "").toLowerCase().trim() === "no parcels"
+    );
+  };
+
   const canPlotParcel = (parcel: any): boolean => {
     if (!parcel) return false;
+    if (isParcelTransferredOrInactive(parcel)) return false;
 
     const ownerSignals = [
       parcel.ownership_type_registered_owner,
@@ -885,7 +896,7 @@ const LandPlottingPage: React.FC = () => {
   const fetchFarmParcelData = async (recordId: string) => {
     try {
       const response = await getFarmParcels(recordId, {
-        currentOwnerOnly: true,
+        currentOwnerOnly: false,
       });
       if (response.error || !response.data || response.data.length === 0) {
         console.log("≡ƒôì No farm parcels found for submission:", recordId);
@@ -958,7 +969,7 @@ const LandPlottingPage: React.FC = () => {
 
       if (Array.isArray(farmParcels) && farmParcels.length > 0) {
         farmParcels = farmParcels.filter((parcel: any) =>
-          canPlotParcel(parcel),
+          canPlotParcel(parcel) || isParcelTransferredOrInactive(parcel)
         );
       }
 
@@ -1071,9 +1082,11 @@ const LandPlottingPage: React.FC = () => {
               console.error("Failed to parse parcel geometry:", parseError);
             }
           }
+
           const landPlotsRes = await getLandPlots({
             currentOwnerOnly: false,
           });
+
           if (!landPlotsRes.error) {
             const allPlots = Array.isArray(landPlotsRes.data)
               ? landPlotsRes.data
@@ -2067,7 +2080,9 @@ const LandPlottingPage: React.FC = () => {
               }`}
             >
               {!currentParcelCanPlot
-                ? "Plotting locked: parcel is not owner-eligible"
+                ? isParcelTransferredOrInactive(currentParcel)
+                  ? "Plotting locked: Ownership transferred"
+                  : "Plotting locked: parcel is not owner-eligible"
                 : polygonExistsForCurrentParcel
                   ? "Polygon completed for this parcel"
                   : "Ready to draw parcel polygon"}
@@ -2143,7 +2158,21 @@ const LandPlottingPage: React.FC = () => {
                 ? `Farm Parcel #${(selectedShape.properties as any).parcelNumber}`
                 : "Farm Parcel #1"}
           </div>
-          {!currentParcelCanPlot && (
+          {currentParcel && isParcelTransferredOrInactive(currentParcel) && (
+            <div className="tech-landplotting-transferred-warning" style={{
+              background: "#fee2e2",
+              color: "#991b1b",
+              border: "1px solid #fca5a5",
+              borderRadius: "6px",
+              padding: "10px",
+              marginBottom: "12px",
+              fontWeight: 500,
+              fontSize: "13px"
+            }}>
+              ⚠️ Ownership Transferred: The landowner no longer owns this farm/parcel. The geometry is outdated.
+            </div>
+          )}
+          {!currentParcelCanPlot && !isParcelTransferredOrInactive(currentParcel) && (
             <div className="tech-landplotting-owner-guard-note">
               {ownerPlotGuardMessage}
             </div>

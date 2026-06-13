@@ -761,3 +761,42 @@
   vertical-align: middle;
   cursor: help;
 }
+
+/* ── No-Land Owner Row ── */
+.tech-rsbsa-owners-table tbody tr.tech-rsbsa-row-no-land {
+  background-color: #fffbeb !important;
+  border-left: 3px solid #f59e0b;
+}
+
+.tech-rsbsa-owners-table tbody tr.tech-rsbsa-row-no-land:hover {
+  background-color: #fef3c7 !important;
+}
+
+/* ── Land Status Badges ── */
+.tech-rsbsa-no-land-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.tech-rsbsa-active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}

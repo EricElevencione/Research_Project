@@ -55,6 +55,15 @@ const OWN_PARCEL_SELECTED_STYLE = {
   fillOpacity: 0.35,
 };
 
+const TRANSFERRED_PARCEL_STYLE = {
+  color: "#b45309",
+  weight: 2,
+  opacity: 1,
+  fillColor: "#f59e0b",
+  fillOpacity: 0.25,
+  dashArray: "6 4",
+};
+
 const REFERENCE_PARCEL_STYLE = {
   color: "#2563eb",
   weight: 2,
@@ -861,11 +870,14 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             properties: shape.properties,
           });
 
+          const isTransferred = shape.properties?.is_current_owner === false;
+          const parcelStyle = isTransferred ? TRANSFERRED_PARCEL_STYLE : OWN_PARCEL_STYLE;
+
           if (shape.layer && !featureGroupRef.current?.hasLayer(shape.layer)) {
             featureGroupRef.current?.addLayer(shape.layer);
             console.log(`   ✅ Added shape ${shape.id} to map`);
             if (shape.layer instanceof L.Path) {
-              shape.layer.setStyle(OWN_PARCEL_STYLE);
+              shape.layer.setStyle(parcelStyle);
             }
             if (shape.properties) {
               shape.layer.bindPopup(getPopupContent(shape.properties));
@@ -873,7 +885,7 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           } else if (shape.layer) {
             console.log(`   ⚠️ Shape ${shape.id} already on map`);
             if (shape.layer instanceof L.Path) {
-              shape.layer.setStyle(OWN_PARCEL_STYLE);
+              shape.layer.setStyle(parcelStyle);
             }
           } else {
             console.log(`   ❌ Shape ${shape.id} has no layer!`);
@@ -951,11 +963,29 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
     // Helper to generate popup content for a shape
     const getPopupContent = (properties: any) => {
-      return `<div style='min-width:180px'>
+      const isTransferred = properties?.is_current_owner === false;
+      const transferredWarning = isTransferred
+        ? `<div style="
+            margin-top:8px;
+            padding:6px 8px;
+            background:#fef3c7;
+            border-left:3px solid #d97706;
+            border-radius:4px;
+            color:#92400e;
+            font-size:11px;
+            font-weight:600;
+            line-height:1.4;
+          ">
+            ⚠️ Geometry inherited from previous owner — please verify and confirm.
+          </div>`
+        : "";
+
+      return `<div style='min-width:200px'>
                 <b>Parcel</b><br/>
                 <b>Name:</b> ${properties.surname || ""} ${properties.firstName || ""} ${properties.middleName || ""}<br/>
                 <b>Barangay:</b> ${properties.barangay || ""}<br/>
                 <b>Municipality:</b> ${properties.municipality || ""}<br/>
+                ${transferredWarning}
             </div>`;
     };
 

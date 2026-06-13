@@ -30,6 +30,8 @@ interface RSBSARecord {
   landParcel: string;
   parcelArea?: string;
   parcelCount?: number;
+  /** true = has current parcels, false = all transferred/no land, undefined = no parcels registered */
+  hasCurrentParcels?: boolean;
   ownershipType: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -82,6 +84,7 @@ const TechRsbsa: React.FC = () => {
   const [filteredOwners, setFilteredOwners] = useState<RSBSARecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
+  const [landStatusFilter, setLandStatusFilter] = useState<"all" | "active" | "no_land">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
@@ -395,17 +398,11 @@ const TechRsbsa: React.FC = () => {
     }
   };
 
-  // Function to filter registered owners only
+  // Function to filter registered owners only (includes no-land owners so they can be shown with a warning)
   const filterRegisteredOwners = (records: RSBSARecord[]) => {
     console.log("Filtering records:", records.length);
 
     const filtered = records.filter((record: any) => {
-      // Exclude farmers who have transferred ALL their parcels (no current ownership)
-      // hasCurrentParcels: true = has current parcels, false = all transferred, undefined = no parcels yet
-      if (record.hasCurrentParcels === false) {
-        return false;
-      }
-
       // Check if the record represents a registered owner
       if (record.ownershipType) {
         return record.ownershipType.registeredOwner === true;
@@ -466,12 +463,20 @@ const TechRsbsa: React.FC = () => {
     });
   }, [filteredOwners]);
 
-  // Filter records based on search term and barangay
+  // Filter records based on search term, barangay, and land status
   useEffect(() => {
     const filtered = registeredOwners.filter((record) => {
       const isUnplotted = unplottedFarmerIdSet.has(String(record.id));
 
       if (showUnplottedOnly && !isUnplotted) {
+        return false;
+      }
+
+      // Land status filter
+      if (landStatusFilter === "active" && record.hasCurrentParcels !== true) {
+        return false;
+      }
+      if (landStatusFilter === "no_land" && record.hasCurrentParcels !== false) {
         return false;
       }
 
@@ -533,6 +538,7 @@ const TechRsbsa: React.FC = () => {
     registeredOwners,
     showUnplottedOnly,
     unplottedFarmerIdSet,
+    landStatusFilter,
   ]);
 
   useEffect(() => {
@@ -744,6 +750,22 @@ const TechRsbsa: React.FC = () => {
                       ))}
                     </select>
                   </div>
+                  <div className="tech-rsbsa-filter-container">
+                    <select
+                      id="land-status-filter"
+                      value={landStatusFilter}
+                      onChange={(e) =>
+                        setLandStatusFilter(
+                          e.target.value as "all" | "active" | "no_land",
+                        )
+                      }
+                      className="tech-rsbsa-filter-select"
+                    >
+                      <option value="all">All Land Status</option>
+                      <option value="active">✅ Active (Has Land)</option>
+                      <option value="no_land">⚠️ No Land</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="tech-rsbsa-table-container">
@@ -761,13 +783,14 @@ const TechRsbsa: React.FC = () => {
                         <th>Farm Location</th>
                         <th>Parcel Area</th>
                         <th>Plotted</th>
+                        <th>Land Status</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedFilteredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={12} className="tech-rsbsa-no-data">
+                          <td colSpan={13} className="tech-rsbsa-no-data">
                             {searchTerm
                               ? "No matching records found"
                               : "No registered owners found"}
@@ -781,6 +804,8 @@ const TechRsbsa: React.FC = () => {
                               : `${record.parcelArea} hectares`
                             : "N/A";
 
+                          const hasNoLand = record.hasCurrentParcels === false;
+
                           return (
                             <tr
                               key={record.id}
@@ -788,6 +813,7 @@ const TechRsbsa: React.FC = () => {
                                 fetchFarmerDetails(record.id, record)
                               }
                               style={{ cursor: "pointer" }}
+                              className={hasNoLand ? "tech-rsbsa-row-no-land" : ""}
                             >
                               <td
                                 className="tech-rsbsa-ffrs-id"
@@ -810,6 +836,17 @@ const TechRsbsa: React.FC = () => {
                                 <span className="tech-rsbsa-plot-status-pill">
                                   {getPlottingRatio(record)}
                                 </span>
+                              </td>
+                              <td>
+                                {hasNoLand ? (
+                                  <span className="tech-rsbsa-no-land-badge">
+                                    ⚠️ No Land
+                                  </span>
+                                ) : (
+                                  <span className="tech-rsbsa-active-badge">
+                                    ✅ Active
+                                  </span>
+                                )}
                               </td>
                               <td onClick={(e) => e.stopPropagation()}>
                                 <div

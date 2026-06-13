@@ -1719,3 +1719,29 @@
     width: 100%;
   }
 }
+
+/* ── No Land Owner Highlight ── */
+.jo-land-registry-table tbody tr.jo-land-registry-row-no-land {
+  background-color: #fffbeb !important;
+  border-left: 3px solid #f59e0b;
+}
+
+.jo-land-registry-table tbody tr.jo-land-registry-row-no-land:hover {
+  background-color: #fef3c7 !important;
+}
+
+.jo-land-registry-no-land-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  margin-left: 8px;
+}
+

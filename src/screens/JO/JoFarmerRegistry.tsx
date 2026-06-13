@@ -53,6 +53,7 @@ interface RSBSARecord {
   archiveReason?: string | null;
   needsPendingReview?: boolean;
   hasNoParcels?: boolean;
+  hasNoLandOwner?: boolean;
   ownershipType?: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -668,21 +669,47 @@ const JoFarmerRegistry: React.FC = () => {
         })
         .map((r) => r.id);
 
+      // Batch query parcel owner names to detect tenants/lessees with no
+      // landowner filled in. Runs alongside the transfer-history query.
+      let submissionsWithOwnerName = new Set<string>();
+      let tenantLesseeParcelIds = new Set<string>();
+
       if (tenantLesseeIds.length > 0) {
-        const { data: transferHistory } = await supabase
-          .from("land_history_association")
-          .select("farmer_id")
-          .in("farmer_id", tenantLesseeIds)
-          .eq("is_current", false)
-          .ilike("change_type", "%transfer%");
+        const [transferResult, ownerNameResult] = await Promise.all([
+          supabase
+            .from("land_history_association")
+            .select("farmer_id")
+            .in("farmer_id", tenantLesseeIds)
+            .eq("is_current", false)
+            .ilike("change_type", "%transfer%"),
+          supabase
+            .from("rsbsa_farm_parcels")
+            .select(
+              "submission_id, tenant_land_owner_name, lessee_land_owner_name",
+            )
+            .in("submission_id", tenantLesseeIds)
+            .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true"),
+        ]);
 
         const transferredIds = new Set(
-          (transferHistory || []).map((h: any) => String(h.farmer_id)),
+          (transferResult.data || []).map((h: any) => String(h.farmer_id)),
         );
+
+        (ownerNameResult.data || []).forEach((p: any) => {
+          if (!p.submission_id) return;
+          const id = String(p.submission_id);
+          tenantLesseeParcelIds.add(id);
+          const name =
+            p.tenant_land_owner_name || p.lessee_land_owner_name || "";
+          if (name) submissionsWithOwnerName.add(id);
+        });
 
         formattedRecords = formattedRecords.map((r) => ({
           ...r,
           needsPendingReview: transferredIds.has(r.id),
+          hasNoLandOwner:
+            tenantLesseeParcelIds.has(r.id) &&
+            !submissionsWithOwnerName.has(r.id),
         }));
       }
 
@@ -785,6 +812,8 @@ const JoFarmerRegistry: React.FC = () => {
         matchesRole = record.needsPendingReview === true;
       } else if (selectedRole === "noParcels") {
         matchesRole = record.hasNoParcels === true;
+      } else if (selectedRole === "noLandOwner") {
+        matchesRole = record.hasNoLandOwner === true;
       }
 
       if (!matchesRole) return false;
@@ -809,8 +838,10 @@ const JoFarmerRegistry: React.FC = () => {
     })
     .sort((a, b) => {
       // Flagged rows always sink to the bottom regardless of other sort keys
-      const aFlag = a.needsPendingReview || a.hasNoParcels ? 1 : 0;
-      const bFlag = b.needsPendingReview || b.hasNoParcels ? 1 : 0;
+      const aFlag =
+        a.needsPendingReview || a.hasNoParcels || a.hasNoLandOwner ? 1 : 0;
+      const bFlag =
+        b.needsPendingReview || b.hasNoParcels || b.hasNoLandOwner ? 1 : 0;
       if (aFlag !== bFlag) return aFlag - bFlag;
 
       const parseAreaValue = (value: string) => {
@@ -877,7 +908,15 @@ const JoFarmerRegistry: React.FC = () => {
     const noParcels = base.filter(
       (r) => (r.status || "").toLowerCase().trim() === "no parcels",
     ).length;
-    return { total, active, tenants, lessees, owners, noParcels };
+    return {
+      total,
+      active,
+      tenants,
+      lessees,
+      owners,
+      noParcels,
+      noLandOwner: base.filter((r) => r.hasNoLandOwner === true).length,
+    };
   }, [rsbsaRecords]);
 
   // CHANGE: Column count updated to 9 — checkbox + Farmer, Barangay, Role,
@@ -1702,6 +1741,22 @@ const JoFarmerRegistry: React.FC = () => {
                   </div>
                 </div>
               )}
+              {farmerCounts.noLandOwner > 0 && (
+                <div
+                  className="jo-farmer-status-card jo-farmer-card-inactive"
+                  style={{ borderLeft: "3px solid #dc2626", cursor: "pointer" }}
+                  onClick={() => setSelectedRole("noLandOwner")}
+                  title="Click to filter tenants/lessees with no landowner on record"
+                >
+                  <div className="jo-farmer-card-icon">🚫</div>
+                  <div className="jo-farmer-card-info">
+                    <span className="jo-farmer-card-count">
+                      {farmerCounts.noLandOwner}
+                    </span>
+                    <span className="jo-farmer-card-label">No Land Owner</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1730,6 +1785,7 @@ const JoFarmerRegistry: React.FC = () => {
                   <option value="active">Active</option>
                   <option value="notActive">Not Active</option>
                   <option value="noParcels">No Parcels</option>
+                  <option value="noLandOwner">No Land Owner</option>
                 </select>
               </div>
 
@@ -1989,6 +2045,21 @@ const JoFarmerRegistry: React.FC = () => {
                                     ⚠️ No parcels on record
                                   </span>
                                 )}
+                              {record.hasNoLandOwner && (
+                                <span
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                    fontSize: 11,
+                                    color: "#dc2626",
+                                    marginTop: 2,
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  🚫 No land owner on record
+                                </span>
+                              )}
                             </div>
                           </div>
                         </td>

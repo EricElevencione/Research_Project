@@ -271,8 +271,7 @@ const normalizeCurrentOwnershipGroups = (
             ? parcelsToUse.some((parcel) => parcel?.is_lessee === true)
             : false) || group.has_lessee,
       };
-    })
-    .filter((group) => group.parcels.length > 0);
+    });
 };
 
 const buildReplacementTakeoverPlan = (
@@ -394,6 +393,7 @@ const JoLandRegistry: React.FC = () => {
   const [filterCultivation, setFilterCultivation] = useState<
     "all" | "active" | "inactive"
   >("all");
+  const [landStatusFilter, setLandStatusFilter] = useState<"all" | "active" | "no_land">("all");
   const [showModal, setShowModal] = useState(false);
 
   // Proof viewer state
@@ -497,18 +497,78 @@ const JoLandRegistry: React.FC = () => {
     console.log("[FETCH START] Starting refresh...");
 
     try {
-      const { data, error } = await supabase
-        .from("farmer_aggregated_unified")
-        .select("*")
-        .order("farmer_name", { ascending: true });
+      const [unifiedResult, submissionResult] = await Promise.all([
+        supabase
+          .from("farmer_aggregated_unified")
+          .select("*")
+          .order("farmer_name", { ascending: true }),
+        supabase
+          .from("rsbsa_submission")
+          .select(`
+            id,
+            "FIRST NAME",
+            "MIDDLE NAME",
+            "LAST NAME",
+            "EXT NAME",
+            "FFRS_CODE",
+            "OWNERSHIP_TYPE_REGISTERED_OWNER",
+            "OWNERSHIP_TYPE_TENANT",
+            "OWNERSHIP_TYPE_LESSEE",
+            status,
+            archived_at,
+            updated_at
+          `)
+      ]);
 
-      if (error) {
-        console.error("[FETCH ERROR]", error);
+      if (unifiedResult.error) {
+        console.error("[FETCH ERROR]", unifiedResult.error);
         return;
       }
 
-      console.log("[FETCH SUCCESS] Raw data received:", data);
-      const normalizedData = normalizeCurrentOwnershipGroups(data || []);
+      const unifiedData = unifiedResult.data || [];
+      const submissions = submissionResult.data || [];
+
+      // Filter submissions to only those that represent landowners, tenants, or lessees
+      const registeredSubmissions = submissions.filter((sub: any) => 
+        sub.OWNERSHIP_TYPE_REGISTERED_OWNER === true ||
+        sub.OWNERSHIP_TYPE_TENANT === true ||
+        sub.OWNERSHIP_TYPE_LESSEE === true
+      );
+
+      // Create a set of farmer IDs that already have active parcels in unifiedData
+      const unifiedFarmerIds = new Set(unifiedData.map((group: any) => group.farmer_id));
+
+      // Build group objects for those who don't have land anymore
+      const noLandGroups: FarmerGroup[] = registeredSubmissions
+        .filter((sub: any) => !unifiedFarmerIds.has(Number(sub.id)))
+        .map((sub: any) => {
+          const first = sub["FIRST NAME"] || "";
+          const middle = sub["MIDDLE NAME"] || "";
+          const last = sub["LAST NAME"] || "";
+          const ext = sub["EXT NAME"] || "";
+          const fullName = [first, middle, last, ext].filter(Boolean).join(" ").trim() || `Farmer #${sub.id}`;
+
+          return {
+            farmer_id: Number(sub.id),
+            farmer_name: fullName,
+            ffrs_code: sub.FFRS_CODE || "",
+            parcels: [],
+            total_farm_area_ha: 0,
+            last_updated: sub.updated_at || new Date().toISOString(),
+            has_registered_owner: sub.OWNERSHIP_TYPE_REGISTERED_OWNER || false,
+            has_tenant: sub.OWNERSHIP_TYPE_TENANT || false,
+            has_lessee: sub.OWNERSHIP_TYPE_LESSEE || false,
+            archived_at: sub.archived_at || null,
+          };
+        });
+
+      const combinedData = [...unifiedData, ...noLandGroups];
+      
+      // Sort combined data by farmer_name
+      combinedData.sort((a, b) => a.farmer_name.localeCompare(b.farmer_name));
+
+      console.log("[FETCH SUCCESS] Combined data received:", combinedData);
+      const normalizedData = normalizeCurrentOwnershipGroups(combinedData);
       setAggregatedFarmers(normalizedData);
       console.log(
         "[STATE SET] Set aggregatedFarmers to length:",
@@ -1936,7 +1996,7 @@ const JoLandRegistry: React.FC = () => {
         totalAreaHa,
         primaryBarangay:
           barangays.length === 0
-            ? "Multiple"
+            ? "—"
             : barangays.length === 1
               ? barangays[0]
               : "Multiple",
@@ -1947,9 +2007,9 @@ const JoLandRegistry: React.FC = () => {
     const rows: RegistryDisplayRow[] = [];
 
     aggregatedFarmers.forEach((group) => {
-      if (!group || !Array.isArray(group.parcels) || group.parcels.length === 0)
+      if (!group || !Array.isArray(group.parcels))
         return;
-      if (group.archived_at) return;
+      if (group.archived_at && group.parcels.length > 0) return;
 
       rows.push(buildRow(group));
     });
@@ -2040,8 +2100,15 @@ const JoLandRegistry: React.FC = () => {
 
     return registryRows
       .filter((row) => {
-        if (row.parcels.length === 0) return false;
-        if (row.totalAreaHa <= 0) return false;
+        const hasNoLand = row.parcels.length === 0 || row.totalAreaHa <= 0;
+
+        // Land status filter
+        if (landStatusFilter === "active" && hasNoLand) {
+          return false;
+        }
+        if (landStatusFilter === "no_land" && !hasNoLand) {
+          return false;
+        }
 
         if (filterCultivation !== "all") {
           const cultivationFlags = row.parcels
@@ -3412,6 +3479,18 @@ const JoLandRegistry: React.FC = () => {
                   ))}
                 </select>
               </div>
+              <div className="jo-land-registry-barangay-filter">
+                <select
+                  id="land-status-filter"
+                  className="jo-land-registry-barangay-select"
+                  value={landStatusFilter}
+                  onChange={(e) => setLandStatusFilter(e.target.value as "all" | "active" | "no_land")}
+                >
+                  <option value="all">All Land Status</option>
+                  <option value="active">✅ Active (Has Land)</option>
+                  <option value="no_land">⚠️ No Land</option>
+                </select>
+              </div>
             </div>
 
             {/* Table */}
@@ -3444,24 +3523,29 @@ const JoLandRegistry: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredRegistryRows.map((row) => (
-                      <tr
-                        key={row.rowId}
-                        onClick={() =>
-                          handleFarmerSelect(
-                            row.farmer,
-                            row.primaryOwnership,
-                            row.parcels.map((parcel) => parcel.id),
-                            row.rowId,
-                          )
-                        }
-                        className={
-                          selectedRegistryRowId === row.rowId ? "selected" : ""
-                        }
-                      >
-                        <td className="jo-land-registry-farmer-name">
-                          {row.farmer.farmer_name || "—"}
-                        </td>
+                    filteredRegistryRows.map((row) => {
+                      const hasNoLand = row.parcels.length === 0 || row.totalAreaHa <= 0;
+                      return (
+                        <tr
+                          key={row.rowId}
+                          onClick={() =>
+                            handleFarmerSelect(
+                              row.farmer,
+                              row.primaryOwnership,
+                              row.parcels.map((parcel) => parcel.id),
+                              row.rowId,
+                            )
+                          }
+                          className={`${selectedRegistryRowId === row.rowId ? "selected" : ""} ${hasNoLand ? "jo-land-registry-row-no-land" : ""}`}
+                        >
+                          <td className="jo-land-registry-farmer-name">
+                            {row.farmer.farmer_name || "—"}
+                            {hasNoLand && (
+                              <span className="jo-land-registry-no-land-warning" title="No Land / Transferred All Parcels">
+                                ⚠️ No Land
+                              </span>
+                            )}
+                          </td>
                         <td className="jo-land-registry-ownership-cell">
                           <div className="jo-land-registry-ownership-stack">
                             <span
@@ -3567,7 +3651,8 @@ const JoLandRegistry: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>

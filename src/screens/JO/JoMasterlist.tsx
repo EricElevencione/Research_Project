@@ -53,6 +53,9 @@ interface RSBSARecord {
   archivedAt?: string | null;
   archiveReason?: string | null;
   hasNoActiveLand?: boolean;
+  // True when the record is a tenant/lessee but has no landowner name
+  // linked to any of their parcels.
+  hasNoLandOwner?: boolean;
   farmerRice: boolean;
   farmerCorn: boolean;
   farmerOtherCrops: boolean;
@@ -594,10 +597,20 @@ const JoMasterlist: React.FC = () => {
       ]);
 
       const landownerMap = new Map<string, string>();
+      // Track which tenant/lessee submissions have at least one parcel with
+      // a landowner name filled in. Those missing from this set are flagged
+      // hasNoLandOwner.
+      const submissionsWithOwnerName = new Set<string>();
+      const tenantLesseeSubmissionIds = new Set<string>();
       (tlResult.data || []).forEach((p: any) => {
+        if (!p.submission_id) return;
+        const id = String(p.submission_id);
+        tenantLesseeSubmissionIds.add(id);
         const name = p.tenant_land_owner_name || p.lessee_land_owner_name || "";
-        if (name && p.submission_id)
-          landownerMap.set(String(p.submission_id), name);
+        if (name) {
+          landownerMap.set(id, name);
+          submissionsWithOwnerName.add(id);
+        }
       });
 
       // Submissions that have at least one parcel where is_current_owner is not false
@@ -709,6 +722,22 @@ const JoMasterlist: React.FC = () => {
             typeof item.parcelCount !== "number" ||
             item.parcelCount === 0 ||
             !submissionsWithActiveParcels.has(String(item.id)),
+          // Tenant or lessee whose parcels have no landowner name filled in.
+          hasNoLandOwner: (() => {
+            const ot = item.ownershipType;
+            const isTenantOrLessee =
+              ot?.tenant === true ||
+              ot?.lessee === true ||
+              ot?.tenantLessee === true;
+            if (!isTenantOrLessee) return false;
+            // If this submission appears in tenant/lessee parcels but has no
+            // owner name anywhere, flag it.
+            const id = String(item.id);
+            return (
+              tenantLesseeSubmissionIds.has(id) &&
+              !submissionsWithOwnerName.has(id)
+            );
+          })(),
         };
       });
 
@@ -1013,6 +1042,7 @@ const JoMasterlist: React.FC = () => {
       noParcels: rsbsaRecords.filter(
         (r) => (r.status || "").toLowerCase().trim() === "no parcels",
       ).length,
+      noLandOwner: rsbsaRecords.filter((r) => r.hasNoLandOwner === true).length,
     };
   }, [rsbsaRecords]);
 
@@ -1054,6 +1084,8 @@ const JoMasterlist: React.FC = () => {
           matchesStatus = inactive.has(ns);
         else if (selectedStatus === "flaggedNoLand")
           matchesStatus = record.hasNoActiveLand === true;
+        else if (selectedStatus === "noLandOwner")
+          matchesStatus = record.hasNoLandOwner === true;
         if (!matchesStatus) return false;
 
         if (selectedBarangay !== "all") {
@@ -1872,6 +1904,24 @@ const JoMasterlist: React.FC = () => {
                   </div>
                 </div>
               )}
+              {statusCounts.noLandOwner > 0 && (
+                <div
+                  className="jo-masterlist-status-card jo-masterlist-card-inactive"
+                  style={{ borderLeft: "3px solid #dc2626", cursor: "pointer" }}
+                  onClick={() => setSelectedStatus("noLandOwner")}
+                  title="Click to filter tenants/lessees with no landowner on record"
+                >
+                  <div className="jo-masterlist-card-icon">🚫</div>
+                  <div className="jo-masterlist-card-info">
+                    <span className="jo-masterlist-card-count">
+                      {statusCounts.noLandOwner}
+                    </span>
+                    <span className="jo-masterlist-card-label">
+                      No Land Owner
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="jo-masterlist-status-card jo-masterlist-card-total">
                 <div className="jo-masterlist-card-icon">🌾</div>
                 <div className="jo-masterlist-card-info">
@@ -1958,6 +2008,7 @@ const JoMasterlist: React.FC = () => {
                     <option value="active">Active</option>
                     <option value="notActive">Not Active</option>
                     <option value="flaggedNoLand">Flagged (No Land)</option>
+                    <option value="noLandOwner">No Land Owner</option>
                   </select>
                 </div>
                 <div className="jo-masterlist-status-filter">
@@ -2313,6 +2364,21 @@ const JoMasterlist: React.FC = () => {
                                         : "⚠️ No active land — marked Inactive"}
                                     </span>
                                   )}
+                                  {record.hasNoLandOwner && (
+                                    <span
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                        fontSize: 11,
+                                        color: "#dc2626",
+                                        marginTop: 2,
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      🚫 No land owner on record
+                                    </span>
+                                  )}
                                   {/* Tenant badge — only shown when tenants exist */}
                                   {hasTenants && (
                                     <button
@@ -2491,9 +2557,28 @@ const JoMasterlist: React.FC = () => {
                                                   t.farmerName,
                                                 )}
                                               </div>
-                                              <span className="jo-masterlist-tenant-name">
-                                                {t.farmerName}
-                                              </span>
+                                              <div
+                                                style={{
+                                                  display: "flex",
+                                                  flexDirection: "column",
+                                                }}
+                                              >
+                                                <span className="jo-masterlist-tenant-name">
+                                                  {t.farmerName}
+                                                </span>
+                                                {t.hasNoLandOwner && (
+                                                  <span
+                                                    style={{
+                                                      fontSize: 10,
+                                                      color: "#dc2626",
+                                                      fontWeight: 500,
+                                                      marginTop: 1,
+                                                    }}
+                                                  >
+                                                    🚫 No land owner on record
+                                                  </span>
+                                                )}
+                                              </div>
                                             </div>
                                           </td>
                                           <td className="jo-masterlist-tenant-ref">

@@ -49,6 +49,7 @@ interface LandownerRecord {
   lesseeCount: number;
   archivedAt?: string | null;
   archiveReason?: string | null;
+  hasNoLand?: boolean; // Flagged: no current land ownership
 }
 
 interface LandownerSummaryRow {
@@ -69,7 +70,7 @@ interface LandownerSummaryRow {
     | "mixed";
   isFarming: boolean | null;
   status: string;
-  hasNoLand: boolean;
+  hasNoLand?: boolean; // Flagged: no current land ownership
 }
 
 // One parcel in the modal — combined view of ownership + occupation
@@ -549,6 +550,19 @@ const JoLandownerRegistry: React.FC = () => {
             ownerParcelsError.message,
           );
 
+        // Build set of ownerIds that have at least one is_current_owner parcel
+        const ownersWithActiveLand = new Set<string>();
+        (ownerParcels || []).forEach((p: any) => {
+          if (p.is_current_owner === true) {
+            ownersWithActiveLand.add(String(p.submission_id));
+          }
+        });
+
+        // Mark records with no active land as flagged
+        formatted.forEach((owner) => {
+          owner.hasNoLand = !ownersWithActiveLand.has(owner.id);
+        });
+
         parcelRows = (ownerParcels || [])
           .filter((p: any) => p.is_current_owner !== false)
           .map((p: any) => {
@@ -590,6 +604,32 @@ const JoLandownerRegistry: React.FC = () => {
           .filter((row): row is LandownerParcelRow => row !== null);
       }
 
+      // Fire-and-forget: batch update Supabase status for flagged records
+      // Only write if not already inactive or archived
+      const flaggedToUpdate = formatted.filter(
+        (r) =>
+          r.hasNoLand && r.status !== "inactive" && r.status !== "archived",
+      );
+      if (flaggedToUpdate.length > 0) {
+        (async () => {
+          try {
+            await Promise.all(
+              flaggedToUpdate.map((r) =>
+                supabase
+                  .from("rsbsa_submission")
+                  .update({ status: "inactive" })
+                  .eq("id", r.id),
+              ),
+            );
+          } catch (e) {
+            console.warn(
+              "Failed to update flagged landowner records status:",
+              e,
+            );
+          }
+        })();
+      }
+
       setLandownerRecords(formatted);
       setParcelRows(parcelRows);
       setLoading(false);
@@ -603,95 +643,6 @@ const JoLandownerRegistry: React.FC = () => {
   useEffect(() => {
     fetchLandownerRecords();
   }, []);
-
-  const landownerSummary = useMemo((): LandownerSummaryRow[] => {
-    const parcelsByOwner = new Map<string, LandownerParcelRow[]>();
-    parcelRows.forEach((row) => {
-      if (!parcelsByOwner.has(row.landownerId))
-        parcelsByOwner.set(row.landownerId, []);
-      parcelsByOwner.get(row.landownerId)!.push(row);
-    });
-
-    return landownerRecords.map((owner) => {
-      const parcels = parcelsByOwner.get(owner.id) || [];
-
-      // Sum all parcel areas
-      const totalAreaHa = parcels.reduce((sum, p) => {
-        const area =
-          typeof p.parcelArea === "number"
-            ? p.parcelArea
-            : parseFloat(String(p.parcelArea || 0));
-        return sum + (Number.isFinite(area) ? area : 0);
-      }, 0);
-
-      // Barangay — 1 name if single, "X barangays" if multiple
-      const uniqueBarangays = [
-        ...new Set(
-          parcels.map((p) => p.barangay).filter((b) => b && b !== "—"),
-        ),
-      ];
-      const barangay =
-        uniqueBarangays.length === 1
-          ? uniqueBarangays[0]
-          : uniqueBarangays.length > 1
-            ? `${uniqueBarangays.length} barangays`
-            : owner.barangay || "—";
-
-      // Occupation type — "mixed" if parcels differ
-      const occupationTypes = new Set(parcels.map((p) => p.occupationType));
-      const occupationType: LandownerSummaryRow["occupationType"] =
-        occupationTypes.size <= 1
-          ? ([...occupationTypes][0] ?? "owner-farmed")
-          : "mixed";
-
-      // Farming status — "Not Farming" takes priority over "Farming"
-      const farmingParcels = parcels.filter((p) => p.isFarming !== null);
-      const isFarming =
-        farmingParcels.length === 0
-          ? null
-          : farmingParcels.some((p) => p.isFarming === false)
-            ? false
-            : true;
-
-      return {
-        id: owner.id,
-        referenceNumber: owner.referenceNumber,
-        landownerName: owner.landownerName,
-        barangay,
-        barangayCount: uniqueBarangays.length,
-        totalAreaHa,
-        parcelCount: parcels.length || owner.parcelCount,
-        tenantCount: owner.tenantCount,
-        lesseeCount: owner.lesseeCount,
-        occupationType,
-        isFarming,
-        status: owner.status,
-        hasNoLand:
-          parcels.length === 0 ||
-          (owner.status || "").toLowerCase().trim() === "no parcels",
-      };
-    });
-  }, [landownerRecords, parcelRows]);
-
-  // Fire-and-forget: write-once status update for no-land landowners.
-  // Only runs if status is not already inactive/archived.
-  useEffect(() => {
-    if (landownerSummary.length === 0) return;
-    const toFlag = landownerSummary.filter((r) => {
-      if (!r.hasNoLand) return false;
-      const s = (r.status || "").toLowerCase().trim();
-      return s !== "inactive" && s !== "archived" && s !== "no parcels";
-    });
-    if (toFlag.length === 0) return;
-    const ids = toFlag.map((r) => r.id);
-    supabase
-      .from("rsbsa_submission")
-      .update({ status: "inactive" })
-      .in("id", ids)
-      .then(({ error }) => {
-        if (error) console.error("No-land flag status update error:", error);
-      });
-  }, [landownerSummary]);
 
   // ─── Fetch detail for modal ─────────────────────────────────────────────────
 
@@ -996,6 +947,73 @@ const JoLandownerRegistry: React.FC = () => {
 
   // ─── Filtered + sorted records ─────────────────────────────────────────────
 
+  const landownerSummary = useMemo((): LandownerSummaryRow[] => {
+    const parcelsByOwner = new Map<string, LandownerParcelRow[]>();
+    parcelRows.forEach((row) => {
+      if (!parcelsByOwner.has(row.landownerId))
+        parcelsByOwner.set(row.landownerId, []);
+      parcelsByOwner.get(row.landownerId)!.push(row);
+    });
+
+    return landownerRecords.map((owner) => {
+      const parcels = parcelsByOwner.get(owner.id) || [];
+
+      // Sum all parcel areas
+      const totalAreaHa = parcels.reduce((sum, p) => {
+        const area =
+          typeof p.parcelArea === "number"
+            ? p.parcelArea
+            : parseFloat(String(p.parcelArea || 0));
+        return sum + (Number.isFinite(area) ? area : 0);
+      }, 0);
+
+      // Barangay — 1 name if single, "X barangays" if multiple
+      const uniqueBarangays = [
+        ...new Set(
+          parcels.map((p) => p.barangay).filter((b) => b && b !== "—"),
+        ),
+      ];
+      const barangay =
+        uniqueBarangays.length === 1
+          ? uniqueBarangays[0]
+          : uniqueBarangays.length > 1
+            ? `${uniqueBarangays.length} barangays`
+            : owner.barangay || "—";
+
+      // Occupation type — "mixed" if parcels differ
+      const occupationTypes = new Set(parcels.map((p) => p.occupationType));
+      const occupationType: LandownerSummaryRow["occupationType"] =
+        occupationTypes.size <= 1
+          ? ([...occupationTypes][0] ?? "owner-farmed")
+          : "mixed";
+
+      // Farming status — "Not Farming" takes priority over "Farming"
+      const farmingParcels = parcels.filter((p) => p.isFarming !== null);
+      const isFarming =
+        farmingParcels.length === 0
+          ? null
+          : farmingParcels.some((p) => p.isFarming === false)
+            ? false
+            : true;
+
+      return {
+        id: owner.id,
+        referenceNumber: owner.referenceNumber,
+        landownerName: owner.landownerName,
+        barangay,
+        barangayCount: uniqueBarangays.length,
+        totalAreaHa,
+        parcelCount: parcels.length || owner.parcelCount,
+        tenantCount: owner.tenantCount,
+        lesseeCount: owner.lesseeCount,
+        occupationType,
+        isFarming,
+        status: owner.status,
+        hasNoLand: parcels.length === 0,
+      };
+    });
+  }, [landownerRecords, parcelRows]);
+
   const filteredSummary = useMemo(() => {
     return landownerSummary
       .filter((record) => {
@@ -1026,7 +1044,7 @@ const JoLandownerRegistry: React.FC = () => {
           matchesRole = activeStatuses.has(normalizedStatus);
         else if (selectedRole === "notActive")
           matchesRole = notActiveStatuses.has(normalizedStatus);
-        else if (selectedRole === "flaggedNoLand")
+        else if (selectedRole === "flagged")
           matchesRole = record.hasNoLand === true;
 
         if (!matchesRole) return false;
@@ -1051,11 +1069,12 @@ const JoLandownerRegistry: React.FC = () => {
         );
       })
       .sort((a, b) => {
-        // Flagged rows always sink to the bottom regardless of other sort keys
-        const aFlag = a.hasNoLand ? 1 : 0;
-        const bFlag = b.hasNoLand ? 1 : 0;
-        if (aFlag !== bFlag) return aFlag - bFlag;
+        // Primary: push flagged records to the bottom
+        const aFlagged = a.hasNoLand === true ? 1 : 0;
+        const bFlagged = b.hasNoLand === true ? 1 : 0;
+        if (aFlagged !== bFlagged) return aFlagged - bFlagged;
 
+        // Secondary: apply user's sort configs
         for (const config of sortConfigs) {
           const factor = config.direction === "asc" ? 1 : -1;
           if (config.key === "landownerName") {
@@ -1114,9 +1133,6 @@ const JoLandownerRegistry: React.FC = () => {
       withLessees: base.filter((r) => r.lesseeCount > 0).length,
       ownerCultivated: base.filter(
         (r) => r.tenantCount === 0 && r.lesseeCount === 0,
-      ).length,
-      noParcels: base.filter(
-        (r) => (r.status || "").toLowerCase().trim() === "no parcels",
       ).length,
     };
   }, [landownerRecords]);
@@ -1202,6 +1218,8 @@ const JoLandownerRegistry: React.FC = () => {
         parts.push("Role: Self-farming");
       else if (selectedRole === "active") parts.push("Status: Active");
       else if (selectedRole === "notActive") parts.push("Status: Not Active");
+      else if (selectedRole === "flagged")
+        parts.push("Status: Flagged (No Land)");
       if (searchQuery) parts.push(`Search: "${searchQuery}"`);
       return parts.length > 0 ? parts.join(" · ") : "All Landowners";
     })();
@@ -1550,22 +1568,6 @@ const JoLandownerRegistry: React.FC = () => {
                   <span className="jo-landowner-card-label">Self-farming</span>
                 </div>
               </div>
-              {landownerCounts.noParcels > 0 && (
-                <div
-                  className="jo-landowner-status-card jo-landowner-card-inactive"
-                  style={{ borderLeft: "3px solid #d97706", cursor: "pointer" }}
-                  onClick={() => setSelectedRole("flaggedNoLand")}
-                  title="Click to filter No Parcels records"
-                >
-                  <div className="jo-landowner-card-icon">⚠️</div>
-                  <div className="jo-landowner-card-info">
-                    <span className="jo-landowner-card-count">
-                      {landownerCounts.noParcels}
-                    </span>
-                    <span className="jo-landowner-card-label">No Parcels</span>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -1593,7 +1595,7 @@ const JoLandownerRegistry: React.FC = () => {
                   <option value="ownerCultivated">Self-farming only</option>
                   <option value="active">Active</option>
                   <option value="notActive">Not Active</option>
-                  <option value="flaggedNoLand">Flagged (No Land)</option>
+                  <option value="flagged">Flagged (No Land)</option>
                 </select>
               </div>
               <div className="jo-landowner-status-filter">
@@ -1843,7 +1845,7 @@ const JoLandownerRegistry: React.FC = () => {
                       return (
                         <tr
                           key={record.id}
-                          className={`jo-landowner-table-row${record.hasNoLand ? " jo-row--flagged" : ""}`}
+                          className="jo-landowner-table-row"
                           onClick={() =>
                             fetchLandownerDetails(record.id, ownerRecord)
                           }
@@ -1874,25 +1876,6 @@ const JoLandownerRegistry: React.FC = () => {
                                 >
                                   {record.referenceNumber}
                                 </span>
-                                {record.hasNoLand && (
-                                  <span
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 4,
-                                      fontSize: 11,
-                                      color: "#b45309",
-                                      marginTop: 2,
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    {(record.status || "")
-                                      .toLowerCase()
-                                      .trim() === "no parcels"
-                                      ? "⚠️ No parcels on record"
-                                      : "⚠️ No parcels remaining"}
-                                  </span>
-                                )}
                               </div>
                             </div>
                           </td>
@@ -1961,45 +1944,20 @@ const JoLandownerRegistry: React.FC = () => {
                           {/* Record Status */}
                           <td>
                             <span
-                              className={
-                                record.hasNoLand
-                                  ? undefined
-                                  : `jo-landowner-ownership-pill ${
-                                      [
-                                        "submitted",
-                                        "approved",
-                                        "active",
-                                        "active farmer",
-                                      ].includes(
-                                        (record.status || "")
-                                          .toLowerCase()
-                                          .trim(),
-                                      )
-                                        ? "jo-landowner-ownership-tenant"
-                                        : "jo-landowner-ownership-unknown"
-                                    }`
-                              }
-                              style={
-                                record.hasNoLand
-                                  ? {
-                                      background: "#fee2e2",
-                                      color: "#991b1b",
-                                      border: "1px solid #fca5a5",
-                                      borderRadius: 4,
-                                      padding: "2px 8px",
-                                      fontSize: 12,
-                                      fontWeight: 500,
-                                      whiteSpace: "nowrap",
-                                    }
-                                  : undefined
-                              }
+                              className={`jo-landowner-ownership-pill ${
+                                [
+                                  "submitted",
+                                  "approved",
+                                  "active",
+                                  "active farmer",
+                                ].includes(
+                                  (record.status || "").toLowerCase().trim(),
+                                )
+                                  ? "jo-landowner-ownership-tenant"
+                                  : "jo-landowner-ownership-unknown"
+                              }`}
                             >
-                              {record.hasNoLand
-                                ? (record.status || "").toLowerCase().trim() ===
-                                  "no parcels"
-                                  ? "No Parcels"
-                                  : "Inactive — No Land"
-                                : formatRecordStatus(record.status)}
+                              {formatRecordStatus(record.status)}
                             </span>
                           </td>
 

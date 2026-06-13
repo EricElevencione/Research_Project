@@ -1024,7 +1024,7 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #b45309;        /* amber-700 */
+  color: #b45309; /* amber-700 */
   margin-top: 2px;
   font-weight: 500;
 }
@@ -1154,7 +1154,7 @@ tr.jo-row--flagged td {
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #b45309;        /* amber-700 */
+  color: #b45309; /* amber-700 */
   margin-top: 2px;
   font-weight: 500;
 }
@@ -1177,4 +1177,3 @@ tr.jo-row--flagged td {
 tr.jo-row--flagged td {
   background: rgba(251, 191, 36, 0.04) !important;
 }
-
