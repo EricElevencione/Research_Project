@@ -87,9 +87,9 @@ const buildOwnershipTypeFromRecord = (item: any) => {
     explicitCategory !== "unknown"
       ? explicitCategory
       : deriveOwnershipCategoryFromFlags({
-          registeredOwner,
-          tenantLessee,
-        });
+        registeredOwner,
+        tenantLessee,
+      });
 
   return {
     registeredOwner,
@@ -197,8 +197,8 @@ export const getDashboardStats = async (
 
     let currentSeason =
       !isAllocationId &&
-      typeof seasonOrAllocationId === "string" &&
-      seasonOrAllocationId
+        typeof seasonOrAllocationId === "string" &&
+        seasonOrAllocationId
         ? seasonOrAllocationId
         : defaultSeason;
 
@@ -970,12 +970,12 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
       barangayCodes.length > 0
         ? barangayCodes.map((b: any) => b.barangay_name)
         : [
-            ...new Set(
-              allParcels
-                .map((p: any) => p.farm_location_barangay)
-                .filter(Boolean) as string[],
-            ),
-          ].sort();
+          ...new Set(
+            allParcels
+              .map((p: any) => p.farm_location_barangay)
+              .filter(Boolean) as string[],
+          ),
+        ].sort();
 
     const barangayChecklist = barangayNames
       .map((brgy) => {
@@ -1060,7 +1060,7 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         const unplottedParcels = Math.max(
           0,
           Number(progress.totalParcels || 0) -
-            Number(progress.plottedParcels || 0),
+          Number(progress.plottedParcels || 0),
         );
 
         return {
@@ -1292,11 +1292,11 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
       cultivationStatus: deriveCultivationStatus(cultivationCounts),
       cultivationSummary: cultivationCounts
         ? {
-            active: cultivationCounts.active,
-            inactive: cultivationCounts.inactive,
-            unknown: cultivationCounts.unknown,
-            total: cultivationCounts.total,
-          }
+          active: cultivationCounts.active,
+          inactive: cultivationCounts.inactive,
+          unknown: cultivationCounts.unknown,
+          total: cultivationCounts.total,
+        }
         : null,
     };
   });
@@ -1392,7 +1392,7 @@ export const createRsbsaSubmission = async (
             : "No",
         agrarianReformBeneficiary:
           p.agrarianReformBeneficiary === "Yes" ||
-          p.agrarianReformBeneficiary === true
+            p.agrarianReformBeneficiary === true
             ? "Yes"
             : "No",
         ownershipDocumentNo: p.ownershipDocumentNo || "",
@@ -1995,44 +1995,57 @@ export const getLandPlots = async (
     }
   }
 
-  if (!currentOwnerOnly) {
-    return createResponse(enriched, null, 200);
-  }
+  // Fetch all parcels to map their current ownership status
+  const { data: allParcels, error: allParcelsError } = await supabase
+    .from("rsbsa_farm_parcels")
+    .select("submission_id, parcel_number, ownership_type_registered_owner, is_current_owner");
 
-  const { data: currentOwnerParcels, error: currentOwnerParcelsError } =
-    await supabase
-      .from("rsbsa_farm_parcels")
-      .select(
-        "submission_id, parcel_number, ownership_type_registered_owner, is_current_owner",
-      )
-      .or("is_current_owner.is.null,is_current_owner.eq.true");
-
-  if (currentOwnerParcelsError) {
-    console.warn(
-      "Land plot current-owner filtering skipped:",
-      currentOwnerParcelsError.message,
-    );
+  if (allParcelsError) {
+    console.warn("Land plot owner status mapping skipped:", allParcelsError.message);
     return createResponse(enriched, null, 200);
   }
 
   const currentOwnerKeys = new Set<string>();
-  (currentOwnerParcels || [])
-    .filter((parcel: any) => isCurrentOwnerParcel(parcel))
-    .forEach((parcel: any) => {
-      const submissionId = normalizeSubmissionId(parcel?.submission_id);
-      const parcelNumber = normalizeParcelNumber(parcel?.parcel_number);
-      if (!submissionId || !parcelNumber) return;
-      currentOwnerKeys.add(`${submissionId}::${parcelNumber}`);
-    });
+  const nonCurrentOwnerKeys = new Set<string>();
 
-  const filteredPlots = enriched.filter((plot: any) => {
+  (allParcels || []).forEach((parcel: any) => {
+    const submissionId = normalizeSubmissionId(parcel?.submission_id);
+    const parcelNumber = normalizeParcelNumber(parcel?.parcel_number);
+    if (!submissionId || !parcelNumber) return;
+
+    if (isCurrentOwnerParcel(parcel)) {
+      currentOwnerKeys.add(`${submissionId}::${parcelNumber}`);
+    } else {
+      nonCurrentOwnerKeys.add(`${submissionId}::${parcelNumber}`);
+    }
+  });
+
+  const enrichedWithStatus = enriched.map((plot: any) => {
     const submissionId = normalizeSubmissionId(plot?.farmer_id);
     const parcelNumber = normalizeParcelNumber(plot?.parcel_number);
+    if (!submissionId || !parcelNumber) {
+      return { ...plot, is_current_owner: true };
+    }
 
-    // Keep legacy rows that cannot be mapped yet; strict filtering applies only to resolvable owner+parcel rows.
-    if (!submissionId || !parcelNumber) return true;
+    const key = `${submissionId}::${parcelNumber}`;
+    // If explicitly marked as non-current, or if it is not in the current owner list but is in non-current list
+    const isCurrent = currentOwnerKeys.has(key) || !nonCurrentOwnerKeys.has(key);
+    return {
+      ...plot,
+      is_current_owner: isCurrent,
+    };
+  });
 
-    return currentOwnerKeys.has(`${submissionId}::${parcelNumber}`);
+  if (!currentOwnerOnly) {
+    return createResponse(enrichedWithStatus, null, 200);
+  }
+
+  const filteredPlots = enrichedWithStatus.filter((plot: any) => {
+    const submissionId = normalizeSubmissionId(plot?.farmer_id);
+    const parcelNumber = normalizeParcelNumber(plot?.parcel_number);
+    if (!submissionId || !parcelNumber) return true; // keep legacy unresolved rows
+
+    return plot.is_current_owner === true;
   });
 
   return createResponse(filteredPlots, null, 200);
@@ -2851,8 +2864,8 @@ const callShortagesApiViaNode = async (
       method: body ? "POST" : "GET",
       headers: body
         ? {
-            "Content-Type": "application/json",
-          }
+          "Content-Type": "application/json",
+        }
         : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });

@@ -16,7 +16,10 @@ interface TechSidebarProps {
   setSidebarOpen: (open: boolean) => void;
 }
 
-const TechSidebar: React.FC<TechSidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
+const TechSidebar: React.FC<TechSidebarProps> = ({
+  sidebarOpen,
+  setSidebarOpen,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState<{
@@ -51,15 +54,21 @@ const TechSidebar: React.FC<TechSidebarProps> = ({ sidebarOpen, setSidebarOpen }
     { path: "/technician-rsbsa", label: "RSBSA Registration", icon: RSBSAIcon },
     { path: "/technician-incentives", label: "Subsidy", icon: IncentivesIcon },
     { path: "/technician-masterlist", label: "Masterlist", icon: ApproveIcon },
-    { path: "/technician-tenant-registry", label: "Farmer Registry", icon: ApproveIcon },
+    {
+      path: "/technician-tenant-registry",
+      label: "Farmer Registry",
+      icon: ApproveIcon,
+    },
   ];
 
   return (
     <>
       <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
         <nav className="sidebar-nav">
+          {/* Logo */}
           <div className="sidebar-logo">
             <img src={LogoImage} alt="Logo" />
+            <span className="sidebar-logo-title">Technician Portal</span>
           </div>
 
           {navItems.map((item) => (
