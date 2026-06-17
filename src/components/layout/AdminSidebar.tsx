@@ -57,8 +57,10 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen }: AdminSidebarProps) => {
     <>
       <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
         <nav className="sidebar-nav">
+          {/* Logo */}
           <div className="sidebar-logo">
             <img src={LogoImage} alt="Logo" />
+            <span className="sidebar-logo-title">Admin Portal</span>
           </div>
 
           {navItems.map((item) => (

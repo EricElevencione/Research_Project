@@ -482,6 +482,16 @@ const JoLandRegistry: React.FC = () => {
   const [ownerAffiliationContextNote, setOwnerAffiliationContextNote] =
     useState("");
 
+  const [selectedTransferParcelIds, setSelectedTransferParcelIds] = useState<number[]>([]);
+
+  const handleToggleTransferParcel = useCallback((farmParcelId: number) => {
+    setSelectedTransferParcelIds((prev) =>
+      prev.includes(farmParcelId)
+        ? prev.filter((id) => id !== farmParcelId)
+        : [...prev, farmParcelId],
+    );
+  }, []);
+
   const {
     parcelScope,
     setParcelScope,
@@ -491,6 +501,10 @@ const JoLandRegistry: React.FC = () => {
     validateSplitInputs,
     executePartialTransfers,
   } = usePartialTransfer();
+
+  useEffect(() => {
+    setSelectedTransferParcelIds([]);
+  }, [sourceRegisteredOwnerId, beneficairyOwnerId]);
 
   const refreshLandParcels = useCallback(async () => {
     setLoading(true);
@@ -2684,8 +2698,10 @@ const JoLandRegistry: React.FC = () => {
 
   const partialTotalTransferAreaHa: number = donorSplitParcels.reduce(
     (sum, p) => {
-      if (parcelScope === "full")
-        return sum + (Number(p.total_farm_area_ha) || 0);
+      if (parcelScope === "full") {
+        const isSelected = selectedTransferParcelIds.includes(p.farm_parcel_id);
+        return sum + (isSelected ? (Number(p.total_farm_area_ha) || 0) : 0);
+      }
       const val = parcelSplitInputs[p.farm_parcel_id];
       return sum + (typeof val === "number" && val > 0 ? val : 0);
     },
@@ -2724,7 +2740,9 @@ const JoLandRegistry: React.FC = () => {
       return parcelScopeValidationError;
     }
     if (donorSplitParcels.length > 0 && parcelScope === "full") {
-      // full parcel is always valid if donor has parcels — no extra check needed
+      if (selectedTransferParcelIds.length === 0) {
+        return "Please select at least one parcel to transfer.";
+      }
     }
     if (supportingDocs.length === 0) return "Upload at least one proof image.";
     if (parcelScope === "partial" && parcelScopeValidationError)
@@ -2747,6 +2765,7 @@ const JoLandRegistry: React.FC = () => {
     setTransferSubmitError("");
     setTransferSubmitSuccess("");
     setIsSubmittingTransfer(false);
+    setSelectedTransferParcelIds([]);
   };
 
   const openTransferModal = (contextOwnership?: RegistryRowOwnership) => {
@@ -3041,6 +3060,13 @@ const JoLandRegistry: React.FC = () => {
 
     try {
       // ── Step 1: Verify donor still owns the parcels ──────────────
+      const parcelsToVerify = parcelScope === "full"
+        ? donorSplitParcels.filter(p => selectedTransferParcelIds.includes(p.farm_parcel_id))
+        : donorSplitParcels.filter(p => {
+            const input = parcelSplitInputs[p.farm_parcel_id];
+            return input !== "" && input !== undefined;
+          });
+
       const {
         verifiedParcels,
         invalidParcelIds,
@@ -3048,7 +3074,7 @@ const JoLandRegistry: React.FC = () => {
         verifiedAvailableAreaHa,
       } = await verifyDonorParcelOwnership(
         fromFarmerId,
-        donorSplitParcels.map((p) => ({
+        parcelsToVerify.map((p) => ({
           ...p,
           id: p.farm_parcel_id,
           land_parcel_id: p.farm_parcel_id,
@@ -4769,6 +4795,8 @@ const JoLandRegistry: React.FC = () => {
                                     s + (Number(p.total_farm_area_ha) || 0),
                                   0,
                                 )}
+                                selectedFullParcelIds={selectedTransferParcelIds}
+                                onToggleFullParcel={handleToggleTransferParcel}
                               />
                             </div>
                           )}
@@ -4868,6 +4896,8 @@ const JoLandRegistry: React.FC = () => {
                                   s + (Number(p.total_farm_area_ha) || 0),
                                 0,
                               )}
+                              selectedFullParcelIds={selectedTransferParcelIds}
+                              onToggleFullParcel={handleToggleTransferParcel}
                             />
                           </div>
                         )}
@@ -5008,10 +5038,12 @@ const JoLandRegistry: React.FC = () => {
                                     return { ...p, reviewArea: area };
                                   })
                                   .filter((p) => p.reviewArea !== null)
-                              : donorSplitParcels.map((p) => ({
-                                  ...p,
-                                  reviewArea: p.total_farm_area_ha,
-                                }));
+                              : donorSplitParcels
+                                  .filter((p) => selectedTransferParcelIds.includes(p.farm_parcel_id))
+                                  .map((p) => ({
+                                    ...p,
+                                    reviewArea: p.total_farm_area_ha,
+                                  }));
 
                           const reviewTotalHa = reviewParcels.reduce(
                             (sum, p) => sum + (p.reviewArea ?? 0),
@@ -5047,6 +5079,20 @@ const JoLandRegistry: React.FC = () => {
                                         }}
                                       >
                                         of {donorSplitParcels.length} entered
+                                      </span>
+                                    )}
+                                  {parcelScope === "full" &&
+                                    donorSplitParcels.length >
+                                      reviewParcels.length && (
+                                      <span
+                                        style={{
+                                          color: "#94a3b8",
+                                          fontWeight: 400,
+                                          fontSize: 11,
+                                          marginLeft: 4,
+                                        }}
+                                      >
+                                        of {donorSplitParcels.length} selected
                                       </span>
                                     )}
                                 </strong>
@@ -5096,6 +5142,17 @@ const JoLandRegistry: React.FC = () => {
                                   }}
                                 >
                                   No transfer areas entered yet.
+                                </p>
+                              ) : parcelScope === "full" ? (
+                                <p
+                                  style={{
+                                    fontSize: 12,
+                                    color: "#ef4444",
+                                    margin: "4px 0 0",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  Please select at least one parcel to transfer.
                                 </p>
                               ) : null}
                             </div>

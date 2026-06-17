@@ -1172,14 +1172,26 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
     .from("rsbsa_farm_parcels")
     .select("submission_id, is_current_owner, is_farming");
 
-  // Create a map of submission_id -> has any current parcels
+  // Create maps of submission_id -> current/all parcel state.
+  // Transferred parcels remain in rsbsa_farm_parcels with is_current_owner=false,
+  // so current-facing screens must not count them as land still held.
   const currentOwnershipMap = new Map<number, boolean>();
+  const currentParcelCountMap = new Map<number, number>();
+  const totalParcelCountMap = new Map<number, number>();
   (parcelsData || []).forEach((parcel: any) => {
     const subId = parcel.submission_id;
+    if (subId === null || subId === undefined) return;
+
+    totalParcelCountMap.set(subId, (totalParcelCountMap.get(subId) || 0) + 1);
+
     // If any parcel has is_current_owner = true (or null/undefined which defaults to true), mark as current
     const isCurrent = parcel.is_current_owner !== false;
     if (isCurrent) {
       currentOwnershipMap.set(subId, true);
+      currentParcelCountMap.set(
+        subId,
+        (currentParcelCountMap.get(subId) || 0) + 1,
+      );
     } else if (!currentOwnershipMap.has(subId)) {
       currentOwnershipMap.set(subId, false);
     }
@@ -1188,15 +1200,6 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
   // Show ALL farmers (Masterlist needs everyone). Attach parcel ownership info
   // so individual pages can filter as needed (e.g. RSBSA pages hide transferred owners).
   const filteredData = data || [];
-
-  // Count ALL parcels per submission (including transferred ones)
-  // "Number of Parcels" = how many parcels the farmer has ever registered,
-  // regardless of whether any were later transferred to another farmer.
-  const parcelCountMap = new Map<number, number>();
-  (parcelsData || []).forEach((parcel: any) => {
-    const subId = parcel.submission_id;
-    parcelCountMap.set(subId, (parcelCountMap.get(subId) || 0) + 1);
-  });
 
   const initCultivationCounts = () => ({
     active: 0,
@@ -1267,11 +1270,16 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
   const transformedData = filteredData.map((item: any) => {
     const record = transformRsbsaRecord(item);
     const hasCurrentParcels = currentOwnershipMap.get(item.id);
-    const normalizedParcelCount = parcelCountMap.get(item.id) || 0;
+    const currentParcelCount = currentParcelCountMap.get(item.id) || 0;
+    const totalParcelCount = totalParcelCountMap.get(item.id) || 0;
     const fallbackParcelCount =
-      normalizedParcelCount > 0
-        ? normalizedParcelCount
-        : deriveLegacyParcelFallbackCount(item);
+      currentParcelCount > 0
+        ? currentParcelCount
+        : hasCurrentParcels === false
+          ? 0
+          : totalParcelCount > 0
+            ? totalParcelCount
+            : deriveLegacyParcelFallbackCount(item);
 
     const cultivationEntry = cultivationMap.get(item.id);
     const cultivationCounts = cultivationEntry
@@ -1284,9 +1292,11 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
       ...record,
       // true = has current parcels, false = all transferred, undefined = no parcels at all
       hasCurrentParcels: hasCurrentParcels,
+      currentParcelCount,
+      totalParcelCount,
       parcelCount: fallbackParcelCount,
       legacyParcelCountEstimated:
-        normalizedParcelCount === 0 && fallbackParcelCount > 0,
+        totalParcelCount === 0 && fallbackParcelCount > 0,
       archived_at: item.archived_at ?? null,
       archive_reason: item.archive_reason ?? null,
       cultivationStatus: deriveCultivationStatus(cultivationCounts),

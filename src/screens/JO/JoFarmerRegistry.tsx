@@ -40,6 +40,10 @@ interface RSBSARecord {
   farmLocation: string;
   parcelArea: string;
   parcelCount: number;
+  currentParcelCount?: number;
+  totalParcelCount?: number;
+  tenureParcelCount?: number;
+  hasCurrentParcels?: boolean;
   // CHANGE: farmingParcelCount tracks how many parcels are actively farmed.
   // Used to render the "X/Y farming" cultivation column.
   // null means the API didn't return a count — we fall back to farmingStatus string.
@@ -582,16 +586,62 @@ const JoFarmerRegistry: React.FC = () => {
             cultivationSummary?.active,
           );
 
-          const parcelCountValue = parseNumberValue(
+          const hasCurrentParcels =
+            item.hasCurrentParcels === true
+              ? true
+              : item.hasCurrentParcels === false
+                ? false
+                : undefined;
+
+          const currentParcelCountValue = parseNumberValue(
+            item.currentParcelCount ?? item.current_parcel_count,
+          );
+          const reportedParcelCountValue = parseNumberValue(
             item.parcelCount ??
               item.parcel_count ??
               item["PARCEL COUNT"] ??
               cultivationTotal,
           );
           const parcelCount =
-            parcelCountValue !== null
-              ? Math.max(0, Math.floor(parcelCountValue))
-              : 0;
+            currentParcelCountValue !== null
+              ? Math.max(0, Math.floor(currentParcelCountValue))
+              : hasCurrentParcels === false
+                ? 0
+                : reportedParcelCountValue !== null
+                  ? Math.max(0, Math.floor(reportedParcelCountValue))
+                  : 0;
+          const totalParcelCountValue = parseNumberValue(
+            item.totalParcelCount ?? item.total_parcel_count,
+          );
+          const totalParcelCount =
+            totalParcelCountValue !== null
+              ? Math.max(0, Math.floor(totalParcelCountValue))
+              : reportedParcelCountValue !== null
+                ? Math.max(0, Math.floor(reportedParcelCountValue))
+                : parcelCount;
+          const archivedAt =
+            item.archivedAt ??
+            item.archived_at ??
+            item._raw?.archived_at ??
+            null;
+          const normalizedStatus = String(item.status || "")
+            .toLowerCase()
+            .trim();
+          const ownership = item.ownershipType || {};
+          const isTenantOrLessee =
+            ownership.tenant === true ||
+            ownership.lessee === true ||
+            ownership.tenantLessee === true ||
+            ownership.category === "tenantLessee";
+          const isOwnerRole =
+            !isTenantOrLessee &&
+            (ownership.registeredOwner === true ||
+              ownership.category === "registeredOwner");
+          const hasNoParcels =
+            isOwnerRole &&
+            (hasCurrentParcels === false ||
+              parcelCount === 0 ||
+              normalizedStatus === "no parcels");
 
           const farmingParcelCountValue = parseNumberValue(
             item.farmingParcelCount ??
@@ -614,6 +664,10 @@ const JoFarmerRegistry: React.FC = () => {
             farmLocation: String(item.farmLocation ?? "—"),
             parcelArea,
             parcelCount,
+            currentParcelCount: parcelCount,
+            totalParcelCount,
+            tenureParcelCount: isTenantOrLessee ? totalParcelCount : 0,
+            hasCurrentParcels,
             // CHANGE: Extract farmingParcelCount from API if available.
             // Falls back to null, which triggers the farmingStatus string fallback
             // in formatCultivation().
@@ -636,19 +690,14 @@ const JoFarmerRegistry: React.FC = () => {
             farmingStatus: String(
               item.farmingStatus || item.cultivationStatus || "Not specified",
             ),
-            archivedAt:
-              item.archivedAt ??
-              item.archived_at ??
-              item._raw?.archived_at ??
-              null,
+            archivedAt,
             archiveReason:
               item.archiveReason ??
               item.archive_reason ??
               item._raw?.archive_reason ??
               null,
             ownershipType: item.ownershipType,
-            hasNoParcels:
-              (item.status || "").toLowerCase().trim() === "no parcels",
+            hasNoParcels,
           };
         },
       );
@@ -671,8 +720,9 @@ const JoFarmerRegistry: React.FC = () => {
 
       // Batch query parcel owner names to detect tenants/lessees with no
       // landowner filled in. Runs alongside the transfer-history query.
-      let submissionsWithOwnerName = new Set<string>();
-      let tenantLesseeParcelIds = new Set<string>();
+      const submissionsWithOwnerLink = new Set<string>();
+      const tenantLesseeParcelCountById = new Map<string, number>();
+      const tenantLesseeFarmingCountById = new Map<string, number>();
 
       if (tenantLesseeIds.length > 0) {
         const [transferResult, ownerNameResult] = await Promise.all([
@@ -685,7 +735,7 @@ const JoFarmerRegistry: React.FC = () => {
           supabase
             .from("rsbsa_farm_parcels")
             .select(
-              "submission_id, tenant_land_owner_name, lessee_land_owner_name",
+              "submission_id, tenant_land_owner_id, lessee_land_owner_id, tenant_land_owner_name, lessee_land_owner_name, is_farming",
             )
             .in("submission_id", tenantLesseeIds)
             .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true"),
@@ -698,19 +748,47 @@ const JoFarmerRegistry: React.FC = () => {
         (ownerNameResult.data || []).forEach((p: any) => {
           if (!p.submission_id) return;
           const id = String(p.submission_id);
-          tenantLesseeParcelIds.add(id);
+          tenantLesseeParcelCountById.set(
+            id,
+            (tenantLesseeParcelCountById.get(id) || 0) + 1,
+          );
+          if (p.is_farming === true) {
+            tenantLesseeFarmingCountById.set(
+              id,
+              (tenantLesseeFarmingCountById.get(id) || 0) + 1,
+            );
+          }
           const name =
             p.tenant_land_owner_name || p.lessee_land_owner_name || "";
-          if (name) submissionsWithOwnerName.add(id);
+          const ownerId = p.tenant_land_owner_id || p.lessee_land_owner_id;
+          if (name || ownerId) submissionsWithOwnerLink.add(id);
         });
 
-        formattedRecords = formattedRecords.map((r) => ({
-          ...r,
-          needsPendingReview: transferredIds.has(r.id),
-          hasNoLandOwner:
-            tenantLesseeParcelIds.has(r.id) &&
-            !submissionsWithOwnerName.has(r.id),
-        }));
+        formattedRecords = formattedRecords.map((r) => {
+          const isTenantLesseeRecord = tenantLesseeIds.includes(r.id);
+          const tenureParcelCount =
+            tenantLesseeParcelCountById.get(r.id) || 0;
+          const farmingParcelCount =
+            tenantLesseeFarmingCountById.get(r.id) ?? null;
+
+          return {
+            ...r,
+            needsPendingReview: transferredIds.has(r.id),
+            parcelCount: isTenantLesseeRecord
+              ? tenureParcelCount
+              : r.parcelCount,
+            tenureParcelCount: isTenantLesseeRecord
+              ? tenureParcelCount
+              : r.tenureParcelCount,
+            farmingParcelCount: isTenantLesseeRecord
+              ? farmingParcelCount
+              : r.farmingParcelCount,
+            hasNoParcels: isTenantLesseeRecord ? false : r.hasNoParcels,
+            hasNoLandOwner:
+              isTenantLesseeRecord &&
+              (tenureParcelCount === 0 || !submissionsWithOwnerLink.has(r.id)),
+          };
+        });
       }
 
       setRsbsaRecords(formattedRecords);
@@ -905,9 +983,7 @@ const JoFarmerRegistry: React.FC = () => {
       const f = getOwnershipFlags(r);
       return f.category === "registeredOwner" || f.owner;
     }).length;
-    const noParcels = base.filter(
-      (r) => (r.status || "").toLowerCase().trim() === "no parcels",
-    ).length;
+    const noParcels = base.filter((r) => r.hasNoParcels === true).length;
     return {
       total,
       active,
@@ -1009,16 +1085,12 @@ const JoFarmerRegistry: React.FC = () => {
   // Falls back to inferring from the farmingStatus string when the API doesn't
   // return a count (e.g. "Farming" → all parcels active, "Not farming" → none).
   const formatCultivation = (record: RSBSARecord): string => {
+    const flags = getOwnershipFlags(record);
+    if (flags.tenantLessee) return "-";
+
     const total = record.parcelCount;
     const hasTotal = Number.isFinite(total) && total > 0;
-    if (
-      !hasTotal &&
-      record.farmingParcelCount !== null &&
-      record.farmingParcelCount !== undefined
-    ) {
-      return `${record.farmingParcelCount}/? farming`;
-    }
-    if (!hasTotal) return "—";
+    if (!hasTotal) return "-";
 
     // Preferred path: API returned an explicit count
     if (
@@ -1034,11 +1106,10 @@ const JoFarmerRegistry: React.FC = () => {
       return `${total}/${total} farming`;
     if (status === "not farming" || status === "not_farming")
       return `0/${total} farming`;
-    // "Mixed" with no count — we know it's partial but not exactly how many.
-    // Show the total so staff know to open the modal for the breakdown.
-    if (status === "mixed") return `?/${total} farming`;
+    // "Mixed" without an exact count is intentionally left blank in the table.
+    if (status === "mixed") return "-";
 
-    return "—";
+    return "-";
   };
 
   const formatRecordStatus = (status?: string | null) => {
@@ -1985,7 +2056,13 @@ const JoFarmerRegistry: React.FC = () => {
                     filteredRecords.map((record) => (
                       <tr
                         key={record.id}
-                        className={`jo-farmer-table-row${record.needsPendingReview || record.hasNoParcels ? " jo-row--flagged" : ""}`}
+                        className={`jo-farmer-table-row${
+                          record.needsPendingReview ||
+                          record.hasNoParcels ||
+                          record.hasNoLandOwner
+                            ? " jo-row--flagged"
+                            : ""
+                        }`}
                         onClick={() => fetchFarmerDetails(record.id, record)}
                       >
                         <td
@@ -2109,7 +2186,7 @@ const JoFarmerRegistry: React.FC = () => {
                           <span
                             className="jo-farmer-record-status"
                             style={
-                              record.hasNoParcels
+                              record.hasNoParcels || record.hasNoLandOwner
                                 ? {
                                     background: "#fee2e2",
                                     color: "#991b1b",
@@ -2134,11 +2211,13 @@ const JoFarmerRegistry: React.FC = () => {
                                   : undefined
                             }
                           >
-                            {record.hasNoParcels
-                              ? "No Parcels"
-                              : record.needsPendingReview
-                                ? "Pending Review"
-                                : formatRecordStatus(record.status)}
+                            {record.hasNoLandOwner
+                              ? "No Land Owner" // tenant/lessee with no landowner filled
+                              : record.hasNoParcels
+                                ? "No Parcels" // owner with no parcel on record
+                                : record.needsPendingReview
+                                  ? "Pending Review"
+                                  : formatRecordStatus(record.status)}
                           </span>
                         </td>
 

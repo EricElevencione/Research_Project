@@ -1216,6 +1216,11 @@
   border-color: #cbd5e1;
 }
 
+.jo-land-registry-transfer-parcel-row--selected {
+  border-color: #10b981 !important;
+  background: #f0fdf4 !important;
+}
+
 .jo-land-registry-transfer-parcel-meta {
   display: flex;
   flex-wrap: wrap;

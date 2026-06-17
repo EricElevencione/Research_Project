@@ -972,21 +972,24 @@ const JoMasterlist: React.FC = () => {
     fetchSummaryStats();
   }, []);
 
-  // Fire-and-forget: write-once status update for no-land records.
-  // Only runs if status is not already inactive/archived, so a JO's manual
-  // status change won't be clobbered until the parcel situation changes.
+  // Fire-and-forget: write-once status update for owner records with no
+  // current parcels. Tenant/lessee missing-owner cases stay separately flagged.
   useEffect(() => {
     if (rsbsaRecords.length === 0) return;
     const toFlag = rsbsaRecords.filter((r) => {
       if (!r.hasNoActiveLand) return false;
+      const flags = getOwnershipFlags(r);
+      if (flags.tenant || flags.lessee || flags.category === "tenantLessee") {
+        return false;
+      }
       const s = (r.status || "").toLowerCase().trim();
-      return s !== "inactive" && s !== "archived" && s !== "no parcels";
+      return s !== "archived" && s !== "no parcels";
     });
     if (toFlag.length === 0) return;
     const ids = toFlag.map((r) => r.id);
     supabase
       .from("rsbsa_submission")
-      .update({ status: "inactive" })
+      .update({ status: "No Parcels" })
       .in("id", ids)
       .then(({ error }) => {
         if (error) console.error("No-land flag status update error:", error);
@@ -1031,17 +1034,24 @@ const JoMasterlist: React.FC = () => {
       "not approved",
       "inactive",
     ]);
+    const isNoParcelsRecord = (record: RSBSARecord) => {
+      const status = (record.status || "").toLowerCase().trim();
+      if (status === "no parcels") return true;
+      if (record.hasNoActiveLand !== true) return false;
+      const flags = getOwnershipFlags(record);
+      return !(flags.tenant || flags.lessee || flags.category === "tenantLessee");
+    };
+
     return {
       total: rsbsaRecords.length,
       active: rsbsaRecords.filter((r) =>
         active.has((r.status || "").toLowerCase().trim()),
       ).length,
       inactive: rsbsaRecords.filter((r) =>
-        inactive.has((r.status || "").toLowerCase().trim()),
+        inactive.has((r.status || "").toLowerCase().trim()) &&
+        !isNoParcelsRecord(r),
       ).length,
-      noParcels: rsbsaRecords.filter(
-        (r) => (r.status || "").toLowerCase().trim() === "no parcels",
-      ).length,
+      noParcels: rsbsaRecords.filter(isNoParcelsRecord).length,
       noLandOwner: rsbsaRecords.filter((r) => r.hasNoLandOwner === true).length,
     };
   }, [rsbsaRecords]);
@@ -2357,11 +2367,14 @@ const JoMasterlist: React.FC = () => {
                                         fontWeight: 500,
                                       }}
                                     >
-                                      {(record.status || "")
-                                        .toLowerCase()
-                                        .trim() === "no parcels"
-                                        ? "⚠️ No parcels on record"
-                                        : "⚠️ No active land — marked Inactive"}
+                                      {(() => {
+                                        const f = getOwnershipFlags(record);
+                                        return f.tenant ||
+                                          f.lessee ||
+                                          f.category === "tenantLessee"
+                                          ? "⚠️ No land owner on record"
+                                          : "⚠️ No parcels on record";
+                                      })()}
                                     </span>
                                   )}
                                   {record.hasNoLandOwner && (
@@ -2443,11 +2456,14 @@ const JoMasterlist: React.FC = () => {
                                 }
                               >
                                 {record.hasNoActiveLand
-                                  ? (record.status || "")
-                                      .toLowerCase()
-                                      .trim() === "no parcels"
-                                    ? "No Parcels"
-                                    : "Inactive — No Land"
+                                  ? (() => {
+                                      const f = getOwnershipFlags(record);
+                                      return f.tenant ||
+                                        f.lessee ||
+                                        f.category === "tenantLessee"
+                                        ? "No Land Owner"
+                                        : "No Parcels";
+                                    })()
                                   : formatRecordStatus(record.status)}
                               </span>
                             </td>

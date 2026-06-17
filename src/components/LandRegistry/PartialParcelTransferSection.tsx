@@ -22,6 +22,10 @@ interface Props {
   validationError: string;     // "" when all inputs pass
   totalTransferAreaHa: number; // sum of all non-empty inputs (partial) or full donor area
   donorTotalAreaHa: number;    // sum of all donor parcels before transfer
+
+  // Selected parcels in Full mode
+  selectedFullParcelIds?: number[];
+  onToggleFullParcel?: (farmParcelId: number) => void;
 }
 
 export const PartialParcelTransferSection: React.FC<Props> = ({
@@ -33,6 +37,8 @@ export const PartialParcelTransferSection: React.FC<Props> = ({
   validationError,
   totalTransferAreaHa,
   donorTotalAreaHa,
+  selectedFullParcelIds = [],
+  onToggleFullParcel,
 }) => {
   if (donorParcels.length === 0) return null;
 
@@ -90,93 +96,130 @@ export const PartialParcelTransferSection: React.FC<Props> = ({
           const isNegativeOrZero =
             numericInput !== null && numericInput <= 0;
 
+          const isSelected = parcelScope === "full"
+            ? selectedFullParcelIds.includes(parcel.farm_parcel_id)
+            : (inputVal !== "" && inputVal !== undefined && Number(inputVal) > 0);
+
           return (
             <div
               key={parcel.farm_parcel_id}
-              className="jo-land-registry-transfer-parcel-row"
+              className={[
+                "jo-land-registry-transfer-parcel-row",
+                isSelected ? "jo-land-registry-transfer-parcel-row--selected" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
             >
-              {/* Parcel header */}
-              <div className="jo-land-registry-transfer-parcel-meta">
-                <span className="jo-land-registry-transfer-parcel-number">
-                  {parcel.parcel_number}
-                </span>
-                <span className="jo-land-registry-transfer-parcel-location">
-                  {parcel.farm_location_barangay}
-                </span>
-                <span className="jo-land-registry-transfer-parcel-area">
-                  {parcel.total_farm_area_ha.toFixed(4)} ha total
-                </span>
-              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
+                {parcelScope === "full" && (
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleFullParcel?.(parcel.farm_parcel_id)}
+                    style={{
+                      width: "18px",
+                      height: "18px",
+                      cursor: "pointer",
+                      accentColor: "#10b981",
+                      flexShrink: 0
+                    }}
+                  />
+                )}
 
-              {/* Full mode: read-only area badge */}
-              {parcelScope === "full" && (
-                <div className="jo-land-registry-transfer-parcel-full-badge">
-                  Transferring full {parcel.total_farm_area_ha.toFixed(4)} ha
-                </div>
-              )}
-
-              {/* Partial mode: hectare input */}
-              {parcelScope === "partial" && (
-                <div className="jo-land-registry-transfer-parcel-split-inputs">
-                  <div className="jo-land-registry-transfer-parcel-input-row">
-                    <label>Transfer (ha):</label>
-                    <input
-                      type="number"
-                      min="0.0001"
-                      max={parcel.total_farm_area_ha - 0.0001}
-                      step="0.0001"
-                      placeholder={`Max ${(parcel.total_farm_area_ha - 0.0001).toFixed(4)}`}
-                      value={inputVal === "" || inputVal === undefined ? "" : inputVal}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        if (raw === "") {
-                          onSetParcelTransferArea(parcel.farm_parcel_id, "");
-                          return;
-                        }
-                        const parsed = parseFloat(raw);
-                        onSetParcelTransferArea(
-                          parcel.farm_parcel_id,
-                          Number.isFinite(parsed) ? parsed : "",
-                        );
-                      }}
-                      className={[
-                        "jo-land-registry-transfer-ha-input",
-                        isOverLimit || isNegativeOrZero
-                          ? "jo-land-registry-transfer-ha-input--error"
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    />
-                    <span className="jo-land-registry-transfer-ha-unit">ha</span>
+                <div style={{ flexGrow: 1 }}>
+                  {/* Parcel header */}
+                  <div className="jo-land-registry-transfer-parcel-meta">
+                    <span className="jo-land-registry-transfer-parcel-number">
+                      {parcel.parcel_number}
+                    </span>
+                    <span className="jo-land-registry-transfer-parcel-location">
+                      {parcel.farm_location_barangay}
+                    </span>
+                    <span className="jo-land-registry-transfer-parcel-area">
+                      {parcel.total_farm_area_ha.toFixed(4)} ha total
+                    </span>
                   </div>
 
-                  {/* Inline validation hint */}
-                  {isOverLimit && (
-                    <p className="jo-land-registry-transfer-input-error">
-                      Must be less than {parcel.total_farm_area_ha.toFixed(4)}{" "}
-                      ha. Use Full Parcel for complete handover.
-                    </p>
-                  )}
-                  {isNegativeOrZero && (
-                    <p className="jo-land-registry-transfer-input-error">
-                      Must be greater than 0.
-                    </p>
+                  {/* Full mode: selection state badge */}
+                  {parcelScope === "full" && (
+                    <div
+                      className="jo-land-registry-transfer-parcel-full-badge"
+                      style={{
+                        background: isSelected ? "#dcfce7" : "#f1f5f9",
+                        borderColor: isSelected ? "#86efac" : "#cbd5e1",
+                        color: isSelected ? "#15803d" : "#475569"
+                      }}
+                    >
+                      {isSelected
+                        ? `Selected to Transfer: full ${parcel.total_farm_area_ha.toFixed(4)} ha`
+                        : "Click checkbox to select this parcel"}
+                    </div>
                   )}
 
-                  {/* Remaining area preview */}
-                  {remaining !== null && !isOverLimit && !isNegativeOrZero && (
-                    <p className="jo-land-registry-transfer-remaining-preview">
-                      Donor retains:{" "}
-                      <strong>{remaining.toFixed(4)} ha</strong>. New parcel
-                      number:{" "}
-                      <code>
-                        {parcel.parcel_number}-SPL-1
-                      </code>
-                    </p>
+                  {/* Partial mode: hectare input */}
+                  {parcelScope === "partial" && (
+                    <div className="jo-land-registry-transfer-parcel-split-inputs">
+                      <div className="jo-land-registry-transfer-parcel-input-row">
+                        <label>Transfer (ha):</label>
+                        <input
+                          type="number"
+                          min="0.0001"
+                          max={parcel.total_farm_area_ha - 0.0001}
+                          step="0.0001"
+                          placeholder={`Max ${(parcel.total_farm_area_ha - 0.0001).toFixed(4)}`}
+                          value={inputVal === "" || inputVal === undefined ? "" : inputVal}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === "") {
+                              onSetParcelTransferArea(parcel.farm_parcel_id, "");
+                              return;
+                            }
+                            const parsed = parseFloat(raw);
+                            onSetParcelTransferArea(
+                              parcel.farm_parcel_id,
+                              Number.isFinite(parsed) ? parsed : "",
+                            );
+                          }}
+                          className={[
+                            "jo-land-registry-transfer-ha-input",
+                            isOverLimit || isNegativeOrZero
+                              ? "jo-land-registry-transfer-ha-input--error"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        />
+                        <span className="jo-land-registry-transfer-ha-unit">ha</span>
+                      </div>
+
+                      {/* Inline validation hint */}
+                      {isOverLimit && (
+                        <p className="jo-land-registry-transfer-input-error">
+                          Must be less than {parcel.total_farm_area_ha.toFixed(4)}{" "}
+                          ha. Use Full Parcel for complete handover.
+                        </p>
+                      )}
+                      {isNegativeOrZero && (
+                        <p className="jo-land-registry-transfer-input-error">
+                          Must be greater than 0.
+                        </p>
+                      )}
+
+                      {/* Remaining area preview */}
+                      {remaining !== null && !isOverLimit && !isNegativeOrZero && (
+                        <p className="jo-land-registry-transfer-remaining-preview">
+                          Donor retains:{" "}
+                          <strong>{remaining.toFixed(4)} ha</strong>. New parcel
+                          number:{" "}
+                          <code>
+                            {parcel.parcel_number}-SPL-1
+                          </code>
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
@@ -190,7 +233,7 @@ export const PartialParcelTransferSection: React.FC<Props> = ({
         </strong>
         {" of "}
         <strong>{donorTotalAreaHa.toFixed(4)} ha</strong>
-        {parcelScope === "partial" && donorTotalAreaHa > 0 && (
+        {donorTotalAreaHa > 0 && (
           <span className="jo-land-registry-transfer-scope-pct">
             {" "}
             ({((totalTransferAreaHa / donorTotalAreaHa) * 100).toFixed(1)}%)
