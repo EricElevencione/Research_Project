@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { getAllocations, getFarmerRequests } from "../../api";
+import { getAllocations, getFarmerRequests, closeAllocation, reopenAllocation } from "../../api";
 import {
   UsageGauges,
   BarangayBreakdownTable,
@@ -65,6 +65,7 @@ const ViewAllocation: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [closingProgram, setClosingProgram] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -248,6 +249,55 @@ const ViewAllocation: React.FC = () => {
     fetchAllocationData();
   }, [allocationId]);
 
+  const handleCloseProgram = async () => {
+    if (!allocation) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to close "${allocation.season}"?\n\nThis will mark the program as Closed across all accounts and transfer remaining stock to Excess Inventory.`,
+    );
+    if (!confirmed) return;
+
+    setClosingProgram(true);
+    try {
+      const response = await closeAllocation(allocation.id);
+      if (response.error) {
+        alert(`Failed to close program: ${response.error}`);
+      } else {
+        // Refresh data
+        const refreshed = await getAllocations();
+        const updated = (refreshed.data || []).find((a: any) => a.id === allocation.id);
+        if (updated) setAllocation(updated);
+      }
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setClosingProgram(false);
+    }
+  };
+
+  const handleReopenProgram = async () => {
+    if (!allocation) return;
+    const confirmed = window.confirm(
+      `Reopen the program "${allocation.season}"?\n\nThis will reactivate the program and move excess stock back to active inventory.`,
+    );
+    if (!confirmed) return;
+
+    setClosingProgram(true);
+    try {
+      const response = await reopenAllocation(allocation.id);
+      if (response.error) {
+        alert(`Failed to reopen program: ${response.error}`);
+      } else {
+        const refreshed = await getAllocations();
+        const updated = (refreshed.data || []).find((a: any) => a.id === allocation.id);
+        if (updated) setAllocation(updated);
+      }
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setClosingProgram(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="admin-viewalloc-page-container">
@@ -317,7 +367,22 @@ const ViewAllocation: React.FC = () => {
           </div>
 
           <div className="admin-viewalloc-header">
-            <h2 className="admin-viewalloc-title">View Allocation</h2>
+            <h2 className="admin-viewalloc-title">
+              View Allocation
+              {(allocation as any).status === "closed" && (
+                <span style={{
+                  marginLeft: 12,
+                  display: "inline-block",
+                  background: "#ef4444",
+                  color: "#fff",
+                  padding: "3px 12px",
+                  borderRadius: "9999px",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  verticalAlign: "middle",
+                }}>CLOSED</span>
+              )}
+            </h2>
             <p className="admin-viewalloc-subtitle">
               {formatSeasonName(allocation.season)} · Regional Program Details
             </p>
@@ -330,6 +395,25 @@ const ViewAllocation: React.FC = () => {
             >
               View Requests
             </button>
+            {(allocation as any).status === "closed" ? (
+              <button
+                className="admin-viewalloc-btn-nav"
+                style={{ background: "#16a34a", color: "#fff", border: "none" }}
+                onClick={handleReopenProgram}
+                disabled={closingProgram}
+              >
+                {closingProgram ? "Reopening..." : "↩ Reopen Program"}
+              </button>
+            ) : (
+              <button
+                className="admin-viewalloc-btn-nav"
+                style={{ background: "#ef4444", color: "#fff", border: "none" }}
+                onClick={handleCloseProgram}
+                disabled={closingProgram}
+              >
+                {closingProgram ? "Closing..." : "✕ Close Program"}
+              </button>
+            )}
             <button
               className="app-back-button"
               onClick={() => navigate("/incentives")}

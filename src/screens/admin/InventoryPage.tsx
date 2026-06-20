@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   useAdminDashboardStats,
   SubsidyStock,
+  ExcessInventoryItem,
 } from "../../hooks/useAdminDashboardStats";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import {
@@ -35,7 +36,7 @@ const InventoryPage: React.FC = () => {
 
   const hybridKeywords = ["Jackpot", "US88", "TH82", "RH9000", "Mestiso"];
   const [activeTab, setActiveTab] = useState<
-    "overview" | "seeds" | "ferts" | "traceability"
+    "overview" | "seeds" | "ferts" | "traceability" | "excess"
   >("overview");
 
   const categorizedData = useMemo(() => {
@@ -421,6 +422,25 @@ const InventoryPage: React.FC = () => {
               >
                 Traceability
               </button>
+              <button
+                className={`inventory-tab ${activeTab === "excess" ? "active" : ""}`}
+                onClick={() => setActiveTab("excess")}
+              >
+                Excess
+                {dashData.excessInventory.length > 0 && (
+                  <span style={{
+                    marginLeft: 6,
+                    background: "#ef4444",
+                    color: "#fff",
+                    borderRadius: "9999px",
+                    padding: "1px 7px",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                  }}>
+                    {dashData.excessInventory.length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -739,6 +759,151 @@ const InventoryPage: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+
+              {activeTab === "excess" && (
+                <div className="inventory-section fade-in">
+                  <div className="section-header-flex">
+                    <div className="header-with-icon">
+                      <Package className="header-icon-main" />
+                      <h3 className="section-title">
+                        Excess Inventory from Closed Programs
+                      </h3>
+                    </div>
+                    <span className="section-header-hint">
+                      {dashData.excessInventory.length} excess item(s) total
+                    </span>
+                  </div>
+
+                  {dashData.excessInventory.length === 0 ? (
+                    <div className="admin-viewalloc-empty-state" style={{ padding: "40px 20px", textAlign: "center" }}>
+                      <Package size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
+                      <p style={{ color: "#94a3b8" }}>No excess inventory. Close a program to see leftover stocks here.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Fertilizers Excess */}
+                      {dashData.excessInventory.filter(i => i.category === "Fertilizer").length > 0 && (
+                        <div className="inventory-category-card solid" style={{ marginBottom: 20 }}>
+                          <div className="inventory-category-header">
+                            <div className="inventory-category-icon"><Leaf size={20} /></div>
+                            <div className="inventory-category-title-group">
+                              <h3>Fertilizers (Excess)</h3>
+                              <span className="inventory-count">
+                                {dashData.excessInventory.filter(i => i.category === "Fertilizer").length} Items
+                              </span>
+                            </div>
+                          </div>
+                          <div className="inventory-table-container">
+                            <table className="inventory-table">
+                              <thead>
+                                <tr>
+                                  <th>Item Name</th>
+                                  <th>Sub-Category</th>
+                                  <th>Excess Amount</th>
+                                  <th>Source Program</th>
+                                  <th>Closure Date</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {dashData.excessInventory
+                                  .filter(i => i.category === "Fertilizer")
+                                  .map((item, idx) => (
+                                    <tr key={`fert-excess-${idx}`} className="inventory-row-hover">
+                                      <td className="item-name-cell">
+                                        <div className="item-name-wrapper">
+                                          <span className={`item-dot ${item.subCategory.toLowerCase()}`}></span>
+                                          {item.name}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <span className={`cat-badge ${item.subCategory.toLowerCase()}`}>
+                                          {item.subCategory}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontWeight: 600 }}>{item.excessAmount.toLocaleString()}</td>
+                                      <td>
+                                        <span className="program-badge">{item.sourceProgram}</span>
+                                      </td>
+                                      <td className="date-cell">
+                                        {item.closureDate
+                                          ? new Date(item.closureDate).toLocaleDateString(undefined, {
+                                              month: "short",
+                                              day: "numeric",
+                                              year: "numeric",
+                                            })
+                                          : "—"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Seeds Excess */}
+                      {dashData.excessInventory.filter(i => i.category === "Seed").length > 0 && (
+                        <div className="inventory-category-card hybrid" style={{ marginBottom: 20 }}>
+                          <div className="inventory-category-header">
+                            <div className="inventory-category-icon"><Sprout size={20} /></div>
+                            <div className="inventory-category-title-group">
+                              <h3>Seeds (Excess)</h3>
+                              <span className="inventory-count">
+                                {dashData.excessInventory.filter(i => i.category === "Seed").length} Items
+                              </span>
+                            </div>
+                          </div>
+                          <div className="inventory-table-container">
+                            <table className="inventory-table">
+                              <thead>
+                                <tr>
+                                  <th>Item Name</th>
+                                  <th>Sub-Category</th>
+                                  <th>Excess Amount</th>
+                                  <th>Source Program</th>
+                                  <th>Closure Date</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {dashData.excessInventory
+                                  .filter(i => i.category === "Seed")
+                                  .map((item, idx) => (
+                                    <tr key={`seed-excess-${idx}`} className="inventory-row-hover">
+                                      <td className="item-name-cell">
+                                        <div className="item-name-wrapper">
+                                          <span className={`item-dot ${item.subCategory.toLowerCase()}`}></span>
+                                          {item.name}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <span className={`cat-badge ${item.subCategory.toLowerCase()}`}>
+                                          {item.subCategory}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontWeight: 600 }}>{item.excessAmount.toLocaleString()}</td>
+                                      <td>
+                                        <span className="program-badge">{item.sourceProgram}</span>
+                                      </td>
+                                      <td className="date-cell">
+                                        {item.closureDate
+                                          ? new Date(item.closureDate).toLocaleDateString(undefined, {
+                                              month: "short",
+                                              day: "numeric",
+                                              year: "numeric",
+                                            })
+                                          : "—"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>

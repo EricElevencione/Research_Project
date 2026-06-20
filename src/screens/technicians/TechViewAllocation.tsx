@@ -666,6 +666,19 @@ const TechViewAllocation: React.FC = () => {
             <div>
               <h2 className="jo-view-alloc-title">
                 {formatSeasonName(allocation.season)}
+                {(allocation as any).status === "closed" && (
+                  <span style={{
+                    marginLeft: 12,
+                    display: "inline-block",
+                    background: "#ef4444",
+                    color: "#fff",
+                    padding: "3px 12px",
+                    borderRadius: "9999px",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    verticalAlign: "middle",
+                  }}>CLOSED</span>
+                )}
               </h2>
               <p className="jo-view-alloc-subtitle">Regional Program Details</p>
             </div>

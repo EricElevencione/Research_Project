@@ -3118,6 +3118,34 @@ export const updateAllocation = async (
   return createResponse(data, null, 200);
 };
 
+export const closeAllocation = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("regional_allocations")
+    .update({ status: "closed", closed_date: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
+};
+
+export const reopenAllocation = async (
+  id: string | number,
+): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("regional_allocations")
+    .update({ status: "active", closed_date: null })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return createResponse(null, error.message, 500);
+  return createResponse(data, null, 200);
+};
+
 export const deleteAllocation = async (
   id: string | number,
 ): Promise<ApiResponse> => {

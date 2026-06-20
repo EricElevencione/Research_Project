@@ -440,6 +440,19 @@ const TechIncentives: React.FC = () => {
                           })}
                         </span>
                       </div>
+                      {(allocation as any).status === "closed" && (
+                        <span style={{
+                          display: "inline-block",
+                          background: "#ef4444",
+                          color: "#fff",
+                          padding: "2px 10px",
+                          borderRadius: "9999px",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          letterSpacing: "0.04em",
+                          marginTop: 4,
+                        }}>CLOSED</span>
+                      )}
                     </div>
 
                     <div className="jo-incent-card-body">
@@ -494,6 +507,8 @@ const TechIncentives: React.FC = () => {
                           )
                         }
                         title="Manage Request"
+                        disabled={(allocation as any).status === "closed"}
+                        style={(allocation as any).status === "closed" ? { opacity: 0.4, cursor: "not-allowed" } : {}}
                       >
                         Manage
                       </button>

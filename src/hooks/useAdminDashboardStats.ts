@@ -50,6 +50,15 @@ export interface SubsidyStock {
   remaining: number;
 }
 
+export interface ExcessInventoryItem {
+  name: string;
+  category: "Fertilizer" | "Seed";
+  subCategory: "Solid" | "Liquid" | "Hybrid" | "Inbred";
+  excessAmount: number;
+  sourceProgram: string;
+  closureDate: string;
+}
+
 export interface TraceabilityRecord {
   id: number;
   date: string;
@@ -74,6 +83,7 @@ export interface AdminDashboardData {
   claimRateTrend: ClaimRateTrend[];
   barangayDensity: BarangayDensity[];
   subsidyBreakdown: SubsidyStock[];
+  excessInventory: ExcessInventoryItem[];
   requestStats: RequestStats;
   traceabilityLog: TraceabilityRecord[];
   currentSeason: string;
@@ -126,6 +136,7 @@ export const useAdminDashboardStats = (
     claimRateTrend: [],
     barangayDensity: [],
     subsidyBreakdown: [],
+    excessInventory: [],
     requestStats: {
       pending: 0,
       approved: 0,
@@ -390,13 +401,17 @@ export const useAdminDashboardStats = (
         total: requests.length,
       };
 
-      // Calculate totals for allocated vs distributed
+      // Separate active vs closed allocations
+      const activeAllocations = allocations.filter((a: any) => (a.status || 'active') !== 'closed');
+      const closedAllocations = allocations.filter((a: any) => a.status === 'closed');
+
+      // Calculate totals for allocated vs distributed (ACTIVE programs only)
       const subsidyMap = new Map<string, { allocated: number; requested: number; distributed: number }>();
 
-      // Allocated amounts (sum across regional_allocations)
+      // Allocated amounts (sum across active regional_allocations only)
       const filteredAllocations = selectedAllocationId 
         ? allocations.filter((a: any) => a.id === selectedAllocationId)
-        : allocations;
+        : activeAllocations;
 
       filteredAllocations.forEach((a: any) => {
         const fields = Object.keys(a).filter(k => k.includes('_bags') || k.includes('_kg') || k.includes('_liters'));
@@ -413,7 +428,11 @@ export const useAdminDashboardStats = (
       // Filter requests by allocation if selected
       const filteredRequestsInv = selectedAllocationId
         ? requests.filter((r: any) => r.allocation_id === selectedAllocationId)
-        : requests;
+        : requests.filter((r: any) => {
+            // Exclude requests from closed allocations in the master view
+            const alloc = allocations.find((al: any) => al.id === r.allocation_id);
+            return !alloc || (alloc.status || 'active') !== 'closed';
+          });
 
       filteredRequestsInv.forEach((req: any) => {
         const reqFields = Object.keys(req).filter(k => k.startsWith('requested_'));
@@ -452,6 +471,77 @@ export const useAdminDashboardStats = (
         distributed: val.distributed,
         remaining: Math.max(0, val.allocated - val.distributed),
       })).sort((a, b) => b.allocated - a.allocated);
+
+      // ── Excess Inventory (from Closed Programs) ──────────────
+      const hybridKeywords = ['jackpot', 'us88', 'th82', 'rh9000', 'mestiso'];
+      const liquidKeywords = ['liquid', 'liters', 'foliar', 'biofertilizer'];
+      const fertilizerKeywords = ['urea', 'complete', 'sulfate', 'potash', 'manure', 'compost', 'phosphate', 'straw', 'hull', 'azolla'];
+
+      const excessInventory: ExcessInventoryItem[] = [];
+
+      closedAllocations.forEach((closedAlloc: any) => {
+        const closedAllocReqs = requests.filter((r: any) => r.allocation_id === closedAlloc.id);
+        const closedReqIds = new Set(closedAllocReqs.map((r: any) => r.id));
+        const closedDists = distributions.filter((d: any) => closedReqIds.has(d.request_id));
+
+        // Build a map of distributed per field for this closed program
+        const distPerField = new Map<string, number>();
+        closedAllocReqs.forEach((req: any) => {
+          const reqFields = Object.keys(req).filter(k => k.startsWith('requested_'));
+          reqFields.forEach(rf => {
+            let allocField = rf.replace('requested_', '');
+            if (allocField === 'complete_14_bags') allocField = 'complete_14_14_14_bags';
+            if (allocField === 'ammonium_sulfate_bags') allocField = 'ammonium_sulfate_21_0_0_bags';
+            if (allocField === 'muriate_potash_bags') allocField = 'muriate_potash_0_0_60_bags';
+            if (allocField === 'urea_bags') allocField = 'urea_46_0_0_bags';
+            if (allocField === 'ammonium_phosphate_bags') allocField = 'np_16_20_0_bags';
+            if (allocField === 'complete_16_bags') allocField = 'complete_16_16_16_bags';
+
+            const status = (req.status || '').toLowerCase();
+            if (status === 'distributed' || status === 'claimed') {
+              const val = Number((req as any)[rf]) || 0;
+              if (val > 0) {
+                distPerField.set(allocField, (distPerField.get(allocField) || 0) + val);
+              }
+            }
+          });
+        });
+
+        const fields = Object.keys(closedAlloc).filter(k => k.includes('_bags') || k.includes('_kg') || k.includes('_liters'));
+        fields.forEach(field => {
+          const allocated = Number(closedAlloc[field]) || 0;
+          if (allocated <= 0) return;
+
+          const distributed = distPerField.get(field) || 0;
+          const excess = Math.max(0, allocated - distributed);
+          if (excess <= 0) return;
+
+          const fieldLower = field.toLowerCase();
+          const displayName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+          const isLiquid = liquidKeywords.some(kw => fieldLower.includes(kw));
+          const isFertilizer = fertilizerKeywords.some(kw => fieldLower.includes(kw)) || isLiquid;
+
+          let category: "Fertilizer" | "Seed" = isFertilizer ? "Fertilizer" : "Seed";
+          let subCategory: "Solid" | "Liquid" | "Hybrid" | "Inbred";
+
+          if (isFertilizer) {
+            subCategory = isLiquid ? "Liquid" : "Solid";
+          } else {
+            const isHybrid = hybridKeywords.some(kw => fieldLower.includes(kw));
+            subCategory = isHybrid ? "Hybrid" : "Inbred";
+          }
+
+          excessInventory.push({
+            name: displayName,
+            category,
+            subCategory,
+            excessAmount: excess,
+            sourceProgram: closedAlloc.season || 'Unknown Program',
+            closureDate: closedAlloc.closed_date || closedAlloc.updated_at || '',
+          });
+        });
+      });
 
       // ── Traceability Log (Full Lifecycle) ──────────────────
       const traceabilityLog: TraceabilityRecord[] = requests
@@ -511,6 +601,7 @@ export const useAdminDashboardStats = (
         claimRateTrend,
         barangayDensity,
         subsidyBreakdown,
+        excessInventory,
         requestStats,
         traceabilityLog,
         currentSeason,

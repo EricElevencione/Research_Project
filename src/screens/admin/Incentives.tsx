@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getAllocations, getFarmerRequests } from "../../api";
+import { getAllocations, getFarmerRequests, closeAllocation, reopenAllocation } from "../../api";
 import {
   FERTILIZER_FIELD_MAPS,
   SEED_FIELD_MAPS,
@@ -25,6 +25,7 @@ const Incentives: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [closingId, setClosingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchAllocations();
@@ -79,6 +80,48 @@ const Incentives: React.FC = () => {
       setAllocations([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCloseProgram = async (allocationId: number, season: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to close the program "${season}"?\n\nThis will:\n• Mark the program as Closed across all accounts\n• Transfer remaining stock to Excess Inventory\n• Prevent new farmer requests`,
+    );
+    if (!confirmed) return;
+
+    setClosingId(allocationId);
+    try {
+      const response = await closeAllocation(allocationId);
+      if (response.error) {
+        alert(`Failed to close program: ${response.error}`);
+      } else {
+        fetchAllocations();
+      }
+    } catch (err: any) {
+      alert(`Error closing program: ${err.message}`);
+    } finally {
+      setClosingId(null);
+    }
+  };
+
+  const handleReopenProgram = async (allocationId: number, season: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to reopen the program "${season}"?\n\nThis will reactivate the program and move excess stock back to active inventory.`,
+    );
+    if (!confirmed) return;
+
+    setClosingId(allocationId);
+    try {
+      const response = await reopenAllocation(allocationId);
+      if (response.error) {
+        alert(`Failed to reopen program: ${response.error}`);
+      } else {
+        fetchAllocations();
+      }
+    } catch (err: any) {
+      alert(`Error reopening program: ${err.message}`);
+    } finally {
+      setClosingId(null);
     }
   };
 
@@ -176,6 +219,19 @@ const Incentives: React.FC = () => {
                       <h3 className="admin-incent-card-season">
                         {formatSeasonName(allocation.season)}
                       </h3>
+                      {(allocation as any).status === "closed" && (
+                        <span style={{
+                          display: "inline-block",
+                          background: "#ef4444",
+                          color: "#fff",
+                          padding: "2px 10px",
+                          borderRadius: "9999px",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          letterSpacing: "0.04em",
+                          marginTop: 4,
+                        }}>CLOSED</span>
+                      )}
                       <p className="admin-incent-card-date">
                         {new Date(
                           allocation.allocation_date,
@@ -227,6 +283,8 @@ const Incentives: React.FC = () => {
                         onClick={() =>
                           navigate(`/admin-edit-allocation/${allocation.id}`)
                         }
+                        disabled={(allocation as any).status === "closed"}
+                        style={(allocation as any).status === "closed" ? { opacity: 0.4, cursor: "not-allowed" } : {}}
                       >
                         Edit
                       </button>
@@ -238,6 +296,25 @@ const Incentives: React.FC = () => {
                       >
                         Manage
                       </button>
+                      {(allocation as any).status === "closed" ? (
+                        <button
+                          className="admin-incent-btn-manage"
+                          style={{ background: "#16a34a", color: "#fff", border: "none" }}
+                          onClick={() => handleReopenProgram(allocation.id, allocation.season)}
+                          disabled={closingId === allocation.id}
+                        >
+                          {closingId === allocation.id ? "Reopening..." : "↩ Reopen"}
+                        </button>
+                      ) : (
+                        <button
+                          className="admin-incent-btn-manage"
+                          style={{ background: "#ef4444", color: "#fff", border: "none" }}
+                          onClick={() => handleCloseProgram(allocation.id, allocation.season)}
+                          disabled={closingId === allocation.id}
+                        >
+                          {closingId === allocation.id ? "Closing..." : "✕ Close"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
