@@ -46,6 +46,7 @@ interface FormData {
   age: string;
   // Farm Profile
   mainLivelihood: string;
+  isActivelyFarming: boolean;
   farmingActivity: string;
   otherCrops: string;
   livestock: string;
@@ -210,7 +211,8 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     province: "",
     dateOfBirth: "",
     age: "",
-    mainLivelihood: "farmer",
+    mainLivelihood: "landowner",
+    isActivelyFarming: false,
     farmingActivity: "",
     otherCrops: "",
     livestock: "",
@@ -222,7 +224,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         farmLocationMunicipality: "",
         totalFarmAreaHa: "",
         withinAncestralDomain: "",
-        isCultivating: null,
+        isCultivating: false, // Default to false; land owner can change later
         cultivatingStatus: "",
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
@@ -316,7 +318,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         withinAncestralDomain: "",
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
-        isCultivating: null, // Land owner decides later
+        isCultivating: false, // Land owner decides later
         cultivatingStatus: "",
         ownershipTypeRegisteredOwner: true, // Always true
         ownershipTypeTenant: false,
@@ -386,21 +388,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     }
 
     if (currentStep === 2) {
-      // Validate farm profile: require at least one farming activity
-      const hasFarmingActivity =
-        (formData as any).farmerRice ||
-        (formData as any).farmerCorn ||
-        (formData as any).farmerOtherCrops ||
-        (formData as any).farmerLivestock ||
-        (formData as any).farmerPoultry;
-      if (!hasFarmingActivity) {
-        newErrors.farmingActivity =
-          "Please select at least one farming activity";
-      }
-
-      setErrors(newErrors);
-      if (Object.keys(newErrors).length > 0) return;
-
+      // Validation removed: Land capability/crops are now completely optional!
       setErrors({});
       setCurrentStep(3);
       return;
@@ -499,6 +487,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     try {
       const transformedData = {
         ...formData,
+        isActivelyFarming: formData.isActivelyFarming,
         dateOfBirth: formData.dateOfBirth
           ? new Date(formData.dateOfBirth)
           : null,
@@ -1370,65 +1359,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                         </select>
                       </div>
                     </div>
-                    <div className="jo-registration-form-group">
-                      <label>Are you farming this parcel?</label>
-                      <select
-                        value={p.cultivatingStatus || ""}
-                        onChange={(e) => {
-                          const val = e.target.value as
-                            | "yes"
-                            | "no"
-                            | "no-other"
-                            | "";
-                          handleParcelChange(idx, "cultivatingStatus", val);
-                          handleParcelChange(
-                            idx,
-                            "isCultivating",
-                            val === "yes" ? true : val === "" ? null : false,
-                          );
-                          if (val !== "no-other") {
-                            handleParcelChange(idx, "tenantLandOwnerName", "");
-                          }
-                        }}
-                      >
-                        <option value="">Select</option>
-                        <option value="yes">
-                          Yes — I am actively farming this
-                        </option>
-                        <option value="no">No — I am not farming this</option>
-                        <option value="no-other">
-                          No — Someone else is farming it
-                        </option>
-                      </select>
-
-                      {/* Tenant/Lessee picker — only shows for "no-other" */}
-                      {p.cultivatingStatus === "no-other" && (
-                        <div
-                          className="jo-registration-form-group"
-                          style={{ marginTop: "10px" }}
-                        >
-                          <label>Select Tenant / Lessee</label>
-                          <select
-                            value={p.tenantLandOwnerName || ""}
-                            onChange={(e) =>
-                              handleParcelChange(
-                                idx,
-                                "tenantLandOwnerName",
-                                e.target.value,
-                              )
-                            }
-                          >
-                            <option value="">-- Select a person --</option>
-                            {landowners.map((lo) => (
-                              <option key={lo.id} value={lo.name}>
-                                {lo.name}
-                                {lo.barangay ? ` — ${lo.barangay}` : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 ))}
 
@@ -1518,8 +1448,8 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Farmer Details */}
-                      {formData.mainLivelihood === "farmer" && (
+                      {/* Farm Details / Usual Cultivation Potential */}
+                      {formData.mainLivelihood === "landowner" && (
                         <div className="jo-registration-summary-item">
                           <span className="jo-registration-summary-label">
                             Farming Activities:

@@ -184,10 +184,11 @@
 /* Table Styles */
 .jo-land-registry-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   background: white;
   font-size: 13px;
-  min-width: 960px;
+  min-width: 900px;
 }
 
 .jo-land-registry-table thead th {
@@ -239,44 +240,83 @@
   border-right: none;
 }
 
-.jo-land-registry-table th:nth-child(1),
-.jo-land-registry-table td:nth-child(1),
-.jo-land-registry-table th:nth-child(5),
-.jo-land-registry-table td:nth-child(5),
-.jo-land-registry-table th:nth-child(6),
-.jo-land-registry-table td:nth-child(6),
-.jo-land-registry-table th:nth-child(7),
-.jo-land-registry-table td:nth-child(7) {
-  white-space: nowrap;
-}
+/* ============================================
+   Registry Table — Column Layout
+   Order: 1 Farmer | 2 FFRS Code | 3 Tenure Status |
+   4 Associated Landowner | 5 Barangay | 6 Parcels |
+   7 Area (ha) | 8 Status & Last Activity | 9 Action
+   ============================================ */
 
 .jo-land-registry-table th:nth-child(1),
 .jo-land-registry-table td:nth-child(1) {
-  width: 160px;
+  width: 15%;
 }
 
-.jo-land-registry-table th:nth-child(5),
-.jo-land-registry-table td:nth-child(5) {
-  width: 80px;
+.jo-land-registry-table th:nth-child(2),
+.jo-land-registry-table td:nth-child(2) {
+  width: 11%;
 }
 
 .jo-land-registry-table th:nth-child(3),
 .jo-land-registry-table td:nth-child(3) {
-  width: 132px;
+  width: 10%;
 }
 
-.jo-land-registry-table td:nth-child(3) {
+.jo-land-registry-table th:nth-child(4),
+.jo-land-registry-table td:nth-child(4) {
+  width: 16%;
+}
+
+.jo-land-registry-table th:nth-child(5),
+.jo-land-registry-table td:nth-child(5) {
+  width: 11%;
+}
+
+.jo-land-registry-table th:nth-child(6),
+.jo-land-registry-table td:nth-child(6) {
+  width: 7%;
+}
+
+.jo-land-registry-table th:nth-child(7),
+.jo-land-registry-table td:nth-child(7) {
+  width: 8%;
+}
+
+.jo-land-registry-table th:nth-child(8),
+.jo-land-registry-table td:nth-child(8) {
+  width: 14%;
+}
+
+.jo-land-registry-table th:nth-child(9),
+.jo-land-registry-table td:nth-child(9) {
+  width: 8%;
+}
+
+/* Columns that hold a single line of potentially-long text get a clean
+   "…" truncation instead of wrapping (which made some rows taller than
+   others) or hard-clipping mid-letter (which is what was happening to
+   long farmer/landowner names — see note below). The full value is
+   still readable via the title attribute already on these spans. */
+.jo-land-registry-table td:nth-child(1),
+.jo-land-registry-table td:nth-child(2),
+.jo-land-registry-table td:nth-child(4),
+.jo-land-registry-table td:nth-child(5),
+.jo-land-registry-table td:nth-child(6),
+.jo-land-registry-table td:nth-child(7) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Action column: nowrap only — no overflow:hidden here, it would
+   clip the dropdown menu, which relies on .jo-land-registry-row-action-cell's
+   overflow:visible to float above the rows below it. */
+.jo-land-registry-table td:nth-child(9) {
   white-space: nowrap;
 }
 
 .jo-land-registry-table td.jo-land-registry-ownership-cell {
   white-space: normal;
-}
-.jo-land-registry-farmer-name {
-  color: #111827;
-  font-weight: 700;
-  font-size: 13px;
-  line-height: 1.2;
 }
 
 .jo-land-registry-ownership-stack {
@@ -293,32 +333,83 @@
   line-height: 1.2;
 }
 
-.jo-land-registry-table th:nth-child(4),
-.jo-land-registry-table td:nth-child(4) {
-  width: 146px;
+/* --- Farmer cell ---
+   IMPORTANT: this must stay a plain block, not display:flex.
+   text-overflow:ellipsis does not apply inside a flex container — that
+   was the actual bug causing long names to get hard-clipped with no
+   "…" shown. If you add an avatar later, wrap the *name text* in its
+   own <span class="jo-land-registry-farmer-name-text"> and put nowrap/
+   ellipsis on that span instead of on this flex row. */
+.jo-land-registry-farmer-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #111827;
+  line-height: 1.2;
 }
 
-.jo-land-registry-table th:nth-child(6),
-.jo-land-registry-table td:nth-child(6) {
-  width: 112px;
+.jo-land-registry-farmer-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: #e5e7eb;
 }
 
-.jo-land-registry-table th:nth-child(7),
-.jo-land-registry-table td:nth-child(7) {
-  width: 106px;
+/* --- FFRS Code column --- */
+.jo-land-registry-ffrs-code-cell {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  color: #6b7280;
+  letter-spacing: 0.02em;
 }
 
-.jo-land-registry-table td.jo-land-registry-ffrs-code {
-  overflow: hidden;
+/* --- Parcels (count) column --- */
+.jo-land-registry-parcels-count-cell {
+  text-align: center;
 }
 
-.jo-land-registry-ffrs-value {
-  display: block;
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Optional badge look for the parcel count number.
+   Wrap the number in a <span> in JSX if you want this applied:
+   <span className="jo-land-registry-parcels-badge">{row.parcels.length}</span> */
+.jo-land-registry-parcels-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* --- Status & Last Activity column --- */
+.jo-land-registry-status-activity-cell {
+  vertical-align: middle;
+}
+
+.jo-land-registry-status-activity-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.jo-land-registry-last-activity-date {
+  font-size: 12px;
+  color: #6b7280;
   white-space: nowrap;
-  color: #2c5f2d;
+}
+
+/* The "No Land" pill now sits stacked above the date in this column
+   instead of inline next to the farmer name, so the base rule's
+   margin-left (further down this file) needs to be zeroed out here
+   or the pill sits 8px out of alignment with the date below it. */
+.jo-land-registry-status-activity-stack .jo-land-registry-no-land-warning {
+  margin-left: 0;
 }
 
 /* Status Pills */
@@ -1662,7 +1753,7 @@
   }
 
   .jo-land-registry-table {
-    min-width: 860px;
+    min-width: 760px;
   }
 
   .jo-land-registry-table thead th,
@@ -1749,4 +1840,3 @@
   border: 1px solid #fcd34d;
   margin-left: 8px;
 }
-

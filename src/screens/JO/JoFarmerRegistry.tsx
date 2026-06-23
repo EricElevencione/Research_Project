@@ -11,6 +11,7 @@ import {
 import "../../assets/css/jo css/JoFarmerStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
+import { TenantLesseeProfileDisplay } from "../../components/FarmerProfile/TenantLesseeProfileDisplay";
 import {
   getAuditLogger,
   AuditModule,
@@ -752,7 +753,7 @@ const JoFarmerRegistry: React.FC = () => {
             id,
             (tenantLesseeParcelCountById.get(id) || 0) + 1,
           );
-          if (p.is_farming === true) {
+          if (p.is_farming === true || p.is_farming === null) {
             tenantLesseeFarmingCountById.set(
               id,
               (tenantLesseeFarmingCountById.get(id) || 0) + 1,
@@ -766,8 +767,7 @@ const JoFarmerRegistry: React.FC = () => {
 
         formattedRecords = formattedRecords.map((r) => {
           const isTenantLesseeRecord = tenantLesseeIds.includes(r.id);
-          const tenureParcelCount =
-            tenantLesseeParcelCountById.get(r.id) || 0;
+          const tenureParcelCount = tenantLesseeParcelCountById.get(r.id) || 0;
           const farmingParcelCount =
             tenantLesseeFarmingCountById.get(r.id) ?? null;
 
@@ -1085,12 +1085,8 @@ const JoFarmerRegistry: React.FC = () => {
   // Falls back to inferring from the farmingStatus string when the API doesn't
   // return a count (e.g. "Farming" → all parcels active, "Not farming" → none).
   const formatCultivation = (record: RSBSARecord): string => {
-    const flags = getOwnershipFlags(record);
-    if (flags.tenantLessee) return "-";
-
     const total = record.parcelCount;
     const hasTotal = Number.isFinite(total) && total > 0;
-    if (!hasTotal) return "-";
 
     // Preferred path: API returned an explicit count
     if (

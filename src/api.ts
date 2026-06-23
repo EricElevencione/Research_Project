@@ -87,9 +87,9 @@ const buildOwnershipTypeFromRecord = (item: any) => {
     explicitCategory !== "unknown"
       ? explicitCategory
       : deriveOwnershipCategoryFromFlags({
-        registeredOwner,
-        tenantLessee,
-      });
+          registeredOwner,
+          tenantLessee,
+        });
 
   return {
     registeredOwner,
@@ -197,8 +197,8 @@ export const getDashboardStats = async (
 
     let currentSeason =
       !isAllocationId &&
-        typeof seasonOrAllocationId === "string" &&
-        seasonOrAllocationId
+      typeof seasonOrAllocationId === "string" &&
+      seasonOrAllocationId
         ? seasonOrAllocationId
         : defaultSeason;
 
@@ -970,12 +970,12 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
       barangayCodes.length > 0
         ? barangayCodes.map((b: any) => b.barangay_name)
         : [
-          ...new Set(
-            allParcels
-              .map((p: any) => p.farm_location_barangay)
-              .filter(Boolean) as string[],
-          ),
-        ].sort();
+            ...new Set(
+              allParcels
+                .map((p: any) => p.farm_location_barangay)
+                .filter(Boolean) as string[],
+            ),
+          ].sort();
 
     const barangayChecklist = barangayNames
       .map((brgy) => {
@@ -1060,7 +1060,7 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         const unplottedParcels = Math.max(
           0,
           Number(progress.totalParcels || 0) -
-          Number(progress.plottedParcels || 0),
+            Number(progress.plottedParcels || 0),
         );
 
         return {
@@ -1302,11 +1302,11 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
       cultivationStatus: deriveCultivationStatus(cultivationCounts),
       cultivationSummary: cultivationCounts
         ? {
-          active: cultivationCounts.active,
-          inactive: cultivationCounts.inactive,
-          unknown: cultivationCounts.unknown,
-          total: cultivationCounts.total,
-        }
+            active: cultivationCounts.active,
+            inactive: cultivationCounts.inactive,
+            unknown: cultivationCounts.unknown,
+            total: cultivationCounts.total,
+          }
         : null,
     };
   });
@@ -1367,6 +1367,7 @@ export const createRsbsaSubmission = async (
     municipality:
       formData.municipality || formData.address?.municipality || "Dumangas",
     mainLivelihood: formData.mainLivelihood || "",
+    isActivelyFarming: formData.isActivelyFarming ?? false,
     totalFarmArea: totalFarmArea,
     // Ownership category
     ownershipCategory: formData.ownershipCategory || "registeredOwner",
@@ -1402,7 +1403,7 @@ export const createRsbsaSubmission = async (
             : "No",
         agrarianReformBeneficiary:
           p.agrarianReformBeneficiary === "Yes" ||
-            p.agrarianReformBeneficiary === true
+          p.agrarianReformBeneficiary === true
             ? "Yes"
             : "No",
         ownershipDocumentNo: p.ownershipDocumentNo || "",
@@ -2008,10 +2009,15 @@ export const getLandPlots = async (
   // Fetch all parcels to map their current ownership status
   const { data: allParcels, error: allParcelsError } = await supabase
     .from("rsbsa_farm_parcels")
-    .select("submission_id, parcel_number, ownership_type_registered_owner, is_current_owner");
+    .select(
+      "submission_id, parcel_number, ownership_type_registered_owner, is_current_owner",
+    );
 
   if (allParcelsError) {
-    console.warn("Land plot owner status mapping skipped:", allParcelsError.message);
+    console.warn(
+      "Land plot owner status mapping skipped:",
+      allParcelsError.message,
+    );
     return createResponse(enriched, null, 200);
   }
 
@@ -2039,7 +2045,8 @@ export const getLandPlots = async (
 
     const key = `${submissionId}::${parcelNumber}`;
     // If explicitly marked as non-current, or if it is not in the current owner list but is in non-current list
-    const isCurrent = currentOwnerKeys.has(key) || !nonCurrentOwnerKeys.has(key);
+    const isCurrent =
+      currentOwnerKeys.has(key) || !nonCurrentOwnerKeys.has(key);
     return {
       ...plot,
       is_current_owner: isCurrent,
@@ -2874,8 +2881,8 @@ const callShortagesApiViaNode = async (
       method: body ? "POST" : "GET",
       headers: body
         ? {
-          "Content-Type": "application/json",
-        }
+            "Content-Type": "application/json",
+          }
         : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
