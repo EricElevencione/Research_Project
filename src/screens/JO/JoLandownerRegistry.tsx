@@ -2133,42 +2133,15 @@ const JoLandownerRegistry: React.FC = () => {
 
         {/* Landowner Detail Modal */}
         {showModal && selectedLandowner && (
-          <div
-            className="farmer-modal-overlay"
-            onClick={() => setShowModal(false)}
-          >
-            <div
-              className="farmer-modal-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="farmer-modal-header">
-                <h2>Landowner Details</h2>
-                <div className="farmer-modal-header-actions">
-                  <button
-                    className="farmer-modal-print-btn"
-                    onClick={handleModalPrint}
-                    disabled={isModalPrinting}
-                  >
-                    {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
-                  </button>
-                  <button
-                    className="farmer-modal-close"
-                    onClick={() => setShowModal(false)}
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-
-              <div className="farmer-modal-body">
-                {loadingDetail ? (
-                  <div className="farmer-modal-loading">
-                    Loading landowner details...
-                  </div>
-                ) : (
-                  <LandownerProfileDisplay landowner={selectedLandowner} />
-                )}
-              </div>
+          <div className="farmer-modal-overlay">
+            <div className="farmer-modal-content">
+              {" "}
+              {/* ← add this */}
+              <LandownerProfileDisplay
+                landowner={selectedLandowner}
+                onClose={() => setShowModal(false)}
+              />{" "}
+              {/* ← and close it */}
             </div>
           </div>
         )}

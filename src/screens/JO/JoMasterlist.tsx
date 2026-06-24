@@ -21,6 +21,12 @@ import {
   AuditModule,
 } from "../../components/Audit/auditLogger";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
+import { TenantLesseeProfileDisplay } from "../../components/FarmerProfile/TenantLesseeProfileDisplay";
+import {
+  LandownerProfileDisplay,
+  LandownerOccupant,
+  LandownerProfileParcel,
+} from "../../components/FarmerProfile/LandownerProfileDisplay";
 
 // ─────────────────────────────────────────────
 // MASTERLIST — Universal "Find Anyone" page
@@ -270,6 +276,9 @@ const JoMasterlist: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState<
+    "landowner" | "tenantLessee" | null
+  >(null);
   const [modalLandHistory, setModalLandHistory] = useState<LandHistoryEntry[]>(
     [],
   );
@@ -475,6 +484,23 @@ const JoMasterlist: React.FC = () => {
     if (f.lessee) return "jo-masterlist-ownership-lessee";
     if (f.tenantLessee) return "jo-masterlist-ownership-tenant";
     return "jo-masterlist-ownership-unknown";
+  };
+
+  const isTenantOrLesseeRecord = (record: RSBSARecord) => {
+    const f = getOwnershipFlags(record);
+    return f.tenant || f.lessee || f.category === "tenantLessee";
+  };
+
+  const hasNoParcelsOnRecord = (record: RSBSARecord) => {
+    if (isTenantOrLesseeRecord(record)) return false;
+    const status = (record.status || "").toLowerCase().trim();
+    return status === "no parcels" || record.hasNoActiveLand === true;
+  };
+
+  const getMissingRecordWarning = (record: RSBSARecord) => {
+    if (record.hasNoLandOwner === true) return "🚫 No land owner on record";
+    if (hasNoParcelsOnRecord(record)) return "⚠️ No parcels on record";
+    return null;
   };
 
   // ─── Fetch: Summary Stats ───────────────────────────────────────────────────
@@ -719,10 +745,13 @@ const JoMasterlist: React.FC = () => {
           ownershipType: item.ownershipType,
           hasNoActiveLand:
             (item.status || "").toLowerCase().trim() === "no parcels" ||
+            item.hasCurrentParcels === false ||
             typeof item.parcelCount !== "number" ||
             item.parcelCount === 0 ||
             !submissionsWithActiveParcels.has(String(item.id)),
           // Tenant or lessee whose parcels have no landowner name filled in.
+          // Also covers T/L records with no parcel rows at all in rsbsa_farm_parcels
+          // (tenantLesseeSubmissionIds won't contain them, but they're still unfilled).
           hasNoLandOwner: (() => {
             const ot = item.ownershipType;
             const isTenantOrLessee =
@@ -730,13 +759,8 @@ const JoMasterlist: React.FC = () => {
               ot?.lessee === true ||
               ot?.tenantLessee === true;
             if (!isTenantOrLessee) return false;
-            // If this submission appears in tenant/lessee parcels but has no
-            // owner name anywhere, flag it.
             const id = String(item.id);
-            return (
-              tenantLesseeSubmissionIds.has(id) &&
-              !submissionsWithOwnerName.has(id)
-            );
+            return !submissionsWithOwnerName.has(id);
           })(),
         };
       });
@@ -919,6 +943,10 @@ const JoMasterlist: React.FC = () => {
         ownershipRole,
         parcels: mappedParcels,
       });
+
+      // Determine which profile modal to show based on ownership role
+      const isLandowner = ownershipRole === "Registered Owner";
+      setModalType(isLandowner ? "landowner" : "tenantLessee");
       setShowModal(true);
 
       // Fetch land history in background after modal opens
@@ -1039,7 +1067,11 @@ const JoMasterlist: React.FC = () => {
       if (status === "no parcels") return true;
       if (record.hasNoActiveLand !== true) return false;
       const flags = getOwnershipFlags(record);
-      return !(flags.tenant || flags.lessee || flags.category === "tenantLessee");
+      return !(
+        flags.tenant ||
+        flags.lessee ||
+        flags.category === "tenantLessee"
+      );
     };
 
     return {
@@ -1047,9 +1079,10 @@ const JoMasterlist: React.FC = () => {
       active: rsbsaRecords.filter((r) =>
         active.has((r.status || "").toLowerCase().trim()),
       ).length,
-      inactive: rsbsaRecords.filter((r) =>
-        inactive.has((r.status || "").toLowerCase().trim()) &&
-        !isNoParcelsRecord(r),
+      inactive: rsbsaRecords.filter(
+        (r) =>
+          inactive.has((r.status || "").toLowerCase().trim()) &&
+          !isNoParcelsRecord(r),
       ).length,
       noParcels: rsbsaRecords.filter(isNoParcelsRecord).length,
       noLandOwner: rsbsaRecords.filter((r) => r.hasNoLandOwner === true).length,
@@ -1163,8 +1196,8 @@ const JoMasterlist: React.FC = () => {
       })
       .sort((a, b) => {
         // Flagged rows always sink to the bottom regardless of other sort keys
-        const aFlag = a.hasNoActiveLand ? 1 : 0;
-        const bFlag = b.hasNoActiveLand ? 1 : 0;
+        const aFlag = a.hasNoActiveLand || a.hasNoLandOwner ? 1 : 0;
+        const bFlag = b.hasNoActiveLand || b.hasNoLandOwner ? 1 : 0;
         if (aFlag !== bFlag) return aFlag - bFlag;
 
         const parseArea = (v: string) => {
@@ -2299,6 +2332,8 @@ const JoMasterlist: React.FC = () => {
                         isOwner && idleParcelOwnerIds.has(record.id);
                       const isTenantOrLessee =
                         flags.tenant || flags.lessee || flags.tenantLessee;
+                      const missingRecordWarning =
+                        getMissingRecordWarning(record);
 
                       // Look up tenants/lessees farming under this owner
                       const tenants =
@@ -2319,7 +2354,7 @@ const JoMasterlist: React.FC = () => {
                         <React.Fragment key={record.id}>
                           {/* ── Main owner row ── */}
                           <tr
-                            className={`jo-masterlist-table-row${record.hasNoActiveLand ? " jo-row--flagged" : ""}`}
+                            className={`jo-masterlist-table-row${missingRecordWarning ? " jo-row--flagged" : ""}`}
                             onClick={() =>
                               fetchFarmerDetails(record.id, record)
                             }
@@ -2355,7 +2390,7 @@ const JoMasterlist: React.FC = () => {
                                   <span className="jo-masterlist-farmer-ref">
                                     {record.referenceNumber}
                                   </span>
-                                  {record.hasNoActiveLand && (
+                                  {hasNoParcelsOnRecord(record) && (
                                     <span
                                       style={{
                                         display: "flex",
@@ -2367,14 +2402,7 @@ const JoMasterlist: React.FC = () => {
                                         fontWeight: 500,
                                       }}
                                     >
-                                      {(() => {
-                                        const f = getOwnershipFlags(record);
-                                        return f.tenant ||
-                                          f.lessee ||
-                                          f.category === "tenantLessee"
-                                          ? "⚠️ No land owner on record"
-                                          : "⚠️ No parcels on record";
-                                      })()}
+                                      ⚠️ No parcels on record
                                     </span>
                                   )}
                                   {record.hasNoLandOwner && (
@@ -2441,7 +2469,8 @@ const JoMasterlist: React.FC = () => {
                               <span
                                 className="jo-masterlist-record-status"
                                 style={
-                                  record.hasNoActiveLand
+                                  record.hasNoActiveLand ||
+                                  record.hasNoLandOwner
                                     ? {
                                         background: "#fee2e2",
                                         color: "#991b1b",
@@ -2455,16 +2484,18 @@ const JoMasterlist: React.FC = () => {
                                     : undefined
                                 }
                               >
-                                {record.hasNoActiveLand
-                                  ? (() => {
-                                      const f = getOwnershipFlags(record);
-                                      return f.tenant ||
-                                        f.lessee ||
-                                        f.category === "tenantLessee"
-                                        ? "No Land Owner"
-                                        : "No Parcels";
-                                    })()
-                                  : formatRecordStatus(record.status)}
+                                {record.hasNoLandOwner
+                                  ? "No Land Owner"
+                                  : record.hasNoActiveLand
+                                    ? (() => {
+                                        const f = getOwnershipFlags(record);
+                                        return f.tenant ||
+                                          f.lessee ||
+                                          f.category === "tenantLessee"
+                                          ? "No Land Owner"
+                                          : "No Parcels";
+                                      })()
+                                    : formatRecordStatus(record.status)}
                               </span>
                             </td>
                             <td>
@@ -2896,655 +2927,717 @@ const JoMasterlist: React.FC = () => {
         {showModal && selectedFarmer && (
           <div
             className="farmer-modal-overlay"
-            onClick={() => setShowModal(false)}
+            onClick={() => {
+              setShowModal(false);
+              setModalType(null);
+            }}
           >
             <div
               className="farmer-modal-content"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="farmer-modal-header">
-                <h2>Farmer Details</h2>
-                <div className="farmer-modal-header-actions">
-                  <button
-                    className="farmer-modal-print-btn"
-                    onClick={handleModalPrint}
-                    disabled={isModalPrinting}
-                  >
-                    {isModalPrinting ? "Preparing form..." : "Print RSBSA Form"}
-                  </button>
-                  <button
-                    className="farmer-modal-close"
-                    onClick={() => setShowModal(false)}
-                  >
-                    ×
-                  </button>
+              {loadingFarmerDetail ? (
+                <div className="farmer-modal-loading">
+                  Loading farmer details...
                 </div>
-              </div>
-
-              <div className="farmer-modal-body">
-                {loadingFarmerDetail ? (
-                  <div className="farmer-modal-loading">
-                    Loading farmer details...
+              ) : modalType === "landowner" ? (
+                <LandownerProfileDisplay
+                  landowner={{
+                    id: selectedFarmer.id,
+                    referenceNumber: selectedFarmer.referenceNumber,
+                    dateSubmitted: selectedFarmer.dateSubmitted,
+                    recordStatus: selectedFarmer.recordStatus,
+                    birthdate: selectedFarmer.birthdate,
+                    archivedAt: selectedFarmer.archivedAt,
+                    archiveReason: selectedFarmer.archiveReason,
+                    landownerName: selectedFarmer.farmerName,
+                    landownerAddress: selectedFarmer.farmerAddress,
+                    age: selectedFarmer.age,
+                    gender: selectedFarmer.gender,
+                    parcels: selectedFarmer.parcels.map((p) => ({
+                      id: p.id,
+                      parcelNumber: p.parcelNumber,
+                      farmLocationBarangay: p.farmLocationBarangay,
+                      farmLocationMunicipality: p.farmLocationMunicipality,
+                      totalFarmAreaHa: p.totalFarmAreaHa,
+                      occupationType: (p.ownershipTypeTenant &&
+                      p.ownershipTypeLessee
+                        ? "tenant+lessee"
+                        : p.ownershipTypeTenant
+                          ? "tenant"
+                          : p.ownershipTypeLessee
+                            ? "lessee"
+                            : "owner-farmed") as LandownerProfileParcel["occupationType"],
+                      occupants: [],
+                      agrarianReformBeneficiary: p.agrarianReformBeneficiary,
+                      withinAncestralDomain: p.withinAncestralDomain,
+                      ownershipDocumentNo: p.ownershipDocumentNo,
+                      isFarming: p.isFarming,
+                      farmingStatusReason: p.farmingStatusReason,
+                    })),
+                  }}
+                  onClose={() => {
+                    setShowModal(false);
+                    setModalType(null);
+                  }}
+                />
+              ) : modalType === "tenantLessee" ? (
+                <TenantLesseeProfileDisplay
+                  farmer={{
+                    id: selectedFarmer.id,
+                    referenceNumber: selectedFarmer.referenceNumber,
+                    dateSubmitted: selectedFarmer.dateSubmitted,
+                    recordStatus: selectedFarmer.recordStatus,
+                    birthdate: selectedFarmer.birthdate,
+                    archivedAt: selectedFarmer.archivedAt,
+                    archiveReason: selectedFarmer.archiveReason,
+                    farmerName: selectedFarmer.farmerName,
+                    farmerAddress: selectedFarmer.farmerAddress,
+                    age: selectedFarmer.age,
+                    gender: selectedFarmer.gender,
+                    mainLivelihood: selectedFarmer.mainLivelihood,
+                    farmingActivities: selectedFarmer.farmingActivities,
+                    parcels: selectedFarmer.parcels.map((p) => ({
+                      id: p.id,
+                      parcelNumber: p.parcelNumber,
+                      farmLocationBarangay: p.farmLocationBarangay,
+                      farmLocationMunicipality: p.farmLocationMunicipality,
+                      totalFarmAreaHa: p.totalFarmAreaHa,
+                      ownershipTypeRegisteredOwner:
+                        p.ownershipTypeRegisteredOwner,
+                      ownershipTypeTenant: p.ownershipTypeTenant,
+                      ownershipTypeLessee: p.ownershipTypeLessee,
+                      tenantLandOwnerName: p.tenantLandOwnerName,
+                      lesseeLandOwnerName: p.lesseeLandOwnerName,
+                      withinAncestralDomain: p.withinAncestralDomain,
+                      ownershipDocumentNo: p.ownershipDocumentNo,
+                      agrarianReformBeneficiary: p.agrarianReformBeneficiary,
+                      ownershipOthersSpecify: p.ownershipOthersSpecify,
+                      contractEndDate: p.contractEndDate,
+                      isFarming: p.isFarming,
+                      farmingStatusReason: p.farmingStatusReason,
+                    })),
+                  }}
+                  onClose={() => {
+                    setShowModal(false);
+                    setModalType(null);
+                  }}
+                />
+              ) : (
+                <>
+                  {/* ── Record Overview ──────────────────────────────── */}
+                  <div className="farmer-modal-section">
+                    <h3 className="farmer-modal-section-title">
+                      Record Overview
+                    </h3>
+                    <div className="farmer-modal-info-grid">
+                      <div className="farmer-modal-info-item">
+                        <span className="farmer-modal-label">FFRS ID:</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.referenceNumber}
+                        </span>
+                      </div>
+                      <div className="farmer-modal-info-item">
+                        <span className="farmer-modal-label">
+                          Date Submitted:
+                        </span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.dateSubmitted}
+                        </span>
+                      </div>
+                      <div className="farmer-modal-info-item">
+                        <span className="farmer-modal-label">Role:</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.ownershipRole}
+                        </span>
+                      </div>
+                      <div className="farmer-modal-info-item">
+                        <span className="farmer-modal-label">Status:</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.recordStatus}
+                        </span>
+                      </div>
+                      {selectedFarmer.archivedAt && (
+                        <>
+                          <div className="farmer-modal-info-item">
+                            <span className="farmer-modal-label">
+                              Archived On:
+                            </span>
+                            <span
+                              className="farmer-modal-value"
+                              style={{
+                                color: "var(--color-text-danger,#c0392b)",
+                              }}
+                            >
+                              {formatDateTime(selectedFarmer.archivedAt)}
+                            </span>
+                          </div>
+                          <div className="farmer-modal-info-item">
+                            <span className="farmer-modal-label">
+                              Archive Reason:
+                            </span>
+                            <span className="farmer-modal-value">
+                              {selectedFarmer.archiveReason || "Not specified"}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    {/* ── Record Overview ──────────────────────────────── */}
-                    <div className="farmer-modal-section">
-                      <h3 className="farmer-modal-section-title">
-                        Record Overview
-                      </h3>
-                      <div className="farmer-modal-info-grid">
-                        <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">FFRS ID:</span>
-                          <span className="farmer-modal-value">
-                            {selectedFarmer.referenceNumber}
-                          </span>
-                        </div>
-                        <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">
-                            Date Submitted:
-                          </span>
-                          <span className="farmer-modal-value">
-                            {selectedFarmer.dateSubmitted}
-                          </span>
-                        </div>
-                        <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Role:</span>
-                          <span className="farmer-modal-value">
-                            {selectedFarmer.ownershipRole}
-                          </span>
-                        </div>
-                        <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Status:</span>
-                          <span className="farmer-modal-value">
-                            {selectedFarmer.recordStatus}
-                          </span>
-                        </div>
-                        {selectedFarmer.archivedAt && (
-                          <>
-                            <div className="farmer-modal-info-item">
-                              <span className="farmer-modal-label">
-                                Archived On:
-                              </span>
-                              <span
-                                className="farmer-modal-value"
-                                style={{
-                                  color: "var(--color-text-danger,#c0392b)",
-                                }}
-                              >
-                                {formatDateTime(selectedFarmer.archivedAt)}
-                              </span>
-                            </div>
-                            <div className="farmer-modal-info-item">
-                              <span className="farmer-modal-label">
-                                Archive Reason:
-                              </span>
-                              <span className="farmer-modal-value">
-                                {selectedFarmer.archiveReason ||
-                                  "Not specified"}
-                              </span>
-                            </div>
-                          </>
-                        )}
+
+                  {/* ── Personal Information ─────────────────────────── */}
+                  <div className="farmer-modal-section">
+                    <h3 className="farmer-modal-section-title">
+                      👤 Personal Information
+                    </h3>
+                    <div className="farmer-modal-info-grid">
+                      <div className="farmer-modal-info-item">
+                        <span className="farmer-modal-label">Full Name:</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.farmerName}
+                        </span>
+                      </div>
+                      <div className="farmer-modal-info-item">
+                        <span className="farmer-modal-label">Address:</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.farmerAddress}
+                        </span>
+                      </div>
+                      <div className="farmer-modal-info-item">
+                        <span className="farmer-modal-label">Age:</span>
+                        <span className="farmer-modal-value">
+                          {typeof selectedFarmer.age === "number"
+                            ? `${selectedFarmer.age} years old`
+                            : selectedFarmer.age}
+                          {selectedFarmer.birthdate && (
+                            <span
+                              style={{
+                                marginLeft: 8,
+                                fontSize: "0.85em",
+                                color: "var(--color-text-secondary,#666)",
+                              }}
+                            >
+                              (Born: {selectedFarmer.birthdate})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="farmer-modal-info-item">
+                        <span className="farmer-modal-label">Gender:</span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.gender}
+                        </span>
+                      </div>
+                      <div className="farmer-modal-info-item farmer-modal-full-width">
+                        <span className="farmer-modal-label">
+                          Farming Activities:
+                        </span>
+                        <span className="farmer-modal-value">
+                          {selectedFarmer.farmingActivities.length > 0
+                            ? selectedFarmer.farmingActivities.join(", ")
+                            : "Not available"}
+                        </span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* ── Personal Information ─────────────────────────── */}
-                    <div className="farmer-modal-section">
-                      <h3 className="farmer-modal-section-title">
-                        👤 Personal Information
-                      </h3>
-                      <div className="farmer-modal-info-grid">
-                        <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Full Name:</span>
-                          <span className="farmer-modal-value">
-                            {selectedFarmer.farmerName}
-                          </span>
-                        </div>
-                        <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Address:</span>
-                          <span className="farmer-modal-value">
-                            {selectedFarmer.farmerAddress}
-                          </span>
-                        </div>
-                        <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Age:</span>
-                          <span className="farmer-modal-value">
-                            {typeof selectedFarmer.age === "number"
-                              ? `${selectedFarmer.age} years old`
-                              : selectedFarmer.age}
-                            {selectedFarmer.birthdate && (
-                              <span
-                                style={{
-                                  marginLeft: 8,
-                                  fontSize: "0.85em",
-                                  color: "var(--color-text-secondary,#666)",
-                                }}
-                              >
-                                (Born: {selectedFarmer.birthdate})
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Gender:</span>
-                          <span className="farmer-modal-value">
-                            {selectedFarmer.gender}
-                          </span>
-                        </div>
-                        <div className="farmer-modal-info-item farmer-modal-full-width">
-                          <span className="farmer-modal-label">
-                            Farming Activities:
-                          </span>
-                          <span className="farmer-modal-value">
-                            {selectedFarmer.farmingActivities.length > 0
-                              ? selectedFarmer.farmingActivities.join(", ")
-                              : "Not available"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* ── Farm Information ─────────────────────────────── */}
-                    <div className="farmer-modal-section">
-                      <h3 className="farmer-modal-section-title">
-                        🌾 Farm Information
-                      </h3>
-                      {selectedFarmer.parcels.length > 0 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 20,
-                            padding: "8px 12px",
-                            marginBottom: 12,
-                            background:
-                              "var(--color-background-secondary,#f5f5f5)",
-                            borderRadius: 6,
-                            fontSize: "0.9em",
-                            color: "var(--color-text-secondary,#555)",
-                          }}
-                        >
-                          <span>
-                            <strong
-                              style={{
-                                color: "var(--color-text-primary,#222)",
-                              }}
-                            >
-                              {selectedFarmer.parcels.length}
-                            </strong>{" "}
-                            parcel
-                            {selectedFarmer.parcels.length === 1 ? "" : "s"}
-                          </span>
-                          <span>
-                            <strong
-                              style={{
-                                color: "var(--color-text-primary,#222)",
-                              }}
-                            >
-                              {selectedFarmer.parcels
-                                .reduce(
-                                  (s, p) =>
-                                    s +
-                                    (typeof p.totalFarmAreaHa === "number"
-                                      ? p.totalFarmAreaHa
-                                      : parseFloat(
-                                          String(p.totalFarmAreaHa || 0),
-                                        )),
-                                  0,
-                                )
-                                .toFixed(2)}
-                            </strong>{" "}
-                            ha total
-                          </span>
-                          <span>
-                            <strong
-                              style={{
-                                color: "var(--color-text-primary,#222)",
-                              }}
-                            >
+                  {/* ── Farm Information ─────────────────────────────── */}
+                  <div className="farmer-modal-section">
+                    <h3 className="farmer-modal-section-title">
+                      🌾 Farm Information
+                    </h3>
+                    {selectedFarmer.parcels.length > 0 && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 20,
+                          padding: "8px 12px",
+                          marginBottom: 12,
+                          background:
+                            "var(--color-background-secondary,#f5f5f5)",
+                          borderRadius: 6,
+                          fontSize: "0.9em",
+                          color: "var(--color-text-secondary,#555)",
+                        }}
+                      >
+                        <span>
+                          <strong
+                            style={{
+                              color: "var(--color-text-primary,#222)",
+                            }}
+                          >
+                            {selectedFarmer.parcels.length}
+                          </strong>{" "}
+                          parcel
+                          {selectedFarmer.parcels.length === 1 ? "" : "s"}
+                        </span>
+                        <span>
+                          <strong
+                            style={{
+                              color: "var(--color-text-primary,#222)",
+                            }}
+                          >
+                            {selectedFarmer.parcels
+                              .reduce(
+                                (s, p) =>
+                                  s +
+                                  (typeof p.totalFarmAreaHa === "number"
+                                    ? p.totalFarmAreaHa
+                                    : parseFloat(
+                                        String(p.totalFarmAreaHa || 0),
+                                      )),
+                                0,
+                              )
+                              .toFixed(2)}
+                          </strong>{" "}
+                          ha total
+                        </span>
+                        <span>
+                          <strong
+                            style={{
+                              color: "var(--color-text-primary,#222)",
+                            }}
+                          >
+                            {
+                              selectedFarmer.parcels.filter(
+                                (p) => p.isFarming === true,
+                              ).length
+                            }
+                          </strong>{" "}
+                          actively farmed
+                        </span>
+                        {selectedFarmer.parcels.filter(
+                          (p) => p.isFarming === false,
+                        ).length > 0 && (
+                          <span style={{ color: "#c0392b" }}>
+                            ⚠️{" "}
+                            <strong>
                               {
                                 selectedFarmer.parcels.filter(
-                                  (p) => p.isFarming === true,
+                                  (p) => p.isFarming === false,
                                 ).length
                               }
                             </strong>{" "}
-                            actively farmed
+                            idle
                           </span>
-                          {selectedFarmer.parcels.filter(
-                            (p) => p.isFarming === false,
-                          ).length > 0 && (
-                            <span style={{ color: "#c0392b" }}>
-                              ⚠️{" "}
-                              <strong>
-                                {
-                                  selectedFarmer.parcels.filter(
-                                    (p) => p.isFarming === false,
-                                  ).length
-                                }
-                              </strong>{" "}
-                              idle
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {selectedFarmer.parcels.length === 0 ? (
-                        <p className="farmer-modal-no-data">No parcels found</p>
-                      ) : (
-                        <div className="farmer-modal-parcels-container">
-                          {selectedFarmer.parcels.map((parcel, index) => {
-                            const isTL =
-                              parcel.ownershipTypeTenant ||
-                              parcel.ownershipTypeLessee;
-                            const hasOwnerName =
-                              parcel.tenantLandOwnerName ||
-                              parcel.lesseeLandOwnerName;
-                            const hasOwnerLink =
-                              parcel.tenantLandOwnerId ||
-                              parcel.lesseeLandOwnerId;
-                            const isUnlinked =
-                              isTL && hasOwnerName && !hasOwnerLink;
-                            const parsedContractEnd = parcel.contractEndDate
-                              ? new Date(parcel.contractEndDate)
-                              : null;
-                            const contractDateLabel =
-                              parsedContractEnd &&
-                              !Number.isNaN(parsedContractEnd.getTime())
-                                ? parsedContractEnd.toLocaleDateString()
-                                : "Not specified";
-                            const contractStatus = (() => {
-                              if (
-                                !parsedContractEnd ||
-                                Number.isNaN(parsedContractEnd.getTime())
-                              )
-                                return null;
-                              const endDate = new Date(parsedContractEnd);
-                              const today = new Date();
-                              endDate.setHours(0, 0, 0, 0);
-                              today.setHours(0, 0, 0, 0);
-                              return endDate < today ? "Ended" : "Active";
-                            })();
-                            return (
-                              <div
-                                key={parcel.id}
-                                className="farmer-modal-parcel-card"
-                              >
-                                <div className="farmer-modal-parcel-header">
-                                  <h4>
-                                    {parcel.parcelNumber &&
-                                    parcel.parcelNumber !== "N/A"
-                                      ? `Parcel No. ${parcel.parcelNumber}`
-                                      : `Parcel #${index + 1}`}
-                                  </h4>
+                        )}
+                      </div>
+                    )}
+                    {selectedFarmer.parcels.length === 0 ? (
+                      <p className="farmer-modal-no-data">No parcels found</p>
+                    ) : (
+                      <div className="farmer-modal-parcels-container">
+                        {selectedFarmer.parcels.map((parcel, index) => {
+                          const isTL =
+                            parcel.ownershipTypeTenant ||
+                            parcel.ownershipTypeLessee;
+                          const hasOwnerName =
+                            parcel.tenantLandOwnerName ||
+                            parcel.lesseeLandOwnerName;
+                          const hasOwnerLink =
+                            parcel.tenantLandOwnerId ||
+                            parcel.lesseeLandOwnerId;
+                          const isUnlinked =
+                            isTL && hasOwnerName && !hasOwnerLink;
+                          const parsedContractEnd = parcel.contractEndDate
+                            ? new Date(parcel.contractEndDate)
+                            : null;
+                          const contractDateLabel =
+                            parsedContractEnd &&
+                            !Number.isNaN(parsedContractEnd.getTime())
+                              ? parsedContractEnd.toLocaleDateString()
+                              : "Not specified";
+                          const contractStatus = (() => {
+                            if (
+                              !parsedContractEnd ||
+                              Number.isNaN(parsedContractEnd.getTime())
+                            )
+                              return null;
+                            const endDate = new Date(parsedContractEnd);
+                            const today = new Date();
+                            endDate.setHours(0, 0, 0, 0);
+                            today.setHours(0, 0, 0, 0);
+                            return endDate < today ? "Ended" : "Active";
+                          })();
+                          return (
+                            <div
+                              key={parcel.id}
+                              className="farmer-modal-parcel-card"
+                            >
+                              <div className="farmer-modal-parcel-header">
+                                <h4>
+                                  {parcel.parcelNumber &&
+                                  parcel.parcelNumber !== "N/A"
+                                    ? `Parcel No. ${parcel.parcelNumber}`
+                                    : `Parcel #${index + 1}`}
+                                </h4>
+                              </div>
+                              <div className="farmer-modal-parcel-details">
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Role on this parcel:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.ownershipTypeRegisteredOwner
+                                      ? "Registered Owner"
+                                      : parcel.ownershipTypeTenant &&
+                                          parcel.ownershipTypeLessee
+                                        ? "Tenant + Lessee"
+                                        : parcel.ownershipTypeTenant
+                                          ? "Tenant"
+                                          : parcel.ownershipTypeLessee
+                                            ? "Lessee"
+                                            : "—"}
+                                  </span>
                                 </div>
-                                <div className="farmer-modal-parcel-details">
+                                {isTL && hasOwnerName && (
                                   <div className="farmer-modal-parcel-item">
                                     <span className="farmer-modal-label">
-                                      Role on this parcel:
+                                      Landowner:
                                     </span>
                                     <span className="farmer-modal-value">
-                                      {parcel.ownershipTypeRegisteredOwner
-                                        ? "Registered Owner"
-                                        : parcel.ownershipTypeTenant &&
-                                            parcel.ownershipTypeLessee
-                                          ? "Tenant + Lessee"
-                                          : parcel.ownershipTypeTenant
-                                            ? "Tenant"
-                                            : parcel.ownershipTypeLessee
-                                              ? "Lessee"
-                                              : "—"}
-                                    </span>
-                                  </div>
-                                  {isTL && hasOwnerName && (
-                                    <div className="farmer-modal-parcel-item">
-                                      <span className="farmer-modal-label">
-                                        Landowner:
-                                      </span>
-                                      <span className="farmer-modal-value">
-                                        {parcel.tenantLandOwnerName ||
-                                          parcel.lesseeLandOwnerName}
-                                        {isUnlinked && (
-                                          <span
-                                            style={{
-                                              marginLeft: 8,
-                                              fontSize: "11px",
-                                              padding: "2px 8px",
-                                              borderRadius: 99,
-                                              background: "#FAEEDA",
-                                              color: "#633806",
-                                            }}
-                                            title="Text-only name — no FFRS record linked"
-                                          >
-                                            ⚠️ Unlinked
-                                          </span>
-                                        )}
-                                        {parcel.ownershipDocumentNo && (
-                                          <span className="farmer-modal-owner-name">
-                                            {" "}
-                                            · Doc No:{" "}
-                                            {parcel.ownershipDocumentNo}
-                                          </span>
-                                        )}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <div className="farmer-modal-parcel-item">
-                                    <span className="farmer-modal-label">
-                                      Location:
-                                    </span>
-                                    <span className="farmer-modal-value">
-                                      {parcel.farmLocationBarangay},{" "}
-                                      {parcel.farmLocationMunicipality}
-                                    </span>
-                                  </div>
-                                  <div className="farmer-modal-parcel-item">
-                                    <span className="farmer-modal-label">
-                                      Area:
-                                    </span>
-                                    <span className="farmer-modal-value">
-                                      {(typeof parcel.totalFarmAreaHa ===
-                                      "number"
-                                        ? parcel.totalFarmAreaHa
-                                        : parseFloat(
-                                            String(parcel.totalFarmAreaHa || 0),
-                                          )
-                                      ).toFixed(2)}{" "}
-                                      ha
-                                    </span>
-                                  </div>
-                                  <div className="farmer-modal-parcel-item">
-                                    <span className="farmer-modal-label">
-                                      Agrarian Reform Beneficiary:
-                                    </span>
-                                    <span className="farmer-modal-value">
-                                      {parcel.agrarianReformBeneficiary || (
-                                        <span style={{ color: "#888" }}>
-                                          Not specified
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                  <div className="farmer-modal-parcel-item">
-                                    <span className="farmer-modal-label">
-                                      Within Ancestral Domain:
-                                    </span>
-                                    <span className="farmer-modal-value">
-                                      {parcel.withinAncestralDomain || (
-                                        <span style={{ color: "#888" }}>
-                                          Not specified
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                  <div className="farmer-modal-parcel-item">
-                                    <span className="farmer-modal-label">
-                                      Farming Status:
-                                    </span>
-                                    <span className="farmer-modal-value">
-                                      {parcel.isFarming === true ? (
+                                      {parcel.tenantLandOwnerName ||
+                                        parcel.lesseeLandOwnerName}
+                                      {isUnlinked && (
                                         <span
                                           style={{
-                                            color: "green",
-                                            fontWeight: 500,
+                                            marginLeft: 8,
+                                            fontSize: "11px",
+                                            padding: "2px 8px",
+                                            borderRadius: 99,
+                                            background: "#FAEEDA",
+                                            color: "#633806",
                                           }}
+                                          title="Text-only name — no FFRS record linked"
                                         >
-                                          ✅ Farming
-                                        </span>
-                                      ) : parcel.isFarming === false ? (
-                                        <span
-                                          style={{
-                                            color: "red",
-                                            fontWeight: 500,
-                                          }}
-                                        >
-                                          ❌ Not farming
-                                        </span>
-                                      ) : (
-                                        <span style={{ color: "#888" }}>
-                                          Not specified
+                                          ⚠️ Unlinked
                                         </span>
                                       )}
-                                      {parcel.isFarming === false &&
-                                        parcel.farmingStatusReason && (
-                                          <span className="farmer-modal-owner-name">
-                                            {" "}
-                                            — {parcel.farmingStatusReason}
-                                          </span>
-                                        )}
+                                      {parcel.ownershipDocumentNo && (
+                                        <span className="farmer-modal-owner-name">
+                                          {" "}
+                                          · Doc No: {parcel.ownershipDocumentNo}
+                                        </span>
+                                      )}
                                     </span>
                                   </div>
-                                  {parcel.farmingStatusUpdatedAt && (
-                                    <div className="farmer-modal-parcel-item">
-                                      <span className="farmer-modal-label">
-                                        Status Last Updated:
+                                )}
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Location:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.farmLocationBarangay},{" "}
+                                    {parcel.farmLocationMunicipality}
+                                  </span>
+                                </div>
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Area:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {(typeof parcel.totalFarmAreaHa === "number"
+                                      ? parcel.totalFarmAreaHa
+                                      : parseFloat(
+                                          String(parcel.totalFarmAreaHa || 0),
+                                        )
+                                    ).toFixed(2)}{" "}
+                                    ha
+                                  </span>
+                                </div>
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Agrarian Reform Beneficiary:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.agrarianReformBeneficiary || (
+                                      <span style={{ color: "#888" }}>
+                                        Not specified
                                       </span>
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Within Ancestral Domain:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.withinAncestralDomain || (
+                                      <span style={{ color: "#888" }}>
+                                        Not specified
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Farming Status:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {parcel.isFarming === true ? (
                                       <span
-                                        className="farmer-modal-value"
                                         style={{
-                                          fontSize: "0.85em",
-                                          color: "#666",
+                                          color: "green",
+                                          fontWeight: 500,
                                         }}
                                       >
-                                        {formatDateTime(
-                                          parcel.farmingStatusUpdatedAt,
-                                        )}
+                                        ✅ Farming
                                       </span>
-                                    </div>
-                                  )}
+                                    ) : parcel.isFarming === false ? (
+                                      <span
+                                        style={{
+                                          color: "red",
+                                          fontWeight: 500,
+                                        }}
+                                      >
+                                        ❌ Not farming
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: "#888" }}>
+                                        Not specified
+                                      </span>
+                                    )}
+                                    {parcel.isFarming === false &&
+                                      parcel.farmingStatusReason && (
+                                        <span className="farmer-modal-owner-name">
+                                          {" "}
+                                          — {parcel.farmingStatusReason}
+                                        </span>
+                                      )}
+                                  </span>
+                                </div>
+                                {parcel.farmingStatusUpdatedAt && (
                                   <div className="farmer-modal-parcel-item">
                                     <span className="farmer-modal-label">
-                                      Contract End Date:
+                                      Status Last Updated:
                                     </span>
-                                    <span className="farmer-modal-value">
-                                      {contractDateLabel}
-                                      {contractStatus && (
-                                        <span className="farmer-modal-owner-name">
-                                          {` · ${contractStatus}`}
-                                        </span>
+                                    <span
+                                      className="farmer-modal-value"
+                                      style={{
+                                        fontSize: "0.85em",
+                                        color: "#666",
+                                      }}
+                                    >
+                                      {formatDateTime(
+                                        parcel.farmingStatusUpdatedAt,
                                       )}
                                     </span>
                                   </div>
-                                  {parcel.ownershipOthersSpecify && (
-                                    <div className="farmer-modal-parcel-item">
-                                      <span className="farmer-modal-label">
-                                        Other notes:
+                                )}
+                                <div className="farmer-modal-parcel-item">
+                                  <span className="farmer-modal-label">
+                                    Contract End Date:
+                                  </span>
+                                  <span className="farmer-modal-value">
+                                    {contractDateLabel}
+                                    {contractStatus && (
+                                      <span className="farmer-modal-owner-name">
+                                        {` · ${contractStatus}`}
                                       </span>
-                                      <span className="farmer-modal-value">
-                                        {parcel.ownershipOthersSpecify}
-                                      </span>
-                                    </div>
-                                  )}
+                                    )}
+                                  </span>
                                 </div>
+                                {parcel.ownershipOthersSpecify && (
+                                  <div className="farmer-modal-parcel-item">
+                                    <span className="farmer-modal-label">
+                                      Other notes:
+                                    </span>
+                                    <span className="farmer-modal-value">
+                                      {parcel.ownershipOthersSpecify}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
-                    {/* ── Land History ─────────────────────────────────── */}
-                    <div className="farmer-modal-section">
-                      <h3 className="farmer-modal-section-title">
-                        📋 Land History
-                      </h3>
-                      {loadingLandHistory ? (
-                        <p style={{ fontSize: "0.85em", color: "#888" }}>
-                          Loading land history...
-                        </p>
-                      ) : modalLandHistory.length === 0 ? (
-                        <p className="farmer-modal-no-data">
-                          No land history records found.
-                        </p>
-                      ) : (
-                        <div style={{ overflowX: "auto" }}>
-                          <table
-                            style={{
-                              width: "100%",
-                              borderCollapse: "collapse",
-                              fontSize: "12px",
-                            }}
-                          >
-                            <thead>
-                              <tr
-                                style={{
-                                  background:
-                                    "var(--color-background-secondary,#f5f5f5)",
-                                }}
-                              >
-                                {[
-                                  "Parcel No.",
-                                  "Barangay",
-                                  "Role",
-                                  "Landowner",
-                                  "Period",
-                                  "Change",
-                                ].map((h) => (
-                                  <th
-                                    key={h}
+                  {/* ── Land History ─────────────────────────────────── */}
+                  <div className="farmer-modal-section">
+                    <h3 className="farmer-modal-section-title">
+                      📋 Land History
+                    </h3>
+                    {loadingLandHistory ? (
+                      <p style={{ fontSize: "0.85em", color: "#888" }}>
+                        Loading land history...
+                      </p>
+                    ) : modalLandHistory.length === 0 ? (
+                      <p className="farmer-modal-no-data">
+                        No land history records found.
+                      </p>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table
+                          style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            fontSize: "12px",
+                          }}
+                        >
+                          <thead>
+                            <tr
+                              style={{
+                                background:
+                                  "var(--color-background-secondary,#f5f5f5)",
+                              }}
+                            >
+                              {[
+                                "Parcel No.",
+                                "Barangay",
+                                "Role",
+                                "Landowner",
+                                "Period",
+                                "Change",
+                              ].map((h) => (
+                                <th
+                                  key={h}
+                                  style={{
+                                    padding: "6px 10px",
+                                    textAlign: "left",
+                                    fontWeight: 500,
+                                    borderBottom:
+                                      "0.5px solid var(--color-border-tertiary)",
+                                    color: "var(--color-text-secondary)",
+                                  }}
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {modalLandHistory.map((h, i) => {
+                              const role = h.isRegisteredOwner
+                                ? "Owner"
+                                : h.isTenant && h.isLessee
+                                  ? "Tenant+Lessee"
+                                  : h.isTenant
+                                    ? "Tenant"
+                                    : h.isLessee
+                                      ? "Lessee"
+                                      : "—";
+                              const start = h.periodStartDate
+                                ? new Date(
+                                    h.periodStartDate,
+                                  ).toLocaleDateString()
+                                : "?";
+                              const end = h.isCurrent
+                                ? "Present"
+                                : h.periodEndDate
+                                  ? new Date(
+                                      h.periodEndDate,
+                                    ).toLocaleDateString()
+                                  : "?";
+                              return (
+                                <tr
+                                  key={h.id}
+                                  style={{
+                                    background:
+                                      i % 2 === 0
+                                        ? "transparent"
+                                        : "var(--color-background-secondary,#f9f9f9)",
+                                  }}
+                                >
+                                  <td
                                     style={{
-                                      padding: "6px 10px",
-                                      textAlign: "left",
-                                      fontWeight: 500,
+                                      padding: "5px 10px",
                                       borderBottom:
                                         "0.5px solid var(--color-border-tertiary)",
+                                      fontWeight: h.isCurrent ? 600 : 400,
+                                    }}
+                                  >
+                                    {h.parcelNumber}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 10px",
+                                      borderBottom:
+                                        "0.5px solid var(--color-border-tertiary)",
+                                    }}
+                                  >
+                                    {h.farmLocationBarangay}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 10px",
+                                      borderBottom:
+                                        "0.5px solid var(--color-border-tertiary)",
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontSize: "11px",
+                                        padding: "2px 7px",
+                                        borderRadius: 99,
+                                        background: h.isRegisteredOwner
+                                          ? "#EAF3DE"
+                                          : "#E6F1FB",
+                                        color: h.isRegisteredOwner
+                                          ? "#27500A"
+                                          : "#0C447C",
+                                      }}
+                                    >
+                                      {role}
+                                    </span>
+                                    {h.isCurrent && (
+                                      <span
+                                        style={{
+                                          marginLeft: 4,
+                                          fontSize: "11px",
+                                          color: "green",
+                                        }}
+                                      >
+                                        ● Current
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 10px",
+                                      borderBottom:
+                                        "0.5px solid var(--color-border-tertiary)",
+                                    }}
+                                  >
+                                    {h.landOwnerName}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "5px 10px",
+                                      borderBottom:
+                                        "0.5px solid var(--color-border-tertiary)",
+                                      fontSize: "11px",
                                       color: "var(--color-text-secondary)",
                                     }}
                                   >
-                                    {h}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {modalLandHistory.map((h, i) => {
-                                const role = h.isRegisteredOwner
-                                  ? "Owner"
-                                  : h.isTenant && h.isLessee
-                                    ? "Tenant+Lessee"
-                                    : h.isTenant
-                                      ? "Tenant"
-                                      : h.isLessee
-                                        ? "Lessee"
-                                        : "—";
-                                const start = h.periodStartDate
-                                  ? new Date(
-                                      h.periodStartDate,
-                                    ).toLocaleDateString()
-                                  : "?";
-                                const end = h.isCurrent
-                                  ? "Present"
-                                  : h.periodEndDate
-                                    ? new Date(
-                                        h.periodEndDate,
-                                      ).toLocaleDateString()
-                                    : "?";
-                                return (
-                                  <tr
-                                    key={h.id}
+                                    {start} → {end}
+                                  </td>
+                                  <td
                                     style={{
-                                      background:
-                                        i % 2 === 0
-                                          ? "transparent"
-                                          : "var(--color-background-secondary,#f9f9f9)",
+                                      padding: "5px 10px",
+                                      borderBottom:
+                                        "0.5px solid var(--color-border-tertiary)",
+                                      fontSize: "11px",
                                     }}
                                   >
-                                    <td
-                                      style={{
-                                        padding: "5px 10px",
-                                        borderBottom:
-                                          "0.5px solid var(--color-border-tertiary)",
-                                        fontWeight: h.isCurrent ? 600 : 400,
-                                      }}
-                                    >
-                                      {h.parcelNumber}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "5px 10px",
-                                        borderBottom:
-                                          "0.5px solid var(--color-border-tertiary)",
-                                      }}
-                                    >
-                                      {h.farmLocationBarangay}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "5px 10px",
-                                        borderBottom:
-                                          "0.5px solid var(--color-border-tertiary)",
-                                      }}
-                                    >
-                                      <span
-                                        style={{
-                                          fontSize: "11px",
-                                          padding: "2px 7px",
-                                          borderRadius: 99,
-                                          background: h.isRegisteredOwner
-                                            ? "#EAF3DE"
-                                            : "#E6F1FB",
-                                          color: h.isRegisteredOwner
-                                            ? "#27500A"
-                                            : "#0C447C",
-                                        }}
-                                      >
-                                        {role}
-                                      </span>
-                                      {h.isCurrent && (
-                                        <span
-                                          style={{
-                                            marginLeft: 4,
-                                            fontSize: "11px",
-                                            color: "green",
-                                          }}
-                                        >
-                                          ● Current
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "5px 10px",
-                                        borderBottom:
-                                          "0.5px solid var(--color-border-tertiary)",
-                                      }}
-                                    >
-                                      {h.landOwnerName}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "5px 10px",
-                                        borderBottom:
-                                          "0.5px solid var(--color-border-tertiary)",
-                                        fontSize: "11px",
-                                        color: "var(--color-text-secondary)",
-                                      }}
-                                    >
-                                      {start} → {end}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "5px 10px",
-                                        borderBottom:
-                                          "0.5px solid var(--color-border-tertiary)",
-                                        fontSize: "11px",
-                                      }}
-                                    >
-                                      {h.changeType}
-                                      {h.changeReason
-                                        ? ` — ${h.changeReason}`
-                                        : ""}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+                                    {h.changeType}
+                                    {h.changeReason
+                                      ? ` — ${h.changeReason}`
+                                      : ""}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
