@@ -1411,6 +1411,20 @@ export const createRsbsaSubmission = async (
         cultivationStatusUpdatedAt: p.cultivationStatusUpdatedAt || null,
         cultivationStatusReason: p.cultivationStatusReason || null,
         cultivatorSubmissionId: p.cultivatorSubmissionId || null,
+        // Ownership type flags — these map to DB columns in rsbsa_farm_parcels
+        ownershipTypeRegisteredOwner:
+          p.ownershipTypeRegisteredOwner ??
+          p.ownershipType?.registeredOwner ??
+          false,
+        ownershipTypeTenant:
+          p.ownershipTypeTenant ?? p.ownershipType?.tenant ?? false,
+        ownershipTypeLessee:
+          p.ownershipTypeLessee ?? p.ownershipType?.lessee ?? false,
+        // Land owner names recorded on the parcel itself
+        tenantLandOwnerName: p.tenantLandOwnerName || "",
+        lesseeLandOwnerName: p.lesseeLandOwnerName || "",
+        tenantLandOwnerId: p.tenantLandOwnerId || null,
+        lesseeLandOwnerId: p.lesseeLandOwnerId || null,
       };
     }),
   };
@@ -3842,4 +3856,70 @@ export default {
 
   // Universal fetch
   apiFetch,
+};
+
+export const getLandOwnerById = async (id: number): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("rsbsa_submission")
+    .select(
+      'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", "BARANGAY", "MUNICIPALITY"',
+    )
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("getLandOwnerById error:", error);
+    return createResponse(null, error.message, 500);
+  }
+
+  // Normalise BIRTHDATE → YYYY-MM-DD so <input type="date"> can consume it
+  let dateOfBirth = "";
+  if (data["BIRTHDATE"]) {
+    const d = new Date(data["BIRTHDATE"]);
+    dateOfBirth = isNaN(d.getTime())
+      ? String(data["BIRTHDATE"])
+      : d.toISOString().split("T")[0];
+  }
+
+  return createResponse(
+    {
+      id: data.id,
+      firstName: data["FIRST NAME"] || "",
+      surname: data["LAST NAME"] || "",
+      middleName: data["MIDDLE NAME"] || "",
+      extensionName: data["EXT NAME"] || "",
+      gender: data["GENDER"] || "",
+      dateOfBirth,
+      barangay: data["BARANGAY"] || "",
+      municipality: data["MUNICIPALITY"] || "Dumangas",
+    },
+    null,
+    200,
+  );
+};
+
+/**
+ * Fetch all registered farmers for the per-parcel tenant/lessee live search
+ * in Step 3 (YES path, "Who is cultivating this parcel?" cards).
+ */
+export const getRegisteredFarmers = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("rsbsa_submission")
+    .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY"')
+    .order('"LAST NAME"', { ascending: true });
+
+  if (error) {
+    console.error("getRegisteredFarmers error:", error);
+    return createResponse(null, error.message, 500);
+  }
+
+  const farmers = (data || []).map((row: any) => ({
+    id: row.id,
+    name: `${row["FIRST NAME"] || ""} ${row["MIDDLE NAME"] || ""} ${row["LAST NAME"] || ""}`
+      .replace(/\s+/g, " ")
+      .trim(),
+    barangay: row["BARANGAY"] || "",
+  }));
+
+  return createResponse(farmers, null, 200);
 };

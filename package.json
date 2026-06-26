@@ -28,6 +28,7 @@
     "@types/uuid": "^10.0.0",
     "axios": "^1.9.0",
     "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
     "file-saver": "^2.0.5",
     "firebase": "^11.6.0",
     "jspdf": "^4.1.0",
