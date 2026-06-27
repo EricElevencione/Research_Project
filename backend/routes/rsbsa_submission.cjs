@@ -595,7 +595,7 @@ router.post("/", async (req, res) => {
           }
 
           if (hasCurrentOwnerColumn) {
-            parcelInsertValues.push(isNewRegisteredOwner);
+            parcelInsertValues.push(true);
           }
 
           if (hasIsCultivatingColumn) {

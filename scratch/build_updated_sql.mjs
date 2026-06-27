@@ -185,7 +185,7 @@ const insertParcelsReplacement = `        -- Insert rsbsa_farm_parcels record
             v_parcel_lessee_land_owner_name,
             v_parcel_tenant_land_owner_id,
             v_parcel_lessee_land_owner_id,
-            v_parcel_is_registered_owner,
+            TRUE, -- is_current_owner is always TRUE for new registrations (owner or tenant/lessee)
             v_is_cultivating,
             v_cultivation_status_updated_at,
             v_cultivation_status_reason,

@@ -610,7 +610,7 @@ const JoMasterlist: React.FC = () => {
       const allData = Array.isArray(response.data) ? response.data : [];
 
       // Batch queries — avoids N+1
-      const [tlResult, parcelOwnerResult] = await Promise.all([
+      const [tlResult, parcelOwnerResult, lhTenantResult] = await Promise.all([
         supabase
           .from("rsbsa_farm_parcels")
           .select(
@@ -620,6 +620,14 @@ const JoMasterlist: React.FC = () => {
         supabase
           .from("rsbsa_farm_parcels")
           .select("submission_id, is_current_owner"),
+        // Fallback: land_history rows for tenants/lessees whose rsbsa_farm_parcels
+        // insert may have failed. The land_owner_name column holds the owner name.
+        // NOTE: farmer_id is the column written by the RPC (same field getFarmParcels uses).
+        supabase
+          .from("land_history")
+          .select("farmer_id, land_owner_name")
+          .or("is_tenant.eq.true,is_lessee.eq.true")
+          .eq("is_current", true),
       ]);
 
       const landownerMap = new Map<string, string>();
@@ -635,6 +643,18 @@ const JoMasterlist: React.FC = () => {
         const name = p.tenant_land_owner_name || p.lessee_land_owner_name || "";
         if (name) {
           landownerMap.set(id, name);
+          submissionsWithOwnerName.add(id);
+        }
+      });
+
+      // Apply land_history fallback for submissions not covered by rsbsa_farm_parcels
+      (lhTenantResult.data || []).forEach((h: any) => {
+        if (!h.farmer_id) return;
+        const id = String(h.farmer_id);
+        const name = (h.land_owner_name || "").trim();
+        if (name) {
+          // Only set if not already resolved from rsbsa_farm_parcels
+          if (!landownerMap.has(id)) landownerMap.set(id, name);
           submissionsWithOwnerName.add(id);
         }
       });

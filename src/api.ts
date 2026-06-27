@@ -3862,7 +3862,7 @@ export const getLandOwnerById = async (id: number): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("rsbsa_submission")
     .select(
-      'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", "BARANGAY", "MUNICIPALITY"',
+      'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", "BARANGAY", "MUNICIPALITY", "FARMER_RICE", "FARMER_CORN", "FARMER_OTHER_CROPS", "FARMER_OTHER_CROPS_TEXT", "FARMER_LIVESTOCK", "FARMER_LIVESTOCK_TEXT", "FARMER_POULTRY", "FARMER_POULTRY_TEXT"',
     )
     .eq("id", id)
     .single();
@@ -3883,15 +3883,26 @@ export const getLandOwnerById = async (id: number): Promise<ApiResponse> => {
 
   return createResponse(
     {
-      id: data.id,
+      // Personal information
       firstName: data["FIRST NAME"] || "",
+      lastName: data["LAST NAME"] || "",
       surname: data["LAST NAME"] || "",
       middleName: data["MIDDLE NAME"] || "",
+      extName: data["EXT NAME"] || "",
       extensionName: data["EXT NAME"] || "",
       gender: data["GENDER"] || "",
       dateOfBirth,
       barangay: data["BARANGAY"] || "",
       municipality: data["MUNICIPALITY"] || "Dumangas",
+      // Farming activities
+      farmerRice: data["FARMER_RICE"] ?? false,
+      farmerCorn: data["FARMER_CORN"] ?? false,
+      farmerOtherCrops: data["FARMER_OTHER_CROPS"] ?? false,
+      farmerOtherCropsText: data["FARMER_OTHER_CROPS_TEXT"] || "",
+      farmerLivestock: data["FARMER_LIVESTOCK"] ?? false,
+      farmerLivestockText: data["FARMER_LIVESTOCK_TEXT"] || "",
+      farmerPoultry: data["FARMER_POULTRY"] ?? false,
+      farmerPoultryText: data["FARMER_POULTRY_TEXT"] || "",
     },
     null,
     200,
