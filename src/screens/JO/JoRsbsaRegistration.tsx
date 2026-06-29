@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getLandOwners,
@@ -349,98 +349,48 @@ const JoRsbsa: React.FC = () => {
 
   // Load all registered owners with their parcels on mount
   useEffect(() => {
-    const fetchRegisteredOwners = async () => {
-      try {
-        const ownersResponse = await getLandOwners();
-        if (ownersResponse.error) {
-          console.error(
-            "Error fetching registered owners:",
-            ownersResponse.error,
-          );
-          setAllRegisteredOwners([]);
-          return;
-        }
+    const fetch = async () => {
+      const response = await getLandOwners();
+      if (response.error) return;
+      const owners = (response.data || []) as LandOwner[];
+      setLandowners(owners);
+      setRegisteredFarmers(
+        owners as Array<{ id: number; name: string; barangay?: string }>,
+      );
 
-        const owners = (ownersResponse.data || []) as LandOwner[];
-        if (!owners.length) {
-          setAllRegisteredOwners([]);
-          return;
-        }
-
-        const ownerIds = owners
-          .map((owner) => Number(owner.id))
-          .filter((id) => Number.isFinite(id));
-
-        if (!ownerIds.length) {
-          setAllRegisteredOwners([]);
-          return;
-        }
-
-        const { data: parcels, error: parcelError } = await supabase
-          .from("rsbsa_farm_parcels")
-          .select(
-            "id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, submission_id, ownership_type_registered_owner, is_current_owner",
-          )
-          .in("submission_id", ownerIds)
-          .eq("ownership_type_registered_owner", true)
-          .or("is_current_owner.is.null,is_current_owner.eq.true");
-
-        if (parcelError) {
-          console.error("Error fetching parcels:", parcelError);
-          return;
-        }
-
-        // Build name lookup
-        const nameMap: Record<number, string> = {};
-        owners.forEach((owner) => {
-          const ownerId = Number(owner.id);
-          if (!Number.isFinite(ownerId)) return;
-          nameMap[ownerId] = owner.name;
-        });
-
-        // Map parcels to ExistingParcel format
-        const ownerParcels: ExistingParcel[] = (parcels || []).map(
-          (p: any) => ({
-            id: p.id,
-            parcel_number: p.parcel_number || `Parcel-${p.submission_id}`,
-            farm_location_barangay: p.farm_location_barangay || "",
-            farm_location_municipality:
-              p.farm_location_municipality || "Dumangas",
-            total_farm_area_ha: p.total_farm_area_ha || 0,
-            current_holder: nameMap[p.submission_id] || "Unknown",
-            ownership_type: "Owner",
-          }),
-        );
-
-        setAllRegisteredOwners(ownerParcels);
-      } catch (err) {
-        console.error("Error loading registered owners:", err);
+      // Build allRegisteredOwners from the same fetch
+      const ownerIds = owners.map((o) => Number(o.id)).filter(Number.isFinite);
+      if (!ownerIds.length) {
+        setAllRegisteredOwners([]);
+        return;
       }
+      const { data: parcels } = await supabase
+        .from("rsbsa_farm_parcels")
+        .select(
+          "id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, submission_id, ownership_type_registered_owner, is_current_owner",
+        )
+        .in("submission_id", ownerIds)
+        .eq("ownership_type_registered_owner", true)
+        .or("is_current_owner.is.null,is_current_owner.eq.true");
+
+      const nameMap: Record<number, string> = {};
+      owners.forEach((o) => {
+        nameMap[Number(o.id)] = o.name;
+      });
+      setAllRegisteredOwners(
+        (parcels || []).map((p: any) => ({
+          id: p.id,
+          parcel_number: p.parcel_number || `Parcel-${p.submission_id}`,
+          farm_location_barangay: p.farm_location_barangay || "",
+          farm_location_municipality:
+            p.farm_location_municipality || "Dumangas",
+          total_farm_area_ha: p.total_farm_area_ha || 0,
+          current_holder: nameMap[p.submission_id] || "Unknown",
+          ownership_type: "Owner",
+        })),
+      );
     };
-
-    fetchRegisteredOwners();
-  }, []);
-
-  // Fetch landowners from the database
-  useEffect(() => {
-    const fetchLandowners = async () => {
-      try {
-        const response = await getLandOwners();
-        if (response.error) {
-          throw new Error("Failed to fetch landowners");
-        }
-        const data = response.data || [];
-        setLandowners(data);
-        // Seed the registered-farmer lookup list from the same dataset
-        setRegisteredFarmers(
-          data as Array<{ id: number; name: string; barangay?: string }>,
-        );
-      } catch (error) {
-        console.error("Error fetching landowners:", error);
-      }
-    };
-
-    fetchLandowners();
+    fetch();
   }, []);
 
   // ── Merge land owner farming activities into formData on Step 3 entry ────
@@ -952,13 +902,21 @@ const JoRsbsa: React.FC = () => {
   };
 
   // Filter land owners based on search term
-  const filteredLandOwners = landowners.filter((owner) =>
-    owner.name.toLowerCase().includes(landOwnerSearchTerm.toLowerCase()),
+  const filteredLandOwners = useMemo(
+    () =>
+      landowners.filter((o) =>
+        o.name.toLowerCase().includes(landOwnerSearchTerm.toLowerCase()),
+      ),
+    [landowners, landOwnerSearchTerm],
   );
 
   // Filter landowners for the self-search in Step 1 (YES path)
-  const filteredSelfOwners = landowners.filter((owner) =>
-    owner.name.toLowerCase().includes(selfSearchTerm.toLowerCase()),
+  const filteredSelfOwners = useMemo(
+    () =>
+      landowners.filter((o) =>
+        o.name.toLowerCase().includes(selfSearchTerm.toLowerCase()),
+      ),
+    [landowners, selfSearchTerm],
   );
 
   // Controls whether the "Search Land Owner" block is shown:
@@ -3137,289 +3095,302 @@ const JoRsbsa: React.FC = () => {
                 {(farmerRole === "tenant" || farmerRole === "lessee") &&
                   selectedLandOwner !== null && (
                     <>
-                      {additionalLandOwnerGroups.map((group, idx) => (
-                        <div
-                          key={group.groupId}
-                          style={{
-                            marginTop: "1.5rem",
-                            padding: "1.5rem",
-                            backgroundColor: "#f8f9fa",
-                            borderRadius: "8px",
-                            border: errors[`addGroup_${group.groupId}`]
-                              ? "2px solid #dc2626"
-                              : "2px solid #dee2e6",
-                          }}
-                        >
-                          {/* Group header */}
+                      {additionalLandOwnerGroups.map((group, idx) => {
+                        const filteredGroupOwners = landowners.filter((o) =>
+                          o.name
+                            .toLowerCase()
+                            .includes(group.searchTerm.toLowerCase()),
+                        );
+                        return (
                           <div
+                            key={group.groupId}
                             style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              marginBottom: "1rem",
+                              marginTop: "1.5rem",
+                              padding: "1.5rem",
+                              backgroundColor: "#f8f9fa",
+                              borderRadius: "8px",
+                              border: errors[`addGroup_${group.groupId}`]
+                                ? "2px solid #dc2626"
+                                : "2px solid #dee2e6",
                             }}
                           >
-                            <h4 style={{ margin: 0, color: "#2c3e50" }}>
-                              Land Owner #{idx + 2}
-                            </h4>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                removeLandOwnerGroup(group.groupId)
-                              }
-                              style={{
-                                background: "none",
-                                border: "1px solid #dc2626",
-                                color: "#dc2626",
-                                borderRadius: "6px",
-                                padding: "0.3rem 0.75rem",
-                                cursor: "pointer",
-                                fontSize: "0.85rem",
-                                fontWeight: "bold",
-                              }}
-                            >
-                              ✕ Remove
-                            </button>
-                          </div>
-
-                          {/* Land owner search */}
-                          <div
-                            style={{
-                              position: "relative",
-                              marginBottom: "0.75rem",
-                            }}
-                          >
-                            <input
-                              type="text"
-                              placeholder="Type land owner name..."
-                              value={group.searchTerm}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                updateAdditionalGroup(group.groupId, {
-                                  searchTerm: val,
-                                  showDropdown: true,
-                                  ...(val === "" && {
-                                    landOwner: null,
-                                    parcels: [],
-                                    selectedParcelIds: new Set<string>(),
-                                  }),
-                                });
-                              }}
-                              onFocus={() =>
-                                updateAdditionalGroup(group.groupId, {
-                                  showDropdown: true,
-                                })
-                              }
-                              style={{
-                                width: "100%",
-                                padding: "0.75rem",
-                                border: "1px solid #ced4da",
-                                borderRadius: "6px",
-                                fontSize: "0.95rem",
-                              }}
-                            />
-                            {group.showDropdown && group.searchTerm && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: "100%",
-                                  left: 0,
-                                  right: 0,
-                                  backgroundColor: "white",
-                                  border: "1px solid #ced4da",
-                                  borderRadius: "0 0 6px 6px",
-                                  maxHeight: "200px",
-                                  overflowY: "auto",
-                                  zIndex: 100,
-                                  boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                                }}
-                              >
-                                {landowners.filter((o) =>
-                                  o.name
-                                    .toLowerCase()
-                                    .includes(group.searchTerm.toLowerCase()),
-                                ).length > 0 ? (
-                                  landowners
-                                    .filter((o) =>
-                                      o.name
-                                        .toLowerCase()
-                                        .includes(
-                                          group.searchTerm.toLowerCase(),
-                                        ),
-                                    )
-                                    .map((owner) => (
-                                      <div
-                                        key={owner.id}
-                                        onClick={() =>
-                                          handleAdditionalLandOwnerSelect(
-                                            group.groupId,
-                                            owner,
-                                          )
-                                        }
-                                        style={{
-                                          padding: "0.75rem 1rem",
-                                          cursor: "pointer",
-                                          borderBottom: "1px solid #f0f0f0",
-                                          fontSize: "0.95rem",
-                                        }}
-                                        onMouseEnter={(e) =>
-                                          (e.currentTarget.style.backgroundColor =
-                                            "#f8f9fa")
-                                        }
-                                        onMouseLeave={(e) =>
-                                          (e.currentTarget.style.backgroundColor =
-                                            "white")
-                                        }
-                                      >
-                                        <strong>{owner.name}</strong>
-                                        {owner.barangay && (
-                                          <span
-                                            style={{
-                                              color: "#6c757d",
-                                              marginLeft: "0.5rem",
-                                              fontSize: "0.85rem",
-                                            }}
-                                          >
-                                            — {owner.barangay}
-                                          </span>
-                                        )}
-                                      </div>
-                                    ))
-                                ) : (
-                                  <div
-                                    style={{
-                                      padding: "0.75rem 1rem",
-                                      color: "#6c757d",
-                                      fontSize: "0.9rem",
-                                    }}
-                                  >
-                                    No land owners found
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Selected land owner badge */}
-                          {group.landOwner && (
+                            {/* Group header */}
                             <div
                               style={{
-                                marginBottom: "1rem",
-                                padding: "0.6rem 1rem",
-                                backgroundColor: "#d4edda",
-                                border: "1px solid #c3e6cb",
-                                borderRadius: "6px",
                                 display: "flex",
-                                alignItems: "center",
                                 justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "1rem",
                               }}
                             >
-                              <span
-                                style={{ color: "#155724", fontWeight: "bold" }}
-                              >
-                                ✓ {group.landOwner.name}
-                              </span>
+                              <h4 style={{ margin: 0, color: "#2c3e50" }}>
+                                Land Owner #{idx + 2}
+                              </h4>
                               <button
                                 type="button"
                                 onClick={() =>
-                                  updateAdditionalGroup(group.groupId, {
-                                    landOwner: null,
-                                    searchTerm: "",
-                                    parcels: [],
-                                    selectedParcelIds: new Set(),
-                                  })
+                                  removeLandOwnerGroup(group.groupId)
                                 }
                                 style={{
                                   background: "none",
-                                  border: "none",
-                                  color: "#721c24",
+                                  border: "1px solid #dc2626",
+                                  color: "#dc2626",
+                                  borderRadius: "6px",
+                                  padding: "0.3rem 0.75rem",
                                   cursor: "pointer",
+                                  fontSize: "0.85rem",
                                   fontWeight: "bold",
-                                  fontSize: "1rem",
                                 }}
                               >
-                                ✕
+                                ✕ Remove
                               </button>
                             </div>
-                          )}
 
-                          {/* Parcel list */}
-                          {group.landOwner && (
-                            <>
-                              {group.parcels.length === 0 ? (
-                                <div className="jo-registration-parcel-warning">
-                                  The selected land owner has no registered
-                                  parcels.
-                                </div>
-                              ) : (
-                                <div className="jo-registration-parcel-list">
-                                  {group.parcels.map((parcel) => {
-                                    const pid = String(parcel.id);
-                                    const isSelected =
-                                      group.selectedParcelIds.has(pid);
-                                    return (
+                            {/* Land owner search */}
+                            <div
+                              style={{
+                                position: "relative",
+                                marginBottom: "0.75rem",
+                              }}
+                            >
+                              <input
+                                type="text"
+                                placeholder="Type land owner name..."
+                                value={group.searchTerm}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  updateAdditionalGroup(group.groupId, {
+                                    searchTerm: val,
+                                    showDropdown: true,
+                                    ...(val === "" && {
+                                      landOwner: null,
+                                      parcels: [],
+                                      selectedParcelIds: new Set<string>(),
+                                    }),
+                                  });
+                                }}
+                                onFocus={() =>
+                                  updateAdditionalGroup(group.groupId, {
+                                    showDropdown: true,
+                                  })
+                                }
+                                style={{
+                                  width: "100%",
+                                  padding: "0.75rem",
+                                  border: "1px solid #ced4da",
+                                  borderRadius: "6px",
+                                  fontSize: "0.95rem",
+                                }}
+                              />
+                              {group.showDropdown && group.searchTerm && (
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: "100%",
+                                    left: 0,
+                                    right: 0,
+                                    backgroundColor: "white",
+                                    border: "1px solid #ced4da",
+                                    borderRadius: "0 0 6px 6px",
+                                    maxHeight: "200px",
+                                    overflowY: "auto",
+                                    zIndex: 100,
+                                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                                  }}
+                                >
+                                  {(() => {
+                                    const filteredGroupOwners =
+                                      landowners.filter((o) =>
+                                        o.name
+                                          .toLowerCase()
+                                          .includes(
+                                            group.searchTerm.toLowerCase(),
+                                          ),
+                                      );
+                                    return filteredGroupOwners.length > 0 ? (
+                                      filteredGroupOwners.map(
+                                        (
+                                          owner, // ← added ( after =>
+                                        ) => (
+                                          <div
+                                            key={owner.id}
+                                            onClick={() =>
+                                              handleAdditionalLandOwnerSelect(
+                                                group.groupId,
+                                                owner,
+                                              )
+                                            }
+                                            style={{
+                                              padding: "0.75rem 1rem",
+                                              cursor: "pointer",
+                                              borderBottom: "1px solid #f0f0f0",
+                                              fontSize: "0.95rem",
+                                            }}
+                                            onMouseEnter={(e) =>
+                                              (e.currentTarget.style.backgroundColor =
+                                                "#f8f9fa")
+                                            }
+                                            onMouseLeave={(e) =>
+                                              (e.currentTarget.style.backgroundColor =
+                                                "white")
+                                            }
+                                          >
+                                            <strong>{owner.name}</strong>
+                                            {owner.barangay && (
+                                              <span
+                                                style={{
+                                                  color: "#6c757d",
+                                                  marginLeft: "0.5rem",
+                                                  fontSize: "0.85rem",
+                                                }}
+                                              >
+                                                — {owner.barangay}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ),
+                                      ) // ← )) closes (owner) => ( and .map(
+                                    ) : (
                                       <div
-                                        key={pid}
-                                        className={`jo-registration-parcel-item ${isSelected ? "jo-registration-selected" : ""}`}
+                                        style={{
+                                          padding: "0.75rem 1rem",
+                                          color: "#6c757d",
+                                          fontSize: "0.9rem",
+                                        }}
                                       >
-                                        <input
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          onChange={() => {
-                                            const next = new Set(
-                                              group.selectedParcelIds,
-                                            );
-                                            next.has(pid)
-                                              ? next.delete(pid)
-                                              : next.add(pid);
-                                            updateAdditionalGroup(
-                                              group.groupId,
-                                              { selectedParcelIds: next },
-                                            );
-                                            setErrors((prev) => ({
-                                              ...prev,
-                                              [`addGroup_${group.groupId}`]: "",
-                                            }));
-                                          }}
-                                        />
-                                        <div className="jo-registration-parcel-details">
-                                          <div className="jo-registration-parcel-header">
-                                            {parcel.parcel_number ||
-                                              `Parcel ${pid}`}
-                                          </div>
-                                          <div className="jo-registration-parcel-info">
-                                            <span>
-                                              Barangay:{" "}
-                                              {parcel.farm_location_barangay ||
-                                                "Not provided"}
-                                            </span>
-                                            <span>
-                                              Area:{" "}
-                                              {parcel.total_farm_area_ha ||
-                                                "Not provided"}{" "}
-                                              ha
-                                            </span>
-                                          </div>
-                                        </div>
+                                        No land owners found
                                       </div>
-                                    );
-                                  })}
+                                    ); // ← semicolon ends the return statement
+                                  })()}
                                 </div>
                               )}
-                            </>
-                          )}
-
-                          {/* Group-level error */}
-                          {errors[`addGroup_${group.groupId}`] && (
-                            <div
-                              className="jo-registration-error"
-                              style={{ marginTop: "0.5rem" }}
-                            >
-                              {errors[`addGroup_${group.groupId}`]}
                             </div>
-                          )}
-                        </div>
-                      ))}
+
+                            {/* Selected land owner badge */}
+                            {group.landOwner && (
+                              <div
+                                style={{
+                                  marginBottom: "1rem",
+                                  padding: "0.6rem 1rem",
+                                  backgroundColor: "#d4edda",
+                                  border: "1px solid #c3e6cb",
+                                  borderRadius: "6px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    color: "#155724",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  ✓ {group.landOwner.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateAdditionalGroup(group.groupId, {
+                                      landOwner: null,
+                                      searchTerm: "",
+                                      parcels: [],
+                                      selectedParcelIds: new Set(),
+                                    })
+                                  }
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "#721c24",
+                                    cursor: "pointer",
+                                    fontWeight: "bold",
+                                    fontSize: "1rem",
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Parcel list */}
+                            {group.landOwner && (
+                              <>
+                                {group.parcels.length === 0 ? (
+                                  <div className="jo-registration-parcel-warning">
+                                    The selected land owner has no registered
+                                    parcels.
+                                  </div>
+                                ) : (
+                                  <div className="jo-registration-parcel-list">
+                                    {group.parcels.map((parcel) => {
+                                      const pid = String(parcel.id);
+                                      const isSelected =
+                                        group.selectedParcelIds.has(pid);
+                                      return (
+                                        <div
+                                          key={pid}
+                                          className={`jo-registration-parcel-item ${isSelected ? "jo-registration-selected" : ""}`}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => {
+                                              const next = new Set(
+                                                group.selectedParcelIds,
+                                              );
+                                              next.has(pid)
+                                                ? next.delete(pid)
+                                                : next.add(pid);
+                                              updateAdditionalGroup(
+                                                group.groupId,
+                                                { selectedParcelIds: next },
+                                              );
+                                              setErrors((prev) => ({
+                                                ...prev,
+                                                [`addGroup_${group.groupId}`]:
+                                                  "",
+                                              }));
+                                            }}
+                                          />
+                                          <div className="jo-registration-parcel-details">
+                                            <div className="jo-registration-parcel-header">
+                                              {parcel.parcel_number ||
+                                                `Parcel ${pid}`}
+                                            </div>
+                                            <div className="jo-registration-parcel-info">
+                                              <span>
+                                                Barangay:{" "}
+                                                {parcel.farm_location_barangay ||
+                                                  "Not provided"}
+                                              </span>
+                                              <span>
+                                                Area:{" "}
+                                                {parcel.total_farm_area_ha ||
+                                                  "Not provided"}{" "}
+                                                ha
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {/* Group-level error */}
+                            {errors[`addGroup_${group.groupId}`] && (
+                              <div
+                                className="jo-registration-error"
+                                style={{ marginTop: "0.5rem" }}
+                              >
+                                {errors[`addGroup_${group.groupId}`]}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
 
                       {/* Add another land owner button */}
                       <button
