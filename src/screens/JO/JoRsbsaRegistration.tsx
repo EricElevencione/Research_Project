@@ -247,6 +247,25 @@ const JoRsbsa: React.FC = () => {
     boolean | null
   >(null);
 
+  // ── Tenant/Lessee: farming activities per selected land owner ────────────
+  // keyed by land owner ID, populated as each land owner is selected
+  const [landOwnerActivities, setLandOwnerActivities] = useState<
+    Record<
+      number,
+      {
+        name: string;
+        farmerRice: boolean;
+        farmerCorn: boolean;
+        farmerOtherCrops: boolean;
+        farmerOtherCropsText: string;
+        farmerLivestock: boolean;
+        farmerLivestockText: string;
+        farmerPoultry: boolean;
+        farmerPoultryText: string;
+      }
+    >
+  >({});
+
   // ── Per-parcel farmer search inputs (YES path cards) ────────────────────
   const [parcelFarmerSearchTerm, setParcelFarmerSearchTerm] = useState<
     Record<string, string>
@@ -423,6 +442,65 @@ const JoRsbsa: React.FC = () => {
 
     fetchLandowners();
   }, []);
+
+  // ── Merge land owner farming activities into formData on Step 3 entry ────
+  // Tenant / Lessee path only: takes the union of every selected land owner's
+  // activities so the read-only preview and Step 4 summary are accurate.
+  useEffect(() => {
+    if (currentStep !== 3) return;
+    if (farmerRole !== "tenant" && farmerRole !== "lessee") return;
+
+    const allOwnerIds: number[] = [
+      selectedLandOwner ? Number(selectedLandOwner.id) : null,
+      ...additionalLandOwnerGroups
+        .filter((g) => g.landOwner)
+        .map((g) => Number(g.landOwner.id)),
+    ].filter((id): id is number => id !== null && Number.isFinite(id));
+
+    let farmerRice = false;
+    let farmerCorn = false;
+    let farmerOtherCrops = false;
+    const farmerOtherCropsTexts: string[] = [];
+    let farmerLivestock = false;
+    const farmerLivestockTexts: string[] = [];
+    let farmerPoultry = false;
+    const farmerPoultryTexts: string[] = [];
+
+    allOwnerIds.forEach((id) => {
+      const act = landOwnerActivities[id];
+      if (!act) return;
+      if (act.farmerRice) farmerRice = true;
+      if (act.farmerCorn) farmerCorn = true;
+      if (act.farmerOtherCrops) {
+        farmerOtherCrops = true;
+        if (act.farmerOtherCropsText)
+          farmerOtherCropsTexts.push(act.farmerOtherCropsText);
+      }
+      if (act.farmerLivestock) {
+        farmerLivestock = true;
+        if (act.farmerLivestockText)
+          farmerLivestockTexts.push(act.farmerLivestockText);
+      }
+      if (act.farmerPoultry) {
+        farmerPoultry = true;
+        if (act.farmerPoultryText)
+          farmerPoultryTexts.push(act.farmerPoultryText);
+      }
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      farmerRice,
+      farmerCorn,
+      farmerOtherCrops,
+      farmerOtherCropsText: [...new Set(farmerOtherCropsTexts)].join(", "),
+      farmerLivestock,
+      farmerLivestockText: [...new Set(farmerLivestockTexts)].join(", "),
+      farmerPoultry,
+      farmerPoultryText: [...new Set(farmerPoultryTexts)].join(", "),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep]);
 
   const [formData, setFormData] = useState<FormData>({
     surname: "",
@@ -636,16 +714,15 @@ const JoRsbsa: React.FC = () => {
     setLandOwnerSearchTerm(owner.name);
     setShowLandOwnerDropdown(false);
     setSelectedParcelIds(new Set());
-
     setErrors((prev) => ({ ...prev, landOwner: "", parcelSelection: "" }));
 
-    // Fetch the land owner's parcels to show for selection
     try {
-      const response = await getFarmParcels(owner.id, {
+      // Fetch parcels for selection
+      const parcelResp = await getFarmParcels(owner.id, {
         currentOwnerOnly: true,
       });
-      if (!response.error) {
-        const parcels = (response.data || []).filter((parcel: any) => {
+      if (!parcelResp.error) {
+        const parcels = (parcelResp.data || []).filter((parcel: any) => {
           if (!parcel) return false;
           const isOwnerParcel =
             parcel.ownership_type_registered_owner === undefined
@@ -654,18 +731,40 @@ const JoRsbsa: React.FC = () => {
           const isCurrent = parcel.is_current_owner !== false;
           return isOwnerParcel && isCurrent;
         });
-        console.log("Fetched land owner parcels:", parcels);
         setOwnerParcels(parcels);
-
         if (!parcels || parcels.length === 0) {
           console.warn("No parcels found for land owner");
         }
       } else {
-        console.error("Failed to fetch land owner parcels");
         setOwnerParcels([]);
       }
+
+      // For Tenant / Lessee: also pre-fill Step 3 farming activities
+      // from the land owner's submission record
+      if (farmerRole === "tenant" || farmerRole === "lessee") {
+        const recordResp = await getLandOwnerById(Number(owner.id));
+        if (!recordResp.error && recordResp.data) {
+          const r = recordResp.data;
+          const activities = {
+            name: owner.name,
+            farmerRice: r.farmerRice ?? false,
+            farmerCorn: r.farmerCorn ?? false,
+            farmerOtherCrops: r.farmerOtherCrops ?? false,
+            farmerOtherCropsText: r.farmerOtherCropsText ?? "",
+            farmerLivestock: r.farmerLivestock ?? false,
+            farmerLivestockText: r.farmerLivestockText ?? "",
+            farmerPoultry: r.farmerPoultry ?? false,
+            farmerPoultryText: r.farmerPoultryText ?? "",
+          };
+          // Clear primary owner slot and rebuild — keep additional group entries
+          setLandOwnerActivities((prev) => {
+            const next = { ...prev, [owner.id]: activities };
+            return next;
+          });
+        }
+      }
     } catch (error) {
-      console.error("Error fetching land owner parcels:", error);
+      console.error("Error in handleLandOwnerSelect:", error);
       setOwnerParcels([]);
     }
   };
@@ -727,6 +826,7 @@ const JoRsbsa: React.FC = () => {
       selectedParcelIds: new Set(),
     });
     try {
+      // Fetch parcels for this group
       const response = await getFarmParcels(owner.id, {
         currentOwnerOnly: true,
       });
@@ -742,6 +842,28 @@ const JoRsbsa: React.FC = () => {
         updateAdditionalGroup(groupId, { parcels });
       } else {
         updateAdditionalGroup(groupId, { parcels: [] });
+      }
+
+      // Also fetch and store farming activities for this land owner
+      if (farmerRole === "tenant" || farmerRole === "lessee") {
+        const recordResp = await getLandOwnerById(Number(owner.id));
+        if (!recordResp.error && recordResp.data) {
+          const r = recordResp.data;
+          setLandOwnerActivities((prev) => ({
+            ...prev,
+            [owner.id]: {
+              name: owner.name,
+              farmerRice: r.farmerRice ?? false,
+              farmerCorn: r.farmerCorn ?? false,
+              farmerOtherCrops: r.farmerOtherCrops ?? false,
+              farmerOtherCropsText: r.farmerOtherCropsText ?? "",
+              farmerLivestock: r.farmerLivestock ?? false,
+              farmerLivestockText: r.farmerLivestockText ?? "",
+              farmerPoultry: r.farmerPoultry ?? false,
+              farmerPoultryText: r.farmerPoultryText ?? "",
+            },
+          }));
+        }
       }
     } catch (error) {
       console.error("Error fetching parcels for additional group:", error);
@@ -1048,27 +1170,6 @@ const JoRsbsa: React.FC = () => {
     }
 
     if (currentStep === 2) {
-      // Validate farm profile: require at least one farming activity
-      const hasFarmingActivity =
-        (formData as any).farmerRice ||
-        (formData as any).farmerCorn ||
-        (formData as any).farmerOtherCrops ||
-        (formData as any).farmerLivestock ||
-        (formData as any).farmerPoultry;
-      if (!hasFarmingActivity) {
-        newErrors.farmingActivity =
-          "Please select at least one farming activity";
-      }
-
-      setErrors(newErrors);
-      if (Object.keys(newErrors).length > 0) return;
-
-      setErrors({});
-      setCurrentStep(3);
-      return;
-    }
-
-    if (currentStep === 3) {
       // ── Land Owner path ──────────────────────────────────────────────────
       if (farmerRole === "owner") {
         if (!selectedSelfLandOwner) {
@@ -1083,7 +1184,6 @@ const JoRsbsa: React.FC = () => {
           newErrors.alsoFarmsQuestion =
             "Please answer: Do you also farm land you don't own?";
         } else if (alsoFarmsOthersLand === true) {
-          // Validate the additional tenant/lessee parcels
           if (!selectedLandOwner) {
             newErrors.landOwner =
               "Please select the land owner of the additional parcel(s)";
@@ -1110,7 +1210,7 @@ const JoRsbsa: React.FC = () => {
         return;
       }
 
-      // ── NO path (pure tenant / lessee) ──────────────────────────────────
+      // ── Tenant / Lessee path ─────────────────────────────────────────────
       if (!selectedLandOwner) {
         newErrors.landOwner = "Please search and select the land owner";
       } else if (ownerParcels.length === 0) {
@@ -1119,7 +1219,6 @@ const JoRsbsa: React.FC = () => {
       } else if (selectedParcelIds.size === 0) {
         newErrors.parcelSelection = "Please select at least one parcel";
       }
-      // Validate additional land owner groups
       additionalLandOwnerGroups.forEach((group) => {
         if (!group.landOwner) {
           newErrors[`addGroup_${group.groupId}`] =
@@ -1146,6 +1245,32 @@ const JoRsbsa: React.FC = () => {
         parcelCount: totalParcelCount,
         landOwnerName: selectedLandOwner?.name || "",
       });
+      return;
+    }
+
+    if (currentStep === 3) {
+      // For Tenant / Lessee: activities are auto-merged from land owner records
+      // and shown read-only — no user-editable validation needed here.
+      // For Land Owner path: activities were pre-filled from their own LO record
+      // and are also read-only, so only validate if they somehow have none.
+      if (farmerRole !== "tenant" && farmerRole !== "lessee") {
+        const hasFarmingActivity =
+          (formData as any).farmerRice ||
+          (formData as any).farmerCorn ||
+          (formData as any).farmerOtherCrops ||
+          (formData as any).farmerLivestock ||
+          (formData as any).farmerPoultry;
+        if (!hasFarmingActivity) {
+          newErrors.farmingActivity =
+            "Please select at least one farming activity";
+        }
+      }
+
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) return;
+
+      setErrors({});
+      setCurrentStep(4);
       return;
     }
 
@@ -1436,7 +1561,7 @@ const JoRsbsa: React.FC = () => {
                 <span className="jo-registration-dot">
                   {isStepCompleted(2) ? "✓" : "2"}
                 </span>
-                <span className="jo-registration-label">Farm Profile</span>
+                <span className="jo-registration-label">Farmland</span>
               </div>
               <div
                 className={`jo-registration-step ${isStepActive(3) ? "jo-registration-active" : ""} ${isStepCompleted(3) ? "jo-registration-completed" : ""}`}
@@ -1444,7 +1569,7 @@ const JoRsbsa: React.FC = () => {
                 <span className="jo-registration-dot">
                   {isStepCompleted(3) ? "✓" : "3"}
                 </span>
-                <span className="jo-registration-label">Farmland</span>
+                <span className="jo-registration-label">Farm Profile</span>
               </div>
               <div
                 className={`jo-registration-step ${isStepActive(4) ? "jo-registration-active" : ""}${isStepCompleted(4) ? "jo-registration-completed" : ""}`}
@@ -2096,7 +2221,7 @@ const JoRsbsa: React.FC = () => {
               </>
             )}
 
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <div className="jo-registration-form-section">
                 <h3>PART II: FARM PROFILE</h3>
                 <div className="jo-registration-form-grid">
@@ -2266,148 +2391,221 @@ const JoRsbsa: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      /* INTERACTIVE for Tenant / Lessee path */
+                      /* READ-ONLY PREVIEW for Tenant / Lessee path — per land owner */
                       <div>
-                        <p
-                          style={{
-                            color: "#666",
-                            fontSize: "14px",
-                            marginBottom: "15px",
-                          }}
-                        >
-                          Select all farming activities that apply:
-                        </p>
-
+                        {/* Info banner */}
                         <div
                           style={{
-                            padding: errors.farmingActivity ? "15px" : "0",
-                            borderRadius: "6px",
-                            border: errors.farmingActivity
-                              ? "2px solid #dc2626"
-                              : "2px solid transparent",
-                            backgroundColor: errors.farmingActivity
-                              ? "#fef2f2"
-                              : "transparent",
-                            marginBottom: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "10px 14px",
+                            backgroundColor: "#eff6ff",
+                            border: "1px solid #bfdbfe",
+                            borderRadius: "8px",
+                            marginBottom: "16px",
+                            fontSize: "13px",
+                            color: "#1d4ed8",
                           }}
                         >
-                          <div
-                            className="jo-registration-checkbox-group"
-                            style={{ marginBottom: "10px" }}
-                          >
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={(formData as any).farmerRice}
-                                onChange={() => toggleBool("farmerRice")}
-                              />{" "}
-                              Rice
-                            </label>
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={(formData as any).farmerCorn}
-                                onChange={() => toggleBool("farmerCorn")}
-                              />{" "}
-                              Corn
-                            </label>
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={(formData as any).farmerOtherCrops}
-                                onChange={() => toggleBool("farmerOtherCrops")}
-                              />{" "}
-                              Other crops, please specify
-                            </label>
-                          </div>
-                          {(formData as any).farmerOtherCrops && (
-                            <input
-                              type="text"
-                              placeholder="Specify other crops"
-                              value={(formData as any).farmerOtherCropsText}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "farmerOtherCropsText",
-                                  e.target.value,
-                                )
-                              }
-                              style={{ marginBottom: "15px" }}
-                            />
-                          )}
-
-                          <div
-                            className="jo-registration-checkbox-group"
-                            style={{ marginBottom: "10px" }}
-                          >
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={(formData as any).farmerLivestock}
-                                onChange={() => toggleBool("farmerLivestock")}
-                              />{" "}
-                              Livestock, please specify
-                            </label>
-                          </div>
-                          {(formData as any).farmerLivestock && (
-                            <input
-                              type="text"
-                              placeholder="Specify livestock"
-                              value={(formData as any).farmerLivestockText}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "farmerLivestockText",
-                                  e.target.value,
-                                )
-                              }
-                              style={{ marginBottom: "15px" }}
-                            />
-                          )}
-
-                          <div
-                            className="jo-registration-checkbox-group"
-                            style={{
-                              marginBottom: errors.farmingActivity
-                                ? "0"
-                                : "10px",
-                            }}
-                          >
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={(formData as any).farmerPoultry}
-                                onChange={() => toggleBool("farmerPoultry")}
-                              />{" "}
-                              Poultry, please specify
-                            </label>
-                          </div>
-                          {(formData as any).farmerPoultry && (
-                            <input
-                              type="text"
-                              placeholder="Specify poultry"
-                              value={(formData as any).farmerPoultryText}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "farmerPoultryText",
-                                  e.target.value,
-                                )
-                              }
-                              style={{ marginBottom: "0" }}
-                            />
-                          )}
+                          <span style={{ fontSize: "16px" }}>ℹ️</span>
+                          <span>
+                            Farming activities are sourced from each land
+                            owner's registered record and cannot be edited here.
+                          </span>
                         </div>
 
-                        {errors.farmingActivity && (
-                          <div
-                            className="jo-registration-error"
-                            style={{
-                              marginTop: "10px",
-                              fontSize: "12px",
-                              color: "#dc3545",
-                            }}
-                          >
-                            {errors.farmingActivity}
-                          </div>
-                        )}
+                        {/* Per-land-owner activity cards */}
+                        {[
+                          selectedLandOwner
+                            ? {
+                                id: selectedLandOwner.id,
+                                name: selectedLandOwner.name,
+                              }
+                            : null,
+                          ...additionalLandOwnerGroups
+                            .filter((g) => g.landOwner)
+                            .map((g) => ({
+                              id: g.landOwner.id,
+                              name: g.landOwner.name,
+                            })),
+                        ]
+                          .filter(
+                            (o): o is { id: number; name: string } =>
+                              o !== null,
+                          )
+                          .map((owner) => {
+                            const act = landOwnerActivities[owner.id];
+                            return (
+                              <div
+                                key={owner.id}
+                                style={{
+                                  marginBottom: "14px",
+                                  borderRadius: "8px",
+                                  border: "1px solid #e2e8f0",
+                                  backgroundColor: "#f8fafc",
+                                  opacity: 0.85,
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {/* Card header — land owner name */}
+                                <div
+                                  style={{
+                                    padding: "7px 14px",
+                                    backgroundColor: "#e2e8f0",
+                                    fontSize: "12px",
+                                    fontWeight: 600,
+                                    color: "#374151",
+                                    borderBottom: "1px solid #cbd5e1",
+                                  }}
+                                >
+                                  📋 {owner.name}
+                                </div>
+
+                                <div style={{ padding: "14px" }}>
+                                  {!act ? (
+                                    <span
+                                      style={{
+                                        fontSize: "13px",
+                                        color: "#94a3b8",
+                                      }}
+                                    >
+                                      No activity data on record
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <div
+                                        className="jo-registration-checkbox-group"
+                                        style={{ marginBottom: "10px" }}
+                                      >
+                                        <label
+                                          style={{
+                                            cursor: "not-allowed",
+                                            color: "#64748b",
+                                          }}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={act.farmerRice}
+                                            disabled
+                                            style={{ cursor: "not-allowed" }}
+                                          />{" "}
+                                          Rice
+                                        </label>
+                                        <label
+                                          style={{
+                                            cursor: "not-allowed",
+                                            color: "#64748b",
+                                          }}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={act.farmerCorn}
+                                            disabled
+                                            style={{ cursor: "not-allowed" }}
+                                          />{" "}
+                                          Corn
+                                        </label>
+                                        <label
+                                          style={{
+                                            cursor: "not-allowed",
+                                            color: "#64748b",
+                                          }}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={act.farmerOtherCrops}
+                                            disabled
+                                            style={{ cursor: "not-allowed" }}
+                                          />{" "}
+                                          Other crops, please specify
+                                        </label>
+                                      </div>
+                                      {act.farmerOtherCrops && (
+                                        <input
+                                          type="text"
+                                          readOnly
+                                          value={act.farmerOtherCropsText}
+                                          style={{
+                                            marginBottom: "12px",
+                                            backgroundColor: "#f1f5f9",
+                                            cursor: "not-allowed",
+                                            color: "#475569",
+                                          }}
+                                        />
+                                      )}
+
+                                      <div
+                                        className="jo-registration-checkbox-group"
+                                        style={{ marginBottom: "10px" }}
+                                      >
+                                        <label
+                                          style={{
+                                            cursor: "not-allowed",
+                                            color: "#64748b",
+                                          }}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={act.farmerLivestock}
+                                            disabled
+                                            style={{ cursor: "not-allowed" }}
+                                          />{" "}
+                                          Livestock, please specify
+                                        </label>
+                                      </div>
+                                      {act.farmerLivestock && (
+                                        <input
+                                          type="text"
+                                          readOnly
+                                          value={act.farmerLivestockText}
+                                          style={{
+                                            marginBottom: "12px",
+                                            backgroundColor: "#f1f5f9",
+                                            cursor: "not-allowed",
+                                            color: "#475569",
+                                          }}
+                                        />
+                                      )}
+
+                                      <div
+                                        className="jo-registration-checkbox-group"
+                                        style={{ marginBottom: 0 }}
+                                      >
+                                        <label
+                                          style={{
+                                            cursor: "not-allowed",
+                                            color: "#64748b",
+                                          }}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={act.farmerPoultry}
+                                            disabled
+                                            style={{ cursor: "not-allowed" }}
+                                          />{" "}
+                                          Poultry, please specify
+                                        </label>
+                                      </div>
+                                      {act.farmerPoultry && (
+                                        <input
+                                          type="text"
+                                          readOnly
+                                          value={act.farmerPoultryText}
+                                          style={{
+                                            marginBottom: 0,
+                                            backgroundColor: "#f1f5f9",
+                                            cursor: "not-allowed",
+                                            color: "#475569",
+                                          }}
+                                        />
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                       </div>
                     )}
                   </div>
@@ -2415,9 +2613,9 @@ const JoRsbsa: React.FC = () => {
               </div>
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 2 && (
               <div className="jo-registration-form-section">
-                <h3>PART III: FARMLAND</h3>
+                <h3>PART II: FARMLAND</h3>
 
                 {/* ── YES path: per-parcel cultivating cards ─────────────── */}
                 {/* ── YES path: select which owned parcels to farm ────────── */}
@@ -3606,7 +3804,7 @@ const JoRsbsa: React.FC = () => {
                   }
 
                   setErrors({});
-                  setCurrentStep(4);
+                  setCurrentStep(3);
                 }}
               >
                 ✓ Confirm &amp; Proceed

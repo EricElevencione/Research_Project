@@ -3885,12 +3885,10 @@ export const getLandOwnerById = async (id: number): Promise<ApiResponse> => {
 
   return createResponse(
     {
-      // Personal information
+      id: data.id,
       firstName: data["FIRST NAME"] || "",
-      lastName: data["LAST NAME"] || "",
       surname: data["LAST NAME"] || "",
       middleName: data["MIDDLE NAME"] || "",
-      extName: data["EXT NAME"] || "",
       extensionName: data["EXT NAME"] || "",
       gender: data["GENDER"] || "",
       dateOfBirth,
