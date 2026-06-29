@@ -696,7 +696,6 @@ const JoRsbsa: React.FC = () => {
         showDropdown: false,
         parcels: [],
         selectedParcelIds: new Set(),
-
       },
     ]);
   };
@@ -1199,6 +1198,8 @@ const JoRsbsa: React.FC = () => {
         isActivelyFarming: formData.isActivelyFarming,
         // Include ownership category and land owner info for land_history creation
         ownershipCategory: ownershipCategory,
+        farmerRole: farmerRole, // ← add this
+        selectedSelfLandOwner: selectedSelfLandOwner,
         selectedLandOwner: selectedLandOwner
           ? {
               id: selectedLandOwner.id,
@@ -2682,8 +2683,6 @@ const JoRsbsa: React.FC = () => {
                   </>
                 )}
 
-
-
                 {/* Prompt if gate not answered yet */}
                 {farmerRole === null && (
                   <div
@@ -2918,7 +2917,6 @@ const JoRsbsa: React.FC = () => {
                                     ha
                                   </span>
                                 </div>
-
                               </div>
                             </div>
                           );
@@ -3204,7 +3202,6 @@ const JoRsbsa: React.FC = () => {
                                               ha
                                             </span>
                                           </div>
-
                                         </div>
                                       </div>
                                     );

@@ -1371,6 +1371,8 @@ export const createRsbsaSubmission = async (
     totalFarmArea: totalFarmArea,
     // Ownership category
     ownershipCategory: formData.ownershipCategory || "registeredOwner",
+    farmerRole: formData.farmerRole || null,
+    selectedSelfLandOwner: formData.selectedSelfLandOwner || null,
     selectedLandOwner: formData.selectedLandOwner || null,
     // Farming activities
     farmerRice: formData.farmerRice || false,
