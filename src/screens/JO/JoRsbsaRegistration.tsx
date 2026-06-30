@@ -28,6 +28,8 @@ interface Parcel {
   ownershipTypeOthers: boolean;
   tenantLandOwnerName: string;
   lesseeLandOwnerName: string;
+  tenantLandOwnerId?: number | null;
+  lesseeLandOwnerId?: number | null;
   ownershipOthersSpecify: string;
   // New field for linking to existing land_parcels
   existingParcelId?: number;
@@ -850,6 +852,8 @@ const JoRsbsa: React.FC = () => {
         ownershipTypeOthers: false,
         tenantLandOwnerName: isTenant ? selectedLandOwner.name : "",
         lesseeLandOwnerName: isLessee ? selectedLandOwner.name : "",
+        tenantLandOwnerId: isTenant ? selectedLandOwner.id : null,
+        lesseeLandOwnerId: isLessee ? selectedLandOwner.id : null,
         ownershipOthersSpecify: "",
         existingParcelId: ownerParcel.land_parcel_id || ownerParcel.id,
         existingParcelNumber: ownerParcel.parcel_number || "",
@@ -2181,7 +2185,7 @@ const JoRsbsa: React.FC = () => {
 
             {currentStep === 3 && (
               <div className="jo-registration-form-section">
-                <h3>PART II: FARM PROFILE</h3>
+                <h3>PART III: FARM PROFILE</h3>
                 <div className="jo-registration-form-grid">
                   <div className="jo-registration-livelihood-details">
                     <h4>Type of Farming Activity</h4>
