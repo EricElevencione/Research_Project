@@ -1,40 +1,29 @@
 // PartialParcelTransferSection.tsx
 // Drop the <PartialParcelTransferSection> component inside the
-// existing Transfer Ownership modal, replacing (or wrapping) the
-// current "take_all / partial" area-selection block.
+// existing Transfer Ownership modal. Lets the user pick which
+// donor parcel(s) to transfer (full parcels only — no partial
+// split option).
 //
-// Props are wired directly from usePartialTransfer() + existing state.
+// Props are wired directly from existing state in JoLandRegistry.tsx.
 
 import React from "react";
-import { ParcelSplitInput, ParcelTransferScope } from "./usePartialTransfer";
+import { ParcelSplitInput } from "./usePartialTransfer";
 
 interface Props {
   // Which donor parcels are eligible (already filtered by selected source)
   donorParcels: ParcelSplitInput[];
 
-  // From usePartialTransfer()
-  parcelScope: ParcelTransferScope;
-  onParcelScopeChange: (scope: ParcelTransferScope) => void;
-  parcelSplitInputs: Record<number, number | "">;
-  onSetParcelTransferArea: (farmParcelId: number, value: number | "") => void;
-
   // Derived summary (computed outside, passed in for display)
-  validationError: string;     // "" when all inputs pass
-  totalTransferAreaHa: number; // sum of all non-empty inputs (partial) or full donor area
-  donorTotalAreaHa: number;    // sum of all donor parcels before transfer
+  totalTransferAreaHa: number; // sum of area for selected parcels
+  donorTotalAreaHa: number; // sum of all donor parcels before transfer
 
-  // Selected parcels in Full mode
+  // Selected parcels
   selectedFullParcelIds?: number[];
   onToggleFullParcel?: (farmParcelId: number) => void;
 }
 
 export const PartialParcelTransferSection: React.FC<Props> = ({
   donorParcels,
-  parcelScope,
-  onParcelScopeChange,
-  parcelSplitInputs,
-  onSetParcelTransferArea,
-  validationError,
   totalTransferAreaHa,
   donorTotalAreaHa,
   selectedFullParcelIds = [],
@@ -42,89 +31,49 @@ export const PartialParcelTransferSection: React.FC<Props> = ({
 }) => {
   if (donorParcels.length === 0) return null;
 
-  const handleScopeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onParcelScopeChange(e.target.value as ParcelTransferScope);
-  };
-
   return (
     <div className="jo-land-registry-transfer-section-card">
-      <h4>Parcel Transfer Scope</h4>
-
-      {/* ── Radio: Full vs Partial ── */}
-      <div className="jo-land-registry-transfer-scope-radios">
-        <label className="jo-land-registry-transfer-radio-label">
-          <input
-            type="radio"
-            name="parcelScope"
-            value="full"
-            checked={parcelScope === "full"}
-            onChange={handleScopeChange}
-          />
-          <span>
-            <strong>Full Parcel</strong> – transfer the entire parcel to
-            recipient
-          </span>
-        </label>
-
-        <label className="jo-land-registry-transfer-radio-label">
-          <input
-            type="radio"
-            name="parcelScope"
-            value="partial"
-            checked={parcelScope === "partial"}
-            onChange={handleScopeChange}
-          />
-          <span>
-            <strong>Partial Parcel</strong> – split a portion; donor retains
-            the remainder
-          </span>
-        </label>
-      </div>
+      <h4>Select Parcel(s) to Transfer</h4>
 
       {/* ── Parcel list ── */}
       <div className="jo-land-registry-transfer-parcel-list">
         {donorParcels.map((parcel) => {
-          const inputVal = parcelSplitInputs[parcel.farm_parcel_id];
-          const numericInput = typeof inputVal === "number" ? inputVal : null;
-          const remaining =
-            numericInput !== null
-              ? parcel.total_farm_area_ha - numericInput
-              : null;
-          const isOverLimit =
-            numericInput !== null &&
-            numericInput >= parcel.total_farm_area_ha;
-          const isNegativeOrZero =
-            numericInput !== null && numericInput <= 0;
-
-          const isSelected = parcelScope === "full"
-            ? selectedFullParcelIds.includes(parcel.farm_parcel_id)
-            : (inputVal !== "" && inputVal !== undefined && Number(inputVal) > 0);
+          const isSelected = selectedFullParcelIds.includes(
+            parcel.farm_parcel_id,
+          );
 
           return (
             <div
               key={parcel.farm_parcel_id}
               className={[
                 "jo-land-registry-transfer-parcel-row",
-                isSelected ? "jo-land-registry-transfer-parcel-row--selected" : ""
+                isSelected
+                  ? "jo-land-registry-transfer-parcel-row--selected"
+                  : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
-                {parcelScope === "full" && (
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => onToggleFullParcel?.(parcel.farm_parcel_id)}
-                    style={{
-                      width: "18px",
-                      height: "18px",
-                      cursor: "pointer",
-                      accentColor: "#10b981",
-                      flexShrink: 0
-                    }}
-                  />
-                )}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  width: "100%",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => onToggleFullParcel?.(parcel.farm_parcel_id)}
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    cursor: "pointer",
+                    accentColor: "#10b981",
+                    flexShrink: 0,
+                  }}
+                />
 
                 <div style={{ flexGrow: 1 }}>
                   {/* Parcel header */}
@@ -140,84 +89,19 @@ export const PartialParcelTransferSection: React.FC<Props> = ({
                     </span>
                   </div>
 
-                  {/* Full mode: selection state badge */}
-                  {parcelScope === "full" && (
-                    <div
-                      className="jo-land-registry-transfer-parcel-full-badge"
-                      style={{
-                        background: isSelected ? "#dcfce7" : "#f1f5f9",
-                        borderColor: isSelected ? "#86efac" : "#cbd5e1",
-                        color: isSelected ? "#15803d" : "#475569"
-                      }}
-                    >
-                      {isSelected
-                        ? `Selected to Transfer: full ${parcel.total_farm_area_ha.toFixed(4)} ha`
-                        : "Click checkbox to select this parcel"}
-                    </div>
-                  )}
-
-                  {/* Partial mode: hectare input */}
-                  {parcelScope === "partial" && (
-                    <div className="jo-land-registry-transfer-parcel-split-inputs">
-                      <div className="jo-land-registry-transfer-parcel-input-row">
-                        <label>Transfer (ha):</label>
-                        <input
-                          type="number"
-                          min="0.0001"
-                          max={parcel.total_farm_area_ha - 0.0001}
-                          step="0.0001"
-                          placeholder={`Max ${(parcel.total_farm_area_ha - 0.0001).toFixed(4)}`}
-                          value={inputVal === "" || inputVal === undefined ? "" : inputVal}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            if (raw === "") {
-                              onSetParcelTransferArea(parcel.farm_parcel_id, "");
-                              return;
-                            }
-                            const parsed = parseFloat(raw);
-                            onSetParcelTransferArea(
-                              parcel.farm_parcel_id,
-                              Number.isFinite(parsed) ? parsed : "",
-                            );
-                          }}
-                          className={[
-                            "jo-land-registry-transfer-ha-input",
-                            isOverLimit || isNegativeOrZero
-                              ? "jo-land-registry-transfer-ha-input--error"
-                              : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        />
-                        <span className="jo-land-registry-transfer-ha-unit">ha</span>
-                      </div>
-
-                      {/* Inline validation hint */}
-                      {isOverLimit && (
-                        <p className="jo-land-registry-transfer-input-error">
-                          Must be less than {parcel.total_farm_area_ha.toFixed(4)}{" "}
-                          ha. Use Full Parcel for complete handover.
-                        </p>
-                      )}
-                      {isNegativeOrZero && (
-                        <p className="jo-land-registry-transfer-input-error">
-                          Must be greater than 0.
-                        </p>
-                      )}
-
-                      {/* Remaining area preview */}
-                      {remaining !== null && !isOverLimit && !isNegativeOrZero && (
-                        <p className="jo-land-registry-transfer-remaining-preview">
-                          Donor retains:{" "}
-                          <strong>{remaining.toFixed(4)} ha</strong>. New parcel
-                          number:{" "}
-                          <code>
-                            {parcel.parcel_number}-SPL-1
-                          </code>
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  {/* Selection state badge */}
+                  <div
+                    className="jo-land-registry-transfer-parcel-full-badge"
+                    style={{
+                      background: isSelected ? "#dcfce7" : "#f1f5f9",
+                      borderColor: isSelected ? "#86efac" : "#cbd5e1",
+                      color: isSelected ? "#15803d" : "#475569",
+                    }}
+                  >
+                    {isSelected
+                      ? `Selected to Transfer: full ${parcel.total_farm_area_ha.toFixed(4)} ha`
+                      : "Click checkbox to select this parcel"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -228,9 +112,7 @@ export const PartialParcelTransferSection: React.FC<Props> = ({
       {/* ── Summary row ── */}
       <div className="jo-land-registry-transfer-scope-summary">
         <span>Total transfer area:</span>
-        <strong>
-          {totalTransferAreaHa.toFixed(4)} ha
-        </strong>
+        <strong>{totalTransferAreaHa.toFixed(4)} ha</strong>
         {" of "}
         <strong>{donorTotalAreaHa.toFixed(4)} ha</strong>
         {donorTotalAreaHa > 0 && (
@@ -240,13 +122,6 @@ export const PartialParcelTransferSection: React.FC<Props> = ({
           </span>
         )}
       </div>
-
-      {/* ── Block-level validation error ── */}
-      {validationError && (
-        <div className="jo-land-registry-transfer-input-error jo-land-registry-transfer-input-error--block">
-          ⚠ {validationError}
-        </div>
-      )}
     </div>
   );
 };

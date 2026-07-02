@@ -3355,6 +3355,27 @@ export const getLandOwners = async (): Promise<ApiResponse> => {
     );
   });
 
+  // Look up already-registered-Farmer status for these same owners.
+  // Explicit table (farmer_registration_status) rather than inferring
+  // from FARMER_RICE/etc — see migration notes for why.
+  const { data: statusRows, error: statusError } = await supabase
+    .from("farmer_registration_status")
+    .select("submission_id, is_active_farmer")
+    .in("submission_id", ownerIds);
+
+  if (statusError) {
+    console.error("getLandOwners farmer status lookup error:", statusError);
+    // Non-blocking: fall back to "not flagged" rather than failing the
+    // whole land owner list if this lookup has an issue.
+  }
+
+  const isRegisteredFarmerByOwnerId = new Map<number, boolean>();
+  (statusRows || []).forEach((row: any) => {
+    const ownerId = Number(row?.submission_id);
+    if (!Number.isFinite(ownerId)) return;
+    isRegisteredFarmerByOwnerId.set(ownerId, row?.is_active_farmer === true);
+  });
+
   // Transform to expected format with full name
   const landOwners = (data || [])
     .map((row: any) => {
@@ -3369,6 +3390,9 @@ export const getLandOwners = async (): Promise<ApiResponse> => {
         parcelCount: Number.isFinite(ownerId)
           ? parcelCountByOwnerId.get(ownerId) || 0
           : 0,
+        isRegisteredFarmer: Number.isFinite(ownerId)
+          ? isRegisteredFarmerByOwnerId.get(ownerId) || false
+          : false,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

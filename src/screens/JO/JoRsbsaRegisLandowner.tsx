@@ -13,11 +13,11 @@ interface Parcel {
   farmLocationBarangay: string;
   farmLocationMunicipality: string;
   totalFarmAreaHa: string;
-  withinAncestralDomain: string; // 'Yes' | 'No'
+  withinAncestralDomain: string;
   isCultivating?: boolean | null;
   cultivatingStatus?: "yes" | "no" | "no-other" | "";
   ownershipDocumentNo: string;
-  agrarianReformBeneficiary: string; // 'Yes' | 'No'
+  agrarianReformBeneficiary: string;
   ownershipTypeRegisteredOwner: boolean;
   ownershipTypeTenant: boolean;
   ownershipTypeLessee: boolean;
@@ -25,13 +25,11 @@ interface Parcel {
   tenantLandOwnerName: string;
   lesseeLandOwnerName: string;
   ownershipOthersSpecify: string;
-  // New field for linking to existing land_parcels
   existingParcelId?: number;
   existingParcelNumber?: string;
 }
 
 interface FormData {
-  // Basic Details
   surname: string;
   firstName: string;
   middleName: string;
@@ -44,16 +42,13 @@ interface FormData {
   province: string;
   dateOfBirth: string;
   age: string;
-  // Farm Profile
   mainLivelihood: string;
   isActivelyFarming: boolean;
   farmingActivity: string;
   otherCrops: string;
   livestock: string;
   poultry: string;
-  // Farmland Parcels
   farmlandParcels: Parcel[];
-  // Dynamic Fields
   farmerRice?: boolean;
   farmerCorn?: boolean;
   farmerOtherCrops?: boolean;
@@ -90,55 +85,35 @@ interface LandOwner {
   municipality?: string;
 }
 
-// Utility function to convert text to Title Case with special handling
 const toTitleCase = (text: string): string => {
   if (!text) return "";
-
-  // Special words that should remain lowercase (unless at start)
   const lowercase = ["de", "del", "dela", "ng", "sa", "and", "or", "the"];
-
-  // Special words that should be uppercase
   const uppercase = ["ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
-
-  // Extension name handling
   const extensions: Record<string, string> = {
     jr: "Jr.",
     sr: "Sr.",
     "jr.": "Jr.",
     "sr.": "Sr.",
   };
-
   return text
     .toLowerCase()
     .split(" ")
     .map((word, index) => {
-      // Handle empty strings
       if (!word) return word;
-
-      // Check if it's an extension
       const ext = extensions[word.replace(/\./g, "")];
       if (ext) return ext;
-
-      // Check if it's a roman numeral
       if (uppercase.includes(word)) return word.toUpperCase();
-
-      // Handle hyphenated words (e.g., "Aurora-Del Pilar")
       if (word.includes("-")) {
         return word
           .split("-")
           .map((part) => {
             if (!part) return part;
-            // Check if hyphenated part should be lowercase
             if (lowercase.includes(part) && index !== 0) return part;
             return part.charAt(0).toUpperCase() + part.slice(1);
           })
           .join("-");
       }
-
-      // Check if word should remain lowercase (except at start)
       if (lowercase.includes(word) && index !== 0) return word;
-
-      // Default: capitalize first letter
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
     .join(" ")
@@ -153,26 +128,19 @@ const JoRsbsaRegisLandowner: React.FC = () => {
   const [draftId, _setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Toast notification state
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
     type: "success" | "error" | "warning";
-  }>({
-    show: false,
-    message: "",
-    type: "success",
-  });
+  }>({ show: false, message: "", type: "success" });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Show toast notification
   const showToast = (
     message: string,
     type: "success" | "error" | "warning" = "success",
   ) => {
     setToast({ show: true, message, type });
-    // Auto-hide after 4 seconds for success, longer for errors
     setTimeout(
       () => {
         setToast((prev) => ({ ...prev, show: false }));
@@ -181,9 +149,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     );
   };
 
-  // Clear existing parcel selection
-
-  // Fetch landowners from the database
   useEffect(() => {
     const fetchLandowners = async () => {
       try {
@@ -194,7 +159,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         console.error("Error fetching landowners:", error);
       }
     };
-
     fetchLandowners();
   }, []);
 
@@ -224,11 +188,11 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         farmLocationMunicipality: "",
         totalFarmAreaHa: "",
         withinAncestralDomain: "",
-        isCultivating: false, // Default to false; land owner can change later
+        isCultivating: false,
         cultivatingStatus: "",
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
-        ownershipTypeRegisteredOwner: true, // Default to registered owner
+        ownershipTypeRegisteredOwner: true,
         ownershipTypeTenant: false,
         ownershipTypeLessee: false,
         ownershipTypeOthers: false,
@@ -266,16 +230,13 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     ayOthersText: "",
   });
 
-  // validation errors (field name -> message)
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Handler for text inputs with Title Case formatting
   const handleTextInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
-  // Handler for onBlur to format text fields
   const handleTextInputBlur = (field: keyof FormData) => {
     const value = formData[field];
     if (typeof value === "string" && value.trim()) {
@@ -286,7 +247,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // clear any existing error for this field
     setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
@@ -296,13 +256,11 @@ const JoRsbsaRegisLandowner: React.FC = () => {
       parcels[idx] = { ...parcels[idx], [field]: value };
       return { ...prev, farmlandParcels: parcels };
     });
-    // clear parcel-related errors when user edits parcels
     setErrors((prev) => ({ ...prev, farmland: "" }));
   };
 
   const toggleBool = (field: keyof FormData) => {
     setFormData((prev) => ({ ...prev, [field]: !prev[field] }));
-    // Clear farmingActivity error when any activity checkbox is toggled
     setErrors((prev) => ({ ...prev, farmingActivity: "" }));
   };
 
@@ -318,9 +276,9 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         withinAncestralDomain: "",
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
-        isCultivating: false, // Land owner decides later
+        isCultivating: false,
         cultivatingStatus: "",
-        ownershipTypeRegisteredOwner: true, // Always true
+        ownershipTypeRegisteredOwner: true,
         ownershipTypeTenant: false,
         ownershipTypeLessee: false,
         ownershipTypeOthers: false,
@@ -340,10 +298,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     });
   };
 
-  // Handle ownership category change (Registered Owner, Tenant, Lessee)
-
-  // Next step validation is handled by handleSubmitForm now
-
   const handlePrevStep = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
@@ -352,11 +306,9 @@ const JoRsbsaRegisLandowner: React.FC = () => {
   const isStepCompleted = (step: number) => currentStep > step;
 
   const handleSubmitForm = () => {
-    // We'll validate only what is relevant to the current step so users can progress step-by-step
     const newErrors: Record<string, string> = {};
 
     if (currentStep === 1) {
-      // Validate basic details only
       if (!formData.firstName?.trim())
         newErrors.firstName = "First name is required";
       if (!formData.surname?.trim()) newErrors.surname = "Surname is required";
@@ -377,25 +329,15 @@ const JoRsbsaRegisLandowner: React.FC = () => {
       }
       if (!formData.barangay?.trim())
         newErrors.barangay = "Barangay is required";
-
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) return;
-
-      // clear any step-level errors and go to next step
       setErrors({});
       setCurrentStep(2);
       return;
     }
 
+    // STEP 2 — Land Parcel (was step 3)
     if (currentStep === 2) {
-      // Validation removed: Land capability/crops are now completely optional!
-      setErrors({});
-      setCurrentStep(3);
-      return;
-    }
-
-    if (currentStep === 3) {
-      // KEEP only this block, DELETE the isTenantLesseeCategory block:
       const hasValidFarmland = formData.farmlandParcels.some(
         (parcel) =>
           parcel.farmLocationBarangay?.toString().trim() &&
@@ -423,14 +365,19 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) return;
+      setErrors({});
+      setCurrentStep(3);
+      return;
+    }
 
+    // STEP 3 — Farm Information (was step 2)
+    if (currentStep === 3) {
       setErrors({});
       setCurrentStep(4);
       return;
     }
 
-    // currentStep === 4 -> final submit: perform full validation then submit
-    // Full-form basic validation (repeat or extend as necessary)
+    // Step 4 — final submit
     if (!formData.firstName?.trim())
       newErrors.firstName = "First name is required";
     if (!formData.surname?.trim()) newErrors.surname = "Surname is required";
@@ -451,7 +398,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     }
     if (!formData.barangay?.trim()) newErrors.barangay = "Barangay is required";
 
-    // Validate based on ownership category
     const hasValidFarmlandFinal = formData.farmlandParcels.some(
       (parcel) =>
         parcel.farmLocationBarangay?.toString().trim() &&
@@ -471,7 +417,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         );
       },
     );
-
     if (hasUndesignatedCultivationFinal) {
       newErrors.farmland =
         "Each listed parcel must have a cultivation status (Yes or No).";
@@ -479,7 +424,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
-
     handleFinalSubmit();
   };
 
@@ -491,10 +435,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         dateOfBirth: formData.dateOfBirth
           ? new Date(formData.dateOfBirth)
           : null,
-        // DELETE these three lines:
-        // ownershipCategory: ownershipCategory,
-        // selectedLandOwner: selectedLandOwner ? { ... } : null,
-        // selectedParcelIds: Array.from(selectedParcelIds),
         farmlandParcels: formData.farmlandParcels.map((parcel) => ({
           ...parcel,
           totalFarmAreaHa: parcel.totalFarmAreaHa
@@ -506,36 +446,24 @@ const JoRsbsaRegisLandowner: React.FC = () => {
           existingParcelId: parcel.existingParcelId || null,
           existingParcelNumber: parcel.existingParcelNumber || null,
           ownershipType: {
-            registeredOwner: true, // Always true for this page
+            registeredOwner: true,
             tenant: false,
             lessee: false,
           },
         })),
       };
 
-      console.log(
-        "📤 Submitting transformed data:",
-        JSON.stringify(transformedData.farmlandParcels, null, 2),
-      );
-
       const response = await createRsbsaSubmission({
         draftId,
         data: transformedData,
       });
-
-      if (response.error) {
-        throw new Error(response.error || `HTTP error`);
-      }
+      if (response.error) throw new Error(response.error || `HTTP error`);
       const result = response.data;
-      console.log("Submission response:", result);
-      return result; // Should include message, submissionId, submittedAt
+      return result;
     } catch (error) {
       let message = "Unknown error";
-      if (error instanceof Error) {
-        message = error.message;
-      } else if (typeof error === "string") {
-        message = error;
-      }
+      if (error instanceof Error) message = error.message;
+      else if (typeof error === "string") message = error;
       console.error("Error submitting form:", error);
       showToast(
         "Error submitting form: " + message + ". Please try again.",
@@ -549,7 +477,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     const farmlandParcels = formData.farmlandParcels.map((parcel, index) => {
       const parsedArea = Number(parcel.totalFarmAreaHa);
       const totalFarmAreaHa = Number.isFinite(parsedArea) ? parsedArea : 0;
-
       return {
         parcelNo: parcel.parcelNo || String(index + 1),
         farmLocationBarangay: parcel.farmLocationBarangay || null,
@@ -606,14 +533,11 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
   const handleFinalSubmit = async () => {
     if (isSubmitting) return;
-
     setIsSubmitting(true);
     let shouldUnlockSubmit = true;
-
     try {
       const submitted = await submitFinalToServer();
       if (submitted && submitted.submissionId) {
-        // Log audit trail for farmer registration
         try {
           const user = await getCurrentUserForAudit();
           const farmerName =
@@ -621,7 +545,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
           const farmDetails = buildFarmerAuditFarmDetails();
           const auditLogger = getAuditLogger();
           await auditLogger.logFarmerRegistration(
-            { ...user, id: undefined }, // UUIDs don't fit number, just drop id
+            { ...user, id: undefined },
             submitted.submissionId,
             farmerName,
             farmDetails,
@@ -629,9 +553,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         } catch (auditErr) {
           console.error("Audit log failed (non-blocking):", auditErr);
         }
-
         showToast("RSBSA form submitted successfully!", "success");
-        // Navigate back to JO flow after a short delay to show the toast
         shouldUnlockSubmit = false;
         setTimeout(() => {
           navigate("/jo-rsbsapage");
@@ -641,19 +563,15 @@ const JoRsbsaRegisLandowner: React.FC = () => {
       console.error("Error submitting form:", error);
       showToast("Error submitting form. Please try again.", "error");
     } finally {
-      if (shouldUnlockSubmit) {
-        setIsSubmitting(false);
-      }
+      if (shouldUnlockSubmit) setIsSubmitting(false);
     }
   };
 
   return (
     <div className="jo-registration-page-container">
       <div className="jo-registration-page">
-        {/* Sidebar */}
         <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-        {/* Main content starts here */}
         <div className="jo-registration-main-content">
           <div className="tech-incent-mobile-header">
             <button
@@ -679,6 +597,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
               Land Owner Registration
             </div>
           </div>
+
           <h2>RSBSA Enrollment Form - Land Owner</h2>
 
           <div className="jo-registration-back-button">
@@ -694,6 +613,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
           </div>
 
           <div className="jo-registration-form-container">
+            {/* Step indicators */}
             <div className="jo-registration-form-steps">
               <div
                 className={`jo-registration-step ${isStepActive(1) ? "jo-registration-active" : ""} ${isStepCompleted(1) ? "jo-registration-completed" : ""}`}
@@ -703,21 +623,23 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                 </span>
                 <span className="jo-registration-label">Basic Details</span>
               </div>
+              {/* SWAPPED: Step 2 is now Land Parcel */}
               <div
                 className={`jo-registration-step ${isStepActive(2) ? "jo-registration-active" : ""} ${isStepCompleted(2) ? "jo-registration-completed" : ""}`}
               >
                 <span className="jo-registration-dot">
                   {isStepCompleted(2) ? "✓" : "2"}
                 </span>
-                <span className="jo-registration-label">Farm Information</span>
+                <span className="jo-registration-label">Land Parcel</span>
               </div>
+              {/* SWAPPED: Step 3 is now Farm Information */}
               <div
                 className={`jo-registration-step ${isStepActive(3) ? "jo-registration-active" : ""} ${isStepCompleted(3) ? "jo-registration-completed" : ""}`}
               >
                 <span className="jo-registration-dot">
                   {isStepCompleted(3) ? "✓" : "3"}
                 </span>
-                <span className="jo-registration-label">Land Parcel</span>
+                <span className="jo-registration-label">Farm Information</span>
               </div>
               <div
                 className={`jo-registration-step ${isStepActive(4) ? "jo-registration-active" : ""}${isStepCompleted(4) ? "jo-registration-completed" : ""}`}
@@ -727,6 +649,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
               </div>
             </div>
 
+            {/* STEP 1 — Basic Details (unchanged) */}
             {currentStep === 1 && (
               <>
                 <div className="jo-registration-form-section">
@@ -838,7 +761,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                         )}
                       </div>
                     </div>
-
                     <div className="jo-registration-form-row">
                       <div className="jo-registration-form-group">
                         <label>DATE OF BIRTH</label>
@@ -857,9 +779,8 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                                 monthDiff <= 0 ||
                                 (monthDiff === 0 &&
                                   today.getDate() < birthDate.getDate())
-                              ) {
+                              )
                                 age--;
-                              }
                               setFormData((prev) => ({
                                 ...prev,
                                 age: String(age),
@@ -902,7 +823,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                         )}
                       </div>
                     </div>
-
                     <div className="jo-registration-address-section">
                       <h4>ADDRESS</h4>
                       <div className="jo-registration-address-grid">
@@ -1011,165 +931,11 @@ const JoRsbsaRegisLandowner: React.FC = () => {
               </>
             )}
 
+            {/* STEP 2 — Land Parcel (was step 3) */}
             {currentStep === 2 && (
               <div className="jo-registration-form-section">
-                <h3>PART II: Farm Information</h3>
-                <div className="jo-registration-form-grid">
-                  <div className="jo-registration-livelihood-details">
-                    <h4>Type of Farming Activity</h4>
-                    <p
-                      style={{
-                        color: "#666",
-                        fontSize: "14px",
-                        marginBottom: "15px",
-                      }}
-                    >
-                      Select all farming activities that apply:
-                    </p>
+                <h3>PART II: Land Parcel</h3>
 
-                    {/* Wrapper for all farming activities - single error border */}
-                    <div
-                      style={{
-                        padding: errors.farmingActivity ? "15px" : "0",
-                        borderRadius: "6px",
-                        border: errors.farmingActivity
-                          ? "2px solid #dc2626"
-                          : "2px solid transparent",
-                        backgroundColor: errors.farmingActivity
-                          ? "#fef2f2"
-                          : "transparent",
-                        marginBottom: "10px",
-                      }}
-                    >
-                      {/* Crops Section */}
-                      <div
-                        className="jo-registration-checkbox-group"
-                        style={{ marginBottom: "10px" }}
-                      >
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={(formData as any).farmerRice}
-                            onChange={() => toggleBool("farmerRice")}
-                          />{" "}
-                          Rice
-                        </label>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={(formData as any).farmerCorn}
-                            onChange={() => toggleBool("farmerCorn")}
-                          />{" "}
-                          Corn
-                        </label>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={(formData as any).farmerOtherCrops}
-                            onChange={() => toggleBool("farmerOtherCrops")}
-                          />{" "}
-                          Other crops, please specify
-                        </label>
-                      </div>
-                      {(formData as any).farmerOtherCrops && (
-                        <input
-                          type="text"
-                          placeholder="Specify other crops"
-                          value={(formData as any).farmerOtherCropsText}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "farmerOtherCropsText",
-                              e.target.value,
-                            )
-                          }
-                          style={{ marginBottom: "15px" }}
-                        />
-                      )}
-
-                      {/* Livestock Section */}
-                      <div
-                        className="jo-registration-checkbox-group"
-                        style={{ marginBottom: "10px" }}
-                      >
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={(formData as any).farmerLivestock}
-                            onChange={() => toggleBool("farmerLivestock")}
-                          />{" "}
-                          Livestock, please specify
-                        </label>
-                      </div>
-                      {(formData as any).farmerLivestock && (
-                        <input
-                          type="text"
-                          placeholder="Specify livestock"
-                          value={(formData as any).farmerLivestockText}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "farmerLivestockText",
-                              e.target.value,
-                            )
-                          }
-                          style={{ marginBottom: "15px" }}
-                        />
-                      )}
-
-                      {/* Poultry Section */}
-                      <div
-                        className="jo-registration-checkbox-group"
-                        style={{
-                          marginBottom: errors.farmingActivity ? "0" : "10px",
-                        }}
-                      >
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={(formData as any).farmerPoultry}
-                            onChange={() => toggleBool("farmerPoultry")}
-                          />{" "}
-                          Poultry, please specify
-                        </label>
-                      </div>
-                      {(formData as any).farmerPoultry && (
-                        <input
-                          type="text"
-                          placeholder="Specify poultry"
-                          value={(formData as any).farmerPoultryText}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "farmerPoultryText",
-                              e.target.value,
-                            )
-                          }
-                          style={{ marginBottom: "0" }}
-                        />
-                      )}
-                    </div>
-
-                    {/* Error Message - shown once for all farming activities */}
-                    {errors.farmingActivity && (
-                      <div
-                        className="jo-registration-error"
-                        style={{
-                          marginTop: "10px",
-                          fontSize: "12px",
-                          color: "#dc3545",
-                        }}
-                      >
-                        {errors.farmingActivity}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {currentStep === 3 && (
-              <div className="jo-registration-form-section">
-                <h3>PART III: Land Parcel</h3>
-
-                {/* Show validation summary for farmland */}
                 {(errors.farmland || errors.landOwner) && (
                   <div className="jo-registration-form-errors">
                     {errors.farmland && (
@@ -1184,16 +950,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                     )}
                   </div>
                 )}
-
-                {/* Ownership Category Selection */}
-
-                {/* Land Owner Search for Tenant/Lessee */}
-
-                {/* Parcel Selection for Tenant/Lessee */}
-
-                {/* Farmland Parcels - Show only for Registered Owner */}
-
-                {/* Existing Parcel Dropdown Section */}
 
                 {(formData.farmlandParcels as any[]).map((p, idx) => (
                   <div key={idx} className="jo-registration-parcel-card">
@@ -1373,15 +1129,160 @@ const JoRsbsaRegisLandowner: React.FC = () => {
               </div>
             )}
 
+            {/* STEP 3 — Farm Information (was step 2) */}
+            {currentStep === 3 && (
+              <div className="jo-registration-form-section">
+                <h3>PART III: Farm Information</h3>
+                <div className="jo-registration-form-grid">
+                  <div className="jo-registration-livelihood-details">
+                    <h4>Type of Farming Activity</h4>
+                    <p
+                      style={{
+                        color: "#666",
+                        fontSize: "14px",
+                        marginBottom: "15px",
+                      }}
+                    >
+                      Select all farming activities that apply:
+                    </p>
+                    <div
+                      style={{
+                        padding: errors.farmingActivity ? "15px" : "0",
+                        borderRadius: "6px",
+                        border: errors.farmingActivity
+                          ? "2px solid #dc2626"
+                          : "2px solid transparent",
+                        backgroundColor: errors.farmingActivity
+                          ? "#fef2f2"
+                          : "transparent",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      <div
+                        className="jo-registration-checkbox-group"
+                        style={{ marginBottom: "10px" }}
+                      >
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={(formData as any).farmerRice}
+                            onChange={() => toggleBool("farmerRice")}
+                          />{" "}
+                          Rice
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={(formData as any).farmerCorn}
+                            onChange={() => toggleBool("farmerCorn")}
+                          />{" "}
+                          Corn
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={(formData as any).farmerOtherCrops}
+                            onChange={() => toggleBool("farmerOtherCrops")}
+                          />{" "}
+                          Other crops, please specify
+                        </label>
+                      </div>
+                      {(formData as any).farmerOtherCrops && (
+                        <input
+                          type="text"
+                          placeholder="Specify other crops"
+                          value={(formData as any).farmerOtherCropsText}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "farmerOtherCropsText",
+                              e.target.value,
+                            )
+                          }
+                          style={{ marginBottom: "15px" }}
+                        />
+                      )}
+                      <div
+                        className="jo-registration-checkbox-group"
+                        style={{ marginBottom: "10px" }}
+                      >
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={(formData as any).farmerLivestock}
+                            onChange={() => toggleBool("farmerLivestock")}
+                          />{" "}
+                          Livestock, please specify
+                        </label>
+                      </div>
+                      {(formData as any).farmerLivestock && (
+                        <input
+                          type="text"
+                          placeholder="Specify livestock"
+                          value={(formData as any).farmerLivestockText}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "farmerLivestockText",
+                              e.target.value,
+                            )
+                          }
+                          style={{ marginBottom: "15px" }}
+                        />
+                      )}
+                      <div
+                        className="jo-registration-checkbox-group"
+                        style={{
+                          marginBottom: errors.farmingActivity ? "0" : "10px",
+                        }}
+                      >
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={(formData as any).farmerPoultry}
+                            onChange={() => toggleBool("farmerPoultry")}
+                          />{" "}
+                          Poultry, please specify
+                        </label>
+                      </div>
+                      {(formData as any).farmerPoultry && (
+                        <input
+                          type="text"
+                          placeholder="Specify poultry"
+                          value={(formData as any).farmerPoultryText}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "farmerPoultryText",
+                              e.target.value,
+                            )
+                          }
+                          style={{ marginBottom: "0" }}
+                        />
+                      )}
+                    </div>
+                    {errors.farmingActivity && (
+                      <div
+                        className="jo-registration-error"
+                        style={{
+                          marginTop: "10px",
+                          fontSize: "12px",
+                          color: "#dc3545",
+                        }}
+                      >
+                        {errors.farmingActivity}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 4 — Verification */}
             {currentStep === 4 && (
               <div className="jo-registration-form-section">
                 <h3>PART IV: VERIFICATION</h3>
-
-                {/* Compilation of Previous Steps */}
                 <div className="jo-registration-compilation">
                   <h4>FORM SUMMARY - PLEASE REVIEW ALL INFORMATION</h4>
 
-                  {/* Step 1: Personal Information Summary */}
+                  {/* Personal Information */}
                   <div className="jo-registration-summary-section">
                     <h3>PART I: PERSONAL INFORMATION</h3>
                     <div className="jo-registration-summary-grid">
@@ -1435,118 +1336,9 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Step 2: Farm Profile Summary */}
+                  {/* SWAPPED: Land Parcel now comes before Farm Information in the summary */}
                   <div className="jo-registration-summary-section">
-                    <h3>PART II: Farm Information</h3>
-                    <div className="jo-registration-summary-grid">
-                      <div className="jo-registration-summary-item">
-                        <span className="jo-registration-summary-label">
-                          Main Livelihood:
-                        </span>
-                        <span className="jo-registration-summary-value">
-                          {formData.mainLivelihood || "Not selected"}
-                        </span>
-                      </div>
-
-                      {/* Farm Details / Usual Cultivation Potential */}
-                      {formData.mainLivelihood === "landowner" && (
-                        <div className="jo-registration-summary-item">
-                          <span className="jo-registration-summary-label">
-                            Farming Activities:
-                          </span>
-                          <span className="jo-registration-summary-value">
-                            {[
-                              (formData as any).farmerRice && "Rice",
-                              (formData as any).farmerCorn && "Corn",
-                              (formData as any).farmerOtherCrops &&
-                                `Other crops: ${(formData as any).farmerOtherCropsText}`,
-                              (formData as any).farmerLivestock &&
-                                `Livestock: ${(formData as any).farmerLivestockText}`,
-                              (formData as any).farmerPoultry &&
-                                `Poultry: ${(formData as any).farmerPoultryText}`,
-                            ]
-                              .filter(Boolean)
-                              .join(", ") || "None selected"}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Farmworker Details */}
-                      {formData.mainLivelihood === "farmworker" && (
-                        <div className="jo-registration-summary-item">
-                          <span className="jo-registration-summary-label">
-                            Kind of Work:
-                          </span>
-                          <span className="jo-registration-summary-value">
-                            {[
-                              (formData as any).fwLandPrep &&
-                                "Land Preparation",
-                              (formData as any).fwPlanting &&
-                                "Planting/Transplanting",
-                              (formData as any).fwCultivation && "Cultivation",
-                              (formData as any).fwHarvesting && "Harvesting",
-                              (formData as any).fwOthers &&
-                                `Others: ${(formData as any).fwOthersText}`,
-                            ]
-                              .filter(Boolean)
-                              .join(", ") || "None selected"}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Fisherfolk Details */}
-                      {formData.mainLivelihood === "fisherfolk" && (
-                        <div className="jo-registration-summary-item">
-                          <span className="jo-registration-summary-label">
-                            Fishing Activities:
-                          </span>
-                          <span className="jo-registration-summary-value">
-                            {[
-                              (formData as any).ffFishCapture && "Fish Capture",
-                              (formData as any).ffAquaculture && "Aquaculture",
-                              (formData as any).ffGleaning && "Gleaning",
-                              (formData as any).ffFishProcessing &&
-                                "Fish Processing",
-                              (formData as any).ffFishVending && "Fish Vending",
-                              (formData as any).ffOthers &&
-                                `Others: ${(formData as any).ffOthersText}`,
-                            ]
-                              .filter(Boolean)
-                              .join(", ") || "None selected"}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Agri Youth Details */}
-                      {formData.mainLivelihood === "agri-youth" && (
-                        <div className="jo-registration-summary-item">
-                          <span className="jo-registration-summary-label">
-                            Type of Involvement:
-                          </span>
-                          <span className="jo-registration-summary-value">
-                            {[
-                              (formData as any).ayPartHousehold &&
-                                "Part of farming household",
-                              (formData as any).ayFormalCourse &&
-                                "Formal agri-fishery course",
-                              (formData as any).ayNonFormalCourse &&
-                                "Non-formal agri-fishery course",
-                              (formData as any).ayParticipatedProgram &&
-                                "Agricultural activity/program",
-                              (formData as any).ayOthers &&
-                                `Others: ${(formData as any).ayOthersText}`,
-                            ]
-                              .filter(Boolean)
-                              .join(", ") || "None selected"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Step 3: Farmland Summary */}
-                  <div className="jo-registration-summary-section">
-                    <h3>PART III: Land Parcel</h3>
+                    <h3>PART II: Land Parcel</h3>
                     {(formData.farmlandParcels as any[]).map((parcel, idx) => (
                       <div key={idx} className="jo-registration-parcel-summary">
                         <h6>Farm Parcel No. {parcel.parcelNo || idx + 1}</h6>
@@ -1603,17 +1395,49 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                                 : parcel.cultivatingStatus === "no"
                                   ? "No"
                                   : parcel.cultivatingStatus === "no-other"
-                                    ? `No — Someone else is farming it${
-                                        parcel.tenantLandOwnerName
-                                          ? ` (${parcel.tenantLandOwnerName})`
-                                          : " (no tenant selected)"
-                                      }`
+                                    ? `No — Someone else is farming it${parcel.tenantLandOwnerName ? ` (${parcel.tenantLandOwnerName})` : " (no tenant selected)"}`
                                     : "Not specified"}
                             </span>
                           </div>
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  {/* SWAPPED: Farm Information now comes after Land Parcel in the summary */}
+                  <div className="jo-registration-summary-section">
+                    <h3>PART III: Farm Information</h3>
+                    <div className="jo-registration-summary-grid">
+                      <div className="jo-registration-summary-item">
+                        <span className="jo-registration-summary-label">
+                          Main Livelihood:
+                        </span>
+                        <span className="jo-registration-summary-value">
+                          {formData.mainLivelihood || "Not selected"}
+                        </span>
+                      </div>
+                      {formData.mainLivelihood === "landowner" && (
+                        <div className="jo-registration-summary-item">
+                          <span className="jo-registration-summary-label">
+                            Farming Activities:
+                          </span>
+                          <span className="jo-registration-summary-value">
+                            {[
+                              (formData as any).farmerRice && "Rice",
+                              (formData as any).farmerCorn && "Corn",
+                              (formData as any).farmerOtherCrops &&
+                                `Other crops: ${(formData as any).farmerOtherCropsText}`,
+                              (formData as any).farmerLivestock &&
+                                `Livestock: ${(formData as any).farmerLivestockText}`,
+                              (formData as any).farmerPoultry &&
+                                `Poultry: ${(formData as any).farmerPoultryText}`,
+                            ]
+                              .filter(Boolean)
+                              .join(", ") || "None selected"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1651,9 +1475,6 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-
-      {/* Toast Notification */}
       {toast.show && (
         <div
           className={`jo-registration-toast jo-registration-toast-${toast.type}`}

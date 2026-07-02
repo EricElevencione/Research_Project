@@ -41,6 +41,8 @@ interface LandOwner {
   name: string;
   barangay?: string;
   municipality?: string;
+  parcelCount?: number;
+  isRegisteredFarmer?: boolean;
 }
 
 // Interface for existing parcels from land_parcels table
@@ -353,7 +355,13 @@ const JoRsbsa: React.FC = () => {
   useEffect(() => {
     const fetch = async () => {
       const response = await getLandOwners();
-      if (response.error) return;
+      // A 207 means the owner list is usable but the "already registered"
+      // flags could not be verified — show a warning, don't discard the data.
+      // Any other error means there's no usable list at all.
+      if (response.error && response.status !== 207) return;
+      if (response.status === 207 && response.error) {
+        showToast(response.error, "warning");
+      }
       const owners = (response.data || []) as LandOwner[];
       setLandowners(owners);
       setRegisteredFarmers(
@@ -1683,23 +1691,32 @@ const JoRsbsa: React.FC = () => {
                               filteredSelfOwners.map((owner) => (
                                 <div
                                   key={owner.id}
-                                  onClick={() =>
-                                    handleSelfLandOwnerSelect(owner)
+                                  onClick={() => {
+                                    if (owner.isRegisteredFarmer) return;
+                                    handleSelfLandOwnerSelect(owner);
+                                  }}
+                                  aria-disabled={
+                                    owner.isRegisteredFarmer || undefined
                                   }
                                   style={{
                                     padding: "0.7rem 1rem",
-                                    cursor: "pointer",
+                                    cursor: owner.isRegisteredFarmer
+                                      ? "not-allowed"
+                                      : "pointer",
                                     borderBottom: "1px solid #f0f0f0",
                                     fontSize: "0.95rem",
+                                    opacity: owner.isRegisteredFarmer ? 0.5 : 1,
                                   }}
-                                  onMouseEnter={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      "#f8f9fa")
-                                  }
-                                  onMouseLeave={(e) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      "white")
-                                  }
+                                  onMouseEnter={(e) => {
+                                    if (owner.isRegisteredFarmer) return;
+                                    e.currentTarget.style.backgroundColor =
+                                      "#f8f9fa";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (owner.isRegisteredFarmer) return;
+                                    e.currentTarget.style.backgroundColor =
+                                      "white";
+                                  }}
                                 >
                                   <strong>{owner.name}</strong>
                                   {owner.barangay && (
@@ -1711,6 +1728,18 @@ const JoRsbsa: React.FC = () => {
                                       }}
                                     >
                                       — {owner.barangay}
+                                    </span>
+                                  )}
+                                  {owner.isRegisteredFarmer && (
+                                    <span
+                                      style={{
+                                        marginLeft: "0.5rem",
+                                        fontSize: "0.75rem",
+                                        color: "#dc2626",
+                                        fontWeight: "bold",
+                                      }}
+                                    >
+                                      Already registered
                                     </span>
                                   )}
                                 </div>
@@ -2928,21 +2957,31 @@ const JoRsbsa: React.FC = () => {
                           filteredLandOwners.map((owner) => (
                             <div
                               key={owner.id}
-                              onClick={() => handleLandOwnerSelect(owner)}
+                              onClick={() => {
+                                if (owner.isRegisteredFarmer) return;
+                                handleLandOwnerSelect(owner);
+                              }}
+                              aria-disabled={
+                                owner.isRegisteredFarmer || undefined
+                              }
                               style={{
                                 padding: "0.75rem 1rem",
-                                cursor: "pointer",
+                                cursor: owner.isRegisteredFarmer
+                                  ? "not-allowed"
+                                  : "pointer",
                                 borderBottom: "1px solid #f0f0f0",
                                 fontSize: "0.95rem",
+                                opacity: owner.isRegisteredFarmer ? 0.5 : 1,
                               }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  "#f8f9fa")
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.backgroundColor =
-                                  "white")
-                              }
+                              onMouseEnter={(e) => {
+                                if (owner.isRegisteredFarmer) return;
+                                e.currentTarget.style.backgroundColor =
+                                  "#f8f9fa";
+                              }}
+                              onMouseLeave={(e) => {
+                                if (owner.isRegisteredFarmer) return;
+                                e.currentTarget.style.backgroundColor = "white";
+                              }}
                             >
                               <strong>{owner.name}</strong>
                               {owner.barangay && (
@@ -2954,6 +2993,18 @@ const JoRsbsa: React.FC = () => {
                                   }}
                                 >
                                   — {owner.barangay}
+                                </span>
+                              )}
+                              {owner.isRegisteredFarmer && (
+                                <span
+                                  style={{
+                                    marginLeft: "0.5rem",
+                                    fontSize: "0.75rem",
+                                    color: "#dc2626",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  Already registered
                                 </span>
                               )}
                             </div>
@@ -3212,48 +3263,71 @@ const JoRsbsa: React.FC = () => {
                                           ),
                                       );
                                     return filteredGroupOwners.length > 0 ? (
-                                      filteredGroupOwners.map(
-                                        (
-                                          owner, // ← added ( after =>
-                                        ) => (
-                                          <div
-                                            key={owner.id}
-                                            onClick={() =>
-                                              handleAdditionalLandOwnerSelect(
-                                                group.groupId,
-                                                owner,
-                                              )
-                                            }
-                                            style={{
-                                              padding: "0.75rem 1rem",
-                                              cursor: "pointer",
-                                              borderBottom: "1px solid #f0f0f0",
-                                              fontSize: "0.95rem",
-                                            }}
-                                            onMouseEnter={(e) =>
-                                              (e.currentTarget.style.backgroundColor =
-                                                "#f8f9fa")
-                                            }
-                                            onMouseLeave={(e) =>
-                                              (e.currentTarget.style.backgroundColor =
-                                                "white")
-                                            }
-                                          >
-                                            <strong>{owner.name}</strong>
-                                            {owner.barangay && (
-                                              <span
-                                                style={{
-                                                  color: "#6c757d",
-                                                  marginLeft: "0.5rem",
-                                                  fontSize: "0.85rem",
-                                                }}
-                                              >
-                                                — {owner.barangay}
-                                              </span>
-                                            )}
-                                          </div>
-                                        ),
-                                      ) // ← )) closes (owner) => ( and .map(
+                                      filteredGroupOwners.map((owner) => (
+                                        <div
+                                          key={owner.id}
+                                          onClick={() => {
+                                            if (owner.isRegisteredFarmer)
+                                              return;
+                                            handleAdditionalLandOwnerSelect(
+                                              group.groupId,
+                                              owner,
+                                            );
+                                          }}
+                                          aria-disabled={
+                                            owner.isRegisteredFarmer ||
+                                            undefined
+                                          }
+                                          style={{
+                                            padding: "0.75rem 1rem",
+                                            cursor: owner.isRegisteredFarmer
+                                              ? "not-allowed"
+                                              : "pointer",
+                                            borderBottom: "1px solid #f0f0f0",
+                                            fontSize: "0.95rem",
+                                            opacity: owner.isRegisteredFarmer
+                                              ? 0.5
+                                              : 1,
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            if (owner.isRegisteredFarmer)
+                                              return;
+                                            e.currentTarget.style.backgroundColor =
+                                              "#f8f9fa";
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            if (owner.isRegisteredFarmer)
+                                              return;
+                                            e.currentTarget.style.backgroundColor =
+                                              "white";
+                                          }}
+                                        >
+                                          <strong>{owner.name}</strong>
+                                          {owner.barangay && (
+                                            <span
+                                              style={{
+                                                color: "#6c757d",
+                                                marginLeft: "0.5rem",
+                                                fontSize: "0.85rem",
+                                              }}
+                                            >
+                                              — {owner.barangay}
+                                            </span>
+                                          )}
+                                          {owner.isRegisteredFarmer && (
+                                            <span
+                                              style={{
+                                                marginLeft: "0.5rem",
+                                                fontSize: "0.75rem",
+                                                color: "#dc2626",
+                                                fontWeight: "bold",
+                                              }}
+                                            >
+                                              Already registered
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))
                                     ) : (
                                       <div
                                         style={{

@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../supabase";
-import {
-  usePartialTransfer,
-  ParcelSplitInput,
-} from "../../components/LandRegistry/usePartialTransfer";
+import { ParcelSplitInput } from "../../components/LandRegistry/usePartialTransfer";
 import { PartialParcelTransferSection } from "../../components/LandRegistry/PartialParcelTransferSection";
 import "../../assets/css/jo css/JoLandRegistryStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
@@ -492,15 +489,8 @@ const JoLandRegistry: React.FC = () => {
     );
   }, []);
 
-  const {
-    parcelScope,
-    setParcelScope,
-    parcelSplitInputs,
-    setParcelTransferArea,
-    initSplitInputs,
-    validateSplitInputs,
-    executePartialTransfers,
-  } = usePartialTransfer();
+  // Parcel scope is always "full" now — the Full/Partial parcel choice
+  // has been removed. Users simply pick which whole parcel(s) to transfer.
 
   useEffect(() => {
     setSelectedTransferParcelIds([]);
@@ -2697,24 +2687,17 @@ const JoLandRegistry: React.FC = () => {
       parcel_number: p.parcel_number,
       farm_location_barangay: p.farm_location_barangay,
       total_farm_area_ha: Number(p.total_farm_area_ha) || 0,
-      transfer_area_ha: parcelSplitInputs[p.id] ?? "",
+      transfer_area_ha: "",
     }),
   );
 
   const partialTotalTransferAreaHa: number = donorSplitParcels.reduce(
     (sum, p) => {
-      if (parcelScope === "full") {
-        const isSelected = selectedTransferParcelIds.includes(p.farm_parcel_id);
-        return sum + (isSelected ? Number(p.total_farm_area_ha) || 0 : 0);
-      }
-      const val = parcelSplitInputs[p.farm_parcel_id];
-      return sum + (typeof val === "number" && val > 0 ? val : 0);
+      const isSelected = selectedTransferParcelIds.includes(p.farm_parcel_id);
+      return sum + (isSelected ? Number(p.total_farm_area_ha) || 0 : 0);
     },
     0,
   );
-
-  const parcelScopeValidationError: string =
-    parcelScope === "partial" ? validateSplitInputs(donorSplitParcels) : "";
 
   const defaultReason =
     transferMode === "inheritance"
@@ -2739,19 +2722,11 @@ const JoLandRegistry: React.FC = () => {
     }
     if (
       donorSplitParcels.length > 0 &&
-      parcelScope === "partial" &&
-      parcelScopeValidationError
+      selectedTransferParcelIds.length === 0
     ) {
-      return parcelScopeValidationError;
-    }
-    if (donorSplitParcels.length > 0 && parcelScope === "full") {
-      if (selectedTransferParcelIds.length === 0) {
-        return "Please select at least one parcel to transfer.";
-      }
+      return "Please select at least one parcel to transfer.";
     }
     if (supportingDocs.length === 0) return "Upload at least one proof image.";
-    if (parcelScope === "partial" && parcelScopeValidationError)
-      return parcelScopeValidationError;
     return "";
   })();
   const transferReadyForReview = transferBlockingReason === "";
@@ -3067,15 +3042,9 @@ const JoLandRegistry: React.FC = () => {
 
     try {
       // ── Step 1: Verify donor still owns the parcels ──────────────
-      const parcelsToVerify =
-        parcelScope === "full"
-          ? donorSplitParcels.filter((p) =>
-              selectedTransferParcelIds.includes(p.farm_parcel_id),
-            )
-          : donorSplitParcels.filter((p) => {
-              const input = parcelSplitInputs[p.farm_parcel_id];
-              return input !== "" && input !== undefined;
-            });
+      const parcelsToVerify = donorSplitParcels.filter((p) =>
+        selectedTransferParcelIds.includes(p.farm_parcel_id),
+      );
 
       const {
         verifiedParcels,
@@ -3126,132 +3095,111 @@ const JoLandRegistry: React.FC = () => {
         return;
       }
 
-      if (parcelScope === "partial") {
-        // ── PARTIAL: calls execute_partial_parcel_transfer RPC ─────
-        const splitResults = await executePartialTransfers({
-          parcels: donorSplitParcels,
-          donorFarmerId: fromFarmerId,
-          recipientFarmerId: toFarmerId,
-          transferMode: transferMode as "voluntary" | "inheritance",
-          transferReason: finalReasonPreview || "",
-          transferDate: new Date().toISOString().slice(0, 10),
-          uploadedProofs,
-        });
+      // Calls the existing create_ownership_transfer_no_review RPC.
+      // Parcel scope is always "full" now, so requestedAreaHa is simply
+      // the donor's verified available area for the selected parcel(s)
+      // unless a specific partial-hectare take is set (areaMode).
+      const requestedAreaHa =
+        areaMode === "take_all" ? verifiedAvailableAreaHa : selectedAreaHa;
 
-        setTransferSubmitSuccess(
-          `Partial transfer complete — ${splitResults.length} parcel(s) split successfully.`,
+      const itemPayload = buildTransferItemsPayload(
+        verifiedParcels,
+        requestedAreaHa,
+        areaMode === "take_all",
+      );
+
+      if (itemPayload.length === 0) {
+        setTransferSubmitError(
+          "No valid parcel items to submit after ownership verification.",
         );
-      } else {
-        // ── FULL: calls existing create_ownership_transfer_no_review RPC
-        const areaMode = isInheritance
-          ? inheritanceAreaMode
-          : voluntaryAreaMode;
-        const selectedAreaHa = isInheritance
-          ? inheritanceSelectedAreaHa
-          : voluntarySelectedAreaHa;
-        const requestedAreaHa =
-          areaMode === "take_all" ? verifiedAvailableAreaHa : selectedAreaHa;
+        return;
+      }
 
-        const itemPayload = buildTransferItemsPayload(
-          verifiedParcels,
-          requestedAreaHa,
-          areaMode === "take_all",
-        );
+      const { data, error } = await supabase.rpc(
+        "create_ownership_transfer_no_review",
+        {
+          p_transfer_mode: transferMode,
+          p_from_farmer_id: fromFarmerId,
+          p_to_farmer_id: toFarmerId,
+          p_source_role: "registered_owner",
+          p_area_mode: areaMode,
+          p_area_requested_ha: areaMode === "partial" ? requestedAreaHa : null,
+          p_area_available_ha: verifiedAvailableAreaHa,
+          p_transfer_reason: finalReasonPreview || null,
+          p_transfer_date: new Date().toISOString().slice(0, 10),
+          p_is_deceased_confirmed: isInheritance ? confirmBenefaciary : false,
+          p_items: itemPayload,
+          p_proofs: uploadedProofs,
+        },
+      );
 
-        if (itemPayload.length === 0) {
-          setTransferSubmitError(
-            "No valid parcel items to submit after ownership verification.",
+      if (error) {
+        const rpcCode = String((error as any)?.code || "");
+        const rpcMessage = String(error?.message || "");
+        const rpcDetails = String((error as any)?.details || "");
+        if (
+          /column\s+\"transfer_type\"\s+of relation\s+\"ownership_transfers\"\s+does not exist/i.test(
+            `${rpcMessage} ${rpcDetails}`,
+          )
+        ) {
+          throw new Error(
+            "Supabase table ownership_transfers is missing required columns. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
           );
-          return;
+        }
+        if (
+          rpcCode === "PGRST202" ||
+          /create_ownership_transfer_no_review/i.test(
+            `${rpcMessage} ${rpcDetails}`,
+          ) ||
+          /404/.test(rpcMessage)
+        ) {
+          throw new Error(
+            "Supabase RPC create_ownership_transfer_no_review is missing. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
+          );
         }
 
-        const { data, error } = await supabase.rpc(
-          "create_ownership_transfer_no_review",
+        if (
+          rpcCode === "P0005" ||
+          /only registered owners can transfer legal ownership/i.test(
+            `${rpcMessage} ${rpcDetails}`,
+          )
+        ) {
+          throw new Error(
+            "Transfer blocked by policy: only registered owners can transfer legal ownership.",
+          );
+        }
+
+        throw new Error(
+          error.message || "Failed to create ownership transfer.",
+        );
+      }
+
+      const transferId = Array.isArray(data) ? data[0] : data;
+      setTransferSubmitSuccess(
+        `Transfer submitted successfully${transferId ? ` (ID: ${transferId})` : ""}.`,
+      );
+
+      try {
+        const user = await getCurrentUserForAudit();
+        const recipientName = isInheritance
+          ? selectedBeneficiaryOwner?.name || `Farmer #${toFarmerId}`
+          : selectedRegisteredOwner?.name || `Farmer #${toFarmerId}`;
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "UPDATE",
+          AuditModule.LAND_PLOTS,
+          "ownership_transfer",
+          `${donorFarmerId}-to-${toFarmerId}`,
+          `Transferred ownership from ${selectedSource?.name || "Unknown"} to ${recipientName} (${transferMode})`,
+          { fromFarmerId: donorFarmerId, transferMode },
           {
-            p_transfer_mode: transferMode,
-            p_from_farmer_id: fromFarmerId,
-            p_to_farmer_id: toFarmerId,
-            p_source_role: "registered_owner",
-            p_area_mode: areaMode,
-            p_area_requested_ha:
-              areaMode === "partial" ? requestedAreaHa : null,
-            p_area_available_ha: verifiedAvailableAreaHa,
-            p_transfer_reason: finalReasonPreview || null,
-            p_transfer_date: new Date().toISOString().slice(0, 10),
-            p_is_deceased_confirmed: isInheritance ? confirmBenefaciary : false,
-            p_items: itemPayload,
-            p_proofs: uploadedProofs,
+            toFarmerId,
+            totalAreaHa: partialTotalTransferAreaHa,
+            parcelCount: donorSplitParcels.length,
           },
         );
-
-        if (error) {
-          const rpcCode = String((error as any)?.code || "");
-          const rpcMessage = String(error?.message || "");
-          const rpcDetails = String((error as any)?.details || "");
-          if (
-            /column\s+\"transfer_type\"\s+of relation\s+\"ownership_transfers\"\s+does not exist/i.test(
-              `${rpcMessage} ${rpcDetails}`,
-            )
-          ) {
-            throw new Error(
-              "Supabase table ownership_transfers is missing required columns. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
-            );
-          }
-          if (
-            rpcCode === "PGRST202" ||
-            /create_ownership_transfer_no_review/i.test(
-              `${rpcMessage} ${rpcDetails}`,
-            ) ||
-            /404/.test(rpcMessage)
-          ) {
-            throw new Error(
-              "Supabase RPC create_ownership_transfer_no_review is missing. Run database/create_ownership_transfer_no_review_rpc.sql in Supabase SQL Editor, then retry.",
-            );
-          }
-
-          if (
-            rpcCode === "P0005" ||
-            /only registered owners can transfer legal ownership/i.test(
-              `${rpcMessage} ${rpcDetails}`,
-            )
-          ) {
-            throw new Error(
-              "Transfer blocked by policy: only registered owners can transfer legal ownership.",
-            );
-          }
-
-          throw new Error(
-            error.message || "Failed to create ownership transfer.",
-          );
-        }
-
-        const transferId = Array.isArray(data) ? data[0] : data;
-        setTransferSubmitSuccess(
-          `Transfer submitted successfully${transferId ? ` (ID: ${transferId})` : ""}.`,
-        );
-
-        try {
-          const user = await getCurrentUserForAudit();
-          const recipientName = isInheritance
-            ? selectedBeneficiaryOwner?.name || `Farmer #${toFarmerId}`
-            : selectedRegisteredOwner?.name || `Farmer #${toFarmerId}`;
-          await getAuditLogger().logCRUD(
-            { ...user, id: undefined },
-            "UPDATE",
-            AuditModule.LAND_PLOTS,
-            "ownership_transfer",
-            `${donorFarmerId}-to-${toFarmerId}`,
-            `Transferred ownership from ${selectedSource?.name || "Unknown"} to ${recipientName} (${transferMode})`,
-            { fromFarmerId: donorFarmerId, transferMode },
-            {
-              toFarmerId,
-              totalAreaHa: partialTotalTransferAreaHa,
-              parcelCount: donorSplitParcels.length,
-            },
-          );
-        } catch (auditErr) {
-          console.error("Audit log failed (non-blocking):", auditErr);
-        }
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
       }
 
       const transferredParcelIds = donorSplitParcels
@@ -4805,15 +4753,6 @@ const JoLandRegistry: React.FC = () => {
 
                             <PartialParcelTransferSection
                               donorParcels={donorSplitParcels}
-                              parcelScope={parcelScope}
-                              onParcelScopeChange={(scope) => {
-                                setParcelScope(scope);
-                                if (scope === "partial")
-                                  initSplitInputs(donorSplitParcels);
-                              }}
-                              parcelSplitInputs={parcelSplitInputs}
-                              onSetParcelTransferArea={setParcelTransferArea}
-                              validationError={parcelScopeValidationError}
                               totalTransferAreaHa={partialTotalTransferAreaHa}
                               donorTotalAreaHa={donorSplitParcels.reduce(
                                 (s, p) =>
@@ -4903,15 +4842,6 @@ const JoLandRegistry: React.FC = () => {
 
                             <PartialParcelTransferSection
                               donorParcels={donorSplitParcels}
-                              parcelScope={parcelScope}
-                              onParcelScopeChange={(scope) => {
-                                setParcelScope(scope);
-                                if (scope === "partial")
-                                  initSplitInputs(donorSplitParcels);
-                              }}
-                              parcelSplitInputs={parcelSplitInputs}
-                              onSetParcelTransferArea={setParcelTransferArea}
-                              validationError={parcelScopeValidationError}
                               totalTransferAreaHa={partialTotalTransferAreaHa}
                               donorTotalAreaHa={donorSplitParcels.reduce(
                                 (s, p) =>
@@ -5059,30 +4989,17 @@ const JoLandRegistry: React.FC = () => {
 
                         {/* ── Review: Section 3 – Area, Parcels & Effectivity ── */}
                         {(() => {
-                          // Build the live parcel rows depending on scope
-                          const reviewParcels =
-                            parcelScope === "partial"
-                              ? donorSplitParcels
-                                  .map((p) => {
-                                    const entered =
-                                      parcelSplitInputs[p.farm_parcel_id];
-                                    const area =
-                                      typeof entered === "number" && entered > 0
-                                        ? entered
-                                        : null;
-                                    return { ...p, reviewArea: area };
-                                  })
-                                  .filter((p) => p.reviewArea !== null)
-                              : donorSplitParcels
-                                  .filter((p) =>
-                                    selectedTransferParcelIds.includes(
-                                      p.farm_parcel_id,
-                                    ),
-                                  )
-                                  .map((p) => ({
-                                    ...p,
-                                    reviewArea: p.total_farm_area_ha,
-                                  }));
+                          // Live parcel rows: whichever parcels are checked
+                          const reviewParcels = donorSplitParcels
+                            .filter((p) =>
+                              selectedTransferParcelIds.includes(
+                                p.farm_parcel_id,
+                              ),
+                            )
+                            .map((p) => ({
+                              ...p,
+                              reviewArea: p.total_farm_area_ha,
+                            }));
 
                           const reviewTotalHa = reviewParcels.reduce(
                             (sum, p) => sum + (p.reviewArea ?? 0),
@@ -5095,45 +5012,22 @@ const JoLandRegistry: React.FC = () => {
                                 Transfer Details
                               </div>
                               <div className="jo-land-registry-transfer-kv">
-                                <span>Scope</span>
-                                <strong>
-                                  {parcelScope === "partial"
-                                    ? "Partial"
-                                    : "Full Transfer"}
-                                </strong>
-                              </div>
-                              <div className="jo-land-registry-transfer-kv">
                                 <span>Parcels Involved</span>
                                 <strong>
                                   {reviewParcels.length}
-                                  {parcelScope === "partial" &&
-                                    donorSplitParcels.length >
-                                      reviewParcels.length && (
-                                      <span
-                                        style={{
-                                          color: "#94a3b8",
-                                          fontWeight: 400,
-                                          fontSize: 11,
-                                          marginLeft: 4,
-                                        }}
-                                      >
-                                        of {donorSplitParcels.length} entered
-                                      </span>
-                                    )}
-                                  {parcelScope === "full" &&
-                                    donorSplitParcels.length >
-                                      reviewParcels.length && (
-                                      <span
-                                        style={{
-                                          color: "#94a3b8",
-                                          fontWeight: 400,
-                                          fontSize: 11,
-                                          marginLeft: 4,
-                                        }}
-                                      >
-                                        of {donorSplitParcels.length} selected
-                                      </span>
-                                    )}
+                                  {donorSplitParcels.length >
+                                    reviewParcels.length && (
+                                    <span
+                                      style={{
+                                        color: "#94a3b8",
+                                        fontWeight: 400,
+                                        fontSize: 11,
+                                        marginLeft: 4,
+                                      }}
+                                    >
+                                      of {donorSplitParcels.length} selected
+                                    </span>
+                                  )}
                                 </strong>
                               </div>
                               <div className="jo-land-registry-transfer-kv">
@@ -5146,9 +5040,7 @@ const JoLandRegistry: React.FC = () => {
                                 >
                                   {reviewTotalHa > 0
                                     ? `${reviewTotalHa.toFixed(2)} ha`
-                                    : parcelScope === "partial"
-                                      ? "Enter values above"
-                                      : "—"}
+                                    : "—"}
                                 </strong>
                               </div>
                               <div className="jo-land-registry-transfer-kv">
@@ -5172,17 +5064,7 @@ const JoLandRegistry: React.FC = () => {
                                     </li>
                                   ))}
                                 </ul>
-                              ) : parcelScope === "partial" ? (
-                                <p
-                                  style={{
-                                    fontSize: 12,
-                                    color: "#94a3b8",
-                                    margin: "4px 0 0",
-                                  }}
-                                >
-                                  No transfer areas entered yet.
-                                </p>
-                              ) : parcelScope === "full" ? (
+                              ) : (
                                 <p
                                   style={{
                                     fontSize: 12,
@@ -5193,7 +5075,7 @@ const JoLandRegistry: React.FC = () => {
                                 >
                                   Please select at least one parcel to transfer.
                                 </p>
-                              ) : null}
+                              )}
                             </div>
                           );
                         })()}

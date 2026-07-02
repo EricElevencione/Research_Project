@@ -1177,7 +1177,7 @@ const JoAddFarmerRequest: React.FC = () => {
                         />
                         <div className="jo-add-farmer-item-content">
                           <label className="jo-add-farmer-label">
-                            Program Name
+                            Farmer Name
                           </label>
                           <div className="jo-add-farmer-name">
                             {farmer.last_name}, {farmer.first_name}{" "}

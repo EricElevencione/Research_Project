@@ -24,7 +24,6 @@ import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserFor
 import { TenantLesseeProfileDisplay } from "../../components/FarmerProfile/TenantLesseeProfileDisplay";
 import {
   LandownerProfileDisplay,
-  LandownerOccupant,
   LandownerProfileParcel,
 } from "../../components/FarmerProfile/LandownerProfileDisplay";
 
@@ -2291,8 +2290,6 @@ const JoMasterlist: React.FC = () => {
                       </button>
                     </th>
 
-                    <th>Role</th>
-
                     <th>
                       <button
                         className={`jo-masterlist-sort-btn ${isSortActive("status") ? "is-active" : ""}`}
@@ -2476,15 +2473,6 @@ const JoMasterlist: React.FC = () => {
                               </div>
                             </td>
 
-                            <td>
-                              <div className="jo-masterlist-status-cell">
-                                <span
-                                  className={`jo-masterlist-ownership-pill ${getOwnershipClass(record)}`}
-                                >
-                                  {getOwnershipLabel(record)}
-                                </span>
-                              </div>
-                            </td>
                             <td>
                               <span
                                 className="jo-masterlist-record-status"
