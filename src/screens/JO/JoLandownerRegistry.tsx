@@ -48,6 +48,8 @@ interface LandownerRecord {
   // Relationship counts — fetched separately via supabase
   tenantCount: number;
   lesseeCount: number;
+  currentTenantNames: string[];
+  currentLesseeNames: string[];
   archivedAt?: string | null;
   archiveReason?: string | null;
   hasNoLand?: boolean; // Flagged: no current land ownership
@@ -63,13 +65,8 @@ interface LandownerSummaryRow {
   parcelCount: number;
   tenantCount: number;
   lesseeCount: number;
-  occupationType:
-    | "owner-farmed"
-    | "tenant"
-    | "lessee"
-    | "tenant+lessee"
-    | "mixed";
-  isFarming: boolean | null;
+  currentTenantNames: string[];
+  currentLesseeNames: string[];
   status: string;
   hasNoLand?: boolean; // Flagged: no current land ownership
 }
@@ -88,9 +85,6 @@ interface OccupiedParcel {
   agrarianReformBeneficiary: string;
   withinAncestralDomain: string;
   ownershipDocumentNo: string;
-  isFarming: boolean | null;
-  farmingStatusReason: string | null;
-  farmingStatusUpdatedAt: string | null;
 }
 
 interface OccupantInfo {
@@ -134,10 +128,6 @@ interface LandownerParcelRow {
   parcelNumber: string;
   barangay: string;
   parcelArea: number | string;
-  tenantCount: number;
-  lesseeCount: number;
-  occupationType: "owner-farmed" | "tenant" | "lessee" | "tenant+lessee";
-  isFarming: boolean | null;
 }
 
 type SortKey =
@@ -289,6 +279,32 @@ const JoLandownerRegistry: React.FC = () => {
     return status || "Unknown";
   };
 
+  // Plain "2 Tenants, 1 Lessee" style count — no inferred label, just what's
+  // on record. Shared between the table cell and the print export so both
+  // stay in sync.
+  const getTenantLesseeSummary = (record: {
+    tenantCount: number;
+    lesseeCount: number;
+    currentTenantNames: string[];
+    currentLesseeNames: string[];
+  }) => {
+    const parts: string[] = [];
+    if (record.tenantCount > 0) {
+      parts.push(
+        `${record.tenantCount} Tenant${record.tenantCount === 1 ? "" : "s"}`,
+      );
+    }
+    if (record.lesseeCount > 0) {
+      parts.push(
+        `${record.lesseeCount} Lessee${record.lesseeCount === 1 ? "" : "s"}`,
+      );
+    }
+    const countText =
+      parts.length > 0 ? parts.join(", ") : "No tenant/lessee on record";
+    const names = [...record.currentTenantNames, ...record.currentLesseeNames];
+    return { countText, names };
+  };
+
   const getInitials = (name: string) => {
     const parts = (name || "")
       .replace(/,/g, " ")
@@ -360,12 +376,23 @@ const JoLandownerRegistry: React.FC = () => {
         );
       });
 
+      // Name lookup covering EVERY submission (owners, tenants, lessees
+      // alike) — used to resolve tenant/lessee names below without an
+      // extra fetch.
+      const nameById = new Map<number, string>();
+      allRecords.forEach((item: any) => {
+        const id = Number(item.id);
+        if (Number.isFinite(id)) nameById.set(id, item.farmerName || "—");
+      });
+
       // Step 2: Fetch ALL tenant/lessee parcel links in one query
-      // This avoids N+1 calls — we get every parcel that references an owner
+      // This avoids N+1 calls — we get every parcel that references an owner.
+      // is_current_owner is included and filtered below so a tenant/lessee
+      // who has since been replaced doesn't keep counting as "current."
       const { data: tlParcels, error: tlError } = await supabase
         .from("rsbsa_farm_parcels")
         .select(
-          "submission_id, parcel_number, tenant_land_owner_id, lessee_land_owner_id, ownership_type_tenant, ownership_type_lessee",
+          "submission_id, parcel_number, tenant_land_owner_id, lessee_land_owner_id, ownership_type_tenant, ownership_type_lessee, is_current_owner",
         )
         .or(
           "tenant_land_owner_id.not.is.null,lessee_land_owner_id.not.is.null",
@@ -377,40 +404,20 @@ const JoLandownerRegistry: React.FC = () => {
           tlError.message,
         );
 
-      // Step 3: Build count maps — ownerId → unique tenant submission IDs
+      // Step 3: Build count maps — ownerId → unique CURRENT tenant submission IDs
       const tenantsByOwner = new Map<number, Set<number>>();
       const lesseesByOwner = new Map<number, Set<number>>();
-      const occupantsByOwnerParcel = new Map<
-        string,
-        { tenantIds: Set<number>; lesseeIds: Set<number> }
-      >();
-
-      const addOccupant = (
-        ownerId: number,
-        parcelNumber: string,
-        role: "tenant" | "lessee",
-        farmerId: number,
-      ) => {
-        const key = `${ownerId}|${parcelNumber}`;
-        if (!occupantsByOwnerParcel.has(key)) {
-          occupantsByOwnerParcel.set(key, {
-            tenantIds: new Set<number>(),
-            lesseeIds: new Set<number>(),
-          });
-        }
-        const entry = occupantsByOwnerParcel.get(key);
-        if (!entry) return;
-        if (role === "tenant") entry.tenantIds.add(farmerId);
-        else entry.lesseeIds.add(farmerId);
-      };
+      const tenantNamesByOwner = new Map<number, Set<string>>();
+      const lesseeNamesByOwner = new Map<number, Set<string>>();
 
       (tlParcels || []).forEach((p: any) => {
+        // Skip replaced/deactivated tenant-lessee links — only the
+        // current holder should count.
+        if (p.is_current_owner === false) return;
+
         const tenantOwnerId = Number(p.tenant_land_owner_id);
         const lesseeOwnerId = Number(p.lessee_land_owner_id);
         const farmerId = Number(p.submission_id);
-        const parcelNumber = String(p.parcel_number || "")
-          .trim()
-          .toUpperCase();
 
         if (
           p.ownership_type_tenant &&
@@ -420,8 +427,11 @@ const JoLandownerRegistry: React.FC = () => {
           if (!tenantsByOwner.has(tenantOwnerId))
             tenantsByOwner.set(tenantOwnerId, new Set());
           tenantsByOwner.get(tenantOwnerId)!.add(farmerId);
-          if (parcelNumber)
-            addOccupant(tenantOwnerId, parcelNumber, "tenant", farmerId);
+          if (!tenantNamesByOwner.has(tenantOwnerId))
+            tenantNamesByOwner.set(tenantOwnerId, new Set());
+          tenantNamesByOwner
+            .get(tenantOwnerId)!
+            .add(nameById.get(farmerId) || `Farmer #${farmerId}`);
         }
         if (
           p.ownership_type_lessee &&
@@ -431,8 +441,11 @@ const JoLandownerRegistry: React.FC = () => {
           if (!lesseesByOwner.has(lesseeOwnerId))
             lesseesByOwner.set(lesseeOwnerId, new Set());
           lesseesByOwner.get(lesseeOwnerId)!.add(farmerId);
-          if (parcelNumber)
-            addOccupant(lesseeOwnerId, parcelNumber, "lessee", farmerId);
+          if (!lesseeNamesByOwner.has(lesseeOwnerId))
+            lesseeNamesByOwner.set(lesseeOwnerId, new Set());
+          lesseeNamesByOwner
+            .get(lesseeOwnerId)!
+            .add(nameById.get(farmerId) || `Farmer #${farmerId}`);
         }
       });
 
@@ -489,6 +502,12 @@ const JoLandownerRegistry: React.FC = () => {
           lesseeCount: Number.isFinite(ownerId)
             ? (lesseesByOwner.get(ownerId)?.size ?? 0)
             : 0,
+          currentTenantNames: Number.isFinite(ownerId)
+            ? [...(tenantNamesByOwner.get(ownerId) ?? [])]
+            : [],
+          currentLesseeNames: Number.isFinite(ownerId)
+            ? [...(lesseeNamesByOwner.get(ownerId) ?? [])]
+            : [],
           archivedAt: item.archivedAt ?? item.archived_at ?? null,
           archiveReason: item.archiveReason ?? item.archive_reason ?? null,
         };
@@ -507,7 +526,7 @@ const JoLandownerRegistry: React.FC = () => {
         const { data: ownerParcels, error: ownerParcelsError } = await supabase
           .from("rsbsa_farm_parcels")
           .select(
-            "id, submission_id, parcel_number, farm_location_barangay, total_farm_area_ha, is_farming, is_current_owner",
+            "id, submission_id, parcel_number, farm_location_barangay, total_farm_area_ha, is_current_owner",
           )
           .in("submission_id", ownerIds);
 
@@ -536,18 +555,6 @@ const JoLandownerRegistry: React.FC = () => {
             const owner = ownerById.get(String(p.submission_id));
             if (!owner) return null;
             const parcelNumber = String(p.parcel_number || "N/A").trim();
-            const parcelKey = parcelNumber.toUpperCase();
-            const occupants = occupantsByOwnerParcel.get(
-              `${Number(owner.id)}|${parcelKey}`,
-            );
-            const tenantCount = occupants ? occupants.tenantIds.size : 0;
-            const lesseeCount = occupants ? occupants.lesseeIds.size : 0;
-            const occupationType = (() => {
-              if (tenantCount === 0 && lesseeCount === 0) return "owner-farmed";
-              if (tenantCount > 0 && lesseeCount > 0) return "tenant+lessee";
-              if (tenantCount > 0) return "tenant";
-              return "lessee";
-            })() as LandownerParcelRow["occupationType"];
 
             return {
               id: String(p.id),
@@ -561,11 +568,6 @@ const JoLandownerRegistry: React.FC = () => {
                 typeof p.total_farm_area_ha === "number"
                   ? p.total_farm_area_ha
                   : parseFloat(String(p.total_farm_area_ha || 0)),
-              tenantCount,
-              lesseeCount,
-              occupationType,
-              isFarming:
-                typeof p.is_farming === "boolean" ? p.is_farming : null,
             } as LandownerParcelRow;
           })
           .filter((row): row is LandownerParcelRow => row !== null);
@@ -667,25 +669,33 @@ const JoLandownerRegistry: React.FC = () => {
 
       // Step B: Parcels where this person is listed as landlord
       // These come from OTHER farmers' parcel rows pointing back to this owner
-      const { data: occupiedByParcels, error: occupiedError } = await supabase
-        .from("rsbsa_farm_parcels")
-        .select(
-          `
+      const { data: occupiedByParcelsRaw, error: occupiedError } =
+        await supabase
+          .from("rsbsa_farm_parcels")
+          .select(
+            `
           id, submission_id, parcel_number,
           farm_location_barangay, farm_location_municipality,
           total_farm_area_ha, ownership_type_tenant, ownership_type_lessee,
           tenant_land_owner_id, lessee_land_owner_id,
           tenant_land_owner_name, lessee_land_owner_name,
-          is_farming, farming_status_reason, farming_status_updated_at,
+          is_current_owner,
           agrarian_reform_beneficiary, within_ancestral_domain, ownership_document_no
         `,
-        )
-        .or(
-          `tenant_land_owner_id.eq.${ownerNumId},lessee_land_owner_id.eq.${ownerNumId}`,
-        );
+          )
+          .or(
+            `tenant_land_owner_id.eq.${ownerNumId},lessee_land_owner_id.eq.${ownerNumId}`,
+          );
 
       if (occupiedError)
         console.warn("Occupied parcels fetch error:", occupiedError.message);
+
+      // Only the current tenant/lessee on a parcel should show up here —
+      // a replaced tenant/lessee whose link is still in the table but is
+      // no longer active shouldn't keep appearing on the landowner's parcel.
+      const occupiedByParcels = (occupiedByParcelsRaw || []).filter(
+        (p: any) => p.is_current_owner !== false,
+      );
 
       // Step C: Fetch farmer names for occupant submission IDs
       const occupantIds = [
@@ -789,9 +799,6 @@ const JoLandownerRegistry: React.FC = () => {
           agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: p.ownership_document_no || "",
-          isFarming: typeof p.is_farming === "boolean" ? p.is_farming : null,
-          farmingStatusReason: p.farming_status_reason || null,
-          farmingStatusUpdatedAt: p.farming_status_updated_at || null,
         };
       });
 
@@ -848,9 +855,6 @@ const JoLandownerRegistry: React.FC = () => {
           agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: p.ownership_document_no || "",
-          isFarming: typeof p.is_farming === "boolean" ? p.is_farming : null,
-          farmingStatusReason: p.farming_status_reason || null,
-          farmingStatusUpdatedAt: p.farming_status_updated_at || null,
         });
 
         ownedParcelNumbers.add(parcelNum);
@@ -947,22 +951,6 @@ const JoLandownerRegistry: React.FC = () => {
             ? `${uniqueBarangays.length} barangays`
             : owner.barangay || "—";
 
-      // Occupation type — "mixed" if parcels differ
-      const occupationTypes = new Set(parcels.map((p) => p.occupationType));
-      const occupationType: LandownerSummaryRow["occupationType"] =
-        occupationTypes.size <= 1
-          ? ([...occupationTypes][0] ?? "owner-farmed")
-          : "mixed";
-
-      // Farming status — "Not Farming" takes priority over "Farming"
-      const farmingParcels = parcels.filter((p) => p.isFarming !== null);
-      const isFarming =
-        farmingParcels.length === 0
-          ? null
-          : farmingParcels.some((p) => p.isFarming === false)
-            ? false
-            : true;
-
       return {
         id: owner.id,
         referenceNumber: owner.referenceNumber,
@@ -973,8 +961,8 @@ const JoLandownerRegistry: React.FC = () => {
         parcelCount: parcels.length || owner.parcelCount,
         tenantCount: owner.tenantCount,
         lesseeCount: owner.lesseeCount,
-        occupationType,
-        isFarming,
+        currentTenantNames: owner.currentTenantNames,
+        currentLesseeNames: owner.currentLesseeNames,
         status: owner.status,
         hasNoLand: parcels.length === 0,
       };
@@ -1182,7 +1170,7 @@ const JoLandownerRegistry: React.FC = () => {
       if (selectedRole === "hasTenants") parts.push("Role: Has Tenants");
       else if (selectedRole === "hasLessees") parts.push("Role: Has Lessees");
       else if (selectedRole === "ownerCultivated")
-        parts.push("Role: Self-farming");
+        parts.push("Filter: No Tenant/Lessee on Record");
       else if (selectedRole === "active") parts.push("Status: Active");
       else if (selectedRole === "notActive") parts.push("Status: Not Active");
       else if (selectedRole === "flagged")
@@ -1193,23 +1181,10 @@ const JoLandownerRegistry: React.FC = () => {
 
     const rows = records
       .map((r, i) => {
-        const occupationLabel =
-          r.occupationType === "owner-farmed"
-            ? "Owner-farmed"
-            : r.occupationType === "tenant"
-              ? "Has Tenant"
-              : r.occupationType === "lessee"
-                ? "Has Lessee"
-                : r.occupationType === "tenant+lessee"
-                  ? "Tenant + Lessee"
-                  : "Mixed";
-
-        const farmingLabel =
-          r.isFarming === true
-            ? "Farming"
-            : r.isFarming === false
-              ? "Not Farming"
-              : "—";
+        const { countText, names } = getTenantLesseeSummary(r);
+        const tenantLesseeLabel = names.length
+          ? `${countText} (${names.join(", ")})`
+          : countText;
 
         return `<tr>
         <td>${i + 1}</td>
@@ -1218,10 +1193,8 @@ const JoLandownerRegistry: React.FC = () => {
         <td>${r.barangay}</td>
         <td>${r.totalAreaHa > 0 ? r.totalAreaHa.toFixed(2) + " ha" : "—"}</td>
         <td>${r.parcelCount > 0 ? r.parcelCount : "—"}</td>
-        <td>${r.tenantCount + r.lesseeCount > 0 ? r.tenantCount + r.lesseeCount : "None"}</td>
-        <td>${occupationLabel}</td>
+        <td>${tenantLesseeLabel}</td>
         <td>${formatRecordStatus(r.status)}</td>
-        <td>${farmingLabel}</td>
       </tr>`;
       })
       .join("");
@@ -1262,10 +1235,8 @@ const JoLandownerRegistry: React.FC = () => {
         <th>Barangay</th>
         <th>Total Area</th>
         <th>Parcels</th>
-        <th>Occupants</th>
-        <th>Occupation Role</th>
+        <th>Tenants / Lessees</th>
         <th>Record Status</th>
-        <th>Farming Status</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -1527,12 +1498,14 @@ const JoLandownerRegistry: React.FC = () => {
                 </div>
               </div>
               <div className="jo-landowner-status-card jo-landowner-card-total">
-                <div className="jo-landowner-card-icon">👨‍🌾</div>
+                <div className="jo-landowner-card-icon">📋</div>
                 <div className="jo-landowner-card-info">
                   <span className="jo-landowner-card-count">
                     {landownerCounts.ownerCultivated}
                   </span>
-                  <span className="jo-landowner-card-label">Self-farming</span>
+                  <span className="jo-landowner-card-label">
+                    No Tenant/Lessee
+                  </span>
                 </div>
               </div>
             </div>
@@ -1559,7 +1532,9 @@ const JoLandownerRegistry: React.FC = () => {
                   <option value="all">All Landowners</option>
                   <option value="hasTenants">Has Tenants</option>
                   <option value="hasLessees">Has Lessees</option>
-                  <option value="ownerCultivated">Self-farming only</option>
+                  <option value="ownerCultivated">
+                    No Tenant/Lessee on Record
+                  </option>
                   <option value="active">Active</option>
                   <option value="notActive">Not Active</option>
                   <option value="flagged">Flagged (No Land)</option>
@@ -1777,26 +1752,24 @@ const JoLandownerRegistry: React.FC = () => {
                           handleSortChange("occupantCount");
                         }}
                       >
-                        Occupants{" "}
+                        Tenants / Lessees{" "}
                         <span>{getSortIndicator("occupantCount")}</span>
                       </button>
                     </th>
-                    <th>Occupation Role</th>
                     <th>Record Status</th>
-                    <th>Farming Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={8} className="jo-landowner-loading-cell">
+                      <td colSpan={7} className="jo-landowner-loading-cell">
                         Loading...
                       </td>
                     </tr>
                   )}
                   {error && !loading && (
                     <tr>
-                      <td colSpan={8} className="jo-landowner-error-cell">
+                      <td colSpan={7} className="jo-landowner-error-cell">
                         Error: {error}
                       </td>
                     </tr>
@@ -1872,40 +1845,38 @@ const JoLandownerRegistry: React.FC = () => {
                             </span>
                           </td>
 
-                          {/* Occupants */}
+                          {/* Tenants / Lessees — plain count, no inferred label */}
                           <td>
                             {(() => {
                               const total =
                                 record.tenantCount + record.lesseeCount;
+                              const { countText, names } =
+                                getTenantLesseeSummary(record);
                               return (
-                                <span
-                                  className={`jo-landowner-ownership-pill ${
-                                    total > 0
-                                      ? "jo-landowner-ownership-tenant"
-                                      : "jo-landowner-ownership-unknown"
-                                  }`}
-                                >
-                                  {total > 0
-                                    ? `${total} occupant${total === 1 ? "" : "s"}`
-                                    : "None"}
-                                </span>
+                                <div className="jo-landowner-farmer-meta">
+                                  <span
+                                    className={`jo-landowner-ownership-pill ${
+                                      total > 0
+                                        ? "jo-landowner-ownership-tenant"
+                                        : "jo-landowner-ownership-unknown"
+                                    }`}
+                                  >
+                                    {countText}
+                                  </span>
+                                  {names.length > 0 && (
+                                    <span
+                                      style={{
+                                        fontSize: "0.8em",
+                                        color:
+                                          "var(--color-text-secondary, #888)",
+                                      }}
+                                    >
+                                      {names.join(", ")}
+                                    </span>
+                                  )}
+                                </div>
                               );
                             })()}
-                          </td>
-
-                          {/* Occupation Role */}
-                          <td>
-                            <span className="jo-landowner-record-status">
-                              {record.occupationType === "owner-farmed"
-                                ? "Owner-farmed"
-                                : record.occupationType === "tenant"
-                                  ? "Has Tenant"
-                                  : record.occupationType === "lessee"
-                                    ? "Has Lessee"
-                                    : record.occupationType === "tenant+lessee"
-                                      ? "Tenant + Lessee"
-                                      : "Mixed"}
-                            </span>
                           </td>
 
                           {/* Record Status */}
@@ -1927,28 +1898,13 @@ const JoLandownerRegistry: React.FC = () => {
                               {formatRecordStatus(record.status)}
                             </span>
                           </td>
-
-                          {/* Farming Status */}
-                          <td>
-                            {record.isFarming === true ? (
-                              <span style={{ color: "green", fontWeight: 500 }}>
-                                ✅ Farming
-                              </span>
-                            ) : record.isFarming === false ? (
-                              <span style={{ color: "red", fontWeight: 500 }}>
-                                ❌ Not Farming
-                              </span>
-                            ) : (
-                              <span style={{ color: "#888" }}>—</span>
-                            )}
-                          </td>
                         </tr>
                       );
                     })}
 
                   {!loading && !error && filteredSummary.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="jo-landowner-empty-cell">
+                      <td colSpan={7} className="jo-landowner-empty-cell">
                         No landowners found for the selected filters.
                       </td>
                     </tr>
