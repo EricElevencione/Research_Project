@@ -3934,6 +3934,42 @@ export const getLandOwnerById = async (id: number): Promise<ApiResponse> => {
 };
 
 /**
+ * Replace the current tenant/lessee holder on a parcel with a newly
+ * registered person. Call this AFTER createRsbsaSubmission has succeeded
+ * for the new registrant -- pass the returned submissionId as newHolderId.
+ * See replace_current_tenant_lessee_on_registration for the full logic
+ * (deactivates the old holder's parcel row + land_history period, points
+ * the owner's parcel at the new holder, tags the new holder's land_history
+ * row with source: 'tenant_replaced_via_registration').
+ */
+export const replaceCurrentTenantLessee = async (params: {
+  role: "tenant" | "lessee";
+  ownerFarmParcelId: number;
+  oldHolderId: number;
+  newHolderId: number;
+  reason?: string | null;
+}): Promise<ApiResponse> => {
+  const { data, error } = await supabase.rpc(
+    "replace_current_tenant_lessee_on_registration",
+    {
+      p_role: params.role,
+      p_owner_farm_parcel_id: params.ownerFarmParcelId,
+      p_old_holder_id: params.oldHolderId,
+      p_new_holder_id: params.newHolderId,
+      p_reason: params.reason || null,
+      p_effective_date: new Date().toISOString().slice(0, 10),
+    },
+  );
+
+  if (error) {
+    console.error("replaceCurrentTenantLessee error:", error);
+    return createResponse(null, error.message, 500);
+  }
+
+  return createResponse(data, null, 200);
+};
+
+/**
  * Fetch all registered farmers for the per-parcel tenant/lessee live search
  * in Step 3 (YES path, "Who is cultivating this parcel?" cards).
  */

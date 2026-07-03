@@ -142,28 +142,10 @@ export const LandownerProfileDisplay: React.FC<
             <div className="farmer-modal-info-item farmer-modal-full-width">
               <span className="farmer-modal-label">Status:</span>
               <span className="farmer-modal-value">
-                {landowner.recordStatus || "—"}
+                {landowner.recordStatus || "—"} (
+                {landowner.archiveReason || "Not specified"})
               </span>
             </div>
-            {landowner.archivedAt && (
-              <>
-                <div className="farmer-modal-info-item">
-                  <span className="farmer-modal-label">Archived On:</span>
-                  <span
-                    className="farmer-modal-value"
-                    style={{ color: "var(--color-text-danger, #c0392b)" }}
-                  >
-                    {formatDateTime(landowner.archivedAt)}
-                  </span>
-                </div>
-                <div className="farmer-modal-info-item">
-                  <span className="farmer-modal-label">Archive Reason:</span>
-                  <span className="farmer-modal-value">
-                    {landowner.archiveReason || "Not specified"}
-                  </span>
-                </div>
-              </>
-            )}
           </div>
         </div>
 

@@ -265,21 +265,6 @@ const JoLandownerRegistry: React.FC = () => {
     );
   };
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleDateString();
-    } catch {
-      return "—";
-    }
-  };
-
-  const formatDateTime = (iso?: string | null) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
-  };
-
   const formatRecordStatus = (status?: string | null) => {
     const n = String(status || "")
       .toLowerCase()
@@ -302,25 +287,6 @@ const JoLandownerRegistry: React.FC = () => {
     if (active.has(n)) return "Active";
     if (inactive.has(n)) return "Inactive";
     return status || "Unknown";
-  };
-
-  const formatParcelNumber = (
-    raw: string,
-    ownerId?: string | number,
-    fallbackIndex?: number,
-  ) => {
-    const normalized = String(raw || "").trim();
-    const hasOwner =
-      ownerId !== undefined && ownerId !== null && ownerId !== "";
-    if (!normalized || normalized === "N/A") {
-      if (hasOwner && typeof fallbackIndex === "number")
-        return `Parcel-${ownerId}-${fallbackIndex + 1}`;
-      if (hasOwner) return `Parcel-${ownerId}`;
-      return "N/A";
-    }
-    if (/^\d+$/.test(normalized) && hasOwner)
-      return `Parcel-${ownerId}-${normalized}`;
-    return normalized;
   };
 
   const getInitials = (name: string) => {

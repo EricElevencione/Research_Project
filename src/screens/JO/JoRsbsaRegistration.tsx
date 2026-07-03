@@ -5,6 +5,8 @@ import {
   getLandOwnerById,
   getFarmParcels,
   createRsbsaSubmission,
+  getRegisteredFarmers,
+  replaceCurrentTenantLessee,
 } from "../../api";
 import { supabase } from "../../supabase";
 import { getAuditLogger } from "../../components/Audit/auditLogger";
@@ -364,9 +366,26 @@ const JoRsbsa: React.FC = () => {
       }
       const owners = (response.data || []) as LandOwner[];
       setLandowners(owners);
-      setRegisteredFarmers(
-        owners as Array<{ id: number; name: string; barangay?: string }>,
-      );
+
+      // registeredFarmers needs to cover EVERY submission (not just land
+      // owners) so a parcel's cultivator_submission_id -- which can be a
+      // Tenant/Lessee who never appears in getLandOwners() -- can still be
+      // resolved to a display name for the "already farmed by" badge.
+      const allFarmersResp = await getRegisteredFarmers();
+      if (!allFarmersResp.error) {
+        setRegisteredFarmers(
+          (allFarmersResp.data || []) as Array<{
+            id: number;
+            name: string;
+            barangay?: string;
+          }>,
+        );
+      } else {
+        // Fall back to the land-owner-only list rather than an empty map
+        setRegisteredFarmers(
+          owners as Array<{ id: number; name: string; barangay?: string }>,
+        );
+      }
 
       // Build allRegisteredOwners from the same fetch
       const ownerIds = owners.map((o) => Number(o.id)).filter(Number.isFinite);
@@ -913,6 +932,49 @@ const JoRsbsa: React.FC = () => {
     setErrors((prev) => ({ ...prev, parcelSelection: "" }));
   };
 
+  // Lookup map: submission id -> display name, built from registeredFarmers
+  // (all submissions, not just land owners). Used to resolve a parcel's
+  // cultivator_submission_id to a name for the "already farmed by" badge.
+  const farmerNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    registeredFarmers.forEach((f: any) => {
+      const id = Number(f?.id);
+      if (Number.isFinite(id)) map.set(id, f?.name || `Farmer #${id}`);
+    });
+    return map;
+  }, [registeredFarmers]);
+
+  // Given a parcel from ownerParcels/group.parcels and the owner it belongs
+  // to, determine whether it's already being farmed by someone else (a
+  // different active tenant/lessee), and if so, who.
+  const getParcelReplacementInfo = (parcel: any, ownerId: any) => {
+    const cultivatorId = parcel?.cultivator_submission_id
+      ? Number(parcel.cultivator_submission_id)
+      : null;
+    const ownerIdNum = ownerId ? Number(ownerId) : null;
+    if (!cultivatorId || !Number.isFinite(cultivatorId)) {
+      return {
+        isReplacement: false,
+        currentHolderId: null,
+        currentHolderName: null,
+      };
+    }
+    if (ownerIdNum !== null && cultivatorId === ownerIdNum) {
+      // Owner is cultivating it themselves — not a replacement case.
+      return {
+        isReplacement: false,
+        currentHolderId: null,
+        currentHolderName: null,
+      };
+    }
+    return {
+      isReplacement: true,
+      currentHolderId: cultivatorId,
+      currentHolderName:
+        farmerNameById.get(cultivatorId) || `Farmer #${cultivatorId}`,
+    };
+  };
+
   // Filter land owners based on search term
   const filteredLandOwners = useMemo(
     () =>
@@ -1426,6 +1488,112 @@ const JoRsbsa: React.FC = () => {
     };
   };
 
+  // After a new Tenant/Lessee submission succeeds, replace any parcels the
+  // registrant selected that already had an active tenant/lessee (flagged
+  // via getParcelReplacementInfo / the warning badge). Runs as a separate
+  // step from createRsbsaSubmission on purpose (see design discussion) —
+  // failures here are surfaced but don't roll back the registration, since
+  // the person is already validly registered either way.
+  const processTenantLesseeReplacements = async (
+    newSubmissionId: number,
+  ): Promise<{ succeeded: number; failed: number }> => {
+    const role = farmerRole === "lessee" ? "lessee" : "tenant";
+    let succeeded = 0;
+    let failed = 0;
+
+    // Gather every selected parcel (main + additional groups) flagged as
+    // a replacement.
+    type ReplacementCandidate = {
+      ownerFarmParcelId: number;
+      oldHolderId: number;
+      parcelLabel: string;
+    };
+    const candidates: ReplacementCandidate[] = [];
+
+    ownerParcels.forEach((parcel: any) => {
+      if (!selectedParcelIds.has(String(parcel.id))) return;
+      const info = getParcelReplacementInfo(parcel, selectedLandOwner?.id);
+      if (info.isReplacement && info.currentHolderId) {
+        candidates.push({
+          ownerFarmParcelId: Number(parcel.id),
+          oldHolderId: info.currentHolderId,
+          parcelLabel: parcel.parcel_number || `Parcel ${parcel.id}`,
+        });
+      }
+    });
+
+    additionalLandOwnerGroups.forEach((group) => {
+      group.parcels.forEach((parcel: any) => {
+        if (!group.selectedParcelIds.has(String(parcel.id))) return;
+        const info = getParcelReplacementInfo(parcel, group.landOwner?.id);
+        if (info.isReplacement && info.currentHolderId) {
+          candidates.push({
+            ownerFarmParcelId: Number(parcel.id),
+            oldHolderId: info.currentHolderId,
+            parcelLabel: parcel.parcel_number || `Parcel ${parcel.id}`,
+          });
+        }
+      });
+    });
+
+    if (candidates.length === 0) {
+      return { succeeded: 0, failed: 0 };
+    }
+
+    for (const candidate of candidates) {
+      try {
+        // Determine the OLD holder's exact role (tenant or lessee) for
+        // this specific parcel — it may differ from this registrant's own
+        // farmerRole, and the RPC needs the old holder's real role to find
+        // their record correctly.
+        let oldHolderRole: "tenant" | "lessee" = role;
+        const oldHolderParcelsResp = await getFarmParcels(
+          candidate.oldHolderId,
+        );
+        if (!oldHolderParcelsResp.error) {
+          const matching = (oldHolderParcelsResp.data || []).find(
+            (p: any) =>
+              (p.ownership_type_tenant === true ||
+                p.ownership_type_lessee === true) &&
+              (p.is_current_owner === null ||
+                p.is_current_owner === undefined ||
+                p.is_current_owner === true) &&
+              (p.tenant_land_owner_id != null ||
+                p.lessee_land_owner_id != null),
+          );
+          if (matching) {
+            oldHolderRole = matching.ownership_type_lessee
+              ? "lessee"
+              : "tenant";
+          }
+        }
+
+        const replaceResp = await replaceCurrentTenantLessee({
+          role: oldHolderRole,
+          ownerFarmParcelId: candidate.ownerFarmParcelId,
+          oldHolderId: candidate.oldHolderId,
+          newHolderId: newSubmissionId,
+          reason: "Replaced during new Tenant/Lessee registration",
+        });
+
+        if (replaceResp.error) {
+          console.error(
+            `Replacement failed for ${candidate.parcelLabel}:`,
+            replaceResp.error,
+          );
+          failed += 1;
+        } else {
+          succeeded += 1;
+        }
+      } catch (err) {
+        console.error(`Replacement threw for ${candidate.parcelLabel}:`, err);
+        failed += 1;
+      }
+    }
+
+    return { succeeded, failed };
+  };
+
   const handleFinalSubmit = async () => {
     if (isSubmitting) return;
 
@@ -1450,6 +1618,36 @@ const JoRsbsa: React.FC = () => {
           );
         } catch (auditErr) {
           console.error("Audit log failed (non-blocking):", auditErr);
+        }
+
+        // Replace any previously-farmed parcels the registrant claimed.
+        // Non-fatal: registration already succeeded either way.
+        if (farmerRole === "tenant" || farmerRole === "lessee") {
+          try {
+            const { succeeded, failed } = await processTenantLesseeReplacements(
+              submitted.submissionId,
+            );
+            if (failed > 0) {
+              showToast(
+                `Registered, but ${failed} parcel replacement${failed > 1 ? "s" : ""} failed and may need manual review in the Land Registry.`,
+                "warning",
+              );
+            } else if (succeeded > 0) {
+              showToast(
+                `${succeeded} parcel${succeeded > 1 ? "s" : ""} reassigned from the previous farmer.`,
+                "success",
+              );
+            }
+          } catch (replaceErr) {
+            console.error(
+              "Tenant/lessee replacement step failed (non-blocking):",
+              replaceErr,
+            );
+            showToast(
+              "Registered, but parcel replacement could not be completed automatically. Please check the Land Registry.",
+              "warning",
+            );
+          }
         }
 
         showToast("RSBSA form submitted successfully!", "success");
@@ -2957,29 +3155,18 @@ const JoRsbsa: React.FC = () => {
                           filteredLandOwners.map((owner) => (
                             <div
                               key={owner.id}
-                              onClick={() => {
-                                if (owner.isRegisteredFarmer) return;
-                                handleLandOwnerSelect(owner);
-                              }}
-                              aria-disabled={
-                                owner.isRegisteredFarmer || undefined
-                              }
+                              onClick={() => handleLandOwnerSelect(owner)}
                               style={{
                                 padding: "0.75rem 1rem",
-                                cursor: owner.isRegisteredFarmer
-                                  ? "not-allowed"
-                                  : "pointer",
+                                cursor: "pointer",
                                 borderBottom: "1px solid #f0f0f0",
                                 fontSize: "0.95rem",
-                                opacity: owner.isRegisteredFarmer ? 0.5 : 1,
                               }}
                               onMouseEnter={(e) => {
-                                if (owner.isRegisteredFarmer) return;
                                 e.currentTarget.style.backgroundColor =
                                   "#f8f9fa";
                               }}
                               onMouseLeave={(e) => {
-                                if (owner.isRegisteredFarmer) return;
                                 e.currentTarget.style.backgroundColor = "white";
                               }}
                             >
@@ -2993,18 +3180,6 @@ const JoRsbsa: React.FC = () => {
                                   }}
                                 >
                                   — {owner.barangay}
-                                </span>
-                              )}
-                              {owner.isRegisteredFarmer && (
-                                <span
-                                  style={{
-                                    marginLeft: "0.5rem",
-                                    fontSize: "0.75rem",
-                                    color: "#dc2626",
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  Already registered
                                 </span>
                               )}
                             </div>
@@ -3096,6 +3271,11 @@ const JoRsbsa: React.FC = () => {
                         {ownerParcels.map((parcel) => {
                           const parcelId = String(parcel.id);
                           const isSelected = selectedParcelIds.has(parcelId);
+                          const { isReplacement, currentHolderName } =
+                            getParcelReplacementInfo(
+                              parcel,
+                              selectedLandOwner?.id,
+                            );
 
                           return (
                             <div
@@ -3114,6 +3294,25 @@ const JoRsbsa: React.FC = () => {
                               <div className="jo-registration-parcel-details">
                                 <div className="jo-registration-parcel-header">
                                   {parcel.parcel_number || `Parcel ${parcelId}`}
+                                  {isReplacement && (
+                                    <span
+                                      style={{
+                                        marginLeft: "0.5rem",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.25rem",
+                                        padding: "0.15rem 0.5rem",
+                                        borderRadius: "999px",
+                                        fontSize: "0.75rem",
+                                        fontWeight: 600,
+                                        color: "#92400e",
+                                        backgroundColor: "#fef3c7",
+                                        border: "1px solid #f59e0b",
+                                      }}
+                                    >
+                                      ⚠ Currently farmed by {currentHolderName}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="jo-registration-parcel-info">
                                   <span>
@@ -3128,6 +3327,20 @@ const JoRsbsa: React.FC = () => {
                                     ha
                                   </span>
                                 </div>
+                                {isReplacement && isSelected && (
+                                  <div
+                                    style={{
+                                      marginTop: "0.4rem",
+                                      fontSize: "0.8rem",
+                                      color: "#92400e",
+                                    }}
+                                  >
+                                    Selecting this parcel will replace{" "}
+                                    <strong>{currentHolderName}</strong> as the
+                                    current farmer once this registration is
+                                    submitted.
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -3266,38 +3479,23 @@ const JoRsbsa: React.FC = () => {
                                       filteredGroupOwners.map((owner) => (
                                         <div
                                           key={owner.id}
-                                          onClick={() => {
-                                            if (owner.isRegisteredFarmer)
-                                              return;
+                                          onClick={() =>
                                             handleAdditionalLandOwnerSelect(
                                               group.groupId,
                                               owner,
-                                            );
-                                          }}
-                                          aria-disabled={
-                                            owner.isRegisteredFarmer ||
-                                            undefined
+                                            )
                                           }
                                           style={{
                                             padding: "0.75rem 1rem",
-                                            cursor: owner.isRegisteredFarmer
-                                              ? "not-allowed"
-                                              : "pointer",
+                                            cursor: "pointer",
                                             borderBottom: "1px solid #f0f0f0",
                                             fontSize: "0.95rem",
-                                            opacity: owner.isRegisteredFarmer
-                                              ? 0.5
-                                              : 1,
                                           }}
                                           onMouseEnter={(e) => {
-                                            if (owner.isRegisteredFarmer)
-                                              return;
                                             e.currentTarget.style.backgroundColor =
                                               "#f8f9fa";
                                           }}
                                           onMouseLeave={(e) => {
-                                            if (owner.isRegisteredFarmer)
-                                              return;
                                             e.currentTarget.style.backgroundColor =
                                               "white";
                                           }}
@@ -3312,18 +3510,6 @@ const JoRsbsa: React.FC = () => {
                                               }}
                                             >
                                               — {owner.barangay}
-                                            </span>
-                                          )}
-                                          {owner.isRegisteredFarmer && (
-                                            <span
-                                              style={{
-                                                marginLeft: "0.5rem",
-                                                fontSize: "0.75rem",
-                                                color: "#dc2626",
-                                                fontWeight: "bold",
-                                              }}
-                                            >
-                                              Already registered
                                             </span>
                                           )}
                                         </div>
@@ -3404,6 +3590,13 @@ const JoRsbsa: React.FC = () => {
                                       const pid = String(parcel.id);
                                       const isSelected =
                                         group.selectedParcelIds.has(pid);
+                                      const {
+                                        isReplacement,
+                                        currentHolderName,
+                                      } = getParcelReplacementInfo(
+                                        parcel,
+                                        group.landOwner?.id,
+                                      );
                                       return (
                                         <div
                                           key={pid}
@@ -3434,6 +3627,26 @@ const JoRsbsa: React.FC = () => {
                                             <div className="jo-registration-parcel-header">
                                               {parcel.parcel_number ||
                                                 `Parcel ${pid}`}
+                                              {isReplacement && (
+                                                <span
+                                                  style={{
+                                                    marginLeft: "0.5rem",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "0.25rem",
+                                                    padding: "0.15rem 0.5rem",
+                                                    borderRadius: "999px",
+                                                    fontSize: "0.75rem",
+                                                    fontWeight: 600,
+                                                    color: "#92400e",
+                                                    backgroundColor: "#fef3c7",
+                                                    border: "1px solid #f59e0b",
+                                                  }}
+                                                >
+                                                  ⚠ Currently farmed by{" "}
+                                                  {currentHolderName}
+                                                </span>
+                                              )}
                                             </div>
                                             <div className="jo-registration-parcel-info">
                                               <span>
@@ -3448,6 +3661,23 @@ const JoRsbsa: React.FC = () => {
                                                 ha
                                               </span>
                                             </div>
+                                            {isReplacement && isSelected && (
+                                              <div
+                                                style={{
+                                                  marginTop: "0.4rem",
+                                                  fontSize: "0.8rem",
+                                                  color: "#92400e",
+                                                }}
+                                              >
+                                                Selecting this parcel will
+                                                replace{" "}
+                                                <strong>
+                                                  {currentHolderName}
+                                                </strong>{" "}
+                                                as the current farmer once this
+                                                registration is submitted.
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
                                       );
