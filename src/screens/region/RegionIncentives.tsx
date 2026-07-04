@@ -7,7 +7,7 @@ import {
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminIncentives.css";
 import "../../components/layout/sidebarStyle.css";
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import RegionSidebar from "../../components/layout/RegionSidebar";
 
 interface RegionalAllocation {
   id: number;
@@ -17,7 +17,7 @@ interface RegionalAllocation {
   [key: string]: any;
 }
 
-const Incentives: React.FC = () => {
+const RegionIncentives: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -179,7 +179,7 @@ const Incentives: React.FC = () => {
         }
       `}</style>
       <div className="admin-incent-page has-mobile-sidebar">
-        <AdminSidebar
+        <RegionSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
@@ -205,7 +205,7 @@ const Incentives: React.FC = () => {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </button>
-            <div className="tech-incent-mobile-title">Admin Incentives</div>
+            <div className="tech-incent-mobile-title">Region Incentives</div>
           </div>
 
           <div className="admin-incent-dashboard-header">
@@ -218,7 +218,7 @@ const Incentives: React.FC = () => {
             <div className="admin-incent-dashboard-header-right">
               <button
                 className="jo-incent-btn-create"
-                onClick={() => navigate("/admin-create-allocation")}
+                onClick={() => navigate("/region-create-allocation")}
               >
                 ➕ New Regional Allocation
               </button>
@@ -364,13 +364,13 @@ const Incentives: React.FC = () => {
                         <td style={{ padding: '1rem' }}>
                           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                             <button
-                              onClick={() => navigate(`/view-allocation/${allocation.id}`)}
+                              onClick={() => navigate(`/region-view-allocation/${allocation.id}`)}
                               style={{ padding: '0.4rem 0.8rem', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                             >
                               View
                             </button>
                             <button
-                              onClick={() => navigate(`/admin-edit-allocation/${allocation.id}`)}
+                              onClick={() => navigate(`/region-edit-allocation/${allocation.id}`)}
                               disabled={(allocation as any).status === "closed"}
                               style={{ 
                                 padding: '0.4rem 0.8rem', 
@@ -387,7 +387,7 @@ const Incentives: React.FC = () => {
                               Edit
                             </button>
                             <button
-                              onClick={() => navigate(`/manage-requests/${allocation.id}`)}
+                              onClick={() => navigate(`/region-manage-requests/${allocation.id}`)}
                               style={{ padding: '0.4rem 0.8rem', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                             >
                               Manage
@@ -424,4 +424,4 @@ const Incentives: React.FC = () => {
   );
 };
 
-export default Incentives;
+export default RegionIncentives;

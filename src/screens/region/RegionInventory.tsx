@@ -5,7 +5,7 @@ import {
   SubsidyStock,
   ExcessInventoryItem,
 } from "../../hooks/useAdminDashboardStats";
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import RegionSidebar from "../../components/layout/RegionSidebar";
 import {
   Package,
   Leaf,
@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import "../../assets/css/admin css/AdminViewAllocation.css";
 
-const InventoryPage: React.FC = () => {
+const RegionInventory: React.FC = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -125,7 +125,7 @@ const InventoryPage: React.FC = () => {
           <div className="inventory-category-actions">
             <button
               className="inventory-btn-mini"
-              onClick={() => navigate("/admin-create-allocation")}
+              onClick={() => navigate("/region-create-allocation")}
             >
               Add Stock
             </button>
@@ -322,7 +322,7 @@ const InventoryPage: React.FC = () => {
   return (
     <div className="admin-viewalloc-page-container">
       <div className="admin-viewalloc-page has-mobile-sidebar">
-        <AdminSidebar
+        <RegionSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
@@ -388,7 +388,7 @@ const InventoryPage: React.FC = () => {
               </div>
               <button
                 className="inventory-btn-register"
-                onClick={() => navigate("/manage-varieties")}
+                onClick={() => navigate("/region-manage-varieties")}
               >
                 <Plus size={18} />
                 Manage Varieties
@@ -1076,4 +1076,4 @@ const InventoryPage: React.FC = () => {
   );
 };
 
-export default InventoryPage;
+export default RegionInventory;

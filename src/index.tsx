@@ -4,9 +4,16 @@ import Dashboard from "./screens/admin/Dashboard";
 import MasterlistPage from "./screens/admin/MasterlistPage";
 import RSBSAPage from "./screens/admin/RSBSAPage";
 import GapAnalysis from "./screens/admin/GapAnalysis";
-import Incentives from "./screens/admin/Incentives";
 import ManageRequests from "./screens/admin/ManageRequest";
 import ViewAllocation from "./screens/admin/ViewAllocation";
+import Incentives from "./screens/admin/Incentives";
+import RegionDashboard from "./screens/region/RegionDashboard";
+import RegionIncentives from "./screens/region/RegionIncentives";
+import RegionInventory from "./screens/region/RegionInventory";
+import RegionCreateAllocation from "./screens/region/RegionCreateAllocation";
+import RegionViewAllocation from "./screens/region/RegionViewAllocation";
+import RegionManageRequest from "./screens/region/RegionManageRequest";
+import RegionManageVarieties from "./screens/region/RegionManageVarieties";
 import TechnicianDashboard from "./screens/technicians/TechnicianDashboard";
 import TechMasterlist from "./screens/technicians/TechMasterlist";
 import TechTenantRegistry from "./screens/technicians/TechTenantRegistry";
@@ -99,6 +106,70 @@ function App() {
           element={
             <ProtectedRoute>
               <Incentives />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-dashboard"
+          element={
+            <ProtectedRoute>
+              <RegionDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-incentives"
+          element={
+            <ProtectedRoute>
+              <RegionIncentives />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-inventory"
+          element={
+            <ProtectedRoute>
+              <RegionInventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-create-allocation"
+          element={
+            <ProtectedRoute>
+              <RegionCreateAllocation />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-edit-allocation/:allocationId"
+          element={
+            <ProtectedRoute>
+              <RegionCreateAllocation />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-view-allocation/:allocationId"
+          element={
+            <ProtectedRoute>
+              <RegionViewAllocation />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-manage-requests/:allocationId"
+          element={
+            <ProtectedRoute>
+              <RegionManageRequest />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-manage-varieties"
+          element={
+            <ProtectedRoute>
+              <RegionManageVarieties />
             </ProtectedRoute>
           }
         />

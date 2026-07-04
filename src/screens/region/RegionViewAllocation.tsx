@@ -12,7 +12,7 @@ import {
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/admin css/AdminViewAllocation.css";
 import "../../components/layout/sidebarStyle.css";
-import AdminSidebar from "../../components/layout/AdminSidebar";
+import RegionSidebar from "../../components/layout/RegionSidebar";
 import { FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
 
 interface FarmerRequest extends Record<
@@ -53,7 +53,7 @@ interface AllocationDetails extends Record<
   lp296_kg: number;
 }
 
-const ViewAllocation: React.FC = () => {
+const RegionViewAllocation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { allocationId } = useParams<{ allocationId: string }>();
@@ -296,7 +296,7 @@ const ViewAllocation: React.FC = () => {
               <p>{error || "Allocation not found"}</p>
               <button
                 className="app-back-button"
-                onClick={() => navigate("/incentives")}
+                onClick={() => navigate("/region-incentives")}
               >
                 ← Back to Allocations
               </button>
@@ -310,7 +310,7 @@ const ViewAllocation: React.FC = () => {
   return (
     <div className="admin-viewalloc-page-container">
       <div className="admin-viewalloc-page has-mobile-sidebar">
-        <AdminSidebar
+        <RegionSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
@@ -336,7 +336,7 @@ const ViewAllocation: React.FC = () => {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </button>
-            <div className="tech-incent-mobile-title">Admin Allocation</div>
+            <div className="tech-incent-mobile-title">Region View Allocation</div>
           </div>
 
           <div className="admin-viewalloc-header">
@@ -364,7 +364,7 @@ const ViewAllocation: React.FC = () => {
           <div className="admin-viewalloc-header-actions">
             <button
               className="admin-viewalloc-btn-nav"
-              onClick={() => navigate(`/manage-requests/${allocation.id}`)}
+              onClick={() => navigate(`/region-manage-requests/${allocation.id}`)}
             >
               View Requests
             </button>
@@ -389,7 +389,7 @@ const ViewAllocation: React.FC = () => {
             )}
             <button
               className="app-back-button"
-              onClick={() => navigate("/incentives")}
+              onClick={() => navigate("/region-incentives")}
             >
               ← Back to Allocations
             </button>
@@ -482,4 +482,4 @@ const ViewAllocation: React.FC = () => {
   );
 };
 
-export default ViewAllocation;
+export default RegionViewAllocation;

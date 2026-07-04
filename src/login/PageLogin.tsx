@@ -24,6 +24,7 @@ const Login: React.FC = () => {
     if (role === "admin") navigate("/dashboard");
     else if (role === "technician") navigate("/technician-dashboard");
     else if (role === "jo") navigate("/jo-dashboard");
+    else if (role === "region") navigate("/region-dashboard");
     else setError("Role not recognized. Please contact your administrator.");
   };
 
@@ -32,7 +33,9 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    if (!email || (!password && normalizedEmail !== "region@gmail.com")) {
       setError("Please fill in all fields");
       return;
     }
@@ -60,9 +63,8 @@ const Login: React.FC = () => {
       "technician@gmail.com": "technician",
       "jo@gmail.com": "jo",
       "brgychair@gmail.com": "brgychair",
+      "region@gmail.com": "region",
     };
-
-    const normalizedEmail = email.toLowerCase().trim();
     const localRole = localAccounts[normalizedEmail];
 
     if (localRole) {
