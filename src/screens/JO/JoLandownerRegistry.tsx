@@ -85,6 +85,10 @@ interface OccupiedParcel {
   agrarianReformBeneficiary: string;
   withinAncestralDomain: string;
   ownershipDocumentNo: string;
+  // GIS shape from land_plots, matched by ffrs_id/name + barangay + parcel
+  // number (no hard FK between rsbsa_farm_parcels and land_plots — see
+  // matching logic in fetchLandownerDetails). Null if no plot matched yet.
+  geometry: any | null;
 }
 
 interface OccupantInfo {
@@ -767,6 +771,90 @@ const JoLandownerRegistry: React.FC = () => {
         occupationByParcelNumber.get(parcelNum)!.push(occupant);
       });
 
+      // Step D.5: Fetch this owner's GIS shapes from land_plots.
+      // No hard foreign key to rsbsa_farm_parcels — matched by ffrs_id
+      // (when this owner has a real one, not the "RSBSA-{id}" fallback),
+      // or by first/last name as a fallback, then narrowed per-parcel by
+      // barangay + parcel_number. If a match is ambiguous or missing,
+      // geometry is simply null — the UI shows "not plotted yet" rather
+      // than guessing.
+      const ownerFfrsId = (() => {
+        const ref = String(
+          selectedRecord?.referenceNumber || farmerData.referenceNumber || "",
+        ).trim();
+        return ref && !ref.toUpperCase().startsWith("RSBSA-")
+          ? ref.toUpperCase()
+          : "";
+      })();
+      const { firstName: ownerFirstName, lastName: ownerLastName } = (() => {
+        const parsed = parseName(farmerData.farmerName || "");
+        return {
+          firstName: parsed.firstName.trim().toLowerCase(),
+          lastName: parsed.lastName.trim().toLowerCase(),
+        };
+      })();
+
+      let ownerPlots: any[] = [];
+      if (ownerFfrsId) {
+        const { data: plotsByFfrs, error: plotsByFfrsError } = await supabase
+          .from("land_plots")
+          .select("*")
+          .ilike("ffrs_id", ownerFfrsId);
+        if (plotsByFfrsError) {
+          console.warn(
+            "Land plot fetch by ffrs_id error (non-blocking):",
+            plotsByFfrsError.message,
+          );
+        } else {
+          ownerPlots = plotsByFfrs || [];
+        }
+      }
+      if (ownerPlots.length === 0 && ownerFirstName && ownerLastName) {
+        const { data: plotsByName, error: plotsByNameError } = await supabase
+          .from("land_plots")
+          .select("*")
+          .ilike("first_name", ownerFirstName)
+          .ilike("surname", ownerLastName);
+        if (plotsByNameError) {
+          console.warn(
+            "Land plot fetch by name error (non-blocking):",
+            plotsByNameError.message,
+          );
+        } else {
+          ownerPlots = plotsByName || [];
+        }
+      }
+
+      // Keyed by barangay + parcel_number so multiple parcels for the
+      // same owner resolve to the right shape, not just "a" shape.
+      const geometryByParcelKey = new Map<string, any>();
+      ownerPlots.forEach((plot: any) => {
+        if (!plot.geometry) return;
+        const key = `${String(plot.barangay || "")
+          .trim()
+          .toUpperCase()}|${String(plot.parcel_number || "")
+          .trim()
+          .toUpperCase()}`;
+        // First match wins — don't silently overwrite if duplicates exist,
+        // that's a data-quality question for the GIS side, not something
+        // to guess through here.
+        if (!geometryByParcelKey.has(key)) {
+          geometryByParcelKey.set(key, plot.geometry);
+        }
+      });
+
+      const getGeometryFor = (
+        barangay: string | null | undefined,
+        parcelNumber: string | null | undefined,
+      ) => {
+        const key = `${String(barangay || "")
+          .trim()
+          .toUpperCase()}|${String(parcelNumber || "")
+          .trim()
+          .toUpperCase()}`;
+        return geometryByParcelKey.get(key) || null;
+      };
+
       // Step E: Build the combined parcel list
       // Start with owned parcels as the authoritative list
       const combinedParcels: OccupiedParcel[] = ownedParcels.map((p: any) => {
@@ -799,6 +887,7 @@ const JoLandownerRegistry: React.FC = () => {
           agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: p.ownership_document_no || "",
+          geometry: getGeometryFor(p.farm_location_barangay, p.parcel_number),
         };
       });
 
@@ -855,6 +944,7 @@ const JoLandownerRegistry: React.FC = () => {
           agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: p.ownership_document_no || "",
+          geometry: getGeometryFor(p.farm_location_barangay, p.parcel_number),
         });
 
         ownedParcelNumbers.add(parcelNum);

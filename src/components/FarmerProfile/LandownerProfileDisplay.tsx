@@ -1,5 +1,6 @@
 import React from "react";
 import "../../components/FarmerProfile/farmerProfileModal.css";
+import ParcelGeometryPreview from "../FarmerProfile/Parcelgeometrypreview";
 
 export interface LandownerOccupant {
   submissionId: string;
@@ -24,6 +25,10 @@ export interface LandownerProfileParcel {
   isCultivating?: boolean | null;
   farmingStatusReason?: string | null;
   cultivationStatusReason?: string | null;
+  // GIS shape from land_plots, matched by ffrs_id/name + barangay + parcel
+  // number (no hard FK) — see JoLandownerRegistry.tsx's fetchLandownerDetails.
+  // Null if no matching plot was found.
+  geometry?: any | null;
 }
 
 export interface LandownerProfileData {
@@ -346,6 +351,13 @@ export const LandownerProfileDisplay: React.FC<
                           )}
                         </span>
                       </div>
+                    </div>
+
+                    <div style={{ padding: "0 16px 16px" }}>
+                      <ParcelGeometryPreview
+                        geometry={parcel.geometry ?? null}
+                        parcelLabel={parcel.parcelNumber}
+                      />
                     </div>
                   </div>
                 );
