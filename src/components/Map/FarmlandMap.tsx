@@ -535,17 +535,17 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                     : false;
                 return isHighlighted
                   ? {
-                    color: "#e74c3c",
-                    weight: 3,
-                    opacity: 1,
-                    fillOpacity: 0.2,
-                  }
+                      color: "#e74c3c",
+                      weight: 3,
+                      opacity: 1,
+                      fillOpacity: 0.2,
+                    }
                   : {
-                    color: "blue",
-                    weight: 2,
-                    opacity: 0.8,
-                    fillOpacity: 0.5,
-                  };
+                      color: "blue",
+                      weight: 2,
+                      opacity: 0.8,
+                      fillOpacity: 0.5,
+                    };
               }}
               filter={(feature) =>
                 !!feature.geometry &&
@@ -670,7 +670,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                           ? cropInfo.landHistory
                           : [];
 
-                        const isTransferred = feature.properties?.is_current_owner === false;
+                        const isTransferred =
+                          feature.properties?.is_current_owner === false;
 
                         if (cell) {
                           if (
@@ -678,9 +679,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                             cropInfo.tenants.length === 0 &&
                             landHistory.length === 0
                           ) {
-                            cell.innerHTML =
-                              isTransferred
-                                ? `<div style="
+                            cell.innerHTML = isTransferred
+                              ? `<div style="
                                     background: #fffbeb;
                                     border-left: 4px solid #d97706;
                                     color: #92400e;
@@ -693,7 +693,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   ">
                                     ⚠️ Geometry inherited from previous owner — please verify and redraw if needed.
                                   </div>`
-                                : '<div class="farmland-popup-no-data" style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No owner or history information found for this parcel.</div>';
+                              : '<div class="farmland-popup-no-data" style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No owner or history information found for this parcel.</div>';
                           } else {
                             let html = `<div class="farmland-popup-crops-list" style="max-height: 300px; overflow-y: auto;">`;
                             if (isTransferred) {
@@ -723,7 +723,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                 .toLowerCase();
                               const ownerStatusLabel =
                                 ownerStatusRaw === "owner" ||
-                                  ownerStatusRaw === "registered owner"
+                                ownerStatusRaw === "registered owner"
                                   ? "Registered Owner"
                                   : ownerStatusRaw === "tenant"
                                     ? "Tenant"
@@ -732,9 +732,9 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                       : ownerStatusRaw === "tenant/lessee"
                                         ? "Tenant + Lessee"
                                         : String(
-                                          cropInfo.owner.ownership_status ||
-                                          "Unknown",
-                                        );
+                                            cropInfo.owner.ownership_status ||
+                                              "Unknown",
+                                          );
                               const ownerStatusColor =
                                 ownerStatusLabel === "Registered Owner"
                                   ? "#16a34a"
@@ -753,22 +753,22 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               const tenantNames =
                                 tenantCount > 0
                                   ? cropInfo.tenants
-                                    .map((tenant: any) =>
-                                      escapeHtml(
-                                        tenant?.farmer_name || "Unknown",
-                                      ),
-                                    )
-                                    .join(", ")
+                                      .map((tenant: any) =>
+                                        escapeHtml(
+                                          tenant?.farmer_name || "Unknown",
+                                        ),
+                                      )
+                                      .join(", ")
                                   : "";
                               const ownerRegDate = cropInfo.owner
                                 .registration_date
                                 ? new Date(
-                                  cropInfo.owner.registration_date,
-                                ).toLocaleDateString("en-US", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })
+                                    cropInfo.owner.registration_date,
+                                  ).toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
                                 : "N/A";
                               html += `<div class="farmland-popup-owner-section">`;
                               html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: #16a34a; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">🏠 Land Owner</div>`;
@@ -780,23 +780,36 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               html += `<div class="farmland-popup-farmer-barangay" style="font-size: 0.75em; color: #166534; margin-bottom: 4px;">📍 Barangay: <strong>${location || cropInfo.owner.barangay || "N/A"}</strong></div>`;
                               html += `<div class="farmland-popup-farmer-date" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;">📅 Registered: ${ownerRegDate}</div>`;
                               html += `<div class="farmland-popup-owner-tenant-link" style="font-size: 0.75em; color: #92400e; margin-bottom: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 8px;">👥 Tenant and Lessee Link: <strong>${tenantCount > 0 ? `${tenantCount} tenant or lessee association${tenantCount === 1 ? "" : "s"} on this land` : "No tenant or lessee association currently linked"}</strong>${tenantCount > 0 ? `<div style="margin-top: 4px; color: #78350f;">${tenantNames}</div>` : ""}</div>`;
-                              html += `<div class="farmland-popup-crops-label" style="font-size: 0.8em; color: #4b5563; margin-bottom: 4px;">Crops planted:</div>`;
-                              html += `<div class="farmland-popup-crops-tags" style="display: flex; flex-wrap: wrap; gap: 6px;">`;
-                              cropInfo.owner.crops.forEach((crop: string) => {
-                                const cropColor = crop
-                                  .toLowerCase()
-                                  .includes("rice")
-                                  ? "#22c55e"
-                                  : crop.toLowerCase().includes("corn")
-                                    ? "#eab308"
-                                    : crop.toLowerCase().includes("livestock")
-                                      ? "#f97316"
-                                      : crop.toLowerCase().includes("poultry")
-                                        ? "#ef4444"
-                                        : "#8b5cf6";
-                                html += `<span class="farmland-popup-crop-tag" style="background: ${cropColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500;">🌱 ${crop}</span>`;
-                              });
-                              html += `</div></div></div>`;
+                              // Crop/livestock flags on the OWNER's own
+                              // submission describe what's generally on
+                              // the land, not confirmed active
+                              // cultivation — a land owner with no
+                              // tenant/lessee linked has nobody confirmed
+                              // to be farming it. Only show this section
+                              // when someone is actually linked, and label
+                              // it as registered activity rather than
+                              // "planted," which implies it's happening
+                              // right now.
+                              if (tenantCount > 0) {
+                                html += `<div class="farmland-popup-crops-label" style="font-size: 0.8em; color: #4b5563; margin-bottom: 4px;">Registered crop/livestock activity:</div>`;
+                                html += `<div class="farmland-popup-crops-tags" style="display: flex; flex-wrap: wrap; gap: 6px;">`;
+                                cropInfo.owner.crops.forEach((crop: string) => {
+                                  const cropColor = crop
+                                    .toLowerCase()
+                                    .includes("rice")
+                                    ? "#22c55e"
+                                    : crop.toLowerCase().includes("corn")
+                                      ? "#eab308"
+                                      : crop.toLowerCase().includes("livestock")
+                                        ? "#f97316"
+                                        : crop.toLowerCase().includes("poultry")
+                                          ? "#ef4444"
+                                          : "#8b5cf6";
+                                  html += `<span class="farmland-popup-crop-tag" style="background: ${cropColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500;">🌱 ${crop}</span>`;
+                                });
+                                html += `</div>`;
+                              }
+                              html += `</div></div>`;
                             }
 
                             // Tenants section with separator
@@ -818,7 +831,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   .toLowerCase();
                                 const tenantStatusLabel =
                                   tenantStatusRaw === "owner" ||
-                                    tenantStatusRaw === "registered owner"
+                                  tenantStatusRaw === "registered owner"
                                     ? "Registered Owner"
                                     : tenantStatusRaw === "tenant"
                                       ? "Tenant"
@@ -829,12 +842,12 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                           : "Unknown";
                                 const tenantRegDate = tenant.registration_date
                                   ? new Date(
-                                    tenant.registration_date,
-                                  ).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })
+                                      tenant.registration_date,
+                                    ).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    })
                                   : "N/A";
                                 html += `<div class="farmland-popup-tenant-card" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fcd34d; border-radius: 8px; padding: 10px; margin-bottom: 8px;">`;
                                 html += `<div class="farmland-popup-tenant-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
@@ -892,7 +905,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   record?.change_type || "Update";
                                 const periodStart = formatDisplayDate(
                                   record?.period_start_date ||
-                                  record?.created_at,
+                                    record?.created_at,
                                 );
                                 const periodEnd = formatDisplayDate(
                                   record?.period_end_date,
@@ -906,9 +919,22 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   feature.properties?.parcel_number ||
                                   "N/A";
 
-                                const transferredArea = Number(
-                                  record?.transferred_area_ha,
-                                );
+                                // transferred_area_ha is only ever set by
+                                // the ownership-transfer (partial split)
+                                // path — TENANT_CHANGE/LESSEE_CHANGE/
+                                // ASSOCIATION_CHANGE rows correctly leave
+                                // it null. Number(null) is 0, which passes
+                                // isFinite, so presence must be checked
+                                // before converting or a genuinely-missing
+                                // value renders as "0.0000 ha transferred"
+                                // instead of falling back to total area.
+                                const rawTransferred =
+                                  record?.transferred_area_ha;
+                                const transferredArea =
+                                  rawTransferred !== null &&
+                                  rawTransferred !== undefined
+                                    ? Number(rawTransferred)
+                                    : NaN;
                                 const totalArea = Number(
                                   record?.total_farm_area_ha,
                                 );

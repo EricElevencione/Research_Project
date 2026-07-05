@@ -65,6 +65,11 @@ interface LandPlotCandidate {
   barangay?: string;
   farm_location_barangay?: string;
   farmLocationBarangay?: string;
+  first_name?: string;
+  firstName?: string;
+  surname?: string;
+  last_name?: string;
+  lastName?: string;
   geometry?: unknown;
 }
 
@@ -157,33 +162,57 @@ const parseSupportedGeometry = (raw: unknown): SupportedGeometry | null => {
   };
 };
 
+// Scopes land_plots candidates down to ones verified to belong to this
+// specific owner — by ffrs_id (skipping the "RSBSA-{id}" fallback pattern,
+// which was never a real FFRS code to begin with), or by first+last name
+// as a fallback. Deliberately does NOT fall back to the whole municipality's
+// land_plots table: a parcel_number/barangay match against an unrelated
+// owner's plot is not a match, it's a coincidence, and printing it would
+// mean printing someone else's land. Better to show "No geometry" than a
+// wrong shape — especially once a parcel has been transferred and its
+// original plot may still carry the previous owner's identity.
+const findOwnerVerifiedPlots = (
+  landPlots: LandPlotCandidate[],
+  referenceNumber: string,
+  firstName: string,
+  surname: string,
+): LandPlotCandidate[] => {
+  const referenceToken = normalizeToken(referenceNumber);
+  const isFallbackReference = referenceToken.startsWith("rsbsa-");
 
+  if (referenceToken && !isFallbackReference) {
+    const ffrsMatches = landPlots.filter((plot) => {
+      const plotReference = normalizeToken(plot.ffrs_id || plot.ffrsId);
+      return plotReference && plotReference === referenceToken;
+    });
+    if (ffrsMatches.length > 0) return ffrsMatches;
+  }
+
+  const firstNameToken = normalizeToken(firstName);
+  const surnameToken = normalizeToken(surname);
+  if (!firstNameToken || !surnameToken) return [];
+
+  return landPlots.filter((plot) => {
+    const plotFirstName = normalizeToken(plot.first_name || plot.firstName);
+    const plotSurname = normalizeToken(
+      plot.surname || plot.last_name || plot.lastName,
+    );
+    return plotFirstName === firstNameToken && plotSurname === surnameToken;
+  });
+};
 
 const findParcelGeometry = (
   parcel: NormalizedParcel,
-  referenceNumber: string,
-  landPlots: LandPlotCandidate[],
+  ownerVerifiedPlots: LandPlotCandidate[],
 ): SupportedGeometry | null => {
-  if (landPlots.length === 0) return parcel.geometry || null;
-
   const parcelToken = normalizeParcelToken(parcel.parcelNumber);
   const barangayToken = normalizeToken(parcel.barangay);
-  const referenceToken = normalizeToken(referenceNumber);
-
-  const byReference =
-    referenceToken && referenceToken !== "n/a"
-      ? landPlots.filter((plot) => {
-          const plotReference = normalizeToken(plot.ffrs_id || plot.ffrsId);
-          return plotReference && plotReference === referenceToken;
-        })
-      : [];
 
   const findInList = (
-    source: LandPlotCandidate[],
     requireParcel: boolean,
     requireBarangay: boolean,
   ): SupportedGeometry | null => {
-    for (const plot of source) {
+    for (const plot of ownerVerifiedPlots) {
       const plotParcelToken = normalizeParcelToken(
         plot.parcel_number || plot.parcelNumber,
       );
@@ -211,12 +240,9 @@ const findParcelGeometry = (
   };
 
   return (
-    findInList(byReference, true, true) ||
-    findInList(byReference, true, false) ||
-    findInList(byReference, false, true) ||
-    findInList(landPlots, true, true) ||
-    findInList(landPlots, true, false) ||
-    findInList(landPlots, false, true) ||
+    findInList(true, true) ||
+    findInList(true, false) ||
+    findInList(false, true) ||
     parcel.geometry ||
     null
   );
@@ -229,7 +255,7 @@ const renderParcelGeometryCard = (
 ): string => {
   const parcelLabel = parcel.parcelNumber || String(index + 1);
   const mapId = `print-map-${formIndex}-${index}`;
-  
+
   const geometryHtml = parcel.geometry
     ? `
       <div id="${mapId}" class="parcel-print-map" style="width: 100%; height: 150px; z-index: 1; background: #ddd;"></div>
@@ -439,9 +465,16 @@ const normalizeFormData = (
     "N/A",
   );
 
+  const ownerVerifiedPlots = findOwnerVerifiedPlots(
+    landPlots,
+    referenceNumber,
+    data.firstName || data["FIRST NAME"] || "",
+    data.surname || data.lastName || data["LAST NAME"] || "",
+  );
+
   const parcelsWithGeometry = normalizedParcels.map((parcel) => ({
     ...parcel,
-    geometry: findParcelGeometry(parcel, referenceNumber, landPlots),
+    geometry: findParcelGeometry(parcel, ownerVerifiedPlots),
   }));
 
   return {
@@ -525,7 +558,9 @@ const renderFarmerFormSection = (
     .join("");
 
   const parcelGeometryHtml = form.parcels
-    .map((parcel, parcelIndex) => renderParcelGeometryCard(parcel, parcelIndex, index))
+    .map((parcel, parcelIndex) =>
+      renderParcelGeometryCard(parcel, parcelIndex, index),
+    )
     .join("");
 
   return `
@@ -1072,7 +1107,9 @@ const fetchNormalizedForm = async (
 
   const submissionRecord = submissionResponse.data || {};
 
-  const parcelsResponse = await getFarmParcels(request.farmerId);
+  const parcelsResponse = await getFarmParcels(request.farmerId, {
+    currentOwnerOnly: true,
+  });
   const parcels = parcelsResponse.error ? [] : parcelsResponse.data || [];
 
   return normalizeFormData(submissionRecord, parcels, request, landPlots);
