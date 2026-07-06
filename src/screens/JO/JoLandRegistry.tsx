@@ -3207,49 +3207,31 @@ const JoLandRegistry: React.FC = () => {
         .filter((id) => Number.isFinite(id) && id > 0);
 
       if (transferredParcelIds.length > 0) {
-        if (transferMode === "inheritance") {
-          // Inheritance: always auto-relink, no prompt needed
-          const { error: relinkError } = await supabase.rpc(
-            "auto_relink_tenant_lessee_on_transfer",
-            {
-              p_old_owner_id: fromFarmerId,
-              p_new_owner_id: toFarmerId,
-              p_farm_parcel_ids: transferredParcelIds,
-            },
+        // Always relink tenant/lessee records tied to the specific
+        // parcel(s) that just moved -- regardless of transfer mode, and
+        // regardless of whether the donor still owns other, unrelated
+        // parcels. The RPC only touches records scoped to these exact
+        // parcel IDs, so this is safe to call unconditionally: if
+        // nothing is tenanted on the transferred parcel(s), it's a
+        // no-op. Previously this only ran for inheritance, or for
+        // voluntary transfers where the donor gave away everything they
+        // had -- meaning a tenant sitting on one specific parcel would
+        // NOT get relinked if the donor happened to still own other
+        // parcels elsewhere, even though that tenant's actual landlord
+        // for THIS parcel had changed.
+        const { error: relinkError } = await supabase.rpc(
+          "auto_relink_tenant_lessee_on_transfer",
+          {
+            p_old_owner_id: fromFarmerId,
+            p_new_owner_id: toFarmerId,
+            p_farm_parcel_ids: transferredParcelIds,
+          },
+        );
+        if (relinkError) {
+          console.warn(
+            "Transfer succeeded but tenant/lessee re-link failed:",
+            relinkError.message,
           );
-          if (relinkError) {
-            console.warn(
-              "Transfer succeeded but auto tenant/lessee re-link failed:",
-              relinkError.message,
-            );
-          }
-        } else if (transferMode === "voluntary") {
-          // Voluntary: only relink if the donor is being archived (transferred ALL parcels)
-          // i.e. they have no remaining parcels after this transfer
-          const remainingParcels =
-            donorFarmerGroup?.parcels.filter(
-              (p) => !transferredParcelIds.includes(p.id),
-            ) ?? [];
-
-          if (remainingParcels.length === 0) {
-            // Donor is going to be archived — must relink or tenant/lessee is orphaned
-            const { error: relinkError } = await supabase.rpc(
-              "auto_relink_tenant_lessee_on_transfer",
-              {
-                p_old_owner_id: fromFarmerId,
-                p_new_owner_id: toFarmerId,
-                p_farm_parcel_ids: transferredParcelIds,
-              },
-            );
-            if (relinkError) {
-              console.warn(
-                "Transfer succeeded but tenant/lessee re-link failed:",
-                relinkError.message,
-              );
-            }
-          }
-          // If donor still has remaining parcels after voluntary transfer,
-          // tenant/lessee links are still valid — no re-linking needed
         }
       }
 

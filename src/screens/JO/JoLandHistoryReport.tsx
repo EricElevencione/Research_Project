@@ -3,14 +3,39 @@ import React, { useEffect, useMemo, useState } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
-  getLandHistoryBarangays,
   getLandHistoryParcelHistory,
-  getLandHistoryReportRows,
+  getLandInventoryReportRows,
+  getLandPlotsBarangays,
 } from "../../api";
 import "../../assets/css/jo css/JoLandHistoryReport.css";
 import JOSidebar from "../../components/layout/JOSidebar";
 
-interface LandHistoryReportRow {
+// One row per PLOTTED parcel (land_plots), not per history event —
+// includes parcels that have real geometry and a resolvable owner but
+// were never run through an RSBSA registration, so has_registration can
+// legitimately be false. Owner is resolved via land_plots.farmer_id
+// (see getLandInventoryReportRows), not derived from land_history.
+interface LandInventoryRow {
+  id: string;
+  parcel_number: string | null;
+  barangay: string | null;
+  area_ha: number | null;
+  owner_name: string | null;
+  owner_resolved_via: "farmer_id" | "plot_name_only" | "unresolved";
+  has_registration: boolean;
+  change_type: string | null;
+  change_reason: string | null;
+  period_start_date: string | null;
+  period_end_date: string | null;
+  farmer_name: string | null;
+  role_label: string | null;
+}
+
+// Still land_history's own row shape — used only by the parcel-history
+// drill-down modal, which shows the timeline of registration EVENTS for
+// one specific parcel. That's a different question from "what land
+// exists," so it correctly stays land_history-only.
+interface LandHistoryEventRow {
   id: number;
   parcel_number: string | null;
   farm_location_barangay: string | null;
@@ -36,7 +61,7 @@ type RelationshipFilter =
   | "lessee"
   | "tenantLessee";
 interface ParcelRow {
-  id: number;
+  id: string;
   parcelNumber: string | null;
   barangay: string;
   occupantName: string;
@@ -45,10 +70,12 @@ interface ParcelRow {
   currentAreaHa: number;
   lastChangeDate: string | null;
   isCurrent: boolean;
+  hasRegistration: boolean;
+  ownerResolvedVia: "farmer_id" | "plot_name_only" | "unresolved";
 }
 
 const JoLandHistoryReport: React.FC = () => {
-  const [rows, setRows] = useState<LandHistoryReportRow[]>([]);
+  const [rows, setRows] = useState<LandInventoryRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,8 +84,6 @@ const JoLandHistoryReport: React.FC = () => {
   const [barangayFilter, setBarangayFilter] = useState("all");
   const [relationshipFilter, setRelationshipFilter] =
     useState<RelationshipFilter>("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [barangayOptions, setBarangayOptions] = useState<string[]>([]);
@@ -66,20 +91,20 @@ const JoLandHistoryReport: React.FC = () => {
   const [parcelModalParcelNumber, setParcelModalParcelNumber] = useState<
     string | null
   >(null);
-  const [parcelModalRows, setParcelModalRows] = useState<
-    LandHistoryReportRow[]
-  >([]);
+  const [parcelModalRows, setParcelModalRows] = useState<LandHistoryEventRow[]>(
+    [],
+  );
   const [parcelModalLoading, setParcelModalLoading] = useState(false);
   const [parcelModalError, setParcelModalError] = useState<string | null>(null);
   const [selectedHistoryRow, setSelectedHistoryRow] =
-    useState<LandHistoryReportRow | null>(null);
+    useState<LandHistoryEventRow | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const formatName = (value?: string | null) =>
     String(value || "").trim() || "-";
 
-  const getFarmingRoleLabel = (row: LandHistoryReportRow) => {
+  const getFarmingRoleLabel = (row: LandHistoryEventRow) => {
     if (row.is_registered_owner) return "Owner";
     if (row.is_tenant) return "Tenant";
     if (row.is_lessee) return "Lessee";
@@ -115,9 +140,9 @@ const JoLandHistoryReport: React.FC = () => {
 
   const parseReportPayload = (payload: any) => {
     const nextRows = Array.isArray(payload?.rows)
-      ? (payload.rows as LandHistoryReportRow[])
+      ? (payload.rows as LandInventoryRow[])
       : Array.isArray(payload)
-        ? (payload as LandHistoryReportRow[])
+        ? (payload as LandInventoryRow[])
         : [];
     const nextTotal = Number(payload?.totalCount ?? nextRows.length ?? 0);
 
@@ -133,16 +158,13 @@ const JoLandHistoryReport: React.FC = () => {
       setError(null);
 
       const targetPage = pageOverride || page;
-      const response = await getLandHistoryReportRows({
+      const response = await getLandInventoryReportRows({
         searchTerm,
-        farmerName: "all",
         barangay: barangayFilter,
-        relationship: relationshipFilter,
-        dateFrom,
-        dateTo,
+        relationship:
+          relationshipFilter === "tenantLessee" ? "all" : relationshipFilter,
         page: targetPage,
         pageSize,
-        currentOnly: true,
       });
       if (response.error) {
         throw new Error(response.error);
@@ -159,14 +181,14 @@ const JoLandHistoryReport: React.FC = () => {
         setPage(1);
       }
     } catch (err: any) {
-      setError(err?.message || "Failed to load land history report data.");
+      setError(err?.message || "Failed to load land inventory report data.");
     } finally {
       setLoading(false);
     }
   };
 
   const fetchBarangayOptions = async () => {
-    const response = await getLandHistoryBarangays();
+    const response = await getLandPlotsBarangays();
     if (response.error) return;
     setBarangayOptions((response.data as string[]) || []);
   };
@@ -177,15 +199,7 @@ const JoLandHistoryReport: React.FC = () => {
 
   useEffect(() => {
     fetchReportRows();
-  }, [
-    page,
-    pageSize,
-    searchTerm,
-    barangayFilter,
-    relationshipFilter,
-    dateFrom,
-    dateTo,
-  ]);
+  }, [page, pageSize, searchTerm, barangayFilter, relationshipFilter]);
 
   const uniqueBarangays = useMemo(
     () => [...barangayOptions].sort((a, b) => a.localeCompare(b)),
@@ -216,7 +230,7 @@ const JoLandHistoryReport: React.FC = () => {
       return;
     }
 
-    setParcelModalRows((response.data as LandHistoryReportRow[]) || []);
+    setParcelModalRows((response.data as LandHistoryEventRow[]) || []);
     setParcelModalError(null);
     setParcelModalLoading(false);
   };
@@ -253,7 +267,7 @@ const JoLandHistoryReport: React.FC = () => {
     };
   }, [parcelModalOpen]);
 
-  const getRowEventDate = (row: LandHistoryReportRow) =>
+  const getRowEventDate = (row: LandHistoryEventRow) =>
     row.period_start_date || row.created_at || row.period_end_date || null;
 
   const toSortableTimestamp = (value?: string | null) => {
@@ -262,22 +276,27 @@ const JoLandHistoryReport: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  // One row per plotted parcel already (getLandInventoryReportRows), so
+  // no aggregation/filtering needed here — just map field names for the
+  // table/PDF/summary code below.
   const parcelRows = useMemo<ParcelRow[]>(() => {
-    return rows
-      .filter((row) => row.is_current)
-      .map((row) => ({
-        id: row.id,
-        parcelNumber: row.parcel_number
-          ? String(row.parcel_number).trim()
-          : null,
-        barangay: formatName(row.farm_location_barangay),
-        occupantName: formatName(row.land_owner_name),
-        farmerName: formatName(row.farmer_name),
-        roleLabel: getFarmingRoleLabel(row),
-        currentAreaHa: Number(row.total_farm_area_ha) || 0,
-        lastChangeDate: getRowEventDate(row),
-        isCurrent: row.is_current,
-      }));
+    return rows.map((row) => ({
+      id: row.id,
+      parcelNumber: row.parcel_number ? String(row.parcel_number).trim() : null,
+      barangay: formatName(row.barangay),
+      occupantName: row.owner_name
+        ? formatName(row.owner_name)
+        : "Unclaimed — no owner matched",
+      farmerName: row.has_registration ? formatName(row.farmer_name) : "-",
+      roleLabel: row.has_registration
+        ? row.role_label || "Unknown"
+        : "No registration on file",
+      currentAreaHa: Number(row.area_ha) || 0,
+      lastChangeDate: row.period_start_date || row.period_end_date || null,
+      isCurrent: row.has_registration,
+      hasRegistration: row.has_registration,
+      ownerResolvedVia: row.owner_resolved_via,
+    }));
   }, [rows]);
 
   const parcelModalTimelineRows = useMemo(() => {
@@ -312,17 +331,22 @@ const JoLandHistoryReport: React.FC = () => {
       (row) => row.roleLabel === "Lessee",
     ).length;
 
+    const unregisteredParcels = parcelRows.filter(
+      (row) => !row.hasRegistration,
+    ).length;
+
     const totalCurrentAreaHa = parcelRows.reduce(
       (sum, row) => sum + (Number(row.currentAreaHa) || 0),
       0,
     );
 
     return {
-      totalHistoryRows: totalCount,
+      totalPlottedParcels: totalCount,
       parcelsOnPage: parcelRows.length,
       currentParcels: parcelRows.length,
       tenantParcels,
       lesseeParcels,
+      unregisteredParcels,
       totalCurrentAreaHa,
     };
   }, [parcelRows, totalCount]);
@@ -346,8 +370,6 @@ const JoLandHistoryReport: React.FC = () => {
       `Search: ${searchTerm.trim() || "All"}`,
       `Barangay: ${barangayFilter === "all" ? "All Barangays" : barangayFilter}`,
       `Relationship: ${relationshipLabelMap[relationshipFilter]}`,
-      `Date From: ${dateFrom ? formatDate(dateFrom) : "Any"}`,
-      `Date To: ${dateTo ? formatDate(dateTo) : "Any"}`,
     ].join(" | ");
 
     const doc = new jsPDF({
@@ -360,7 +382,7 @@ const JoLandHistoryReport: React.FC = () => {
     const datePart = generatedAt.toISOString().slice(0, 10);
 
     doc.setFontSize(16);
-    doc.text("Land History Report", 40, 40);
+    doc.text("Land Inventory Report", 40, 40);
     doc.setFontSize(10);
     doc.text(`Generated: ${generatedAt.toLocaleString()}`, 40, 60);
     doc.text(
@@ -388,17 +410,17 @@ const JoLandHistoryReport: React.FC = () => {
         3: { cellWidth: 80 },
         4: { cellWidth: 70, halign: "right" },
         5: { cellWidth: 80 },
-        6: { cellWidth: 60 },
+        6: { cellWidth: 90 },
       },
       head: [
         [
           "Parcel",
-          "Occupant (Owner)",
-          "Farmer",
+          "Owner",
+          "Farmer/Occupant",
           "Role",
           "Area (ha)",
           "Last Change",
-          "Status",
+          "Registration",
         ],
       ],
       body: parcelRows.map((row) => [
@@ -408,23 +430,21 @@ const JoLandHistoryReport: React.FC = () => {
         row.roleLabel,
         Number(row.currentAreaHa || 0).toFixed(2),
         formatDate(row.lastChangeDate),
-        row.isCurrent ? "Active" : "Inactive",
+        row.hasRegistration ? "On file" : "Not registered",
       ]),
     });
 
-    doc.save(`land-history-report-${datePart}.pdf`);
+    doc.save(`land-inventory-report-${datePart}.pdf`);
   };
 
   const handleResetFilters = () => {
     setSearchTerm("");
     setBarangayFilter("all");
     setRelationshipFilter("all");
-    setDateFrom("");
-    setDateTo("");
     setPage(1);
   };
 
-  const noRowsMessage = "No parcels found with the current filters.";
+  const noRowsMessage = "No plotted parcels found with the current filters.";
 
   return (
     <div className="jo-land-history-report-page-container">
@@ -439,14 +459,18 @@ const JoLandHistoryReport: React.FC = () => {
             >
               ☰
             </button>
-            <div className="tech-incent-mobile-title">Land History Report</div>
+            <div className="tech-incent-mobile-title">
+              Land Inventory Report
+            </div>
           </div>
 
           <div className="jo-land-history-report-header">
-            <h1>Land History Report</h1>
+            <h1>Land Inventory Report</h1>
             <p>
-              Parcel-first view: one row per current parcel with occupant and
-              farmer details. Click a row to open full parcel history.
+              Every plotted parcel — not just ones with a registration on file.
+              Owner is resolved from the GIS plot record directly, so land with
+              no RSBSA registration still shows up here. Click a row with a
+              registration on file to open its full history.
             </p>
           </div>
 
@@ -511,8 +535,8 @@ const JoLandHistoryReport: React.FC = () => {
 
             <div className="jo-land-history-report-kpis">
               <div className="jo-land-history-report-kpi-card">
-                <span className="label">Current Parcels</span>
-                <strong>{summary.currentParcels}</strong>
+                <span className="label">Total Plotted Parcels</span>
+                <strong>{summary.totalPlottedParcels}</strong>
               </div>
               <div className="jo-land-history-report-kpi-card">
                 <span className="label">Tenant Parcels</span>
@@ -522,8 +546,12 @@ const JoLandHistoryReport: React.FC = () => {
                 <span className="label">Lessee Parcels</span>
                 <strong>{summary.lesseeParcels}</strong>
               </div>
+              <div className="jo-land-history-report-kpi-card">
+                <span className="label">No Registration on File</span>
+                <strong>{summary.unregisteredParcels}</strong>
+              </div>
               <div className="jo-land-history-report-kpi-card wide">
-                <span className="label">Total Current Area (ha, Page)</span>
+                <span className="label">Total Area (ha, Page)</span>
                 <strong>{summary.totalCurrentAreaHa.toFixed(2)}</strong>
               </div>
             </div>
@@ -567,44 +595,60 @@ const JoLandHistoryReport: React.FC = () => {
                   <thead>
                     <tr>
                       <th>Parcel</th>
-                      <th>Occupant (Owner)</th>
-                      <th>Farmer</th>
+                      <th>Owner</th>
+                      <th>Farmer/Occupant</th>
                       <th>Role</th>
                       <th>Area (ha)</th>
                       <th>Last Change</th>
-                      <th>Status</th>
+                      <th>Registration</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {parcelRows.map((row, index) => (
-                      <tr
-                        key={`${row.parcelNumber || "unknown"}-${index}`}
-                        className={`jo-land-history-report-row ${row.parcelNumber ? "is-clickable" : ""}`}
-                        role={row.parcelNumber ? "button" : undefined}
-                        tabIndex={row.parcelNumber ? 0 : undefined}
-                        aria-label={
-                          row.parcelNumber
-                            ? `View history for parcel ${row.parcelNumber}`
-                            : undefined
-                        }
-                        onClick={() =>
-                          row.parcelNumber
-                            ? openParcelHistoryModal(row.parcelNumber)
-                            : undefined
-                        }
-                        onKeyDown={(event) =>
-                          handleReportRowKeyDown(event, row.parcelNumber)
-                        }
-                      >
-                        <td>{row.parcelNumber || "-"}</td>
-                        <td>{row.occupantName}</td>
-                        <td>{row.farmerName}</td>
-                        <td>{row.roleLabel}</td>
-                        <td>{row.currentAreaHa.toFixed(2)}</td>
-                        <td>{formatDate(row.lastChangeDate)}</td>
-                        <td>{row.isCurrent ? "Active" : "Inactive"}</td>
-                      </tr>
-                    ))}
+                    {parcelRows.map((row, index) => {
+                      const isClickable =
+                        !!row.parcelNumber && row.hasRegistration;
+                      return (
+                        <tr
+                          key={`${row.parcelNumber || "unknown"}-${index}`}
+                          className={`jo-land-history-report-row ${isClickable ? "is-clickable" : ""}`}
+                          role={isClickable ? "button" : undefined}
+                          tabIndex={isClickable ? 0 : undefined}
+                          aria-label={
+                            isClickable
+                              ? `View history for parcel ${row.parcelNumber}`
+                              : undefined
+                          }
+                          onClick={() =>
+                            isClickable
+                              ? openParcelHistoryModal(row.parcelNumber)
+                              : undefined
+                          }
+                          onKeyDown={(event) =>
+                            isClickable
+                              ? handleReportRowKeyDown(event, row.parcelNumber)
+                              : undefined
+                          }
+                        >
+                          <td>{row.parcelNumber || "-"}</td>
+                          <td>{row.occupantName}</td>
+                          <td>{row.farmerName}</td>
+                          <td>{row.roleLabel}</td>
+                          <td>{row.currentAreaHa.toFixed(2)}</td>
+                          <td>{formatDate(row.lastChangeDate)}</td>
+                          <td>
+                            <span
+                              className={`jo-land-history-modal-status-badge ${
+                                row.hasRegistration ? "is-current" : "is-past"
+                              }`}
+                            >
+                              {row.hasRegistration
+                                ? "On file"
+                                : "Not registered"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

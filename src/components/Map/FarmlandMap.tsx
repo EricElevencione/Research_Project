@@ -11,7 +11,11 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { FeatureCollection } from "geojson"; // Import FeatureCollection and Feature types
-import { getLandPlots, getCropPlantingInfo } from "../../api";
+import {
+  getLandPlots,
+  getCropPlantingInfo,
+  getCurrentParcelOwner,
+} from "../../api";
 
 // Fix for default marker icons in Leaflet with React
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -644,6 +648,12 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         feature.properties.farmer_id ||
                         feature.properties.farmerId ||
                         "";
+                      const parcelNumberForLookup =
+                        feature.properties.parcel_number ||
+                        feature.properties.parcelNumber ||
+                        "";
+                      const isTransferred =
+                        feature.properties?.is_current_owner === false;
                       // Fetch crop/planting info
                       console.log("Fetching crop/planting info for:", {
                         surname,
@@ -654,14 +664,30 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         farmerId,
                       });
                       console.log("Feature properties:", feature.properties);
-                      const cropInfo = await fetchCropPlantingInfo(
-                        surname,
-                        firstName,
-                        middleName,
-                        location,
-                        ffrsId,
-                        farmerId,
-                      );
+                      const [cropInfo, resolvedOwnerName] = await Promise.all([
+                        fetchCropPlantingInfo(
+                          surname,
+                          firstName,
+                          middleName,
+                          location,
+                          ffrsId,
+                          farmerId,
+                        ),
+                        // Only worth resolving when the plotted identity is
+                        // known to be stale — otherwise cropInfo.owner
+                        // above already IS the current owner.
+                        isTransferred && parcelNumberForLookup
+                          ? getCurrentParcelOwner(String(parcelNumberForLookup))
+                              .then((res) => res?.data?.ownerName || null)
+                              .catch((err) => {
+                                console.error(
+                                  "Error resolving current parcel owner:",
+                                  err,
+                                );
+                                return null;
+                              })
+                          : Promise.resolve(null),
+                      ]);
                       setTimeout(() => {
                         const cell = document.getElementById(
                           `crops-cell-${featureKey}`,
@@ -670,16 +696,13 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                           ? cropInfo.landHistory
                           : [];
 
-                        const isTransferred =
-                          feature.properties?.is_current_owner === false;
-
                         if (cell) {
                           if (
                             !cropInfo.owner &&
                             cropInfo.tenants.length === 0 &&
                             landHistory.length === 0
                           ) {
-                            cell.innerHTML = isTransferred
+                            const transferredNotice = resolvedOwnerName
                               ? `<div style="
                                     background: #fffbeb;
                                     border-left: 4px solid #d97706;
@@ -691,13 +714,69 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                     margin-bottom: 12px;
                                     line-height: 1.4;
                                   ">
-                                    ⚠️ Geometry inherited from previous owner — please verify and redraw if needed.
+                                    ⚠️ Geometry inherited from previous owner.
+                                  </div>
+                                  <div style="
+                                    background: #f0fdf4;
+                                    border-left: 4px solid #16a34a;
+                                    color: #166534;
+                                    padding: 10px;
+                                    border-radius: 6px;
+                                    font-size: 0.85em;
+                                    font-weight: 600;
+                                    line-height: 1.4;
+                                  ">
+                                    ✅ Current Owner: ${escapeHtml(resolvedOwnerName)}
                                   </div>`
+                              : `<div style="
+                                    background: #fffbeb;
+                                    border-left: 4px solid #d97706;
+                                    color: #92400e;
+                                    padding: 10px;
+                                    border-radius: 6px;
+                                    font-size: 0.85em;
+                                    font-weight: 600;
+                                    margin-bottom: 12px;
+                                    line-height: 1.4;
+                                  ">
+                                    ⚠️ Geometry inherited from previous owner — please verify and redraw if needed.
+                                  </div>`;
+                            cell.innerHTML = isTransferred
+                              ? transferredNotice
                               : '<div class="farmland-popup-no-data" style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No owner or history information found for this parcel.</div>';
                           } else {
                             let html = `<div class="farmland-popup-crops-list" style="max-height: 300px; overflow-y: auto;">`;
                             if (isTransferred) {
-                              html += `
+                              html += resolvedOwnerName
+                                ? `
+                                <div style="
+                                  background: #fffbeb;
+                                  border-left: 4px solid #d97706;
+                                  color: #92400e;
+                                  padding: 10px;
+                                  border-radius: 6px;
+                                  font-size: 0.85em;
+                                  font-weight: 600;
+                                  margin-bottom: 8px;
+                                  line-height: 1.4;
+                                ">
+                                  ⚠️ Geometry inherited from previous owner.
+                                </div>
+                                <div style="
+                                  background: #f0fdf4;
+                                  border-left: 4px solid #16a34a;
+                                  color: #166534;
+                                  padding: 10px;
+                                  border-radius: 6px;
+                                  font-size: 0.85em;
+                                  font-weight: 600;
+                                  margin-bottom: 12px;
+                                  line-height: 1.4;
+                                ">
+                                  ✅ Current Owner: ${escapeHtml(resolvedOwnerName)}
+                                </div>
+                              `
+                                : `
                                 <div style="
                                   background: #fffbeb;
                                   border-left: 4px solid #d97706;
@@ -721,9 +800,14 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               )
                                 .trim()
                                 .toLowerCase();
-                              const ownerStatusLabel =
-                                ownerStatusRaw === "owner" ||
-                                ownerStatusRaw === "registered owner"
+                              const isStaleRegisteredOwner =
+                                isTransferred &&
+                                (ownerStatusRaw === "owner" ||
+                                  ownerStatusRaw === "registered owner");
+                              const ownerStatusLabel = isStaleRegisteredOwner
+                                ? "Previous Owner"
+                                : ownerStatusRaw === "owner" ||
+                                    ownerStatusRaw === "registered owner"
                                   ? "Registered Owner"
                                   : ownerStatusRaw === "tenant"
                                     ? "Tenant"
@@ -735,8 +819,9 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                             cropInfo.owner.ownership_status ||
                                               "Unknown",
                                           );
-                              const ownerStatusColor =
-                                ownerStatusLabel === "Registered Owner"
+                              const ownerStatusColor = isStaleRegisteredOwner
+                                ? "#d97706"
+                                : ownerStatusLabel === "Registered Owner"
                                   ? "#16a34a"
                                   : ownerStatusLabel === "Tenant"
                                     ? "#f59e0b"
@@ -771,7 +856,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   })
                                 : "N/A";
                               html += `<div class="farmland-popup-owner-section">`;
-                              html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: #16a34a; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">🏠 Land Owner</div>`;
+                              html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: ${isStaleRegisteredOwner ? "#d97706" : "#16a34a"}; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">🏠 ${isStaleRegisteredOwner ? "Previously Plotted As" : "Land Owner"}</div>`;
                               html += `<div class="farmland-popup-farmer-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #86efac; border-radius: 8px; padding: 12px; margin-bottom: 10px;">`;
                               html += `<div class="farmland-popup-farmer-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
                               html += `<span class="farmland-popup-farmer-name" style="font-weight: 600; color: #166534; font-size: 0.9em;">👤 ${cropInfo.owner.farmer_name}</span>`;

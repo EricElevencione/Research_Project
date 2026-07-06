@@ -251,7 +251,9 @@ const LandPlottingPage: React.FC = () => {
     return (
       parcel.is_current_owner === false ||
       parcel.isCurrentOwner === false ||
-      String(parcel.status || "").toLowerCase().trim() === "no parcels"
+      String(parcel.status || "")
+        .toLowerCase()
+        .trim() === "no parcels"
     );
   };
 
@@ -402,6 +404,7 @@ const LandPlottingPage: React.FC = () => {
       const landPlotData = {
         id: shapeToSave.id,
         name: landAttributes.name,
+        farmer_id: rsbsaRecord?.id ?? currentParcel?.submission_id ?? null,
         ffrs_id:
           landAttributes.ffrs_id ||
           rsbsaRecord?.ffrs_id ||
@@ -968,8 +971,9 @@ const LandPlottingPage: React.FC = () => {
       }
 
       if (Array.isArray(farmParcels) && farmParcels.length > 0) {
-        farmParcels = farmParcels.filter((parcel: any) =>
-          canPlotParcel(parcel) || isParcelTransferredOrInactive(parcel)
+        farmParcels = farmParcels.filter(
+          (parcel: any) =>
+            canPlotParcel(parcel) || isParcelTransferredOrInactive(parcel),
         );
       }
 
@@ -2159,24 +2163,29 @@ const LandPlottingPage: React.FC = () => {
                 : "Farm Parcel #1"}
           </div>
           {currentParcel && isParcelTransferredOrInactive(currentParcel) && (
-            <div className="tech-landplotting-transferred-warning" style={{
-              background: "#fee2e2",
-              color: "#991b1b",
-              border: "1px solid #fca5a5",
-              borderRadius: "6px",
-              padding: "10px",
-              marginBottom: "12px",
-              fontWeight: 500,
-              fontSize: "13px"
-            }}>
-              ⚠️ Ownership Transferred: The landowner no longer owns this farm/parcel. The geometry is outdated.
+            <div
+              className="tech-landplotting-transferred-warning"
+              style={{
+                background: "#fee2e2",
+                color: "#991b1b",
+                border: "1px solid #fca5a5",
+                borderRadius: "6px",
+                padding: "10px",
+                marginBottom: "12px",
+                fontWeight: 500,
+                fontSize: "13px",
+              }}
+            >
+              ⚠️ Ownership Transferred: The landowner no longer owns this
+              farm/parcel. The geometry is outdated.
             </div>
           )}
-          {!currentParcelCanPlot && !isParcelTransferredOrInactive(currentParcel) && (
-            <div className="tech-landplotting-owner-guard-note">
-              {ownerPlotGuardMessage}
-            </div>
-          )}
+          {!currentParcelCanPlot &&
+            !isParcelTransferredOrInactive(currentParcel) && (
+              <div className="tech-landplotting-owner-guard-note">
+                {ownerPlotGuardMessage}
+              </div>
+            )}
           <div className="tech-landplotting-section-label">Details:</div>
           <div className="tech-landplotting-details-container">
             <div className="tech-landplotting-detail-row">

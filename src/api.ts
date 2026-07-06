@@ -2607,6 +2607,7 @@ const normalizeLandPlotPayloadForSupabase = (payload: any) => {
     farm_type: payload.farm_type ?? payload.farmType,
     plot_source: payload.plot_source ?? payload.plotSource,
     parcel_number: payload.parcel_number ?? payload.parcelNumber,
+    farmer_id: payload.farmer_id ?? payload.farmerId,
     geometry: payload.geometry,
     created_at: payload.created_at ?? payload.createdAt,
     updated_at: payload.updated_at ?? payload.updatedAt,
@@ -3553,6 +3554,292 @@ export const getLandHistoryParcelHistory = async (
   return createResponse(data || [], null, 200);
 };
 
+/**
+ * Given one parcel_number, resolves who genuinely holds it right now as
+ * registered owner — not who the plotted shape's stored identity happens
+ * to point at. A shape's saved farmer_id/name reflects who plotted it at
+ * draw time; it does not update itself when that land is later transferred.
+ * This checks the actual ownership record (land_history, is_current +
+ * is_registered_owner) instead, the same source getLandInventoryReportRows
+ * already trusts. Returns null (not a guess) when nothing is on file, so
+ * callers can show an honest "not registered" rather than stale data.
+ */
+export const getCurrentParcelOwner = async (
+  parcelNumber: string,
+): Promise<ApiResponse> => {
+  const normalizedParcelNumber = String(parcelNumber || "").trim();
+  if (!normalizedParcelNumber) {
+    return createResponse(null, null, 200);
+  }
+
+  const { data, error } = await supabase
+    .from("land_history")
+    .select(
+      "parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_current, period_start_date, change_type",
+    )
+    .eq("parcel_number", normalizedParcelNumber)
+    .eq("is_current", true)
+    .eq("is_registered_owner", true)
+    .order("period_start_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) return createResponse(null, error.message, 500);
+
+  const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+  if (!row) {
+    return createResponse(null, null, 200);
+  }
+
+  return createResponse(
+    {
+      ownerName: row.land_owner_name || row.farmer_name || null,
+      parcelNumber: row.parcel_number,
+      barangay: row.farm_location_barangay,
+      totalFarmAreaHa: row.total_farm_area_ha,
+      periodStartDate: row.period_start_date,
+      changeType: row.change_type,
+    },
+    null,
+    200,
+  );
+};
+
+/**
+ * Land-plots-first report: one row per PLOTTED parcel in land_plots,
+ * not per land_history event. Fixes the gap where a plot has real
+ * geometry and a resolvable owner (via farmer_id) but was never run
+ * through an RSBSA farm-parcel registration, and so has zero land_history
+ * rows -- under the old land_history-first report, that land was simply
+ * invisible. Here it still shows up, with has_registration: false and
+ * owner_name resolved directly from land_plots.farmer_id (backfilled by
+ * getLandPlots from ffrs_id where needed) rather than land_history.
+ *
+ * land_history is left-joined in (by parcel_number, current row only) to
+ * show registration/occupancy details where they exist.
+ */
+export const getLandInventoryReportRows = async (
+  options: {
+    searchTerm?: string;
+    barangay?: string;
+    relationship?: "all" | "owner" | "tenant" | "lessee";
+    page?: number;
+    pageSize?: number;
+  } = {},
+): Promise<ApiResponse> => {
+  try {
+    // 1. Every plotted parcel, with farmer_id resolved where possible.
+    const plotsResponse = await getLandPlots({ currentOwnerOnly: false });
+    if (plotsResponse.error)
+      return createResponse(null, plotsResponse.error, 500);
+
+    const plots = (plotsResponse.data || []) as any[];
+    if (plots.length === 0) {
+      return createResponse({ rows: [], totalCount: 0 }, null, 200);
+    }
+
+    // 2. Batch-resolve owner names for every farmer_id found on a plot.
+    const farmerIds = Array.from(
+      new Set(
+        plots
+          .map((p: any) => Number(p.farmer_id))
+          .filter((id) => Number.isFinite(id)),
+      ),
+    );
+
+    const nameById = new Map<number, string>();
+    if (farmerIds.length > 0) {
+      const { data: submissionRows, error: nameError } = await supabase
+        .from("rsbsa_submission")
+        .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME"')
+        .in("id", farmerIds);
+
+      if (nameError) {
+        console.warn(
+          "Land inventory owner name lookup error (non-blocking):",
+          nameError.message,
+        );
+      } else {
+        (submissionRows || []).forEach((row: any) => {
+          const parts = [
+            row["LAST NAME"] || "",
+            [row["FIRST NAME"], row["MIDDLE NAME"]].filter(Boolean).join(" "),
+          ].filter(Boolean);
+          nameById.set(Number(row.id), parts.join(", ") || "Unknown");
+        });
+      }
+    }
+
+    // 3. Left-join land_history — current rows only, keyed by parcel_number.
+    // A parcel can have more than one "current" row (owner's own row plus
+    // a tenant/lessee's row) -- prefer the tenant/lessee one since "who's
+    // actually on this land" is more informative than "who owns it," which
+    // owner_name (from land_plots) already covers.
+    const { data: historyRows, error: historyError } = await supabase
+      .from("land_history")
+      .select(
+        "parcel_number, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
+      )
+      .eq("is_current", true);
+
+    if (historyError) {
+      console.warn(
+        "Land inventory history fetch error (non-blocking):",
+        historyError.message,
+      );
+    }
+
+    const historyByParcelNumber = new Map<string, any>();
+    (historyRows || []).forEach((row: any) => {
+      const key = String(row.parcel_number || "")
+        .trim()
+        .toUpperCase();
+      if (!key) return;
+      const existing = historyByParcelNumber.get(key);
+      if (
+        !existing ||
+        (existing.is_registered_owner && !row.is_registered_owner)
+      ) {
+        historyByParcelNumber.set(key, row);
+      }
+    });
+
+    // 4. Merge: one row per plot, with owner resolved from land_plots and
+    // registration/occupancy details attached where land_history exists.
+    const merged = plots.map((plot: any) => {
+      const parcelNumber = String(plot.parcel_number || "").trim();
+      const history =
+        historyByParcelNumber.get(parcelNumber.toUpperCase()) || null;
+
+      const resolvedFarmerId = Number(plot.farmer_id);
+      const ownerNameFromFarmerId = Number.isFinite(resolvedFarmerId)
+        ? nameById.get(resolvedFarmerId)
+        : undefined;
+
+      const plotOwnNameParts = [
+        plot.surname || "",
+        [plot.first_name, plot.middle_name].filter(Boolean).join(" "),
+      ].filter(Boolean);
+      const plotOwnName = plotOwnNameParts.join(", ") || null;
+
+      const ownerName = ownerNameFromFarmerId || plotOwnName || null;
+      const ownerResolvedVia: "farmer_id" | "plot_name_only" | "unresolved" =
+        ownerNameFromFarmerId
+          ? "farmer_id"
+          : plotOwnName
+            ? "plot_name_only"
+            : "unresolved";
+
+      const roleLabel = history
+        ? history.is_registered_owner
+          ? "Owner"
+          : history.is_tenant
+            ? "Tenant"
+            : history.is_lessee
+              ? "Lessee"
+              : null
+        : null;
+
+      return {
+        id: String(plot.id),
+        parcel_number: parcelNumber || null,
+        barangay: plot.barangay || null,
+        area_ha:
+          plot.area !== null && plot.area !== undefined
+            ? Number(plot.area)
+            : null,
+        owner_name: ownerName,
+        owner_resolved_via: ownerResolvedVia,
+        has_registration: !!history,
+        change_type: history?.change_type || null,
+        change_reason: history?.change_reason || null,
+        period_start_date: history?.period_start_date || null,
+        period_end_date: history?.period_end_date || null,
+        farmer_name: history?.farmer_name || null,
+        role_label: roleLabel,
+      };
+    });
+
+    // 5. Filter
+    const searchTerm = (options.searchTerm || "").trim().toLowerCase();
+    const barangayFilter = options.barangay || "all";
+    const relationshipFilter = options.relationship || "all";
+
+    const filtered = merged.filter((row) => {
+      if (
+        barangayFilter !== "all" &&
+        (row.barangay || "").toLowerCase() !== barangayFilter.toLowerCase()
+      ) {
+        return false;
+      }
+      if (relationshipFilter !== "all") {
+        const wanted =
+          relationshipFilter === "owner"
+            ? "Owner"
+            : relationshipFilter === "tenant"
+              ? "Tenant"
+              : "Lessee";
+        if (row.role_label !== wanted) return false;
+      }
+      if (!searchTerm) return true;
+      const haystack = [
+        row.parcel_number,
+        row.barangay,
+        row.owner_name,
+        row.farmer_name,
+        row.change_type,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(searchTerm);
+    });
+
+    // 6. Paginate (client-computed — land_plots is a JO-scale table, not
+    // millions of rows, so fetch-all-then-slice is fine here).
+    const page = options.page || 1;
+    const pageSize = options.pageSize || 50;
+    const totalCount = filtered.length;
+    const startIdx = (page - 1) * pageSize;
+    const pageRows = filtered.slice(startIdx, startIdx + pageSize);
+
+    return createResponse({ rows: pageRows, totalCount }, null, 200);
+  } catch (err: any) {
+    return createResponse(
+      null,
+      err?.message || "Failed to build land inventory report",
+      500,
+    );
+  }
+};
+
+/**
+ * Barangay list sourced from land_plots (every plotted parcel), not
+ * land_history — a barangay with only unregistered plots would be
+ * missing from getLandHistoryBarangays() since that only looks at
+ * land_history.
+ */
+export const getLandPlotsBarangays = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("land_plots")
+    .select("barangay")
+    .not("barangay", "is", null)
+    .order("barangay", { ascending: true })
+    .limit(5000);
+
+  if (error) return createResponse(null, error.message, 500);
+
+  const uniqueBarangays = Array.from(
+    new Set(
+      (data || [])
+        .map((row: any) => String(row?.barangay || "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  return createResponse(uniqueBarangays, null, 200);
+};
+
 export const getLandHistoryBarangays = async (): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("land_history")
@@ -3650,374 +3937,6 @@ export const getLandHistoryAssociationRows = async (
   if (error) return createResponse(null, error.message, 500);
 
   return createResponse(data || [], null, 200);
-};
-
-// ==================== LAND INVENTORY (land_plots-first) ====================
-//
-// getLandHistoryReportRows() (above) is land_history-first: it only ever shows
-// a row for a parcel that has a registration/transfer event on record. That
-// silently drops plotted land that was matched to a real person on the map
-// (land_plots.farmer_id) but was never formally registered through the RSBSA
-// flow for that specific parcel — the land isn't filtered out, it just never
-// enters the query.
-//
-// getLandInventoryReportRows() flips the foundation: it starts from every
-// plotted parcel in land_plots, resolves the owner via farmer_id (same link
-// FarmlandMap.tsx relies on), and left-joins land_history by parcel_number so
-// change events still show when they exist. Parcels with a resolved owner but
-// no matching history come back with has_registration_history: false instead
-// of being omitted, so the UI can say so honestly.
-
-type LandInventoryRelationshipFilter =
-  | "all"
-  | "owner"
-  | "tenant"
-  | "lessee"
-  | "tenantLessee"
-  | "unregistered";
-
-interface LandInventoryReportQueryOptions {
-  searchTerm?: string;
-  barangay?: string;
-  relationship?: LandInventoryRelationshipFilter;
-  dateFrom?: string;
-  dateTo?: string;
-  page?: number;
-  pageSize?: number;
-}
-
-export interface LandInventoryReportRow {
-  id: string;
-  land_plot_id: number | string | null;
-  parcel_number: string | null;
-  farm_location_barangay: string | null;
-  total_farm_area_ha: number | null;
-  land_owner_name: string | null;
-  farmer_name: string | null;
-  is_registered_owner: boolean;
-  is_tenant: boolean;
-  is_lessee: boolean;
-  is_current: boolean;
-  period_start_date: string | null;
-  period_end_date: string | null;
-  change_type: string | null;
-  change_reason: string | null;
-  created_at: string | null;
-  // false = this plotted parcel has no matching rsbsa/land_history record at all
-  has_registration_history: boolean;
-}
-
-const normalizeInventoryKey = (value: unknown): string =>
-  String(value ?? "")
-    .trim()
-    .toUpperCase();
-
-export const getLandInventoryReportRows = async (
-  options: LandInventoryReportQueryOptions = {},
-): Promise<ApiResponse> => {
-  try {
-    const searchTerm = String(options.searchTerm || "")
-      .trim()
-      .toLowerCase();
-    const barangay = String(options.barangay || "all").trim();
-    const relationship: LandInventoryRelationshipFilter =
-      options.relationship || "all";
-    const dateFrom = String(options.dateFrom || "").trim();
-    const dateTo = String(options.dateTo || "").trim();
-    const page = Math.max(1, Number(options.page || 1));
-    const pageSize = Math.min(
-      5000,
-      Math.max(1, Number(options.pageSize || 50)),
-    );
-
-    // 1. Every plotted parcel, not just ones currently owned — this is an
-    // inventory of land on the ground, so nothing should be filtered out yet.
-    const plotsResponse = await getLandPlots({ currentOwnerOnly: false });
-    if (plotsResponse.error) {
-      return createResponse(null, plotsResponse.error, 500);
-    }
-    const plots: any[] = Array.isArray(plotsResponse.data)
-      ? plotsResponse.data
-      : [];
-
-    if (plots.length === 0) {
-      return createResponse(
-        { rows: [], totalCount: 0, page, pageSize },
-        null,
-        200,
-      );
-    }
-
-    // 2. Resolve owner names for plots already linked to a farmer_id.
-    const farmerIds = Array.from(
-      new Set(
-        plots
-          .map((p: any) => Number(p?.farmer_id))
-          .filter((id: number) => Number.isFinite(id)),
-      ),
-    );
-
-    const farmerNameById = new Map<number, string>();
-    if (farmerIds.length > 0) {
-      const { data: farmerRows, error: farmerRowsError } = await supabase
-        .from("rsbsa_submission")
-        .select('id, "FIRST NAME", "MIDDLE NAME", "LAST NAME"')
-        .in("id", farmerIds);
-
-      if (farmerRowsError) {
-        console.log(
-          "Land inventory farmer name lookup skipped (non-blocking):",
-          farmerRowsError.message,
-        );
-      } else {
-        (farmerRows || []).forEach((row: any) => {
-          const id = Number(row?.id);
-          if (!Number.isFinite(id)) return;
-          const name =
-            `${row["FIRST NAME"] || ""} ${row["MIDDLE NAME"] || ""} ${row["LAST NAME"] || ""}`
-              .replace(/\s+/g, " ")
-              .trim();
-          if (name) farmerNameById.set(id, name);
-        });
-      }
-    }
-
-    // 3. Left-join land_history by parcel_number so change events still show
-    // where they exist, without excluding plots that have none.
-    const { data: historyRows, error: historyError } = await supabase
-      .from("land_history")
-      .select(
-        "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at, farmer_id",
-      )
-      .order("created_at", { ascending: false })
-      .limit(5000);
-
-    if (historyError) {
-      console.log(
-        "Land inventory history lookup skipped (non-blocking):",
-        historyError.message,
-      );
-    }
-
-    const historyByParcelNumber = new Map<string, any[]>();
-    (historyRows || []).forEach((row: any) => {
-      const key = normalizeInventoryKey(row?.parcel_number);
-      if (!key) return;
-      if (!historyByParcelNumber.has(key)) historyByParcelNumber.set(key, []);
-      historyByParcelNumber.get(key)!.push(row);
-    });
-
-    const resolveBestHistoryMatch = (plot: any) => {
-      const key = normalizeInventoryKey(plot?.parcel_number);
-      if (!key) return null;
-      const candidates = historyByParcelNumber.get(key);
-      if (!candidates || candidates.length === 0) return null;
-
-      const plotFarmerId = Number(plot?.farmer_id);
-      if (Number.isFinite(plotFarmerId)) {
-        const farmerMatch = candidates.find(
-          (c: any) => Number(c?.farmer_id) === plotFarmerId,
-        );
-        if (farmerMatch) return farmerMatch;
-      }
-
-      const currentMatch = candidates.find((c: any) => c?.is_current === true);
-      if (currentMatch) return currentMatch;
-
-      // historyRows was already ordered by created_at desc, so [0] is most recent.
-      return candidates[0];
-    };
-
-    // 4. Build one combined row per plotted parcel.
-    const combinedRows: LandInventoryReportRow[] = plots.map((plot: any) => {
-      const matchedHistory = resolveBestHistoryMatch(plot);
-      const hasRegistrationHistory = Boolean(matchedHistory);
-
-      const resolvedFarmerId = Number(plot?.farmer_id);
-      const resolvedFarmerName = Number.isFinite(resolvedFarmerId)
-        ? farmerNameById.get(resolvedFarmerId)
-        : undefined;
-
-      const plotOwnerName = [
-        plot?.first_name,
-        plot?.middle_name,
-        plot?.surname,
-        plot?.ext_name,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-      const landOwnerName =
-        (matchedHistory?.land_owner_name || "").trim() ||
-        resolvedFarmerName ||
-        plotOwnerName ||
-        "";
-
-      const farmerName =
-        (matchedHistory?.farmer_name || "").trim() ||
-        resolvedFarmerName ||
-        plotOwnerName ||
-        "";
-
-      return {
-        id: matchedHistory ? `history-${matchedHistory.id}` : `plot-${plot.id}`,
-        land_plot_id: plot?.id ?? null,
-        parcel_number: plot?.parcel_number || null,
-        farm_location_barangay:
-          matchedHistory?.farm_location_barangay || plot?.barangay || null,
-        total_farm_area_ha:
-          matchedHistory?.total_farm_area_ha ?? plot?.area ?? null,
-        land_owner_name: landOwnerName || null,
-        farmer_name: farmerName || null,
-        is_registered_owner: matchedHistory
-          ? Boolean(matchedHistory.is_registered_owner)
-          : true,
-        is_tenant: matchedHistory ? Boolean(matchedHistory.is_tenant) : false,
-        is_lessee: matchedHistory ? Boolean(matchedHistory.is_lessee) : false,
-        is_current: matchedHistory ? Boolean(matchedHistory.is_current) : true,
-        period_start_date: matchedHistory?.period_start_date ?? null,
-        period_end_date: matchedHistory?.period_end_date ?? null,
-        change_type: matchedHistory?.change_type ?? null,
-        change_reason: matchedHistory?.change_reason ?? null,
-        created_at: matchedHistory?.created_at ?? null,
-        has_registration_history: hasRegistrationHistory,
-      };
-    });
-
-    // 5. Filters (client-side — land_plots for one municipality is small
-    // enough that this mirrors the pattern already used by getTechDashboardData).
-    const barangayLower = barangay.toLowerCase();
-    const dateFromTime = dateFrom ? new Date(dateFrom).getTime() : null;
-    const dateToTime = dateTo ? new Date(dateTo).getTime() : null;
-
-    const filteredRows = combinedRows.filter((row) => {
-      if (
-        barangayLower !== "all" &&
-        String(row.farm_location_barangay || "").toLowerCase() !== barangayLower
-      ) {
-        return false;
-      }
-
-      if (relationship === "unregistered") {
-        if (row.has_registration_history) return false;
-      } else if (relationship !== "all") {
-        // Role can't be verified for a parcel with no registration record,
-        // so an explicit role filter excludes unregistered parcels.
-        if (!row.has_registration_history) return false;
-        if (relationship === "owner" && !row.is_registered_owner) return false;
-        if (relationship === "tenant" && !row.is_tenant) return false;
-        if (relationship === "lessee" && !row.is_lessee) return false;
-        if (
-          relationship === "tenantLessee" &&
-          !(row.is_tenant || row.is_lessee)
-        ) {
-          return false;
-        }
-      }
-
-      if (dateFromTime || dateToTime) {
-        if (!row.period_start_date) return false;
-        const rowTime = new Date(row.period_start_date).getTime();
-        if (!Number.isFinite(rowTime)) return false;
-        if (dateFromTime && rowTime < dateFromTime) return false;
-        if (dateToTime && rowTime > dateToTime) return false;
-      }
-
-      if (searchTerm) {
-        const haystack = [
-          row.parcel_number,
-          row.land_owner_name,
-          row.farmer_name,
-          row.farm_location_barangay,
-          row.change_type,
-          row.change_reason,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(searchTerm)) return false;
-      }
-
-      return true;
-    });
-
-    filteredRows.sort((a, b) => {
-      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
-      if (bTime !== aTime) return bTime - aTime;
-      return String(a.parcel_number || "").localeCompare(
-        String(b.parcel_number || ""),
-      );
-    });
-
-    const totalCount = filteredRows.length;
-    const from = (page - 1) * pageSize;
-    const pagedRows = filteredRows.slice(from, from + pageSize);
-
-    return createResponse(
-      { rows: pagedRows, totalCount, page, pageSize },
-      null,
-      200,
-    );
-  } catch (error: any) {
-    console.error("Error building land inventory report:", error);
-    return createResponse(
-      null,
-      error?.message || "Failed to build land inventory report.",
-      500,
-    );
-  }
-};
-
-/**
- * Barangay filter options for the land-plots-first inventory report. Unions
- * land_plots.barangay with land_history.farm_location_barangay so a barangay
- * that has only unregistered plotted land still shows up as a filter choice.
- */
-export const getLandInventoryBarangays = async (): Promise<ApiResponse> => {
-  const [plotBarangayResult, historyBarangayResult] = await Promise.all([
-    supabase
-      .from("land_plots")
-      .select("barangay")
-      .not("barangay", "is", null)
-      .limit(5000),
-    supabase
-      .from("land_history")
-      .select("farm_location_barangay")
-      .not("farm_location_barangay", "is", null)
-      .limit(5000),
-  ]);
-
-  if (plotBarangayResult.error) {
-    console.log(
-      "Land inventory barangay lookup (land_plots) skipped:",
-      plotBarangayResult.error.message,
-    );
-  }
-  if (historyBarangayResult.error) {
-    console.log(
-      "Land inventory barangay lookup (land_history) skipped:",
-      historyBarangayResult.error.message,
-    );
-  }
-
-  const barangaySet = new Set<string>();
-  (plotBarangayResult.data || []).forEach((row: any) => {
-    const value = String(row?.barangay || "").trim();
-    if (value) barangaySet.add(value);
-  });
-  (historyBarangayResult.data || []).forEach((row: any) => {
-    const value = String(row?.farm_location_barangay || "").trim();
-    if (value) barangaySet.add(value);
-  });
-
-  return createResponse(
-    Array.from(barangaySet).sort((a, b) => a.localeCompare(b)),
-    null,
-    200,
-  );
 };
 
 // ==================== USERS ====================
@@ -4223,13 +4142,10 @@ export default {
   getLandHistory,
   getLandHistoryReportRows,
   getLandHistoryParcelHistory,
+  getCurrentParcelOwner,
   getLandHistoryBarangays,
   getLandHistoryFarmers,
   getLandHistoryAssociationRows,
-
-  // Land Inventory (land_plots-first)
-  getLandInventoryReportRows,
-  getLandInventoryBarangays,
 
   // Users
   getUsers,
@@ -4306,13 +4222,39 @@ export const getLandOwnerById = async (id: number): Promise<ApiResponse> => {
 };
 
 /**
+ * Fetch all registered farmers for the per-parcel tenant/lessee live search
+ * in Step 3 (YES path, "Who is cultivating this parcel?" cards).
+ */
+export const getRegisteredFarmers = async (): Promise<ApiResponse> => {
+  const { data, error } = await supabase
+    .from("rsbsa_submission")
+    .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY"')
+    .order('"LAST NAME"', { ascending: true });
+
+  if (error) {
+    console.error("getRegisteredFarmers error:", error);
+    return createResponse(null, error.message, 500);
+  }
+
+  const farmers = (data || []).map((row: any) => ({
+    id: row.id,
+    name: `${row["FIRST NAME"] || ""} ${row["MIDDLE NAME"] || ""} ${row["LAST NAME"] || ""}`
+      .replace(/\s+/g, " ")
+      .trim(),
+    barangay: row["BARANGAY"] || "",
+  }));
+
+  return createResponse(farmers, null, 200);
+};
+
+/**
  * Replace the current tenant/lessee holder on a parcel with a newly
  * registered person. Call this AFTER createRsbsaSubmission has succeeded
  * for the new registrant -- pass the returned submissionId as newHolderId.
- * See replace_current_tenant_lessee_on_registration for the full logic
- * (deactivates the old holder's parcel row + land_history period, points
- * the owner's parcel at the new holder, tags the new holder's land_history
- * row with source: 'tenant_replaced_via_registration').
+ * See replace_current_tenant_lessee_on_registration (Postgres function)
+ * for the full logic: deactivates the old holder's parcel row +
+ * land_history period, points the owner's parcel at the new holder, tags
+ * the new holder's land_history row with source: 'tenant_replaced_via_registration'.
  */
 export const replaceCurrentTenantLessee = async (params: {
   role: "tenant" | "lessee";
@@ -4339,30 +4281,4 @@ export const replaceCurrentTenantLessee = async (params: {
   }
 
   return createResponse(data, null, 200);
-};
-
-/**
- * Fetch all registered farmers for the per-parcel tenant/lessee live search
- * in Step 3 (YES path, "Who is cultivating this parcel?" cards).
- */
-export const getRegisteredFarmers = async (): Promise<ApiResponse> => {
-  const { data, error } = await supabase
-    .from("rsbsa_submission")
-    .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY"')
-    .order('"LAST NAME"', { ascending: true });
-
-  if (error) {
-    console.error("getRegisteredFarmers error:", error);
-    return createResponse(null, error.message, 500);
-  }
-
-  const farmers = (data || []).map((row: any) => ({
-    id: row.id,
-    name: `${row["FIRST NAME"] || ""} ${row["MIDDLE NAME"] || ""} ${row["LAST NAME"] || ""}`
-      .replace(/\s+/g, " ")
-      .trim(),
-    barangay: row["BARANGAY"] || "",
-  }));
-
-  return createResponse(farmers, null, 200);
 };
