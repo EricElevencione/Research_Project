@@ -1,15 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import "../../components/layout/sidebarStyle.css";
 import "../../assets/css/technician css/PickLandStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
 import { getRsbsaSubmissions, getFarmParcels } from "../../api";
-import { supabase } from "../../supabase";
+import TechSidebar from "../../components/layout/TechSidebar";
 
 interface LandOwner {
   id: string;
@@ -42,7 +36,6 @@ interface FarmParcel {
 
 const TechPickLandParcel: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { ownerId } = useParams<{ ownerId: string }>();
 
   const [landOwner, setLandOwner] = useState<LandOwner | null>(null);
@@ -51,12 +44,6 @@ const TechPickLandParcel: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
-
-  const isActive = (path: string) => location.pathname === path;
 
   // Fetch land owner information
   const fetchLandOwner = async () => {
@@ -167,19 +154,7 @@ const TechPickLandParcel: React.FC = () => {
     }
   }, [ownerId]);
 
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const firstName = user.user_metadata?.first_name || "";
-        const lastName = user.user_metadata?.last_name || "";
-        setCurrentUser({ firstName, lastName });
-      }
-    };
-    fetchCurrentUser();
-  }, []);
+
 
   // Handle parcel selection -> navigate to mapping page
   const handleParcelSelect = (parcel: FarmParcel, parcelIndex: number) => {
@@ -190,10 +165,7 @@ const TechPickLandParcel: React.FC = () => {
       );
     }
   };
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
+
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -242,80 +214,10 @@ const TechPickLandParcel: React.FC = () => {
   return (
     <div className="page-container">
       <div className="page">
-        {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/technician-dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
-              onClick={() => navigate("/technician-rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
-              onClick={() => navigate("/technician-incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/technician-masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button className="sidebar-nav-item logout" onClick={handleLogout}>
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-          {currentUser && (
-            <div className="sidebar-current-user">
-              <div className="sidebar-current-user-avatar">
-                {currentUser.firstName.charAt(0).toUpperCase()}
-                {currentUser.lastName.charAt(0).toUpperCase()}
-              </div>
-              <div className="sidebar-current-user-info">
-                <span className="sidebar-current-user-name">
-                  {currentUser.firstName} {currentUser.lastName}
-                </span>
-                <span className="sidebar-current-user-label">Logged in</span>
-              </div>
-            </div>
-          )}
-        </div>
-        {/* Sidebar ends here */}
-
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
+        {/* Shared Technician Sidebar */}
+        <TechSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
         />
 
         {/* Main content starts here */}

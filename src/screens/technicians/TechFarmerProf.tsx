@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   getRsbsaSubmissionById,
   getFarmParcels,
   getFarmerRequests,
 } from "../../api";
 import "../../assets/css/technician css/FarmerProf.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import FarmerIcon from "../../assets/images/farmer (1).png";
+import TechSidebar from "../../components/layout/TechSidebar";
 
 interface FarmerData {
   id: string;
@@ -56,7 +51,6 @@ interface Parcel {
 
 const TechFarmerProf: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { id } = useParams<{ id: string }>();
 
   const [farmer, setFarmer] = useState<FarmerData | null>(null);
@@ -76,12 +70,7 @@ const TechFarmerProf: React.FC = () => {
   const [expandedParcel, setExpandedParcel] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const isActive = (path: string) => {
-    if (path === "/technician-farmerprofile") {
-      return location.pathname.startsWith("/technician-farmerprofile");
-    }
-    return location.pathname === path;
-  };
+
 
   useEffect(() => {
     if (id) {
@@ -356,13 +345,10 @@ const TechFarmerProf: React.FC = () => {
     return (
       <div className="page-container">
         <div className="page">
-          <div className="sidebar">
-            <nav className="sidebar-nav">
-              <div className="sidebar-logo">
-                <img src={LogoImage} alt="Logo" />
-              </div>
-            </nav>
-          </div>
+          <TechSidebar
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
           <div className="tech-prof-main-content">
             <div className="loading-container">
               <div className="loading-spinner"></div>
@@ -378,13 +364,10 @@ const TechFarmerProf: React.FC = () => {
     return (
       <div className="page-container">
         <div className="page">
-          <div className="sidebar">
-            <nav className="sidebar-nav">
-              <div className="sidebar-logo">
-                <img src={LogoImage} alt="Logo" />
-              </div>
-            </nav>
-          </div>
+          <TechSidebar
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
           <div className="tech-prof-main-content">
             <div className="error-container">
               <p className="error-message">{error || "Farmer not found"}</p>
@@ -418,60 +401,11 @@ const TechFarmerProf: React.FC = () => {
   return (
     <div className="page-container">
       <div className="page">
-        {/* Sidebar starts here */}
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/technician-dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsapage") ? "active" : ""}`}
-              onClick={() => navigate("/technician-rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/technician-masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/") ? "active" : ""}`}
-              onClick={() => navigate("/")}
-            >
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-        </div>
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
+        {/* Shared Technician Sidebar */}
+        <TechSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
         />
-
-        {/* Sidebar ends here */}
 
         {/* Main content starts here */}
         <div className="tech-prof-main-content">

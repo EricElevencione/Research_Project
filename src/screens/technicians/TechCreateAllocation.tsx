@@ -1,15 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createAllocation } from "../../api";
 import "../../assets/css/technician css/TechCreateAllocationStyle.css";
 import "../../components/layout/sidebarStyle.css";
-import LogoImage from "../../assets/images/Logo.png";
-import HomeIcon from "../../assets/images/home.png";
-import RSBSAIcon from "../../assets/images/rsbsa.png";
-import ApproveIcon from "../../assets/images/approve.png";
-import LogoutIcon from "../../assets/images/logout.png";
-import IncentivesIcon from "../../assets/images/incentives.png";
-import { supabase } from "../../supabase";
+import TechSidebar from "../../components/layout/TechSidebar";
 
 interface AllocationFormData {
   season: string;
@@ -149,7 +143,6 @@ const SEED_FIELDS = [
 
 const TechCreateAllocation: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,24 +159,7 @@ const TechCreateAllocation: React.FC = () => {
 
   const [addedFertilizers, setAddedFertilizers] = useState<string[]>([]);
   const [addedSeeds, setAddedSeeds] = useState<string[]>([]);
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
 
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const firstName = user.user_metadata?.first_name || "";
-        const lastName = user.user_metadata?.last_name || "";
-        setCurrentUser({ firstName, lastName });
-      }
-    };
-    fetchCurrentUser();
-  }, []);
 
   const showToast = (
     message: string,
@@ -198,10 +174,7 @@ const TechCreateAllocation: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
+
 
   const todayDate = new Date().toISOString().split("T")[0];
   const [formData, setFormData] = useState<AllocationFormData>({
@@ -263,7 +236,7 @@ const TechCreateAllocation: React.FC = () => {
     notes: "",
   });
 
-  const isActive = (path: string) => location.pathname === path;
+
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -342,78 +315,9 @@ const TechCreateAllocation: React.FC = () => {
   return (
     <div className="tech-allocation-page-container">
       <div className="tech-allocation-page">
-        <div className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-          <nav className="sidebar-nav">
-            <div className="sidebar-logo">
-              <img src={LogoImage} alt="Logo" />
-            </div>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-dashboard") ? "active" : ""}`}
-              onClick={() => navigate("/technician-dashboard")}
-            >
-              <span className="nav-icon">
-                <img src={HomeIcon} alt="Home" />
-              </span>
-              <span className="nav-text">Home</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-rsbsa") ? "active" : ""}`}
-              onClick={() => navigate("/technician-rsbsa")}
-            >
-              <span className="nav-icon">
-                <img src={RSBSAIcon} alt="RSBSA" />
-              </span>
-              <span className="nav-text">RSBSA</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-incentives") ? "active" : ""}`}
-              onClick={() => navigate("/technician-incentives")}
-            >
-              <span className="nav-icon">
-                <img src={IncentivesIcon} alt="Incentives" />
-              </span>
-              <span className="nav-text">Subsidy</span>
-            </button>
-
-            <button
-              className={`sidebar-nav-item ${isActive("/technician-masterlist") ? "active" : ""}`}
-              onClick={() => navigate("/technician-masterlist")}
-            >
-              <span className="nav-icon">
-                <img src={ApproveIcon} alt="Masterlist" />
-              </span>
-              <span className="nav-text">Masterlist</span>
-            </button>
-
-            <button className="sidebar-nav-item logout" onClick={handleLogout}>
-              <span className="nav-icon">
-                <img src={LogoutIcon} alt="Logout" />
-              </span>
-              <span className="nav-text">Logout</span>
-            </button>
-          </nav>
-          {currentUser && (
-            <div className="sidebar-current-user">
-              <div className="sidebar-current-user-avatar">
-                {currentUser.firstName.charAt(0).toUpperCase()}
-                {currentUser.lastName.charAt(0).toUpperCase()}
-              </div>
-              <div className="sidebar-current-user-info">
-                <span className="sidebar-current-user-name">
-                  {currentUser.firstName} {currentUser.lastName}
-                </span>
-                <span className="sidebar-current-user-label">Logged in</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div
-          className={`tech-incent-sidebar-overlay ${sidebarOpen ? "active" : ""}`}
-          onClick={() => setSidebarOpen(false)}
+        <TechSidebar
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
         />
 
         <div className="tech-allocation-main-content">
