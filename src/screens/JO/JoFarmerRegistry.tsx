@@ -59,6 +59,7 @@ interface RSBSARecord {
   needsPendingReview?: boolean;
   hasNoParcels?: boolean;
   hasNoLandOwner?: boolean;
+  mainLivelihood?: string;
   ownershipType?: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -698,6 +699,7 @@ const JoFarmerRegistry: React.FC = () => {
               item._raw?.archive_reason ??
               null,
             ownershipType: item.ownershipType,
+            mainLivelihood: item.mainLivelihood || item._raw?.["MAIN LIVELIHOOD"] || "",
             hasNoParcels,
           };
         },
@@ -790,6 +792,16 @@ const JoFarmerRegistry: React.FC = () => {
           };
         });
       }
+
+      // Exclude landowner-only registrations from the Farmer Registry.
+      // These are people registered via JoRsbsaRegisLandowner who haven't
+      // been registered as farmers yet through JoRsbsaRegistration.
+      formattedRecords = formattedRecords.filter((record) => {
+        const livelihood = String(
+          record.mainLivelihood || ""
+        ).toLowerCase().trim();
+        return livelihood !== "landowner";
+      });
 
       setRsbsaRecords(formattedRecords);
       setLoading(false);
