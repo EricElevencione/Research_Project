@@ -664,7 +664,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         farmerId,
                       });
                       console.log("Feature properties:", feature.properties);
-                      const [cropInfo, resolvedOwnerName] = await Promise.all([
+                      const [cropInfo, resolvedOwner] = await Promise.all([
                         fetchCropPlantingInfo(
                           surname,
                           firstName,
@@ -678,7 +678,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                         // above already IS the current owner.
                         isTransferred && parcelNumberForLookup
                           ? getCurrentParcelOwner(String(parcelNumberForLookup))
-                              .then((res) => res?.data?.ownerName || null)
+                              .then((res) => res?.data || null)
                               .catch((err) => {
                                 console.error(
                                   "Error resolving current parcel owner:",
@@ -688,18 +688,58 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               })
                           : Promise.resolve(null),
                       ]);
+                      const resolvedOwnerName =
+                        resolvedOwner?.ownerName || null;
+                      const resolvedOwnerId = resolvedOwner?.ownerId ?? null;
+
+                      // A name alone doesn't tell you who's actually farming
+                      // the land now. When we can identify the current owner
+                      // by ID, pull THEIR own live tenant/crop record so the
+                      // card shows real current data instead of the stale
+                      // plotted identity's.
+                      let currentOwnerCropInfo: {
+                        owner: any;
+                        tenants: any[];
+                        landHistory?: any[];
+                      } | null = null;
+                      if (isTransferred && resolvedOwnerId) {
+                        currentOwnerCropInfo = await fetchCropPlantingInfo(
+                          "",
+                          "",
+                          "",
+                          "",
+                          undefined,
+                          resolvedOwnerId,
+                        ).catch((err: any) => {
+                          console.error(
+                            "Error fetching current owner's crop info:",
+                            err,
+                          );
+                          return null;
+                        });
+                      }
+                      const usingCurrentOwnerData =
+                        !!currentOwnerCropInfo?.owner;
+                      // Everything below renders from effectiveCropInfo so the
+                      // owner/tenant/history sections all reflect the SAME
+                      // record — never a mix of stale owner + fresh tenants.
+                      const effectiveCropInfo = usingCurrentOwnerData
+                        ? currentOwnerCropInfo!
+                        : cropInfo;
                       setTimeout(() => {
                         const cell = document.getElementById(
                           `crops-cell-${featureKey}`,
                         );
-                        const landHistory = Array.isArray(cropInfo?.landHistory)
-                          ? cropInfo.landHistory
+                        const landHistory = Array.isArray(
+                          effectiveCropInfo?.landHistory,
+                        )
+                          ? effectiveCropInfo.landHistory
                           : [];
 
                         if (cell) {
                           if (
-                            !cropInfo.owner &&
-                            cropInfo.tenants.length === 0 &&
+                            !effectiveCropInfo.owner &&
+                            effectiveCropInfo.tenants.length === 0 &&
                             landHistory.length === 0
                           ) {
                             const transferredNotice = resolvedOwnerName
@@ -747,8 +787,37 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                           } else {
                             let html = `<div class="farmland-popup-crops-list" style="max-height: 300px; overflow-y: auto;">`;
                             if (isTransferred) {
-                              html += resolvedOwnerName
+                              html += usingCurrentOwnerData
                                 ? `
+                                <div style="
+                                  background: #fffbeb;
+                                  border-left: 4px solid #d97706;
+                                  color: #92400e;
+                                  padding: 10px;
+                                  border-radius: 6px;
+                                  font-size: 0.85em;
+                                  font-weight: 600;
+                                  margin-bottom: 8px;
+                                  line-height: 1.4;
+                                ">
+                                  ⚠️ Geometry inherited from previous owner — please verify and redraw if needed.
+                                </div>
+                                <div style="
+                                  background: #f0fdf4;
+                                  border-left: 4px solid #16a34a;
+                                  color: #166534;
+                                  padding: 10px;
+                                  border-radius: 6px;
+                                  font-size: 0.85em;
+                                  font-weight: 600;
+                                  margin-bottom: 12px;
+                                  line-height: 1.4;
+                                ">
+                                  ✅ Showing the current registered owner's own records below.
+                                </div>
+                              `
+                                : resolvedOwnerName
+                                  ? `
                                 <div style="
                                   background: #fffbeb;
                                   border-left: 4px solid #d97706;
@@ -776,7 +845,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   ✅ Current Owner: ${escapeHtml(resolvedOwnerName)}
                                 </div>
                               `
-                                : `
+                                  : `
                                 <div style="
                                   background: #fffbeb;
                                   border-left: 4px solid #d97706;
@@ -794,14 +863,19 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                             }
 
                             // Owner section
-                            if (cropInfo.owner) {
+                            if (effectiveCropInfo.owner) {
                               const ownerStatusRaw = String(
-                                cropInfo.owner.ownership_status || "",
+                                effectiveCropInfo.owner.ownership_status || "",
                               )
                                 .trim()
                                 .toLowerCase();
+                              // Only label as "previous" when we're stuck
+                              // showing the stale plotted identity — once
+                              // we've resolved the real current owner's own
+                              // record, this IS the current registered owner.
                               const isStaleRegisteredOwner =
                                 isTransferred &&
+                                !usingCurrentOwnerData &&
                                 (ownerStatusRaw === "owner" ||
                                   ownerStatusRaw === "registered owner");
                               const ownerStatusLabel = isStaleRegisteredOwner
@@ -816,8 +890,8 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                       : ownerStatusRaw === "tenant/lessee"
                                         ? "Tenant + Lessee"
                                         : String(
-                                            cropInfo.owner.ownership_status ||
-                                              "Unknown",
+                                            effectiveCropInfo.owner
+                                              .ownership_status || "Unknown",
                                           );
                               const ownerStatusColor = isStaleRegisteredOwner
                                 ? "#d97706"
@@ -831,13 +905,13 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                         ? "#f59e0b"
                                         : "#6366f1";
                               const tenantCount = Array.isArray(
-                                cropInfo.tenants,
+                                effectiveCropInfo.tenants,
                               )
-                                ? cropInfo.tenants.length
+                                ? effectiveCropInfo.tenants.length
                                 : 0;
                               const tenantNames =
                                 tenantCount > 0
-                                  ? cropInfo.tenants
+                                  ? effectiveCropInfo.tenants
                                       .map((tenant: any) =>
                                         escapeHtml(
                                           tenant?.farmer_name || "Unknown",
@@ -845,10 +919,10 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                       )
                                       .join(", ")
                                   : "";
-                              const ownerRegDate = cropInfo.owner
+                              const ownerRegDate = effectiveCropInfo.owner
                                 .registration_date
                                 ? new Date(
-                                    cropInfo.owner.registration_date,
+                                    effectiveCropInfo.owner.registration_date,
                                   ).toLocaleDateString("en-US", {
                                     year: "numeric",
                                     month: "short",
@@ -859,10 +933,10 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               html += `<div class="farmland-popup-section-title" style="font-size: 0.85em; color: ${isStaleRegisteredOwner ? "#d97706" : "#16a34a"}; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">🏠 ${isStaleRegisteredOwner ? "Previously Plotted As" : "Land Owner"}</div>`;
                               html += `<div class="farmland-popup-farmer-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #86efac; border-radius: 8px; padding: 12px; margin-bottom: 10px;">`;
                               html += `<div class="farmland-popup-farmer-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
-                              html += `<span class="farmland-popup-farmer-name" style="font-weight: 600; color: #166534; font-size: 0.9em;">👤 ${cropInfo.owner.farmer_name}</span>`;
+                              html += `<span class="farmland-popup-farmer-name" style="font-weight: 600; color: #166534; font-size: 0.9em;">👤 ${effectiveCropInfo.owner.farmer_name}</span>`;
                               html += `<span class="farmland-popup-farmer-status" style="background: ${ownerStatusColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">${ownerStatusLabel}</span>`;
                               html += `</div>`;
-                              html += `<div class="farmland-popup-farmer-barangay" style="font-size: 0.75em; color: #166534; margin-bottom: 4px;">📍 Barangay: <strong>${location || cropInfo.owner.barangay || "N/A"}</strong></div>`;
+                              html += `<div class="farmland-popup-farmer-barangay" style="font-size: 0.75em; color: #166534; margin-bottom: 4px;">📍 Barangay: <strong>${location || effectiveCropInfo.owner.barangay || "N/A"}</strong></div>`;
                               html += `<div class="farmland-popup-farmer-date" style="font-size: 0.75em; color: #6b7280; margin-bottom: 8px;">📅 Registered: ${ownerRegDate}</div>`;
                               html += `<div class="farmland-popup-owner-tenant-link" style="font-size: 0.75em; color: #92400e; margin-bottom: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 8px;">👥 Tenant and Lessee Link: <strong>${tenantCount > 0 ? `${tenantCount} tenant or lessee association${tenantCount === 1 ? "" : "s"} on this land` : "No tenant or lessee association currently linked"}</strong>${tenantCount > 0 ? `<div style="margin-top: 4px; color: #78350f;">${tenantNames}</div>` : ""}</div>`;
                               // Crop/livestock flags on the OWNER's own
@@ -878,20 +952,26 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               if (tenantCount > 0) {
                                 html += `<div class="farmland-popup-crops-label" style="font-size: 0.8em; color: #4b5563; margin-bottom: 4px;">Registered crop/livestock activity:</div>`;
                                 html += `<div class="farmland-popup-crops-tags" style="display: flex; flex-wrap: wrap; gap: 6px;">`;
-                                cropInfo.owner.crops.forEach((crop: string) => {
-                                  const cropColor = crop
-                                    .toLowerCase()
-                                    .includes("rice")
-                                    ? "#22c55e"
-                                    : crop.toLowerCase().includes("corn")
-                                      ? "#eab308"
-                                      : crop.toLowerCase().includes("livestock")
-                                        ? "#f97316"
-                                        : crop.toLowerCase().includes("poultry")
-                                          ? "#ef4444"
-                                          : "#8b5cf6";
-                                  html += `<span class="farmland-popup-crop-tag" style="background: ${cropColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500;">🌱 ${crop}</span>`;
-                                });
+                                effectiveCropInfo.owner.crops.forEach(
+                                  (crop: string) => {
+                                    const cropColor = crop
+                                      .toLowerCase()
+                                      .includes("rice")
+                                      ? "#22c55e"
+                                      : crop.toLowerCase().includes("corn")
+                                        ? "#eab308"
+                                        : crop
+                                              .toLowerCase()
+                                              .includes("livestock")
+                                          ? "#f97316"
+                                          : crop
+                                                .toLowerCase()
+                                                .includes("poultry")
+                                            ? "#ef4444"
+                                            : "#8b5cf6";
+                                    html += `<span class="farmland-popup-crop-tag" style="background: ${cropColor}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500;">🌱 ${crop}</span>`;
+                                  },
+                                );
                                 html += `</div>`;
                               }
                               html += `</div></div>`;
@@ -899,73 +979,79 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
 
                             // Tenants section with separator
                             if (
-                              cropInfo.tenants &&
-                              cropInfo.tenants.length > 0
+                              effectiveCropInfo.tenants &&
+                              effectiveCropInfo.tenants.length > 0
                             ) {
                               // Add separator line between owner and tenants
-                              if (cropInfo.owner) {
+                              if (effectiveCropInfo.owner) {
                                 html += `<hr style="border: none; border-top: 2px dashed #d1d5db; margin: 12px 0;">`;
                               }
                               html += `<div class="farmland-popup-tenants-section">`;
                               html += `<div class="farmland-popup-tenants-title" style="font-size: 0.85em; color: #f59e0b; font-weight: 600; margin-bottom: 8px; padding-left: 4px;">👥 Tenant and Lessee associations on this land:</div>`;
-                              cropInfo.tenants.forEach((tenant: any) => {
-                                const tenantStatusRaw = String(
-                                  tenant.ownership_status || "",
-                                )
-                                  .trim()
-                                  .toLowerCase();
-                                const tenantStatusLabel =
-                                  tenantStatusRaw === "owner" ||
-                                  tenantStatusRaw === "registered owner"
-                                    ? "Registered Owner"
-                                    : tenantStatusRaw === "tenant"
-                                      ? "Tenant"
-                                      : tenantStatusRaw === "lessee"
-                                        ? "Lessee"
-                                        : tenantStatusRaw === "tenant/lessee"
-                                          ? "Tenant + Lessee"
-                                          : "Unknown";
-                                const tenantRegDate = tenant.registration_date
-                                  ? new Date(
-                                      tenant.registration_date,
-                                    ).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "short",
-                                      day: "numeric",
-                                    })
-                                  : "N/A";
-                                html += `<div class="farmland-popup-tenant-card" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fcd34d; border-radius: 8px; padding: 10px; margin-bottom: 8px;">`;
-                                html += `<div class="farmland-popup-tenant-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
-                                html += `<span class="farmland-popup-tenant-name" style="font-weight: 600; color: #92400e; font-size: 0.85em;">👤 ${tenant.farmer_name}</span>`;
-                                html += `<span class="farmland-popup-tenant-status" style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7em; font-weight: 600;">${tenantStatusLabel}</span>`;
-                                html += `</div>`;
-                                html += `<div class="farmland-popup-tenant-date" style="font-size: 0.7em; color: #6b7280; margin-bottom: 6px;">📅 Registered: ${tenantRegDate}</div>`;
-                                html += `<div class="farmland-popup-tenant-crops-label" style="font-size: 0.75em; color: #6b7280; margin-bottom: 4px;">Crops planted:</div>`;
-                                html += `<div class="farmland-popup-tenant-crops-tags" style="display: flex; flex-wrap: wrap; gap: 4px;">`;
-                                tenant.crops.forEach((crop: string) => {
-                                  const cropColor = crop
-                                    .toLowerCase()
-                                    .includes("rice")
-                                    ? "#22c55e"
-                                    : crop.toLowerCase().includes("corn")
-                                      ? "#eab308"
-                                      : crop.toLowerCase().includes("livestock")
-                                        ? "#f97316"
-                                        : crop.toLowerCase().includes("poultry")
-                                          ? "#ef4444"
-                                          : "#8b5cf6";
-                                  html += `<span class="farmland-popup-tenant-crop-tag" style="background: ${cropColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 500;">🌱 ${crop}</span>`;
-                                });
-                                html += `</div></div>`;
-                              });
+                              effectiveCropInfo.tenants.forEach(
+                                (tenant: any) => {
+                                  const tenantStatusRaw = String(
+                                    tenant.ownership_status || "",
+                                  )
+                                    .trim()
+                                    .toLowerCase();
+                                  const tenantStatusLabel =
+                                    tenantStatusRaw === "owner" ||
+                                    tenantStatusRaw === "registered owner"
+                                      ? "Registered Owner"
+                                      : tenantStatusRaw === "tenant"
+                                        ? "Tenant"
+                                        : tenantStatusRaw === "lessee"
+                                          ? "Lessee"
+                                          : tenantStatusRaw === "tenant/lessee"
+                                            ? "Tenant + Lessee"
+                                            : "Unknown";
+                                  const tenantRegDate = tenant.registration_date
+                                    ? new Date(
+                                        tenant.registration_date,
+                                      ).toLocaleDateString("en-US", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                      })
+                                    : "N/A";
+                                  html += `<div class="farmland-popup-tenant-card" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fcd34d; border-radius: 8px; padding: 10px; margin-bottom: 8px;">`;
+                                  html += `<div class="farmland-popup-tenant-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">`;
+                                  html += `<span class="farmland-popup-tenant-name" style="font-weight: 600; color: #92400e; font-size: 0.85em;">👤 ${tenant.farmer_name}</span>`;
+                                  html += `<span class="farmland-popup-tenant-status" style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7em; font-weight: 600;">${tenantStatusLabel}</span>`;
+                                  html += `</div>`;
+                                  html += `<div class="farmland-popup-tenant-date" style="font-size: 0.7em; color: #6b7280; margin-bottom: 6px;">📅 Registered: ${tenantRegDate}</div>`;
+                                  html += `<div class="farmland-popup-tenant-crops-label" style="font-size: 0.75em; color: #6b7280; margin-bottom: 4px;">Crops planted:</div>`;
+                                  html += `<div class="farmland-popup-tenant-crops-tags" style="display: flex; flex-wrap: wrap; gap: 4px;">`;
+                                  tenant.crops.forEach((crop: string) => {
+                                    const cropColor = crop
+                                      .toLowerCase()
+                                      .includes("rice")
+                                      ? "#22c55e"
+                                      : crop.toLowerCase().includes("corn")
+                                        ? "#eab308"
+                                        : crop
+                                              .toLowerCase()
+                                              .includes("livestock")
+                                          ? "#f97316"
+                                          : crop
+                                                .toLowerCase()
+                                                .includes("poultry")
+                                            ? "#ef4444"
+                                            : "#8b5cf6";
+                                    html += `<span class="farmland-popup-tenant-crop-tag" style="background: ${cropColor}; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 500;">🌱 ${crop}</span>`;
+                                  });
+                                  html += `</div></div>`;
+                                },
+                              );
                               html += `</div>`;
                             }
 
                             // Land history section
                             if (landHistory.length > 0) {
                               if (
-                                cropInfo.owner ||
-                                cropInfo.tenants.length > 0
+                                effectiveCropInfo.owner ||
+                                effectiveCropInfo.tenants.length > 0
                               ) {
                                 html += `<hr style="border: none; border-top: 2px dashed #d1d5db; margin: 12px 0;">`;
                               }
