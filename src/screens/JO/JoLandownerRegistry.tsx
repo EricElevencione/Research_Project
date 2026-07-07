@@ -111,6 +111,9 @@ interface LandownerDetail {
   landownerAddress: string;
   age: number | string;
   gender: string;
+  mainLivelihood?: string;
+  farmingActivities?: string[];
+  statusChangeReason?: string | null;
   parcels: OccupiedParcel[];
 }
 
@@ -961,6 +964,149 @@ const JoLandownerRegistry: React.FC = () => {
         return `${parts[0]}, ${parts.slice(1).join(" ")}`;
       })();
 
+      // Does this landowner ALSO have a separate Tenant/Lessee farmer
+      // registration under their name? There is no person-level ID linking
+      // separate submissions together — name is the only signal we have.
+      // That's inherently unreliable if two different people share a name,
+      // so this deliberately narrows further by middle name where either
+      // side has one, and refuses to attach anything if the match still
+      // resolves to more than one distinct person — showing nothing is
+      // safer than attaching a stranger's farming activities to this record.
+      let hasFarmerRegistration = false;
+      let linkedFarmerData: Record<string, any> | null = null;
+
+      try {
+        const { data: tenantLesseeRows, error: tenantLesseeError } =
+          await supabase
+            .from("rsbsa_farm_parcels")
+            .select("submission_id")
+            .neq("submission_id", ownerNumId)
+            .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true");
+
+        if (tenantLesseeError) {
+          console.warn(
+            "Linked farmer lookup (tenant/lessee parcels) error:",
+            tenantLesseeError.message,
+          );
+        }
+
+        const candidateSubmissionIds = [
+          ...new Set(
+            (tenantLesseeRows || [])
+              .map((row: any) => Number(row.submission_id))
+              .filter(Number.isFinite),
+          ),
+        ];
+
+        if (candidateSubmissionIds.length > 0) {
+          const { lastName: ownerLastName, firstName: ownerFirstName } =
+            parseName(farmerData.farmerName || "");
+          const normalizedOwnerLast = ownerLastName.trim().toLowerCase();
+          const normalizedOwnerFirst = ownerFirstName.trim().toLowerCase();
+          const normalizedOwnerMiddle = String(
+            data.middleName || data["MIDDLE NAME"] || "",
+          )
+            .trim()
+            .toLowerCase();
+
+          if (normalizedOwnerLast && normalizedOwnerFirst) {
+            const { data: candidateSubmissions, error: candidateError } =
+              await supabase
+                .from("rsbsa_submission")
+                .select(
+                  'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "MAIN LIVELIHOOD", "FARMER_RICE", "FARMER_CORN", "FARMER_OTHER_CROPS", "FARMER_OTHER_CROPS_TEXT", "FARMER_LIVESTOCK", "FARMER_LIVESTOCK_TEXT", "FARMER_POULTRY", "FARMER_POULTRY_TEXT"',
+                )
+                .in("id", candidateSubmissionIds);
+
+            if (candidateError) {
+              console.warn(
+                "Linked farmer lookup (submission match) error:",
+                candidateError.message,
+              );
+            }
+
+            const nameMatches = (candidateSubmissions || []).filter(
+              (row: any) => {
+                const rowLast = String(row["LAST NAME"] || "")
+                  .trim()
+                  .toLowerCase();
+                const rowFirst = String(row["FIRST NAME"] || "")
+                  .trim()
+                  .toLowerCase();
+                return (
+                  rowLast === normalizedOwnerLast &&
+                  rowFirst === normalizedOwnerFirst
+                );
+              },
+            );
+
+            if (nameMatches.length > 0) {
+              // Narrow by middle name when we have one to compare — this
+              // doesn't confirm identity, but it does separate two
+              // different people who happen to share a first+last name
+              // more often than first+last alone would.
+              const middleNarrowed = normalizedOwnerMiddle
+                ? nameMatches.filter((row: any) => {
+                    const rowMiddle = String(row["MIDDLE NAME"] || "")
+                      .trim()
+                      .toLowerCase();
+                    return !rowMiddle || rowMiddle === normalizedOwnerMiddle;
+                  })
+                : nameMatches;
+
+              const finalMatches =
+                middleNarrowed.length > 0 ? middleNarrowed : nameMatches;
+
+              // If distinct middle names remain among the finalists, these
+              // are genuinely different people sharing a name — bail out
+              // rather than guess which one this owner actually is.
+              const distinctMiddleNames = new Set(
+                finalMatches.map((row: any) =>
+                  String(row["MIDDLE NAME"] || "")
+                    .trim()
+                    .toLowerCase(),
+                ),
+              );
+              const isAmbiguous =
+                distinctMiddleNames.size > 1 &&
+                [...distinctMiddleNames].every((m) => m !== "");
+
+              if (!isAmbiguous) {
+                hasFarmerRegistration = true;
+                linkedFarmerData = finalMatches[0];
+              }
+            }
+          }
+        }
+      } catch (linkedFarmerErr) {
+        console.warn(
+          "Linked farmer registration check failed (non-blocking):",
+          linkedFarmerErr,
+        );
+      }
+
+      const farmingActivities: string[] = [];
+      if (hasFarmerRegistration && linkedFarmerData) {
+        if (linkedFarmerData["FARMER_RICE"]) farmingActivities.push("Rice");
+        if (linkedFarmerData["FARMER_CORN"]) farmingActivities.push("Corn");
+        if (linkedFarmerData["FARMER_OTHER_CROPS"]) {
+          const text = linkedFarmerData["FARMER_OTHER_CROPS_TEXT"] || "";
+          farmingActivities.push(text ? `Other Crops: ${text}` : "Other Crops");
+        }
+        if (linkedFarmerData["FARMER_LIVESTOCK"]) {
+          const text = linkedFarmerData["FARMER_LIVESTOCK_TEXT"] || "";
+          farmingActivities.push(text ? `Livestock: ${text}` : "Livestock");
+        }
+        if (linkedFarmerData["FARMER_POULTRY"]) {
+          const text = linkedFarmerData["FARMER_POULTRY_TEXT"] || "";
+          farmingActivities.push(text ? `Poultry: ${text}` : "Poultry");
+        }
+      }
+      const mainLivelihood =
+        hasFarmerRegistration && linkedFarmerData
+          ? String(linkedFarmerData["MAIN LIVELIHOOD"] || "").trim()
+          : "";
+
       setSelectedLandowner({
         id: ownerId,
         referenceNumber: selectedRecord?.referenceNumber || "N/A",
@@ -973,6 +1119,8 @@ const JoLandownerRegistry: React.FC = () => {
         landownerAddress: farmerData.farmerAddress || "N/A",
         age: age ?? "N/A",
         gender: data.gender || data.GENDER || "N/A",
+        mainLivelihood,
+        farmingActivities,
         parcels: combinedParcels,
       });
       setShowModal(true);

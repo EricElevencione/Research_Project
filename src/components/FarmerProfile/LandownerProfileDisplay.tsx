@@ -1,6 +1,6 @@
 import React from "react";
 import "../../components/FarmerProfile/farmerProfileModal.css";
-import ParcelGeometryPreview from "../FarmerProfile/Parcelgeometrypreview";
+import ParcelGeometryPreview from "../FarmerProfile/ParcelGeometryPreview";
 
 export interface LandownerOccupant {
   submissionId: string;
@@ -43,6 +43,9 @@ export interface LandownerProfileData {
   landownerAddress?: string;
   age?: number | string;
   gender?: string;
+  mainLivelihood?: string;
+  farmingActivities?: string[];
+  statusChangeReason?: string | null;
   parcels: LandownerProfileParcel[];
 }
 
@@ -149,6 +152,23 @@ export const LandownerProfileDisplay: React.FC<
               <span className="farmer-modal-value">
                 {landowner.recordStatus || "—"} (
                 {landowner.archiveReason || "Not specified"})
+                {landowner.recordStatus === "Not Active" &&
+                  landowner.statusChangeReason && (
+                    <div
+                      className="farmer-modal-info-item farmer-modal-full-width"
+                      style={{ marginTop: "8px" }}
+                    >
+                      <span
+                        className="farmer-modal-label"
+                        style={{ color: "#d32f2f" }}
+                      >
+                        Reason for Inactivity:
+                      </span>
+                      <span className="farmer-modal-value">
+                        {landowner.statusChangeReason}
+                      </span>
+                    </div>
+                  )}
               </span>
             </div>
           </div>
@@ -197,6 +217,18 @@ export const LandownerProfileDisplay: React.FC<
                 {landowner.gender || "—"}
               </span>
             </div>
+            {((landowner.farmingActivities ?? []).length > 0 ||
+              landowner.mainLivelihood) && (
+              <div className="farmer-modal-info-item farmer-modal-full-width">
+                <span className="farmer-modal-label">Main Livelihood:</span>
+                <span className="farmer-modal-value">
+                  {landowner.farmingActivities &&
+                  landowner.farmingActivities.length > 0
+                    ? landowner.farmingActivities.join(", ")
+                    : landowner.mainLivelihood}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -278,6 +310,45 @@ export const LandownerProfileDisplay: React.FC<
                           {parcel.farmLocationBarangay},{" "}
                           {parcel.farmLocationMunicipality}
                         </span>
+                        {(parcel.withinAncestralDomain ||
+                          parcel.ownershipDocumentNo ||
+                          parcel.agrarianReformBeneficiary) && (
+                          <div
+                            className="farmer-modal-parcel-details"
+                            style={{ paddingTop: 0 }}
+                          >
+                            {parcel.withinAncestralDomain && (
+                              <div className="farmer-modal-parcel-item">
+                                <span className="farmer-modal-label">
+                                  Within Ancestral Domain:
+                                </span>
+                                <span className="farmer-modal-value">
+                                  {parcel.withinAncestralDomain}
+                                </span>
+                              </div>
+                            )}
+                            {parcel.ownershipDocumentNo && (
+                              <div className="farmer-modal-parcel-item">
+                                <span className="farmer-modal-label">
+                                  Document Number:
+                                </span>
+                                <span className="farmer-modal-value">
+                                  {parcel.ownershipDocumentNo}
+                                </span>
+                              </div>
+                            )}
+                            {parcel.agrarianReformBeneficiary && (
+                              <div className="farmer-modal-parcel-item">
+                                <span className="farmer-modal-label">
+                                  ARB Beneficiary:
+                                </span>
+                                <span className="farmer-modal-value">
+                                  {parcel.agrarianReformBeneficiary}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="farmer-modal-parcel-item">
