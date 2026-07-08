@@ -442,7 +442,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
             : 0,
           withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
           agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
-          isCultivating: parcel.isCultivating ?? true,
+          isCultivating: parcel.isCultivating ?? false,
           existingParcelId: parcel.existingParcelId || null,
           existingParcelNumber: parcel.existingParcelNumber || null,
           ownershipType: {
@@ -485,7 +485,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         withinAncestralDomain: parcel.withinAncestralDomain || null,
         ownershipDocumentNo: parcel.ownershipDocumentNo || null,
         agrarianReformBeneficiary: parcel.agrarianReformBeneficiary || null,
-        isCultivating: parcel.isCultivating ?? null,
+        isCultivating: parcel.isCultivating ?? false,
         ownershipType: {
           registeredOwner: !!parcel.ownershipTypeRegisteredOwner,
           tenant: !!parcel.ownershipTypeTenant,

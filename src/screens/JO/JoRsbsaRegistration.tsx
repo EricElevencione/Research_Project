@@ -507,7 +507,7 @@ const JoRsbsa: React.FC = () => {
         farmLocationMunicipality: "",
         totalFarmAreaHa: "",
         withinAncestralDomain: "",
-        isCultivating: true,
+        isCultivating: false,
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
         ownershipTypeRegisteredOwner: false, // Default to registered owner
@@ -621,7 +621,7 @@ const JoRsbsa: React.FC = () => {
             farmLocationMunicipality: "Dumangas",
             totalFarmAreaHa: "",
             withinAncestralDomain: "",
-            isCultivating: true,
+            isCultivating: false,
             ownershipDocumentNo: "",
             agrarianReformBeneficiary: "",
             ownershipTypeRegisteredOwner: true,
@@ -663,7 +663,7 @@ const JoRsbsa: React.FC = () => {
           farmLocationMunicipality: "Dumangas",
           totalFarmAreaHa: "",
           withinAncestralDomain: "",
-          isCultivating: true,
+          isCultivating: false,
           ownershipDocumentNo: "",
           agrarianReformBeneficiary: "",
           ownershipTypeRegisteredOwner: true,
@@ -872,7 +872,7 @@ const JoRsbsa: React.FC = () => {
         ownershipDocumentNo: ownerParcel.ownership_document_no || "",
         agrarianReformBeneficiary:
           ownerParcel.agrarian_reform_beneficiary || "",
-        isCultivating: true,
+        isCultivating: false,
         ownershipTypeRegisteredOwner: false,
         ownershipTypeTenant: isTenant,
         ownershipTypeLessee: isLessee,
@@ -1090,7 +1090,7 @@ const JoRsbsa: React.FC = () => {
         withinAncestralDomain: parcel.within_ancestral_domain || "",
         ownershipDocumentNo: parcel.ownership_document_no || "",
         agrarianReformBeneficiary: parcel.agrarian_reform_beneficiary || "",
-        isCultivating: true,
+        isCultivating: false,
         ownershipTypeRegisteredOwner: true,
         ownershipTypeTenant: false,
         ownershipTypeLessee: false,
@@ -1121,7 +1121,7 @@ const JoRsbsa: React.FC = () => {
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: "",
           agrarianReformBeneficiary: "",
-          isCultivating: true,
+          isCultivating: false,
           ownershipTypeRegisteredOwner: false,
           ownershipTypeTenant: isTenant,
           ownershipTypeLessee: isLessee,
@@ -1354,9 +1354,11 @@ const JoRsbsa: React.FC = () => {
           : null,
         isActivelyFarming: formData.isActivelyFarming,
         // Include ownership category and land owner info for land_history creation
-        ownershipCategory: ownershipCategory,
+        ownershipCategory:
+          farmerRole === "owner" ? "registeredOwner" : ownershipCategory,
         farmerRole: farmerRole, // ← add this
         selectedSelfLandOwner: selectedSelfLandOwner,
+        selectedSelfLandOwnerId: selectedSelfLandOwner?.id || null,
         selectedLandOwner: selectedLandOwner
           ? {
               id: selectedLandOwner.id,
@@ -1373,7 +1375,7 @@ const JoRsbsa: React.FC = () => {
             : 0,
           withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
           agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
-          isCultivating: parcel.isCultivating ?? true,
+          isCultivating: parcel.isCultivating ?? false,
           // Include existing parcel info for ownership transfer
           existingParcelId: parcel.existingParcelId || null,
           existingParcelNumber: parcel.existingParcelNumber || null,
@@ -1456,7 +1458,8 @@ const JoRsbsa: React.FC = () => {
     );
 
     return {
-      ownershipCategory,
+      ownershipCategory:
+        farmerRole === "owner" ? "registeredOwner" : ownershipCategory,
       totalParcels: farmlandParcels.length,
       totalFarmAreaHa: Number(totalFarmAreaHa.toFixed(4)),
       farmLocation: {

@@ -16,7 +16,12 @@ export interface LandownerProfileParcel {
   farmLocationBarangay: string;
   farmLocationMunicipality: string;
   totalFarmAreaHa: number;
-  occupationType: "owner-farmed" | "tenant" | "lessee" | "tenant+lessee";
+  occupationType:
+    | "land-owner"
+    | "owner-farmed"
+    | "tenant"
+    | "lessee"
+    | "tenant+lessee";
   occupants: LandownerOccupant[];
   agrarianReformBeneficiary: string;
   withinAncestralDomain: string;
@@ -64,9 +69,10 @@ export const LandownerProfileDisplay: React.FC<
   };
 
   const getParcelOccupationLabel = (type: string) => {
+    if (type === "land-owner") return "Land-owner";
     if (type === "owner-farmed") return "Owner-farmed";
-    if (type === "tenant") return "Has Tenant";
-    if (type === "lessee") return "Has Lessee";
+    if (type === "tenant") return "Tenant";
+    if (type === "lessee") return "Lessee";
     if (type === "tenant+lessee") return "Tenant + Lessee";
     return type || "Mixed";
   };
@@ -92,8 +98,14 @@ export const LandownerProfileDisplay: React.FC<
   const ownerCult = (landowner.parcels || []).filter(
     (p) => p.occupationType === "owner-farmed",
   ).length;
+  const landOwnerOnly = (landowner.parcels || []).filter(
+    (p) => p.occupationType === "land-owner",
+  ).length;
   const occupied = (landowner.parcels || []).filter(
-    (p) => p.occupationType !== "owner-farmed",
+    (p) =>
+      p.occupationType === "tenant" ||
+      p.occupationType === "lessee" ||
+      p.occupationType === "tenant+lessee",
   ).length;
   const totalTenants = new Set(
     (landowner.parcels || [])
@@ -267,6 +279,11 @@ export const LandownerProfileDisplay: React.FC<
                   Owner-farmed: <strong>{ownerCult}</strong>
                 </div>
               )}
+              {landOwnerOnly > 0 && (
+                <div>
+                  Land-owner: <strong>{landOwnerOnly}</strong>
+                </div>
+              )}
               {occupied > 0 && (
                 <div>
                   Occupied: <strong>{occupied}</strong>
@@ -310,45 +327,6 @@ export const LandownerProfileDisplay: React.FC<
                           {parcel.farmLocationBarangay},{" "}
                           {parcel.farmLocationMunicipality}
                         </span>
-                        {(parcel.withinAncestralDomain ||
-                          parcel.ownershipDocumentNo ||
-                          parcel.agrarianReformBeneficiary) && (
-                          <div
-                            className="farmer-modal-parcel-details"
-                            style={{ paddingTop: 0 }}
-                          >
-                            {parcel.withinAncestralDomain && (
-                              <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">
-                                  Within Ancestral Domain:
-                                </span>
-                                <span className="farmer-modal-value">
-                                  {parcel.withinAncestralDomain}
-                                </span>
-                              </div>
-                            )}
-                            {parcel.ownershipDocumentNo && (
-                              <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">
-                                  Document Number:
-                                </span>
-                                <span className="farmer-modal-value">
-                                  {parcel.ownershipDocumentNo}
-                                </span>
-                              </div>
-                            )}
-                            {parcel.agrarianReformBeneficiary && (
-                              <div className="farmer-modal-parcel-item">
-                                <span className="farmer-modal-label">
-                                  ARB Beneficiary:
-                                </span>
-                                <span className="farmer-modal-value">
-                                  {parcel.agrarianReformBeneficiary}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
 
                       <div className="farmer-modal-parcel-item">
@@ -364,7 +342,7 @@ export const LandownerProfileDisplay: React.FC<
                       </div>
 
                       <div className="farmer-modal-parcel-item">
-                        <span className="farmer-modal-label">Occupation:</span>
+                        <span className="farmer-modal-label">Role:</span>
                         <span className="farmer-modal-value">
                           {getParcelOccupationLabel(parcel.occupationType)}
                         </span>

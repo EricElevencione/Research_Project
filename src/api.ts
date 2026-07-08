@@ -1370,9 +1370,21 @@ export const createRsbsaSubmission = async (
     isActivelyFarming: formData.isActivelyFarming ?? false,
     totalFarmArea: totalFarmArea,
     // Ownership category
-    ownershipCategory: formData.ownershipCategory || "registeredOwner",
+    ownershipCategory:
+      formData.farmerRole === "owner"
+        ? "registeredOwner"
+        : (formData.ownershipCategory || "registeredOwner"),
     farmerRole: formData.farmerRole || null,
     selectedSelfLandOwner: formData.selectedSelfLandOwner || null,
+    // The register_farmer_with_parcels SQL function reads
+    // selectedSelfLandOwnerId specifically (not selectedSelfLandOwner) to
+    // decide whether to reuse an existing submission instead of creating a
+    // duplicate. Sending both keeps this working regardless of which name
+    // any given caller happens to populate.
+    selectedSelfLandOwnerId:
+      formData.selectedSelfLandOwnerId ||
+      formData.selectedSelfLandOwner?.id ||
+      null,
     selectedLandOwner: formData.selectedLandOwner || null,
     // Farming activities
     farmerRice: formData.farmerRice || false,
@@ -3575,12 +3587,9 @@ export const getCurrentParcelOwner = async (
   const { data, error } = await supabase
     .from("land_history")
     .select(
-      "parcel_number, farmer_id, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_current, period_start_date, change_type",
+      "parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_current, period_start_date, change_type",
     )
-    // parcel_number casing can differ across entry points (e.g. land_plots
-    // vs land_history), so match case-insensitively rather than losing a
-    // real current-owner match to a casing mismatch.
-    .ilike("parcel_number", normalizedParcelNumber)
+    .eq("parcel_number", normalizedParcelNumber)
     .eq("is_current", true)
     .eq("is_registered_owner", true)
     .order("period_start_date", { ascending: false })
@@ -3596,10 +3605,6 @@ export const getCurrentParcelOwner = async (
 
   return createResponse(
     {
-      // ownerId lets callers re-resolve this owner's OWN current
-      // tenants/crops (via getCropPlantingInfo's farmer_id hint) instead of
-      // showing only a name with no supporting detail.
-      ownerId: row.farmer_id ?? null,
       ownerName: row.land_owner_name || row.farmer_name || null,
       parcelNumber: row.parcel_number,
       barangay: row.farm_location_barangay,

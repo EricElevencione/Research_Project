@@ -496,7 +496,9 @@ router.post("/", async (req, res) => {
 
           const isCultivating =
             parcel.isCultivating === undefined || parcel.isCultivating === null
-              ? true
+              ? isNewRegisteredOwner && !isNewTenant && !isNewLessee
+                ? false
+                : true
               : toBooleanFlag(parcel.isCultivating);
           const cultivationStatusUpdatedAt =
             parcel.cultivationStatusUpdatedAt || new Date().toISOString();

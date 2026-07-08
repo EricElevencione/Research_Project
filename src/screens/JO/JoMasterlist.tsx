@@ -26,6 +26,7 @@ import {
   LandownerProfileDisplay,
   LandownerProfileParcel,
 } from "../../components/FarmerProfile/LandownerProfileDisplay";
+import { getParcelOccupationType } from "../../utils/parcelOccupationType";
 
 // ─────────────────────────────────────────────
 // MASTERLIST — Universal "Find Anyone" page
@@ -2968,14 +2969,13 @@ const JoMasterlist: React.FC = () => {
                       farmLocationBarangay: p.farmLocationBarangay,
                       farmLocationMunicipality: p.farmLocationMunicipality,
                       totalFarmAreaHa: p.totalFarmAreaHa,
-                      occupationType: (p.ownershipTypeTenant &&
-                      p.ownershipTypeLessee
-                        ? "tenant+lessee"
-                        : p.ownershipTypeTenant
-                          ? "tenant"
-                          : p.ownershipTypeLessee
-                            ? "lessee"
-                            : "owner-farmed") as LandownerProfileParcel["occupationType"],
+                      occupationType: getParcelOccupationType({
+                        registeredOwner: p.ownershipTypeRegisteredOwner,
+                        tenant: p.ownershipTypeTenant,
+                        lessee: p.ownershipTypeLessee,
+                        isCultivating: p.isFarming,
+                        isFarming: p.isFarming,
+                      }) as LandownerProfileParcel["occupationType"],
                       occupants: [],
                       agrarianReformBeneficiary: p.agrarianReformBeneficiary,
                       withinAncestralDomain: p.withinAncestralDomain,

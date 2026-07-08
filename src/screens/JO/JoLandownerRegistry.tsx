@@ -11,6 +11,7 @@ import {
   printRsbsaFormById,
   printRsbsaFormsByIds,
 } from "../../utils/rsbsaPrint";
+import { getParcelOccupationType } from "../../utils/parcelOccupationType";
 import "../../assets/css/jo css/JoLandownerStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
@@ -67,6 +68,7 @@ interface LandownerSummaryRow {
   lesseeCount: number;
   currentTenantNames: string[];
   currentLesseeNames: string[];
+  dateSubmitted: string;
   status: string;
   hasNoLand?: boolean; // Flagged: no current land ownership
 }
@@ -79,7 +81,12 @@ interface OccupiedParcel {
   farmLocationMunicipality: string;
   totalFarmAreaHa: number;
   // Occupation
-  occupationType: "owner-farmed" | "tenant" | "lessee" | "tenant+lessee";
+  occupationType:
+    | "land-owner"
+    | "owner-farmed"
+    | "tenant"
+    | "lessee"
+    | "tenant+lessee";
   occupants: OccupantInfo[];
   // Parcel attributes
   agrarianReformBeneficiary: string;
@@ -142,18 +149,18 @@ type SortKey =
   | "barangay"
   | "totalAreaHa"
   | "parcelCount"
-  | "occupantCount";
+  | "occupantCount"
+  | "dateSubmitted";
 
 type SortDirection = "asc" | "desc";
 
 const DEFAULT_SORT_CONFIG: { key: SortKey; direction: SortDirection } = {
-  key: "landownerName",
-  direction: "asc",
+  key: "dateSubmitted",
+  direction: "desc",
 };
-const MAX_SORT_LEVELS = 2;
-
 const getDefaultSortDirection = (key: SortKey): SortDirection => {
   if (key === "landownerName" || key === "barangay") return "asc";
+  if (key === "dateSubmitted") return "desc";
   return "desc";
 };
 
@@ -866,18 +873,11 @@ const JoLandownerRegistry: React.FC = () => {
           .toUpperCase();
         const occupants = occupationByParcelNumber.get(parcelNum) || [];
 
-        const occupationType = (() => {
-          if (occupants.length === 0) return "owner-farmed";
-          const hasTenant = occupants.some(
-            (o) => o.role === "tenant" || o.role === "tenant+lessee",
-          );
-          const hasLessee = occupants.some(
-            (o) => o.role === "lessee" || o.role === "tenant+lessee",
-          );
-          if (hasTenant && hasLessee) return "tenant+lessee";
-          if (hasTenant) return "tenant";
-          return "lessee";
-        })() as OccupiedParcel["occupationType"];
+        const occupationType = getParcelOccupationType({
+          registeredOwner: true,
+          isCultivating: p.is_cultivating === true || p.is_farming === true,
+          occupants,
+        }) as OccupiedParcel["occupationType"];
 
         return {
           id: String(p.id),
@@ -928,13 +928,11 @@ const JoLandownerRegistry: React.FC = () => {
           isLinked: !!occupantData,
         };
 
-        const occupationType = (
-          isTenant && isLessee
-            ? "tenant+lessee"
-            : isTenant
-              ? "tenant"
-              : "lessee"
-        ) as OccupiedParcel["occupationType"];
+        const occupationType = getParcelOccupationType({
+          registeredOwner: false,
+          tenant: isTenant,
+          lessee: isLessee,
+        }) as OccupiedParcel["occupationType"];
 
         combinedParcels.push({
           id: String(p.id),
@@ -1201,6 +1199,7 @@ const JoLandownerRegistry: React.FC = () => {
         lesseeCount: owner.lesseeCount,
         currentTenantNames: owner.currentTenantNames,
         currentLesseeNames: owner.currentLesseeNames,
+        dateSubmitted: owner.dateSubmitted,
         status: owner.status,
         hasNoLand: parcels.length === 0,
       };
@@ -1295,6 +1294,15 @@ const JoLandownerRegistry: React.FC = () => {
                 (b.tenantCount + b.lesseeCount)) *
               factor;
             if (r !== 0) return r;
+          } else if (config.key === "dateSubmitted") {
+            const aDate = a.dateSubmitted
+              ? new Date(a.dateSubmitted).getTime()
+              : 0;
+            const bDate = b.dateSubmitted
+              ? new Date(b.dateSubmitted).getTime()
+              : 0;
+            const r = (aDate - bDate) * factor;
+            if (r !== 0) return r;
           }
         }
         return 0;
@@ -1334,18 +1342,17 @@ const JoLandownerRegistry: React.FC = () => {
 
   const handleSortChange = (key: SortKey) => {
     setSortConfigs((prev) => {
-      const defaultDir = getDefaultSortDirection(key);
-      const existingIndex = prev.findIndex((c) => c.key === key);
-      if (existingIndex >= 0) {
-        return prev.map((c) =>
-          c.key === key
-            ? { ...c, direction: c.direction === "asc" ? "desc" : "asc" }
-            : c,
-        );
+      const existing = prev[0];
+      if (existing?.key === key) {
+        return [
+          {
+            key,
+            direction: existing.direction === "asc" ? "desc" : "asc",
+          },
+        ];
       }
-      const next = [...prev, { key, direction: defaultDir }];
-      if (next.length <= MAX_SORT_LEVELS) return next;
-      return next.slice(next.length - MAX_SORT_LEVELS);
+
+      return [{ key, direction: getDefaultSortDirection(key) }];
     });
   };
 
@@ -1357,12 +1364,12 @@ const JoLandownerRegistry: React.FC = () => {
     sortConfigs[0].direction === DEFAULT_SORT_CONFIG.direction;
 
   const getSortIndicator = (key: SortKey) => {
-    const i = sortConfigs.findIndex((c) => c.key === key);
-    if (i === -1) return "↕";
-    return `${sortConfigs[i].direction === "asc" ? "▲" : "▼"}${i + 1}`;
+    const active = sortConfigs[0];
+    if (!active || active.key !== key) return "↕";
+    return active.direction === "asc" ? "▲" : "▼";
   };
 
-  const isSortActive = (key: SortKey) => sortConfigs.some((c) => c.key === key);
+  const isSortActive = (key: SortKey) => sortConfigs[0]?.key === key;
 
   // ─── Selection helpers ──────────────────────────────────────────────────────
 
