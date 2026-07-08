@@ -1743,9 +1743,11 @@ export const getFarmParcels = async (
   submissionId: string | number,
   options: {
     currentOwnerOnly?: boolean;
+    activeOnly?: boolean;
   } = {},
 ): Promise<ApiResponse> => {
   const currentOwnerOnly = options.currentOwnerOnly === true;
+  const activeOnly = options.activeOnly === true;
 
   // First get the farm parcels
   let parcelQuery = supabase
@@ -1756,6 +1758,9 @@ export const getFarmParcels = async (
   if (currentOwnerOnly) {
     parcelQuery = parcelQuery
       .eq("ownership_type_registered_owner", true)
+      .or("is_current_owner.is.null,is_current_owner.eq.true");
+  } else if (activeOnly) {
+    parcelQuery = parcelQuery
       .or("is_current_owner.is.null,is_current_owner.eq.true");
   }
 

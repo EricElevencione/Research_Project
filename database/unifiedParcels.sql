@@ -22,29 +22,8 @@ select
   lh.change_type,
   lh.change_reason,
   GREATEST(p.updated_at, lh.updated_at) as last_updated,
-  coalesce(
-    concat_ws(
-      ' '::text,
-      tenant_owner."FIRST NAME",
-      tenant_owner."MIDDLE NAME",
-      tenant_owner."LAST NAME",
-      tenant_owner."EXT NAME"
-    ),
-    p.tenant_land_owner_name
-  ) as tenant_land_owner_name,
-  coalesce(
-    concat_ws(
-      ' '::text,
-      lessee_owner."FIRST NAME",
-      lessee_owner."MIDDLE NAME",
-      lessee_owner."LAST NAME",
-      lessee_owner."EXT NAME"
-    ),
-    p.lessee_land_owner_name
-  ) as lessee_land_owner_name,
-  case
-    when p.ownership_type_tenant
-    then coalesce(
+  COALESCE(
+    NULLIF(
       concat_ws(
         ' '::text,
         tenant_owner."FIRST NAME",
@@ -52,10 +31,12 @@ select
         tenant_owner."LAST NAME",
         tenant_owner."EXT NAME"
       ),
-      p.tenant_land_owner_name
-    )
-    when p.ownership_type_lessee
-    then coalesce(
+      ''
+    ),
+    p.tenant_land_owner_name::text
+  ) as tenant_land_owner_name,
+  COALESCE(
+    NULLIF(
       concat_ws(
         ' '::text,
         lessee_owner."FIRST NAME",
@@ -63,7 +44,36 @@ select
         lessee_owner."LAST NAME",
         lessee_owner."EXT NAME"
       ),
-      p.lessee_land_owner_name
+      ''
+    ),
+    p.lessee_land_owner_name::text
+  ) as lessee_land_owner_name,
+  case
+    when p.ownership_type_tenant then COALESCE(
+      NULLIF(
+        concat_ws(
+          ' '::text,
+          tenant_owner."FIRST NAME",
+          tenant_owner."MIDDLE NAME",
+          tenant_owner."LAST NAME",
+          tenant_owner."EXT NAME"
+        ),
+        ''
+      ),
+      p.tenant_land_owner_name::text
+    )
+    when p.ownership_type_lessee then COALESCE(
+      NULLIF(
+        concat_ws(
+          ' '::text,
+          lessee_owner."FIRST NAME",
+          lessee_owner."MIDDLE NAME",
+          lessee_owner."LAST NAME",
+          lessee_owner."EXT NAME"
+        ),
+        ''
+      ),
+      p.lessee_land_owner_name::text
     )
     else concat_ws(
       ' '::text,
@@ -73,16 +83,13 @@ select
       s."EXT NAME"
     )
   end as land_owner_name,
-  s.archived_at as archived_at
+  s.archived_at
 from
   rsbsa_farm_parcels p
   left join rsbsa_submission s on p.submission_id = s.id
   left join rsbsa_submission tenant_owner on p.tenant_land_owner_id = tenant_owner.id
   left join rsbsa_submission lessee_owner on p.lessee_land_owner_id = lessee_owner.id
-  left join land_history lh on (
-    lh.farm_parcel_id = p.id
-    or lh.land_parcel_id = p.id
-  )
+  left join land_history lh on lh.farm_parcel_id = p.id
   and lh.is_current = true
 where
   COALESCE(p.is_current_owner, false) = true
@@ -109,11 +116,10 @@ select
   null::text as tenant_land_owner_name,
   null::text as lessee_land_owner_name,
   lh.land_owner_name,
-  s_hist.archived_at as archived_at
+  s_hist.archived_at
 from
   land_history lh
   left join rsbsa_farm_parcels p on p.id = lh.farm_parcel_id
-  or p.id = lh.land_parcel_id
   left join rsbsa_submission s_hist on lh.rsbsa_submission_id = s_hist.id
 where
   lh.is_current = true

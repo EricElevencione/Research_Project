@@ -2199,7 +2199,19 @@ const JoLandRegistry: React.FC = () => {
 
   const parcelDetailRows = useMemo<CultivationParcel[]>(() => {
     if (!selectedFarmer) return [];
-    return selectedFarmer.parcels.map((parcel) => {
+    // Safety net: `farmer_aggregated_unified.parcels[]` can still contain
+    // duplicate entries for the same underlying parcel (e.g. if the DB view
+    // ever regresses, or during the rollout window before the view fix is
+    // deployed everywhere). Dedupe by parcel id before rendering so the same
+    // parcel never shows up twice in the modal.
+    const seenParcelIds = new Set<string>();
+    const dedupedParcels = selectedFarmer.parcels.filter((parcel) => {
+      const key = String(parcel.id);
+      if (seenParcelIds.has(key)) return false;
+      seenParcelIds.add(key);
+      return true;
+    });
+    return dedupedParcels.map((parcel) => {
       const normalizePN = (pn: string) => normalizeParcelNumberKey(pn);
       const matches = cultivationParcels.filter(
         (cp) =>

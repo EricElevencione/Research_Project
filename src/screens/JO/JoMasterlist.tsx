@@ -809,7 +809,9 @@ const JoMasterlist: React.FC = () => {
         throw new Error("Failed to fetch farmer details");
       const farmerData = farmerResponse.data;
 
-      const parcelsResponse = await getFarmParcels(farmerId);
+      const parcelsResponse = await getFarmParcels(farmerId, {
+        activeOnly: true,
+      });
       if (parcelsResponse.error) throw new Error("Failed to fetch parcels");
       const parcelsData = parcelsResponse.data || [];
 
