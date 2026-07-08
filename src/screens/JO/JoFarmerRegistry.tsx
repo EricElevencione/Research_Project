@@ -86,6 +86,7 @@ interface Parcel {
   ownership_others_specify: string;
   contract_end_date?: string | null;
   is_farming?: boolean | null;
+  is_cultivating?: boolean | null;
   farming_status_reason?: string | null;
   farming_status_updated_at?: string | null;
 }
@@ -124,6 +125,7 @@ interface ParcelDetail {
   ownershipOthersSpecify: string;
   contractEndDate?: string | null;
   isFarming?: boolean | null;
+  isCultivating?: boolean | null;
   farmingStatusReason?: string | null;
   farmingStatusUpdatedAt?: string | null;
 }
@@ -347,7 +349,14 @@ const JoFarmerRegistry: React.FC = () => {
         agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
         ownershipOthersSpecify: p.ownership_others_specify || "",
         contractEndDate: p.contract_end_date || p.contractEndDate || null,
-        isFarming: typeof p.is_farming === "boolean" ? p.is_farming : null,
+        isFarming:
+          typeof p.is_farming === "boolean"
+            ? p.is_farming
+            : typeof p.is_cultivating === "boolean"
+              ? p.is_cultivating
+              : null,
+        isCultivating:
+          typeof p.is_cultivating === "boolean" ? p.is_cultivating : null,
         farmingStatusReason: p.farming_status_reason || null,
         farmingStatusUpdatedAt: p.farming_status_updated_at || null,
       }));
@@ -699,7 +708,8 @@ const JoFarmerRegistry: React.FC = () => {
               item._raw?.archive_reason ??
               null,
             ownershipType: item.ownershipType,
-            mainLivelihood: item.mainLivelihood || item._raw?.["MAIN LIVELIHOOD"] || "",
+            mainLivelihood:
+              item.mainLivelihood || item._raw?.["MAIN LIVELIHOOD"] || "",
             hasNoParcels,
           };
         },
@@ -727,6 +737,57 @@ const JoFarmerRegistry: React.FC = () => {
       const tenantLesseeParcelCountById = new Map<string, number>();
       const tenantLesseeFarmingCountById = new Map<string, number>();
 
+      // Batch query for owner-farmer parcels — counts is_cultivating OR
+      // is_farming so parcels set during land owner registration are included.
+      const ownerFarmerIds = formattedRecords
+        .filter((r) => {
+          const ot = r.ownershipType;
+          return (
+            ot?.registeredOwner === true || ot?.category === "registeredOwner"
+          );
+        })
+        .map((r) => r.id);
+
+      const ownerFarmerFarmingCountById = new Map<string, number>();
+
+      if (ownerFarmerIds.length > 0) {
+        const { data: ownerParcelRows } = await supabase
+          .from("rsbsa_farm_parcels")
+          .select("submission_id, is_farming, is_cultivating")
+          .in("submission_id", ownerFarmerIds)
+          .eq("ownership_type_registered_owner", true);
+
+        (ownerParcelRows || []).forEach((p: any) => {
+          if (!p.submission_id) return;
+          const id = String(p.submission_id);
+          // Count parcel as farmed if either field is true.
+          // null is NOT counted here — owner-farmers must explicitly confirm
+          // cultivation via registration or JO edit (unlike tenant/lessee
+          // records where null defaults to farming assumed).
+          if (p.is_cultivating === true || p.is_farming === true) {
+            ownerFarmerFarmingCountById.set(
+              id,
+              (ownerFarmerFarmingCountById.get(id) || 0) + 1,
+            );
+          }
+        });
+
+        // Overwrite farmingParcelCount for owner-farmer records with the
+        // direct parcel count — more accurate than cultivationSummary?.active.
+        formattedRecords = formattedRecords.map((r) => {
+          const isOwner =
+            r.ownershipType?.registeredOwner === true ||
+            r.ownershipType?.category === "registeredOwner";
+          if (!isOwner) return r;
+          const directCount = ownerFarmerFarmingCountById.get(r.id) ?? null;
+          return {
+            ...r,
+            farmingParcelCount:
+              directCount !== null ? directCount : r.farmingParcelCount,
+          };
+        });
+      }
+
       if (tenantLesseeIds.length > 0) {
         const [transferResult, ownerNameResult] = await Promise.all([
           supabase
@@ -738,7 +799,7 @@ const JoFarmerRegistry: React.FC = () => {
           supabase
             .from("rsbsa_farm_parcels")
             .select(
-              "submission_id, tenant_land_owner_id, lessee_land_owner_id, tenant_land_owner_name, lessee_land_owner_name, is_farming",
+              "submission_id, tenant_land_owner_id, lessee_land_owner_id, tenant_land_owner_name, lessee_land_owner_name, is_farming, is_cultivating",
             )
             .in("submission_id", tenantLesseeIds)
             .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true"),
@@ -797,9 +858,9 @@ const JoFarmerRegistry: React.FC = () => {
       // These are people registered via JoRsbsaRegisLandowner who haven't
       // been registered as farmers yet through JoRsbsaRegistration.
       formattedRecords = formattedRecords.filter((record) => {
-        const livelihood = String(
-          record.mainLivelihood || ""
-        ).toLowerCase().trim();
+        const livelihood = String(record.mainLivelihood || "")
+          .toLowerCase()
+          .trim();
         return livelihood !== "landowner";
       });
 
@@ -1475,8 +1536,14 @@ const JoFarmerRegistry: React.FC = () => {
     let active = 0,
       inactive = 0;
     parcels.forEach((p) => {
-      if (p.is_farming === true) active++;
-      if (p.is_farming === false) inactive++;
+      // A parcel counts as actively farmed if either is_farming OR
+      // is_cultivating is true — mirrors the Landowner Registry's logic.
+      const isActive = p.is_farming === true || p.is_cultivating === true;
+      // A parcel counts as not farmed only when is_farming is explicitly
+      // false AND is_cultivating is not true.
+      const isInactive = p.is_farming === false && p.is_cultivating !== true;
+      if (isActive) active++;
+      if (isInactive) inactive++;
     });
     if (active > 0 && inactive > 0) return "Mixed";
     if (active > 0) return "Farming";
@@ -1486,8 +1553,12 @@ const JoFarmerRegistry: React.FC = () => {
 
   // CHANGE: After saving, also recalculate farmingParcelCount from the edited
   // parcels so the "X/Y farming" column stays accurate without a full refetch.
+  // Counts a parcel as farmed if is_farming OR is_cultivating is true —
+  // mirrors the Landowner Registry's union of both fields.
   const deriveFarmingParcelCountFromParcels = (parcels: Parcel[]): number => {
-    return parcels.filter((p) => p.is_farming === true).length;
+    return parcels.filter(
+      (p) => p.is_farming === true || p.is_cultivating === true,
+    ).length;
   };
 
   const handleIndividualParcelChange = (
