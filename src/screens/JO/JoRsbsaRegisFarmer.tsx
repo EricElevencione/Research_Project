@@ -24,6 +24,20 @@ interface Parcel {
   ownershipDocumentNo: string;
   agrarianReformBeneficiary: string;
   // isCultivating is omitted — always true for farmer registration
+  // Optional ownership and tenant/lessee fields (may be present from other flows)
+  ownershipTypeRegisteredOwner?: boolean;
+  ownershipTypeTenant?: boolean;
+  ownershipTypeLessee?: boolean;
+  ownershipType?: {
+    registeredOwner?: boolean;
+    tenant?: boolean;
+    lessee?: boolean;
+  };
+  tenantLandOwnerName?: string;
+  lesseeLandOwnerName?: string;
+  tenantLandOwnerId?: number | null;
+  lesseeLandOwnerId?: number | null;
+  isCultivating?: boolean | null;
 }
 
 interface FormData {
@@ -364,22 +378,57 @@ const JoRsbsaRegisFarmer: React.FC = () => {
         dateOfBirth: formData.dateOfBirth
           ? new Date(formData.dateOfBirth)
           : null,
-        farmlandParcels: formData.farmlandParcels.map((parcel) => ({
-          ...parcel,
-          totalFarmAreaHa: parcel.totalFarmAreaHa
-            ? parseFloat(parcel.totalFarmAreaHa)
-            : 0,
-          withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
-          agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
-          // KEY: isCultivating is ALWAYS true for farmer registration
-          isCultivating: true,
-          ownershipType: {
-            // KEY: Always registered owner — farmers own their land
-            registeredOwner: true,
-            tenant: false,
-            lessee: false,
-          },
-        })),
+        farmlandParcels: formData.farmlandParcels.map((p) => {
+          // Parse area
+          const totalFarmAreaHa = p.totalFarmAreaHa
+            ? parseFloat(String(p.totalFarmAreaHa))
+            : 0;
+
+          // isCultivating remains true for farmer registration, but we
+          // should NOT overwrite parcel-level ownership flags if they
+          // were explicitly set elsewhere. Preserve tenant/lessee names/ids.
+          const registeredFlag =
+            p.ownershipTypeRegisteredOwner ?? p.ownershipType?.registeredOwner;
+          const tenantFlag = p.ownershipTypeTenant ?? p.ownershipType?.tenant;
+          const lesseeFlag = p.ownershipTypeLessee ?? p.ownershipType?.lessee;
+
+          let finalRegistered = registeredFlag;
+          let finalTenant = tenantFlag;
+          let finalLessee = lesseeFlag;
+
+          // If no explicit ownership flags provided, default to registeredOwner
+          if (
+            finalRegistered === undefined &&
+            finalTenant === undefined &&
+            finalLessee === undefined
+          ) {
+            finalRegistered = true;
+            finalTenant = false;
+            finalLessee = false;
+          } else {
+            finalRegistered = !!finalRegistered;
+            finalTenant = !!finalTenant;
+            finalLessee = !!finalLessee;
+          }
+
+          return {
+            ...p,
+            totalFarmAreaHa,
+            withinAncestralDomain: p.withinAncestralDomain === "Yes",
+            agrarianReformBeneficiary: p.agrarianReformBeneficiary === "Yes",
+            // Keep farming flag true for farmer registrations
+            isCultivating: true,
+            // Flattened ownership flags expected by createRsbsaSubmission
+            ownershipTypeRegisteredOwner: finalRegistered,
+            ownershipTypeTenant: finalTenant,
+            ownershipTypeLessee: finalLessee,
+            // Preserve any tenant/lessee names or ids entered
+            tenantLandOwnerName: p.tenantLandOwnerName || "",
+            lesseeLandOwnerName: p.lesseeLandOwnerName || "",
+            tenantLandOwnerId: p.tenantLandOwnerId || null,
+            lesseeLandOwnerId: p.lesseeLandOwnerId || null,
+          };
+        }),
       };
 
       const response = await createRsbsaSubmission({
