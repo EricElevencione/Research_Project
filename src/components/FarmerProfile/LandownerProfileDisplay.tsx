@@ -70,7 +70,7 @@ export const LandownerProfileDisplay: React.FC<
 
   const getParcelOccupationLabel = (type: string) => {
     if (type === "land-owner") return "Land-owner";
-    if (type === "owner-farmed") return "Owner-farmed";
+    if (type === "owner-farmed") return "Owner-Farming";
     if (type === "tenant") return "Tenant";
     if (type === "lessee") return "Lessee";
     if (type === "tenant+lessee") return "Tenant + Lessee";

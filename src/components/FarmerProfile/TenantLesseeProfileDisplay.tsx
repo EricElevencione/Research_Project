@@ -56,7 +56,7 @@ export const TenantLesseeProfileDisplay: React.FC<
   };
 
   const getParcelOwnershipLabel = (parcel: FarmerProfileParcel) => {
-    if (parcel.ownershipTypeRegisteredOwner) return "Registered Owner";
+    if (parcel.ownershipTypeRegisteredOwner) return "Owner-Farming"; // Islan lang karun
     if (parcel.ownershipTypeTenant && parcel.ownershipTypeLessee)
       return "Tenant + Lessee";
     if (parcel.ownershipTypeTenant) return "Tenant";

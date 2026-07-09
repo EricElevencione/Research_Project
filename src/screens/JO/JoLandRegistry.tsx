@@ -1498,15 +1498,6 @@ const JoLandRegistry: React.FC = () => {
       return;
     }
 
-    if (
-      ownerAffiliationTakeoverMode === "specific_slot" &&
-      selectedNewOwnerAvailableItems.length > 0
-    ) {
-      setOwnerAffiliationSubmitError(
-        "Specific slot is only allowed for current holder-linked parcels. Use Full parcel(s) when selecting new owner available parcels.",
-      );
-      return;
-    }
 
     if (ownerAffiliationSupportingDocs.length === 0) {
       setOwnerAffiliationSubmitError(
@@ -2516,10 +2507,8 @@ const JoLandRegistry: React.FC = () => {
     ownerAffiliationSpecificLotInputs,
   ]);
 
-  const ownerAffiliationTakeoverModeLabel =
-    ownerAffiliationTakeoverMode === "full_parcel"
-      ? "Full parcel(s)"
-      : "Specific slot per parcel";
+  // Scope is always "full_parcel" — the Full/Partial choice has been removed.
+  const ownerAffiliationTakeoverModeLabel = "Full parcel(s)";
 
   const ownerAffiliationOwnerOptions = useMemo<OwnerAffiliationOwnerOption[]>(
     () =>
@@ -5138,14 +5127,9 @@ const JoLandRegistry: React.FC = () => {
               <div className="jo-land-registry-modal-body">
                 <div className="jo-land-registry-replacement-flow">
                   <div className="jo-land-registry-replacement-note">
-                    <strong>
-                      {ownerAffiliationHasExistingLink
-                        ? "Affiliation Update Only:"
-                        : "Create First Link:"}
-                    </strong>{" "}
                     {ownerAffiliationHasExistingLink
-                      ? `This keeps the same ${ownerAffiliationRoleLabel.toLowerCase()} holder and updates only the linked landowner on selected parcel(s). Legal ownership is not transferred.`
-                      : `No linked landowner exists yet for this ${ownerAffiliationRoleLabel.toLowerCase()} holder. Select a landowner and parcel(s) below to create the first official link. Legal ownership is not transferred.`}
+                      ? `Updates the linked landowner for this ${ownerAffiliationRoleLabel.toLowerCase()}. Legal ownership is not transferred.`
+                      : `No linked landowner yet — select one below to create the first link.`}
                   </div>
 
                   {ownerAffiliationSubmitError && (
@@ -5283,27 +5267,14 @@ const JoLandRegistry: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    <div className="jo-land-registry-transfer-mini-note">
-                      {ownerAffiliationHasExistingLink
-                        ? "The parcels listed below are the holder's parcels currently linked to the selected landowner above (Step 1). After selecting a new owner, Step 2 can also include that owner's available owner parcels so they can be assigned to this holder under the same role."
-                        : "No existing link found for this holder. Select the landowner and then choose from that owner's parcels to create the first link."}
-                    </div>
-
                     {ownerAffiliationNewOwnerId === "" ? (
                       <div className="jo-land-registry-transfer-mini-note">
-                        Choose the new linked landowner first to continue parcel
-                        selection.
+                        Select a new landowner above to continue.
                       </div>
                     ) : ownerAffiliationStep3Parcels.length > 0 ? (
                       <>
                         <div className="jo-land-registry-transfer-subheading">
                           Parcel(s) To Update
-                        </div>
-
-                        <div className="jo-land-registry-transfer-mini-note">
-                          Select one or more parcels. Current holder-linked
-                          parcels are eligible for re-link; new owner available
-                          parcels are eligible for full assignment.
                         </div>
                         <div className="jo-land-registry-replacement-action-row">
                           <button
@@ -5312,7 +5283,7 @@ const JoLandRegistry: React.FC = () => {
                             disabled={ownerAffiliationStep3Parcels.length === 0}
                             onClick={handleOwnerAffiliationSelectAllParcels}
                           >
-                            Select All Parcels
+                            Select All
                           </button>
                           <button
                             type="button"
@@ -5322,13 +5293,8 @@ const JoLandRegistry: React.FC = () => {
                             }
                             onClick={handleOwnerAffiliationClearSelectedParcels}
                           >
-                            Clear Selection
+                            Clear
                           </button>
-                        </div>
-                        <div className="jo-land-registry-transfer-mini-note">
-                          Multi-select enabled: choose one or more parcels and
-                          submit them together under the same new linked
-                          landowner.
                         </div>
                         <div className="jo-land-registry-donor-parcel-cards">
                           {ownerAffiliationStep3Parcels.map((parcel) => {
@@ -5393,149 +5359,12 @@ const JoLandRegistry: React.FC = () => {
                           })}
                         </div>
 
-                        <div className="jo-land-registry-transfer-mini-note">
-                          Selected parcel count:{" "}
-                          {ownerAffiliationSelectedParcelIds.length}
-                        </div>
-
-                        <div className="jo-land-registry-transfer-subheading">
-                          Scope (Full or Partial)
-                        </div>
-
                         {ownerAffiliationSelectedParcelIds.length === 0 ? (
                           <div className="jo-land-registry-transfer-mini-note">
-                            Select at least one parcel first.
+                            Select at least one parcel.
                           </div>
                         ) : (
                           <>
-                            <div className="jo-land-registry-transfer-scope-radios">
-                              <label className="jo-land-registry-transfer-radio-label">
-                                <input
-                                  type="radio"
-                                  name="ownerAffiliationTakeoverMode"
-                                  checked={
-                                    ownerAffiliationTakeoverMode ===
-                                    "full_parcel"
-                                  }
-                                  onChange={() =>
-                                    handleOwnerAffiliationTakeoverModeChange(
-                                      "full_parcel",
-                                    )
-                                  }
-                                />
-                                <span>
-                                  <strong>Full parcel(s)</strong>
-                                  <br />
-                                  Update linked landowner for full selected
-                                  parcel area.
-                                </span>
-                              </label>
-
-                              <label className="jo-land-registry-transfer-radio-label">
-                                <input
-                                  type="radio"
-                                  name="ownerAffiliationTakeoverMode"
-                                  checked={
-                                    ownerAffiliationTakeoverMode ===
-                                    "specific_slot"
-                                  }
-                                  onChange={() =>
-                                    handleOwnerAffiliationTakeoverModeChange(
-                                      "specific_slot",
-                                    )
-                                  }
-                                />
-                                <span>
-                                  <strong>Specific slot per parcel</strong>
-                                  <br />
-                                  Enter a specific area for each selected
-                                  parcel.
-                                </span>
-                              </label>
-                            </div>
-
-                            {ownerAffiliationTakeoverMode ===
-                              "specific_slot" && (
-                              <div className="jo-land-registry-transfer-parcel-box">
-                                <div className="jo-land-registry-transfer-subheading">
-                                  Specific Slot Area Input
-                                </div>
-                                <div className="jo-land-registry-transfer-mini-note">
-                                  Enter the area share (ha) for each selected
-                                  parcel.
-                                </div>
-                                <div className="jo-land-registry-transfer-mini-note">
-                                  Note: new owner available parcels can only use
-                                  Full parcel(s).
-                                </div>
-
-                                <div className="jo-land-registry-donor-parcel-cards">
-                                  {ownerAffiliationStep3Parcels
-                                    .filter((parcel) =>
-                                      ownerAffiliationSelectedParcelIds.includes(
-                                        parcel.farmParcelId,
-                                      ),
-                                    )
-                                    .map((parcel) => {
-                                      const specificInput =
-                                        ownerAffiliationSpecificLotInputs[
-                                          parcel.farmParcelId
-                                        ] || {
-                                          customAreaHa: "",
-                                        };
-
-                                      return (
-                                        <div
-                                          key={`owner-affiliation-specific-${parcel.farmParcelId}`}
-                                          className="jo-land-registry-donor-parcel-card"
-                                        >
-                                          <div className="jo-land-registry-donor-parcel-card-header">
-                                            <span className="jo-land-registry-donor-parcel-number">
-                                              {parcel.parcelNumber ||
-                                                `Parcel ID #${parcel.farmParcelId}`}
-                                            </span>
-                                            <span className="jo-land-registry-donor-parcel-area-badge">
-                                              {parcel.areaHa.toFixed(2)} ha
-                                            </span>
-                                          </div>
-
-                                          <div className="jo-land-registry-donor-parcel-card-body">
-                                            <div
-                                              style={{
-                                                marginTop: "10px",
-                                                display: "grid",
-                                                gap: "8px",
-                                              }}
-                                            >
-                                              <label className="jo-land-registry-transfer-label">
-                                                Specific Area (ha)
-                                              </label>
-                                              <input
-                                                type="number"
-                                                min="0.01"
-                                                step="0.01"
-                                                max={parcel.areaHa.toFixed(2)}
-                                                className="jo-land-registry-transfer-input"
-                                                placeholder={`Max ${parcel.areaHa.toFixed(2)} ha`}
-                                                value={
-                                                  specificInput.customAreaHa
-                                                }
-                                                onChange={(e) =>
-                                                  handleOwnerAffiliationSpecificAreaChange(
-                                                    parcel.farmParcelId,
-                                                    e.target.value,
-                                                  )
-                                                }
-                                              />
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                </div>
-                              </div>
-                            )}
-
                             {ownerAffiliationTakeoverPlan.error && (
                               <div className="jo-land-registry-transfer-mini-note">
                                 {ownerAffiliationTakeoverPlan.error}
@@ -5543,22 +5372,14 @@ const JoLandRegistry: React.FC = () => {
                             )}
 
                             <div className="jo-land-registry-transfer-mini-note">
-                              Ready scoped parcel count:{" "}
-                              {ownerAffiliationTakeoverPlan.selectedParcelCount}{" "}
-                              • Total scoped area:{" "}
-                              {ownerAffiliationTakeoverPlan.totalAreaHa.toFixed(
-                                2,
-                              )}{" "}
-                              ha
+                              {ownerAffiliationTakeoverPlan.selectedParcelCount} parcel{ownerAffiliationTakeoverPlan.selectedParcelCount === 1 ? "" : "s"} · {ownerAffiliationTakeoverPlan.totalAreaHa.toFixed(2)} ha
                             </div>
                           </>
                         )}
                       </>
                     ) : (
                       <div className="jo-land-registry-transfer-mini-note">
-                        No eligible parcels found for this context. Select a
-                        different source/new owner or verify parcel role-link
-                        data.
+                        No eligible parcels found. Try a different landowner.
                       </div>
                     )}
                   </div>
@@ -5582,9 +5403,7 @@ const JoLandRegistry: React.FC = () => {
 
                     {!ownerAffiliationReadyForProofUpload && (
                       <div className="jo-land-registry-transfer-mini-note">
-                        {ownerAffiliationHasExistingLink
-                          ? "Select current linked owner, new linked owner, and at least one scoped parcel before uploading proof documents."
-                          : "Select a new linked landowner and at least one scoped parcel before uploading proof documents."}
+                        Complete Steps 1–2 before uploading proof.
                       </div>
                     )}
 
@@ -5662,10 +5481,12 @@ const JoLandRegistry: React.FC = () => {
                         <span>Role</span>
                         <strong>{ownerAffiliationRoleLabel}</strong>
                       </div>
-                      <div className="jo-land-registry-transfer-kv">
-                        <span>Scope</span>
-                        <strong>{ownerAffiliationTakeoverModeLabel}</strong>
-                      </div>
+                      {ownerAffiliationTakeoverModeLabel && (
+                        <div className="jo-land-registry-transfer-kv">
+                          <span>Scope</span>
+                          <strong>{ownerAffiliationTakeoverModeLabel}</strong>
+                        </div>
+                      )}
 
                       <ul className="jo-land-registry-transfer-list">
                         {ownerAffiliationPreviewParcels.map((parcel) => (
@@ -5719,9 +5540,7 @@ const JoLandRegistry: React.FC = () => {
                   </div>
 
                   <div className="jo-land-registry-transfer-mini-note">
-                    {ownerAffiliationHasExistingLink
-                      ? `This action updates owner affiliation only. The current ${ownerAffiliationRoleLabel.toLowerCase()} holder remains unchanged.`
-                      : `This action creates the first owner link for this ${ownerAffiliationRoleLabel.toLowerCase()} holder. The holder remains unchanged.`}
+                    The {ownerAffiliationRoleLabel.toLowerCase()} holder stays the same — only the linked landowner changes.
                   </div>
                 </div>
               </div>

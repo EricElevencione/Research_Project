@@ -2090,7 +2090,7 @@ const JoFarmerRegistry: React.FC = () => {
                       </button>
                     </th>
                     <th>Barangay</th>
-                    <th>Role</th>
+
                     <th>Parcels</th>
                     <th>
                       <button
@@ -2226,17 +2226,6 @@ const JoFarmerRegistry: React.FC = () => {
                           <span className="jo-farmer-cultivation-text">
                             {getRecordBarangay(record)}
                           </span>
-                        </td>
-
-                        {/* Role */}
-                        <td>
-                          <div className="jo-farmer-status-cell">
-                            <span
-                              className={`jo-farmer-ownership-pill ${getOwnershipClass(record)}`}
-                            >
-                              {getOwnershipLabel(record)}
-                            </span>
-                          </div>
                         </td>
 
                         {/* Parcel count */}
