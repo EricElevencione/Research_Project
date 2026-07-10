@@ -26,7 +26,9 @@ select
       'tenant_land_owner_name',
       tenant_land_owner_name,
       'lessee_land_owner_name',
-      lessee_land_owner_name
+      lessee_land_owner_name,
+      'is_current_owner',
+      is_current_owner
     )
   ) as parcels,
   sum(total_farm_area_ha) as total_farm_area_ha,

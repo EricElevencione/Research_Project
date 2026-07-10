@@ -83,7 +83,8 @@ select
       s."EXT NAME"
     )
   end as land_owner_name,
-  s.archived_at
+  s.archived_at,
+  COALESCE(p.is_current_owner, false) as is_current_owner
 from
   rsbsa_farm_parcels p
   left join rsbsa_submission s on p.submission_id = s.id
@@ -97,7 +98,7 @@ where
   or COALESCE(p.ownership_type_lessee, false) = true
 union
 select
-  lh.id,
+  lh.id + 100000000::bigint as id,
   lh.rsbsa_submission_id as farmer_id,
   lh.parcel_number,
   lh.farm_location_barangay,
@@ -116,7 +117,8 @@ select
   null::text as tenant_land_owner_name,
   null::text as lessee_land_owner_name,
   lh.land_owner_name,
-  s_hist.archived_at
+  s_hist.archived_at,
+  false as is_current_owner
 from
   land_history lh
   left join rsbsa_farm_parcels p on p.id = lh.farm_parcel_id

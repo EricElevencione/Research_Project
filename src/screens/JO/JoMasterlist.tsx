@@ -22,7 +22,10 @@ import {
 } from "../../components/Audit/auditLogger";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfileDisplay";
-import type { UnifiedParcel, OccupantInfo } from "../../components/FarmerProfile/FarmerProfileDisplay";
+import type {
+  UnifiedParcel,
+  OccupantInfo,
+} from "../../components/FarmerProfile/FarmerProfileDisplay";
 import { getParcelOccupationType } from "../../utils/parcelOccupationType";
 
 // ─────────────────────────────────────────────
@@ -71,6 +74,8 @@ interface RSBSARecord {
     tenantLessee?: boolean;
     category?: "registeredOwner" | "tenantLessee" | "unknown";
   };
+  mainLivelihood?: string;
+  isActivelyFarming?: boolean;
 }
 
 interface SummaryStats {
@@ -266,8 +271,9 @@ const JoMasterlist: React.FC = () => {
   const [selectedFarmingStatus, setSelectedFarmingStatus] =
     useState<string>("all");
   const [selectedCrop, setSelectedCrop] = useState<string>("all");
+  const [hideNonFarmingLandowners, setHideNonFarmingLandowners] =
+    useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
-
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
     null,
   );
@@ -740,8 +746,10 @@ const JoMasterlist: React.FC = () => {
               : "",
           status: String(item.status ?? "Not Submitted"),
           landParcel,
-          farmingStatus: String(item.farmingStatus || "Not specified"),
+          farmingStatus: String(item.farmingStatus || item.cultivationStatus || "Not specified"),
           landownerName: landownerMap.get(String(item.id)) || "",
+          mainLivelihood: item.mainLivelihood || "",
+          isActivelyFarming: item.isActivelyFarming === true,
           archivedAt:
             item.archivedAt ??
             item.archived_at ??
@@ -782,7 +790,10 @@ const JoMasterlist: React.FC = () => {
         };
       });
 
-      const cleaned = formatted.filter((record) => !record.archivedAt);
+      const cleaned = formatted.filter((record) => {
+        if (record.archivedAt) return false;
+        return true;
+      });
       setRsbsaRecords(cleaned);
       setLoading(false);
     } catch (err: any) {
@@ -1131,6 +1142,16 @@ const JoMasterlist: React.FC = () => {
         ]);
         if (record.archivedAt) return false;
 
+        // Exclude strict landowners who are not farming if toggle is ON
+        if (hideNonFarmingLandowners) {
+          const isLandOwner = String(record.mainLivelihood || "").toLowerCase().trim() === "landowner";
+          const isActivelyFarming = record.isActivelyFarming === true;
+
+          if (isLandOwner && !isActivelyFarming) {
+            return false;
+          }
+        }
+
         const f = getOwnershipFlags(record);
         if (
           selectedRole === "owner" &&
@@ -1262,6 +1283,7 @@ const JoMasterlist: React.FC = () => {
     selectedFarmBarangay,
     selectedFarmingStatus,
     selectedCrop,
+    hideNonFarmingLandowners,
     searchQuery,
     sortConfigs,
   ]);
@@ -2116,6 +2138,18 @@ const JoMasterlist: React.FC = () => {
                     <option value="poultry">Poultry</option>
                   </select>
                 </div>
+
+                <div className="jo-masterlist-status-filter" style={{ display: "flex", alignItems: "center", paddingLeft: "8px", minWidth: "220px" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--color-text-secondary, #555)", cursor: "pointer", userSelect: "none" }}>
+                    <input
+                      type="checkbox"
+                      checked={hideNonFarmingLandowners}
+                      onChange={(e) => setHideNonFarmingLandowners(e.target.checked)}
+                      style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                    />
+                    Hide non-farming land owners
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -2962,27 +2996,29 @@ const JoMasterlist: React.FC = () => {
                     address: selectedFarmer.farmerAddress,
                     age: selectedFarmer.age,
                     gender: selectedFarmer.gender,
-                    parcels: (selectedFarmer.parcels || []).map((p): UnifiedParcel => ({
-                      id: p.id,
-                      parcelNumber: p.parcelNumber,
-                      farmLocationBarangay: p.farmLocationBarangay,
-                      farmLocationMunicipality: p.farmLocationMunicipality,
-                      totalFarmAreaHa: p.totalFarmAreaHa,
-                      role: getParcelOccupationType({
-                        registeredOwner: p.ownershipTypeRegisteredOwner,
-                        tenant: p.ownershipTypeTenant,
-                        lessee: p.ownershipTypeLessee,
-                        isCultivating: p.isFarming,
+                    parcels: (selectedFarmer.parcels || []).map(
+                      (p): UnifiedParcel => ({
+                        id: p.id,
+                        parcelNumber: p.parcelNumber,
+                        farmLocationBarangay: p.farmLocationBarangay,
+                        farmLocationMunicipality: p.farmLocationMunicipality,
+                        totalFarmAreaHa: p.totalFarmAreaHa,
+                        role: getParcelOccupationType({
+                          registeredOwner: p.ownershipTypeRegisteredOwner,
+                          tenant: p.ownershipTypeTenant,
+                          lessee: p.ownershipTypeLessee,
+                          isCultivating: p.isFarming,
+                          isFarming: p.isFarming,
+                        }) as UnifiedParcel["role"],
+                        occupants: [],
+                        geometry: null,
+                        agrarianReformBeneficiary: p.agrarianReformBeneficiary,
+                        withinAncestralDomain: p.withinAncestralDomain,
+                        ownershipDocumentNo: p.ownershipDocumentNo,
                         isFarming: p.isFarming,
-                      }) as UnifiedParcel["role"],
-                      occupants: [],
-                      geometry: null,
-                      agrarianReformBeneficiary: p.agrarianReformBeneficiary,
-                      withinAncestralDomain: p.withinAncestralDomain,
-                      ownershipDocumentNo: p.ownershipDocumentNo,
-                      isFarming: p.isFarming,
-                      farmingStatusReason: p.farmingStatusReason,
-                    })),
+                        farmingStatusReason: p.farmingStatusReason,
+                      }),
+                    ),
                   }}
                   onClose={() => {
                     setShowModal(false);
@@ -3005,38 +3041,46 @@ const JoMasterlist: React.FC = () => {
                     gender: selectedFarmer.gender,
                     mainLivelihood: selectedFarmer.mainLivelihood,
                     farmingActivities: selectedFarmer.farmingActivities,
-                    parcels: (selectedFarmer.parcels || []).map((p): UnifiedParcel => {
-                      const role: UnifiedParcel["role"] =
-                        p.ownershipTypeRegisteredOwner ? "owner-farmed"
-                        : p.ownershipTypeTenant && p.ownershipTypeLessee ? "tenant+lessee"
-                        : p.ownershipTypeTenant ? "tenant"
-                        : p.ownershipTypeLessee ? "lessee"
-                        : "tenant";
-                      const occupants: OccupantInfo[] = [];
-                      const ownerName = p.tenantLandOwnerName || p.lesseeLandOwnerName;
-                      if (ownerName) {
-                        occupants.push({
-                          submissionId: "",
-                          name: ownerName,
-                          role: "land-owner",
-                        });
-                      }
-                      return {
-                        id: p.id,
-                        parcelNumber: p.parcelNumber,
-                        farmLocationBarangay: p.farmLocationBarangay,
-                        farmLocationMunicipality: p.farmLocationMunicipality,
-                        totalFarmAreaHa: p.totalFarmAreaHa,
-                        role,
-                        occupants,
-                        geometry: null,
-                        withinAncestralDomain: p.withinAncestralDomain,
-                        ownershipDocumentNo: p.ownershipDocumentNo,
-                        agrarianReformBeneficiary: p.agrarianReformBeneficiary,
-                        isFarming: p.isFarming,
-                        farmingStatusReason: p.farmingStatusReason,
-                      };
-                    }),
+                    parcels: (selectedFarmer.parcels || []).map(
+                      (p): UnifiedParcel => {
+                        const role: UnifiedParcel["role"] =
+                          p.ownershipTypeRegisteredOwner
+                            ? "owner-farmed"
+                            : p.ownershipTypeTenant && p.ownershipTypeLessee
+                              ? "tenant+lessee"
+                              : p.ownershipTypeTenant
+                                ? "tenant"
+                                : p.ownershipTypeLessee
+                                  ? "lessee"
+                                  : "tenant";
+                        const occupants: OccupantInfo[] = [];
+                        const ownerName =
+                          p.tenantLandOwnerName || p.lesseeLandOwnerName;
+                        if (ownerName) {
+                          occupants.push({
+                            submissionId: "",
+                            name: ownerName,
+                            role: "land-owner",
+                          });
+                        }
+                        return {
+                          id: p.id,
+                          parcelNumber: p.parcelNumber,
+                          farmLocationBarangay: p.farmLocationBarangay,
+                          farmLocationMunicipality: p.farmLocationMunicipality,
+                          totalFarmAreaHa: p.totalFarmAreaHa,
+                          role,
+                          occupants,
+                          geometry: null,
+                          withinAncestralDomain: p.withinAncestralDomain,
+                          ownershipDocumentNo: p.ownershipDocumentNo,
+                          agrarianReformBeneficiary:
+                            p.agrarianReformBeneficiary,
+                          isFarming: p.isFarming,
+                          farmingStatusReason: p.farmingStatusReason,
+                        };
+                      },
+                    ),
                   }}
                   onClose={() => {
                     setShowModal(false);
