@@ -6,7 +6,8 @@ import {
   getFarmParcels,
   updateRsbsaSubmission,
 } from "../../api";
-import { LandownerProfileDisplay } from "../../components/FarmerProfile/LandownerProfileDisplay";
+import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfileDisplay";
+import type { UnifiedParcel, OccupantInfo } from "../../components/FarmerProfile/FarmerProfileDisplay";
 import {
   printRsbsaFormById,
   printRsbsaFormsByIds,
@@ -2304,8 +2305,46 @@ const JoLandownerRegistry: React.FC = () => {
             <div className="farmer-modal-content">
               {" "}
               {/* ← add this */}
-              <LandownerProfileDisplay
-                landowner={selectedLandowner}
+              <FarmerProfileDisplay
+                farmer={{
+                  id: selectedLandowner.id,
+                  referenceNumber: selectedLandowner.referenceNumber,
+                  dateSubmitted: selectedLandowner.dateSubmitted,
+                  recordStatus: selectedLandowner.recordStatus,
+                  birthdate: selectedLandowner.birthdate,
+                  archivedAt: selectedLandowner.archivedAt,
+                  archiveReason: selectedLandowner.archiveReason,
+                  statusChangeReason: selectedLandowner.statusChangeReason,
+                  name: selectedLandowner.landownerName,
+                  address: selectedLandowner.landownerAddress,
+                  age: selectedLandowner.age,
+                  gender: selectedLandowner.gender,
+                  mainLivelihood: selectedLandowner.mainLivelihood,
+                  farmingActivities: selectedLandowner.farmingActivities,
+                  parcels: (selectedLandowner.parcels || []).map((p): UnifiedParcel => ({
+                    id: p.id,
+                    parcelNumber: p.parcelNumber,
+                    farmLocationBarangay: p.farmLocationBarangay,
+                    farmLocationMunicipality: p.farmLocationMunicipality,
+                    totalFarmAreaHa: p.totalFarmAreaHa,
+                    role: p.occupationType as UnifiedParcel["role"],
+                    occupants: (p.occupants || []).map((occ): OccupantInfo => ({
+                      submissionId: occ.submissionId,
+                      name: occ.name,
+                      ffrsCode: occ.ffrsCode,
+                      role: occ.role as OccupantInfo["role"],
+                      isLinked: occ.isLinked,
+                    })),
+                    geometry: p.geometry ?? null,
+                    withinAncestralDomain: p.withinAncestralDomain,
+                    ownershipDocumentNo: p.ownershipDocumentNo,
+                    agrarianReformBeneficiary: p.agrarianReformBeneficiary,
+                    isFarming: p.isFarming,
+                    isCultivating: p.isCultivating,
+                    farmingStatusReason: p.farmingStatusReason,
+                    cultivationStatusReason: p.cultivationStatusReason,
+                  })),
+                }}
                 onClose={() => setShowModal(false)}
               />{" "}
               {/* ← and close it */}
