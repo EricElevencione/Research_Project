@@ -605,8 +605,7 @@ const JoLandHistoryReport: React.FC = () => {
                   </thead>
                   <tbody>
                     {parcelRows.map((row, index) => {
-                      const isClickable =
-                        !!row.parcelNumber && row.hasRegistration;
+                      const isClickable = !!row.parcelNumber;
                       return (
                         <tr
                           key={`${row.parcelNumber || "unknown"}-${index}`}
@@ -695,7 +694,14 @@ const JoLandHistoryReport: React.FC = () => {
             <div className="jo-land-history-modal-header">
               <div>
                 <h2>Parcel {parcelModalParcelNumber || "-"}</h2>
-                <p>History timeline for this parcel.</p>
+                <p>
+                  {parcelModalTimelineRows.length > 0 &&
+                  parcelModalTimelineRows.some(
+                    (r: any) => r._source === "rsbsa_farm_parcels",
+                  )
+                    ? "Showing RSBSA registration record (no transfer history on file)."
+                    : "History timeline for this parcel."}
+                </p>
               </div>
               <button
                 className="jo-land-history-report-btn"
