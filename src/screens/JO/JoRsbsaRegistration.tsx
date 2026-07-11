@@ -1150,7 +1150,7 @@ const JoRsbsa: React.FC = () => {
   const isStepActive = (step: number) => currentStep === step;
   const isStepCompleted = (step: number) => currentStep > step;
 
-  const handleSubmitForm = () => {
+  const handleSubmitForm = async () => {
     // We'll validate only what is relevant to the current step so users can progress step-by-step
     const newErrors: Record<string, string> = {};
 
@@ -1194,6 +1194,54 @@ const JoRsbsa: React.FC = () => {
 
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) return;
+
+      // Check for duplicate registrant in the database (name & transposed name check)
+      try {
+        const checkFirstName = formData.firstName.trim();
+        const checkLastName = formData.surname.trim();
+        const checkMiddleName = (formData.middleName || "").trim();
+        const checkExtName = (formData.extensionName || "").trim();
+
+        const { data: nameMatches, error: checkError } = await supabase
+          .from("rsbsa_submission")
+          .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME"')
+          .ilike("FIRST NAME", checkFirstName)
+          .is("archived_at", null);
+
+        if (checkError) {
+          console.error("Error checking duplicates:", checkError);
+        } else if (nameMatches && nameMatches.length > 0) {
+          const duplicate = nameMatches.find((m) => {
+            const dbFirst = (m["FIRST NAME"] || "").trim().toLowerCase();
+            const dbLast = (m["LAST NAME"] || "").trim().toLowerCase();
+            const dbMiddle = (m["MIDDLE NAME"] || "").trim().toLowerCase();
+            const dbExt = (m["EXT NAME"] || "").trim().toLowerCase();
+
+            const inputFirst = checkFirstName.toLowerCase();
+            const inputLast = checkLastName.toLowerCase();
+            const inputMiddle = checkMiddleName.toLowerCase();
+            const inputExt = checkExtName.toLowerCase();
+
+            const extMatch = dbExt === inputExt;
+            const exactLastMatch = dbLast === inputLast;
+            const transposedMatch =
+              (inputMiddle && dbLast === inputMiddle) ||
+              (dbMiddle && dbMiddle === inputLast);
+
+            return extMatch && (exactLastMatch || transposedMatch);
+          });
+
+          if (duplicate) {
+            setErrors({
+              firstName: "A farmer with this name combination is already registered.",
+              surname: "A farmer with this name combination is already registered.",
+            });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to run duplicate check:", err);
+      }
 
       // clear any step-level errors and go to next step
       setErrors({});

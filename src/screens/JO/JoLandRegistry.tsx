@@ -386,9 +386,7 @@ const JoLandRegistry: React.FC = () => {
   const [filterCultivation, setFilterCultivation] = useState<
     "all" | "active" | "inactive"
   >("all");
-  const [landStatusFilter, setLandStatusFilter] = useState<
-    "all" | "active" | "no_land"
-  >("all");
+  const [landStatusFilter, setLandStatusFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState(false);
 
   // Proof viewer state
@@ -2165,11 +2163,20 @@ const JoLandRegistry: React.FC = () => {
       .filter((row) => {
         const hasNoLand = row.parcels.length === 0 || row.totalAreaHa <= 0;
 
-        // Land status filter
+        // Land status / Role filter
         if (landStatusFilter === "active" && hasNoLand) {
           return false;
         }
         if (landStatusFilter === "no_land" && !hasNoLand) {
+          return false;
+        }
+        if (landStatusFilter === "owner" && !(row.primaryOwnership === "owner" || row.farmer.has_registered_owner === true)) {
+          return false;
+        }
+        if (landStatusFilter === "tenant" && !(row.primaryOwnership === "tenant" || row.farmer.has_tenant === true)) {
+          return false;
+        }
+        if (landStatusFilter === "lessee" && !(row.primaryOwnership === "lessee" || row.farmer.has_lessee === true)) {
           return false;
         }
 
@@ -2236,7 +2243,7 @@ const JoLandRegistry: React.FC = () => {
           ownershipOrder[b.primaryOwnership]
         );
       });
-  }, [registryRows, searchTerm, filterBarangay, filterCultivation]);
+  }, [registryRows, searchTerm, filterBarangay, filterCultivation, landStatusFilter]);
 
   const registeredOwnerParcels = landParcels.filter(
     (p) => p.is_registered_owner,
@@ -3511,15 +3518,14 @@ const JoLandRegistry: React.FC = () => {
                   id="land-status-filter"
                   className="jo-land-registry-barangay-select"
                   value={landStatusFilter}
-                  onChange={(e) =>
-                    setLandStatusFilter(
-                      e.target.value as "all" | "active" | "no_land",
-                    )
-                  }
+                  onChange={(e) => setLandStatusFilter(e.target.value)}
                 >
-                  <option value="all">All Land Status</option>
+                  <option value="all">All Statuses / Roles</option>
                   <option value="active">✅ Active (Has Land)</option>
-                  <option value="no_land">⚠️ No Land</option>
+                  <option value="no_land">⚠️ No Active Land</option>
+                  <option value="owner">👤 Registered Owner</option>
+                  <option value="tenant">🌾 Tenant</option>
+                  <option value="lessee">📜 Lessee</option>
                 </select>
               </div>
             </div>

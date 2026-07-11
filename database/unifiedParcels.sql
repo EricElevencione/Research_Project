@@ -122,7 +122,7 @@ select
 from
   land_history lh
   left join rsbsa_farm_parcels p on p.id = lh.farm_parcel_id
-  left join rsbsa_submission s_hist on lh.rsbsa_submission_id = s_hist.id
+  join rsbsa_submission s_hist on lh.rsbsa_submission_id = s_hist.id
 where
   lh.is_current = true
   and (

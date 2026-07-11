@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getLandOwners, createRsbsaSubmission } from "../../api";
+import { supabase } from "../../supabase";
 import BirthDatePicker from "../../components/common/BirthDatePicker";
 import { getAuditLogger } from "../../components/Audit/auditLogger";
 import "../../assets/css/jo css/JoRsbsaRegistrationStyle.css";
@@ -305,7 +306,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
   const isStepActive = (step: number) => currentStep === step;
   const isStepCompleted = (step: number) => currentStep > step;
 
-  const handleSubmitForm = () => {
+  const handleSubmitForm = async () => {
     const newErrors: Record<string, string> = {};
 
     if (currentStep === 1) {
@@ -331,6 +332,55 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         newErrors.barangay = "Barangay is required";
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) return;
+
+      // Check for duplicate registrant in the database (name & transposed name check)
+      try {
+        const checkFirstName = formData.firstName.trim();
+        const checkLastName = formData.surname.trim();
+        const checkMiddleName = (formData.middleName || "").trim();
+        const checkExtName = (formData.extensionName || "").trim();
+
+        const { data: nameMatches, error: checkError } = await supabase
+          .from("rsbsa_submission")
+          .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME"')
+          .ilike("FIRST NAME", checkFirstName)
+          .is("archived_at", null);
+
+        if (checkError) {
+          console.error("Error checking duplicates:", checkError);
+        } else if (nameMatches && nameMatches.length > 0) {
+          const duplicate = nameMatches.find((m) => {
+            const dbFirst = (m["FIRST NAME"] || "").trim().toLowerCase();
+            const dbLast = (m["LAST NAME"] || "").trim().toLowerCase();
+            const dbMiddle = (m["MIDDLE NAME"] || "").trim().toLowerCase();
+            const dbExt = (m["EXT NAME"] || "").trim().toLowerCase();
+
+            const inputFirst = checkFirstName.toLowerCase();
+            const inputLast = checkLastName.toLowerCase();
+            const inputMiddle = checkMiddleName.toLowerCase();
+            const inputExt = checkExtName.toLowerCase();
+
+            const extMatch = dbExt === inputExt;
+            const exactLastMatch = dbLast === inputLast;
+            const transposedMatch =
+              (inputMiddle && dbLast === inputMiddle) ||
+              (dbMiddle && dbMiddle === inputLast);
+
+            return extMatch && (exactLastMatch || transposedMatch);
+          });
+
+          if (duplicate) {
+            setErrors({
+              firstName: "A farmer with this name combination is already registered.",
+              surname: "A farmer with this name combination is already registered.",
+            });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to run duplicate check:", err);
+      }
+
       setErrors({});
       setCurrentStep(2);
       return;
@@ -1310,8 +1360,8 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                         <span className="jo-registration-summary-value">
                           {formData.dateOfBirth
                             ? new Date(
-                                formData.dateOfBirth,
-                              ).toLocaleDateString()
+                              formData.dateOfBirth,
+                            ).toLocaleDateString()
                             : "Not provided"}
                         </span>
                       </div>
@@ -1369,17 +1419,17 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                             <span className="jo-registration-summary-value">
                               {[
                                 parcel.ownershipTypeRegisteredOwner &&
-                                  "Registered Owner",
+                                "Registered Owner",
                                 parcel.ownershipTypeTenant &&
-                                  (parcel.tenantLandOwnerName
-                                    ? `Tenant (${parcel.tenantLandOwnerName})`
-                                    : "Tenant"),
+                                (parcel.tenantLandOwnerName
+                                  ? `Tenant (${parcel.tenantLandOwnerName})`
+                                  : "Tenant"),
                                 parcel.ownershipTypeLessee &&
-                                  (parcel.lesseeLandOwnerName
-                                    ? `Lessee (${parcel.lesseeLandOwnerName})`
-                                    : "Lessee"),
+                                (parcel.lesseeLandOwnerName
+                                  ? `Lessee (${parcel.lesseeLandOwnerName})`
+                                  : "Lessee"),
                                 parcel.ownershipTypeOthers &&
-                                  `Others: ${parcel.ownershipOthersSpecify}`,
+                                `Others: ${parcel.ownershipOthersSpecify}`,
                               ]
                                 .filter(Boolean)
                                 .join(", ") || "Not specified"}
@@ -1426,11 +1476,11 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                               (formData as any).farmerRice && "Rice",
                               (formData as any).farmerCorn && "Corn",
                               (formData as any).farmerOtherCrops &&
-                                `Other crops: ${(formData as any).farmerOtherCropsText}`,
+                              `Other crops: ${(formData as any).farmerOtherCropsText}`,
                               (formData as any).farmerLivestock &&
-                                `Livestock: ${(formData as any).farmerLivestockText}`,
+                              `Livestock: ${(formData as any).farmerLivestockText}`,
                               (formData as any).farmerPoultry &&
-                                `Poultry: ${(formData as any).farmerPoultryText}`,
+                              `Poultry: ${(formData as any).farmerPoultryText}`,
                             ]
                               .filter(Boolean)
                               .join(", ") || "None selected"}
