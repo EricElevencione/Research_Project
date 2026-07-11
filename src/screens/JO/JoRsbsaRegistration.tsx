@@ -507,7 +507,7 @@ const JoRsbsa: React.FC = () => {
         farmLocationMunicipality: "",
         totalFarmAreaHa: "",
         withinAncestralDomain: "",
-        isCultivating: false,
+        isCultivating: true,
         ownershipDocumentNo: "",
         agrarianReformBeneficiary: "",
         ownershipTypeRegisteredOwner: false, // Default to registered owner
@@ -621,7 +621,7 @@ const JoRsbsa: React.FC = () => {
             farmLocationMunicipality: "Dumangas",
             totalFarmAreaHa: "",
             withinAncestralDomain: "",
-            isCultivating: false,
+            isCultivating: true,
             ownershipDocumentNo: "",
             agrarianReformBeneficiary: "",
             ownershipTypeRegisteredOwner: true,
@@ -663,7 +663,7 @@ const JoRsbsa: React.FC = () => {
           farmLocationMunicipality: "Dumangas",
           totalFarmAreaHa: "",
           withinAncestralDomain: "",
-          isCultivating: false,
+          isCultivating: true,
           ownershipDocumentNo: "",
           agrarianReformBeneficiary: "",
           ownershipTypeRegisteredOwner: true,
@@ -872,7 +872,7 @@ const JoRsbsa: React.FC = () => {
         ownershipDocumentNo: ownerParcel.ownership_document_no || "",
         agrarianReformBeneficiary:
           ownerParcel.agrarian_reform_beneficiary || "",
-        isCultivating: false,
+        isCultivating: true,
         ownershipTypeRegisteredOwner: false,
         ownershipTypeTenant: isTenant,
         ownershipTypeLessee: isLessee,
@@ -1090,7 +1090,7 @@ const JoRsbsa: React.FC = () => {
         withinAncestralDomain: parcel.within_ancestral_domain || "",
         ownershipDocumentNo: parcel.ownership_document_no || "",
         agrarianReformBeneficiary: parcel.agrarian_reform_beneficiary || "",
-        isCultivating: false,
+        isCultivating: true,
         ownershipTypeRegisteredOwner: true,
         ownershipTypeTenant: false,
         ownershipTypeLessee: false,
@@ -1121,7 +1121,7 @@ const JoRsbsa: React.FC = () => {
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: "",
           agrarianReformBeneficiary: "",
-          isCultivating: false,
+          isCultivating: true,
           ownershipTypeRegisteredOwner: false,
           ownershipTypeTenant: isTenant,
           ownershipTypeLessee: isLessee,
@@ -1196,51 +1196,54 @@ const JoRsbsa: React.FC = () => {
       if (Object.keys(newErrors).length > 0) return;
 
       // Check for duplicate registrant in the database (name & transposed name check)
-      try {
-        const checkFirstName = formData.firstName.trim();
-        const checkLastName = formData.surname.trim();
-        const checkMiddleName = (formData.middleName || "").trim();
-        const checkExtName = (formData.extensionName || "").trim();
+      // Skip if they are registering through the landowner path (since they are intentionally reusing their pre-filled profile)
+      if (farmerRole !== "owner") {
+        try {
+          const checkFirstName = formData.firstName.trim();
+          const checkLastName = formData.surname.trim();
+          const checkMiddleName = (formData.middleName || "").trim();
+          const checkExtName = (formData.extensionName || "").trim();
 
-        const { data: nameMatches, error: checkError } = await supabase
-          .from("rsbsa_submission")
-          .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME"')
-          .ilike("FIRST NAME", checkFirstName)
-          .is("archived_at", null);
+          const { data: nameMatches, error: checkError } = await supabase
+            .from("rsbsa_submission")
+            .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME"')
+            .ilike("FIRST NAME", checkFirstName)
+            .is("archived_at", null);
 
-        if (checkError) {
-          console.error("Error checking duplicates:", checkError);
-        } else if (nameMatches && nameMatches.length > 0) {
-          const duplicate = nameMatches.find((m) => {
-            const dbFirst = (m["FIRST NAME"] || "").trim().toLowerCase();
-            const dbLast = (m["LAST NAME"] || "").trim().toLowerCase();
-            const dbMiddle = (m["MIDDLE NAME"] || "").trim().toLowerCase();
-            const dbExt = (m["EXT NAME"] || "").trim().toLowerCase();
+          if (checkError) {
+            console.error("Error checking duplicates:", checkError);
+          } else if (nameMatches && nameMatches.length > 0) {
+            const duplicate = nameMatches.find((m) => {
+              const dbFirst = (m["FIRST NAME"] || "").trim().toLowerCase();
+              const dbLast = (m["LAST NAME"] || "").trim().toLowerCase();
+              const dbMiddle = (m["MIDDLE NAME"] || "").trim().toLowerCase();
+              const dbExt = (m["EXT NAME"] || "").trim().toLowerCase();
 
-            const inputFirst = checkFirstName.toLowerCase();
-            const inputLast = checkLastName.toLowerCase();
-            const inputMiddle = checkMiddleName.toLowerCase();
-            const inputExt = checkExtName.toLowerCase();
+              const inputFirst = checkFirstName.toLowerCase();
+              const inputLast = checkLastName.toLowerCase();
+              const inputMiddle = checkMiddleName.toLowerCase();
+              const inputExt = checkExtName.toLowerCase();
 
-            const extMatch = dbExt === inputExt;
-            const exactLastMatch = dbLast === inputLast;
-            const transposedMatch =
-              (inputMiddle && dbLast === inputMiddle) ||
-              (dbMiddle && dbMiddle === inputLast);
+              const extMatch = dbExt === inputExt;
+              const exactLastMatch = dbLast === inputLast;
+              const transposedMatch =
+                (inputMiddle && dbLast === inputMiddle) ||
+                (dbMiddle && dbMiddle === inputLast);
 
-            return extMatch && (exactLastMatch || transposedMatch);
-          });
-
-          if (duplicate) {
-            setErrors({
-              firstName: "A farmer with this name combination is already registered.",
-              surname: "A farmer with this name combination is already registered.",
+              return extMatch && (exactLastMatch || transposedMatch);
             });
-            return;
+
+            if (duplicate) {
+              setErrors({
+                firstName: "A farmer with this name combination is already registered.",
+                surname: "A farmer with this name combination is already registered.",
+              });
+              return;
+            }
           }
+        } catch (err) {
+          console.error("Failed to run duplicate check:", err);
         }
-      } catch (err) {
-        console.error("Failed to run duplicate check:", err);
       }
 
       // clear any step-level errors and go to next step
@@ -1423,7 +1426,7 @@ const JoRsbsa: React.FC = () => {
             : 0,
           withinAncestralDomain: parcel.withinAncestralDomain === "Yes",
           agrarianReformBeneficiary: parcel.agrarianReformBeneficiary === "Yes",
-          isCultivating: parcel.isCultivating ?? false,
+          isCultivating: parcel.isCultivating ?? true,
           // Include existing parcel info for ownership transfer
           existingParcelId: parcel.existingParcelId || null,
           existingParcelNumber: parcel.existingParcelNumber || null,

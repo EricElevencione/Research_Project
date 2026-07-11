@@ -1435,20 +1435,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                                 .join(", ") || "Not specified"}
                             </span>
                           </div>
-                          <div className="jo-registration-summary-item">
-                            <span className="jo-registration-summary-label">
-                              Are you farming this parcel?
-                            </span>
-                            <span className="jo-registration-summary-value">
-                              {parcel.cultivatingStatus === "yes"
-                                ? "Yes — Actively farming"
-                                : parcel.cultivatingStatus === "no"
-                                  ? "No"
-                                  : parcel.cultivatingStatus === "no-other"
-                                    ? `No — Someone else is farming it${parcel.tenantLandOwnerName ? ` (${parcel.tenantLandOwnerName})` : " (no tenant selected)"}`
-                                    : "Not specified"}
-                            </span>
-                          </div>
+
                         </div>
                       </div>
                     ))}
