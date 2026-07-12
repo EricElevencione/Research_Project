@@ -1,5 +1,5 @@
 import { supabase } from "../../supabase";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
@@ -7,9 +7,8 @@ import {
   updateRsbsaSubmission,
 } from "../../api";
 import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfileDisplay";
-import type { UnifiedParcel, OccupantInfo } from "../../components/FarmerProfile/FarmerProfileDisplay";
+import type { UnifiedParcel, OccupantInfo as FarmerOccupantInfo } from "../../components/FarmerProfile/FarmerProfileDisplay";
 import {
-  printRsbsaFormById,
   printRsbsaFormsByIds,
 } from "../../utils/rsbsaPrint";
 import { getParcelOccupationType } from "../../utils/parcelOccupationType";
@@ -74,6 +73,90 @@ interface LandownerSummaryRow {
   hasNoLand?: boolean; // Flagged: no current land ownership
 }
 
+interface SubmissionItem {
+  id: string | number;
+  referenceNumber?: string;
+  farmerName?: string;
+  farmerAddress?: string;
+  farmLocation?: string;
+  landParcel?: string;
+  totalFarmArea?: string | number;
+  parcelArea?: string | number;
+  parcelCount?: number;
+  age?: number;
+  birthdate?: string;
+  dateSubmitted?: string;
+  createdAt?: string;
+  status?: string;
+  archivedAt?: string | null;
+  archived_at?: string | null;
+  archiveReason?: string | null;
+  archive_reason?: string | null;
+  ownershipType?: {
+    registeredOwner?: boolean;
+    category?: string;
+  };
+}
+
+interface FarmParcelRow {
+  id: string | number;
+  submission_id: string | number;
+  parcel_number?: string | null;
+  tenant_land_owner_id?: string | number | null;
+  lessee_land_owner_id?: string | number | null;
+  ownership_type_tenant?: boolean | null;
+  ownership_type_lessee?: boolean | null;
+  is_current_owner?: boolean | null;
+  farm_location_barangay?: string | null;
+  farm_location_municipality?: string | null;
+  total_farm_area_ha?: string | number | null;
+  is_farming?: boolean | null;
+  is_cultivating?: boolean | null;
+  farming_status_reason?: string | null;
+  cultivation_status_reason?: string | null;
+  agrarian_reform_beneficiary?: string | null;
+  within_ancestral_domain?: string | null;
+  ownership_document_no?: string | null;
+  geometry?: unknown;
+  tenant_land_owner_name?: string | null;
+  lessee_land_owner_name?: string | null;
+}
+
+interface OccupantSubmissionRow {
+  id: string | number;
+  "FIRST NAME"?: string | null;
+  "LAST NAME"?: string | null;
+  "MIDDLE NAME"?: string | null;
+  "EXT NAME"?: string | null;
+  "FFRS_CODE"?: string | null;
+}
+
+interface LandPlotRow {
+  id: string | number;
+  ffrs_id?: string | null;
+  first_name?: string | null;
+  surname?: string | null;
+  barangay?: string | null;
+  parcel_number?: string | null;
+  geometry?: unknown;
+}
+
+interface CandidateSubmission {
+  id: string | number;
+  "FIRST NAME"?: string | null;
+  "LAST NAME"?: string | null;
+  "MIDDLE NAME"?: string | null;
+  "MAIN LIVELIHOOD"?: string | null;
+  "FARMER_RICE"?: boolean | null;
+  "FARMER_CORN"?: boolean | null;
+  "FARMER_OTHER_CROPS"?: boolean | null;
+  "FARMER_OTHER_CROPS_TEXT"?: string | null;
+  "FARMER_LIVESTOCK"?: boolean | null;
+  "FARMER_LIVESTOCK_TEXT"?: string | null;
+  "FARMER_POULTRY"?: boolean | null;
+  "FARMER_POULTRY_TEXT"?: string | null;
+}
+
 // One parcel in the modal — combined view of ownership + occupation
 interface OccupiedParcel {
   id: string;
@@ -88,7 +171,7 @@ interface OccupiedParcel {
     | "tenant"
     | "lessee"
     | "tenant+lessee";
-  occupants: OccupantInfo[];
+  occupants: FarmerOccupantInfo[];
   // Parcel attributes
   agrarianReformBeneficiary: string;
   withinAncestralDomain: string;
@@ -96,7 +179,11 @@ interface OccupiedParcel {
   // GIS shape from land_plots, matched by ffrs_id/name + barangay + parcel
   // number (no hard FK between rsbsa_farm_parcels and land_plots — see
   // matching logic in fetchLandownerDetails). Null if no plot matched yet.
-  geometry: any | null;
+  geometry: unknown;
+  isFarming?: boolean;
+  isCultivating?: boolean;
+  farmingStatusReason?: string | null;
+  cultivationStatusReason?: string | null;
 }
 
 interface OccupantInfo {
@@ -229,7 +316,6 @@ const JoLandownerRegistry: React.FC = () => {
 
   const [selectedLandowner, setSelectedLandowner] =
     useState<LandownerDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   const [editingRecord, setEditingRecord] = useState<LandownerRecord | null>(
@@ -244,7 +330,6 @@ const JoLandownerRegistry: React.FC = () => {
     message: string;
   }>({ show: false, type: "success", message: "" });
 
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [sortConfigs, setSortConfigs] = useState<
     Array<{ key: SortKey; direction: SortDirection }>
   >([{ ...DEFAULT_SORT_CONFIG }]);
@@ -252,7 +337,6 @@ const JoLandownerRegistry: React.FC = () => {
     new Set(),
   );
   const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
-  const [isModalPrinting, setIsModalPrinting] = useState(false);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
   const [showPrintLandownerModal, setShowPrintLandownerModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -374,7 +458,7 @@ const JoLandownerRegistry: React.FC = () => {
 
   // ─── Fetch main list ────────────────────────────────────────────────────────
 
-  const fetchLandownerRecords = async () => {
+  const fetchLandownerRecords = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -382,8 +466,8 @@ const JoLandownerRegistry: React.FC = () => {
       const response = await getRsbsaSubmissions();
       if (response.error) throw new Error(response.error);
 
-      const allRecords = (response.data || []) as any[];
-      const ownerRecords = allRecords.filter((item: any) => {
+      const allRecords = (response.data || []) as SubmissionItem[];
+      const ownerRecords = allRecords.filter((item: SubmissionItem) => {
         const flags = item.ownershipType;
         return (
           flags?.registeredOwner === true ||
@@ -395,7 +479,7 @@ const JoLandownerRegistry: React.FC = () => {
       // alike) — used to resolve tenant/lessee names below without an
       // extra fetch.
       const nameById = new Map<number, string>();
-      allRecords.forEach((item: any) => {
+      allRecords.forEach((item: SubmissionItem) => {
         const id = Number(item.id);
         if (Number.isFinite(id)) nameById.set(id, item.farmerName || "—");
       });
@@ -425,7 +509,7 @@ const JoLandownerRegistry: React.FC = () => {
       const tenantNamesByOwner = new Map<number, Set<string>>();
       const lesseeNamesByOwner = new Map<number, Set<string>>();
 
-      (tlParcels || []).forEach((p: any) => {
+      (tlParcels as FarmParcelRow[] || []).forEach((p: FarmParcelRow) => {
         // Skip replaced/deactivated tenant-lessee links — only the
         // current holder should count.
         if (p.is_current_owner === false) return;
@@ -465,7 +549,7 @@ const JoLandownerRegistry: React.FC = () => {
       });
 
       // Step 4: Build the display records
-      const formatted: LandownerRecord[] = ownerRecords.map((item: any) => {
+      const formatted: LandownerRecord[] = ownerRecords.map((item: SubmissionItem) => {
         const ownerId = Number(item.id);
         const landParcel = String(item.landParcel ?? "—");
 
@@ -553,7 +637,7 @@ const JoLandownerRegistry: React.FC = () => {
 
         // Build set of ownerIds that have at least one is_current_owner parcel
         const ownersWithActiveLand = new Set<string>();
-        (ownerParcels || []).forEach((p: any) => {
+        (ownerParcels as FarmParcelRow[] || []).forEach((p: FarmParcelRow) => {
           if (p.is_current_owner === true) {
             ownersWithActiveLand.add(String(p.submission_id));
           }
@@ -564,9 +648,9 @@ const JoLandownerRegistry: React.FC = () => {
           owner.hasNoLand = !ownersWithActiveLand.has(owner.id);
         });
 
-        parcelRows = (ownerParcels || [])
-          .filter((p: any) => p.is_current_owner !== false)
-          .map((p: any) => {
+        parcelRows = (ownerParcels as FarmParcelRow[] || [])
+          .filter((p: FarmParcelRow) => p.is_current_owner !== false)
+          .map((p: FarmParcelRow) => {
             const owner = ownerById.get(String(p.submission_id));
             if (!owner) return null;
             const parcelNumber = String(p.parcel_number || "N/A").trim();
@@ -617,16 +701,17 @@ const JoLandownerRegistry: React.FC = () => {
       setLandownerRecords(formatted);
       setParcelRows(parcelRows);
       setLoading(false);
-    } catch (err: any) {
-      setError(err.message ?? "Failed to load landowner records");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to load landowner records";
+      setError(msg);
       setParcelRows([]);
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLandownerRecords();
-  }, []);
+  }, [fetchLandownerRecords]);
 
   // ─── Fetch detail for modal ─────────────────────────────────────────────────
 
@@ -635,8 +720,6 @@ const JoLandownerRegistry: React.FC = () => {
     summaryRecord?: LandownerRecord,
   ) => {
     try {
-      setLoadingDetail(true);
-
       const ownerNumId = Number(ownerId);
 
       // Personal info
@@ -680,7 +763,7 @@ const JoLandownerRegistry: React.FC = () => {
       const ownedResponse = await getFarmParcels(ownerId, {
         currentOwnerOnly: true,
       });
-      const ownedParcels: any[] = ownedResponse.data || [];
+      const ownedParcels = (ownedResponse.data || []) as FarmParcelRow[];
 
       // Step B: Parcels where this person is listed as landlord
       // These come from OTHER farmers' parcel rows pointing back to this owner
@@ -695,7 +778,8 @@ const JoLandownerRegistry: React.FC = () => {
           tenant_land_owner_id, lessee_land_owner_id,
           tenant_land_owner_name, lessee_land_owner_name,
           is_current_owner,
-          agrarian_reform_beneficiary, within_ancestral_domain, ownership_document_no
+          agrarian_reform_beneficiary, within_ancestral_domain, ownership_document_no,
+          is_farming, farming_status_reason, is_cultivating, cultivation_status_reason
         `,
           )
           .or(
@@ -708,13 +792,13 @@ const JoLandownerRegistry: React.FC = () => {
       // Only the current tenant/lessee on a parcel should show up here —
       // a replaced tenant/lessee whose link is still in the table but is
       // no longer active shouldn't keep appearing on the landowner's parcel.
-      const occupiedByParcels = (occupiedByParcelsRaw || []).filter(
-        (p: any) => p.is_current_owner !== false,
+      const occupiedByParcels = ((occupiedByParcelsRaw as FarmParcelRow[]) || []).filter(
+        (p: FarmParcelRow) => p.is_current_owner !== false,
       );
 
       // Step C: Fetch farmer names for occupant submission IDs
       const occupantIds = [
-        ...new Set((occupiedByParcels || []).map((p: any) => p.submission_id)),
+        ...new Set((occupiedByParcels || []).map((p: FarmParcelRow) => p.submission_id)),
       ].filter(Boolean);
       const occupantInfoMap = new Map<
         number,
@@ -729,7 +813,7 @@ const JoLandownerRegistry: React.FC = () => {
           )
           .in("id", occupantIds);
 
-        (occupantSubmissions || []).forEach((row: any) => {
+        (occupantSubmissions as OccupantSubmissionRow[] || []).forEach((row: OccupantSubmissionRow) => {
           const last = row["LAST NAME"] || "";
           const first = row["FIRST NAME"] || "";
           const middle = row["MIDDLE NAME"] || "";
@@ -749,7 +833,7 @@ const JoLandownerRegistry: React.FC = () => {
       // For each owned parcel, find who works it
       const occupationByParcelNumber = new Map<string, OccupantInfo[]>();
 
-      (occupiedByParcels || []).forEach((p: any) => {
+      (occupiedByParcels || []).forEach((p: FarmParcelRow) => {
         const parcelNum = String(p.parcel_number || "")
           .trim()
           .toUpperCase();
@@ -805,7 +889,7 @@ const JoLandownerRegistry: React.FC = () => {
         };
       })();
 
-      let ownerPlots: any[] = [];
+      let ownerPlots: LandPlotRow[] = [];
       if (ownerFfrsId) {
         const { data: plotsByFfrs, error: plotsByFfrsError } = await supabase
           .from("land_plots")
@@ -817,7 +901,7 @@ const JoLandownerRegistry: React.FC = () => {
             plotsByFfrsError.message,
           );
         } else {
-          ownerPlots = plotsByFfrs || [];
+          ownerPlots = (plotsByFfrs as LandPlotRow[]) || [];
         }
       }
       if (ownerPlots.length === 0 && ownerFirstName && ownerLastName) {
@@ -832,14 +916,14 @@ const JoLandownerRegistry: React.FC = () => {
             plotsByNameError.message,
           );
         } else {
-          ownerPlots = plotsByName || [];
+          ownerPlots = (plotsByName as LandPlotRow[]) || [];
         }
       }
 
       // Keyed by barangay + parcel_number so multiple parcels for the
       // same owner resolve to the right shape, not just "a" shape.
-      const geometryByParcelKey = new Map<string, any>();
-      ownerPlots.forEach((plot: any) => {
+      const geometryByParcelKey = new Map<string, unknown>();
+      ownerPlots.forEach((plot: LandPlotRow) => {
         if (!plot.geometry) return;
         const key = `${String(plot.barangay || "")
           .trim()
@@ -868,7 +952,7 @@ const JoLandownerRegistry: React.FC = () => {
 
       // Step E: Build the combined parcel list
       // Start with owned parcels as the authoritative list
-      const combinedParcels: OccupiedParcel[] = ownedParcels.map((p: any) => {
+      const combinedParcels: OccupiedParcel[] = ownedParcels.map((p: FarmParcelRow) => {
         const parcelNum = String(p.parcel_number || "")
           .trim()
           .toUpperCase();
@@ -885,27 +969,31 @@ const JoLandownerRegistry: React.FC = () => {
           parcelNumber: p.parcel_number || "N/A",
           farmLocationBarangay: p.farm_location_barangay || "N/A",
           farmLocationMunicipality: p.farm_location_municipality || "N/A",
-          totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
+          totalFarmAreaHa: typeof p.total_farm_area_ha === "number" ? p.total_farm_area_ha : parseFloat(String(p.total_farm_area_ha || 0)) || 0,
           occupationType,
           occupants,
           agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: p.ownership_document_no || "",
           geometry: getGeometryFor(p.farm_location_barangay, p.parcel_number),
+          isFarming: p.is_farming ?? undefined,
+          isCultivating: p.is_cultivating ?? undefined,
+          farmingStatusReason: p.farming_status_reason ?? null,
+          cultivationStatusReason: p.cultivation_status_reason ?? null,
         };
       });
 
       // Step F: Also append any occupied parcels that didn't match an owned parcel
       // (edge case — tenant references an owner who hasn't registered the parcel yet)
       const ownedParcelNumbers = new Set(
-        ownedParcels.map((p: any) =>
+        ownedParcels.map((p: FarmParcelRow) =>
           String(p.parcel_number || "")
             .trim()
             .toUpperCase(),
         ),
       );
 
-      (occupiedByParcels || []).forEach((p: any) => {
+      (occupiedByParcels || []).forEach((p: FarmParcelRow) => {
         const parcelNum = String(p.parcel_number || "")
           .trim()
           .toUpperCase();
@@ -940,13 +1028,17 @@ const JoLandownerRegistry: React.FC = () => {
           parcelNumber: p.parcel_number || "N/A",
           farmLocationBarangay: p.farm_location_barangay || "N/A",
           farmLocationMunicipality: p.farm_location_municipality || "N/A",
-          totalFarmAreaHa: parseFloat(p.total_farm_area_ha) || 0,
+          totalFarmAreaHa: typeof p.total_farm_area_ha === "number" ? p.total_farm_area_ha : parseFloat(String(p.total_farm_area_ha || 0)) || 0,
           occupationType,
           occupants: [occupant],
           agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: p.ownership_document_no || "",
           geometry: getGeometryFor(p.farm_location_barangay, p.parcel_number),
+          isFarming: p.is_farming ?? undefined,
+          isCultivating: p.is_cultivating ?? undefined,
+          farmingStatusReason: p.farming_status_reason ?? null,
+          cultivationStatusReason: p.cultivation_status_reason ?? null,
         });
 
         ownedParcelNumbers.add(parcelNum);
@@ -972,7 +1064,7 @@ const JoLandownerRegistry: React.FC = () => {
       // resolves to more than one distinct person — showing nothing is
       // safer than attaching a stranger's farming activities to this record.
       let hasFarmerRegistration = false;
-      let linkedFarmerData: Record<string, any> | null = null;
+      let linkedFarmerData: CandidateSubmission | null = null;
 
       try {
         const { data: tenantLesseeRows, error: tenantLesseeError } =
@@ -992,7 +1084,7 @@ const JoLandownerRegistry: React.FC = () => {
         const candidateSubmissionIds = [
           ...new Set(
             (tenantLesseeRows || [])
-              .map((row: any) => Number(row.submission_id))
+              .map((row: { submission_id: string | number }) => Number(row.submission_id))
               .filter(Number.isFinite),
           ),
         ];
@@ -1024,8 +1116,8 @@ const JoLandownerRegistry: React.FC = () => {
               );
             }
 
-            const nameMatches = (candidateSubmissions || []).filter(
-              (row: any) => {
+            const nameMatches = (candidateSubmissions as CandidateSubmission[] || []).filter(
+              (row: CandidateSubmission) => {
                 const rowLast = String(row["LAST NAME"] || "")
                   .trim()
                   .toLowerCase();
@@ -1045,7 +1137,7 @@ const JoLandownerRegistry: React.FC = () => {
               // different people who happen to share a first+last name
               // more often than first+last alone would.
               const middleNarrowed = normalizedOwnerMiddle
-                ? nameMatches.filter((row: any) => {
+                ? nameMatches.filter((row: CandidateSubmission) => {
                     const rowMiddle = String(row["MIDDLE NAME"] || "")
                       .trim()
                       .toLowerCase();
@@ -1060,7 +1152,7 @@ const JoLandownerRegistry: React.FC = () => {
               // are genuinely different people sharing a name — bail out
               // rather than guess which one this owner actually is.
               const distinctMiddleNames = new Set(
-                finalMatches.map((row: any) =>
+                finalMatches.map((row: CandidateSubmission) =>
                   String(row["MIDDLE NAME"] || "")
                     .trim()
                     .toLowerCase(),
@@ -1123,11 +1215,9 @@ const JoLandownerRegistry: React.FC = () => {
         parcels: combinedParcels,
       });
       setShowModal(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error fetching landowner details:", err);
       alert("Failed to load landowner details");
-    } finally {
-      setLoadingDetail(false);
     }
   };
 
@@ -1135,7 +1225,6 @@ const JoLandownerRegistry: React.FC = () => {
 
   useEffect(() => {
     const handleWindowClick = () => {
-      setOpenMenuId(null);
       setShowBulkExportMenu(false);
     };
     window.addEventListener("click", handleWindowClick);
@@ -1451,29 +1540,22 @@ const JoLandownerRegistry: React.FC = () => {
     <title>Landowner Registry — Dumangas, Iloilo</title>
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:Arial,sans-serif;font-size:9px;padding:10mm}
-      .hdr{text-align:center;margin-bottom:8px}
-      .hdr h1{font-size:12px;font-weight:bold}
-      .hdr p{font-size:9px}
-      .meta{display:flex;justify-content:space-between;margin-bottom:6px;font-size:8px;color:#555}
-      table{width:100%;border-collapse:collapse;font-size:8px}
-      th{background:#1a5276;color:#fff;padding:3px 5px;text-align:left;font-weight:600;border:.5px solid #ccc}
-      td{padding:2px 5px;border:.5px solid #ccc;vertical-align:top}
-      tr:nth-child(even) td{background:#f9f9f9}
-      .ftr{margin-top:10px;font-size:8px;color:#555;text-align:center}
+      body{font-family:Arial,sans-serif;font-size:10px;padding:10mm;color:#111827}
+      .landowner-print-header{text-align:center;margin-bottom:8px}
+      .landowner-print-header h1{font-size:14px;font-weight:700;color:#1e3a8a}
+      .landowner-print-header p{font-size:10px;color:#475569}
+      table{width:100%;border-collapse:collapse;font-size:9px}
+      th{background:#1e3a8a;color:#fff;padding:4px 6px;text-align:left;font-weight:700;border:.5px solid #cbd5e1}
+      td{padding:3px 6px;border:.5px solid #e2e8f0;vertical-align:top}
+      tr:nth-child(even) td{background:#f8fafc}
+      .landowner-print-footer{margin-top:10px;font-size:9px;color:#475569;text-align:center}
     </style>
   </head><body>
-    <div class="hdr">
-      <h1>Republic of the Philippines — Department of Agriculture</h1>
-      <p>Registry System for Basic Sectors in Agriculture (RSBSA)</p>
-      <p><strong>Landowner Registry — Municipality of Dumangas, Iloilo</strong></p>
+    <div class="landowner-print-header">
+      <h1>Landowner Registry</h1>
+      <p>Municipality of Dumangas, Iloilo</p>
     </div>
-    <div class="meta">
-      <span>Filter: ${filterLabel}</span>
-      <span>Total: ${records.length} landowner${records.length === 1 ? "" : "s"}</span>
-      <span>Printed: ${new Date().toLocaleString()}</span>
-    </div>
-    <table>
+    <table class="landowner-print-table">
       <thead><tr>
         <th>#</th>
         <th>Landowner Name</th>
@@ -1486,9 +1568,7 @@ const JoLandownerRegistry: React.FC = () => {
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="ftr">
-      Landowner Registry — Dumangas, Iloilo · Printed by JO Staff · ${new Date().toLocaleDateString()}
-    </div>
+    <div class="landowner-print-footer">Filter: ${filterLabel} · Total: ${records.length} · Printed: ${new Date().toLocaleString()}</div>
     <script>window.onload=function(){window.print()}<\/script>
   </body></html>`);
     w.document.close();
@@ -1527,43 +1607,7 @@ const JoLandownerRegistry: React.FC = () => {
     }
   };
 
-  const handleModalPrint = async () => {
-    if (!selectedLandowner) return;
-    setIsModalPrinting(true);
-    const result = await printRsbsaFormById({
-      farmerId: selectedLandowner.id,
-      fallbackReferenceNumber: selectedLandowner.referenceNumber,
-      fallbackFarmerName: selectedLandowner.landownerName,
-    });
-    setIsModalPrinting(false);
-    if (!result.success && !result.cancelled)
-      showUpdateNotification(
-        result.error || "Failed to print RSBSA form.",
-        "error",
-      );
-  };
-
   // ─── Edit handlers ───────────────────────────────────────────────────────────
-
-  const handleEdit = (recordId: string) => {
-    const record = landownerRecords.find((r) => r.id === recordId);
-    if (!record) return;
-    const { lastName, firstName, middleName } = parseName(
-      record.landownerName || "",
-    );
-    const parts = record.landownerAddress.split(",").map((p) => p.trim());
-    setEditingRecord(record);
-    setEditError(null);
-    setEditFormData({
-      firstName,
-      middleName,
-      lastName,
-      age: record.age !== null ? String(record.age) : "",
-      barangay: parts[0] || "",
-      municipality: parts[1] || "Dumangas",
-    });
-    setOpenMenuId(null);
-  };
 
   const handleCancel = () => {
     setEditingRecord(null);
@@ -2331,9 +2375,9 @@ const JoLandownerRegistry: React.FC = () => {
                     occupants: (p.occupants || []).map((occ): OccupantInfo => ({
                       submissionId: occ.submissionId,
                       name: occ.name,
-                      ffrsCode: occ.ffrsCode,
+                      ffrsCode: occ.ffrsCode || "",
                       role: occ.role as OccupantInfo["role"],
-                      isLinked: occ.isLinked,
+                      isLinked: occ.isLinked || false,
                     })),
                     geometry: p.geometry ?? null,
                     withinAncestralDomain: p.withinAncestralDomain,

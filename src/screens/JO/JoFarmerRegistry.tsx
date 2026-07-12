@@ -12,7 +12,10 @@ import "../../assets/css/jo css/JoFarmerStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfileDisplay";
-import type { UnifiedParcel, OccupantInfo } from "../../components/FarmerProfile/FarmerProfileDisplay";
+import type {
+  UnifiedParcel,
+  OccupantInfo,
+} from "../../components/FarmerProfile/FarmerProfileDisplay";
 import {
   getAuditLogger,
   AuditModule,
@@ -1310,8 +1313,7 @@ const JoFarmerRegistry: React.FC = () => {
 
     const w = window.open("", "_blank");
     if (!w) return;
-    w.document
-      .write(`<!DOCTYPE html><html><head><title>Farmers — Farmer Registry</title><style>
+    w.document.write(`<!DOCTYPE html><html><head><style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:Arial,sans-serif;font-size:10px;padding:10mm;color:#111827}
       .farmer-print-header{text-align:center;margin-bottom:8px}
@@ -1324,7 +1326,7 @@ const JoFarmerRegistry: React.FC = () => {
       .farmer-print-footer{margin-top:10px;font-size:9px;color:#475569;text-align:center}
     </style></head><body>
     <div class="farmer-print-header">
-      <h1>Farmers — Farmer Registry</h1>
+      <h1>Farmer Registry</h1>
       <p>Municipality of Dumangas, Iloilo</p>
     </div>
     <table class="farmer-print-table">
@@ -1337,7 +1339,7 @@ const JoFarmerRegistry: React.FC = () => {
           <th>Landowner Name</th>
           <th>Parcels</th>
           <th>Total Area</th>
-          <th>Farming Status</th>
+          <th>Farming Land Status</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -2615,39 +2617,46 @@ const JoFarmerRegistry: React.FC = () => {
                   gender: selectedFarmer.gender,
                   mainLivelihood: selectedFarmer.mainLivelihood,
                   farmingActivities: selectedFarmer.farmingActivities,
-                  parcels: (selectedFarmer.parcels || []).map((p): UnifiedParcel => {
-                    const role: UnifiedParcel["role"] =
-                      p.ownershipTypeRegisteredOwner ? "owner-farmed"
-                      : p.ownershipTypeTenant && p.ownershipTypeLessee ? "tenant+lessee"
-                      : p.ownershipTypeTenant ? "tenant"
-                      : p.ownershipTypeLessee ? "lessee"
-                      : "tenant";
-                    const occupants: OccupantInfo[] = [];
-                    const ownerName = p.tenantLandOwnerName || p.lesseeLandOwnerName;
-                    if (ownerName) {
-                      occupants.push({
-                        submissionId: "",
-                        name: ownerName,
-                        role: "land-owner",
-                      });
-                    }
-                    return {
-                      id: p.id,
-                      parcelNumber: p.parcelNumber,
-                      farmLocationBarangay: p.farmLocationBarangay,
-                      farmLocationMunicipality: p.farmLocationMunicipality,
-                      totalFarmAreaHa: p.totalFarmAreaHa,
-                      role,
-                      occupants,
-                      geometry: null,
-                      withinAncestralDomain: p.withinAncestralDomain,
-                      ownershipDocumentNo: p.ownershipDocumentNo,
-                      agrarianReformBeneficiary: p.agrarianReformBeneficiary,
-                      isFarming: p.isFarming,
-                      isCultivating: p.isCultivating,
-                      farmingStatusReason: p.farmingStatusReason,
-                    };
-                  }),
+                  parcels: (selectedFarmer.parcels || []).map(
+                    (p): UnifiedParcel => {
+                      const role: UnifiedParcel["role"] =
+                        p.ownershipTypeRegisteredOwner
+                          ? "owner-farmed"
+                          : p.ownershipTypeTenant && p.ownershipTypeLessee
+                            ? "tenant+lessee"
+                            : p.ownershipTypeTenant
+                              ? "tenant"
+                              : p.ownershipTypeLessee
+                                ? "lessee"
+                                : "tenant";
+                      const occupants: OccupantInfo[] = [];
+                      const ownerName =
+                        p.tenantLandOwnerName || p.lesseeLandOwnerName;
+                      if (ownerName) {
+                        occupants.push({
+                          submissionId: "",
+                          name: ownerName,
+                          role: "land-owner",
+                        });
+                      }
+                      return {
+                        id: p.id,
+                        parcelNumber: p.parcelNumber,
+                        farmLocationBarangay: p.farmLocationBarangay,
+                        farmLocationMunicipality: p.farmLocationMunicipality,
+                        totalFarmAreaHa: p.totalFarmAreaHa,
+                        role,
+                        occupants,
+                        geometry: null,
+                        withinAncestralDomain: p.withinAncestralDomain,
+                        ownershipDocumentNo: p.ownershipDocumentNo,
+                        agrarianReformBeneficiary: p.agrarianReformBeneficiary,
+                        isFarming: p.isFarming,
+                        isCultivating: p.isCultivating,
+                        farmingStatusReason: p.farmingStatusReason,
+                      };
+                    },
+                  ),
                 }}
                 onClose={() => setShowModal(false)}
               />{" "}

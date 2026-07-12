@@ -180,7 +180,9 @@ export const useAdminDashboardStats = (
           ),
       ]);
 
-      const farmers = farmersRes.data || [];
+      const farmers = (farmersRes.data || []).filter(
+        (f: any) => f.status?.toLowerCase() !== "inactive",
+      );
       const parcels = parcelsRes.data || [];
       const requests = requestsRes.data || [];
       const allocations = allocationsRes.data || [];

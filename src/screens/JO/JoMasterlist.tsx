@@ -746,7 +746,9 @@ const JoMasterlist: React.FC = () => {
               : "",
           status: String(item.status ?? "Not Submitted"),
           landParcel,
-          farmingStatus: String(item.farmingStatus || item.cultivationStatus || "Not specified"),
+          farmingStatus: String(
+            item.farmingStatus || item.cultivationStatus || "Not specified",
+          ),
           landownerName: landownerMap.get(String(item.id)) || "",
           mainLivelihood: item.mainLivelihood || "",
           isActivelyFarming: item.isActivelyFarming === true,
@@ -1144,7 +1146,10 @@ const JoMasterlist: React.FC = () => {
 
         // Exclude strict landowners who are not farming if toggle is ON
         if (hideNonFarmingLandowners) {
-          const isLandOwner = String(record.mainLivelihood || "").toLowerCase().trim() === "landowner";
+          const isLandOwner =
+            String(record.mainLivelihood || "")
+              .toLowerCase()
+              .trim() === "landowner";
           const isActivelyFarming = record.isActivelyFarming === true;
 
           if (isLandOwner && !isActivelyFarming) {
@@ -2101,21 +2106,7 @@ const JoMasterlist: React.FC = () => {
                     onChange={(e) => setSelectedBarangay(e.target.value)}
                     className="jo-masterlist-status-select"
                   >
-                    <option value="all">All Home Barangays</option>
-                    {barangays.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="jo-masterlist-status-filter">
-                  <select
-                    value={selectedFarmBarangay}
-                    onChange={(e) => setSelectedFarmBarangay(e.target.value)}
-                    className="jo-masterlist-status-select"
-                  >
-                    <option value="all">All Farm Barangays</option>
+                    <option value="all">All Barangays</option>
                     {barangays.map((b) => (
                       <option key={b} value={b}>
                         {b}
@@ -2139,13 +2130,37 @@ const JoMasterlist: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="jo-masterlist-status-filter" style={{ display: "flex", alignItems: "center", paddingLeft: "8px", minWidth: "220px" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--color-text-secondary, #555)", cursor: "pointer", userSelect: "none" }}>
+                <div
+                  className="jo-masterlist-status-filter"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    paddingLeft: "8px",
+                    minWidth: "220px",
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "13px",
+                      color: "var(--color-text-secondary, #555)",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={hideNonFarmingLandowners}
-                      onChange={(e) => setHideNonFarmingLandowners(e.target.checked)}
-                      style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                      onChange={(e) =>
+                        setHideNonFarmingLandowners(e.target.checked)
+                      }
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        cursor: "pointer",
+                      }}
                     />
                     Hide non-farming land owners
                   </label>

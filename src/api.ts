@@ -234,7 +234,9 @@ export const getDashboardStats = async (
       console.error("Error fetching farmers:", farmersError);
     }
 
-    const totalFarmers = farmersData?.length || 0;
+    const totalFarmers =
+      farmersData?.filter((f) => f.status?.toLowerCase() !== "inactive")
+        .length || 0;
     const activeFarmers =
       farmersData?.filter(
         (f) =>
@@ -245,7 +247,8 @@ export const getDashboardStats = async (
     const lesseeTenantCount =
       farmersData?.filter(
         (f) =>
-          f.OWNERSHIP_TYPE_LESSEE === true || f.OWNERSHIP_TYPE_TENANT === true,
+          (f.OWNERSHIP_TYPE_LESSEE === true || f.OWNERSHIP_TYPE_TENANT === true) &&
+          f.status?.toLowerCase() !== "inactive",
       ).length || 0;
 
     let currentRequestsQuery = supabase
