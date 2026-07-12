@@ -18,11 +18,12 @@ import {
   Filter,
   BarChart3,
   History,
-  FileDown,
   UserCheck,
   Printer,
   FileText,
+  X,
 } from "lucide-react";
+
 import "../../assets/css/admin css/AdminViewAllocation.css";
 
 const RegionInventory: React.FC = () => {
@@ -123,12 +124,7 @@ const RegionInventory: React.FC = () => {
             <span className="inventory-count">{items.length} Items</span>
           </div>
           <div className="inventory-category-actions">
-            <button
-              className="inventory-btn-mini"
-              onClick={() => navigate("/region-create-allocation")}
-            >
-              Add Stock
-            </button>
+            {/* Kept empty or add filters here if needed */}
           </div>
         </div>
       )}
@@ -386,13 +382,23 @@ const RegionInventory: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <button
-                className="inventory-btn-register"
-                onClick={() => navigate("/region-manage-varieties")}
-              >
-                <Plus size={18} />
-                Manage Varieties
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  className="inventory-btn-register"
+                  onClick={() => navigate("/region-add-stock")}
+                  style={{ background: "#10b981" }}
+                >
+                  <Plus size={18} />
+                  Add Stock
+                </button>
+                <button
+                  className="inventory-btn-register"
+                  onClick={() => navigate("/region-manage-varieties")}
+                >
+                  <Plus size={18} />
+                  Manage Varieties
+                </button>
+              </div>
             </div>
           </div>
 

@@ -3153,9 +3153,13 @@ export const updateAllocation = async (
   id: string | number,
   updateData: any,
 ): Promise<ApiResponse> => {
+  const payload = {
+    ...updateData,
+    updated_at: new Date().toISOString(),
+  };
   const { data, error } = await supabase
     .from("regional_allocations")
-    .update(updateData)
+    .update(payload)
     .eq("id", id)
     .select()
     .single();
