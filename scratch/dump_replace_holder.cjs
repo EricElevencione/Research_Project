@@ -7,7 +7,7 @@ async function main() {
       SELECT pg_get_functiondef(p.oid) as def
       FROM pg_proc p
       JOIN pg_namespace n ON p.pronamespace = n.oid
-      WHERE p.proname = 'sync_farmer_registration_status'
+      WHERE p.proname = 'replace_tenant_lessee_holder_with_portions_no_review'
         AND n.nspname = 'public';
     `);
     if (res.rowCount > 0) {

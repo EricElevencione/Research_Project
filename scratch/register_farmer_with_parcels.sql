@@ -246,6 +246,7 @@ BEGIN
             v_farm_parcel_id := (v_parcel->>'existingParcelId')::BIGINT;
             UPDATE rsbsa_farm_parcels SET
                 is_cultivating = v_is_cultivating,
+                is_farming = COALESCE((v_parcel->>'isFarming')::BOOLEAN, v_is_cultivating),
                 cultivation_status_updated_at = COALESCE(v_cultivation_status_updated_at, NOW()),
                 cultivation_status_reason = v_cultivation_status_reason,
                 cultivator_submission_id = v_cultivator_submission_id,

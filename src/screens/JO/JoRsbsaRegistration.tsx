@@ -913,6 +913,8 @@ const JoRsbsa: React.FC = () => {
               ownershipTypeOthers: false,
               tenantLandOwnerName: isTenant ? group.landOwner.name : "",
               lesseeLandOwnerName: isLessee ? group.landOwner.name : "",
+              tenantLandOwnerId: isTenant ? group.landOwner.id : null,
+              lesseeLandOwnerId: isLessee ? group.landOwner.id : null,
               ownershipOthersSpecify: "",
               existingParcelId: ownerParcel.land_parcel_id || ownerParcel.id,
               existingParcelNumber: ownerParcel.parcel_number || "",

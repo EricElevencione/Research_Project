@@ -5,6 +5,7 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
+  getFarmParcelsWithOccupants,
   updateRsbsaSubmission,
   updateFarmParcel,
   getLandHistoryAssociationRows,
@@ -161,6 +162,8 @@ interface ParcelDetail {
   isFarming?: boolean | null;
   farmingStatusReason?: string | null;
   farmingStatusUpdatedAt?: string | null;
+  role?: string;
+  occupants?: any[];
 }
 
 interface EditFormData {
@@ -514,10 +517,10 @@ const JoMasterlist: React.FC = () => {
       const { data, error: err } = await supabase
         .from("rsbsa_farm_parcels")
         .select(
-          "submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, is_cultivating, contract_end_date, ownership_type_tenant, ownership_type_lessee",
+          "submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, is_cultivating, contract_end_date, ownership_type_tenant, ownership_type_lessee, is_current_owner",
         );
       if (err) throw err;
-      const parcels = data || [];
+      const parcels = (data || []).filter((p: any) => p.is_current_owner !== false);
       const idleOwnerIds = new Set<string>();
       const normalizeKey = (value: unknown) =>
         String(value ?? "")
@@ -617,7 +620,7 @@ const JoMasterlist: React.FC = () => {
         supabase
           .from("rsbsa_farm_parcels")
           .select(
-            "submission_id, tenant_land_owner_name, lessee_land_owner_name",
+            "submission_id, tenant_land_owner_name, lessee_land_owner_name, is_current_owner",
           )
           .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true"),
         supabase
@@ -641,6 +644,7 @@ const JoMasterlist: React.FC = () => {
       const tenantLesseeSubmissionIds = new Set<string>();
       (tlResult.data || []).forEach((p: any) => {
         if (!p.submission_id) return;
+        if (p.is_current_owner === false) return; // Skip inactive/transferred parcels
         const id = String(p.submission_id);
         tenantLesseeSubmissionIds.add(id);
         const name = p.tenant_land_owner_name || p.lessee_land_owner_name || "";
@@ -786,6 +790,7 @@ const JoMasterlist: React.FC = () => {
               ot?.lessee === true ||
               ot?.tenantLessee === true;
             if (!isTenantOrLessee) return false;
+            if (fallbackParcelCount === 0) return false; // Flag as No Parcels first
             const id = String(item.id);
             return !submissionsWithOwnerName.has(id);
           })(),
@@ -819,7 +824,7 @@ const JoMasterlist: React.FC = () => {
         throw new Error("Failed to fetch farmer details");
       const farmerData = farmerResponse.data;
 
-      const parcelsResponse = await getFarmParcels(farmerId, {
+      const parcelsResponse = await getFarmParcelsWithOccupants(farmerId, {
         activeOnly: true,
       });
       if (parcelsResponse.error) throw new Error("Failed to fetch parcels");
@@ -894,6 +899,8 @@ const JoMasterlist: React.FC = () => {
         isFarming: typeof p.is_farming === "boolean" ? p.is_farming : null,
         farmingStatusReason: p.farming_status_reason || null,
         farmingStatusUpdatedAt: p.farming_status_updated_at || null,
+        role: p.role || "",
+        occupants: p.occupants || [],
       }));
 
       if (mappedParcels.length === 0) {
@@ -3018,14 +3025,8 @@ const JoMasterlist: React.FC = () => {
                         farmLocationBarangay: p.farmLocationBarangay,
                         farmLocationMunicipality: p.farmLocationMunicipality,
                         totalFarmAreaHa: p.totalFarmAreaHa,
-                        role: getParcelOccupationType({
-                          registeredOwner: p.ownershipTypeRegisteredOwner,
-                          tenant: p.ownershipTypeTenant,
-                          lessee: p.ownershipTypeLessee,
-                          isCultivating: p.isFarming,
-                          isFarming: p.isFarming,
-                        }) as UnifiedParcel["role"],
-                        occupants: [],
+                        role: p.role as UnifiedParcel["role"],
+                        occupants: p.occupants || [],
                         geometry: null,
                         agrarianReformBeneficiary: p.agrarianReformBeneficiary,
                         withinAncestralDomain: p.withinAncestralDomain,
@@ -3058,34 +3059,14 @@ const JoMasterlist: React.FC = () => {
                     farmingActivities: selectedFarmer.farmingActivities,
                     parcels: (selectedFarmer.parcels || []).map(
                       (p): UnifiedParcel => {
-                        const role: UnifiedParcel["role"] =
-                          p.ownershipTypeRegisteredOwner
-                            ? "owner-farmed"
-                            : p.ownershipTypeTenant && p.ownershipTypeLessee
-                              ? "tenant+lessee"
-                              : p.ownershipTypeTenant
-                                ? "tenant"
-                                : p.ownershipTypeLessee
-                                  ? "lessee"
-                                  : "tenant";
-                        const occupants: OccupantInfo[] = [];
-                        const ownerName =
-                          p.tenantLandOwnerName || p.lesseeLandOwnerName;
-                        if (ownerName) {
-                          occupants.push({
-                            submissionId: "",
-                            name: ownerName,
-                            role: "land-owner",
-                          });
-                        }
                         return {
                           id: p.id,
                           parcelNumber: p.parcelNumber,
                           farmLocationBarangay: p.farmLocationBarangay,
                           farmLocationMunicipality: p.farmLocationMunicipality,
                           totalFarmAreaHa: p.totalFarmAreaHa,
-                          role,
-                          occupants,
+                          role: p.role as UnifiedParcel["role"],
+                          occupants: p.occupants || [],
                           geometry: null,
                           withinAncestralDomain: p.withinAncestralDomain,
                           ownershipDocumentNo: p.ownershipDocumentNo,

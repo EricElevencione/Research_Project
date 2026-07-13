@@ -4,6 +4,7 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
+  getFarmParcelsWithOccupants,
   updateRsbsaSubmission,
 } from "../../api";
 import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfileDisplay";
@@ -638,7 +639,7 @@ const JoLandownerRegistry: React.FC = () => {
         // Build set of ownerIds that have at least one is_current_owner parcel
         const ownersWithActiveLand = new Set<string>();
         (ownerParcels as FarmParcelRow[] || []).forEach((p: FarmParcelRow) => {
-          if (p.is_current_owner === true) {
+          if (p.is_current_owner !== false) {
             ownersWithActiveLand.add(String(p.submission_id));
           }
         });
@@ -698,7 +699,7 @@ const JoLandownerRegistry: React.FC = () => {
         })();
       }
 
-      setLandownerRecords(formatted);
+      setLandownerRecords(formatted.filter((r) => !r.archivedAt));
       setParcelRows(parcelRows);
       setLoading(false);
     } catch (err) {
@@ -759,112 +760,9 @@ const JoLandownerRegistry: React.FC = () => {
           null,
       );
 
-      // Step A: Own parcels (the land they legally own)
-      const ownedResponse = await getFarmParcels(ownerId, {
-        currentOwnerOnly: true,
-      });
-      const ownedParcels = (ownedResponse.data || []) as FarmParcelRow[];
-
-      // Step B: Parcels where this person is listed as landlord
-      // These come from OTHER farmers' parcel rows pointing back to this owner
-      const { data: occupiedByParcelsRaw, error: occupiedError } =
-        await supabase
-          .from("rsbsa_farm_parcels")
-          .select(
-            `
-          id, submission_id, parcel_number,
-          farm_location_barangay, farm_location_municipality,
-          total_farm_area_ha, ownership_type_tenant, ownership_type_lessee,
-          tenant_land_owner_id, lessee_land_owner_id,
-          tenant_land_owner_name, lessee_land_owner_name,
-          is_current_owner,
-          agrarian_reform_beneficiary, within_ancestral_domain, ownership_document_no,
-          is_farming, farming_status_reason, is_cultivating, cultivation_status_reason
-        `,
-          )
-          .or(
-            `tenant_land_owner_id.eq.${ownerNumId},lessee_land_owner_id.eq.${ownerNumId}`,
-          );
-
-      if (occupiedError)
-        console.warn("Occupied parcels fetch error:", occupiedError.message);
-
-      // Only the current tenant/lessee on a parcel should show up here —
-      // a replaced tenant/lessee whose link is still in the table but is
-      // no longer active shouldn't keep appearing on the landowner's parcel.
-      const occupiedByParcels = ((occupiedByParcelsRaw as FarmParcelRow[]) || []).filter(
-        (p: FarmParcelRow) => p.is_current_owner !== false,
-      );
-
-      // Step C: Fetch farmer names for occupant submission IDs
-      const occupantIds = [
-        ...new Set((occupiedByParcels || []).map((p: FarmParcelRow) => p.submission_id)),
-      ].filter(Boolean);
-      const occupantInfoMap = new Map<
-        number,
-        { name: string; ffrsCode: string }
-      >();
-
-      if (occupantIds.length > 0) {
-        const { data: occupantSubmissions } = await supabase
-          .from("rsbsa_submission")
-          .select(
-            'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "FFRS_CODE"',
-          )
-          .in("id", occupantIds);
-
-        (occupantSubmissions as OccupantSubmissionRow[] || []).forEach((row: OccupantSubmissionRow) => {
-          const last = row["LAST NAME"] || "";
-          const first = row["FIRST NAME"] || "";
-          const middle = row["MIDDLE NAME"] || "";
-          const ext = row["EXT NAME"] || "";
-          const parts = [
-            last,
-            [first, middle, ext].filter(Boolean).join(" "),
-          ].filter(Boolean);
-          occupantInfoMap.set(Number(row.id), {
-            name: parts.join(", ") || "Unknown",
-            ffrsCode: row["FFRS_CODE"] || "",
-          });
-        });
-      }
-
-      // Step D: Build occupation map keyed by parcel_number
-      // For each owned parcel, find who works it
-      const occupationByParcelNumber = new Map<string, OccupantInfo[]>();
-
-      (occupiedByParcels || []).forEach((p: FarmParcelRow) => {
-        const parcelNum = String(p.parcel_number || "")
-          .trim()
-          .toUpperCase();
-        if (!parcelNum) return;
-
-        const occupantId = Number(p.submission_id);
-        const occupantData = occupantInfoMap.get(occupantId);
-        const isTenant = p.ownership_type_tenant === true;
-        const isLessee = p.ownership_type_lessee === true;
-
-        const occupant: OccupantInfo = {
-          submissionId: String(p.submission_id),
-          name:
-            occupantData?.name ||
-            p.tenant_land_owner_name ||
-            p.lessee_land_owner_name ||
-            "Unknown",
-          ffrsCode: occupantData?.ffrsCode || "",
-          role:
-            isTenant && isLessee
-              ? "tenant+lessee"
-              : isTenant
-                ? "tenant"
-                : "lessee",
-          isLinked: !!occupantData,
-        };
-
-        if (!occupationByParcelNumber.has(parcelNum))
-          occupationByParcelNumber.set(parcelNum, []);
-        occupationByParcelNumber.get(parcelNum)!.push(occupant);
-      });
+      // Step A: Fetch owned parcels and occupants
+      const ownedResponse = await getFarmParcelsWithOccupants(ownerId);
+      const ownedParcels = (ownedResponse.data || []) as any[];
 
       // Step D.5: Fetch this owner's GIS shapes from land_plots.
       // No hard foreign key to rsbsa_farm_parcels — matched by ffrs_id
@@ -951,27 +849,15 @@ const JoLandownerRegistry: React.FC = () => {
       };
 
       // Step E: Build the combined parcel list
-      // Start with owned parcels as the authoritative list
-      const combinedParcels: OccupiedParcel[] = ownedParcels.map((p: FarmParcelRow) => {
-        const parcelNum = String(p.parcel_number || "")
-          .trim()
-          .toUpperCase();
-        const occupants = occupationByParcelNumber.get(parcelNum) || [];
-
-        const occupationType = getParcelOccupationType({
-          registeredOwner: true,
-          isCultivating: p.is_cultivating === true || p.is_farming === true,
-          occupants,
-        }) as OccupiedParcel["occupationType"];
-
+      const combinedParcels: OccupiedParcel[] = ownedParcels.map((p: any) => {
         return {
           id: String(p.id),
           parcelNumber: p.parcel_number || "N/A",
           farmLocationBarangay: p.farm_location_barangay || "N/A",
           farmLocationMunicipality: p.farm_location_municipality || "N/A",
           totalFarmAreaHa: typeof p.total_farm_area_ha === "number" ? p.total_farm_area_ha : parseFloat(String(p.total_farm_area_ha || 0)) || 0,
-          occupationType,
-          occupants,
+          occupationType: p.role as OccupiedParcel["occupationType"],
+          occupants: p.occupants || [],
           agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: p.ownership_document_no || "",
@@ -981,67 +867,6 @@ const JoLandownerRegistry: React.FC = () => {
           farmingStatusReason: p.farming_status_reason ?? null,
           cultivationStatusReason: p.cultivation_status_reason ?? null,
         };
-      });
-
-      // Step F: Also append any occupied parcels that didn't match an owned parcel
-      // (edge case — tenant references an owner who hasn't registered the parcel yet)
-      const ownedParcelNumbers = new Set(
-        ownedParcels.map((p: FarmParcelRow) =>
-          String(p.parcel_number || "")
-            .trim()
-            .toUpperCase(),
-        ),
-      );
-
-      (occupiedByParcels || []).forEach((p: FarmParcelRow) => {
-        const parcelNum = String(p.parcel_number || "")
-          .trim()
-          .toUpperCase();
-        if (ownedParcelNumbers.has(parcelNum)) return; // already handled above
-
-        const occupantId = Number(p.submission_id);
-        const occupantData = occupantInfoMap.get(occupantId);
-        const isTenant = p.ownership_type_tenant === true;
-        const isLessee = p.ownership_type_lessee === true;
-
-        const occupant: OccupantInfo = {
-          submissionId: String(p.submission_id),
-          name: occupantData?.name || "Unknown",
-          ffrsCode: occupantData?.ffrsCode || "",
-          role:
-            isTenant && isLessee
-              ? "tenant+lessee"
-              : isTenant
-                ? "tenant"
-                : "lessee",
-          isLinked: !!occupantData,
-        };
-
-        const occupationType = getParcelOccupationType({
-          registeredOwner: false,
-          tenant: isTenant,
-          lessee: isLessee,
-        }) as OccupiedParcel["occupationType"];
-
-        combinedParcels.push({
-          id: String(p.id),
-          parcelNumber: p.parcel_number || "N/A",
-          farmLocationBarangay: p.farm_location_barangay || "N/A",
-          farmLocationMunicipality: p.farm_location_municipality || "N/A",
-          totalFarmAreaHa: typeof p.total_farm_area_ha === "number" ? p.total_farm_area_ha : parseFloat(String(p.total_farm_area_ha || 0)) || 0,
-          occupationType,
-          occupants: [occupant],
-          agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
-          withinAncestralDomain: p.within_ancestral_domain || "",
-          ownershipDocumentNo: p.ownership_document_no || "",
-          geometry: getGeometryFor(p.farm_location_barangay, p.parcel_number),
-          isFarming: p.is_farming ?? undefined,
-          isCultivating: p.is_cultivating ?? undefined,
-          farmingStatusReason: p.farming_status_reason ?? null,
-          cultivationStatusReason: p.cultivation_status_reason ?? null,
-        });
-
-        ownedParcelNumbers.add(parcelNum);
       });
 
       const reformattedName = (() => {

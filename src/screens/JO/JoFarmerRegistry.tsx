@@ -5,6 +5,7 @@ import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
   getFarmParcels,
+  getFarmParcelsWithOccupants,
   updateRsbsaSubmission,
   updateFarmParcel,
 } from "../../api";
@@ -132,6 +133,8 @@ interface ParcelDetail {
   isCultivating?: boolean | null;
   farmingStatusReason?: string | null;
   farmingStatusUpdatedAt?: string | null;
+  role?: string;
+  occupants?: any[];
 }
 
 interface EditFormData {
@@ -273,7 +276,7 @@ const JoFarmerRegistry: React.FC = () => {
         throw new Error("Failed to fetch farmer details");
       const farmerData = farmerResponse.data;
 
-      const parcelsResponse = await getFarmParcels(farmerId, {
+      const parcelsResponse = await getFarmParcelsWithOccupants(farmerId, {
         activeOnly: true,
       });
       if (parcelsResponse.error) throw new Error("Failed to fetch parcels");
@@ -365,6 +368,8 @@ const JoFarmerRegistry: React.FC = () => {
           typeof p.is_cultivating === "boolean" ? p.is_cultivating : null,
         farmingStatusReason: p.farming_status_reason || null,
         farmingStatusUpdatedAt: p.farming_status_updated_at || null,
+        role: p.role || "",
+        occupants: p.occupants || [],
       }));
 
       if (mappedParcels.length === 0) {
@@ -759,12 +764,13 @@ const JoFarmerRegistry: React.FC = () => {
       if (ownerFarmerIds.length > 0) {
         const { data: ownerParcelRows } = await supabase
           .from("rsbsa_farm_parcels")
-          .select("submission_id, is_farming, is_cultivating")
+          .select("submission_id, is_farming, is_cultivating, is_current_owner")
           .in("submission_id", ownerFarmerIds)
           .eq("ownership_type_registered_owner", true);
 
         (ownerParcelRows || []).forEach((p: any) => {
           if (!p.submission_id) return;
+          if (p.is_current_owner === false) return; // Skip transferred/inactive parcels
           const id = String(p.submission_id);
           // Count parcel as farmed if either field is true.
           // null is NOT counted here — owner-farmers must explicitly confirm
@@ -805,7 +811,7 @@ const JoFarmerRegistry: React.FC = () => {
           supabase
             .from("rsbsa_farm_parcels")
             .select(
-              "submission_id, tenant_land_owner_id, lessee_land_owner_id, tenant_land_owner_name, lessee_land_owner_name, is_farming, is_cultivating",
+              "submission_id, tenant_land_owner_id, lessee_land_owner_id, tenant_land_owner_name, lessee_land_owner_name, is_farming, is_cultivating, is_current_owner",
             )
             .in("submission_id", tenantLesseeIds)
             .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true"),
@@ -817,6 +823,7 @@ const JoFarmerRegistry: React.FC = () => {
 
         (ownerNameResult.data || []).forEach((p: any) => {
           if (!p.submission_id) return;
+          if (p.is_current_owner === false) return; // Skip deactivated tenant parcels
           const id = String(p.submission_id);
           tenantLesseeParcelCountById.set(
             id,
@@ -852,10 +859,13 @@ const JoFarmerRegistry: React.FC = () => {
             farmingParcelCount: isTenantLesseeRecord
               ? farmingParcelCount
               : r.farmingParcelCount,
-            hasNoParcels: isTenantLesseeRecord ? false : r.hasNoParcels,
+            hasNoParcels: isTenantLesseeRecord
+              ? tenureParcelCount === 0
+              : r.hasNoParcels,
             hasNoLandOwner:
               isTenantLesseeRecord &&
-              (tenureParcelCount === 0 || !submissionsWithOwnerLink.has(r.id)),
+              tenureParcelCount > 0 &&
+              !submissionsWithOwnerLink.has(r.id),
           };
         });
       }
@@ -864,6 +874,7 @@ const JoFarmerRegistry: React.FC = () => {
       // These are people registered via JoRsbsaRegisLandowner who haven't
       // been registered as farmers yet through JoRsbsaRegistration.
       formattedRecords = formattedRecords.filter((record) => {
+        if (record.archivedAt) return false;
         const livelihood = String(record.mainLivelihood || "")
           .toLowerCase()
           .trim();
@@ -2619,34 +2630,14 @@ const JoFarmerRegistry: React.FC = () => {
                   farmingActivities: selectedFarmer.farmingActivities,
                   parcels: (selectedFarmer.parcels || []).map(
                     (p): UnifiedParcel => {
-                      const role: UnifiedParcel["role"] =
-                        p.ownershipTypeRegisteredOwner
-                          ? "owner-farmed"
-                          : p.ownershipTypeTenant && p.ownershipTypeLessee
-                            ? "tenant+lessee"
-                            : p.ownershipTypeTenant
-                              ? "tenant"
-                              : p.ownershipTypeLessee
-                                ? "lessee"
-                                : "tenant";
-                      const occupants: OccupantInfo[] = [];
-                      const ownerName =
-                        p.tenantLandOwnerName || p.lesseeLandOwnerName;
-                      if (ownerName) {
-                        occupants.push({
-                          submissionId: "",
-                          name: ownerName,
-                          role: "land-owner",
-                        });
-                      }
                       return {
                         id: p.id,
                         parcelNumber: p.parcelNumber,
                         farmLocationBarangay: p.farmLocationBarangay,
                         farmLocationMunicipality: p.farmLocationMunicipality,
                         totalFarmAreaHa: p.totalFarmAreaHa,
-                        role,
-                        occupants,
+                        role: p.role as UnifiedParcel["role"],
+                        occupants: p.occupants || [],
                         geometry: null,
                         withinAncestralDomain: p.withinAncestralDomain,
                         ownershipDocumentNo: p.ownershipDocumentNo,

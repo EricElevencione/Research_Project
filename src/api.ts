@@ -1919,6 +1919,179 @@ export const getFarmParcels = async (
   return createResponse(enhancedParcels, null, 200);
 };
 
+export const getFarmParcelsWithOccupants = async (
+  submissionId: string | number,
+  options: { activeOnly?: boolean } = {},
+): Promise<ApiResponse> => {
+  const farmerNumId = Number(submissionId);
+
+  // 1. Fetch own/active parcels of this farmer using existing getFarmParcels
+  const parcelsResponse = await getFarmParcels(submissionId, {
+    activeOnly: options.activeOnly ?? true,
+  });
+
+  if (parcelsResponse.error) {
+    return parcelsResponse;
+  }
+
+  const parcels = parcelsResponse.data || [];
+
+  // 2. Fetch occupants (tenant/lessee parcels pointing to this farmer as landowner)
+  const { data: occupiedByParcelsRaw, error: occupiedError } = await supabase
+    .from("rsbsa_farm_parcels")
+    .select(
+      `id, submission_id, parcel_number,
+      farm_location_barangay, farm_location_municipality,
+      total_farm_area_ha, ownership_type_tenant, ownership_type_lessee,
+      tenant_land_owner_id, lessee_land_owner_id,
+      tenant_land_owner_name, lessee_land_owner_name,
+      is_current_owner`
+    )
+    .or(`tenant_land_owner_id.eq.${farmerNumId},lessee_land_owner_id.eq.${farmerNumId}`);
+
+  if (occupiedError) {
+    console.log("Occupants query error (non-blocking):", occupiedError.message);
+  }
+
+  const occupiedByParcels = ((occupiedByParcelsRaw as any[]) || []).filter(
+    (p: any) => p.is_current_owner !== false
+  );
+
+  // Fetch farmer names for occupants submission IDs
+  const occupantIds = [
+    ...new Set(occupiedByParcels.map((p: any) => p.submission_id)),
+  ].filter(Boolean);
+
+  const occupantInfoMap = new Map<number, { name: string; ffrsCode: string }>();
+
+  if (occupantIds.length > 0) {
+    const { data: occupantSubmissions, error: subError } = await supabase
+      .from("rsbsa_submission")
+      .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "FFRS_CODE"')
+      .in("id", occupantIds);
+
+    if (!subError && occupantSubmissions) {
+      occupantSubmissions.forEach((row: any) => {
+        const last = row["LAST NAME"] || "";
+        const first = row["FIRST NAME"] || "";
+        const middle = row["MIDDLE NAME"] || "";
+        const ext = row["EXT NAME"] || "";
+        const parts = [
+          last,
+          [first, middle, ext].filter(Boolean).join(" "),
+        ].filter(Boolean);
+        occupantInfoMap.set(Number(row.id), {
+          name: parts.join(", ") || "Unknown",
+          ffrsCode: row["FFRS_CODE"] || "",
+        });
+      });
+    }
+  }
+
+  // Group occupants by normalized parcel number
+  const occupantsByParcelNumber = new Map<string, any[]>();
+  occupiedByParcels.forEach((p: any) => {
+    const parcelNum = String(p.parcel_number || "").trim().toUpperCase();
+    if (!parcelNum) return;
+
+    const occupantId = Number(p.submission_id);
+    const occupantData = occupantInfoMap.get(occupantId);
+    const isTenant = p.ownership_type_tenant === true;
+    const isLessee = p.ownership_type_lessee === true;
+
+    const occupant = {
+      submissionId: String(p.submission_id),
+      name: occupantData?.name || p.tenant_land_owner_name || p.lessee_land_owner_name || "Unknown",
+      ffrsCode: occupantData?.ffrsCode || "",
+      role: isTenant && isLessee ? "tenant+lessee" : isTenant ? "tenant" : "lessee",
+      isLinked: !!occupantData,
+    };
+
+    if (!occupantsByParcelNumber.has(parcelNum)) {
+      occupantsByParcelNumber.set(parcelNum, []);
+    }
+    occupantsByParcelNumber.get(parcelNum)!.push(occupant);
+  });
+
+  // 3. Map primary parcels
+  const primaryParcelNumbers = new Set(
+    parcels.map((p: any) => String(p.parcel_number || "").trim().toUpperCase())
+  );
+
+  const mappedParcels = parcels.map((p: any) => {
+    const parcelNum = String(p.parcel_number || "").trim().toUpperCase();
+    const occupants = occupantsByParcelNumber.get(parcelNum) || [];
+
+    const isRegisteredOwner = p.ownership_type_registered_owner === true;
+    const isTenant = p.ownership_type_tenant === true;
+    const isLessee = p.ownership_type_lessee === true;
+
+    // Compute dynamic role
+    let role = "tenant";
+    if (isRegisteredOwner) {
+      role = occupants.length > 0 ? "land-owner" : "owner-farmed";
+    } else if (isTenant && isLessee) {
+      role = "tenant+lessee";
+    } else if (isTenant) {
+      role = "tenant";
+    } else if (isLessee) {
+      role = "lessee";
+    }
+
+    // Attach occupant information
+    const finalOccupants = [...occupants];
+    
+    // For tenant/lessee parcels, if the landowner name is known, add them as an occupant with role 'land-owner'
+    if (!isRegisteredOwner) {
+      const ownerName = p.tenant_land_owner_name || p.lessee_land_owner_name;
+      const ownerId = p.tenant_land_owner_id || p.lessee_land_owner_id;
+      if (ownerName) {
+        finalOccupants.push({
+          submissionId: ownerId ? String(ownerId) : "",
+          name: ownerName,
+          ffrsCode: "", 
+          role: "land-owner",
+          isLinked: !!ownerId,
+        });
+      }
+    }
+
+    return {
+      ...p,
+      role,
+      occupants: finalOccupants,
+    };
+  });
+
+  // 4. Merge virtual landowner parcels (occupied by tenant/lessee but not registered by owner yet)
+  const virtualParcels: any[] = [];
+  occupantsByParcelNumber.forEach((occupants, parcelNum) => {
+    if (!primaryParcelNumbers.has(parcelNum)) {
+      const template = occupiedByParcels.find(
+        (op: any) => String(op.parcel_number || "").trim().toUpperCase() === parcelNum
+      );
+      if (template) {
+        virtualParcels.push({
+          id: `virtual-${template.id}`,
+          parcel_number: template.parcel_number,
+          farm_location_barangay: template.farm_location_barangay || "N/A",
+          farm_location_municipality: template.farm_location_municipality || "N/A",
+          total_farm_area_ha: template.total_farm_area_ha || 0,
+          ownership_type_registered_owner: true,
+          ownership_type_tenant: false,
+          ownership_type_lessee: false,
+          role: "land-owner",
+          occupants,
+          is_virtual: true,
+        });
+      }
+    }
+  });
+
+  const allParcels = [...mappedParcels, ...virtualParcels];
+  return createResponse(allParcels, null, 200);
+};
+
 export const createFarmParcel = async (
   parcelData: any,
 ): Promise<ApiResponse> => {
