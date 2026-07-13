@@ -14,6 +14,8 @@ import "../../assets/css/admin css/AdminViewAllocation.css";
 import "../../components/layout/sidebarStyle.css";
 import RegionSidebar from "../../components/layout/RegionSidebar";
 import { FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { getAuditLogger, AuditModule } from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 interface FarmerRequest extends Record<
   string,
@@ -235,6 +237,17 @@ const RegionViewAllocation: React.FC = () => {
       if (response.error) {
         alert(`Failed to close program: ${response.error}`);
       } else {
+        const auditUser = await getCurrentUserForAudit();
+        const auditLogger = getAuditLogger();
+        await auditLogger.logCRUD(
+          auditUser,
+          "UPDATE",
+          AuditModule.ALLOCATIONS,
+          "regional_allocation",
+          allocation.id,
+          `Closed regional program: ${allocation.season}`,
+        );
+
         // Refresh data
         const refreshed = await getAllocations();
         const updated = (refreshed.data || []).find((a: any) => a.id === allocation.id);
@@ -260,6 +273,17 @@ const RegionViewAllocation: React.FC = () => {
       if (response.error) {
         alert(`Failed to reopen program: ${response.error}`);
       } else {
+        const auditUser = await getCurrentUserForAudit();
+        const auditLogger = getAuditLogger();
+        await auditLogger.logCRUD(
+          auditUser,
+          "UPDATE",
+          AuditModule.ALLOCATIONS,
+          "regional_allocation",
+          allocation.id,
+          `Reopened regional program: ${allocation.season}`,
+        );
+
         const refreshed = await getAllocations();
         const updated = (refreshed.data || []).find((a: any) => a.id === allocation.id);
         if (updated) setAllocation(updated);
@@ -474,6 +498,20 @@ const RegionViewAllocation: React.FC = () => {
                 {overallAllocationTotals.fertilizerBags.toFixed(1)} fertilizer
                 bags and {overallAllocationTotals.seedKg.toFixed(1)} seed kg.
               </p>
+              <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <h5 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>Program Timestamps</h5>
+                <p style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: '#64748b' }}>
+                  <strong>Added:</strong> {allocation.created_at ? new Date(allocation.created_at as string).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }) : 'N/A'}
+                </p>
+                <p style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: '#64748b' }}>
+                  <strong>Updated:</strong> {allocation.updated_at ? new Date(allocation.updated_at as string).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }) : 'N/A'}
+                </p>
+                {allocation.status === 'closed' && (
+                  <p style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: '#ef4444' }}>
+                    <strong>Closed:</strong> {allocation.closed_date ? new Date(allocation.closed_date as string).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }) : 'N/A'}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -11,6 +11,7 @@ import {
   getAuditLogger,
   AuditModule,
 } from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 import "../../assets/css/admin css/index.css";
 import "../../assets/css/jo css/JoIncentStyle.css";
 import "../../assets/css/jo css/JoCreateAllocationStyle.css";
@@ -449,14 +450,10 @@ const RegionCreateAllocation: React.FC = () => {
 
       // Audit Log
       try {
-        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const auditUser = await getCurrentUserForAudit();
         const auditLogger = getAuditLogger();
         await auditLogger.logCRUD(
-          {
-            id: currentUser.id,
-            name: currentUser.name || "Admin",
-            role: currentUser.role || "ADMIN",
-          },
+          auditUser,
           isEditMode ? "UPDATE" : "CREATE",
           AuditModule.ALLOCATIONS,
           "regional_allocation",

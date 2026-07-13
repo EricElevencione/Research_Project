@@ -43,6 +43,7 @@ export interface BarangayDensity {
 }
 
 export interface SubsidyStock {
+  id: string;
   name: string;
   allocated: number;
   requested: number;
@@ -467,6 +468,7 @@ export const useAdminDashboardStats = (
       });
 
       const subsidyBreakdown: SubsidyStock[] = Array.from(subsidyMap.entries()).map(([field, val]) => ({
+        id: field,
         name: field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         allocated: val.allocated,
         requested: val.requested,

@@ -42,6 +42,7 @@ const RegionManageVarieties: React.FC = () => {
     name: "",
     category: "",
     description: "",
+    unit: "",
     sort_order: 1000,
     is_active: true,
   });
@@ -81,6 +82,7 @@ const RegionManageVarieties: React.FC = () => {
       name: "",
       category: "",
       description: "",
+      unit: "",
       sort_order: 1000,
       is_active: true,
     });
@@ -142,6 +144,7 @@ const RegionManageVarieties: React.FC = () => {
       name: item.name,
       category: item.category || "",
       description: item.description || "",
+      unit: item.unit || "",
       sort_order: item.sort_order || 1000,
       is_active: item.is_active ?? true,
     });
@@ -231,6 +234,7 @@ const RegionManageVarieties: React.FC = () => {
                       <th>ID / Code</th>
                       <th>Variety Name</th>
                       <th>Category</th>
+                      <th>Unit</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -257,6 +261,11 @@ const RegionManageVarieties: React.FC = () => {
                               className={`cat-badge ${item.category?.toLowerCase()}`}
                             >
                               {item.category || "N/A"}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="unit-badge">
+                              {item.unit || "N/A"}
                             </span>
                           </td>
                           <td>
@@ -361,6 +370,17 @@ const RegionManageVarieties: React.FC = () => {
                         </>
                       )}
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Unit</label>
+                    <input
+                      type="text"
+                      name="unit"
+                      value={formData.unit}
+                      onChange={handleInputChange}
+                      placeholder="e.g. kg, bags, liters"
+                      required
+                    />
                   </div>
                   <div className="form-group">
                     <label>Sort Order</label>

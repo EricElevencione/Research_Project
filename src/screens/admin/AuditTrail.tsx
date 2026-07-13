@@ -348,7 +348,7 @@ const AuditTrail: React.FC = () => {
   // Filters
   const [timeRangeMonths, setTimeRangeMonths] = useState<string>("1");
   const [userNameFilter] = useState<string>("");
-  const [userRoleFilter] = useState<string>("all");
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
   const [actionFilter] = useState<string>("all");
   const [moduleFilter] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState<string>("");
@@ -2637,6 +2637,22 @@ const AuditTrail: React.FC = () => {
                       Filters logs by the selected period.
                     </span>
                   </div>
+                  <div className="admin-audit-filter-group">
+                    <label>Role</label>
+                    <select
+                      value={userRoleFilter}
+                      onChange={(e) => {
+                        setUserRoleFilter(e.target.value);
+                        setPagination((prev) => ({ ...prev, page: 1 }));
+                      }}
+                    >
+                      <option value="all">All Roles</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="REGION">Region</option>
+                      <option value="TECHNICIAN">Technician</option>
+                      <option value="JO">JO</option>
+                    </select>
+                  </div>
                   <div className="admin-audit-filters-actions">
                     <div className="admin-audit-export-dropdown">
                       <button className="admin-audit-btn admin-audit-btn-export">
@@ -2713,6 +2729,14 @@ const AuditTrail: React.FC = () => {
                       {logs.map((log) => {
                         return (
                           <tr key={log.id}>
+                            <td className="admin-audit-td-timestamp">
+                              <span className="admin-audit-time-ago">
+                                {formatTimeAgo(log.timestamp)}
+                              </span>
+                              <div className="admin-audit-full-date" style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                {new Date(log.timestamp).toLocaleString()}
+                              </div>
+                            </td>
                             <td className="admin-audit-td-user">
                               <div className="admin-audit-user-cell">
                                 <span className="admin-audit-user-display-name">

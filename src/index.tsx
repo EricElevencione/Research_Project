@@ -14,6 +14,7 @@ import RegionCreateAllocation from "./screens/region/RegionCreateAllocation";
 import RegionViewAllocation from "./screens/region/RegionViewAllocation";
 import RegionManageRequest from "./screens/region/RegionManageRequest";
 import RegionManageVarieties from "./screens/region/RegionManageVarieties";
+import RegionAddStock from "./screens/region/RegionAddStock";
 import TechnicianDashboard from "./screens/technicians/TechnicianDashboard";
 import TechMasterlist from "./screens/technicians/TechMasterlist";
 import TechTenantRegistry from "./screens/technicians/TechTenantRegistry";
@@ -169,6 +170,14 @@ function App() {
           element={
             <ProtectedRoute>
               <RegionManageVarieties />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/region-add-stock"
+          element={
+            <ProtectedRoute>
+              <RegionAddStock />
             </ProtectedRoute>
           }
         />

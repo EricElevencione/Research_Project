@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAllocations, getFarmerRequests, closeAllocation, reopenAllocation } from "../../api";
+import { getAuditLogger, AuditModule } from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 import {
   FERTILIZER_FIELD_MAPS,
   SEED_FIELD_MAPS,
@@ -99,6 +101,16 @@ const RegionIncentives: React.FC = () => {
       if (response.error) {
         alert(`Failed to close program: ${response.error}`);
       } else {
+        const auditUser = await getCurrentUserForAudit();
+        const auditLogger = getAuditLogger();
+        await auditLogger.logCRUD(
+          auditUser,
+          "UPDATE",
+          AuditModule.ALLOCATIONS,
+          "regional_allocation",
+          allocationId,
+          `Closed regional program: ${season}`,
+        );
         fetchAllocations();
       }
     } catch (err: any) {
@@ -120,6 +132,16 @@ const RegionIncentives: React.FC = () => {
       if (response.error) {
         alert(`Failed to reopen program: ${response.error}`);
       } else {
+        const auditUser = await getCurrentUserForAudit();
+        const auditLogger = getAuditLogger();
+        await auditLogger.logCRUD(
+          auditUser,
+          "UPDATE",
+          AuditModule.ALLOCATIONS,
+          "regional_allocation",
+          allocationId,
+          `Reopened regional program: ${season}`,
+        );
         fetchAllocations();
       }
     } catch (err: any) {
@@ -338,6 +360,13 @@ const RegionIncentives: React.FC = () => {
                             month: "short",
                             day: "numeric",
                           })}
+                          <div style={{ marginTop: "4px", fontSize: "0.75rem", color: "#64748b" }}>
+                            <div><strong>Added:</strong> {allocation.created_at ? new Date(allocation.created_at).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }) : 'N/A'}</div>
+                            <div><strong>Updated:</strong> {allocation.updated_at ? new Date(allocation.updated_at).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }) : 'N/A'}</div>
+                            {(allocation as any).status === "closed" && allocation.closed_date && (
+                              <div style={{ color: "#ef4444" }}><strong>Closed:</strong> {new Date(allocation.closed_date).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}</div>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '1rem', color: '#475569' }}>
                           <strong>{getTotalFertilizer(allocation).toLocaleString()}</strong> bags

@@ -8,6 +8,8 @@ import {
 import "../../assets/css/admin css/AdminIncentives.css";
 import "../../components/layout/sidebarStyle.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
+import { getAuditLogger, AuditModule } from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 interface RegionalAllocation {
   id: number;
@@ -99,6 +101,20 @@ const Incentives: React.FC = () => {
       if (response.error) {
         alert(`Failed to close program: ${response.error}`);
       } else {
+        try {
+          const auditUser = await getCurrentUserForAudit();
+          const auditLogger = getAuditLogger();
+          await auditLogger.logCRUD(
+            auditUser,
+            "UPDATE",
+            AuditModule.ALLOCATIONS,
+            "regional_allocation",
+            allocationId,
+            `Closed regional program: ${season}`,
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed:", auditErr);
+        }
         fetchAllocations();
       }
     } catch (err: any) {
@@ -120,6 +136,20 @@ const Incentives: React.FC = () => {
       if (response.error) {
         alert(`Failed to reopen program: ${response.error}`);
       } else {
+        try {
+          const auditUser = await getCurrentUserForAudit();
+          const auditLogger = getAuditLogger();
+          await auditLogger.logCRUD(
+            auditUser,
+            "UPDATE",
+            AuditModule.ALLOCATIONS,
+            "regional_allocation",
+            allocationId,
+            `Reopened regional program: ${season}`,
+          );
+        } catch (auditErr) {
+          console.error("Audit log failed:", auditErr);
+        }
         fetchAllocations();
       }
     } catch (err: any) {
