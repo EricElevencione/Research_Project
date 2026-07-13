@@ -790,7 +790,8 @@ const JoMasterlist: React.FC = () => {
               ot?.lessee === true ||
               ot?.tenantLessee === true;
             if (!isTenantOrLessee) return false;
-            if (fallbackParcelCount === 0) return false; // Flag as No Parcels first
+            const pCount = typeof item.parcelCount === "number" ? item.parcelCount : 0;
+            if (pCount === 0) return false; // Flag as No Parcels first
             const id = String(item.id);
             return !submissionsWithOwnerName.has(id);
           })(),
