@@ -408,6 +408,25 @@ const RsbsaAdminPage: React.FC = () => {
     }
   };
 
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    try {
+      const parsed = new Date(dateString);
+      if (Number.isNaN(parsed.getTime())) return "N/A";
+      const month = parsed.getMonth() + 1;
+      const day = parsed.getDate();
+      const year = parsed.getFullYear();
+      let hours = parsed.getHours();
+      const minutes = String(parsed.getMinutes()).padStart(2, "0");
+      const ampm = hours >= 12 ? "pm" : "am";
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
+    } catch {
+      return dateString;
+    }
+  };
+
   const getNameParts = (record: RSBSARecord) => {
     const explicitLastName = (record.lastName || "").trim();
     const explicitFirstName = (record.firstName || "").trim();
@@ -804,7 +823,7 @@ const RsbsaAdminPage: React.FC = () => {
                           Date Submitted:
                         </span>
                         <span className="farmer-modal-value">
-                          {selectedFarmer.dateSubmitted || "N/A"}
+                          {formatDateTime(selectedFarmer.dateSubmitted)}
                         </span>
                       </div>
                       <div className="farmer-modal-info-item farmer-modal-full-width">

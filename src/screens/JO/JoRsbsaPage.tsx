@@ -1,4 +1,4 @@
-﻿import { supabase } from "../../supabase";
+import { supabase } from "../../supabase";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -1011,7 +1011,15 @@ const JoRsbsaPage: React.FC = () => {
     if (!iso) return "—";
     const parsed = new Date(iso);
     if (Number.isNaN(parsed.getTime())) return "—";
-    return parsed.toLocaleDateString();
+    const month = parsed.getMonth() + 1;
+    const day = parsed.getDate();
+    const year = parsed.getFullYear();
+    let hours = parsed.getHours();
+    const minutes = String(parsed.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "pm" : "am";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
   };
 
   const formatDateTime = (iso?: string) => {
@@ -2467,7 +2475,9 @@ const JoRsbsaPage: React.FC = () => {
                             Date Submitted:
                           </span>
                           <span className="farmer-modal-value">
-                            {selectedFarmer.dateSubmitted || "N/A"}
+                            {selectedFarmer.dateSubmitted
+                              ? formatDate(selectedFarmer.dateSubmitted)
+                              : "N/A"}
                           </span>
                         </div>
                         <div className="farmer-modal-info-item farmer-modal-full-width">

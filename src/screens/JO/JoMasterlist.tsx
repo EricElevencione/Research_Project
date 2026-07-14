@@ -800,6 +800,23 @@ const JoMasterlist: React.FC = () => {
 
       const cleaned = formatted.filter((record) => {
         if (record.archivedAt) return false;
+
+        // Exclude strict non-farming landowners
+        const isLandOwner =
+          String(record.mainLivelihood || "")
+            .toLowerCase()
+            .trim() === "landowner";
+        const isActivelyFarming = record.isActivelyFarming === true;
+        if (isLandOwner && !isActivelyFarming) {
+          return false;
+        }
+
+        // Exclude idle/non-farming farmers
+        const fs = (record.farmingStatus || "").toLowerCase().trim();
+        if (fs === "not farming") {
+          return false;
+        }
+
         return true;
       });
       setRsbsaRecords(cleaned);
@@ -1976,15 +1993,6 @@ const JoMasterlist: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
-                <div className="jo-masterlist-card-icon">❌</div>
-                <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">
-                    {statusCounts.inactive}
-                  </span>
-                  <span className="jo-masterlist-card-label">Inactive</span>
-                </div>
-              </div>
               {statusCounts.noParcels > 0 && (
                 <div
                   className="jo-masterlist-status-card jo-masterlist-card-inactive"
@@ -2041,15 +2049,6 @@ const JoMasterlist: React.FC = () => {
                   <span className="jo-masterlist-card-label">
                     Total Land Area
                   </span>
-                </div>
-              </div>
-              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
-                <div className="jo-masterlist-card-icon">🔴</div>
-                <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">
-                    {loadingStats ? "..." : summaryStats.idleParcels}
-                  </span>
-                  <span className="jo-masterlist-card-label">Idle Parcels</span>
                 </div>
               </div>
               <div className="jo-masterlist-status-card jo-masterlist-card-total">

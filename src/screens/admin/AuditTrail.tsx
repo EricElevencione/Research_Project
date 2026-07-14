@@ -2618,6 +2618,21 @@ const AuditTrail: React.FC = () => {
 
           {viewMode === "list" ? (
             <>
+              {/* Stats Summary */}
+              <div className="admin-audit-stats-summary">
+                <div className="admin-audit-stat-card">
+                  <span className="admin-audit-stat-value">
+                    {pagination.totalCount}
+                  </span>
+                  <span className="admin-audit-stat-label">Total Records</span>
+                </div>
+                <div className="admin-audit-stat-card">
+                  <span className="admin-audit-stat-value">
+                    {pagination.page}/{pagination.totalPages || 1}
+                  </span>
+                  <span className="admin-audit-stat-label">Current Page</span>
+                </div>
+              </div>
               {/* Filters */}
               <div className="admin-audit-filters">
                 <div className="admin-audit-time-filter-row">
@@ -2686,22 +2701,6 @@ const AuditTrail: React.FC = () => {
                 </div>
               </div>
 
-              {/* Stats Summary */}
-              <div className="admin-audit-stats-summary">
-                <div className="admin-audit-stat-card">
-                  <span className="admin-audit-stat-value">
-                    {pagination.totalCount}
-                  </span>
-                  <span className="admin-audit-stat-label">Total Records</span>
-                </div>
-                <div className="admin-audit-stat-card">
-                  <span className="admin-audit-stat-value">
-                    {pagination.page}/{pagination.totalPages || 1}
-                  </span>
-                  <span className="admin-audit-stat-label">Current Page</span>
-                </div>
-              </div>
-
               {/* Logs Table */}
               <div className="admin-audit-table-container">
                 {loading ? (
@@ -2721,8 +2720,8 @@ const AuditTrail: React.FC = () => {
                         <th>User</th>
                         <th>Action</th>
                         <th>Module</th>
-
                         <th>Details</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2733,7 +2732,10 @@ const AuditTrail: React.FC = () => {
                               <span className="admin-audit-time-ago">
                                 {formatTimeAgo(log.timestamp)}
                               </span>
-                              <div className="admin-audit-full-date" style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                              <div
+                                className="admin-audit-full-date"
+                                style={{ fontSize: "0.8rem", color: "#64748b" }}
+                              >
                                 {new Date(log.timestamp).toLocaleString()}
                               </div>
                             </td>
@@ -3099,13 +3101,6 @@ const AuditTrail: React.FC = () => {
                 <div className="admin-audit-detail-section">
                   <h4>Previous Values</h4>
                   {renderValueBlock(selectedLog.old_values, "old", selectedLog)}
-                </div>
-              )}
-
-              {selectedLog.new_values && (
-                <div className="admin-audit-detail-section">
-                  <h4>New Values</h4>
-                  {renderValueBlock(selectedLog.new_values, "new", selectedLog)}
                 </div>
               )}
 

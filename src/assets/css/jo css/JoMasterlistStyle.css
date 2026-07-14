@@ -79,6 +79,7 @@
 .jo-masterlist-header-print-btn:hover {
   filter: brightness(1.05);
 }
+
 /* ── Stat Strip ────────────────────────────── */
 /* 7 cards in ONE scrollable row — no wrapping */
 .jo-masterlist-status-cards {
@@ -88,7 +89,8 @@
   gap: 8px;
   flex-shrink: 0;
   overflow-x: auto;
-  padding-bottom: 2px; /* room for scrollbar on Windows */
+  padding-bottom: 2px;
+  /* room for scrollbar on Windows */
   scrollbar-width: thin;
   scrollbar-color: #c1d9bc transparent;
 }
@@ -96,13 +98,15 @@
 .jo-masterlist-status-cards::-webkit-scrollbar {
   height: 4px;
 }
+
 .jo-masterlist-status-cards::-webkit-scrollbar-thumb {
   background: #c1d9bc;
   border-radius: 4px;
 }
 
 .jo-masterlist-status-card {
-  flex: 1 0 120px; /* shrinks nicely, min 120 px */
+  flex: 1 0 120px;
+  /* shrinks nicely, min 120 px */
   max-width: 180px;
   background: white;
   border-radius: 10px;
@@ -128,10 +132,12 @@
   border-left-color: #6366f1;
   background: linear-gradient(135deg, #f5f3ff, #fff);
 }
+
 .jo-masterlist-card-active {
   border-left-color: #22c55e;
   background: linear-gradient(135deg, #f0fdf4, #fff);
 }
+
 .jo-masterlist-card-inactive {
   border-left-color: #ef4444;
   background: linear-gradient(135deg, #fef2f2, #fff);
@@ -174,7 +180,8 @@
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   padding: 14px 16px 12px;
-  flex: 1; /* fills all remaining vertical space */
+  flex: 1;
+  /* fills all remaining vertical space */
   overflow: hidden;
   min-height: 0;
   display: flex;
@@ -343,6 +350,7 @@
   color: #0f766e;
   background: #f0fdfa;
 }
+
 .jo-masterlist-bulk-btn-restore:hover {
   background: #ccfbf1;
 }
@@ -362,7 +370,8 @@
 
 /* ── Table Container ───────────────────────── */
 .jo-masterlist-table-container {
-  flex: 1; /* ← THIS is what fills the card */
+  flex: 1;
+  /* ← THIS is what fills the card */
   min-height: 0;
   overflow: auto;
   border-radius: 10px;
@@ -396,7 +405,8 @@
 }
 
 .jo-masterlist-farmers-table tbody td {
-  padding: 10px 11px; /* reduced from 14px */
+  padding: 10px 11px;
+  /* reduced from 14px */
   border-bottom: 1px solid #edf2e8;
   vertical-align: middle;
 }
@@ -585,21 +595,25 @@
   color: #155724;
   border: 1px solid #c3e6cb;
 }
+
 .jo-masterlist-status-not-approved {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
 }
+
 .jo-masterlist-status-pending {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
 }
+
 .jo-masterlist-status-draft {
   background: #e2e3e5;
   color: #383d41;
   border: 1px solid #d6d8db;
 }
+
 .jo-masterlist-status-no-parcels {
   background: #fef3c7;
   color: #92400e;
@@ -625,21 +639,25 @@
   border: 1px solid #132a5f;
   color: #fff;
 }
+
 .jo-masterlist-ownership-tenant {
   background: #10b981;
   border: 1px solid #0a7e5e;
   color: #fff;
 }
+
 .jo-masterlist-ownership-lessee {
   background: #f59e0b;
   border: 1px solid #c47c08;
   color: #fff;
 }
+
 .jo-masterlist-ownership-mixed {
   background: linear-gradient(135deg, #1e3a8a, #10b981 50%, #f59e0b);
   border: 1px solid #0f172a;
   color: #fff;
 }
+
 .jo-masterlist-ownership-unknown {
   background: #64748b;
   border: 1px solid #475569;
@@ -707,6 +725,7 @@
   color: #0f766e;
   font-weight: 700;
 }
+
 .jo-masterlist-quick-item-restore:hover {
   background: #ecfeff;
 }
@@ -734,6 +753,7 @@
   font-size: 11px;
   color: #7c2d12;
 }
+
 .jo-masterlist-queue-archive-cell span {
   font-size: 10px;
   color: #6b7280;
@@ -782,6 +802,7 @@
 .jo-masterlist-more-menu button:hover {
   background-color: #f8f9fa;
 }
+
 .jo-masterlist-more-menu button.delete {
   color: #d32f2f;
 }
@@ -836,6 +857,7 @@
   font-size: 20px;
   font-weight: 700;
 }
+
 .jo-masterlist-edit-modal-title p {
   margin: 3px 0 0;
   font-size: 12px;
@@ -968,12 +990,14 @@
   color: #0f766e;
   font-size: 13px;
 }
+
 .jo-masterlist-parcel-location {
   color: #64748b;
   font-size: 11px;
   display: block;
   margin-top: 5px;
 }
+
 .jo-masterlist-parcel-error {
   color: #d32f2f;
   font-size: 0.82em;
@@ -981,6 +1005,7 @@
   margin-top: 4px;
   font-weight: 500;
 }
+
 .jo-masterlist-parcel-empty {
   color: #64748b;
   font-style: italic;
@@ -1010,6 +1035,7 @@
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .jo-masterlist-cancel-button:hover {
   background: #5a6268;
 }
@@ -1025,6 +1051,7 @@
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .jo-masterlist-save-button:hover {
   background: #218838;
 }
@@ -1052,6 +1079,7 @@
   border-color: #6ee7b7;
   color: #065f46;
 }
+
 .jo-masterlist-update-toast.error {
   background: #fef2f2;
   border-color: #fca5a5;
@@ -1074,6 +1102,7 @@
   padding: 0;
   min-width: 18px;
 }
+
 .jo-masterlist-update-toast-close:hover {
   opacity: 0.75;
 }
@@ -1126,6 +1155,7 @@
   .jo-masterlist-form-grid {
     grid-template-columns: 1fr;
   }
+
   .jo-masterlist-parcel-item {
     grid-template-columns: 1fr;
   }
@@ -1201,14 +1231,16 @@
   border-bottom: 1px solid #e0d9fc;
 }
 
-.jo-masterlist-tenant-subrow > td {
+.jo-masterlist-tenant-subrow>td {
+
   /* ── Flag Warning Styles ──────────────────── */
   .jo-flag-warning-text {
     display: flex;
     align-items: center;
     gap: 4px;
     font-size: 11px;
-    color: #b45309; /* amber-700 */
+    color: #b45309;
+    /* amber-700 */
     margin-top: 2px;
     font-weight: 500;
   }
@@ -1231,6 +1263,7 @@
   tr.jo-row--flagged td {
     background: rgba(251, 191, 36, 0.04);
   }
+
   padding: 0 !important;
   border-bottom: 2px solid #c4b5fd !important;
 }
@@ -1246,6 +1279,7 @@
     opacity: 0;
     transform: translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1364,7 +1398,8 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #b45309; /* amber-700 */
+  color: #b45309;
+  /* amber-700 */
   margin-top: 2px;
   font-weight: 500;
 }

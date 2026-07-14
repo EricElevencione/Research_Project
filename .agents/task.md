@@ -1,0 +1,8 @@
+- [x] Implement data models, imports, and component state hooks in `MasterlistPage.tsx`
+- [x] Add summary stats calculations (`fetchSummaryStats`) and batch loading to `MasterlistPage.tsx`
+- [x] Add advanced filter controls and triggers (Role, Status, Barangay, Crop, Archive, Toggles)
+- [x] Implement expandable row functionality for landowners and rendering sub-tables
+- [x] Port archiving/restoring systems (with reason dialogs) and audit trail tracking
+- [x] Integrate `<FarmerProfileDisplay>` in the details modal and enable inline profile editing
+- [x] Port necessary styles from `JoMasterlistStyle.css` to `MasterlistStyle.css`
+- [x] Verify functionality and compile checks

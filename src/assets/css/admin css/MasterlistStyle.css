@@ -1,722 +1,1424 @@
 /* ============================================
-   Masterlist Admin Page - Farmer Records
-   Unique class names to avoid conflicts
+   Admin Masterlist Page — Redesigned Layout
+   Fix: compact stat strip + tight filters so
+   the farmer table fills the available height
    ============================================ */
-/* Global Font */
-* {
-  font-family: var(--font-family) !important;
+
+/* ── Reset & Base ──────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-/* Main Layout */
-.masterlist-admin-page-container {
+/* ── Page Shell ────────────────────────────── */
+.admin-masterlist-page-container {
   display: flex;
   height: 100vh;
-  background-color: #f0f0f0;
+  background-color: #f0f2f5;
   overflow: hidden;
 }
 
-.masterlist-admin-page {
+.admin-masterlist-page {
   display: flex;
   width: 100%;
-  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
-/* Main Content Area */
-.masterlist-admin-main-content {
-  width: 100%;
-  flex-grow: 1;
-  padding: 20px;
+/* ── Main Column ───────────────────────────── */
+.admin-masterlist-main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 18px 12px;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  height: 100%;
   overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    #e8f5e9 0%,
-    #f1f8e9 25%,
-    #ffffff 50%,
-    #e8f5e9 75%,
-    #c8e6c9 100%
-  );
+  gap: 10px;
+  background: linear-gradient(160deg, #edf7ed 0%, #f6faf0 40%, #ffffff 100%);
 }
 
-.masterlist-admin-page-header {
+/* ── Page Header ───────────────────────────── */
+.admin-masterlist-dashboard-header {
   display: flex;
-  text-align: center;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.admin-masterlist-page-title {
   font-weight: 600;
   font-size: 28px;
   color: #111827;
+  margin: 0;
+  line-height: 1.1;
 }
-.masterlist-admin-page-subtitle {
+
+.admin-masterlist-page-subtitle {
   color: #6b7280;
   font-size: 14px;
-  margin-top: 0;
-  margin-bottom: 12px;
+  margin-top: 4px;
+  margin-bottom: 0;
 }
 
-/* Content Card */
-.masterlist-admin-content-card {
+.admin-masterlist-header-print-btn {
+  border: 2px solid rgba(5, 150, 105, 0.35);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.admin-masterlist-header-print-btn:hover {
+  filter: brightness(1.05);
+}
+
+/* ── Stat Strip ────────────────────────────── */
+/* 7 cards in ONE scrollable row — no wrapping */
+.admin-masterlist-status-cards {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  /* room for scrollbar on Windows */
+  scrollbar-width: thin;
+  scrollbar-color: #c1d9bc transparent;
+}
+
+.admin-masterlist-status-cards::-webkit-scrollbar {
+  height: 4px;
+}
+
+.admin-masterlist-status-cards::-webkit-scrollbar-thumb {
+  background: #c1d9bc;
+  border-radius: 4px;
+}
+
+.admin-masterlist-status-card {
+  flex: 1 0 120px;
+  /* shrinks nicely, min 120 px */
+  max-width: 180px;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 18px;
-  margin-top: 12px;
-  flex: 1;
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
   display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* Filters Section */
-.masterlist-admin-filters-section {
-  display: flex;
-  justify-content: space-between;
+  flex-direction: row;
   align-items: center;
-  margin-bottom: 16px;
-  gap: 20px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
+  gap: 8px;
+  border-left: 3px solid transparent;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  white-space: nowrap;
 }
 
-/* Status Count Cards */
-.masterlist-status-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+.admin-masterlist-status-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
-.masterlist-status-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  border-radius: 15px;
-  padding: 0.6rem 1.2rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-left: 4px solid #6366f1;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.admin-masterlist-card-total {
+  border-left-color: #6366f1;
+  background: linear-gradient(135deg, #f5f3ff, #fff);
 }
 
-.masterlist-status-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+.admin-masterlist-card-active {
+  border-left-color: #22c55e;
+  background: linear-gradient(135deg, #f0fdf4, #fff);
 }
 
-.masterlist-card-icon {
-  font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-.masterlist-card-total {
-  border-left-color: #6366f1; /* Purple */
-}
-
-.masterlist-card-total .masterlist-card-icon {
-  color: #6366f1;
-}
-
-.masterlist-card-active {
-  border-left-color: #10b981;
-}
-
-.masterlist-card-active .masterlist-card-icon {
-  color: #10b981;
-}
-
-.masterlist-card-inactive {
+.admin-masterlist-card-inactive {
   border-left-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2, #fff);
 }
 
-.masterlist-card-inactive .masterlist-card-icon {
-  color: #ef4444;
+.admin-masterlist-card-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-.masterlist-card-info {
+.admin-masterlist-card-info {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  gap: 0;
+  min-width: 0;
 }
 
-.masterlist-card-count {
-  font-size: 1.4rem;
+.admin-masterlist-card-count {
+  font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.025em;
+  color: #111827;
   line-height: 1;
 }
 
-.masterlist-card-label {
-  color: #64748b;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-top: 1px;
-}
-
-.masterlist-admin-search-filter {
-  flex: 1;
-  min-width: 300px;
-}
-
-.masterlist-admin-search-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.masterlist-admin-search-input:focus {
-  outline: none;
-  border-color: #4caf50;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
-}
-
-.masterlist-admin-status-filter {
-  min-width: 150px;
-}
-
-.masterlist-admin-status-select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  background: white;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.masterlist-admin-status-select:focus {
-  outline: none;
-  border-color: #4caf50;
-}
-
-/* Table Container */
-.masterlist-admin-table-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: -2px 2px 10px;
-  flex-wrap: wrap;
-  color: #4b5563;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.masterlist-admin-bulk-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 2px 14px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #cde8cf;
-  background: #f4fbf3;
-}
-
-.masterlist-admin-bulk-count {
-  color: #14532d;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.masterlist-admin-bulk-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.masterlist-admin-bulk-export-wrap {
-  position: relative;
-}
-
-.masterlist-admin-bulk-btn {
-  border: 1px solid #6aa661;
-  background: #ffffff;
-  color: #1f4f2e;
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.masterlist-admin-bulk-btn:hover {
-  background: #edf9ea;
-}
-
-.masterlist-admin-bulk-btn-clear {
-  border-color: #d1d5db;
-  color: #374151;
-}
-
-.masterlist-admin-bulk-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 190px;
-  background: #ffffff;
-  border: 1px solid #dbe6cf;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
-  border-radius: 10px;
-  padding: 6px;
-  z-index: 20;
-}
-
-.masterlist-admin-table-container {
-  overflow: auto;
-  border-radius: 12px;
-  border: 1px solid #dbe6cf;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-  flex: 1;
-  min-height: 0;
-}
-
-/* Table Styles */
-.masterlist-admin-farmers-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  font-size: 14px;
-  min-width: 1040px;
-}
-
-.masterlist-admin-farmers-table thead th {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-  font-weight: 700;
-  text-align: left;
-  padding: 12px;
-  border-bottom: 1px solid #b6d08f;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.masterlist-admin-checkbox-col {
-  width: 44px;
-  min-width: 44px;
-  text-align: center;
-}
-
-.masterlist-admin-header-checkbox,
-.masterlist-admin-row-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: #059669;
-  cursor: pointer;
-}
-
-.masterlist-admin-sort-btn {
-  border: none;
-  background: transparent;
-  color: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0;
-}
-
-.masterlist-admin-sort-btn.is-active {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.masterlist-admin-farmers-table tbody td {
-  padding: 14px 12px;
-  border-bottom: 1px solid #edf2e8;
-  vertical-align: middle;
-}
-
-.masterlist-admin-table-row {
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.masterlist-admin-table-row:hover {
-  background-color: #f8fbf4;
-}
-
-.masterlist-admin-farmers-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.masterlist-admin-farmer-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 240px;
-}
-
-.masterlist-admin-farmer-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(145deg, #e4f3d8 0%, #b8d98d 100%);
-  color: #2f4a1d;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.masterlist-admin-farmer-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.masterlist-admin-farmer-name {
-  color: #111827;
-  font-weight: 650;
-  font-size: 14.5px;
-}
-
-.masterlist-admin-farmer-ref {
+.admin-masterlist-card-label {
+  font-size: 10px;
   color: #6b7280;
-  font-size: 12px;
-}
-
-.masterlist-admin-address-cell,
-.masterlist-admin-parcel-cell,
-.masterlist-admin-submission-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-.masterlist-admin-address-primary {
-  color: #1f2937;
   font-weight: 600;
-}
-
-.masterlist-admin-address-secondary {
-  color: #6b7280;
-  font-size: 12px;
-  max-width: 260px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.masterlist-admin-parcel-count {
-  display: inline-flex;
+/* ── Content Card ──────────────────────────── */
+.admin-masterlist-content-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 14px 16px 12px;
+  flex: 1;
+  /* fills all remaining vertical space */
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Filter Bar ────────────────────────────── */
+/* Two-row layout: search on top, dropdowns below */
+.admin-masterlist-filters-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Row 1: search */
+.admin-masterlist-filters-row-1 {
+  display: flex;
+  gap: 8px;
   align-items: center;
-  width: fit-content;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background-color: #f3f4f6;
+}
+
+/* Row 2: selects + archived toggle */
+.admin-masterlist-filters-row-2 {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Search input */
+.admin-masterlist-search-filter {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-masterlist-search-input {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s !important;
+  box-sizing: border-box !important;
+  height: 36px !important;
+}
+
+.admin-masterlist-search-input:focus {
+  outline: none !important;
+  border-color: #4caf50 !important;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.12) !important;
+}
+
+/* Select dropdowns — compact */
+.admin-masterlist-status-filter {
+  flex: 1 1 140px;
+  min-width: 120px;
+}
+
+.admin-masterlist-status-select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 12px;
+  background: white;
+  cursor: pointer;
+  height: 34px;
+  transition: border-color 0.2s;
+  color: #374151;
+}
+
+.admin-masterlist-status-select:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+/* Archived toggle */
+.admin-masterlist-archived-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.admin-masterlist-archived-toggle input[type="checkbox"] {
+  accent-color: #0ea5e9;
+  cursor: pointer;
+}
+
+/* ── Table Meta Row ────────────────────────── */
+.admin-masterlist-table-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   color: #4b5563;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
-.masterlist-admin-parcel-area {
+/* ── Bulk Toolbar ──────────────────────────── */
+.admin-masterlist-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #cde8cf;
+  background: #f4fbf3;
+  flex-shrink: 0;
+}
+
+.admin-masterlist-bulk-count {
   color: #14532d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-masterlist-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-masterlist-bulk-export-wrap {
+  position: relative;
+}
+
+.admin-masterlist-bulk-btn {
+  border: 1px solid #6aa661;
+  background: #ffffff;
+  color: #1f4f2e;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.admin-masterlist-bulk-btn:hover {
+  background: #edf9ea;
+}
+
+.admin-masterlist-bulk-btn-clear {
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.admin-masterlist-bulk-btn-restore {
+  border-color: #14b8a6;
+  color: #0f766e;
+  background: #f0fdfa;
+}
+
+.admin-masterlist-bulk-btn-restore:hover {
+  background: #ccfbf1;
+}
+
+.admin-masterlist-bulk-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  padding: 5px;
+  z-index: 20;
+}
+
+/* ── Table Container ───────────────────────── */
+.admin-masterlist-table-container {
+  flex: 1;
+  /* ← THIS is what fills the card */
+  min-height: 0;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Table ─────────────────────────────────── */
+.admin-masterlist-farmers-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 13px;
+  min-width: 960px;
+}
+
+.admin-masterlist-farmers-table thead th {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 11px;
+  border-bottom: 1px solid #b6d08f;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-masterlist-farmers-table tbody td {
+  padding: 10px 11px;
+  /* reduced from 14px */
+  border-bottom: 1px solid #edf2e8;
+  vertical-align: middle;
+}
+
+.admin-masterlist-farmers-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-masterlist-table-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.admin-masterlist-table-row:hover {
+  background-color: #f3fbf0;
+}
+
+/* ── Checkbox Column ───────────────────────── */
+.admin-masterlist-checkbox-col {
+  width: 40px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.admin-masterlist-header-checkbox,
+.admin-masterlist-row-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #059669;
+  cursor: pointer;
+}
+
+/* ── Sort Button ───────────────────────────── */
+.admin-masterlist-sort-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+}
+
+.admin-masterlist-sort-btn.is-active {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Farmer Cell ───────────────────────────── */
+.admin-masterlist-farmer-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+}
+
+.admin-masterlist-farmer-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #e4f3d8, #b8d98d);
+  color: #2f4a1d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.admin-masterlist-farmer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-masterlist-farmer-name {
+  color: #111827;
   font-weight: 700;
   font-size: 13px;
+  line-height: 1.2;
 }
 
-.masterlist-admin-date {
+.admin-masterlist-idle-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
+.admin-masterlist-farmer-ref {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.admin-masterlist-cultivation-text {
+  color: #14532d;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* ── Address / Parcel Cells ────────────────── */
+.admin-masterlist-address-cell,
+.admin-masterlist-parcel-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.admin-masterlist-address-primary {
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.admin-masterlist-address-secondary {
+  color: #6b7280;
+  font-size: 11px;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-masterlist-parcel-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-masterlist-parcel-area {
+  color: #14532d;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.admin-masterlist-date {
   color: #334155;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
 }
 
-.masterlist-admin-view-btn {
+/* ── Status Pills ──────────────────────────── */
+.admin-masterlist-status-pill {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.admin-masterlist-status-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.admin-masterlist-status-approved {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.admin-masterlist-status-not-approved {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.admin-masterlist-status-pending {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.admin-masterlist-status-draft {
+  background: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
+}
+
+.admin-masterlist-status-no-parcels {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+/* ── Ownership Pills ───────────────────────── */
+.admin-masterlist-ownership-pill {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.admin-masterlist-ownership-owner {
+  background: #1e3a8a;
+  border: 1px solid #132a5f;
+  color: #fff;
+}
+
+.admin-masterlist-ownership-tenant {
+  background: #10b981;
+  border: 1px solid #0a7e5e;
+  color: #fff;
+}
+
+.admin-masterlist-ownership-lessee {
+  background: #f59e0b;
+  border: 1px solid #c47c08;
+  color: #fff;
+}
+
+.admin-masterlist-ownership-mixed {
+  background: linear-gradient(135deg, #1e3a8a, #10b981 50%, #f59e0b);
+  border: 1px solid #0f172a;
+  color: #fff;
+}
+
+.admin-masterlist-ownership-unknown {
+  background: #64748b;
+  border: 1px solid #475569;
+  color: #fff;
+}
+
+/* ── Action Cells ──────────────────────────── */
+.admin-masterlist-actions-cell {
+  width: 170px;
+}
+
+.admin-masterlist-view-btn {
   border: 1px solid #9fc06e;
   background: #f6fde9;
   color: #35511a;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12.5px;
-  font-weight: 650;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.masterlist-admin-view-btn:hover {
+.admin-masterlist-view-btn:hover {
   background: #ebf8d6;
   border-color: #84ac53;
 }
 
-.masterlist-admin-view-btn:focus-visible {
-  outline: 2px solid #6ca22f;
-  outline-offset: 2px;
-}
-
-.masterlist-admin-actions-cell {
-  width: 175px;
-}
-
-.masterlist-admin-quick-actions {
+.admin-masterlist-quick-actions {
   position: relative;
   display: inline-flex;
 }
 
-.masterlist-admin-quick-menu {
+.admin-masterlist-quick-menu {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 5px);
   right: 0;
-  min-width: 210px;
-  background: #ffffff;
+  min-width: 200px;
+  background: #fff;
   border: 1px solid #dbe6cf;
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
   border-radius: 10px;
-  padding: 6px;
+  padding: 5px;
   z-index: 25;
 }
 
-.masterlist-admin-quick-item {
+.admin-masterlist-quick-item {
   width: 100%;
   border: none;
   background: transparent;
   color: #1f2937;
   text-align: left;
-  border-radius: 8px;
-  font-size: 12.5px;
+  border-radius: 7px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 8px 10px;
+  padding: 7px 10px;
   cursor: pointer;
 }
 
-.masterlist-admin-quick-item:hover {
+.admin-masterlist-quick-item:hover {
   background: #f3f9eb;
 }
 
-/* Status Pills */
-.masterlist-admin-status-pill {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
+.admin-masterlist-quick-item-restore {
+  color: #0f766e;
   font-weight: 700;
+}
+
+.admin-masterlist-quick-item-restore:hover {
+  background: #ecfeff;
+}
+
+/* ── Archive Meta ──────────────────────────── */
+.admin-masterlist-archive-meta {
+  font-size: 10.5px;
+  color: #7c2d12;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 7px;
+  padding: 2px 5px;
+  line-height: 1.3;
+  max-width: 220px;
+}
+
+.admin-masterlist-queue-archive-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 220px;
+}
+
+.admin-masterlist-queue-archive-cell strong {
+  font-size: 11px;
+  color: #7c2d12;
+}
+
+.admin-masterlist-queue-archive-cell span {
+  font-size: 10px;
+  color: #6b7280;
+}
+
+/* ── More / Hamburger Menu ─────────────────── */
+.admin-masterlist-more-button {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.admin-masterlist-more-button:hover {
+  background: #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.admin-masterlist-more-menu {
+  position: absolute;
+  min-width: 150px;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  z-index: 1000;
+  padding: 6px;
+}
+
+.admin-masterlist-more-menu button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 7px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12.5px;
+  transition: background-color 0.2s ease;
+}
+
+.admin-masterlist-more-menu button:hover {
+  background-color: #f8f9fa;
+}
+
+.admin-masterlist-more-menu button.delete {
+  color: #d32f2f;
+}
+
+/* ── Empty / Loading / Error ───────────────── */
+.admin-masterlist-empty-cell,
+.admin-masterlist-loading-cell,
+.admin-masterlist-error-cell {
   text-align: center;
-  min-width: 70px;
-  text-transform: none;
-  letter-spacing: 0.2px;
-}
-
-.masterlist-admin-status-approved {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.masterlist-admin-status-not-approved {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.masterlist-admin-status-pending {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
-.masterlist-admin-status-submitted {
-  background-color: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
-
-.masterlist-admin-status-draft {
-  background-color: #e2e3e5;
-  color: #383d41;
-  border: 1px solid #d6d8db;
-}
-
-/* Loading and Error States */
-.masterlist-admin-loading-cell,
-.masterlist-admin-error-cell {
-  text-align: center;
-  padding: 40px 20px;
-  color: #666;
-  font-style: italic;
-}
-
-.masterlist-admin-error-cell {
-  color: #dc3545;
-}
-
-.masterlist-admin-empty-cell {
-  text-align: center;
-  padding: 40px 20px;
+  padding: 36px 20px;
   color: #6b7280;
   font-weight: 500;
 }
 
-/* Responsive Design */
+.admin-masterlist-error-cell {
+  color: #dc3545;
+}
+
+/* ── Edit Modal ────────────────────────────── */
+.admin-masterlist-edit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.admin-masterlist-edit-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.admin-masterlist-edit-modal-header {
+  background: linear-gradient(135deg, #0f766e 0%, #10b981 55%, #34d399 100%);
+  color: #fff;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.admin-masterlist-edit-modal-title h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.admin-masterlist-edit-modal-title p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.admin-masterlist-close-button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.admin-masterlist-close-button:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.admin-masterlist-edit-modal-body {
+  padding: 20px 22px 24px;
+  background: #f8fafc;
+}
+
+.admin-masterlist-edit-error-banner {
+  background: #fdecea;
+  color: #b71c1c;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.admin-masterlist-form-group {
+  margin-bottom: 14px;
+}
+
+.admin-masterlist-form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #333;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.admin-masterlist-form-group input {
+  width: 100% !important;
+  padding: 9px 11px !important;
+  border: 1px solid #ddd !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s !important;
+  box-sizing: border-box !important;
+}
+
+.admin-masterlist-form-group input:focus {
+  outline: none !important;
+  border-color: #4caf50 !important;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1) !important;
+}
+
+.admin-masterlist-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin-bottom: 8px;
+}
+
+.admin-masterlist-form-select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.admin-masterlist-form-select:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.admin-masterlist-parcel-section {
+  margin-top: 18px;
+  border-top: 2px solid #e0e0e0;
+  padding-top: 14px;
+}
+
+.admin-masterlist-parcel-section h4 {
+  margin-bottom: 12px;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.admin-masterlist-parcel-item {
+  margin-bottom: 14px;
+  padding: 14px;
+  background: #fff;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 14px;
+}
+
+.admin-masterlist-parcel-item.error {
+  border: 2px solid #d32f2f;
+}
+
+.admin-masterlist-parcel-label {
+  font-weight: 700;
+  color: #0f766e;
+  font-size: 13px;
+}
+
+.admin-masterlist-parcel-location {
+  color: #64748b;
+  font-size: 11px;
+  display: block;
+  margin-top: 5px;
+}
+
+.admin-masterlist-parcel-error {
+  color: #d32f2f;
+  font-size: 0.82em;
+  display: block;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.admin-masterlist-parcel-empty {
+  color: #64748b;
+  font-style: italic;
+}
+
+.admin-masterlist-parcel-input[data-error="true"] {
+  border: 2px solid #d32f2f !important;
+  background-color: #ffebee !important;
+}
+
+.admin-masterlist-edit-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.admin-masterlist-cancel-button {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-masterlist-cancel-button:hover {
+  background: #5a6268;
+}
+
+.admin-masterlist-save-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-masterlist-save-button:hover {
+  background: #218838;
+}
+
+/* ── Toast Notification ────────────────────── */
+.admin-masterlist-update-toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 12000;
+  min-width: 300px;
+  max-width: 440px;
+  border-radius: 10px;
+  padding: 11px 13px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border: 1px solid transparent;
+}
+
+.admin-masterlist-update-toast.success {
+  background: #ecfdf3;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+
+.admin-masterlist-update-toast.error {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.admin-masterlist-update-toast-message {
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.admin-masterlist-update-toast-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  min-width: 18px;
+}
+
+.admin-masterlist-update-toast-close:hover {
+  opacity: 0.75;
+}
+
+/* ── Responsive ────────────────────────────── */
 @media (max-width: 768px) {
-  .masterlist-admin-page-container {
+  .admin-masterlist-page-container {
     height: auto;
     min-height: 100vh;
     overflow: auto;
   }
 
-  .masterlist-admin-filters-section {
+  .admin-masterlist-main-content {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .admin-masterlist-dashboard-header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .admin-masterlist-status-cards {
+    /* still single-row, scroll horizontally on mobile */
+    gap: 6px;
+  }
+
+  .admin-masterlist-status-card {
+    flex: 0 0 110px;
+  }
+
+  .admin-masterlist-filters-row-2 {
+    flex-wrap: wrap;
+  }
+
+  .admin-masterlist-status-filter {
+    flex: 1 1 calc(50% - 6px);
+    max-width: none;
+  }
+
+  .admin-masterlist-bulk-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .masterlist-admin-search-filter,
-  .masterlist-admin-status-filter {
-    min-width: auto;
-  }
-
-  .masterlist-admin-table-container {
-    font-size: 12px;
-  }
-
-  .masterlist-admin-table-meta {
-    font-size: 12px;
-  }
-
-  .masterlist-admin-bulk-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .masterlist-admin-bulk-actions {
+  .admin-masterlist-bulk-actions {
     justify-content: space-between;
   }
 
-  .masterlist-admin-farmers-table thead th,
-  .masterlist-admin-farmers-table tbody td {
-    padding: 8px 6px;
+  .admin-masterlist-form-grid {
+    grid-template-columns: 1fr;
   }
 
-  .masterlist-admin-farmers-table {
-    min-width: 980px;
+  .admin-masterlist-parcel-item {
+    grid-template-columns: 1fr;
   }
 
-  .masterlist-admin-farmer-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    font-size: 11px;
+  .admin-masterlist-farmers-table {
+    min-width: 860px;
   }
 
-  .masterlist-admin-view-btn {
-    width: 100%;
-    padding: 8px 10px;
+  .admin-masterlist-farmers-table thead th,
+  .admin-masterlist-farmers-table tbody td {
+    padding: 7px 8px;
   }
 
-  .masterlist-admin-quick-menu,
-  .masterlist-admin-bulk-menu {
+  .admin-masterlist-content-card {
+    padding: 10px 12px;
+  }
+
+  .admin-masterlist-quick-menu,
+  .admin-masterlist-bulk-menu {
     right: auto;
     left: 0;
   }
 
-  .masterlist-admin-main-content {
-    padding: 10px;
+  .admin-masterlist-edit-modal {
+    width: 96%;
+    max-height: 96vh;
   }
 
-  .masterlist-admin-content-card {
-    padding: 16px;
-    margin-top: 10px;
-  }
-
-  .masterlist-admin-dashboard-header {
-    width: 100%;
-  }
-
-  .masterlist-status-cards {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 6px;
+  .admin-masterlist-update-toast {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    min-width: unset;
+    max-width: unset;
   }
 }
 
+/* ══════════════════════════════════════════════
+   Tenant / Lessee Sub-Row Feature
+   ══════════════════════════════════════════════ */
 
-.masterlist-card-bar {
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 3px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-
-.masterlist-card-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.6s ease;
-}
-
-.masterlist-bar-active {
-  background: linear-gradient(90deg, #22c55e, #4ade80);
-}
-
-.masterlist-bar-inactive {
-  background: linear-gradient(90deg, #ef4444, #f87171);
-}
-
-.masterlist-bar-submitted {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
-}
-
-/* -- Pagination -- */
-.masterlist-admin-pagination {
-  display: flex;
-  justify-content: center;
+/* ── Tenant badge button (sits below the ref code in the farmer cell) ── */
+.admin-masterlist-tenant-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: white;
-  border-top: 1px solid #f1f5f9;
-}
-.masterlist-admin-pagination-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #1e293b;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #a78bfa;
+  background: linear-gradient(135deg, #ede9fe, #f5f3ff);
+  color: #5b21b6;
+  font-size: 10px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.12s ease;
+  white-space: nowrap;
+  line-height: 1.4;
 }
-.masterlist-admin-pagination-btn:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+
+.admin-masterlist-tenant-badge:hover {
+  background: linear-gradient(135deg, #ddd6fe, #ede9fe);
+  border-color: #7c3aed;
+  transform: translateY(-1px);
 }
-.masterlist-admin-pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+
+/* ── Expanded sub-row (the <tr> wrapper) ── */
+.admin-masterlist-tenant-subrow {
+  background: #faf8ff;
+  border-bottom: 1px solid #e0d9fc;
 }
-.masterlist-admin-pagination-info {
-  font-size: 0.875rem;
-  color: #64748b;
+
+.admin-masterlist-tenant-subrow>td {
+
+  /* ── Flag Warning Styles ──────────────────── */
+  .admin-flag-warning-text {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #b45309;
+    /* amber-700 */
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  /* "Pending Review" badge variant */
+  .admin-status-badge--pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+  }
+
+  /* "Inactive – No Land" badge variant */
+  .admin-status-badge--no-land {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+
+  /* Flagged row subtle highlight */
+  tr.admin-row--flagged td {
+    background: rgba(251, 191, 36, 0.04);
+  }
+
+  padding: 0 !important;
+  border-bottom: 2px solid #c4b5fd !important;
+}
+
+/* ── Panel container ── */
+.admin-masterlist-tenant-panel {
+  padding: 10px 14px 12px;
+  animation: tenantPanelIn 0.18s ease;
+}
+
+@keyframes tenantPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Panel header row ── */
+.admin-masterlist-tenant-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-masterlist-tenant-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4c1d95;
+}
+
+.admin-masterlist-tenant-panel-title strong {
+  color: #3730a3;
+}
+
+.admin-masterlist-tenant-panel-note {
+  font-size: 10px;
+  color: #7c3aed;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* ── Inner tenant table ── */
+.admin-masterlist-tenant-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ddd6fe;
+}
+
+.admin-masterlist-tenant-table thead tr {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+}
+
+.admin-masterlist-tenant-table thead th {
+  color: #fff;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-masterlist-tenant-table tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #ede9fe;
+  vertical-align: middle;
+  color: #374151;
+}
+
+.admin-masterlist-tenant-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Individual tenant row ── */
+.admin-masterlist-tenant-row {
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.admin-masterlist-tenant-row:hover {
+  background: #f5f3ff;
+}
+
+/* ── Farmer cell inside the tenant table ── */
+.admin-masterlist-tenant-farmer-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-masterlist-tenant-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #ddd6fe, #a78bfa);
+  color: #3b0764;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.admin-masterlist-tenant-name {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 12px;
+}
+
+.admin-masterlist-tenant-ref,
+.admin-masterlist-tenant-barangay {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+/* Flag warning sub-text */
+.admin-flag-warning-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #b45309;
+  /* amber-700 */
+  margin-top: 2px;
   font-weight: 500;
+}
+
+/* "Pending Review" badge variant */
+.admin-status-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+/* "Inactive – No Land" badge variant */
+.admin-status-badge--no-land {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* Flagged row subtle highlight */
+tr.admin-row--flagged td {
+  background: rgba(251, 191, 36, 0.04) !important;
 }
