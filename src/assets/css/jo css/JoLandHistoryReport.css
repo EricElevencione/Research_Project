@@ -1621,3 +1621,67 @@
     height: 12px;
   }
 }
+
+/* Print dropdown menu */
+.jo-land-history-report-print-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.jo-land-history-report-print-dropdown:hover .jo-land-history-report-print-menu {
+  display: block;
+}
+
+.jo-land-history-report-print-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background-color: #ffffff;
+  min-width: 180px;
+  box-shadow: 0px 8px 16px 0px rgba(15, 23, 42, 0.12);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  z-index: 50;
+  overflow: hidden;
+  padding: 4px 0;
+}
+
+.jo-land-history-report-print-menu button {
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.jo-land-history-report-print-menu button:hover {
+  background-color: #f1f5f9;
+  color: #0ea5e9;
+}
+
+.jo-land-history-report-btn-view {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.jo-land-history-report-btn-view:hover {
+  background-color: #0ea5e9;
+  border-color: #0ea5e9;
+  color: #ffffff;
+}

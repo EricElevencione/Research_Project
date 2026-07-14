@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import {
   getLandHistoryParcelHistory,
   getLandInventoryReportRows,
   getLandPlotsBarangays,
 } from "../../api";
+import { printHtmlReport } from "../../utils/printHelper";
 import "../../assets/css/jo css/JoLandHistoryReport.css";
 import JOSidebar from "../../components/layout/JOSidebar";
 
@@ -355,86 +354,81 @@ const JoLandHistoryReport: React.FC = () => {
   const pageStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const pageEnd = Math.min(totalCount, page * pageSize);
 
-  const handleExportPdf = () => {
-    if (parcelRows.length === 0) return;
+  const handlePrint = async (roleFilter: "all" | "owner" | "tenant" | "lessee") => {
+    try {
+      setLoading(true);
+      const response = await getLandInventoryReportRows({
+        searchTerm,
+        barangay: barangayFilter,
+        relationship: roleFilter,
+        page: 1,
+        pageSize: 1000,
+      });
 
-    const relationshipLabelMap: Record<RelationshipFilter, string> = {
-      all: "All Relationships",
-      owner: "Registered Owner",
-      tenant: "Tenant",
-      lessee: "Lessee",
-      tenantLessee: "Tenant + Lessee",
-    };
+      if (response.error) {
+        throw new Error(response.error);
+      }
 
-    const activeFilterSummary = [
-      `Search: ${searchTerm.trim() || "All"}`,
-      `Barangay: ${barangayFilter === "all" ? "All Barangays" : barangayFilter}`,
-      `Relationship: ${relationshipLabelMap[relationshipFilter]}`,
-    ].join(" | ");
+      const rawRows = response.data?.rows || [];
+      const mappedRows = rawRows.map((row: any) => ({
+        parcelNumber: row.parcel_number ? String(row.parcel_number).trim() : null,
+        barangay: row.barangay ? String(row.barangay).trim() : null,
+        occupantName: row.owner_name ? formatName(row.owner_name) : "Unclaimed — no owner matched",
+        farmerName: row.has_registration ? formatName(row.farmer_name) : "-",
+        roleLabel: row.has_registration ? row.role_label || "Unknown" : "No registration on file",
+        currentAreaHa: Number(row.area_ha) || 0,
+        lastChangeDate: row.period_start_date || row.period_end_date || null,
+        hasRegistration: row.has_registration,
+      }));
 
-    const doc = new jsPDF({
-      orientation: "landscape",
-      unit: "pt",
-      format: "a4",
-    });
+      if (mappedRows.length === 0) {
+        alert("No records found to print");
+        return;
+      }
 
-    const generatedAt = new Date();
-    const datePart = generatedAt.toISOString().slice(0, 10);
+      const rowsHtml = mappedRows
+        .map((row: any) => {
+          const regLabel = row.hasRegistration ? "On file" : "Not registered";
+          const changeDate = row.lastChangeDate ? new Date(row.lastChangeDate).toLocaleDateString() : "-";
+          return `<tr>
+            <td>${row.parcelNumber || "-"}</td>
+            <td>${row.occupantName}</td>
+            <td>${row.farmerName}</td>
+            <td>${row.roleLabel}</td>
+            <td>${Number(row.currentAreaHa || 0).toFixed(2)}</td>
+            <td>${changeDate}</td>
+            <td>${regLabel}</td>
+          </tr>`;
+        })
+        .join("");
 
-    doc.setFontSize(16);
-    doc.text("Land Inventory Report", 40, 40);
-    doc.setFontSize(10);
-    doc.text(`Generated: ${generatedAt.toLocaleString()}`, 40, 60);
-    doc.text(
-      `Page Snapshot: ${parcelRows.length} parcels shown (UI page ${page} of ${totalPages})`,
-      40,
-      76,
-    );
-    doc.text(activeFilterSummary, 40, 92, {
-      maxWidth: 760,
-    });
+      const roleLabelMap = {
+        all: "All Relationships",
+        owner: "Registered Owner Only",
+        tenant: "Tenant Only",
+        lessee: "Lessee Only",
+      };
 
-    autoTable(doc, {
-      startY: 108,
-      margin: { left: 40, right: 40 },
-      headStyles: { fillColor: [27, 72, 120] },
-      styles: {
-        fontSize: 8,
-        cellPadding: 4,
-        overflow: "linebreak",
-      },
-      columnStyles: {
-        0: { cellWidth: 80 },
-        1: { cellWidth: 140 },
-        2: { cellWidth: 140 },
-        3: { cellWidth: 80 },
-        4: { cellWidth: 70, halign: "right" },
-        5: { cellWidth: 80 },
-        6: { cellWidth: 90 },
-      },
-      head: [
-        [
-          "Parcel",
-          "Owner",
-          "Farmer/Occupant",
-          "Role",
-          "Area (ha)",
-          "Last Change",
-          "Registration",
-        ],
-      ],
-      body: parcelRows.map((row) => [
-        row.parcelNumber || "-",
-        row.occupantName,
-        row.farmerName,
-        row.roleLabel,
-        Number(row.currentAreaHa || 0).toFixed(2),
-        formatDate(row.lastChangeDate),
-        row.hasRegistration ? "On file" : "Not registered",
-      ]),
-    });
+      const filterLabel = [
+        `Search: ${searchTerm.trim() || "All"}`,
+        `Barangay: ${barangayFilter === "all" ? "All Barangays" : barangayFilter}`,
+        `Relationship: ${roleLabelMap[roleFilter]}`,
+      ].join(" · ");
 
-    doc.save(`land-inventory-report-${datePart}.pdf`);
+      printHtmlReport({
+        title: "Land Inventory Report — Dumangas, Iloilo",
+        reportName: "Land Inventory Report",
+        filterLabel,
+        totalCount: mappedRows.length,
+        tableHeaderHtml: "<th>Parcel No.</th><th>Registered Owner</th><th>Farmer / Occupant</th><th>Relationship</th><th>Area (ha)</th><th>Last Change</th><th>Registration</th>",
+        tableBodyHtml: rowsHtml,
+        printedBy: "JO Staff",
+      });
+    } catch (err: any) {
+      console.error("Print error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResetFilters = () => {
@@ -524,13 +518,20 @@ const JoLandHistoryReport: React.FC = () => {
                 Reset Filters
               </button>
 
-              <button
-                className="jo-land-history-report-btn primary"
-                onClick={handleExportPdf}
-                disabled={parcelRows.length === 0}
-              >
-                Export PDF
-              </button>
+              <div className="jo-land-history-report-print-dropdown">
+                <button
+                  className="jo-land-history-report-btn primary"
+                  disabled={parcelRows.length === 0}
+                >
+                  Print Report ▾
+                </button>
+                <div className="jo-land-history-report-print-menu">
+                  <button onClick={() => handlePrint("all")}>All Records</button>
+                  <button onClick={() => handlePrint("owner")}>Registered Owners Only</button>
+                  <button onClick={() => handlePrint("tenant")}>Tenants Only</button>
+                  <button onClick={() => handlePrint("lessee")}>Lessees Only</button>
+                </div>
+              </div>
             </div>
 
             <div className="jo-land-history-report-kpis">
@@ -600,7 +601,7 @@ const JoLandHistoryReport: React.FC = () => {
                       <th>Role</th>
                       <th>Area (ha)</th>
                       <th>Last Change</th>
-                      <th>Registration</th>
+                      <th style={{ width: "100px", textAlign: "center" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -634,16 +635,21 @@ const JoLandHistoryReport: React.FC = () => {
                           <td>{row.roleLabel}</td>
                           <td>{row.currentAreaHa.toFixed(2)}</td>
                           <td>{formatDate(row.lastChangeDate)}</td>
-                          <td>
-                            <span
-                              className={`jo-land-history-modal-status-badge ${
-                                row.hasRegistration ? "is-current" : "is-past"
-                              }`}
-                            >
-                              {row.hasRegistration
-                                ? "On file"
-                                : "Not registered"}
-                            </span>
+                          <td style={{ textAlign: "center" }}>
+                            {isClickable ? (
+                              <button
+                                className="jo-land-history-report-btn-view"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openParcelHistoryModal(row.parcelNumber!);
+                                }}
+                                title="View land history timeline"
+                              >
+                                👁️ View
+                              </button>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                         </tr>
                       );

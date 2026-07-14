@@ -11,6 +11,7 @@ import {
 } from "../../api";
 import "../../assets/css/jo css/JoFarmerStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
+import { printHtmlReport } from "../../utils/printHelper";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfileDisplay";
 import type {
@@ -1322,42 +1323,15 @@ const JoFarmerRegistry: React.FC = () => {
       })
       .join("");
 
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head><style>
-      *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:Arial,sans-serif;font-size:10px;padding:10mm;color:#111827}
-      .farmer-print-header{text-align:center;margin-bottom:8px}
-      .farmer-print-header h1{font-size:14px;font-weight:700}
-      .farmer-print-header p{font-size:10px;color:#475569}
-      table{width:100%;border-collapse:collapse;font-size:9px}
-      th{background:#0f766e;color:#fff;padding:4px 6px;text-align:left;font-weight:700;border:.5px solid #cbd5e1}
-      td{padding:3px 6px;border:.5px solid #e2e8f0;vertical-align:top}
-      tr:nth-child(even) td{background:#f8fafc}
-      .farmer-print-footer{margin-top:10px;font-size:9px;color:#475569;text-align:center}
-    </style></head><body>
-    <div class="farmer-print-header">
-      <h1>Farmer Registry</h1>
-      <p>Municipality of Dumangas, Iloilo</p>
-    </div>
-    <table class="farmer-print-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Farmer Name</th>
-          <th>Barangay</th>
-          <th>Role</th>
-          <th>Landowner Name</th>
-          <th>Parcels</th>
-          <th>Total Area</th>
-          <th>Farming Land Status</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div class="farmer-print-footer">Filter: ${filterLabel} · Total: ${records.length} · Printed: ${new Date().toLocaleString()}</div>
-    <script>window.onload=function(){window.print()}<\/script></body></html>`);
-    w.document.close();
+    printHtmlReport({
+      title: "Farmer Registry — Dumangas, Iloilo",
+      reportName: "Farmer Registry",
+      filterLabel,
+      totalCount: records.length,
+      tableHeaderHtml: "<th>#</th><th>Farmer Name</th><th>Barangay</th><th>Role</th><th>Landowner Name</th><th>Parcels</th><th>Total Area</th><th>Farming Land Status</th>",
+      tableBodyHtml: rows,
+      printedBy: "JO Staff",
+    });
   };
 
   const getOwnershipLabel = (record: RSBSARecord) => {

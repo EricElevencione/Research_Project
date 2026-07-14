@@ -1936,6 +1936,24 @@ export const getFarmParcelsWithOccupants = async (
 
   const parcels = parcelsResponse.data || [];
 
+  // Fetch land history to find current and non-current (historical) parcels
+  const { data: historyData } = await supabase
+    .from("land_history")
+    .select("parcel_number, is_current")
+    .eq("farmer_id", submissionId);
+
+  const currentHistoryParcels = new Set<string>();
+  const historicalHistoryParcels = new Set<string>();
+
+  (historyData || []).forEach((h: any) => {
+    const pNum = String(h.parcel_number || "").trim().toUpperCase();
+    if (h.is_current === true) {
+      currentHistoryParcels.add(pNum);
+    } else {
+      historicalHistoryParcels.add(pNum);
+    }
+  });
+
   // 2. Fetch occupants (tenant/lessee parcels pointing to this farmer as landowner)
   const { data: occupiedByParcelsRaw, error: occupiedError } = await supabase
     .from("rsbsa_farm_parcels")
@@ -2066,6 +2084,15 @@ export const getFarmParcelsWithOccupants = async (
   // 4. Merge virtual landowner parcels (occupied by tenant/lessee but not registered by owner yet)
   const virtualParcels: any[] = [];
   occupantsByParcelNumber.forEach((occupants, parcelNum) => {
+    // If the landowner has a historical entry in land_history for this parcel,
+    // and DOES NOT have a current entry, do not create a virtual parcel for it.
+    if (
+      historicalHistoryParcels.has(parcelNum) &&
+      !currentHistoryParcels.has(parcelNum)
+    ) {
+      return;
+    }
+
     if (!primaryParcelNumbers.has(parcelNum)) {
       const template = occupiedByParcels.find(
         (op: any) => String(op.parcel_number || "").trim().toUpperCase() === parcelNum

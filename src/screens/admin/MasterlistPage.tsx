@@ -14,6 +14,7 @@ import {
   printRsbsaFormById,
   printRsbsaFormsByIds,
 } from "../../utils/rsbsaPrint";
+import { printHtmlReport } from "../../utils/printHelper";
 import "../../assets/css/admin css/MasterlistStyle.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
@@ -267,8 +268,6 @@ const Masterlist: React.FC = () => {
   const [selectedFarmingStatus, setSelectedFarmingStatus] =
     useState<string>("all");
   const [selectedCrop, setSelectedCrop] = useState<string>("all");
-  const [hideNonFarmingLandowners, setHideNonFarmingLandowners] =
-    useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
     null,
@@ -1131,17 +1130,7 @@ const Masterlist: React.FC = () => {
         ]);
         if (record.archivedAt) return false;
 
-        if (hideNonFarmingLandowners) {
-          const isLandOwner =
-            String(record.mainLivelihood || "")
-              .toLowerCase()
-              .trim() === "landowner";
-          const isActivelyFarming = record.isActivelyFarming === true;
 
-          if (isLandOwner && !isActivelyFarming) {
-            return false;
-          }
-        }
 
         const f = getOwnershipFlags(record);
         if (
@@ -1273,7 +1262,6 @@ const Masterlist: React.FC = () => {
     selectedFarmBarangay,
     selectedFarmingStatus,
     selectedCrop,
-    hideNonFarmingLandowners,
     searchQuery,
     sortConfigs,
   ]);
@@ -1419,12 +1407,12 @@ const Masterlist: React.FC = () => {
         const homeBarangay = getRecordBarangay(r) || "—";
         const birthdate = r.birthdate
           ? (() => {
-            try {
-              return new Date(r.birthdate).toLocaleDateString();
-            } catch {
-              return r.birthdate;
-            }
-          })()
+              try {
+                return new Date(r.birthdate).toLocaleDateString();
+              } catch {
+                return r.birthdate;
+              }
+            })()
           : "—";
         const gender = r.gender || "—";
         const municipality = (
@@ -1436,31 +1424,15 @@ const Masterlist: React.FC = () => {
       })
       .join("");
 
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document
-      .write(`<!DOCTYPE html><html><head><title>RSBSA Masterlist — Dumangas, Iloilo</title><style>
-      *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:9px;padding:10mm}
-      .hdr{text-align:center;margin-bottom:8px}.hdr h1{font-size:12px;font-weight:bold}.hdr p{font-size:9px}
-      .meta{display:flex;justify-content:space-between;margin-bottom:6px;font-size:8px;color:#555}
-      table{width:100%;border-collapse:collapse;font-size:8px}
-      th{background:#1a5276;color:#fff;padding:3px 5px;text-align:left;font-weight:600;border:.5px solid #ccc}
-      td{padding:2px 5px;border:.5px solid #ccc;vertical-align:top}
-      tr:nth-child(even) td{background:#f9f9f9}
-      .ftr{margin-top:10px;font-size:8px;color:#555;text-align:center}
-    </style></head><body>
-    <div class="hdr"><h1>Republic of the Philippines — Department of Agriculture</h1>
-    <p>Registry System for Basic Sectors in Agriculture (RSBSA)</p>
-    <p><strong>Municipality of Dumangas, Iloilo</strong></p></div>
-    <div class="meta"><span>Filter: ${filterLabel}</span><span>Total: ${records.length} records</span><span>Printed: ${new Date().toLocaleString()}</span></div>
-    <table><thead><tr>
-      <th>FFRS Code</th><th>Last Name</th><th>First Name</th><th>Middle Name</th>
-      <th>Barangay</th><th>Gender</th><th>Birthdate</th><th>Municipality</th>
-      <th>Province</th><th>Farm Barangay</th><th>Area (ha)</th>
-    </tr></thead><tbody>${rows}</tbody></table>
-    <div class="ftr">RSBSA Masterlist — Dumangas, Iloilo · Printed by Admin Staff · ${new Date().toLocaleDateString()}</div>
-    <script>window.onload=function(){window.print()}<\/script></body></html>`);
-    w.document.close();
+    printHtmlReport({
+      title: "RSBSA Masterlist — Dumangas, Iloilo",
+      reportName: "Farmer Masterlist",
+      filterLabel,
+      totalCount: records.length,
+      tableHeaderHtml: "<th>FFRS Code</th><th>Last Name</th><th>First Name</th><th>Middle Name</th><th>Barangay</th><th>Gender</th><th>Birthdate</th><th>Municipality</th><th>Province</th><th>Farm Barangay</th><th>Area (ha)</th>",
+      tableBodyHtml: rows,
+      printedBy: "Admin Staff",
+    });
   };
 
   // ─── Print: Single / Bulk RSBSA Form ───────────────────────────────────────
@@ -2095,41 +2067,6 @@ const Masterlist: React.FC = () => {
                   </select>
                 </div>
 
-                <div
-                  className="admin-masterlist-status-filter"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    paddingLeft: "8px",
-                    minWidth: "220px",
-                  }}
-                >
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      fontSize: "13px",
-                      color: "var(--color-text-secondary, #555)",
-                      cursor: "pointer",
-                      userSelect: "none",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={hideNonFarmingLandowners}
-                      onChange={(e) =>
-                        setHideNonFarmingLandowners(e.target.checked)
-                      }
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        cursor: "pointer",
-                      }}
-                    />
-                    Hide non-farming land owners
-                  </label>
-                </div>
               </div>
             </div>
 

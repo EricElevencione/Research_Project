@@ -1929,6 +1929,23 @@ const JoLandRegistry: React.FC = () => {
     });
   };
 
+  // Format date and time
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return "—";
+    const date = new Date(dateString);
+    const datePart = date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+    const timePart = date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    return `${datePart} ${timePart}`;
+  };
+
   const getParcelsForRegistryOwnership = (
     group: FarmerGroup,
     ownership: RegistryRowOwnership,
@@ -3637,7 +3654,7 @@ const JoLandRegistry: React.FC = () => {
                                 </span>
                               )}
                               <span className="jo-land-registry-last-activity-date">
-                                {formatDate(row.farmer.last_updated)}
+                                {formatDateTime(row.farmer.last_updated)}
                               </span>
                             </div>
                           </td>

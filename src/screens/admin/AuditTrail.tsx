@@ -583,26 +583,197 @@ const AuditTrail: React.FC = () => {
   };
 
   // Export logs
-  // Replace handleExport
-  const handleExport = async (format: "json" | "csv") => {
-    try {
-      const content = await auditAPI.exportLogs(buildAuditFilters(), format);
+  const exportAsWordDoc = (logsToExport: AuditLog[]) => {
+    let html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <title>Audit Logs Export</title>
+        <style>
+          body { font-family: Arial, sans-serif; font-size: 11pt; color: #333; }
+          h2 { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background-color: #10b981; color: white; padding: 10px; font-weight: bold; text-align: left; font-size: 10pt; }
+          td { padding: 8px 10px; border-bottom: 1px solid #ddd; font-size: 9.5pt; vertical-align: top; }
+          tr:nth-child(even) { background-color: #f8fafc; }
+        </style>
+      </head>
+      <body>
+        <h2>System Audit Logs Report</h2>
+        <p>Generated on: ${new Date().toLocaleString()}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Action</th>
+              <th>Module</th>
+              <th>Performed By</th>
+              <th>Role</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
 
-      // Create download link
-      const blob = new Blob([content], {
-        type: format === "json" ? "application/json" : "text/csv",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `audit-logs-${new Date().toISOString().split("T")[0]}.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+    logsToExport.forEach(log => {
+      html += `
+        <tr>
+          <td>${log.formatted_timestamp || new Date(log.timestamp).toLocaleString()}</td>
+          <td><b>${log.action}</b></td>
+          <td>${log.module}</td>
+          <td>${log.user_name || "System"} (${log.ip_address || "N/A"})</td>
+          <td>${log.user_role || "SYSTEM"}</td>
+          <td>${log.description}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `audit-logs-${new Date().toISOString().split("T")[0]}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAsPDF = (logsToExport: AuditLog[]) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      showToast("Please allow popups to export as PDF", "error");
+      return;
+    }
+
+    let html = `
+      <html>
+      <head>
+        <title>System Audit Logs Report</title>
+        <style>
+          @page {
+            size: auto;
+            margin: 0mm;
+          }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #1e293b; line-height: 1.5; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 12px; margin-bottom: 20px; }
+          .title h1 { margin: 0; font-size: 22px; color: #0f172a; }
+          .title p { margin: 4px 0 0 0; color: #64748b; font-size: 13px; }
+          .meta { text-align: right; font-size: 13px; color: #64748b; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th { background: #059669; color: white; padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+          td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #334155; vertical-align: top; }
+          tr:nth-child(even) td { background-color: #f8fafc; }
+          .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+          .badge-create { background: #dcfce7; color: #15803d; }
+          .badge-update { background: #dbeafe; color: #1d4ed8; }
+          .badge-delete { background: #fee2e2; color: #b91c1c; }
+          .badge-default { background: #f1f5f9; color: #475569; }
+          @media print {
+            body { padding: 24px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">
+            <h1>System Audit Logs Report</h1>
+            <p>Export of database audit records and system event logs</p>
+          </div>
+          <div class="meta">
+            <div>Date: ${new Date().toLocaleDateString()}</div>
+            <div>Time: ${new Date().toLocaleTimeString()}</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 18%">Timestamp</th>
+              <th style="width: 12%">Action</th>
+              <th style="width: 12%">Module</th>
+              <th style="width: 20%">Performed By</th>
+              <th style="width: 10%">Role</th>
+              <th style="width: 28%">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    logsToExport.forEach(log => {
+      const actionClass = log.action === 'CREATE' ? 'badge-create' : log.action === 'UPDATE' ? 'badge-update' : log.action === 'DELETE' ? 'badge-delete' : 'badge-default';
+      html += `
+        <tr>
+          <td>${log.formatted_timestamp || new Date(log.timestamp).toLocaleString()}</td>
+          <td><span class="badge ${actionClass}">${log.action}</span></td>
+          <td>${log.module}</td>
+          <td><b>${log.user_name || "System"}</b><br/><span style="color:#64748b; font-size:10px">${log.ip_address || "N/A"}</span></td>
+          <td>${log.user_role || "SYSTEM"}</td>
+          <td>${log.description}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handleExport = async (format: "json" | "csv" | "pdf" | "doc") => {
+    setLoading(true);
+    try {
+      if (format === "json" || format === "csv") {
+        const content = await auditAPI.exportLogs(buildAuditFilters(), format);
+        const blob = new Blob([content], {
+          type: format === "json" ? "application/json" : "text/csv",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `audit-logs-${new Date().toISOString().split("T")[0]}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        const result = await auditAPI.getLogs({
+          ...buildAuditFilters(),
+          page: 1,
+          limit: 1000,
+        });
+        const logsToExport = result.data || [];
+        if (logsToExport.length === 0) {
+          showToast("No logs found to export", "warning");
+          return;
+        }
+        if (format === "pdf") {
+          exportAsPDF(logsToExport);
+        } else if (format === "doc") {
+          exportAsWordDoc(logsToExport);
+        }
+      }
     } catch (error) {
       console.error("Error exporting logs:", error);
       showToast("Failed to export logs", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2648,9 +2819,6 @@ const AuditTrail: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    <span className="admin-audit-filter-note">
-                      Filters logs by the selected period.
-                    </span>
                   </div>
                   <div className="admin-audit-filter-group">
                     <label>Role</label>
@@ -2679,6 +2847,12 @@ const AuditTrail: React.FC = () => {
                         </button>
                         <button onClick={() => handleExport("csv")}>
                           Export CSV
+                        </button>
+                        <button onClick={() => handleExport("doc")}>
+                          Export Word (.doc)
+                        </button>
+                        <button onClick={() => handleExport("pdf")}>
+                          Export PDF (.pdf)
                         </button>
                       </div>
                     </div>
@@ -3022,12 +3196,6 @@ const AuditTrail: React.FC = () => {
                     </span>
                   </div>
                   <div className="admin-audit-detail-item">
-                    <span className="admin-audit-detail-label">IP Address</span>
-                    <span className="admin-audit-detail-value">
-                      {selectedLog.ip_address || "N/A"}
-                    </span>
-                  </div>
-                  <div className="admin-audit-detail-item">
                     <span className="admin-audit-detail-label">Route</span>
                     <span className="admin-audit-detail-value">
                       {selectedLogPageContext?.path
@@ -3096,13 +3264,6 @@ const AuditTrail: React.FC = () => {
                   {selectedLog.description}
                 </p>
               </div>
-
-              {selectedLog.old_values && (
-                <div className="admin-audit-detail-section">
-                  <h4>Previous Values</h4>
-                  {renderValueBlock(selectedLog.old_values, "old", selectedLog)}
-                </div>
-              )}
 
               {selectedLog.old_values &&
                 selectedLog.new_values &&

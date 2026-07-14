@@ -12,6 +12,7 @@ import type { UnifiedParcel, OccupantInfo as FarmerOccupantInfo } from "../../co
 import {
   printRsbsaFormsByIds,
 } from "../../utils/rsbsaPrint";
+import { printHtmlReport } from "../../utils/printHelper";
 import { getParcelOccupationType } from "../../utils/parcelOccupationType";
 import "../../assets/css/jo css/JoLandownerStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
@@ -1359,44 +1360,15 @@ const JoLandownerRegistry: React.FC = () => {
       })
       .join("");
 
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head>
-    <title>Landowner Registry — Dumangas, Iloilo</title>
-    <style>
-      *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:Arial,sans-serif;font-size:10px;padding:10mm;color:#111827}
-      .landowner-print-header{text-align:center;margin-bottom:8px}
-      .landowner-print-header h1{font-size:14px;font-weight:700;color:#1e3a8a}
-      .landowner-print-header p{font-size:10px;color:#475569}
-      table{width:100%;border-collapse:collapse;font-size:9px}
-      th{background:#1e3a8a;color:#fff;padding:4px 6px;text-align:left;font-weight:700;border:.5px solid #cbd5e1}
-      td{padding:3px 6px;border:.5px solid #e2e8f0;vertical-align:top}
-      tr:nth-child(even) td{background:#f8fafc}
-      .landowner-print-footer{margin-top:10px;font-size:9px;color:#475569;text-align:center}
-    </style>
-  </head><body>
-    <div class="landowner-print-header">
-      <h1>Landowner Registry</h1>
-      <p>Municipality of Dumangas, Iloilo</p>
-    </div>
-    <table class="landowner-print-table">
-      <thead><tr>
-        <th>#</th>
-        <th>Landowner Name</th>
-        <th>Reference No.</th>
-        <th>Barangay</th>
-        <th>Total Area</th>
-        <th>Parcels</th>
-        <th>Tenants / Lessees</th>
-        <th>Record Status</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div class="landowner-print-footer">Filter: ${filterLabel} · Total: ${records.length} · Printed: ${new Date().toLocaleString()}</div>
-    <script>window.onload=function(){window.print()}<\/script>
-  </body></html>`);
-    w.document.close();
+    printHtmlReport({
+      title: "Landowner Registry — Dumangas, Iloilo",
+      reportName: "Landowner Registry",
+      filterLabel,
+      totalCount: records.length,
+      tableHeaderHtml: "<th>#</th><th>Landowner Name</th><th>Reference No.</th><th>Barangay</th><th>Total Area</th><th>Parcels</th><th>Tenants / Lessees</th><th>Record Status</th>",
+      tableBodyHtml: rows,
+      printedBy: "JO Staff",
+    });
   };
 
   const handleBulkPrint = async () => {

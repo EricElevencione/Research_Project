@@ -14,6 +14,7 @@ import {
   printRsbsaFormById,
   printRsbsaFormsByIds,
 } from "../../utils/rsbsaPrint";
+import { printHtmlReport } from "../../utils/printHelper";
 import "../../assets/css/jo css/JoMasterlistStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
@@ -274,8 +275,7 @@ const JoMasterlist: React.FC = () => {
   const [selectedFarmingStatus, setSelectedFarmingStatus] =
     useState<string>("all");
   const [selectedCrop, setSelectedCrop] = useState<string>("all");
-  const [hideNonFarmingLandowners, setHideNonFarmingLandowners] =
-    useState<boolean>(true);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
     null,
@@ -520,7 +520,9 @@ const JoMasterlist: React.FC = () => {
           "submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, is_cultivating, contract_end_date, ownership_type_tenant, ownership_type_lessee, is_current_owner",
         );
       if (err) throw err;
-      const parcels = (data || []).filter((p: any) => p.is_current_owner !== false);
+      const parcels = (data || []).filter(
+        (p: any) => p.is_current_owner !== false,
+      );
       const idleOwnerIds = new Set<string>();
       const normalizeKey = (value: unknown) =>
         String(value ?? "")
@@ -790,7 +792,8 @@ const JoMasterlist: React.FC = () => {
               ot?.lessee === true ||
               ot?.tenantLessee === true;
             if (!isTenantOrLessee) return false;
-            const pCount = typeof item.parcelCount === "number" ? item.parcelCount : 0;
+            const pCount =
+              typeof item.parcelCount === "number" ? item.parcelCount : 0;
             if (pCount === 0) return false; // Flag as No Parcels first
             const id = String(item.id);
             return !submissionsWithOwnerName.has(id);
@@ -1169,19 +1172,6 @@ const JoMasterlist: React.FC = () => {
         ]);
         if (record.archivedAt) return false;
 
-        // Exclude strict landowners who are not farming if toggle is ON
-        if (hideNonFarmingLandowners) {
-          const isLandOwner =
-            String(record.mainLivelihood || "")
-              .toLowerCase()
-              .trim() === "landowner";
-          const isActivelyFarming = record.isActivelyFarming === true;
-
-          if (isLandOwner && !isActivelyFarming) {
-            return false;
-          }
-        }
-
         const f = getOwnershipFlags(record);
         if (
           selectedRole === "owner" &&
@@ -1192,13 +1182,23 @@ const JoMasterlist: React.FC = () => {
         if (selectedRole === "lessee" && !f.lessee) return false;
 
         let matchesStatus = true;
-        if (selectedStatus === "active") matchesStatus = active.has(ns);
-        else if (selectedStatus === "notActive")
+        if (selectedStatus === "all") {
+          // Default to hiding "Not Active", "No Land Owner", and "No Active Land" (No Parcels) records
+          const isNotActive = inactive.has(ns) || ns === "no parcels";
+          const isNoLandOwner = record.hasNoLandOwner === true;
+          const isNoActiveLand = record.hasNoActiveLand === true;
+          if (isNotActive || isNoLandOwner || isNoActiveLand) {
+            matchesStatus = false;
+          }
+        } else if (selectedStatus === "active") {
+          matchesStatus = active.has(ns);
+        } else if (selectedStatus === "notActive") {
           matchesStatus = inactive.has(ns);
-        else if (selectedStatus === "flaggedNoLand")
+        } else if (selectedStatus === "flaggedNoLand") {
           matchesStatus = record.hasNoActiveLand === true;
-        else if (selectedStatus === "noLandOwner")
+        } else if (selectedStatus === "noLandOwner") {
           matchesStatus = record.hasNoLandOwner === true;
+        }
         if (!matchesStatus) return false;
 
         if (selectedBarangay !== "all") {
@@ -1313,7 +1313,6 @@ const JoMasterlist: React.FC = () => {
     selectedFarmBarangay,
     selectedFarmingStatus,
     selectedCrop,
-    hideNonFarmingLandowners,
     searchQuery,
     sortConfigs,
   ]);
@@ -1481,31 +1480,15 @@ const JoMasterlist: React.FC = () => {
       })
       .join("");
 
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document
-      .write(`<!DOCTYPE html><html><head><title>RSBSA Masterlist — Dumangas, Iloilo</title><style>
-      *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:9px;padding:10mm}
-      .hdr{text-align:center;margin-bottom:8px}.hdr h1{font-size:12px;font-weight:bold}.hdr p{font-size:9px}
-      .meta{display:flex;justify-content:space-between;margin-bottom:6px;font-size:8px;color:#555}
-      table{width:100%;border-collapse:collapse;font-size:8px}
-      th{background:#1a5276;color:#fff;padding:3px 5px;text-align:left;font-weight:600;border:.5px solid #ccc}
-      td{padding:2px 5px;border:.5px solid #ccc;vertical-align:top}
-      tr:nth-child(even) td{background:#f9f9f9}
-      .ftr{margin-top:10px;font-size:8px;color:#555;text-align:center}
-    </style></head><body>
-    <div class="hdr"><h1>Republic of the Philippines — Department of Agriculture</h1>
-    <p>Registry System for Basic Sectors in Agriculture (RSBSA)</p>
-    <p><strong>Municipality of Dumangas, Iloilo</strong></p></div>
-    <div class="meta"><span>Filter: ${filterLabel}</span><span>Total: ${records.length} records</span><span>Printed: ${new Date().toLocaleString()}</span></div>
-    <table><thead><tr>
-      <th>FFRS Code</th><th>Last Name</th><th>First Name</th><th>Middle Name</th>
-      <th>Barangay</th><th>Gender</th><th>Birthdate</th><th>Municipality</th>
-      <th>Province</th><th>Farm Barangay</th><th>Area (ha)</th>
-    </tr></thead><tbody>${rows}</tbody></table>
-    <div class="ftr">RSBSA Masterlist — Dumangas, Iloilo · Printed by JO Staff · ${new Date().toLocaleDateString()}</div>
-    <script>window.onload=function(){window.print()}<\/script></body></html>`);
-    w.document.close();
+    printHtmlReport({
+      title: "RSBSA Masterlist — Dumangas, Iloilo",
+      reportName: "Farmer Masterlist",
+      filterLabel,
+      totalCount: records.length,
+      tableHeaderHtml: "<th>FFRS Code</th><th>Last Name</th><th>First Name</th><th>Middle Name</th><th>Barangay</th><th>Gender</th><th>Birthdate</th><th>Municipality</th><th>Province</th><th>Farm Barangay</th><th>Area (ha)</th>",
+      tableBodyHtml: rows,
+      printedBy: "JO Staff",
+    });
   };
 
   // ─── Print: Single / Bulk RSBSA Form ───────────────────────────────────────
@@ -2135,42 +2118,6 @@ const JoMasterlist: React.FC = () => {
                     <option value="livestock">Livestock</option>
                     <option value="poultry">Poultry</option>
                   </select>
-                </div>
-
-                <div
-                  className="jo-masterlist-status-filter"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    paddingLeft: "8px",
-                    minWidth: "220px",
-                  }}
-                >
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      fontSize: "13px",
-                      color: "var(--color-text-secondary, #555)",
-                      cursor: "pointer",
-                      userSelect: "none",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={hideNonFarmingLandowners}
-                      onChange={(e) =>
-                        setHideNonFarmingLandowners(e.target.checked)
-                      }
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        cursor: "pointer",
-                      }}
-                    />
-                    Hide non-farming land owners
-                  </label>
                 </div>
               </div>
             </div>
