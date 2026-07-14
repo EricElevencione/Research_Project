@@ -3368,6 +3368,38 @@ export const updateAllocation = async (
   return createResponse(data, null, 200);
 };
 
+export const updateInventoryStock = async (
+  items: { productId: string; quantity: number }[]
+): Promise<ApiResponse> => {
+  try {
+    for (const item of items) {
+      // Fetch the existing row (must already exist from migration seed)
+      const { data: existing, error: fetchError } = await supabase
+        .from("inventory")
+        .select("id, stock_qty")
+        .eq("product_id", item.productId)
+        .single();
+
+      if (fetchError) throw new Error(`Product not found in inventory: ${item.productId}`);
+
+      const newQty = Number(existing.stock_qty || 0) + item.quantity;
+
+      const { error: updateError } = await supabase
+        .from("inventory")
+        .update({
+          stock_qty: newQty,
+          last_updated: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+
+      if (updateError) throw updateError;
+    }
+    return createResponse({ success: true }, null, 200);
+  } catch (err: any) {
+    return createResponse(null, err.message, 500);
+  }
+};
+
 export const closeAllocation = async (
   id: string | number,
 ): Promise<ApiResponse> => {

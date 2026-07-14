@@ -179,6 +179,7 @@ export const useAdminDashboardStats = (
           .select(
             "id, request_id, fertilizer_type, fertilizer_bags_given, seed_type, seed_kg_given, claimed, claim_date, distribution_date, created_at",
           ),
+        supabase.from("inventory").select("*"),
       ]);
 
       const farmers = (farmersRes.data || []).filter(
@@ -188,6 +189,7 @@ export const useAdminDashboardStats = (
       const requests = requestsRes.data || [];
       const allocations = allocationsRes.data || [];
       const distributions = distributionsRes.data || [];
+      const inventory = inventoryRes.data || [];
 
       // ── KPI Stats ─────────────────────────────────────────
       const totalFarmers = farmers.length;
@@ -411,21 +413,32 @@ export const useAdminDashboardStats = (
       // Calculate totals for allocated vs distributed (ACTIVE programs only)
       const subsidyMap = new Map<string, { allocated: number; requested: number; distributed: number }>();
 
-      // Allocated amounts (sum across active regional_allocations only)
-      const filteredAllocations = selectedAllocationId 
-        ? allocations.filter((a: any) => a.id === selectedAllocationId)
-        : activeAllocations;
-
-      filteredAllocations.forEach((a: any) => {
-        const fields = Object.keys(a).filter(k => k.includes('_bags') || k.includes('_kg') || k.includes('_liters'));
-        fields.forEach(field => {
-          const val = Number(a[field]) || 0;
-          if (val > 0) {
-            const current = subsidyMap.get(field) || { allocated: 0, requested: 0, distributed: 0 };
-            subsidyMap.set(field, { ...current, allocated: current.allocated + val });
+      if (!selectedAllocationId) {
+        // MASTER VIEW: Pull directly from the new `inventory` table
+        inventory.forEach((item: any) => {
+          if (item.stock_qty > 0 || item.used_qty > 0) {
+            subsidyMap.set(item.product_id, {
+              allocated: Number(item.stock_qty) || 0,
+              requested: 0,
+              distributed: Number(item.used_qty) || 0 // use used_qty if present, otherwise loop below will override/augment it
+            });
           }
         });
-      });
+      } else {
+        // SPECIFIC PROGRAM VIEW: Fallback to summing up regional_allocations
+        const filteredAllocations = allocations.filter((a: any) => a.id === selectedAllocationId);
+
+        filteredAllocations.forEach((a: any) => {
+          const fields = Object.keys(a).filter(k => k.includes('_bags') || k.includes('_kg') || k.includes('_liters'));
+          fields.forEach(field => {
+            const val = Number(a[field]) || 0;
+            if (val > 0) {
+              const current = subsidyMap.get(field) || { allocated: 0, requested: 0, distributed: 0 };
+              subsidyMap.set(field, { ...current, allocated: current.allocated + val });
+            }
+          });
+        });
+      }
 
       // Requested vs Distributed amounts
       // Filter requests by allocation if selected
