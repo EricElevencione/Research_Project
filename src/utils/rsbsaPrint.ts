@@ -1146,6 +1146,261 @@ export const printRsbsaFormById = async (
   }
 };
 
+export interface GeometryStatusRow {
+  id: string;
+  farmerName: string;
+  referenceNumber: string;
+  barangay: string;
+  totalParcels: number;
+  plottedParcels: number;
+}
+
+export interface PrintGeometryStatusReportOptions {
+  rows: GeometryStatusRow[];
+  filterLabel?: string;
+  printedBy?: string;
+}
+
+const buildGeometryStatusDocument = (
+  options: PrintGeometryStatusReportOptions,
+): string => {
+  const { rows, filterLabel, printedBy } = options;
+
+  const finished = rows.filter(
+    (row) => row.totalParcels > 0 && row.plottedParcels >= row.totalParcels,
+  );
+  const inProgress = rows.filter(
+    (row) => row.totalParcels <= 0 || row.plottedParcels < row.totalParcels,
+  );
+
+  const groupByBarangay = (list: GeometryStatusRow[]) => {
+    const groups = new Map<string, GeometryStatusRow[]>();
+    list.forEach((row) => {
+      const key = toSafeText(row.barangay, "No Barangay");
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(row);
+    });
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([barangay, groupRows]) => ({
+        barangay,
+        rows: [...groupRows].sort((a, b) =>
+          a.farmerName.localeCompare(b.farmerName),
+        ),
+      }));
+  };
+
+  const renderSection = (
+    heading: string,
+    list: GeometryStatusRow[],
+    showRatio: boolean,
+  ): string => {
+    if (list.length === 0) {
+      return `
+        <div class="geometry-status-section">
+          <h3>${escapeHtml(heading)} (0)</h3>
+          <p class="geometry-status-empty">None.</p>
+        </div>
+      `;
+    }
+
+    const groups = groupByBarangay(list);
+    const groupsHtml = groups
+      .map((group) => {
+        const rowsHtml = group.rows
+          .map((row) => {
+            const ratioCell = showRatio
+              ? `<td>${escapeHtml(Math.max(0, row.plottedParcels))}/${escapeHtml(Math.max(0, row.totalParcels))}</td>`
+              : "";
+            return `
+              <tr>
+                <td>${escapeHtml(toSafeText(row.farmerName))}</td>
+                <td>${escapeHtml(toSafeText(row.referenceNumber))}</td>
+                ${ratioCell}
+              </tr>
+            `;
+          })
+          .join("");
+
+        return `
+          <div class="geometry-status-barangay-group">
+            <div class="geometry-status-barangay-label">${escapeHtml(group.barangay)} (${group.rows.length})</div>
+            <table class="geometry-status-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Reference No.</th>
+                  ${showRatio ? "<th>Parcels Plotted</th>" : ""}
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `
+      <div class="geometry-status-section">
+        <h3>${escapeHtml(heading)} (${list.length})</h3>
+        ${groupsHtml}
+      </div>
+    `;
+  };
+
+  const generatedOn = new Date().toLocaleString();
+
+  return `
+    <html>
+      <head>
+        <title>Geometry Status Report</title>
+        <style>
+          @page { size: portrait; margin: 15mm; }
+          * { box-sizing: border-box; }
+          body {
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+            margin: 0;
+            padding: 0;
+          }
+          .geometry-status-header {
+            text-align: center;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #059669;
+            padding-bottom: 10px;
+          }
+          .geometry-status-header h1 {
+            margin: 0 0 4px 0;
+            font-size: 18px;
+          }
+          .geometry-status-meta {
+            font-size: 11px;
+            color: #6b7280;
+            margin: 2px 0;
+          }
+          .geometry-status-summary {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin: 12px 0 18px;
+            font-size: 12px;
+          }
+          .geometry-status-summary strong {
+            font-size: 15px;
+            display: block;
+          }
+          .geometry-status-section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+          }
+          .geometry-status-section h3 {
+            font-size: 13px;
+            background: #f0fdf4;
+            border-left: 4px solid #059669;
+            padding: 4px 8px;
+            margin: 0 0 8px 0;
+          }
+          .geometry-status-empty {
+            font-size: 11px;
+            color: #6b7280;
+            font-style: italic;
+            margin: 0 0 10px 0;
+          }
+          .geometry-status-barangay-group {
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+          }
+          .geometry-status-barangay-label {
+            font-size: 11.5px;
+            font-weight: bold;
+            margin: 6px 0 3px 0;
+          }
+          .geometry-status-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+          }
+          .geometry-status-table th,
+          .geometry-status-table td {
+            border: 1px solid #d1d5db;
+            padding: 3px 6px;
+            text-align: left;
+          }
+          .geometry-status-table th {
+            background: #f9fafb;
+          }
+          .geometry-status-footer {
+            margin-top: 16px;
+            font-size: 10px;
+            color: #9ca3af;
+            text-align: right;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="geometry-status-header">
+          <h1>Parcel Geometry Status Report</h1>
+          <p class="geometry-status-meta">${escapeHtml(filterLabel || "All Registered Owners")}</p>
+          <p class="geometry-status-meta">Generated: ${escapeHtml(generatedOn)}</p>
+        </div>
+        <div class="geometry-status-summary">
+          <div>Total<strong>${rows.length}</strong></div>
+          <div>Finished<strong>${finished.length}</strong></div>
+          <div>In Progress<strong>${inProgress.length}</strong></div>
+        </div>
+        ${renderSection("✅ Finished with Geometry", finished, false)}
+        ${renderSection("⏳ Still in Progress", inProgress, true)}
+        <div class="geometry-status-footer">
+          Printed by: ${escapeHtml(printedBy || "Technician")}
+        </div>
+        <script>
+          window.addEventListener("load", () => {
+            setTimeout(() => { window.focus(); window.print(); }, 300);
+          });
+        </script>
+      </body>
+    </html>
+  `;
+};
+
+export const printGeometryStatusReport = async (
+  options: PrintGeometryStatusReportOptions,
+): Promise<PrintRsbsaResult> => {
+  if (!options.rows || options.rows.length === 0) {
+    return {
+      success: false,
+      error: "No records to print for the current view.",
+      printedCount: 0,
+      failedCount: 0,
+    };
+  }
+
+  const reservedWindow = canUseElectronPrint()
+    ? null
+    : reserveBrowserPrintPreview();
+
+  try {
+    const html = buildGeometryStatusDocument(options);
+    const printResult = await printHtmlDocument(html, reservedWindow);
+    return {
+      ...printResult,
+      printedCount: printResult.success ? options.rows.length : 0,
+      failedCount: printResult.success ? 0 : options.rows.length,
+    };
+  } catch (error) {
+    closeReservedWindow(reservedWindow);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to prepare geometry status report.",
+      printedCount: 0,
+      failedCount: options.rows.length,
+    };
+  }
+};
+
 export const printRsbsaFormsByIds = async (
   requests: PrintRsbsaRequest[],
 ): Promise<PrintRsbsaResult> => {

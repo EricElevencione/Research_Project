@@ -6,6 +6,7 @@ import {
   getFarmParcelsWithOccupants,
   getTechDashboardData,
 } from "../../api";
+import { printGeometryStatusReport } from "../../utils/rsbsaPrint";
 import "../../assets/css/technician css/TechRsbsaStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
@@ -62,7 +63,9 @@ const TechRsbsa: React.FC = () => {
   const [filteredOwners, setFilteredOwners] = useState<RSBSARecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
-  const [landStatusFilter, setLandStatusFilter] = useState<"all" | "active" | "no_land">("active");
+  const [landStatusFilter, setLandStatusFilter] = useState<
+    "all" | "active" | "no_land"
+  >("active");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isActive = (path: string) => location.pathname === path;
@@ -72,9 +75,8 @@ const TechRsbsa: React.FC = () => {
     top: number;
     left: number;
   } | null>(null);
-  const [selectedFarmer, setSelectedFarmer] = useState<FarmerProfileData | null>(
-    null,
-  );
+  const [selectedFarmer, setSelectedFarmer] =
+    useState<FarmerProfileData | null>(null);
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [unplottedFarmers, setUnplottedFarmers] = useState<
@@ -88,6 +90,7 @@ const TechRsbsa: React.FC = () => {
     firstName: string;
     lastName: string;
   } | null>(null);
+  const [isPrintingGeometry, setIsPrintingGeometry] = useState(false);
 
   const unplottedFarmerIdSet = React.useMemo(
     () => new Set(unplottedFarmers.map((farmer) => String(farmer.id))),
@@ -276,7 +279,9 @@ const TechRsbsa: React.FC = () => {
               farmLocationBarangay: parts[0] || data.barangay || "N/A",
               farmLocationMunicipality: parts[1] || "Dumangas",
               totalFarmAreaHa: submissionParcelArea,
-              role: submissionOwnership.registeredOwner ? "land-owner" : "owner-farmed",
+              role: submissionOwnership.registeredOwner
+                ? "land-owner"
+                : "owner-farmed",
               occupants: [],
               withinAncestralDomain: "",
               ownershipDocumentNo: "",
@@ -376,7 +381,9 @@ const TechRsbsa: React.FC = () => {
       const registeredOwnersData = filterRegisteredOwners(data || []);
       setRegisteredOwners(registeredOwnersData);
 
-      const ownerIds = new Set(registeredOwnersData.map((owner) => String(owner.id)));
+      const ownerIds = new Set(
+        registeredOwnersData.map((owner) => String(owner.id)),
+      );
 
       if (!techDashboardResponse.error) {
         const queue = Array.isArray(
@@ -385,7 +392,9 @@ const TechRsbsa: React.FC = () => {
           ? techDashboardResponse.data.unplottedFarmers
           : [];
         // Filter the unplotted queue to keep only registered landowners
-        const ownerQueue = queue.filter((item: any) => ownerIds.has(String(item.id)));
+        const ownerQueue = queue.filter((item: any) =>
+          ownerIds.has(String(item.id)),
+        );
         setUnplottedFarmers(
           ownerQueue.map((item: any) => ({
             id: String(item.id),
@@ -489,7 +498,10 @@ const TechRsbsa: React.FC = () => {
       if (landStatusFilter === "active" && record.hasCurrentParcels !== true) {
         return false;
       }
-      if (landStatusFilter === "no_land" && record.hasCurrentParcels !== false) {
+      if (
+        landStatusFilter === "no_land" &&
+        record.hasCurrentParcels !== false
+      ) {
         return false;
       }
 
@@ -651,8 +663,65 @@ const TechRsbsa: React.FC = () => {
   };
 
   const totalRegisteredCount = registeredOwners.length;
-  const activeLandownersCount = registeredOwners.filter((r) => r.hasCurrentParcels !== false).length;
-  const noActiveLandCount = registeredOwners.filter((r) => r.hasCurrentParcels === false).length;
+  const activeLandownersCount = registeredOwners.filter(
+    (r) => r.hasCurrentParcels !== false,
+  ).length;
+  const noActiveLandCount = registeredOwners.filter(
+    (r) => r.hasCurrentParcels === false,
+  ).length;
+
+  const handlePrintGeometryStatus = async () => {
+    const filterParts: string[] = [];
+    if (selectedBarangay !== "all")
+      filterParts.push(`Barangay: ${selectedBarangay}`);
+    if (landStatusFilter === "active")
+      filterParts.push("Land Status: Active (Has Land)");
+    else if (landStatusFilter === "no_land")
+      filterParts.push("Land Status: No Land");
+    if (searchTerm.trim()) filterParts.push(`Search: "${searchTerm.trim()}"`);
+
+    // Geometry status is only meaningful for owners with active land — a
+    // "No Land" owner has nothing to plot, so they're excluded here rather
+    // than showing up as a confusing 0/0.
+    const rows = sortedFilteredOwners
+      .filter((record) => record.hasCurrentParcels !== false)
+      .map((record) => {
+        const progress = unplottedProgressMap.get(String(record.id));
+        const total = progress
+          ? Math.max(0, Number(progress.totalParcels || 0))
+          : Math.max(0, Number(record.parcelCount || 0)) || 1;
+        const plotted = progress
+          ? Math.min(total, Math.max(0, Number(progress.plottedParcels || 0)))
+          : total;
+
+        return {
+          id: record.id,
+          farmerName: record.farmerName || "N/A",
+          referenceNumber: record.referenceNumber || "N/A",
+          barangay: record.farmerAddress?.split(",")[0]?.trim() || "N/A",
+          totalParcels: total,
+          plottedParcels: plotted,
+        };
+      });
+
+    setIsPrintingGeometry(true);
+    const printedBy = currentUser
+      ? `${currentUser.firstName} ${currentUser.lastName}`.trim()
+      : "Technician";
+    const result = await printGeometryStatusReport({
+      rows,
+      filterLabel:
+        filterParts.length > 0
+          ? filterParts.join(" · ")
+          : "All Registered Owners",
+      printedBy,
+    });
+    setIsPrintingGeometry(false);
+
+    if (!result.success && !result.cancelled) {
+      alert(result.error || "Failed to print geometry status report.");
+    }
+  };
 
   return (
     <div className="tech-rsbsa-page-container">
@@ -698,11 +767,15 @@ const TechRsbsa: React.FC = () => {
           <div className="tech-rsbsa-kpi-grid">
             <div className="tech-rsbsa-kpi-card">
               <span className="tech-rsbsa-kpi-label">👥 Total Registered</span>
-              <span className="tech-rsbsa-kpi-value">{totalRegisteredCount}</span>
+              <span className="tech-rsbsa-kpi-value">
+                {totalRegisteredCount}
+              </span>
             </div>
             <div className="tech-rsbsa-kpi-card">
               <span className="tech-rsbsa-kpi-label">✅ Active Landowners</span>
-              <span className="tech-rsbsa-kpi-value">{activeLandownersCount}</span>
+              <span className="tech-rsbsa-kpi-value">
+                {activeLandownersCount}
+              </span>
             </div>
             <div className="tech-rsbsa-kpi-card">
               <span className="tech-rsbsa-kpi-label">⚠️ No Active Land</span>
@@ -794,6 +867,26 @@ const TechRsbsa: React.FC = () => {
                     </select>
                   </div>
 
+                  <button
+                    onClick={handlePrintGeometryStatus}
+                    disabled={isPrintingGeometry}
+                    title="Print a report of who has finished parcel plotting and who still needs it, for the currently filtered list"
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      border: "1px solid #9fc06e",
+                      background: isPrintingGeometry ? "#f3f4f6" : "#f6fde9",
+                      color: "#35511a",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      cursor: isPrintingGeometry ? "not-allowed" : "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {isPrintingGeometry
+                      ? "Preparing..."
+                      : "🖨 Print Geometry Status"}
+                  </button>
                 </div>
 
                 <div className="tech-rsbsa-table-container">
@@ -840,7 +933,9 @@ const TechRsbsa: React.FC = () => {
                                 fetchFarmerDetails(record.id, record)
                               }
                               style={{ cursor: "pointer" }}
-                              className={hasNoLand ? "tech-rsbsa-row-no-land" : ""}
+                              className={
+                                hasNoLand ? "tech-rsbsa-row-no-land" : ""
+                              }
                             >
                               <td>{record.lastName || ""}</td>
                               <td>{record.firstName || ""}</td>
