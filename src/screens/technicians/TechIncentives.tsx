@@ -171,8 +171,12 @@ const TechIncentives: React.FC = () => {
     lastName: string;
   } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">("all");
-  const [typeFilter, setTypeFilter] = useState<"all" | "seeds" | "fertilizer">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">(
+    "all",
+  );
+  const [typeFilter, setTypeFilter] = useState<"all" | "seeds" | "fertilizer">(
+    "all",
+  );
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -428,21 +432,54 @@ const TechIncentives: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+              alignItems: "center",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: "220px", position: "relative" }}>
               <input
                 type="text"
                 placeholder="Search programs..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '100%', padding: '0.55rem 1rem 0.55rem 2.4rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                style={{
+                  width: "100%",
+                  padding: "0.55rem 1rem 0.55rem 2.4rem",
+                  borderRadius: "8px",
+                  border: "1px solid #e2e8f0",
+                  fontSize: "0.9rem",
+                  boxSizing: "border-box",
+                }}
               />
-              <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.45, fontSize: '0.95rem' }}>🔍</span>
+              <span
+                style={{
+                  position: "absolute",
+                  left: "0.75rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  opacity: 0.45,
+                  fontSize: "0.95rem",
+                }}
+              >
+                🔍
+              </span>
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              style={{ padding: '0.55rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem', backgroundColor: 'white', minWidth: '130px' }}
+              style={{
+                padding: "0.55rem 1rem",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                fontSize: "0.9rem",
+                backgroundColor: "white",
+                minWidth: "130px",
+              }}
             >
               <option value="all">All Status</option>
               <option value="open">Open</option>
@@ -451,7 +488,14 @@ const TechIncentives: React.FC = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
-              style={{ padding: '0.55rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem', backgroundColor: 'white', minWidth: '150px' }}
+              style={{
+                padding: "0.55rem 1rem",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                fontSize: "0.9rem",
+                backgroundColor: "white",
+                minWidth: "150px",
+              }}
             >
               <option value="all">All Types</option>
               <option value="seeds">Seeds Only</option>
@@ -487,8 +531,8 @@ const TechIncentives: React.FC = () => {
                 <p>Try adjusting your search or filters</p>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.93rem', whiteSpace: 'nowrap' }}>
+              <div className="table-responsive" style={{ overflowX: 'auto', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
                   <thead style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                     <tr>
                       <th style={{ padding: '1rem', color: '#64748b', fontWeight: 600 }}>Program</th>
@@ -507,51 +551,55 @@ const TechIncentives: React.FC = () => {
                           {formatSeasonName(allocation.season)}
                         </td>
                         <td style={{ padding: '1rem', color: '#475569' }}>
-                          {new Date(allocation.allocation_date).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
+                          {new Date(allocation.allocation_date).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
                           })}
                         </td>
                         <td style={{ padding: '1rem', color: '#475569' }}>
                           <strong>{getTotalFertilizer(allocation).toLocaleString()}</strong> bags
                         </td>
                         <td style={{ padding: '1rem', color: '#475569' }}>
-                          <strong>{getTotalSeeds(allocation).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong> kg
+                          <strong>{getTotalSeeds(allocation).toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> kg
                         </td>
                         <td style={{ padding: '1rem', color: '#475569' }}>
-                          <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '0.25rem 0.7rem', borderRadius: '9999px', fontSize: '0.83rem', fontWeight: 600 }}>
+                          <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.85rem', fontWeight: 600 }}>
                             {allocation.farmer_count || 0} farmers
                           </span>
                         </td>
                         <td style={{ padding: '1rem' }}>
-                          {(allocation as any).status === 'closed' ? (
-                            <span style={{ background: '#fef2f2', color: '#ef4444', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid #fecaca' }}>CLOSED</span>
+                          {(allocation as any).status === "closed" ? (
+                            <span style={{ background: "#fef2f2", color: "#ef4444", padding: "4px 10px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: 600, border: '1px solid #fecaca' }}>
+                              CLOSED
+                            </span>
                           ) : (
-                            <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid #bbf7d0' }}>OPEN</span>
+                            <span style={{ background: "#f0fdf4", color: "#16a34a", padding: "4px 10px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: 600, border: '1px solid #bbf7d0' }}>
+                              OPEN
+                            </span>
                           )}
                         </td>
                         <td style={{ padding: '1rem' }}>
                           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                             <button
                               onClick={() => navigate(`/technician-view-allocation/${allocation.id}`)}
-                              style={{ padding: '0.4rem 0.8rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.83rem', fontWeight: 600, cursor: 'pointer' }}
+                              style={{ padding: '0.4rem 0.8rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                             >
                               View
                             </button>
                             <button
                               onClick={() => navigate(`/technician-manage-requests/${allocation.id}`)}
-                              disabled={(allocation as any).status === 'closed'}
-                              style={{
-                                padding: '0.4rem 0.8rem',
-                                background: '#10b981',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '0.83rem',
-                                fontWeight: 600,
-                                cursor: (allocation as any).status === 'closed' ? 'not-allowed' : 'pointer',
-                                opacity: (allocation as any).status === 'closed' ? 0.4 : 1,
+                              disabled={(allocation as any).status === "closed"}
+                              style={{ 
+                                padding: '0.4rem 0.8rem', 
+                                background: '#10b981', 
+                                color: '#fff', 
+                                border: 'none', 
+                                borderRadius: '6px', 
+                                fontSize: '0.85rem', 
+                                fontWeight: 600, 
+                                cursor: (allocation as any).status === "closed" ? "not-allowed" : "pointer",
+                                opacity: (allocation as any).status === "closed" ? 0.5 : 1
                               }}
                             >
                               Manage

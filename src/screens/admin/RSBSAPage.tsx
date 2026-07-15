@@ -633,6 +633,17 @@ const RsbsaAdminPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                    {(searchQuery || barangayFilter !== "all") && (
+                      <button
+                        className="rsbsa-admin-clear-filters-btn"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setBarangayFilter("all");
+                        }}
+                      >
+                        Reset Filters
+                      </button>
+                    )}
                   </div>
 
                   <div className="rsbsa-admin-table-meta">

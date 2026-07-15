@@ -73,6 +73,54 @@ interface ParcelRow {
   ownerResolvedVia: "farmer_id" | "plot_name_only" | "unresolved";
 }
 
+const DUMANGAS_BARANGAYS = [
+  "Aurora-Del Pilar",
+  "Bacay",
+  "Bacong",
+  "Balabag",
+  "Balud",
+  "Bantud",
+  "Bantud Fabrica",
+  "Baras",
+  "Barasan",
+  "Basa-Mabini Bonifacio",
+  "Bolilao",
+  "Buenaflor Embarkadero",
+  "Burgos-Regidor",
+  "Calao",
+  "Cali",
+  "Cansilayan",
+  "Capaliz",
+  "Cayos",
+  "Compayan",
+  "Dacutan",
+  "Ermita",
+  "Ilaya 1st",
+  "Ilaya 2nd",
+  "Ilaya 3rd",
+  "Jardin",
+  "Lacturan",
+  "Lopez Jaena - Rizal",
+  "Managuit",
+  "Maquina",
+  "Nanding Lopez",
+  "Pagdugue",
+  "Paloc Bigque",
+  "Paloc Sool",
+  "Patlad",
+  "Pd Monfort North",
+  "Pd Monfort South",
+  "Pulao",
+  "Rosario",
+  "Sapao",
+  "Sulangan",
+  "Tabucan",
+  "Talusan",
+  "Tambobo",
+  "Tamboilan",
+  "Victorias"
+].sort();
+
 const JoLandHistoryReport: React.FC = () => {
   const [rows, setRows] = useState<LandInventoryRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -85,7 +133,6 @@ const JoLandHistoryReport: React.FC = () => {
     useState<RelationshipFilter>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const [barangayOptions, setBarangayOptions] = useState<string[]>([]);
   const [parcelModalOpen, setParcelModalOpen] = useState(false);
   const [parcelModalParcelNumber, setParcelModalParcelNumber] = useState<
     string | null
@@ -186,24 +233,9 @@ const JoLandHistoryReport: React.FC = () => {
     }
   };
 
-  const fetchBarangayOptions = async () => {
-    const response = await getLandPlotsBarangays();
-    if (response.error) return;
-    setBarangayOptions((response.data as string[]) || []);
-  };
-
-  useEffect(() => {
-    fetchBarangayOptions();
-  }, []);
-
   useEffect(() => {
     fetchReportRows();
   }, [page, pageSize, searchTerm, barangayFilter, relationshipFilter]);
-
-  const uniqueBarangays = useMemo(
-    () => [...barangayOptions].sort((a, b) => a.localeCompare(b)),
-    [barangayOptions],
-  );
 
   const closeParcelHistoryModal = () => {
     setParcelModalOpen(false);
@@ -490,7 +522,7 @@ const JoLandHistoryReport: React.FC = () => {
                 }}
               >
                 <option value="all">All Barangays</option>
-                {uniqueBarangays.map((barangay) => (
+                {DUMANGAS_BARANGAYS.map((barangay) => (
                   <option key={barangay} value={barangay}>
                     {barangay}
                   </option>

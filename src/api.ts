@@ -797,7 +797,9 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         supabase.from("barangay_codes").select("barangay_name"),
         supabase
           .from("rsbsa_farm_parcels")
-          .select("id, submission_id, parcel_number, farm_location_barangay"),
+          .select(
+            "id, submission_id, parcel_number, farm_location_barangay, ownership_type_registered_owner",
+          ),
       ]);
 
     if (farmersResult.error) throw farmersResult.error;
@@ -942,7 +944,14 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         };
       });
 
-    const allParcels = [...enrichedParcels, ...syntheticParcels];
+    const allParcels = [...enrichedParcels, ...syntheticParcels].filter(
+      (parcel: any) => {
+        // Keep synthetic parcels (legacy entries without rsbsa_farm_parcels rows)
+        if (parcel.synthetic === true) return true;
+        // Keep only parcels where the landowner is the registered owner of the parcel
+        return parcel.ownership_type_registered_owner === true;
+      },
+    );
 
     // Summary counts
     const totalParcels = allParcels.length;
