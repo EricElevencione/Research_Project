@@ -8,6 +8,7 @@ import {
   updateFarmParcel, // ✅ add this
 } from "../../api";
 import { printRsbsaFormById } from "../../utils/rsbsaPrint";
+import "../../assets/css/jo css/JoMasterlistStyle.css";
 import "../../assets/css/technician css/TechMasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
@@ -25,6 +26,7 @@ interface RSBSARecord {
   status: string;
   landParcel: string;
   cultivationStatus?: string;
+  statusChangeReason?: string | null;
   // Simple per-record data quality based on key fields present in masterlist
   completeness: number;
   ownershipType?: {
@@ -181,7 +183,15 @@ const TechMasterlist: React.FC = () => {
       const parcelsData = parcelsResponse.data;
 
       // Handle both JSONB (data property) and structured column formats
-      const data = farmerData.data || farmerData;
+      const data = farmerData?.data || farmerData || {};
+
+      const selectedRecord =
+        summaryRecord ||
+        rsbsaRecords.find((record) => String(record.id) === String(farmerId));
+
+      const submittedDateLabel = selectedRecord?.dateSubmitted
+        ? formatDate(selectedRecord.dateSubmitted)
+        : "N/A";
 
       // Parse farming activities from the data
       const activities: string[] = [];
@@ -236,28 +246,17 @@ const TechMasterlist: React.FC = () => {
       };
 
       // Reformat the farmer name
-      const backendName = farmerData.farmerName || "";
+      const backendFarmerName = farmerData?.farmerName || "";
       const reformattedFarmerName = (() => {
-        if (!backendName || backendName === "N/A") return "N/A";
-        const parts = backendName
+        if (!backendFarmerName || backendFarmerName === "N/A") return "N/A";
+        const parts = backendFarmerName
           .split(",")
           .map((p: string) => p.trim())
           .filter(Boolean);
         if (parts.length === 0) return "N/A";
         if (parts.length === 1) return parts[0];
-        const lastName = parts[0];
-        const restOfName = parts.slice(1).join(" ");
-        return `${lastName}, ${restOfName}`;
+        return `${parts[0]}, ${parts.slice(1).join(" ")}`;
       })();
-
-      const selectedRecord =
-        summaryRecord ||
-        rsbsaRecords.find((record) => String(record.id) === String(farmerId));
-
-      const submittedDateLabel = selectedRecord?.dateSubmitted
-        ? formatDate(selectedRecord.dateSubmitted)
-        : "N/A";
-
       // Build parcels array from rsbsa_farm_parcels; if empty, fall back to submission-level farm data
       let mappedParcels = parcelsData.map((p: any) => ({
         id: p.id,
@@ -391,9 +390,9 @@ const TechMasterlist: React.FC = () => {
         tenantLandOwnerName: p.tenant_land_owner_name || "",
         lesseeLandOwnerName: p.lessee_land_owner_name || "",
         isCultivating:
-          typeof p.is_cultivating === "boolean" ? p.is_cultivating : null,
-        cultivationStatusReason: p.cultivation_status_reason || null,
-        cultivationStatusUpdatedAt: p.cultivation_status_updated_at || null,
+          typeof p.is_farming === "boolean" ? p.is_farming : null,
+        cultivationStatusReason: p.farming_status_reason || null,
+        cultivationStatusUpdatedAt: p.farming_status_updated_at || null,
         cultivatorSubmissionId: p.cultivator_submission_id || null,
       }));
 
@@ -476,6 +475,11 @@ const TechMasterlist: React.FC = () => {
           status,
           landParcel,
           cultivationStatus: String(item.cultivationStatus || "Not specified"),
+          statusChangeReason:
+            item.statusChangeReason ||
+            item.status_change_reason ||
+            item.archive_reason ||
+            null,
         };
 
         const completeness = calculateRecordCompleteness(baseRecord);
@@ -545,7 +549,7 @@ const TechMasterlist: React.FC = () => {
       .trim();
 
     if (normalizedStatus === "active farmer" || normalizedStatus === "active") {
-      return "status-approved";
+      return "jo-masterlist-status-approved";
     }
 
     if (
@@ -553,10 +557,10 @@ const TechMasterlist: React.FC = () => {
       normalizedStatus === "inactive farmer" ||
       normalizedStatus === "inactive"
     ) {
-      return "status-not-approved";
+      return "jo-masterlist-status-not-approved";
     }
 
-    return "status-pending";
+    return "jo-masterlist-status-pending";
   };
 
   const getOwnershipLabel = (record: RSBSARecord) => {
@@ -1010,82 +1014,128 @@ const TechMasterlist: React.FC = () => {
     navigate("/login");
   };
 
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  const getFarmerInitials = (name: string) => {
+    const parts = name
+      .split(/[, ]+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length === 0) return "?";
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const statusCounts = React.useMemo(() => {
+    const total = rsbsaRecords.length;
+    const active = rsbsaRecords.filter((r) => r.status === "Active Farmer").length;
+    const notActive = rsbsaRecords.filter((r) => r.status === "Not Active").length;
+    return { total, active, notActive };
+  }, [rsbsaRecords]);
+
   return (
-    <div className="tech-masterlist-page-container">
-      <div className="tech-masterlist-page">
+    <div className="jo-masterlist-page-container">
+      <div className="jo-masterlist-page has-mobile-sidebar">
         <TechSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
 
-        <div className="tech-masterlist-main-content">
+        <div className="jo-masterlist-main-content">
+          {/* Mobile header */}
           <div className="tech-incent-mobile-header">
             <button
               className="tech-incent-hamburger"
               onClick={() => setSidebarOpen((prev) => !prev)}
             >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
             <div className="tech-incent-mobile-title">Masterlist</div>
           </div>
-          <div className="tech-masterlist-dashboard-header">
+
+          {/* Page header */}
+          <div className="jo-masterlist-dashboard-header">
             <div>
-              <h2 className="tech-masterlist-page-title">Masterlist</h2>
-              <p className="tech-masterlist-page-subtitle">
+              <h1 className="jo-masterlist-page-title">Masterlist</h1>
+              <p className="jo-masterlist-page-subtitle">
                 Browse all RSBSA farmers, filter by status, and generate reports
               </p>
             </div>
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                onClick={() => setShowPrintModal(true)}
+                className="jo-masterlist-action-btn"
+                style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: "8px", padding: "0.55rem 1.2rem", fontWeight: 600, fontSize: "0.92rem", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              >
+                🖨️ Print Farmers
+              </button>
+            </div>
           </div>
-          <div className="tech-masterlist-print-section">
-            <button
-              onClick={() => setShowPrintModal(true)}
-              className="tech-masterlist-print-button"
-            >
-              🖨️ Print Active Farmers
-            </button>
-          </div>
-          <div className="tech-masterlist-content-card">
-            <div className="tech-masterlist-filters-section">
-              <div className="tech-masterlist-search-filter">
-                <input
-                  type="text"
-                  placeholder="Search by farmer name, reference number, or barangay..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="tech-masterlist-search-input"
-                />
+
+          {/* Summary cards */}
+          {!loading && !error && (
+            <div className="jo-masterlist-status-cards">
+              <div className="jo-masterlist-status-card jo-masterlist-card-total">
+                <div className="jo-masterlist-card-icon">👥</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">{statusCounts.total}</span>
+                  <span className="jo-masterlist-card-label">Total Registered</span>
+                </div>
               </div>
-              <div className="tech-masterlist-status-filter">
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="tech-masterlist-status-select"
-                >
-                  <option value="all">All Status</option>
-                  <option value="Active Farmer">Active Farmer</option>
-                  <option value="Not Active">Not Active</option>
-                </select>
+              <div className="jo-masterlist-status-card jo-masterlist-card-active">
+                <div className="jo-masterlist-card-icon">✅</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">{statusCounts.active}</span>
+                  <span className="jo-masterlist-card-label">Active Farmers</span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
+                <div className="jo-masterlist-card-icon">⛔</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">{statusCounts.notActive}</span>
+                  <span className="jo-masterlist-card-label">Not Active</span>
+                </div>
               </div>
             </div>
-            <div className="tech-masterlist-table-container">
-              <table className="tech-masterlist-farmers-table">
+          )}
+
+          <div className="jo-masterlist-content-card">
+            {/* Filters */}
+            <div className="jo-masterlist-filters-section">
+              <div className="jo-masterlist-filters-row-1">
+                <div className="jo-masterlist-search-filter">
+                  <input
+                    type="text"
+                    placeholder="Search by farmer name, reference number, or barangay..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="jo-masterlist-search-input"
+                  />
+                </div>
+              </div>
+              <div className="jo-masterlist-filters-row-2">
+                <div className="jo-masterlist-status-filter">
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="jo-masterlist-status-select"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="Active Farmer">Active Farmer</option>
+                    <option value="Not Active">Not Active</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="jo-masterlist-table-container">
+              <table className="jo-masterlist-farmers-table">
                 <thead>
                   <tr>
                     {[
-                      "FFRS ID",
                       "Farmer Name",
                       "Farmer Address",
                       "Parcel Address",
@@ -1101,14 +1151,14 @@ const TechMasterlist: React.FC = () => {
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={8} className="tech-masterlist-loading-cell">
+                      <td colSpan={7} className="jo-masterlist-loading-cell">
                         Loading...
                       </td>
                     </tr>
                   )}
                   {error && !loading && (
                     <tr>
-                      <td colSpan={8} className="tech-masterlist-error-cell">
+                      <td colSpan={7} className="jo-masterlist-error-cell">
                         Error: {error}
                       </td>
                     </tr>
@@ -1119,25 +1169,22 @@ const TechMasterlist: React.FC = () => {
                     sortedFilteredRecords.map((record) => (
                       <tr
                         key={record.id}
+                        className="jo-masterlist-table-row"
                         onClick={() => fetchFarmerDetails(record.id, record)}
                         style={{ cursor: "pointer" }}
                       >
-                        <td
-                          className="tech-masterlist-ffrs-id"
-                          title={record.referenceNumber || "N/A"}
-                        >
-                          <span className="tech-masterlist-ffrs-id-value">
-                            {record.referenceNumber || "N/A"}
-                          </span>
-                        </td>
                         <td>
-                          <div className="tech-masterlist-farmer-cell">
-                            <span className="tech-masterlist-farmer-name">
-                              {record.farmerName}
-                            </span>
+                          <div className="jo-masterlist-farmer-cell">
+                            <div className="jo-masterlist-farmer-avatar">
+                              {getFarmerInitials(record.farmerName)}
+                            </div>
+                            <div className="jo-masterlist-farmer-meta">
+                              <span className="jo-masterlist-farmer-name">
+                                {record.farmerName}
+                              </span>
+                            </div>
                           </div>
                         </td>
-
                         <td>{record.farmerAddress}</td>
                         <td>{record.farmLocation}</td>
                         <td>{record.parcelArea}</td>
@@ -1145,7 +1192,7 @@ const TechMasterlist: React.FC = () => {
                         <td>{formatDate(record.dateSubmitted)}</td>
                         <td>
                           <button
-                            className={`tech-masterlist-status-button tech-masterlist-${getStatusClass(record.status)}`}
+                            className={`jo-masterlist-status-pill ${getStatusClass(record.status)}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               openStatusModal(record);
@@ -1158,12 +1205,13 @@ const TechMasterlist: React.FC = () => {
                     ))}
                   {!loading &&
                     !error &&
-                    sortedFilteredRecords.length === 0 &&
-                    Array.from({ length: 16 }).map((_, i) => (
-                      <tr key={`empty-${i}`}>
-                        <td colSpan={8}>&nbsp;</td>
+                    sortedFilteredRecords.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="jo-masterlist-empty-cell" style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
+                          No records found.
+                        </td>
                       </tr>
-                    ))}
+                    )}
                 </tbody>
               </table>
             </div>
@@ -1172,15 +1220,15 @@ const TechMasterlist: React.FC = () => {
 
         {updateNotification.show && (
           <div
-            className={`tech-masterlist-update-toast ${updateNotification.type}`}
+            className={`jo-masterlist-update-toast ${updateNotification.type}`}
             role="status"
             aria-live="polite"
           >
-            <span className="tech-masterlist-update-toast-message">
+            <span className="jo-masterlist-update-toast-message">
               {updateNotification.message}
             </span>
             <button
-              className="tech-masterlist-update-toast-close"
+              className="jo-masterlist-update-toast-close"
               onClick={() =>
                 setUpdateNotification((prev) => ({ ...prev, show: false }))
               }

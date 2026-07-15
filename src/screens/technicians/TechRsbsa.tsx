@@ -772,7 +772,6 @@ const TechRsbsa: React.FC = () => {
                   <table className="tech-rsbsa-owners-table">
                     <thead>
                       <tr>
-                        <th>FFRS ID</th>
                         <th>Last Name</th>
                         <th>First Name</th>
                         <th>Middle Name</th>
@@ -790,7 +789,7 @@ const TechRsbsa: React.FC = () => {
                     <tbody>
                       {sortedFilteredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={13} className="tech-rsbsa-no-data">
+                          <td colSpan={12} className="tech-rsbsa-no-data">
                             {searchTerm
                               ? "No matching records found"
                               : "No registered owners found"}
@@ -815,14 +814,6 @@ const TechRsbsa: React.FC = () => {
                               style={{ cursor: "pointer" }}
                               className={hasNoLand ? "tech-rsbsa-row-no-land" : ""}
                             >
-                              <td
-                                className="tech-rsbsa-ffrs-id"
-                                title={record.referenceNumber || "N/A"}
-                              >
-                                <span className="tech-rsbsa-ffrs-id-value">
-                                  {record.referenceNumber || "N/A"}
-                                </span>
-                              </td>
                               <td>{record.lastName || ""}</td>
                               <td>{record.firstName || ""}</td>
                               <td>{record.middleName || ""}</td>
