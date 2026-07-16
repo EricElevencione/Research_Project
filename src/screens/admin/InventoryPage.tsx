@@ -138,10 +138,10 @@ const InventoryPage: React.FC = () => {
             <tr>
               <th>Item Name</th>
               {showCategory && <th>{categoryHeader}</th>}
-              <th>Allocated</th>
+              <th>Total Stock</th>
               <th>Requested</th>
-              <th>Distributed</th>
-              <th>Remaining</th>
+              <th>Used</th>
+              <th>Current Stock</th>
               <th>Usage</th>
             </tr>
           </thead>
@@ -215,9 +215,25 @@ const InventoryPage: React.FC = () => {
                     <td
                       className={`remaining-cell ${isOut ? "out" : isLow ? "low" : ""}`}
                     >
-                      <span className="stock-badge">
-                        {item.remaining.toLocaleString()}
-                      </span>
+                      {isOut ? (
+                        <span className="stock-badge out" style={{
+                          background: "#ef4444",
+                          color: "#fff",
+                          fontWeight: 700,
+                          padding: "3px 10px",
+                          borderRadius: "6px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: "0.85rem",
+                        }}>
+                          ⚠ 0 — Out of Stock
+                        </span>
+                      ) : (
+                        <span className="stock-badge">
+                          {item.remaining.toLocaleString()}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <div className="stock-indicator-wrapper">
@@ -292,13 +308,13 @@ const InventoryPage: React.FC = () => {
         </div>
         <div className="search-card-stats">
           <div className="search-stat">
-            <span className="search-stat-label">Remaining</span>
+            <span className="search-stat-label">Current Stock</span>
             <span className="search-stat-value">
               {item.remaining.toLocaleString()}
             </span>
           </div>
           <div className="search-stat">
-            <span className="search-stat-label">Total Allocated</span>
+            <span className="search-stat-label">Total Stock</span>
             <span className="search-stat-value">
               {item.allocated.toLocaleString()}
             </span>
@@ -993,9 +1009,9 @@ const InventoryPage: React.FC = () => {
               <tr>
                 <th>Item Name</th>
                 <th>Category</th>
-                <th>Allocated</th>
-                <th>Distributed</th>
-                <th>Remaining</th>
+                <th>Total Stock</th>
+                <th>Used</th>
+                <th>Current Stock</th>
                 <th>Usage %</th>
               </tr>
             </thead>

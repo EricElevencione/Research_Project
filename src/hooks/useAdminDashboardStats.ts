@@ -161,6 +161,9 @@ export const useAdminDashboardStats = (
         requestsRes,
         allocationsRes,
         distributionsRes,
+        inventoryRes,
+        seedCatalogRes,
+        fertCatalogRes,
       ] = await Promise.all([
         supabase
           .from("rsbsa_submission")
@@ -180,6 +183,8 @@ export const useAdminDashboardStats = (
             "id, request_id, fertilizer_type, fertilizer_bags_given, seed_type, seed_kg_given, claimed, claim_date, distribution_date, created_at",
           ),
         supabase.from("inventory").select("*"),
+        supabase.from("shortages_seeds").select("id, name, category"),
+        supabase.from("shortages_fertilizers").select("id, name, category"),
       ]);
 
       const farmers = (farmersRes.data || []).filter(
@@ -190,6 +195,12 @@ export const useAdminDashboardStats = (
       const allocations = allocationsRes.data || [];
       const distributions = distributionsRes.data || [];
       const inventory = inventoryRes.data || [];
+
+      // Build product name lookup maps from catalog tables
+      const seedNameMap = new Map<string, string>();
+      (seedCatalogRes.data || []).forEach((s: any) => seedNameMap.set(s.id, s.name));
+      const fertNameMap = new Map<string, string>();
+      (fertCatalogRes.data || []).forEach((f: any) => fertNameMap.set(f.id, f.name));
 
       // ── KPI Stats ─────────────────────────────────────────
       const totalFarmers = farmers.length;
@@ -415,14 +426,29 @@ export const useAdminDashboardStats = (
 
       if (!selectedAllocationId) {
         // MASTER VIEW: Pull directly from the new `inventory` table
+        // Show ALL products (even 0 stock) — current stock = stock_qty - used_qty
         inventory.forEach((item: any) => {
-          if (item.stock_qty > 0 || item.used_qty > 0) {
-            subsidyMap.set(item.product_id, {
-              allocated: Number(item.stock_qty) || 0,
-              requested: 0,
-              distributed: Number(item.used_qty) || 0 // use used_qty if present, otherwise loop below will override/augment it
-            });
+          const stockQty = Number(item.stock_qty) || 0;
+          const usedQty  = Number(item.used_qty)  || 0;
+          const currentStock = Math.max(0, stockQty - usedQty);
+
+          // Resolve human-readable name from catalog tables
+          let displayName: string;
+          if (item.product_type === 'seed') {
+            displayName = seedNameMap.get(item.product_id) || item.product_id;
+          } else {
+            displayName = fertNameMap.get(item.product_id) || item.product_id;
           }
+
+          subsidyMap.set(item.product_id, {
+            allocated: stockQty,       // total stock received
+            requested: 0,
+            distributed: usedQty,      // amount used
+            // We store displayName temporarily via a side-channel below
+          });
+
+          // Override the id→name mapping so the breakdown uses the real name
+          (subsidyMap as any).set(`__name__${item.product_id}`, displayName);
         });
       } else {
         // SPECIFIC PROGRAM VIEW: Fallback to summing up regional_allocations
@@ -480,14 +506,28 @@ export const useAdminDashboardStats = (
         });
       });
 
-      const subsidyBreakdown: SubsidyStock[] = Array.from(subsidyMap.entries()).map(([field, val]) => ({
-        id: field,
-        name: field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        allocated: val.allocated,
-        requested: val.requested,
-        distributed: val.distributed,
-        remaining: Math.max(0, val.allocated - val.distributed),
-      })).sort((a, b) => b.allocated - a.allocated);
+      const subsidyBreakdown: SubsidyStock[] = Array.from(subsidyMap.entries())
+        .filter(([field]) => !field.startsWith('__name__'))
+        .map(([field, val]) => {
+          // Prefer catalog name (stored in side-channel) over field-based name
+          const catalogName = (subsidyMap as any).get(`__name__${field}`);
+          const displayName = catalogName
+            ? catalogName
+            : field.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+          // current stock = stock_qty - used_qty  (never below 0)
+          const currentStock = Math.max(0, val.allocated - val.distributed);
+
+          return {
+            id: field,
+            name: displayName,
+            allocated: val.allocated,
+            requested: val.requested,
+            distributed: val.distributed,
+            remaining: currentStock,
+          };
+        })
+        .sort((a, b) => b.allocated - a.allocated);
 
       // ── Excess Inventory (from Closed Programs) ──────────────
       const hybridKeywords = ['jackpot', 'us88', 'th82', 'rh9000', 'mestiso'];

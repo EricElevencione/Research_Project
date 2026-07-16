@@ -386,7 +386,8 @@ const AdminCreateAllocation: React.FC = () => {
 
     if (list.some((item) => item.key === itemKey)) return;
 
-    setter((prev) => [...prev, { key: itemKey, value: 0 }]);
+    // Default to 1 so the field always has a valid value
+    setter((prev) => [...prev, { key: itemKey, value: 1 }]);
   };
 
   const updateItemValue = (
@@ -398,7 +399,8 @@ const AdminCreateAllocation: React.FC = () => {
       type === "fertilizer" ? setSelectedFertilizers : setSelectedSeeds;
     setter((prev) => {
       const newList = [...prev];
-      newList[index] = { ...newList[index], value: Math.max(0, value) };
+      // Minimum value is 1 — quantity must always be at least 1
+      newList[index] = { ...newList[index], value: Math.max(1, value) };
       return newList;
     });
   };
@@ -413,6 +415,19 @@ const AdminCreateAllocation: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Validate: all added items must have quantity >= 1
+    const invalidFerts = selectedFertilizers.filter((item) => item.value < 1);
+    const invalidSeeds = selectedSeeds.filter((item) => item.value < 1);
+    if (invalidFerts.length > 0 || invalidSeeds.length > 0) {
+      const names = [
+        ...invalidFerts.map((item) => dynamicFertFields.find((f) => f.key === item.key)?.label || item.key),
+        ...invalidSeeds.map((item) => dynamicSeedFields.find((s) => s.key === item.key)?.label || item.key),
+      ];
+      setError(`Quantity must be at least 1 for: ${names.join(", ")}`);
+      setLoading(false);
+      return;
+    }
 
     try {
       const payload: Record<string, string | number> = {
@@ -615,6 +630,8 @@ const AdminCreateAllocation: React.FC = () => {
                           type="number"
                           className="jo-allocation-input row-input"
                           value={item.value}
+                          min={1}
+                          required
                           onChange={(e) =>
                             updateItemValue(
                               "fertilizer",
@@ -695,6 +712,8 @@ const AdminCreateAllocation: React.FC = () => {
                           type="number"
                           className="jo-allocation-input row-input"
                           value={item.value}
+                          min={1}
+                          required
                           onChange={(e) =>
                             updateItemValue(
                               "seed",

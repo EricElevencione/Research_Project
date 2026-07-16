@@ -723,7 +723,6 @@ const RegionAddStock: React.FC = () => {
                               min="1"
                               required
                             />
-                            )
                           </div>
 
                           {/* Remove */}
