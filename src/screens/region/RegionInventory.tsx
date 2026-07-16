@@ -407,13 +407,6 @@ const RegionInventory: React.FC = () => {
                   <Plus size={18} />
                   Add Stock
                 </button>
-                <button
-                  className="inventory-btn-register"
-                  onClick={() => navigate("/region-manage-varieties")}
-                >
-                  <Plus size={18} />
-                  Manage Varieties
-                </button>
               </div>
             </div>
           </div>
@@ -437,12 +430,6 @@ const RegionInventory: React.FC = () => {
                 onClick={() => setActiveTab("ferts")}
               >
                 Fertilizers Variety
-              </button>
-              <button
-                className={`inventory-tab ${activeTab === "traceability" ? "active" : ""}`}
-                onClick={() => setActiveTab("traceability")}
-              >
-                Traceability
               </button>
               <button
                 className={`inventory-tab ${activeTab === "excess" ? "active" : ""}`}
@@ -704,85 +691,7 @@ const RegionInventory: React.FC = () => {
                 </div>
               )}
 
-              {activeTab === "traceability" && (
-                <div className="inventory-section fade-in">
-                  <div className="section-header-flex">
-                    <div className="header-with-icon">
-                      <History className="header-icon-main" />
-                      <h3 className="section-title">
-                        Farmer Distribution Log (Traceability)
-                      </h3>
-                    </div>
-                  </div>
 
-                  <div className="traceability-table-container">
-                    <table className="inventory-table traceability-table">
-                      <thead>
-                        <tr>
-                          <th>Date</th>
-                          <th>Farmer Name</th>
-                          <th>Barangay</th>
-                          {!selectedAllocationId && <th>Program/Allocation</th>}
-                          <th>Items Received</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dashData.traceabilityLog.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={selectedAllocationId ? 5 : 6}
-                              className="inventory-empty"
-                            >
-                              No distribution records found.
-                            </td>
-                          </tr>
-                        ) : (
-                          dashData.traceabilityLog.map((log) => (
-                            <tr key={log.id} className="inventory-row-hover">
-                              <td className="date-cell">
-                                {new Date(log.date).toLocaleDateString(
-                                  undefined,
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )}
-                              </td>
-                              <td className="farmer-name-cell">
-                                <div className="farmer-info-wrapper">
-                                  <UserCheck
-                                    size={14}
-                                    className="farmer-icon"
-                                  />
-                                  {log.farmerName}
-                                </div>
-                              </td>
-                              <td>{log.barangay}</td>
-                              {!selectedAllocationId && (
-                                <td>
-                                  <span className="program-badge">
-                                    {log.program}
-                                  </span>
-                                </td>
-                              )}
-                              <td className="items-cell">{log.items}</td>
-                              <td>
-                                <span
-                                  className={`status-badge ${log.status.toLowerCase().replace(/[^a-z]/g, "-")}`}
-                                >
-                                  {log.status}
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
 
               {activeTab === "excess" && (
                 <div className="inventory-section fade-in">
@@ -1049,31 +958,7 @@ const RegionInventory: React.FC = () => {
           </table>
         </div>
 
-        <div className="print-section page-break">
-          <h3>Farmer Distribution Traceability Log</h3>
-          <table className="print-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Farmer Name</th>
-                <th>Barangay</th>
-                <th>Items Received</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dashData.traceabilityLog.map((log) => (
-                <tr key={log.id}>
-                  <td>{new Date(log.date).toLocaleDateString()}</td>
-                  <td>{log.farmerName}</td>
-                  <td>{log.barangay}</td>
-                  <td>{log.items}</td>
-                  <td>{log.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+
 
         <div className="print-footer">
           <div className="print-signature-row">
