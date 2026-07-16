@@ -1,0 +1,203 @@
+/* ============================================
+   Admin Inventory Page — Unique Stylesheet
+   ============================================ */
+
+/* ── Page Shell & Layout ───────────────────── */
+.admin-inventory-page-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #edf2f7;
+}
+
+.admin-inventory-page {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.admin-inventory-main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px 12px;
+  background: linear-gradient(160deg, #edf7ed 0%, #f6faf0 40%, #fff 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .admin-inventory-main-content {
+    padding: 14px;
+  }
+}
+
+/* ── Page Header ───────────────────────────── */
+.admin-inventory-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
+.admin-inventory-page-title {
+  font-weight: 600;
+  font-size: 28px;
+  color: #111827;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.admin-inventory-page-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+/* ── Content Card ──────────────────────────── */
+.admin-inventory-content-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Filter Bar ────────────────────────────── */
+.admin-inventory-filters-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.admin-inventory-search-input {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s !important;
+  box-sizing: border-box !important;
+  height: 36px !important;
+}
+
+.admin-inventory-search-input:focus {
+  outline: none !important;
+  border-color: #4caf50 !important;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.12) !important;
+}
+
+.admin-inventory-status-select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 12px;
+  background: white;
+  cursor: pointer;
+  height: 34px;
+  transition: border-color 0.2s;
+  color: #374151;
+}
+
+.admin-inventory-status-select:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+/* ── Bulk Toolbar ──────────────────────────── */
+.admin-inventory-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #cde8cf;
+  background: #f4fbf3;
+  flex-shrink: 0;
+}
+
+.admin-inventory-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-inventory-bulk-btn {
+  border: 1px solid #6aa661;
+  background: #ffffff;
+  color: #1f4f2e;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.admin-inventory-bulk-btn:hover {
+  background: #edf9ea;
+}
+
+/* ── Table Container ───────────────────────── */
+.admin-inventory-table-container {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid #dbe6cf;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Table ─────────────────────────────────── */
+.admin-inventory-farmers-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 13px;
+  min-width: 960px;
+}
+
+.admin-inventory-farmers-table thead th {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 11px;
+  border-bottom: 1px solid #b6d08f;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-inventory-farmers-table tbody td {
+  padding: 10px 11px;
+  border-bottom: 1px solid #edf2e8;
+  vertical-align: middle;
+}
+
+.admin-inventory-farmers-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-inventory-table-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.admin-inventory-table-row:hover {
+  background-color: #f3fbf0;
+}

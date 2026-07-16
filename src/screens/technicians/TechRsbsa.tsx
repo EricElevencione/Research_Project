@@ -91,6 +91,8 @@ const TechRsbsa: React.FC = () => {
     lastName: string;
   } | null>(null);
   const [isPrintingGeometry, setIsPrintingGeometry] = useState(false);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set());
+  const [showPrintGeometryModal, setShowPrintGeometryModal] = useState(false);
 
   const unplottedFarmerIdSet = React.useMemo(
     () => new Set(unplottedFarmers.map((farmer) => String(farmer.id))),
@@ -670,7 +672,35 @@ const TechRsbsa: React.FC = () => {
     (r) => r.hasCurrentParcels === false,
   ).length;
 
-  const handlePrintGeometryStatus = async () => {
+  const allFilteredSelected =
+    sortedFilteredOwners.length > 0 &&
+    sortedFilteredOwners.every((r) => selectedRecordIds.has(r.id));
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        sortedFilteredOwners.forEach((r) => next.delete(r.id));
+      } else {
+        sortedFilteredOwners.forEach((r) => next.add(r.id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectRecord = (id: string) => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handlePrintGeometryStatus = async (scope: "all" | "selected") => {
     const filterParts: string[] = [];
     if (selectedBarangay !== "all")
       filterParts.push(`Barangay: ${selectedBarangay}`);
@@ -680,19 +710,23 @@ const TechRsbsa: React.FC = () => {
       filterParts.push("Land Status: No Land");
     if (searchTerm.trim()) filterParts.push(`Search: "${searchTerm.trim()}"`);
 
+    const recordsToPrint = scope === "selected"
+      ? sortedFilteredOwners.filter(r => selectedRecordIds.has(r.id))
+      : sortedFilteredOwners;
+
     // Geometry status is only meaningful for owners with active land — a
     // "No Land" owner has nothing to plot, so they're excluded here rather
     // than showing up as a confusing 0/0.
-    const rows = sortedFilteredOwners
+    const rows = recordsToPrint
       .filter((record) => record.hasCurrentParcels !== false)
       .map((record) => {
         const progress = unplottedProgressMap.get(String(record.id));
         const total = progress
           ? Math.max(0, Number(progress.totalParcels || 0))
           : Math.max(0, Number(record.parcelCount || 0)) || 1;
-        const plotted = progress
-          ? Math.min(total, Math.max(0, Number(progress.plottedParcels || 0)))
-          : total;
+         const plotted = progress
+           ? Math.min(total, Math.max(0, Number(progress.plottedParcels || 0)))
+           : total;
 
         return {
           id: record.id,
@@ -713,7 +747,9 @@ const TechRsbsa: React.FC = () => {
       filterLabel:
         filterParts.length > 0
           ? filterParts.join(" · ")
-          : "All Registered Owners",
+          : scope === "selected"
+            ? `Selected Owners (${recordsToPrint.length})`
+            : "All Registered Owners",
       printedBy,
     });
     setIsPrintingGeometry(false);
@@ -817,82 +853,166 @@ const TechRsbsa: React.FC = () => {
                 </div>
 
                 {/* Search and Filter Container */}
-                <div className="tech-rsbsa-search-filter-container">
-                  <div className="tech-rsbsa-search-container">
-                    <input
-                      type="text"
-                      className="tech-rsbsa-search-input"
-                      placeholder="Search by FFRS ID, Name, Address, Location, or Gender..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    {searchTerm && (
-                      <button
-                        className="tech-rsbsa-clear-search-button"
-                        onClick={() => setSearchTerm("")}
-                        title="Clear search"
+                <div className="jo-masterlist-filters-section">
+                  <div className="jo-masterlist-filters-row-1">
+                    <div className="jo-masterlist-search-filter">
+                      <input
+                        type="text"
+                        className="jo-masterlist-search-input"
+                        placeholder="Search by FFRS ID, Name, Address, Location, or Gender..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="jo-masterlist-filters-row-2">
+                    <div className="jo-masterlist-status-filter">
+                      <select
+                        value={selectedBarangay}
+                        onChange={(e) => setSelectedBarangay(e.target.value)}
+                        className="jo-masterlist-status-select"
                       >
-                        ×
-                      </button>
-                    )}
+                        <option value="all">All Barangays</option>
+                        {uniqueBarangays.map((barangay) => (
+                          <option key={barangay} value={barangay}>
+                            {barangay}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="jo-masterlist-status-filter">
+                      <select
+                        id="land-status-filter"
+                        value={landStatusFilter}
+                        onChange={(e) =>
+                          setLandStatusFilter(
+                            e.target.value as "all" | "active" | "no_land",
+                          )
+                        }
+                        className="jo-masterlist-status-select"
+                      >
+                        <option value="all">All Land Status</option>
+                        <option value="active">✅ Active (Has Land)</option>
+                        <option value="no_land">⚠️ No Land</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="tech-rsbsa-filter-container">
-                    <select
-                      value={selectedBarangay}
-                      onChange={(e) => setSelectedBarangay(e.target.value)}
-                      className="tech-rsbsa-filter-select"
-                    >
-                      <option value="all">All Barangays</option>
-                      {uniqueBarangays.map((barangay) => (
-                        <option key={barangay} value={barangay}>
-                          {barangay}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="tech-rsbsa-filter-container">
-                    <select
-                      id="land-status-filter"
-                      value={landStatusFilter}
-                      onChange={(e) =>
-                        setLandStatusFilter(
-                          e.target.value as "all" | "active" | "no_land",
-                        )
-                      }
-                      className="tech-rsbsa-filter-select"
-                    >
-                      <option value="all">All Land Status</option>
-                      <option value="active">✅ Active (Has Land)</option>
-                      <option value="no_land">⚠️ No Land</option>
-                    </select>
-                  </div>
-
-                  <button
-                    onClick={handlePrintGeometryStatus}
-                    disabled={isPrintingGeometry}
-                    title="Print a report of who has finished parcel plotting and who still needs it, for the currently filtered list"
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: "8px",
-                      border: "1px solid #9fc06e",
-                      background: isPrintingGeometry ? "#f3f4f6" : "#f6fde9",
-                      color: "#35511a",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      cursor: isPrintingGeometry ? "not-allowed" : "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {isPrintingGeometry
-                      ? "Preparing..."
-                      : "🖨 Print Geometry Status"}
-                  </button>
                 </div>
 
-                <div className="tech-rsbsa-table-container">
-                  <table className="tech-rsbsa-owners-table">
+                {/* ── Bulk toolbar ─────────────────────────────────────────── */}
+                {!loading && !error && (
+                  <div className="jo-masterlist-bulk-toolbar" style={{ margin: "10px 0" }}>
+                    {selectedRecordIds.size > 0 && (
+                      <span className="jo-masterlist-bulk-count">
+                        {selectedRecordIds.size} record
+                        {selectedRecordIds.size === 1 ? "" : "s"} selected
+                      </span>
+                    )}
+                    <div className="jo-masterlist-bulk-actions">
+                      <div
+                        className="jo-masterlist-bulk-export-wrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          className="jo-masterlist-bulk-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPrintGeometryModal((p) => !p);
+                          }}
+                        >
+                          🖨 Print Geometry Status
+                        </button>
+                        {showPrintGeometryModal && (
+                          <div className="jo-masterlist-bulk-menu">
+                            <div
+                              style={{
+                                padding: "6px 12px 4px",
+                                fontSize: "11px",
+                                color: "#888",
+                                fontWeight: 600,
+                                letterSpacing: "0.04em",
+                                textTransform: "uppercase",
+                                borderBottom: "0.5px solid #e0e0e0",
+                                marginBottom: 2,
+                              }}
+                            >
+                              Print scope
+                            </div>
+                            <button
+                              className="jo-masterlist-quick-item"
+                              onClick={() => {
+                                setShowPrintGeometryModal(false);
+                                handlePrintGeometryStatus("all");
+                              }}
+                            >
+                              🗂 Print All ({sortedFilteredOwners.length})
+                            </button>
+                            <button
+                              className="jo-masterlist-quick-item"
+                              disabled={selectedRecordIds.size === 0}
+                              style={{
+                                opacity: selectedRecordIds.size === 0 ? 0.45 : 1,
+                                cursor:
+                                  selectedRecordIds.size === 0
+                                    ? "not-allowed"
+                                    : "pointer",
+                              }}
+                              onClick={() => {
+                                if (selectedRecordIds.size === 0) return;
+                                setShowPrintGeometryModal(false);
+                                handlePrintGeometryStatus("selected");
+                              }}
+                            >
+                              ✅ Print Selected Only
+                              {selectedRecordIds.size > 0
+                                ? ` (${selectedRecordIds.size})`
+                                : " — pick rows first"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedRecordIds.size > 0 && (
+                        <button
+                          className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-clear"
+                          onClick={() => setSelectedRecordIds(new Set())}
+                        >
+                          Clear Selection
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="jo-masterlist-table-container">
+                  <table className="jo-masterlist-farmers-table">
+                    <colgroup>
+                      <col style={{ width: "40px" }} /> {/* checkbox */}
+                      <col style={{ width: "110px" }} /> {/* Last Name */}
+                      <col style={{ width: "120px" }} /> {/* First Name */}
+                      <col style={{ width: "100px" }} /> {/* Middle Name */}
+                      <col style={{ width: "60px" }} /> {/* EXT Name */}
+                      <col style={{ width: "70px" }} /> {/* Gender */}
+                      <col style={{ width: "50px" }} /> {/* Age */}
+                      <col style={{ width: "200px" }} /> {/* Farmer Address */}
+                      <col style={{ width: "180px" }} /> {/* Farm Location */}
+                      <col style={{ width: "100px" }} /> {/* Parcel Area */}
+                      <col style={{ width: "85px" }} /> {/* Plotted */}
+                      <col style={{ width: "110px" }} /> {/* Land Status */}
+                      <col style={{ width: "80px" }} /> {/* Action */}
+                    </colgroup>
                     <thead>
                       <tr>
+                        <th className="jo-masterlist-checkbox-col">
+                          <input
+                            type="checkbox"
+                            className="jo-masterlist-header-checkbox"
+                            checked={allFilteredSelected}
+                            onChange={toggleSelectAllFiltered}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Select all"
+                          />
+                        </th>
                         <th>Last Name</th>
                         <th>First Name</th>
                         <th>Middle Name</th>
@@ -910,7 +1030,7 @@ const TechRsbsa: React.FC = () => {
                     <tbody>
                       {sortedFilteredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={12} className="tech-rsbsa-no-data">
+                          <td colSpan={13} className="tech-rsbsa-no-data">
                             {searchTerm
                               ? "No matching records found"
                               : "No registered owners found"}
@@ -933,10 +1053,18 @@ const TechRsbsa: React.FC = () => {
                                 fetchFarmerDetails(record.id, record)
                               }
                               style={{ cursor: "pointer" }}
-                              className={
-                                hasNoLand ? "tech-rsbsa-row-no-land" : ""
-                              }
+                              className={`jo-masterlist-table-row ${hasNoLand ? "tech-rsbsa-row-no-land" : ""}`}
                             >
+                              <td className="jo-masterlist-checkbox-col">
+                                <input
+                                  type="checkbox"
+                                  className="jo-masterlist-row-checkbox"
+                                  checked={selectedRecordIds.has(record.id)}
+                                  onChange={() => toggleSelectRecord(record.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label={`Select ${record.farmerName}`}
+                                />
+                              </td>
                               <td>{record.lastName || ""}</td>
                               <td>{record.firstName || ""}</td>
                               <td>{record.middleName || ""}</td>

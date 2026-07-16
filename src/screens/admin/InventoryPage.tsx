@@ -24,6 +24,7 @@ import {
   FileText,
 } from "lucide-react";
 import "../../assets/css/admin css/AdminViewAllocation.css";
+import "../../assets/css/admin css/InventoryStyle.css";
 
 const InventoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -132,8 +133,8 @@ const InventoryPage: React.FC = () => {
           </div>
         </div>
       )}
-      <div className="inventory-table-container">
-        <table className="inventory-table">
+      <div className="admin-inventory-table-container">
+        <table className="admin-inventory-farmers-table">
           <thead>
             <tr>
               <th>Item Name</th>
@@ -191,7 +192,7 @@ const InventoryPage: React.FC = () => {
                 }
 
                 return (
-                  <tr key={idx} className="inventory-row-hover">
+                  <tr key={idx} className="admin-inventory-table-row">
                     <td className="item-name-cell">
                       <div className="item-name-wrapper">
                         <span className={`item-dot ${colorClass}`}></span>
@@ -216,17 +217,20 @@ const InventoryPage: React.FC = () => {
                       className={`remaining-cell ${isOut ? "out" : isLow ? "low" : ""}`}
                     >
                       {isOut ? (
-                        <span className="stock-badge out" style={{
-                          background: "#ef4444",
-                          color: "#fff",
-                          fontWeight: 700,
-                          padding: "3px 10px",
-                          borderRadius: "6px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          fontSize: "0.85rem",
-                        }}>
+                        <span
+                          className="stock-badge out"
+                          style={{
+                            background: "#ef4444",
+                            color: "#fff",
+                            fontWeight: 700,
+                            padding: "3px 10px",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontSize: "0.85rem",
+                          }}
+                        >
                           ⚠ 0 — Out of Stock
                         </span>
                       ) : (
@@ -336,14 +340,14 @@ const InventoryPage: React.FC = () => {
   };
 
   return (
-    <div className="admin-viewalloc-page-container">
-      <div className="admin-viewalloc-page has-mobile-sidebar">
+    <div className="admin-inventory-page-container">
+      <div className="admin-inventory-page has-mobile-sidebar">
         <AdminSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
 
-        <div className="admin-viewalloc-main-content inventory-page-content">
+        <div className="admin-inventory-main-content">
           <div className="tech-incent-mobile-header">
             <button
               className="tech-incent-hamburger"
@@ -354,17 +358,31 @@ const InventoryPage: React.FC = () => {
             <div className="tech-incent-mobile-title">Inventory</div>
           </div>
 
-          <div className="inventory-header">
-            <div className="inventory-header-left">
-              <h2 className="admin-viewalloc-title">Inventory Management</h2>
-              <p className="admin-viewalloc-subtitle">
-                Track and manage variety of fertilizers and seeds
+          {/* Page header */}
+          <div className="admin-inventory-dashboard-header">
+            <div>
+              <h1 className="admin-inventory-page-title">Inventory Management</h1>
+              <p className="admin-inventory-page-subtitle">
+                Track and manage variety of fertilizers and seeds in Municipality of Dumangas, Iloilo
               </p>
             </div>
-            <div className="inventory-header-right">
-              <div className="inventory-filter-group">
-                <div className="inventory-select-wrapper">
-                  <Package size={16} className="select-icon" />
+          </div>
+
+          {/* Filters */}
+          <div className="admin-inventory-content-card" style={{ flex: "none", marginBottom: "5px", padding: "12px 16px" }}>
+            <div className="admin-inventory-filters-section">
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", width: "100%" }}>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="text"
+                    placeholder="Search variety..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="admin-inventory-search-input"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <div style={{ width: "240px" }}>
                   <select
                     value={selectedAllocationId || ""}
                     onChange={(e) =>
@@ -372,7 +390,8 @@ const InventoryPage: React.FC = () => {
                         e.target.value ? Number(e.target.value) : undefined,
                       )
                     }
-                    className="inventory-program-select"
+                    className="admin-inventory-status-select"
+                    style={{ width: "100%" }}
                   >
                     <option value="">Master Inventory View</option>
                     {dashData.seasonComparison.map((alloc) => (
@@ -386,28 +405,17 @@ const InventoryPage: React.FC = () => {
                   </select>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Print toolbar */}
+          <div className="admin-inventory-bulk-toolbar" style={{ margin: "5px 0 10px" }}>
+            <div className="admin-inventory-bulk-actions">
               <button
-                className="inventory-btn-print"
+                className="admin-inventory-bulk-btn"
                 onClick={() => window.print()}
               >
-                <Printer size={18} />
-                Print Report
-              </button>
-              <div className="inventory-search-box">
-                <Search size={18} />
-                <input
-                  type="text"
-                  placeholder="Search variety..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <button
-                className="inventory-btn-register"
-                onClick={() => navigate("/manage-varieties")}
-              >
-                <Plus size={18} />
-                Manage Varieties
+                🖨️ Print Report
               </button>
             </div>
           </div>
@@ -444,15 +452,17 @@ const InventoryPage: React.FC = () => {
               >
                 Unused
                 {dashData.excessInventory.length > 0 && (
-                  <span style={{
-                    marginLeft: 6,
-                    background: "#ef4444",
-                    color: "#fff",
-                    borderRadius: "9999px",
-                    padding: "1px 7px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                  }}>
+                  <span
+                    style={{
+                      marginLeft: 6,
+                      background: "#ef4444",
+                      color: "#fff",
+                      borderRadius: "9999px",
+                      padding: "1px 7px",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                    }}
+                  >
                     {dashData.excessInventory.length}
                   </span>
                 )}
@@ -709,8 +719,8 @@ const InventoryPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="traceability-table-container">
-                    <table className="inventory-table traceability-table">
+                  <div className="admin-inventory-table-container">
+                    <table className="admin-inventory-farmers-table">
                       <thead>
                         <tr>
                           <th>Date</th>
@@ -733,7 +743,7 @@ const InventoryPage: React.FC = () => {
                           </tr>
                         ) : (
                           dashData.traceabilityLog.map((log) => (
-                            <tr key={log.id} className="inventory-row-hover">
+                            <tr key={log.id} className="admin-inventory-table-row">
                               <td className="date-cell">
                                 {new Date(log.date).toLocaleDateString(
                                   undefined,
@@ -793,21 +803,42 @@ const InventoryPage: React.FC = () => {
                   </div>
 
                   {dashData.excessInventory.length === 0 ? (
-                    <div className="admin-viewalloc-empty-state" style={{ padding: "40px 20px", textAlign: "center" }}>
-                      <Package size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
-                      <p style={{ color: "#94a3b8" }}>No unused inventory. Close a program to see leftover stocks here.</p>
+                    <div
+                      className="admin-viewalloc-empty-state"
+                      style={{ padding: "40px 20px", textAlign: "center" }}
+                    >
+                      <Package
+                        size={40}
+                        style={{ opacity: 0.3, marginBottom: 12 }}
+                      />
+                      <p style={{ color: "#94a3b8" }}>
+                        No unused inventory. Close a program to see leftover
+                        stocks here.
+                      </p>
                     </div>
                   ) : (
                     <>
                       {/* Fertilizers Excess */}
-                      {dashData.excessInventory.filter(i => i.category === "Fertilizer").length > 0 && (
-                        <div className="inventory-category-card solid" style={{ marginBottom: 20 }}>
+                      {dashData.excessInventory.filter(
+                        (i) => i.category === "Fertilizer",
+                      ).length > 0 && (
+                        <div
+                          className="inventory-category-card solid"
+                          style={{ marginBottom: 20 }}
+                        >
                           <div className="inventory-category-header">
-                            <div className="inventory-category-icon"><Leaf size={20} /></div>
+                            <div className="inventory-category-icon">
+                              <Leaf size={20} />
+                            </div>
                             <div className="inventory-category-title-group">
                               <h3>Fertilizers (Unused)</h3>
                               <span className="inventory-count">
-                                {dashData.excessInventory.filter(i => i.category === "Fertilizer").length} Items
+                                {
+                                  dashData.excessInventory.filter(
+                                    (i) => i.category === "Fertilizer",
+                                  ).length
+                                }{" "}
+                                Items
                               </span>
                             </div>
                           </div>
@@ -824,27 +855,40 @@ const InventoryPage: React.FC = () => {
                               </thead>
                               <tbody>
                                 {dashData.excessInventory
-                                  .filter(i => i.category === "Fertilizer")
+                                  .filter((i) => i.category === "Fertilizer")
                                   .map((item, idx) => (
-                                    <tr key={`fert-excess-${idx}`} className="inventory-row-hover">
+                                    <tr
+                                      key={`fert-excess-${idx}`}
+                                      className="inventory-row-hover"
+                                    >
                                       <td className="item-name-cell">
                                         <div className="item-name-wrapper">
-                                          <span className={`item-dot ${item.subCategory.toLowerCase()}`}></span>
+                                          <span
+                                            className={`item-dot ${item.subCategory.toLowerCase()}`}
+                                          ></span>
                                           {item.name}
                                         </div>
                                       </td>
                                       <td>
-                                        <span className={`cat-badge ${item.subCategory.toLowerCase()}`}>
+                                        <span
+                                          className={`cat-badge ${item.subCategory.toLowerCase()}`}
+                                        >
                                           {item.subCategory}
                                         </span>
                                       </td>
-                                      <td style={{ fontWeight: 600 }}>{item.excessAmount.toLocaleString()}</td>
+                                      <td style={{ fontWeight: 600 }}>
+                                        {item.excessAmount.toLocaleString()}
+                                      </td>
                                       <td>
-                                        <span className="program-badge">{item.sourceProgram}</span>
+                                        <span className="program-badge">
+                                          {item.sourceProgram}
+                                        </span>
                                       </td>
                                       <td className="date-cell">
                                         {item.closureDate
-                                          ? new Date(item.closureDate).toLocaleDateString(undefined, {
+                                          ? new Date(
+                                              item.closureDate,
+                                            ).toLocaleDateString(undefined, {
                                               month: "short",
                                               day: "numeric",
                                               year: "numeric",
@@ -860,14 +904,26 @@ const InventoryPage: React.FC = () => {
                       )}
 
                       {/* Seeds Excess */}
-                      {dashData.excessInventory.filter(i => i.category === "Seed").length > 0 && (
-                        <div className="inventory-category-card hybrid" style={{ marginBottom: 20 }}>
+                      {dashData.excessInventory.filter(
+                        (i) => i.category === "Seed",
+                      ).length > 0 && (
+                        <div
+                          className="inventory-category-card hybrid"
+                          style={{ marginBottom: 20 }}
+                        >
                           <div className="inventory-category-header">
-                            <div className="inventory-category-icon"><Sprout size={20} /></div>
+                            <div className="inventory-category-icon">
+                              <Sprout size={20} />
+                            </div>
                             <div className="inventory-category-title-group">
                               <h3>Seeds (Unused)</h3>
                               <span className="inventory-count">
-                                {dashData.excessInventory.filter(i => i.category === "Seed").length} Items
+                                {
+                                  dashData.excessInventory.filter(
+                                    (i) => i.category === "Seed",
+                                  ).length
+                                }{" "}
+                                Items
                               </span>
                             </div>
                           </div>
@@ -884,27 +940,40 @@ const InventoryPage: React.FC = () => {
                               </thead>
                               <tbody>
                                 {dashData.excessInventory
-                                  .filter(i => i.category === "Seed")
+                                  .filter((i) => i.category === "Seed")
                                   .map((item, idx) => (
-                                    <tr key={`seed-excess-${idx}`} className="inventory-row-hover">
+                                    <tr
+                                      key={`seed-excess-${idx}`}
+                                      className="inventory-row-hover"
+                                    >
                                       <td className="item-name-cell">
                                         <div className="item-name-wrapper">
-                                          <span className={`item-dot ${item.subCategory.toLowerCase()}`}></span>
+                                          <span
+                                            className={`item-dot ${item.subCategory.toLowerCase()}`}
+                                          ></span>
                                           {item.name}
                                         </div>
                                       </td>
                                       <td>
-                                        <span className={`cat-badge ${item.subCategory.toLowerCase()}`}>
+                                        <span
+                                          className={`cat-badge ${item.subCategory.toLowerCase()}`}
+                                        >
                                           {item.subCategory}
                                         </span>
                                       </td>
-                                      <td style={{ fontWeight: 600 }}>{item.excessAmount.toLocaleString()}</td>
+                                      <td style={{ fontWeight: 600 }}>
+                                        {item.excessAmount.toLocaleString()}
+                                      </td>
                                       <td>
-                                        <span className="program-badge">{item.sourceProgram}</span>
+                                        <span className="program-badge">
+                                          {item.sourceProgram}
+                                        </span>
                                       </td>
                                       <td className="date-cell">
                                         {item.closureDate
-                                          ? new Date(item.closureDate).toLocaleDateString(undefined, {
+                                          ? new Date(
+                                              item.closureDate,
+                                            ).toLocaleDateString(undefined, {
                                               month: "short",
                                               day: "numeric",
                                               year: "numeric",

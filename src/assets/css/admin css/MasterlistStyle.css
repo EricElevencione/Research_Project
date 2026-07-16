@@ -1231,8 +1231,7 @@
   border-bottom: 1px solid #e0d9fc;
 }
 
-.admin-masterlist-tenant-subrow>td {
-
+.admin-masterlist-tenant-subrow > td {
   /* ── Flag Warning Styles ──────────────────── */
   .admin-flag-warning-text {
     display: flex;

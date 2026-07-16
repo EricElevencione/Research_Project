@@ -82,6 +82,8 @@ const RegionSidebar = ({ sidebarOpen, setSidebarOpen }: RegionSidebarProps) => {
             </button>
           ))}
 
+          <div className="sidebar-separator" />
+
           <button className="sidebar-nav-item logout" onClick={handleLogout}>
             <span className="nav-icon">
               <img src={LogoutIcon} alt="Logout" />

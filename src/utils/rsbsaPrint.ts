@@ -1192,45 +1192,53 @@ const buildGeometryStatusDocument = (
 
   const renderSection = (
     heading: string,
+    statusLabel: string,
     list: GeometryStatusRow[],
     showRatio: boolean,
+    headerColor: string,
   ): string => {
     if (list.length === 0) {
       return `
-        <div class="geometry-status-section">
-          <h3>${escapeHtml(heading)} (0)</h3>
-          <p class="geometry-status-empty">None.</p>
+        <div class="section">
+          <div class="section-heading" style="background:${headerColor};">${escapeHtml(heading)} <span class="section-count">(0)</span></div>
+          <p class="section-empty">None.</p>
         </div>
       `;
     }
 
     const groups = groupByBarangay(list);
+
     const groupsHtml = groups
       .map((group) => {
         const rowsHtml = group.rows
-          .map((row) => {
-            const ratioCell = showRatio
-              ? `<td>${escapeHtml(Math.max(0, row.plottedParcels))}/${escapeHtml(Math.max(0, row.totalParcels))}</td>`
-              : "";
-            return `
-              <tr>
-                <td>${escapeHtml(toSafeText(row.farmerName))}</td>
-                <td>${escapeHtml(toSafeText(row.referenceNumber))}</td>
-                ${ratioCell}
-              </tr>
-            `;
-          })
+          .map(
+            (row, i) => `
+            <tr class="${i % 2 === 0 ? "row-even" : "row-odd"}">
+              <td>${escapeHtml(toSafeText(row.farmerName))}</td>
+              <td>${escapeHtml(toSafeText(row.referenceNumber))}</td>
+              ${showRatio ? `<td class="center">${escapeHtml(String(Math.max(0, row.plottedParcels)))}/${escapeHtml(String(Math.max(0, row.totalParcels)))}</td>` : ""}
+              <td class="center status-${showRatio ? "progress" : "done"}">${escapeHtml(statusLabel)}</td>
+            </tr>
+          `,
+          )
           .join("");
 
         return `
-          <div class="geometry-status-barangay-group">
-            <div class="geometry-status-barangay-label">${escapeHtml(group.barangay)} (${group.rows.length})</div>
-            <table class="geometry-status-table">
+          <div class="barangay-group">
+            <div class="barangay-label">${escapeHtml(group.barangay)} <span class="barangay-count">(${group.rows.length})</span></div>
+            <table>
+              <colgroup>
+                <col style="width:38%">
+                <col style="width:28%">
+                ${showRatio ? '<col style="width:14%">' : ""}
+                <col style="width:${showRatio ? "20%" : "34%"}">
+              </colgroup>
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th>Farmer Name</th>
                   <th>Reference No.</th>
-                  ${showRatio ? "<th>Parcels Plotted</th>" : ""}
+                  ${showRatio ? '<th class="center">Parcels Plotted</th>' : ""}
+                  <th class="center">Status</th>
                 </tr>
               </thead>
               <tbody>${rowsHtml}</tbody>
@@ -1241,8 +1249,8 @@ const buildGeometryStatusDocument = (
       .join("");
 
     return `
-      <div class="geometry-status-section">
-        <h3>${escapeHtml(heading)} (${list.length})</h3>
+      <div class="section">
+        <div class="section-heading" style="background:${headerColor};">${escapeHtml(heading)} <span class="section-count">(${list.length})</span></div>
         ${groupsHtml}
       </div>
     `;
@@ -1253,105 +1261,186 @@ const buildGeometryStatusDocument = (
   return `
     <html>
       <head>
-        <title>Geometry Status Report</title>
+        <title>Parcel Geometry Status Report</title>
         <style>
-          @page { size: portrait; margin: 15mm; }
-          * { box-sizing: border-box; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          @page {
+            size: portrait;
+            margin: 0mm;
+          }
           body {
             font-family: Arial, sans-serif;
-            color: #1f2937;
-            margin: 0;
-            padding: 0;
+            font-size: 9px;
+            color: #1e293b;
+            line-height: 1.4;
+            padding: 12mm;
+            background: #fff;
           }
-          .geometry-status-header {
+
+          /* Official Header */
+          .hdr {
             text-align: center;
-            margin-bottom: 16px;
             border-bottom: 2px solid #059669;
-            padding-bottom: 10px;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
           }
-          .geometry-status-header h1 {
-            margin: 0 0 4px 0;
-            font-size: 18px;
-          }
-          .geometry-status-meta {
-            font-size: 11px;
-            color: #6b7280;
-            margin: 2px 0;
-          }
-          .geometry-status-summary {
+          .hdr .republic { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; }
+          .hdr .dept     { font-size: 12px; font-weight: 700; color: #1e3a8a; margin: 2px 0; }
+          .hdr .agency   { font-size: 9px; font-weight: 600; color: #475569; }
+          .hdr .report-title { font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+          .hdr .location { font-size: 10px; font-weight: 600; color: #64748b; }
+
+          /* Meta / Filter Bar */
+          .meta {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 8px;
+            color: #64748b;
+            font-weight: 500;
+          }
+          .meta span {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+          }
+
+          /* Summary Pills */
+          .summary-pills {
+            display: flex;
+            gap: 10px;
             justify-content: center;
-            gap: 24px;
-            margin: 12px 0 18px;
-            font-size: 12px;
+            margin-bottom: 14px;
           }
-          .geometry-status-summary strong {
-            font-size: 15px;
-            display: block;
+          .pill {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 4px 14px;
+            min-width: 70px;
           }
-          .geometry-status-section {
-            margin-bottom: 20px;
-            page-break-inside: avoid;
-          }
-          .geometry-status-section h3 {
-            font-size: 13px;
-            background: #f0fdf4;
-            border-left: 4px solid #059669;
+          .pill .pill-num { font-size: 14px; font-weight: 800; color: #0f172a; }
+          .pill .pill-lbl { font-size: 7.5px; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+          .pill.done   { border-color: #059669; }
+          .pill.done .pill-num { color: #059669; }
+          .pill.prog   { border-color: #d97706; }
+          .pill.prog .pill-num { color: #d97706; }
+
+          /* Sections */
+          .section { margin-bottom: 16px; page-break-inside: avoid; }
+          .section-heading {
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
             padding: 4px 8px;
-            margin: 0 0 8px 0;
+            border-radius: 3px 3px 0 0;
+            margin-bottom: 0;
           }
-          .geometry-status-empty {
-            font-size: 11px;
+          .section-count { font-weight: 500; opacity: 0.85; }
+          .section-empty {
+            font-size: 9px;
             color: #6b7280;
             font-style: italic;
-            margin: 0 0 10px 0;
+            padding: 6px 8px;
+            border: 1px solid #e2e8f0;
+            border-top: none;
           }
-          .geometry-status-barangay-group {
-            margin-bottom: 10px;
-            page-break-inside: avoid;
+
+          /* Barangay Groups */
+          .barangay-group { margin-bottom: 10px; page-break-inside: avoid; }
+          .barangay-label {
+            font-size: 9px;
+            font-weight: 700;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: 3px 8px;
+            border-bottom: none;
+            color: #334155;
           }
-          .geometry-status-barangay-label {
-            font-size: 11.5px;
-            font-weight: bold;
-            margin: 6px 0 3px 0;
-          }
-          .geometry-status-table {
+          .barangay-count { font-weight: 500; color: #64748b; }
+
+          /* Tables */
+          table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            font-size: 8px;
+            table-layout: fixed;
           }
-          .geometry-status-table th,
-          .geometry-status-table td {
-            border: 1px solid #d1d5db;
+          th {
+            background: #059669;
+            color: #fff;
             padding: 3px 6px;
             text-align: left;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border: 0.5px solid #d1fae5;
           }
-          .geometry-status-table th {
-            background: #f9fafb;
+          td {
+            padding: 3px 6px;
+            border: 0.5px solid #e2e8f0;
+            vertical-align: top;
+            color: #334155;
+            word-break: break-word;
           }
-          .geometry-status-footer {
+          .row-even td { background: #fff; }
+          .row-odd td  { background: #f8fafc; }
+          .center { text-align: center; }
+
+          /* Status labels */
+          .status-done     { color: #059669; font-weight: 700; }
+          .status-progress { color: #d97706; font-weight: 700; }
+
+          /* Footer */
+          .ftr {
             margin-top: 16px;
-            font-size: 10px;
-            color: #9ca3af;
-            text-align: right;
+            font-size: 8px;
+            color: #94a3b8;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 6px;
           }
         </style>
       </head>
       <body>
-        <div class="geometry-status-header">
-          <h1>Parcel Geometry Status Report</h1>
-          <p class="geometry-status-meta">${escapeHtml(filterLabel || "All Registered Owners")}</p>
-          <p class="geometry-status-meta">Generated: ${escapeHtml(generatedOn)}</p>
+        <div class="hdr">
+          <div class="republic">Republic of the Philippines</div>
+          <div class="dept">Department of Agriculture</div>
+          <div class="agency">Registry System for Basic Sectors in Agriculture (RSBSA)</div>
+          <div class="report-title">Parcel Geometry Status Report</div>
+          <div class="location">Municipality of Dumangas, Iloilo</div>
         </div>
-        <div class="geometry-status-summary">
-          <div>Total<strong>${rows.length}</strong></div>
-          <div>Finished<strong>${finished.length}</strong></div>
-          <div>In Progress<strong>${inProgress.length}</strong></div>
+
+        <div class="meta">
+          <span>Filter: ${escapeHtml(filterLabel || "All Registered Owners")}</span>
+          <span>Total: ${rows.length} records</span>
+          <span>Generated: ${escapeHtml(generatedOn)}</span>
         </div>
-        ${renderSection("✅ Finished with Geometry", finished, false)}
-        ${renderSection("⏳ Still in Progress", inProgress, true)}
-        <div class="geometry-status-footer">
-          Printed by: ${escapeHtml(printedBy || "Technician")}
+
+        <div class="summary-pills">
+          <div class="pill">
+            <span class="pill-num">${rows.length}</span>
+            <span class="pill-lbl">Total</span>
+          </div>
+          <div class="pill done">
+            <span class="pill-num">${finished.length}</span>
+            <span class="pill-lbl">Finished</span>
+          </div>
+          <div class="pill prog">
+            <span class="pill-num">${inProgress.length}</span>
+            <span class="pill-lbl">In Progress</span>
+          </div>
+        </div>
+
+        ${renderSection("✅ Finished with Geometry", "Done", finished, true, "#059669")}
+        ${renderSection("⏳ Still in Progress", "In Progress", inProgress, true, "#d97706")}
+
+        <div class="ftr">
+          Parcel Geometry Status Report &mdash; Dumangas, Iloilo &bull; Printed by ${escapeHtml(printedBy || "Technician")} &bull; ${escapeHtml(generatedOn)}
         </div>
         <script>
           window.addEventListener("load", () => {

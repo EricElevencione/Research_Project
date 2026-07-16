@@ -7,7 +7,7 @@ import {
   updateRsbsaSubmission,
   updateFarmParcel, // ✅ add this
 } from "../../api";
-import { printRsbsaFormById } from "../../utils/rsbsaPrint";
+import { printRsbsaFormById, printRsbsaFormsByIds } from "../../utils/rsbsaPrint";
 import "../../assets/css/jo css/JoMasterlistStyle.css";
 import "../../assets/css/technician css/TechMasterlistStyle.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
@@ -108,6 +108,10 @@ const TechMasterlist: React.FC = () => {
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isModalPrinting, setIsModalPrinting] = useState(false);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set());
+  const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
+  const [showPrintMasterlistModal, setShowPrintMasterlistModal] = useState(false);
+  const [isBulkPrinting, setIsBulkPrinting] = useState(false);
 
   const [updateNotification, setUpdateNotification] = useState<{
     show: boolean;
@@ -1009,6 +1013,265 @@ const TechMasterlist: React.FC = () => {
     }
   };
 
+  const allFilteredSelected =
+    sortedFilteredRecords.length > 0 &&
+    sortedFilteredRecords.every((r) => selectedRecordIds.has(r.id));
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        sortedFilteredRecords.forEach((r) => next.delete(r.id));
+      } else {
+        sortedFilteredRecords.forEach((r) => next.add(r.id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectRecord = (id: string) => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handlePrintMasterlist = async (scope: "all" | "selected") => {
+    const recordsToPrint = scope === "selected"
+      ? sortedFilteredRecords.filter(r => selectedRecordIds.has(r.id))
+      : sortedFilteredRecords;
+
+    if (recordsToPrint.length === 0) {
+      alert("No farmers found for the selected scope.");
+      return;
+    }
+
+    const filterDescription = scope === "selected"
+      ? `Selected Farmers (${recordsToPrint.length})`
+      : `All Filtered Farmers (${recordsToPrint.length})`;
+
+    const reportTitle = "FARMERS MASTERLIST REPORT";
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Farmers Masterlist</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+              color: #333;
+            }
+            .print-toolbar {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              background: #2563eb;
+              color: white;
+              padding: 15px 20px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+              z-index: 1000;
+            }
+            .print-toolbar h3 {
+              margin: 0;
+              font-size: 16px;
+            }
+            .print-toolbar button {
+              padding: 10px 25px;
+              font-size: 14px;
+              font-weight: bold;
+              border: none;
+              border-radius: 5px;
+              cursor: pointer;
+              margin-left: 10px;
+            }
+            .print-btn {
+              background: #22c55e;
+              color: white;
+            }
+            .print-btn:hover {
+              background: #16a34a;
+            }
+            .close-btn {
+              background: #ef4444;
+              color: white;
+            }
+            .close-btn:hover {
+              background: #dc2626;
+            }
+            .content-wrapper {
+              margin-top: 80px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #333;
+              padding-bottom: 10px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+            }
+            .header p {
+              margin: 5px 0;
+              font-size: 14px;
+            }
+            .filter-info {
+              text-align: center;
+              margin-bottom: 20px;
+              padding: 10px;
+              background-color: #f0f0f0;
+              border: 1px solid #ccc;
+              border-radius: 5px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            th, td {
+              border: 1px solid #333;
+              padding: 8px;
+              text-align: left;
+              font-size: 12px;
+            }
+            th {
+              background-color: #f5f5f5;
+              font-weight: bold;
+            }
+            .summary {
+              margin-top: 20px;
+              font-weight: bold;
+              font-size: 14px;
+            }
+            @media print {
+              .print-toolbar { display: none !important; }
+              .content-wrapper { margin-top: 0; }
+              body { margin: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-toolbar">
+            <h3>📄 Print Preview - Review your document below</h3>
+            <div>
+              <button class="print-btn" onclick="window.print()">🖨️ Print Now</button>
+              <button class="close-btn" onclick="window.close()">✕ Close</button>
+            </div>
+          </div>
+          
+          <div class="content-wrapper">
+            <div class="header">
+              <h1>${reportTitle}</h1>
+              <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            </div>
+            
+            <div class="filter-info">
+              <strong>Scope:</strong> ${filterDescription}
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Reference Number</th>
+                  <th>Farmer Name</th>
+                  <th>Farmer Address</th>
+                  <th>Parcel Address</th>
+                  <th>Parcel Area</th>
+                  <th>Date Submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recordsToPrint
+                  .map(
+                    (farmer, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${farmer.referenceNumber}</td>
+                    <td>${farmer.farmerName}</td>
+                    <td>${farmer.farmerAddress}</td>
+                    <td>${farmer.farmLocation}</td>
+                    <td>${farmer.parcelArea}</td>
+                    <td>${formatDate(farmer.dateSubmitted)}</td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+            
+            <div class="summary">
+              <p>Total Farmers (Printed): ${recordsToPrint.length}</p>
+              <p>Report generated by FFRS System</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Check if running in Electron with print API available
+    let printStarted = false;
+    if (window.electron?.printContent) {
+      try {
+        const result = await window.electron.printContent(printContent);
+        if (result.success) {
+          printStarted = true;
+        } else if (result.error) {
+          console.error("Print failed:", result.error);
+          if (result.error !== "cancelled") {
+            printStarted = openBrowserPrintPreview(printContent);
+          }
+        }
+      } catch (err: any) {
+        console.error("Print error:", err);
+        printStarted = openBrowserPrintPreview(printContent);
+      }
+    } else {
+      printStarted = openBrowserPrintPreview(printContent);
+    }
+  };
+
+  const handleBulkPrint = async () => {
+    const selectedRecords = sortedFilteredRecords.filter(r => selectedRecordIds.has(r.id));
+    if (selectedRecords.length === 0) {
+      showUpdateNotification("No records selected.", "error");
+      return;
+    }
+    setIsBulkPrinting(true);
+    const result = await printRsbsaFormsByIds(
+      selectedRecords.map((r) => ({
+        farmerId: r.id,
+        fallbackReferenceNumber: r.referenceNumber,
+        fallbackFarmerName: r.farmerName,
+      })),
+    );
+    setIsBulkPrinting(false);
+    setShowBulkExportMenu(false);
+    if (!result.success && !result.cancelled) {
+      showUpdateNotification(result.error || "Failed to print.", "error");
+      return;
+    }
+    if (result.success && (result.failedCount || 0) > 0) {
+      showUpdateNotification(
+        `Printed ${result.printedCount || 0}, ${result.failedCount} failed.`,
+        "error",
+      );
+      return;
+    }
+    showUpdateNotification("Selected RSBSA forms sent to print.", "success");
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
     navigate("/login");
@@ -1063,15 +1326,6 @@ const TechMasterlist: React.FC = () => {
               <p className="jo-masterlist-page-subtitle">
                 Browse all RSBSA farmers, filter by status, and generate reports
               </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                onClick={() => setShowPrintModal(true)}
-                className="jo-masterlist-action-btn"
-                style={{ background: "#2563eb", color: "#fff", border: "none", borderRadius: "8px", padding: "0.55rem 1.2rem", fontWeight: 600, fontSize: "0.92rem", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-              >
-                🖨️ Print Farmers
-              </button>
             </div>
           </div>
 
@@ -1131,10 +1385,137 @@ const TechMasterlist: React.FC = () => {
               </div>
             </div>
 
+            {/* ── Bulk toolbar ─────────────────────────────────────────── */}
+            {!loading && !error && (
+              <div className="jo-masterlist-bulk-toolbar">
+                {selectedRecordIds.size > 0 && (
+                  <span className="jo-masterlist-bulk-count">
+                    {selectedRecordIds.size} record
+                    {selectedRecordIds.size === 1 ? "" : "s"} selected
+                  </span>
+                )}
+                <div className="jo-masterlist-bulk-actions">
+                  {/* ── Always-visible Print Masterlist ── */}
+                  <div
+                    className="jo-masterlist-bulk-export-wrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      className="jo-masterlist-bulk-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPrintMasterlistModal((p) => !p);
+                      }}
+                    >
+                      🖨 Print Masterlist
+                    </button>
+                    {showPrintMasterlistModal && (
+                      <div className="jo-masterlist-bulk-menu">
+                        <div
+                          style={{
+                            padding: "6px 12px 4px",
+                            fontSize: "11px",
+                            color: "#888",
+                            fontWeight: 600,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            borderBottom: "0.5px solid #e0e0e0",
+                            marginBottom: 2,
+                          }}
+                        >
+                          Print scope
+                        </div>
+                        <button
+                          className="jo-masterlist-quick-item"
+                          onClick={() => {
+                            setShowPrintMasterlistModal(false);
+                            handlePrintMasterlist("all");
+                          }}
+                        >
+                          🗂 Print All ({sortedFilteredRecords.length})
+                        </button>
+                        <button
+                          className="jo-masterlist-quick-item"
+                          disabled={selectedRecordIds.size === 0}
+                          style={{
+                            opacity: selectedRecordIds.size === 0 ? 0.45 : 1,
+                            cursor:
+                              selectedRecordIds.size === 0
+                                ? "not-allowed"
+                                : "pointer",
+                          }}
+                          onClick={() => {
+                            if (selectedRecordIds.size === 0) return;
+                            setShowPrintMasterlistModal(false);
+                            handlePrintMasterlist("selected");
+                          }}
+                        >
+                          ✅ Print Selected Only
+                          {selectedRecordIds.size > 0
+                            ? ` (${selectedRecordIds.size})`
+                            : " — pick rows first"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Multi-Print (RSBSA forms) — only when rows selected ── */}
+                  {selectedRecordIds.size > 0 && (
+                    <div
+                      className="jo-masterlist-bulk-export-wrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        className="jo-masterlist-bulk-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowBulkExportMenu((p) => !p);
+                        }}
+                      >
+                        Multi-Print ▾
+                      </button>
+                      {showBulkExportMenu && (
+                        <div className="jo-masterlist-bulk-menu">
+                          <button
+                            className="jo-masterlist-quick-item"
+                            onClick={handleBulkPrint}
+                            disabled={isBulkPrinting}
+                          >
+                            {isBulkPrinting
+                              ? "Preparing forms..."
+                              : "Print Selected RSBSA Forms"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedRecordIds.size > 0 && (
+                    <button
+                      className="jo-masterlist-bulk-btn jo-masterlist-bulk-btn-clear"
+                      onClick={() => setSelectedRecordIds(new Set())}
+                    >
+                      Clear Selection
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="jo-masterlist-table-container">
               <table className="jo-masterlist-farmers-table">
                 <thead>
                   <tr>
+                    <th className="jo-masterlist-checkbox-col">
+                      <input
+                        type="checkbox"
+                        className="jo-masterlist-header-checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleSelectAllFiltered}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Select all"
+                      />
+                    </th>
                     {[
                       "Farmer Name",
                       "Farmer Address",
@@ -1151,14 +1532,14 @@ const TechMasterlist: React.FC = () => {
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={7} className="jo-masterlist-loading-cell">
+                      <td colSpan={8} className="jo-masterlist-loading-cell">
                         Loading...
                       </td>
                     </tr>
                   )}
                   {error && !loading && (
                     <tr>
-                      <td colSpan={7} className="jo-masterlist-error-cell">
+                      <td colSpan={8} className="jo-masterlist-error-cell">
                         Error: {error}
                       </td>
                     </tr>
@@ -1173,6 +1554,16 @@ const TechMasterlist: React.FC = () => {
                         onClick={() => fetchFarmerDetails(record.id, record)}
                         style={{ cursor: "pointer" }}
                       >
+                        <td className="jo-masterlist-checkbox-col">
+                          <input
+                            type="checkbox"
+                            className="jo-masterlist-row-checkbox"
+                            checked={selectedRecordIds.has(record.id)}
+                            onChange={() => toggleSelectRecord(record.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`Select ${record.farmerName}`}
+                          />
+                        </td>
                         <td>
                           <div className="jo-masterlist-farmer-cell">
                             <div className="jo-masterlist-farmer-avatar">
@@ -1207,7 +1598,7 @@ const TechMasterlist: React.FC = () => {
                     !error &&
                     sortedFilteredRecords.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="jo-masterlist-empty-cell" style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
+                        <td colSpan={8} className="jo-masterlist-empty-cell" style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
                           No records found.
                         </td>
                       </tr>

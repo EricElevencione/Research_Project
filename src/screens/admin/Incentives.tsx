@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getAllocations, getFarmerRequests, closeAllocation, reopenAllocation } from "../../api";
+import {
+  getAllocations,
+  getFarmerRequests,
+  closeAllocation,
+  reopenAllocation,
+} from "../../api";
 import {
   FERTILIZER_FIELD_MAPS,
   SEED_FIELD_MAPS,
@@ -8,7 +13,10 @@ import {
 import "../../assets/css/admin css/AdminIncentives.css";
 import "../../components/layout/sidebarStyle.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
-import { getAuditLogger, AuditModule } from "../../components/Audit/auditLogger";
+import {
+  getAuditLogger,
+  AuditModule,
+} from "../../components/Audit/auditLogger";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 
 interface RegionalAllocation {
@@ -179,7 +187,7 @@ const Incentives: React.FC = () => {
     const matchesSearch = formatSeasonName(allocation.season)
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    
+
     const isClosed = (allocation as any).status === "closed";
     const matchesStatus =
       statusFilter === "all" ||
@@ -188,7 +196,7 @@ const Incentives: React.FC = () => {
 
     const totalFertilizer = getTotalFertilizer(allocation);
     const totalSeeds = getTotalSeeds(allocation);
-    
+
     let matchesType = true;
     if (typeFilter === "seeds") {
       matchesType = totalSeeds > 0 && totalFertilizer === 0;
@@ -245,47 +253,47 @@ const Incentives: React.FC = () => {
                 View Farmer Requests & Regional Allocations
               </p>
             </div>
-            <div className="admin-incent-dashboard-header-right">
-              <button
-                className="jo-incent-btn-create"
-                onClick={() => navigate("/admin-create-allocation")}
-              >
-                ➕ New Regional Allocation
-              </button>
-            </div>
           </div>
 
           <div className="admin-incent-content-card">
-            <div className="admin-incent-filters" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1', minWidth: '200px' }}>
+            <div
+              className="admin-incent-filters"
+              style={{
+                display: "flex",
+                gap: "1rem",
+                marginBottom: "1.5rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ flex: "1", minWidth: "200px" }}>
                 <input
                   type="text"
                   placeholder="Search by season..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
-                    outline: 'none',
-                    fontSize: '0.95rem'
+                    width: "100%",
+                    padding: "0.75rem",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                    outline: "none",
+                    fontSize: "0.95rem",
                   }}
                 />
               </div>
-              <div style={{ width: '200px' }}>
+              <div style={{ width: "200px" }}>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
-                    outline: 'none',
-                    fontSize: '0.95rem',
-                    backgroundColor: 'white',
-                    cursor: 'pointer'
+                    width: "100%",
+                    padding: "0.75rem",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                    outline: "none",
+                    fontSize: "0.95rem",
+                    backgroundColor: "white",
+                    cursor: "pointer",
                   }}
                 >
                   <option value="all">All Status</option>
@@ -293,19 +301,19 @@ const Incentives: React.FC = () => {
                   <option value="closed">Closed</option>
                 </select>
               </div>
-              <div style={{ width: '200px' }}>
+              <div style={{ width: "200px" }}>
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
-                    outline: 'none',
-                    fontSize: '0.95rem',
-                    backgroundColor: 'white',
-                    cursor: 'pointer'
+                    width: "100%",
+                    padding: "0.75rem",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                    outline: "none",
+                    fontSize: "0.95rem",
+                    backgroundColor: "white",
+                    cursor: "pointer",
                   }}
                 >
                   <option value="all">All Types</option>
@@ -343,102 +351,224 @@ const Incentives: React.FC = () => {
                 <p>Try adjusting your search or filters</p>
               </div>
             ) : (
-              <div className="table-responsive" style={{ overflowX: 'auto', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
-                  <thead style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+              <div
+                className="table-responsive"
+                style={{
+                  overflowX: "auto",
+                  backgroundColor: "#fff",
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "left",
+                    fontSize: "0.95rem",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <thead
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      borderBottom: "2px solid #e2e8f0",
+                    }}
+                  >
                     <tr>
-                      <th style={{ padding: '1rem', color: '#64748b', fontWeight: 600 }}>Season</th>
-                      <th style={{ padding: '1rem', color: '#64748b', fontWeight: 600 }}>Date</th>
-                      <th style={{ padding: '1rem', color: '#64748b', fontWeight: 600 }}>Total Fertilizer</th>
-                      <th style={{ padding: '1rem', color: '#64748b', fontWeight: 600 }}>Total Seeds</th>
-                      <th style={{ padding: '1rem', color: '#64748b', fontWeight: 600 }}>Farmer Requests</th>
-                      <th style={{ padding: '1rem', color: '#64748b', fontWeight: 600 }}>Status</th>
-                      <th style={{ padding: '1rem', color: '#64748b', fontWeight: 600, textAlign: 'center' }}>Actions</th>
+                      <th
+                        style={{
+                          padding: "1rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Season
+                      </th>
+                      <th
+                        style={{
+                          padding: "1rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Date
+                      </th>
+                      <th
+                        style={{
+                          padding: "1rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Total Fertilizer
+                      </th>
+                      <th
+                        style={{
+                          padding: "1rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Total Seeds
+                      </th>
+                      <th
+                        style={{
+                          padding: "1rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Farmer Requests
+                      </th>
+                      <th
+                        style={{
+                          padding: "1rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Status
+                      </th>
+                      <th
+                        style={{
+                          padding: "1rem",
+                          color: "#64748b",
+                          fontWeight: 600,
+                          textAlign: "center",
+                        }}
+                      >
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredAllocations.map((allocation) => (
-                      <tr key={allocation.id} style={{ borderBottom: '1px solid #e2e8f0' }} className="admin-incent-table-row">
-                        <td style={{ padding: '1rem', fontWeight: 500, color: '#0f172a' }}>
+                      <tr
+                        key={allocation.id}
+                        style={{ borderBottom: "1px solid #e2e8f0" }}
+                        className="admin-incent-table-row"
+                      >
+                        <td
+                          style={{
+                            padding: "1rem",
+                            fontWeight: 500,
+                            color: "#0f172a",
+                          }}
+                        >
                           {formatSeasonName(allocation.season)}
                         </td>
-                        <td style={{ padding: '1rem', color: '#475569' }}>
-                          {new Date(allocation.allocation_date).toLocaleDateString("en-US", {
+                        <td style={{ padding: "1rem", color: "#475569" }}>
+                          {new Date(
+                            allocation.allocation_date,
+                          ).toLocaleDateString("en-US", {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
                           })}
                         </td>
-                        <td style={{ padding: '1rem', color: '#475569' }}>
-                          <strong>{getTotalFertilizer(allocation).toLocaleString()}</strong> bags
+                        <td style={{ padding: "1rem", color: "#475569" }}>
+                          <strong>
+                            {getTotalFertilizer(allocation).toLocaleString()}
+                          </strong>{" "}
+                          bags
                         </td>
-                        <td style={{ padding: '1rem', color: '#475569' }}>
-                          <strong>{getTotalSeeds(allocation).toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> kg
+                        <td style={{ padding: "1rem", color: "#475569" }}>
+                          <strong>
+                            {getTotalSeeds(allocation).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </strong>{" "}
+                          kg
                         </td>
-                        <td style={{ padding: '1rem', color: '#475569' }}>
-                          <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.85rem', fontWeight: 600 }}>
+                        <td style={{ padding: "1rem", color: "#475569" }}>
+                          <span
+                            style={{
+                              backgroundColor: "#e0f2fe",
+                              color: "#0369a1",
+                              padding: "0.25rem 0.75rem",
+                              borderRadius: "9999px",
+                              fontSize: "0.85rem",
+                              fontWeight: 600,
+                            }}
+                          >
                             {allocation.farmer_count || 0} farmers
                           </span>
                         </td>
-                        <td style={{ padding: '1rem' }}>
+                        <td style={{ padding: "1rem" }}>
                           {(allocation as any).status === "closed" ? (
-                            <span style={{ background: "#fef2f2", color: "#ef4444", padding: "4px 10px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: 600, border: '1px solid #fecaca' }}>
+                            <span
+                              style={{
+                                background: "#fef2f2",
+                                color: "#ef4444",
+                                padding: "4px 10px",
+                                borderRadius: "6px",
+                                fontSize: "0.8rem",
+                                fontWeight: 600,
+                                border: "1px solid #fecaca",
+                              }}
+                            >
                               CLOSED
                             </span>
                           ) : (
-                            <span style={{ background: "#f0fdf4", color: "#16a34a", padding: "4px 10px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: 600, border: '1px solid #bbf7d0' }}>
+                            <span
+                              style={{
+                                background: "#f0fdf4",
+                                color: "#16a34a",
+                                padding: "4px 10px",
+                                borderRadius: "6px",
+                                fontSize: "0.8rem",
+                                fontWeight: 600,
+                                border: "1px solid #bbf7d0",
+                              }}
+                            >
                               OPEN
                             </span>
                           )}
                         </td>
-                        <td style={{ padding: '1rem' }}>
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                        <td style={{ padding: "1rem" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.5rem",
+                              justifyContent: "center",
+                            }}
+                          >
                             <button
-                              onClick={() => navigate(`/view-allocation/${allocation.id}`)}
-                              style={{ padding: '0.4rem 0.8rem', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                              onClick={() =>
+                                navigate(`/view-allocation/${allocation.id}`)
+                              }
+                              style={{
+                                padding: "0.4rem 0.8rem",
+                                background: "#e2e8f0",
+                                color: "#334155",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "0.85rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
                             >
                               View
                             </button>
+
                             <button
-                              onClick={() => navigate(`/admin-edit-allocation/${allocation.id}`)}
-                              disabled={(allocation as any).status === "closed"}
-                              style={{ 
-                                padding: '0.4rem 0.8rem', 
-                                background: '#3b82f6', 
-                                color: '#fff', 
-                                border: 'none', 
-                                borderRadius: '6px', 
-                                fontSize: '0.85rem', 
-                                fontWeight: 600, 
-                                cursor: (allocation as any).status === "closed" ? "not-allowed" : "pointer",
-                                opacity: (allocation as any).status === "closed" ? 0.5 : 1
+                              onClick={() =>
+                                navigate(`/manage-requests/${allocation.id}`)
+                              }
+                              style={{
+                                padding: "0.4rem 0.8rem",
+                                background: "#8b5cf6",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "0.85rem",
+                                fontWeight: 600,
+                                cursor: "pointer",
                               }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => navigate(`/manage-requests/${allocation.id}`)}
-                              style={{ padding: '0.4rem 0.8rem', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                             >
                               Manage
                             </button>
-                            {(allocation as any).status === "closed" ? (
-                              <button
-                                onClick={() => handleReopenProgram(allocation.id, allocation.season)}
-                                disabled={closingId === allocation.id}
-                                style={{ padding: '0.4rem 0.8rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: closingId === allocation.id ? "not-allowed" : "pointer", opacity: closingId === allocation.id ? 0.5 : 1 }}
-                              >
-                                {closingId === allocation.id ? "..." : "Reopen"}
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleCloseProgram(allocation.id, allocation.season)}
-                                disabled={closingId === allocation.id}
-                                style={{ padding: '0.4rem 0.8rem', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: closingId === allocation.id ? "not-allowed" : "pointer", opacity: closingId === allocation.id ? 0.5 : 1 }}
-                              >
-                                {closingId === allocation.id ? "..." : "Close"}
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>
