@@ -404,6 +404,21 @@ const RegionInventory: React.FC = () => {
                     ))}
                   </select>
                 </div>
+                <button
+                  className="region-inv-btn-print"
+                  onClick={() => window.print()}
+                >
+                  <Printer size={18} />
+                  Print Report
+                </button>
+                <button
+                  className="region-inv-btn-register"
+                  onClick={() => navigate("/region-add-stock")}
+                  style={{ background: "#10b981" }}
+                >
+                  <Plus size={18} />
+                  Add Stock
+                </button>
               </div>
             </div>
           </div>
@@ -1117,31 +1132,7 @@ const RegionInventory: React.FC = () => {
           </table>
         </div>
 
-        <div className="print-section page-break">
-          <h3>Farmer Distribution Traceability Log</h3>
-          <table className="print-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Farmer Name</th>
-                <th>Barangay</th>
-                <th>Items Received</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dashData.traceabilityLog.map((log) => (
-                <tr key={log.id}>
-                  <td>{new Date(log.date).toLocaleDateString()}</td>
-                  <td>{log.farmerName}</td>
-                  <td>{log.barangay}</td>
-                  <td>{log.items}</td>
-                  <td>{log.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+
 
         <div className="print-footer">
           <div className="print-signature-row">
