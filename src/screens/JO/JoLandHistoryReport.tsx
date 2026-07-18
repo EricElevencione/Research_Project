@@ -8,6 +8,7 @@ import {
 import { printHtmlReport } from "../../utils/printHelper";
 import "../../assets/css/jo css/JoLandHistoryReport.css";
 import JOSidebar from "../../components/layout/JOSidebar";
+import ParcelGeometryPreview from "../../components/FarmerProfile/ParcelGeometryPreview";
 
 // One row per PLOTTED parcel (land_plots), not per history event —
 // includes parcels that have real geometry and a resolvable owner but
@@ -28,6 +29,7 @@ interface LandInventoryRow {
   period_end_date: string | null;
   farmer_name: string | null;
   role_label: string | null;
+  geometry?: any | null;
 }
 
 // Still land_history's own row shape — used only by the parcel-history
@@ -279,6 +281,59 @@ const JoLandHistoryReport: React.FC = () => {
     }
   };
 
+  const handlePrintTimeline = () => {
+    if (parcelModalTimelineRows.length === 0) {
+      alert("No timeline events found to print");
+      return;
+    }
+
+    const firstRow = parcelModalTimelineRows[0];
+    const parcelNo = parcelModalParcelNumber || "-";
+    const barangay = formatName(firstRow?.farm_location_barangay);
+    const area = firstRow?.total_farm_area_ha != null 
+      ? Number(firstRow.total_farm_area_ha).toFixed(2) + " ha"
+      : "-";
+
+    const tableHeaderHtml = `
+      <th style="width: 15%;">Date</th>
+      <th style="width: 15%;">Event Type</th>
+      <th style="width: 20%;">Land Owner</th>
+      <th style="width: 20%;">Farmer / Occupant</th>
+      <th style="width: 12%;">Role</th>
+      <th style="width: 18%;">Change Reason</th>
+    `;
+
+    const tableBodyHtml = parcelModalTimelineRows.map((row) => {
+      const eventDate = formatDate(getRowEventDate(row));
+      const eventType = String(row.change_type || "Record");
+      const owner = formatName(row.land_owner_name);
+      const farmer = formatName(row.farmer_name);
+      const role = getFarmingRoleLabel(row);
+      const reason = row.change_reason ? row.change_reason : "No additional details";
+
+      return `
+        <tr>
+          <td><strong>${eventDate}</strong>${row.is_current ? ' <span style="background:#d1fae5;color:#065f46;padding:2px 4px;border-radius:3px;font-size:7px;font-weight:bold;">Current</span>' : ''}</td>
+          <td><span style="font-weight:600;">${eventType}</span></td>
+          <td>${owner}</td>
+          <td>${farmer}</td>
+          <td><span style="background:#e2e8f0;padding:1px 4px;border-radius:3px;font-size:7px;">${role}</span></td>
+          <td>${reason}</td>
+        </tr>
+      `;
+    }).join("\n");
+
+    printHtmlReport({
+      title: `Parcel Timeline Report - ${parcelNo}`,
+      reportName: `PARCEL TIMELINE HISTORY REPORT`,
+      filterLabel: `Parcel No: ${parcelNo} | Location: Brgy. ${barangay} | Total Area: ${area}`,
+      totalCount: parcelModalTimelineRows.length,
+      tableHeaderHtml,
+      tableBodyHtml,
+      printedBy: "JO Staff",
+    });
+  };
+
   useEffect(() => {
     if (!parcelModalOpen) return;
 
@@ -352,6 +407,19 @@ const JoLandHistoryReport: React.FC = () => {
       setSelectedHistoryRow(null);
     }
   }, [parcelModalTimelineRows]);
+
+  const matchedInventoryRow = useMemo(() => {
+    return rows.find(
+      (r) =>
+        String(r.parcel_number || "")
+          .trim()
+          .toUpperCase() === String(parcelModalParcelNumber || "")
+          .trim()
+          .toUpperCase()
+    );
+  }, [rows, parcelModalParcelNumber]);
+
+  const parcelGeometry = matchedInventoryRow?.geometry ?? null;
 
   const summary = useMemo(() => {
     const tenantParcels = parcelRows.filter(
@@ -741,12 +809,41 @@ const JoLandHistoryReport: React.FC = () => {
                     : "History timeline for this parcel."}
                 </p>
               </div>
-              <button
-                className="jo-land-history-report-btn"
-                onClick={closeParcelHistoryModal}
-              >
-                ×
-              </button>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={handlePrintTimeline}
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    border: "1px solid rgba(255, 255, 255, 0.4)",
+                    color: "white",
+                    borderRadius: "6px",
+                    padding: "6px 12px",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.3)"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.2)"}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9" />
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                    <rect x="6" y="14" width="12" height="8" />
+                  </svg>
+                  Print Timeline
+                </button>
+                <button
+                  className="jo-land-history-report-btn"
+                  onClick={closeParcelHistoryModal}
+                >
+                  ×
+                </button>
+              </div>
             </div>
             <div className="jo-land-history-modal-block">
               {parcelModalLoading ? (
@@ -886,10 +983,25 @@ const JoLandHistoryReport: React.FC = () => {
                         </p>
                       </div>
                     )}
+
                   </div>
 
                   {/* ===== RIGHT PANEL: Timeline ===== */}
                   <div className="jo-land-history-modal-timeline-panel">
+                    {/* Map Preview Card */}
+                    <div className="jo-land-history-modal-detail-card" style={{ padding: "16px", marginBottom: "20px" }}>
+                      <h3 className="jo-land-history-modal-detail-title" style={{ marginBottom: "12px" }}>
+                        <span className="jo-land-history-modal-detail-icon">
+                          🗺️
+                        </span>
+                        Map Preview
+                      </h3>
+                      <ParcelGeometryPreview
+                        geometry={parcelGeometry}
+                        parcelLabel={parcelModalParcelNumber || "Parcel"}
+                      />
+                    </div>
+
                     <h3 className="jo-land-history-modal-timeline-heading">
                       Timeline
                     </h3>

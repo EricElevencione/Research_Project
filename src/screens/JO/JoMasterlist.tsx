@@ -1002,6 +1002,7 @@ const JoMasterlist: React.FC = () => {
         farmingActivities: activities,
         ownershipRole,
         parcels: mappedParcels,
+        profilePicture: farmerData.profilePicture || null,
       });
 
       // Determine which profile modal to show based on ownership role
@@ -2965,6 +2966,7 @@ const JoMasterlist: React.FC = () => {
                     address: selectedFarmer.farmerAddress,
                     age: selectedFarmer.age,
                     gender: selectedFarmer.gender,
+                    profilePicture: selectedFarmer.profilePicture || null,
                     parcels: (selectedFarmer.parcels || []).map(
                       (p): UnifiedParcel => ({
                         id: p.id,
@@ -3004,6 +3006,7 @@ const JoMasterlist: React.FC = () => {
                     gender: selectedFarmer.gender,
                     mainLivelihood: selectedFarmer.mainLivelihood,
                     farmingActivities: selectedFarmer.farmingActivities,
+                    profilePicture: selectedFarmer.profilePicture || null,
                     parcels: (selectedFarmer.parcels || []).map(
                       (p): UnifiedParcel => {
                         return {

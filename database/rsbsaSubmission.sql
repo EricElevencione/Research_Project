@@ -33,6 +33,7 @@ create table public.rsbsa_submission (
   archive_reason text null,
   ownership_category text null,
   status_change_reason text null,
+  profile_picture text null,
   constraint rsbsa_submission_pkey primary key (id),
   constraint rsbsa_submission_FFRS_CODE_key unique ("FFRS_CODE")
 ) TABLESPACE pg_default;

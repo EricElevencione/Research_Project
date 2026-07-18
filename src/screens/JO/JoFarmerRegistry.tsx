@@ -462,6 +462,7 @@ const JoFarmerRegistry: React.FC = () => {
         mainLivelihood: data.mainLivelihood || "N/A",
         farmingActivities: activities,
         parcels: mappedParcels,
+        profilePicture: farmerData.profilePicture || null,
       });
       setShowModal(true);
     } catch (err: any) {
@@ -2602,6 +2603,7 @@ const JoFarmerRegistry: React.FC = () => {
                   gender: selectedFarmer.gender,
                   mainLivelihood: selectedFarmer.mainLivelihood,
                   farmingActivities: selectedFarmer.farmingActivities,
+                  profilePicture: selectedFarmer.profilePicture || null,
                   parcels: (selectedFarmer.parcels || []).map(
                     (p): UnifiedParcel => {
                       return {

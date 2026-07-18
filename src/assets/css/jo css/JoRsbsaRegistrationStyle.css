@@ -1242,3 +1242,151 @@
     text-align: center;
   }
 }
+
+/* Profile Picture Upload Section styling */
+.profile-pic-upload-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  border: 1px dashed rgba(44, 95, 45, 0.15);
+  transition: all 0.3s ease;
+}
+
+.profile-pic-upload-section:hover {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(44, 95, 45, 0.3);
+}
+
+.profile-pic-upload-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f3f4f6;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-pic-upload-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(93, 187, 75, 0.25);
+  border-color: var(--jo-reg-accent-start);
+}
+
+.profile-pic-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-pic-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  text-align: center;
+  padding: 8px;
+}
+
+.profile-pic-placeholder svg {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  opacity: 0.7;
+  transition: all 0.3s;
+}
+
+.profile-pic-upload-container:hover .profile-pic-placeholder svg {
+  color: var(--jo-reg-accent-start);
+  transform: translateY(-2px);
+}
+
+.profile-pic-placeholder span {
+  font-size: 11px;
+  font-weight: 500;
+  display: block;
+}
+
+.profile-pic-upload-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-pic-upload-btn, .profile-pic-remove-btn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.profile-pic-upload-btn {
+  background: var(--jo-reg-soft-btn-bg);
+  color: #2d5a1d;
+  border-color: var(--jo-reg-soft-btn-border);
+}
+
+.profile-pic-upload-btn:hover {
+  background: var(--jo-reg-soft-btn-bg-hover);
+  color: #1a4013;
+}
+
+.profile-pic-remove-btn {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.profile-pic-remove-btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Verification summary profile image layout */
+.jo-registration-summary-avatar-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+}
+
+.jo-registration-summary-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.jo-registration-summary-avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 24px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}

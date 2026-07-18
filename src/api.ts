@@ -165,6 +165,7 @@ const transformRsbsaRecord = (item: any) => {
     farmerLivestockText: item["FARMER_LIVESTOCK_TEXT"] || "",
     farmerPoultry: item["FARMER_POULTRY"] || false,
     farmerPoultryText: item["FARMER_POULTRY_TEXT"] || "",
+    profilePicture: item.profile_picture || null,
     // Keep raw data for debugging
     _raw: item,
   };
@@ -1408,6 +1409,7 @@ export const createRsbsaSubmission = async (
     farmerLivestockText: formData.farmerLivestockText || "",
     farmerPoultry: formData.farmerPoultry || false,
     farmerPoultryText: formData.farmerPoultryText || "",
+    profilePicture: formData.profile_picture || null,
     // Parcels with transfer info
     farmlandParcels: parcels.map((p: any) => {
       const isCultivating =
@@ -1989,12 +1991,12 @@ export const getFarmParcelsWithOccupants = async (
     ...new Set(occupiedByParcels.map((p: any) => p.submission_id)),
   ].filter(Boolean);
 
-  const occupantInfoMap = new Map<number, { name: string; ffrsCode: string }>();
+  const occupantInfoMap = new Map<number, { name: string; ffrsCode: string; createdAt: number }>();
 
   if (occupantIds.length > 0) {
     const { data: occupantSubmissions, error: subError } = await supabase
       .from("rsbsa_submission")
-      .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "FFRS_CODE"')
+      .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "FFRS_CODE", created_at')
       .in("id", occupantIds);
 
     if (!subError && occupantSubmissions) {
@@ -2010,6 +2012,7 @@ export const getFarmParcelsWithOccupants = async (
         occupantInfoMap.set(Number(row.id), {
           name: parts.join(", ") || "Unknown",
           ffrsCode: row["FFRS_CODE"] || "",
+          createdAt: row.created_at ? new Date(row.created_at).getTime() : 0,
         });
       });
     }
@@ -2032,12 +2035,27 @@ export const getFarmParcelsWithOccupants = async (
       ffrsCode: occupantData?.ffrsCode || "",
       role: isTenant && isLessee ? "tenant+lessee" : isTenant ? "tenant" : "lessee",
       isLinked: !!occupantData,
+      createdAt: occupantData?.createdAt || 0,
+      id: occupantId,
     };
 
     if (!occupantsByParcelNumber.has(parcelNum)) {
       occupantsByParcelNumber.set(parcelNum, []);
     }
     occupantsByParcelNumber.get(parcelNum)!.push(occupant);
+  });
+
+  // Limit each parcel to only the latest registered occupant
+  occupantsByParcelNumber.forEach((occupants, parcelNum) => {
+    if (occupants.length > 1) {
+      occupants.sort((a, b) => {
+        if (b.createdAt !== a.createdAt) {
+          return b.createdAt - a.createdAt; // latest date first
+        }
+        return b.id - a.id; // fallback to higher sequential ID first
+      });
+      occupantsByParcelNumber.set(parcelNum, [occupants[0]]);
+    }
   });
 
   // 3. Map primary parcels
@@ -2056,7 +2074,12 @@ export const getFarmParcelsWithOccupants = async (
     // Compute dynamic role
     let role = "tenant";
     if (isRegisteredOwner) {
-      role = occupants.length > 0 ? "land-owner" : "owner-farmed";
+      if (occupants.length > 0) {
+        role = "land-owner";
+      } else {
+        const isCultivatingParcel = p.is_cultivating === true || p.is_farming === true;
+        role = isCultivatingParcel ? "owner-farmed" : "land-owner";
+      }
     } else if (isTenant && isLessee) {
       role = "tenant+lessee";
     } else if (isTenant) {
@@ -4205,6 +4228,7 @@ export const getLandInventoryReportRows = async (
         period_end_date: periodEndDate,
         farmer_name: farmerName,
         role_label: roleLabel,
+        geometry: plot.geometry || null,
       };
     });
 
@@ -4257,6 +4281,7 @@ export const getLandInventoryReportRows = async (
         period_end_date: history?.period_end_date || null,
         farmer_name: history?.farmer_name || resolvedName,
         role_label: roleLabel,
+        geometry: null,
       });
     });
 
@@ -4677,7 +4702,7 @@ export const getLandOwnerById = async (id: number): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("rsbsa_submission")
     .select(
-      'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", "BARANGAY", "MUNICIPALITY", "FARMER_RICE", "FARMER_CORN", "FARMER_OTHER_CROPS", "FARMER_OTHER_CROPS_TEXT", "FARMER_LIVESTOCK", "FARMER_LIVESTOCK_TEXT", "FARMER_POULTRY", "FARMER_POULTRY_TEXT"',
+      'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", "BARANGAY", "MUNICIPALITY", "FARMER_RICE", "FARMER_CORN", "FARMER_OTHER_CROPS", "FARMER_OTHER_CROPS_TEXT", "FARMER_LIVESTOCK", "FARMER_LIVESTOCK_TEXT", "FARMER_POULTRY", "FARMER_POULTRY_TEXT", profile_picture',
     )
     .eq("id", id)
     .single();
@@ -4716,6 +4741,7 @@ export const getLandOwnerById = async (id: number): Promise<ApiResponse> => {
       farmerLivestockText: data["FARMER_LIVESTOCK_TEXT"] || "",
       farmerPoultry: data["FARMER_POULTRY"] ?? false,
       farmerPoultryText: data["FARMER_POULTRY_TEXT"] || "",
+      profilePicture: data.profile_picture || null,
     },
     null,
     200,

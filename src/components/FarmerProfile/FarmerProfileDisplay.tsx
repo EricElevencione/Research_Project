@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import "../../components/FarmerProfile/farmerProfileModal.css";
 import ParcelGeometryPreview from "../FarmerProfile/ParcelGeometryPreview";
+import { supabase } from "../../supabase";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Unified Farmer Profile Display
@@ -65,6 +66,8 @@ export interface FarmerProfileData {
   farmingActivities?: string[];
 
   parcels: UnifiedParcel[];
+  profilePicture?: string | null;
+  profile_picture?: string | null;
 }
 
 interface FarmerProfileDisplayProps {
@@ -114,6 +117,50 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
   onClose,
 }) => {
   const parcels = farmer.parcels || [];
+  
+  // Local state for profile picture
+  const [profilePic, setProfilePic] = useState<string | null>(
+    farmer.profilePicture || farmer.profile_picture || null
+  );
+  const [isUpdatingPic, setIsUpdatingPic] = useState(false);
+
+  const handleAvatarClick = () => {
+    document.getElementById("farmer-profile-pic-input")?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !farmer.id) return;
+
+    setIsUpdatingPic(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Data = reader.result as string;
+        
+        // Update in Supabase
+        const { error } = await supabase
+          .from("rsbsa_submission")
+          .update({ profile_picture: base64Data })
+          .eq("id", Number(farmer.id));
+
+        if (error) {
+          console.error("Error updating profile picture:", error.message);
+          alert("Failed to update profile picture. Please try again.");
+        } else {
+          setProfilePic(base64Data);
+          // Update prop reference for parent lists
+          farmer.profilePicture = base64Data;
+          farmer.profile_picture = base64Data;
+        }
+        setIsUpdatingPic(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Error uploading picture:", err);
+      setIsUpdatingPic(false);
+    }
+  };
 
   // Summary stats
   const totalArea = parcels.reduce(
@@ -174,6 +221,51 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
 
       {/* ── Scrollable Content ── */}
       <div className="farmer-modal-scroll-content">
+        {/* ── Hero Banner ── */}
+        <div className="farmer-profile-hero">
+          <div className="farmer-profile-avatar-wrapper" onClick={handleAvatarClick} title="Click to upload/change photo">
+            {profilePic ? (
+              <img
+                src={profilePic}
+                alt="Farmer Avatar"
+                className="farmer-profile-avatar"
+              />
+            ) : (
+              <div className="farmer-profile-avatar-placeholder">
+                {farmer.name ? farmer.name.split(" ").map((n: string) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() : "F"}
+              </div>
+            )}
+            <div className="farmer-profile-avatar-overlay">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              <span>{profilePic ? "Change Photo" : "Add Photo"}</span>
+            </div>
+          </div>
+          <input
+            id="farmer-profile-pic-input"
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+            disabled={isUpdatingPic}
+          />
+          
+          <div className="farmer-profile-hero-details">
+            <h2 className="farmer-profile-hero-name">{farmer.name || "Unnamed Farmer"}</h2>
+            <span className="farmer-profile-hero-role">{headerSubtitle}</span>
+            <span className="farmer-profile-hero-address">📍 {farmer.address || "No address provided"}</span>
+          </div>
+        </div>
+
         {/* Record Overview */}
         <div className="farmer-modal-section">
           <h3 className="farmer-modal-section-title">Record Overview</h3>

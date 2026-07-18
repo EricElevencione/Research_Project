@@ -92,6 +92,7 @@ BEGIN
             status      = 'Active Farmer',
             archived_at = NULL,
             archive_reason = NULL,
+            profile_picture = COALESCE(p_data->>'profilePicture', profile_picture),
             updated_at  = NOW()
         WHERE id = v_self_land_owner_id
         RETURNING id, submitted_at INTO v_submission_id, v_submitted_at;
@@ -106,7 +107,7 @@ BEGIN
             "OWNERSHIP_TYPE_REGISTERED_OWNER", "OWNERSHIP_TYPE_TENANT", "OWNERSHIP_TYPE_LESSEE",
             "FARMER_RICE", "FARMER_CORN", "FARMER_OTHER_CROPS", "FARMER_OTHER_CROPS_TEXT",
             "FARMER_LIVESTOCK", "FARMER_LIVESTOCK_TEXT", "FARMER_POULTRY", "FARMER_POULTRY_TEXT",
-            is_actively_farming, status
+            is_actively_farming, status, profile_picture
         ) VALUES (
             COALESCE(p_data->>'surname', p_data->>'lastName', ''),
             COALESCE(p_data->>'firstName', ''),
@@ -131,7 +132,8 @@ BEGIN
             COALESCE((p_data->>'farmerPoultry')::BOOLEAN, FALSE),
             COALESCE(p_data->>'farmerPoultryText', ''),
             COALESCE((p_data->>'isActivelyFarming')::BOOLEAN, FALSE),
-            'Submitted'
+            'Submitted',
+            p_data->>'profilePicture'
         )
         RETURNING id, submitted_at INTO v_submission_id, v_submitted_at;
 

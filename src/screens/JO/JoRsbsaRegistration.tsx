@@ -118,6 +118,7 @@ interface FormData {
   ayParticipatedProgram?: boolean;
   ayOthers?: boolean;
   ayOthersText?: string;
+  profile_picture?: string | null;
 }
 
 // Utility function to convert text to Title Case with special handling
@@ -546,6 +547,7 @@ const JoRsbsa: React.FC = () => {
     ayParticipatedProgram: false,
     ayOthers: false,
     ayOthersText: "",
+    profile_picture: null,
   });
 
   // validation errors (field name -> message)
@@ -1053,6 +1055,7 @@ const JoRsbsa: React.FC = () => {
           farmerLivestockText: r.farmerLivestockText ?? "",
           farmerPoultry: r.farmerPoultry ?? false,
           farmerPoultryText: r.farmerPoultryText ?? "",
+          profile_picture: r.profilePicture || null,
         }));
       }
 
@@ -1857,6 +1860,50 @@ const JoRsbsa: React.FC = () => {
                               setOwnerParcels([]);
                               setSelectedParcelIds(new Set());
                               setAdditionalLandOwnerGroups([]);
+                            } else {
+                              // Reset pre-filled landowner details when switching to tenant/lessee
+                              setSelectedSelfLandOwner(null);
+                              setSelfSearchTerm("");
+                              setFormData((prev) => ({
+                                ...prev,
+                                surname: "",
+                                firstName: "",
+                                middleName: "",
+                                extensionName: "",
+                                gender: "",
+                                dateOfBirth: "",
+                                age: "",
+                                barangay: "",
+                                municipality: "Dumangas",
+                                farmerRice: false,
+                                farmerCorn: false,
+                                farmerOtherCrops: false,
+                                farmerOtherCropsText: "",
+                                farmerLivestock: false,
+                                farmerLivestockText: "",
+                                farmerPoultry: false,
+                                farmerPoultryText: "",
+                                profile_picture: null,
+                                farmlandParcels: [
+                                  {
+                                    parcelNo: "1",
+                                    farmLocationBarangay: "",
+                                    farmLocationMunicipality: "",
+                                    totalFarmAreaHa: "",
+                                    withinAncestralDomain: "",
+                                    isCultivating: true,
+                                    ownershipDocumentNo: "",
+                                    agrarianReformBeneficiary: "",
+                                    ownershipTypeRegisteredOwner: false,
+                                    ownershipTypeTenant: role === "tenant",
+                                    ownershipTypeLessee: role === "lessee",
+                                    ownershipTypeOthers: false,
+                                    tenantLandOwnerName: "",
+                                    lesseeLandOwnerName: "",
+                                    ownershipOthersSpecify: "",
+                                  },
+                                ],
+                              }));
                             }
                             setErrors((prev) => ({ ...prev, farmerRole: "" }));
                           }}
@@ -2096,6 +2143,82 @@ const JoRsbsa: React.FC = () => {
 
                 <div className="jo-registration-form-section">
                   <h3>PART I: PERSONAL INFORMATION</h3>
+
+                  {/* Profile Picture Upload Zone */}
+                  <div className="profile-pic-upload-section">
+                    <div
+                      className={`profile-pic-upload-container ${isPreFilled ? "disabled" : ""}`}
+                      onClick={() => !isPreFilled && document.getElementById("profile-pic-input")?.click()}
+                      style={isPreFilled ? { cursor: "not-allowed", opacity: 0.85 } : undefined}
+                    >
+                      {formData.profile_picture ? (
+                        <img
+                          src={formData.profile_picture}
+                          alt="Profile Preview"
+                          className="profile-pic-preview-img"
+                        />
+                      ) : (
+                        <div className="profile-pic-placeholder">
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="13" r="4" />
+                          </svg>
+                          <span>{isPreFilled ? "No Photo Available" : "Add Photo"}</span>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      id="profile-pic-input"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              profile_picture: reader.result as string,
+                            }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    {formData.profile_picture && !isPreFilled && (
+                      <div className="profile-pic-upload-actions">
+                        <button
+                          type="button"
+                          className="profile-pic-upload-btn"
+                          onClick={() => document.getElementById("profile-pic-input")?.click()}
+                        >
+                          Change Photo
+                        </button>
+                        <button
+                          type="button"
+                          className="profile-pic-remove-btn"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              profile_picture: null,
+                            }));
+                            const fileInput = document.getElementById("profile-pic-input") as HTMLInputElement;
+                            if (fileInput) fileInput.value = "";
+                          }}
+                        >
+                          Remove Photo
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   {/* Pre-filled notice banner */}
                   {isPreFilled && (
                     <div
@@ -3791,6 +3914,30 @@ const JoRsbsa: React.FC = () => {
                   {/* Step 1: Personal Information Summary */}
                   <div className="jo-registration-summary-section">
                     <h3>PART I: PERSONAL INFORMATION</h3>
+
+                    {/* Profile Picture Preview */}
+                    <div className="jo-registration-summary-avatar-container">
+                      {formData.profile_picture ? (
+                        <img
+                          src={formData.profile_picture}
+                          alt="Farmer Profile"
+                          className="jo-registration-summary-avatar"
+                        />
+                      ) : (
+                        <div className="jo-registration-summary-avatar-placeholder">
+                          {formData.firstName?.charAt(0) || ""}{formData.surname?.charAt(0) || ""}
+                        </div>
+                      )}
+                      <div>
+                        <span style={{ fontSize: "14px", fontWeight: 600, color: "#2c5f2d", display: "block" }}>
+                          Profile Photo
+                        </span>
+                        <span style={{ fontSize: "12px", color: "#666" }}>
+                          {formData.profile_picture ? "Optional profile picture provided" : "No profile picture uploaded"}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="jo-registration-summary-grid">
                       <div className="jo-registration-summary-item">
                         <span className="jo-registration-summary-label">

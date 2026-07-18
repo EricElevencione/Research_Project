@@ -1039,6 +1039,7 @@ const JoLandownerRegistry: React.FC = () => {
         mainLivelihood,
         farmingActivities,
         parcels: combinedParcels,
+        profilePicture: farmerData.profilePicture || null,
       });
       setShowModal(true);
     } catch (err) {
@@ -2162,6 +2163,7 @@ const JoLandownerRegistry: React.FC = () => {
                   gender: selectedLandowner.gender,
                   mainLivelihood: selectedLandowner.mainLivelihood,
                   farmingActivities: selectedLandowner.farmingActivities,
+                  profilePicture: selectedLandowner.profilePicture || null,
                   parcels: (selectedLandowner.parcels || []).map((p): UnifiedParcel => ({
                     id: p.id,
                     parcelNumber: p.parcelNumber,

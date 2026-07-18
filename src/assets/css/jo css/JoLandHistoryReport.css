@@ -1017,14 +1017,14 @@
       rgba(59, 130, 246, 0.1),
       transparent 42%
     ),
-    rgba(15, 23, 42, 0.58);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+    rgba(15, 23, 42, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   animation: jo-land-history-modal-fade-in 0.22s ease-out;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
 .jo-land-history-modal {
@@ -1040,6 +1040,10 @@
   overflow-x: hidden;
   padding: 0 0 14px;
   animation: jo-land-history-modal-slide-up 0.28s ease-out;
+  -webkit-overflow-scrolling: touch;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: scroll-position, transform;
 }
 
 .jo-land-history-modal > :not(.jo-land-history-modal-header) {
