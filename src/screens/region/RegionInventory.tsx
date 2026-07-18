@@ -37,7 +37,11 @@ const RegionInventory: React.FC = () => {
 
   const hybridKeywords = ["Jackpot", "US88", "TH82", "RH9000", "Mestiso"];
   const [activeTab, setActiveTab] = useState<
-    "overview" | "region-inv-seeds" | "region-inv-ferts" | "traceability" | "excess"
+    | "overview"
+    | "region-inv-seeds"
+    | "region-inv-ferts"
+    | "traceability"
+    | "excess"
   >("overview");
 
   const categorizedData = useMemo(() => {
@@ -195,7 +199,9 @@ const RegionInventory: React.FC = () => {
                   <tr key={idx} className="region-region-inv-table-row">
                     <td className="region-inv-item-name-cell">
                       <div className="region-inv-item-name-wrapper">
-                        <span className={`region-inv-item-dot ${colorClass}`}></span>
+                        <span
+                          className={`region-inv-item-dot ${colorClass}`}
+                        ></span>
                         {item.name}
                       </div>
                     </td>
@@ -297,7 +303,8 @@ const RegionInventory: React.FC = () => {
       >
         <div className="region-inv-search-card-header">
           <div className="region-inv-search-card-icon">
-            {colorClass === "region-inv-hybrid" || colorClass === "region-inv-inbred" ? (
+            {colorClass === "region-inv-hybrid" ||
+            colorClass === "region-inv-inbred" ? (
               <Sprout size={20} />
             ) : (
               <Droplets size={20} />
@@ -361,17 +368,30 @@ const RegionInventory: React.FC = () => {
           {/* Page header */}
           <div className="region-inventory-dashboard-header">
             <div>
-              <h1 className="region-inventory-page-title">Inventory Management</h1>
+              <h1 className="region-inventory-page-title">
+                Inventory Management
+              </h1>
               <p className="region-inventory-page-subtitle">
-                Track and manage variety of fertilizers and seeds in Municipality of Dumangas, Iloilo
+                Track and manage variety of fertilizers and seeds in
+                Municipality of Dumangas, Iloilo
               </p>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="region-inventory-content-card" style={{ flex: "none", marginBottom: "5px", padding: "12px 16px" }}>
+          <div
+            className="region-inventory-content-card"
+            style={{ flex: "none", marginBottom: "5px", padding: "12px 16px" }}
+          >
             <div className="region-inventory-filters-section">
-              <div style={{ display: "flex", gap: "10px", alignItems: "center", width: "100%" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  width: "100%",
+                }}
+              >
                 <div style={{ flex: 1 }}>
                   <input
                     type="text"
@@ -404,27 +424,15 @@ const RegionInventory: React.FC = () => {
                     ))}
                   </select>
                 </div>
-                <button
-                  className="region-inv-btn-print"
-                  onClick={() => window.print()}
-                >
-                  <Printer size={18} />
-                  Print Report
-                </button>
-                <button
-                  className="region-inv-btn-register"
-                  onClick={() => navigate("/region-add-stock")}
-                  style={{ background: "#10b981" }}
-                >
-                  <Plus size={18} />
-                  Add Stock
-                </button>
               </div>
             </div>
           </div>
 
           {/* Print toolbar */}
-          <div className="region-inventory-bulk-toolbar" style={{ margin: "5px 0 10px" }}>
+          <div
+            className="region-inventory-bulk-toolbar"
+            style={{ margin: "5px 0 10px" }}
+          >
             <div className="region-inventory-bulk-actions">
               <button
                 className="region-inventory-bulk-btn"
@@ -432,6 +440,32 @@ const RegionInventory: React.FC = () => {
               >
                 🖨️ Print Report
               </button>
+              <div className="inventory-search-box">
+                <Search size={18} />
+                <input
+                  type="text"
+                  placeholder="Search variety..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  className="inventory-btn-register"
+                  onClick={() => navigate("/region-add-stock")}
+                  style={{ background: "#10b981" }}
+                >
+                  <Plus size={18} />
+                  Add Stock
+                </button>
+                <button
+                  className="inventory-btn-register"
+                  onClick={() => navigate("/region-manage-varieties")}
+                >
+                  <Plus size={18} />
+                  Manage Varieties
+                </button>
+              </div>
             </div>
           </div>
 
@@ -459,10 +493,9 @@ const RegionInventory: React.FC = () => {
                 Fertilizers Variety
               </button>
               <button
-                className={`region-inv-tab ${activeTab === "traceability" ? "active" : ""}`}
+                className={`inventory-tab ${activeTab === "traceability" ? "active" : ""}`}
                 onClick={() => setActiveTab("traceability")}
               >
-                <History size={16} />
                 Traceability
               </button>
               <button
@@ -548,7 +581,9 @@ const RegionInventory: React.FC = () => {
                           <Sprout />
                         </div>
                         <div className="region-inv-stat-info">
-                          <span className="region-inv-stat-label">Seeds Variety</span>
+                          <span className="region-inv-stat-label">
+                            Seeds Variety
+                          </span>
                           <span className="region-inv-stat-value">
                             {categorizedData.seeds.all.length}
                           </span>
@@ -559,7 +594,9 @@ const RegionInventory: React.FC = () => {
                           <Leaf />
                         </div>
                         <div className="region-inv-stat-info">
-                          <span className="region-inv-stat-label">Fertilizer Variety</span>
+                          <span className="region-inv-stat-label">
+                            Fertilizer Variety
+                          </span>
                           <span className="region-inv-stat-value">
                             {categorizedData.fertilizers.all.length}
                           </span>
@@ -588,7 +625,9 @@ const RegionInventory: React.FC = () => {
                                 .reduce((s, i) => s + i.distributed, 0)
                                 .toLocaleString()}
                             </span>
-                            <span className="region-inv-stat-unit">KG Distributed</span>
+                            <span className="region-inv-stat-unit">
+                              KG Distributed
+                            </span>
                           </div>
                           <div className="region-inv-report-stat-sub">
                             Out of{" "}
@@ -607,7 +646,9 @@ const RegionInventory: React.FC = () => {
                                 .reduce((s, i) => s + i.distributed, 0)
                                 .toLocaleString()}
                             </span>
-                            <span className="region-inv-stat-unit">Bags/Liters Given</span>
+                            <span className="region-inv-stat-unit">
+                              Bags/Liters Given
+                            </span>
                           </div>
                           <div className="region-inv-report-stat-sub">
                             Out of{" "}
@@ -683,7 +724,9 @@ const RegionInventory: React.FC = () => {
               {activeTab === "region-inv-seeds" && (
                 <div className="inventory-section region-inv-fade-in">
                   <div className="region-inv-section-header-flex">
-                    <h3 className="region-inv-section-title">All Seeds Inventory</h3>
+                    <h3 className="region-inv-section-title">
+                      All Seeds Inventory
+                    </h3>
                     <div className="section-actions">
                       <span className="region-inv-section-header-hint">
                         {categorizedData.seeds.all.length} Varieties Found
@@ -707,7 +750,9 @@ const RegionInventory: React.FC = () => {
               {activeTab === "region-inv-ferts" && (
                 <div className="inventory-section region-inv-fade-in">
                   <div className="region-inv-section-header-flex">
-                    <h3 className="region-inv-section-title">All Fertilizers Inventory</h3>
+                    <h3 className="region-inv-section-title">
+                      All Fertilizers Inventory
+                    </h3>
                     <div className="section-actions">
                       <span className="region-inv-section-header-hint">
                         {categorizedData.fertilizers.all.length} Varieties Found
@@ -729,18 +774,18 @@ const RegionInventory: React.FC = () => {
               )}
 
               {activeTab === "traceability" && (
-                <div className="inventory-section region-inv-fade-in">
-                  <div className="region-inv-section-header-flex">
+                <div className="inventory-section fade-in">
+                  <div className="section-header-flex">
                     <div className="header-with-icon">
                       <History className="header-icon-main" />
-                      <h3 className="region-inv-section-title">
+                      <h3 className="section-title">
                         Farmer Distribution Log (Traceability)
                       </h3>
                     </div>
                   </div>
 
-                  <div className="region-region-inv-table-container">
-                    <table className="region-inventory-farmers-table">
+                  <div className="traceability-table-container">
+                    <table className="inventory-table traceability-table">
                       <thead>
                         <tr>
                           <th>Date</th>
@@ -756,14 +801,14 @@ const RegionInventory: React.FC = () => {
                           <tr>
                             <td
                               colSpan={selectedAllocationId ? 5 : 6}
-                              className="region-inv-empty"
+                              className="inventory-empty"
                             >
                               No distribution records found.
                             </td>
                           </tr>
                         ) : (
                           dashData.traceabilityLog.map((log) => (
-                            <tr key={log.id} className="region-region-inv-table-row">
+                            <tr key={log.id} className="inventory-row-hover">
                               <td className="date-cell">
                                 {new Date(log.date).toLocaleDateString(
                                   undefined,
@@ -1131,8 +1176,6 @@ const RegionInventory: React.FC = () => {
             </tbody>
           </table>
         </div>
-
-
 
         <div className="print-footer">
           <div className="print-signature-row">
