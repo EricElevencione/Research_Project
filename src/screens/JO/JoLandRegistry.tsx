@@ -1770,9 +1770,10 @@ const JoLandRegistry: React.FC = () => {
       }
 
       await refreshLandParcels();
-      if (selectedFarmer.parcels.length > 0) {
-        await fetchParcelHistoryForIds(selectedFarmer.parcels.map((p) => p.id));
-      }
+      closeOwnerAffiliationModal();
+      setSelectedFarmer(null);
+      setSelectedRegistryRowId(null);
+      setShowModal(false);
     } catch (error: any) {
       if (uploadedProofs.length > 0 && !hasPersistedChanges) {
         await cleanupUploadedProofs(uploadedProofs);

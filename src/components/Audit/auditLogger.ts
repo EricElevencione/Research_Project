@@ -2,7 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../../supabase';
 
 export interface AuditLogData {
-    userId?: number | null;
+    userId?: number | string | null;
     userName: string;
     userRole: string;
     action: AuditAction;
@@ -206,7 +206,7 @@ export class AuditLogger {
      * Log CRUD operations
      */
     async logCRUD(
-        user: { id?: number; name: string; role: string },
+        user: { id?: number | string; name: string; role: string },
         action: 'CREATE' | 'UPDATE' | 'DELETE',
         module: AuditModule,
         recordType: string,
@@ -236,7 +236,7 @@ export class AuditLogger {
      * Log farmer registration
      */
     async logFarmerRegistration(
-        user: { id?: number; name: string; role: string },
+        user: { id?: number | string; name: string; role: string },
         farmerId: number,
         farmerName: string,
         details?: FarmerRegistrationAuditDetails
@@ -266,7 +266,7 @@ export class AuditLogger {
      * Log RSBSA approval/rejection
      */
     async logRSBSAStatus(
-        user: { id?: number; name: string; role: string },
+        user: { id?: number | string; name: string; role: string },
         action: 'APPROVE' | 'REJECT',
         rsbsaId: number,
         farmerName: string,
@@ -289,7 +289,7 @@ export class AuditLogger {
      * Log distribution
      */
     async logDistribution(
-        user: { id?: number; name: string; role: string },
+        user: { id?: number | string; name: string; role: string },
         distributionId: number,
         farmerName: string,
         items: { type: string; quantity: number }[]
@@ -311,7 +311,7 @@ export class AuditLogger {
      * Log data export
      */
     async logExport(
-        user: { id?: number; name: string; role: string },
+        user: { id?: number | string; name: string; role: string },
         module: AuditModule,
         exportType: string,
         recordCount: number
@@ -329,7 +329,7 @@ export class AuditLogger {
 
     // Log request edit
     async logRequest(
-        user: { id?: number; name: string; role: string },
+        user: { id?: number | string; name: string; role: string },
         module: AuditModule,
         recordType: string,
         recordId: string | number

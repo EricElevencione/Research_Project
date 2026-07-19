@@ -24,6 +24,7 @@ import {
   FileText,
 } from "lucide-react";
 import "../../assets/css/admin css/AdminViewAllocation.css";
+import "../../assets/css/admin css/InventoryPageStyle.css";
 import "../../assets/css/admin css/InventoryStyle.css";
 
 const InventoryPage: React.FC = () => {
@@ -361,17 +362,30 @@ const InventoryPage: React.FC = () => {
           {/* Page header */}
           <div className="admin-inventory-dashboard-header">
             <div>
-              <h1 className="admin-inventory-page-title">Inventory Management</h1>
+              <h1 className="admin-inventory-page-title">
+                Inventory Management
+              </h1>
               <p className="admin-inventory-page-subtitle">
-                Track and manage variety of fertilizers and seeds in Municipality of Dumangas, Iloilo
+                Track and manage variety of fertilizers and seeds in
+                Municipality of Dumangas, Iloilo
               </p>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="admin-inventory-content-card" style={{ flex: "none", marginBottom: "5px", padding: "12px 16px" }}>
+          <div
+            className="admin-inventory-content-card"
+            style={{ flex: "none", marginBottom: "5px", padding: "12px 16px" }}
+          >
             <div className="admin-inventory-filters-section">
-              <div style={{ display: "flex", gap: "10px", alignItems: "center", width: "100%" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  width: "100%",
+                }}
+              >
                 <div style={{ flex: 1 }}>
                   <input
                     type="text"
@@ -409,7 +423,10 @@ const InventoryPage: React.FC = () => {
           </div>
 
           {/* Print toolbar */}
-          <div className="admin-inventory-bulk-toolbar" style={{ margin: "5px 0 10px" }}>
+          <div
+            className="admin-inventory-bulk-toolbar"
+            style={{ margin: "5px 0 10px" }}
+          >
             <div className="admin-inventory-bulk-actions">
               <button
                 className="admin-inventory-bulk-btn"
@@ -743,7 +760,10 @@ const InventoryPage: React.FC = () => {
                           </tr>
                         ) : (
                           dashData.traceabilityLog.map((log) => (
-                            <tr key={log.id} className="admin-inventory-table-row">
+                            <tr
+                              key={log.id}
+                              className="admin-inventory-table-row"
+                            >
                               <td className="date-cell">
                                 {new Date(log.date).toLocaleDateString(
                                   undefined,

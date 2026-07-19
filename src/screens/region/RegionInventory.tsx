@@ -440,15 +440,7 @@ const RegionInventory: React.FC = () => {
               >
                 🖨️ Print Report
               </button>
-              <div className="inventory-search-box">
-                <Search size={18} />
-                <input
-                  type="text"
-                  placeholder="Search variety..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+
               <div style={{ display: "flex", gap: "10px" }}>
                 <button
                   className="inventory-btn-register"
