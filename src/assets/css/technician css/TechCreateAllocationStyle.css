@@ -252,11 +252,12 @@
 /* Responsive Design */
 @media (max-width: 768px) {
     .tech-allocation-main-content {
-        padding: 20px;
+        padding: 12px;
+        padding-bottom: 90px;
     }
 
     .tech-allocation-content-card {
-        padding: 24px;
+        padding: 16px;
     }
 
     .tech-allocation-grid-2 {
@@ -264,17 +265,27 @@
         gap: 16px;
     }
 
+    .tech-allocation-input {
+        height: 44px;
+        font-size: 14px;
+    }
+
     .tech-allocation-title {
-        font-size: 24px;
+        font-size: 22px;
     }
 
     .tech-allocation-actions {
         flex-direction: column;
+        gap: 10px;
     }
 
     .tech-allocation-btn-cancel,
     .tech-allocation-btn-submit {
         width: 100%;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }
 

@@ -20,6 +20,13 @@ import {
   AuditModule,
 } from "../../components/Audit/auditLogger";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
+import {
+  addPendingAction,
+  cacheLandPlot,
+  removeCachedLandPlot,
+} from "../../services/offlineDb";
+import { useOfflineStatus } from "../../hooks/useOfflineStatus";
+import OfflineStatusBanner from "../../components/common/OfflineStatusBanner";
 
 // interfaces unchanged...
 interface LandAttributes {
@@ -439,10 +446,53 @@ const LandPlottingPage: React.FC = () => {
       };
 
       // Determine if this is a new or existing plot
-      // (Assume shapeToSave.id is unique for new, and already exists for update)
-      // If the id exists in the backend, use PUT, else POST
-      // For simplicity, check if the id exists in shapes state (could be improved with backend check)
       const isExisting = existingPlotIds.has(String(shapeToSave.id));
+
+      // ─── Offline Path ─────────────────────────────────────────────
+      if (!navigator.onLine) {
+        const actionType = isExisting ? "LAND_PLOT_UPDATE" : "LAND_PLOT_CREATE";
+        const payload = isExisting
+          ? { plotId: shapeToSave.id, plotData: landPlotData }
+          : { plotData: landPlotData };
+
+        await addPendingAction(actionType, payload);
+        await cacheLandPlot(
+          String(shapeToSave.id),
+          landPlotData,
+          rsbsaRecord?.id ?? currentParcel?.submission_id,
+        );
+
+        if (shapeToSave.layer.feature) {
+          shapeToSave.layer.feature.properties = {
+            ...shapeToSave.layer.feature.properties,
+            ...landAttributes,
+            area: shapeAreaHa,
+          };
+        } else {
+          shapeToSave.layer.feature = {
+            type: "Feature",
+            properties: {
+              ...landAttributes,
+              area: shapeAreaHa,
+            },
+            geometry: shapeToSave.layer.toGeoJSON().geometry,
+          };
+        }
+
+        setToast({
+          message: "Plot saved offline! Will sync when connection returns.",
+          type: "success",
+        });
+        setTimeout(() => setToast(null), 3000);
+        setExistingPlotIds((prev) => {
+          const next = new Set(prev);
+          next.add(String(shapeToSave.id));
+          return next;
+        });
+        return true;
+      }
+
+      // ─── Online Path ──────────────────────────────────────────────
       const response = isExisting
         ? await updateLandPlot(shapeToSave.id, landPlotData)
         : await createLandPlot(landPlotData);
@@ -765,34 +815,46 @@ const LandPlottingPage: React.FC = () => {
     const remainingShapes = shapes.filter((s) => !deletedIds.includes(s.id));
     setShapesAndVersion(remainingShapes);
 
-    // Persist deletions to the backend
-    for (const deletedShape of e.shapes) {
-      try {
-        const response = await deleteLandPlot(deletedShape.id);
-        try {
-          const user = await getCurrentUserForAudit();
-          await getAuditLogger().logCRUD(
-            { ...user, id: undefined },
-            "DELETE",
-            AuditModule.LAND_PLOTS,
-            "land_plot",
-            deletedShape.id,
-            `Deleted land plot — Parcel in ${landAttributes.barangay || parcelBarangay}, ${landAttributes.municipality}`,
-          );
-        } catch (auditErr) {
-          console.error("Audit log failed (non-blocking):", auditErr);
-        }
-        if (response.error) throw new Error("Failed to delete land plot");
-      } catch (error) {
-        setToast({
-          message: "Failed to delete land plot from the backend.",
-          type: "error",
-        });
-        setTimeout(() => setToast(null), 4000);
+    // Persist deletions (Offline or Online)
+    if (!navigator.onLine) {
+      for (const deletedShape of e.shapes) {
+        await addPendingAction("LAND_PLOT_DELETE", { plotId: deletedShape.id });
+        await removeCachedLandPlot(String(deletedShape.id));
       }
+      setToast({
+        message: "Plot deletion saved offline! Will sync when connection returns.",
+        type: "success",
+      });
+      setTimeout(() => setToast(null), 3000);
+    } else {
+      for (const deletedShape of e.shapes) {
+        try {
+          const response = await deleteLandPlot(deletedShape.id);
+          try {
+            const user = await getCurrentUserForAudit();
+            await getAuditLogger().logCRUD(
+              { ...user, id: undefined },
+              "DELETE",
+              AuditModule.LAND_PLOTS,
+              "land_plot",
+              deletedShape.id,
+              `Deleted land plot — Parcel in ${landAttributes.barangay || parcelBarangay}, ${landAttributes.municipality}`,
+            );
+          } catch (auditErr) {
+            console.error("Audit log failed (non-blocking):", auditErr);
+          }
+          if (response.error) throw new Error("Failed to delete land plot");
+        } catch (error) {
+          setToast({
+            message: "Failed to delete land plot from the backend.",
+            type: "error",
+          });
+          setTimeout(() => setToast(null), 4000);
+        }
+      }
+      // Refresh shapes from backend after delete
+      await refreshShapesFromBackend();
     }
-    // Refresh shapes from backend after delete
-    await refreshShapesFromBackend();
 
     if (remainingShapes.length > 0) {
       setSelectedShape(remainingShapes[0]);
@@ -2063,6 +2125,8 @@ const LandPlottingPage: React.FC = () => {
         </span>
         Back
       </button>
+
+      <OfflineStatusBanner />
 
       <div className="tech-landplotting-main-wrapper">
         {/* Left: Map */}

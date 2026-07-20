@@ -378,31 +378,31 @@ td.brgy-status {
 
   .tech-dashboard-main-content {
     padding: 12px;
+    padding-bottom: 90px;
     overflow: auto;
-  }
-  .tech-dashboard-main-content {
-    padding: 12px;
   }
 
   .tech-dashboard-stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
 
   .tech-stat-card {
-    min-width: 140px;
+    min-width: 0;
     padding: 12px;
     gap: 10px;
   }
 
   .tech-stat-icon {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 8px;
   }
 
   .tech-stat-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
 
   .tech-stat-value {
@@ -410,7 +410,7 @@ td.brgy-status {
   }
 
   .tech-dashboard-page-title {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .tech-dashboard-map-area {
@@ -419,6 +419,10 @@ td.brgy-status {
 }
 
 @media (max-width: 480px) {
+  .tech-dashboard-stats-row {
+    grid-template-columns: 1fr;
+  }
+
   .tech-stat-card {
     min-width: 100%;
   }

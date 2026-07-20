@@ -524,16 +524,23 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .tech-add-farmer-main-content {
-    padding: 20px;
+    padding: 12px;
+    padding-bottom: 90px;
   }
 
   .tech-add-farmer-content-card {
-    padding: 24px;
+    padding: 16px;
   }
 
   .tech-add-farmer-form-grid {
     grid-template-columns: 1fr;
     gap: 16px;
+  }
+
+  .tech-add-farmer-input,
+  .tech-add-farmer-select {
+    height: 44px;
+    font-size: 14px;
   }
 
   .tech-add-farmer-summary-totals-grid {
@@ -547,16 +554,21 @@
   }
 
   .tech-add-farmer-title {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .tech-add-farmer-actions {
     flex-direction: column;
+    gap: 10px;
   }
 
   .tech-add-farmer-cancel-btn,
   .tech-add-farmer-submit-btn {
     width: 100%;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 

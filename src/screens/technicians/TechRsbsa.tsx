@@ -1065,21 +1065,21 @@ const TechRsbsa: React.FC = () => {
                                   aria-label={`Select ${record.farmerName}`}
                                 />
                               </td>
-                              <td>{record.lastName || ""}</td>
-                              <td>{record.firstName || ""}</td>
-                              <td>{record.middleName || ""}</td>
-                              <td>{record.extName || ""}</td>
-                              <td>{record.gender || "N/A"}</td>
-                              <td>{getDisplayAge(record)}</td>
-                              <td>{record.farmerAddress || "N/A"}</td>
-                              <td>{record.farmLocation || "N/A"}</td>
-                              <td>{parcelArea}</td>
-                              <td>
+                              <td data-label="Last Name">{record.lastName || ""}</td>
+                              <td data-label="First Name">{record.firstName || ""}</td>
+                              <td data-label="Middle Name">{record.middleName || ""}</td>
+                              <td data-label="EXT Name">{record.extName || ""}</td>
+                              <td data-label="Gender">{record.gender || "N/A"}</td>
+                              <td data-label="Age">{getDisplayAge(record)}</td>
+                              <td data-label="Farmer Address">{record.farmerAddress || "N/A"}</td>
+                              <td data-label="Farm Location">{record.farmLocation || "N/A"}</td>
+                              <td data-label="Parcel Area">{parcelArea}</td>
+                              <td data-label="Plotted">
                                 <span className="tech-rsbsa-plot-status-pill">
                                   {getPlottingRatio(record)}
                                 </span>
                               </td>
-                              <td>
+                              <td data-label="Land Status">
                                 {hasNoLand ? (
                                   <span className="tech-rsbsa-no-land-badge">
                                     ⚠️ No Land

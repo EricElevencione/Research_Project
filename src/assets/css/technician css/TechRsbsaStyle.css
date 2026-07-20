@@ -921,3 +921,106 @@
   color: #0f172a;
   line-height: 1.1;
 }
+
+/* ─── Mobile Responsive Overlay Rules (< 768px) ───────────────────────── */
+@media (max-width: 768px) {
+  .tech-rsbsa-main-content {
+    padding: 12px;
+    padding-bottom: 90px;
+  }
+
+  .tech-rsbsa-kpi-grid {
+    flex-wrap: wrap;
+  }
+
+  .tech-rsbsa-kpi-card {
+    flex: 1 1 calc(50% - 6px);
+    max-width: 100%;
+  }
+
+  .tech-rsbsa-controls-section {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .tech-rsbsa-search-box,
+  .tech-rsbsa-filter-group {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .tech-rsbsa-search-input,
+  .tech-rsbsa-barangay-select,
+  .tech-rsbsa-land-status-select {
+    width: 100%;
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .tech-rsbsa-table-container {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .tech-rsbsa-table {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  .tech-rsbsa-table thead {
+    display: none;
+  }
+
+  .tech-rsbsa-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tech-rsbsa-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  .tech-rsbsa-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px dashed #f1f5f9;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .tech-rsbsa-table tbody td:last-child {
+    border-bottom: none;
+    padding-top: 10px;
+    justify-content: flex-end;
+  }
+
+  .tech-rsbsa-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #64748b;
+    text-align: left;
+    margin-right: 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .tech-rsbsa-edit-modal {
+    width: 95%;
+    max-height: 90vh;
+    border-radius: 16px;
+  }
+}

@@ -13,6 +13,9 @@ import "../../assets/css/technician css/TechTenantRegistry.css";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import { supabase } from "../../supabase";
 import TechSidebar from "../../components/layout/TechSidebar";
+import { addPendingAction } from "../../services/offlineDb";
+import { useOfflineStatus } from "../../hooks/useOfflineStatus";
+import OfflineStatusBanner from "../../components/common/OfflineStatusBanner";
 
 interface TenantRecord {
   id: string;
@@ -411,6 +414,14 @@ const TechTenantRegistry: React.FC = () => {
     setStatusModalLoading(true);
     setShowStatusModal(true);
 
+    // If offline, skip the parcels fetch — the modal can still work
+    // since cultivation toggle only needs the farmer status + reason
+    if (!navigator.onLine) {
+      setStatusModalParcels([]);
+      setStatusModalLoading(false);
+      return;
+    }
+
     try {
       const parcelsResponse = await getFarmParcels(tenant.id);
       const parcelsData = parcelsResponse.data || [];
@@ -430,20 +441,66 @@ const TechTenantRegistry: React.FC = () => {
       return;
     }
 
-    try {
-      const isNowActive = statusChangeTarget.newStatus === "Active Farmer";
+    const isNowActive = statusChangeTarget.newStatus === "Active Farmer";
+    const newFarmerStatus = statusChangeTarget.newStatus;
+    const timestamp = new Date().toISOString();
 
+    // ─── Offline path: queue the change locally ───────────────────────
+    if (!navigator.onLine) {
+      try {
+        await addPendingAction("CULTIVATION_UPDATE", {
+          farmerId: statusChangeTarget.id,
+          parcels: statusModalParcels.map((p: any) => ({
+            id: p.id,
+            updates: {
+              is_cultivating: isNowActive,
+              cultivation_status_reason: isNowActive
+                ? null
+                : statusChangeReason.trim(),
+              cultivation_status_updated_at: timestamp,
+            },
+          })),
+          submission: {
+            id: statusChangeTarget.id,
+            updates: {
+              status: newFarmerStatus,
+              statusChangeReason: statusChangeReason.trim(),
+            },
+          },
+        });
+
+        showUpdateNotification(
+          `Saved offline — "${newFarmerStatus}" will sync when connection returns.`,
+          "success",
+        );
+
+        // Optimistic local update: refresh the table data in-memory
+        fetchTenantRecords();
+      } catch (offlineErr: any) {
+        showUpdateNotification(
+          `Failed to save offline: ${offlineErr.message}`,
+          "error",
+        );
+      } finally {
+        setShowStatusModal(false);
+        setStatusChangeTarget(null);
+        setStatusModalParcels([]);
+        setStatusChangeReason("");
+      }
+      return;
+    }
+
+    // ─── Online path: original Supabase calls ─────────────────────────
+    try {
       for (const parcel of statusModalParcels) {
         await updateFarmParcel(parcel.id, {
           is_cultivating: isNowActive,
           cultivation_status_reason: isNowActive
             ? null
             : statusChangeReason.trim(),
-          cultivation_status_updated_at: new Date().toISOString(),
+          cultivation_status_updated_at: timestamp,
         });
       }
-
-      const newFarmerStatus = statusChangeTarget.newStatus;
 
       await updateRsbsaSubmission(statusChangeTarget.id, {
         status: newFarmerStatus,
@@ -546,6 +603,8 @@ const TechTenantRegistry: React.FC = () => {
             <div className="tech-incent-mobile-title">Farmer Registry</div>
           </div>
 
+          <OfflineStatusBanner />
+
           <div className="tech-masterlist-dashboard-header">
             <div>
               <h2 className="tech-masterlist-page-title">Farmer Registry</h2>
@@ -638,7 +697,7 @@ const TechTenantRegistry: React.FC = () => {
                               key={`${group.landOwnerId}-tenant-${idx}`}
                               className="child-row"
                             >
-                              <td>
+                              <td data-label="Tenant Name">
                                 <span className="tenant-name">
                                   {tenant.tenantName}
                                 </span>
@@ -652,12 +711,12 @@ const TechTenantRegistry: React.FC = () => {
                                   {tenant.tenantAddress}
                                 </div>
                               </td>
-                              <td>
+                              <td data-label="Reference No.">
                                 <span className="tenant-ref">
                                   {tenant.referenceNumber}
                                 </span>
                               </td>
-                              <td>
+                              <td data-label="Parcel / Area">
                                 <span className="area-val">
                                   {parseFloat(tenant.parcelArea).toFixed(2)} Ha
                                 </span>
@@ -670,17 +729,17 @@ const TechTenantRegistry: React.FC = () => {
                                   Parcel: {tenant.landParcel}
                                 </div>
                               </td>
-                              <td>
+                              <td data-label="Location">
                                 <span className="location-text">
                                   {tenant.farmLocation}
                                 </span>
                               </td>
-                              <td>
+                              <td data-label="Date">
                                 <span className="date-text">
                                   {formatDate(tenant.dateSubmitted)}
                                 </span>
                               </td>
-                              <td>
+                              <td data-label="Status">
                                 <button
                                   className={`tech-masterlist-status-button tech-masterlist-${getStatusClass(tenant.status)}`}
                                   onClick={(e) => {
@@ -691,7 +750,7 @@ const TechTenantRegistry: React.FC = () => {
                                   {tenant.status}
                                 </button>
                               </td>
-                              <td>
+                              <td data-label="Actions">
                                 <button
                                   className="view-action-btn"
                                   onClick={(e) => {

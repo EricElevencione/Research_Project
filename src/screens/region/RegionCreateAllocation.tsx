@@ -80,72 +80,73 @@ interface AllocationItem {
   value: number;
 }
 
-const FERTILIZER_FIELDS: Array<{
+interface DynamicAllocationField {
   key: AllocationNumericField;
   label: string;
-}> = [
-  { key: "urea_46_0_0_bags", label: "Urea (46-0-0)" },
-  { key: "complete_14_14_14_bags", label: "Complete (14-14-14)" },
-  { key: "ammonium_sulfate_21_0_0_bags", label: "Ammonium Sulfate (21-0-0)" },
-  { key: "np_16_20_0_bags", label: "16-20-0" },
-  { key: "muriate_potash_0_0_60_bags", label: "Muriate of Potash (0-0-60)" },
-  { key: "zinc_sulfate_bags", label: "Zinc Sulfate" },
-  { key: "vermicompost_bags", label: "Vermicompost" },
-  { key: "chicken_manure_bags", label: "Chicken Manure" },
-  { key: "rice_straw_kg", label: "Rice Straw (incorporated)" },
-  { key: "carbonized_rice_hull_bags", label: "Carbonized Rice Hull (CRH)" },
-  { key: "biofertilizer_liters", label: "Biofertilizer (Liquid Concentrate)" },
-  { key: "nanobiofertilizer_liters", label: "Nanobiofertilizer" },
-  { key: "organic_root_exudate_mix_liters", label: "Organic Root Exudate Mix" },
-  { key: "azolla_microphylla_kg", label: "Azolla microphylla" },
+  category?: string;
+}
+
+const FERTILIZER_FIELDS: DynamicAllocationField[] = [
+  { key: "urea_46_0_0_bags", label: "Urea (46-0-0)", category: "Solid" },
+  { key: "complete_14_14_14_bags", label: "Complete (14-14-14)", category: "Solid" },
+  { key: "ammonium_sulfate_21_0_0_bags", label: "Ammonium Sulfate (21-0-0)", category: "Solid" },
+  { key: "np_16_20_0_bags", label: "16-20-0", category: "Solid" },
+  { key: "muriate_potash_0_0_60_bags", label: "Muriate of Potash (0-0-60)", category: "Solid" },
+  { key: "zinc_sulfate_bags", label: "Zinc Sulfate", category: "Solid" },
+  { key: "vermicompost_bags", label: "Vermicompost", category: "Solid" },
+  { key: "chicken_manure_bags", label: "Chicken Manure", category: "Solid" },
+  { key: "rice_straw_kg", label: "Rice Straw (incorporated)", category: "Solid" },
+  { key: "carbonized_rice_hull_bags", label: "Carbonized Rice Hull (CRH)", category: "Solid" },
+  { key: "biofertilizer_liters", label: "Biofertilizer (Liquid Concentrate)", category: "Liquid" },
+  { key: "nanobiofertilizer_liters", label: "Nanobiofertilizer", category: "Liquid" },
+  { key: "organic_root_exudate_mix_liters", label: "Organic Root Exudate Mix", category: "Liquid" },
+  { key: "azolla_microphylla_kg", label: "Azolla microphylla", category: "Liquid" },
   {
     key: "foliar_liquid_fertilizer_npk_liters",
     label: "Foliar Liquid Fertilizer (NPK)",
+    category: "Liquid",
   },
-  { key: "complete_16_16_16_bags", label: "Complete (16-16-16)" },
-  { key: "ammonium_phosphate_16_20_0_bags", label: "Ammonium Phosphate" },
+  { key: "complete_16_16_16_bags", label: "Complete (16-16-16)", category: "Solid" },
+  { key: "ammonium_phosphate_16_20_0_bags", label: "Ammonium Phosphate", category: "Solid" },
 ];
 
-const SEED_FIELDS: Array<{
-  key: AllocationNumericField;
-  label: string;
-}> = [
-  { key: "rice_seeds_nsic_rc160_kg", label: "NSIC Rc 160" },
-  { key: "rice_seeds_nsic_rc222_kg", label: "NSIC Rc 222" },
-  { key: "jackpot_kg", label: "Jackpot" },
-  { key: "us88_kg", label: "US88" },
-  { key: "th82_kg", label: "TH82" },
-  { key: "rh9000_kg", label: "RH9000" },
-  { key: "lumping143_kg", label: "Lumping143" },
-  { key: "lp296_kg", label: "LP296" },
-  { key: "mestiso_1_kg", label: "Mestiso 1 (M1)" },
-  { key: "mestiso_20_kg", label: "Mestiso 20 (M20)" },
-  { key: "mestiso_29_kg", label: "Mestiso 29" },
-  { key: "mestiso_55_kg", label: "Mestiso 55" },
-  { key: "mestiso_73_kg", label: "Mestiso 73" },
-  { key: "mestiso_99_kg", label: "Mestiso 99" },
-  { key: "mestiso_103_kg", label: "Mestiso 103" },
-  { key: "nsic_rc402_kg", label: "NSIC Rc 402" },
-  { key: "nsic_rc480_kg", label: "NSIC Rc 480" },
-  { key: "nsic_rc216_kg", label: "NSIC Rc 216" },
-  { key: "nsic_rc218_kg", label: "NSIC Rc 218" },
-  { key: "nsic_rc506_kg", label: "NSIC Rc 506" },
-  { key: "nsic_rc508_kg", label: "NSIC Rc 508" },
-  { key: "nsic_rc512_kg", label: "NSIC Rc 512" },
-  { key: "nsic_rc534_kg", label: "NSIC Rc 534" },
-  { key: "tubigan_28_kg", label: "Tubigan 28" },
-  { key: "tubigan_30_kg", label: "Tubigan 30" },
-  { key: "tubigan_22_kg", label: "Tubigan 22" },
-  { key: "sahod_ulan_2_kg", label: "Sahod Ulan 2" },
-  { key: "sahod_ulan_10_kg", label: "Sahod Ulan 10" },
-  { key: "salinas_6_kg", label: "Salinas 6" },
-  { key: "salinas_7_kg", label: "Salinas 7" },
-  { key: "salinas_8_kg", label: "Salinas 8" },
-  { key: "malagkit_5_kg", label: "Malagkit 5" },
-  { key: "rice_seeds_nsic_rc440_kg", label: "NSIC Rc 440" },
-  { key: "corn_seeds_hybrid_kg", label: "Corn Seeds (Hybrid)" },
-  { key: "corn_seeds_opm_kg", label: "Corn Seeds (OPM)" },
-  { key: "vegetable_seeds_kg", label: "Vegetable Seeds" },
+const SEED_FIELDS: DynamicAllocationField[] = [
+  { key: "rice_seeds_nsic_rc160_kg", label: "NSIC Rc 160", category: "Inbred" },
+  { key: "rice_seeds_nsic_rc222_kg", label: "NSIC Rc 222", category: "Inbred" },
+  { key: "jackpot_kg", label: "Jackpot", category: "Hybrid" },
+  { key: "us88_kg", label: "US88", category: "Hybrid" },
+  { key: "th82_kg", label: "TH82", category: "Hybrid" },
+  { key: "rh9000_kg", label: "RH9000", category: "Hybrid" },
+  { key: "lumping143_kg", label: "Lumping143", category: "Inbred" },
+  { key: "lp296_kg", label: "LP296", category: "Inbred" },
+  { key: "mestiso_1_kg", label: "Mestiso 1 (M1)", category: "Hybrid" },
+  { key: "mestiso_20_kg", label: "Mestiso 20 (M20)", category: "Hybrid" },
+  { key: "mestiso_29_kg", label: "Mestiso 29", category: "Hybrid" },
+  { key: "mestiso_55_kg", label: "Mestiso 55", category: "Hybrid" },
+  { key: "mestiso_73_kg", label: "Mestiso 73", category: "Hybrid" },
+  { key: "mestiso_99_kg", label: "Mestiso 99", category: "Hybrid" },
+  { key: "mestiso_103_kg", label: "Mestiso 103", category: "Hybrid" },
+  { key: "nsic_rc402_kg", label: "NSIC Rc 402", category: "Inbred" },
+  { key: "nsic_rc480_kg", label: "NSIC Rc 480", category: "Inbred" },
+  { key: "nsic_rc216_kg", label: "NSIC Rc 216", category: "Inbred" },
+  { key: "nsic_rc218_kg", label: "NSIC Rc 218", category: "Inbred" },
+  { key: "nsic_rc506_kg", label: "NSIC Rc 506", category: "Inbred" },
+  { key: "nsic_rc508_kg", label: "NSIC Rc 508", category: "Inbred" },
+  { key: "nsic_rc512_kg", label: "NSIC Rc 512", category: "Inbred" },
+  { key: "nsic_rc534_kg", label: "NSIC Rc 534", category: "Inbred" },
+  { key: "tubigan_28_kg", label: "Tubigan 28", category: "Inbred" },
+  { key: "tubigan_30_kg", label: "Tubigan 30", category: "Inbred" },
+  { key: "tubigan_22_kg", label: "Tubigan 22", category: "Inbred" },
+  { key: "sahod_ulan_2_kg", label: "Sahod Ulan 2", category: "Inbred" },
+  { key: "sahod_ulan_10_kg", label: "Sahod Ulan 10", category: "Inbred" },
+  { key: "salinas_6_kg", label: "Salinas 6", category: "Inbred" },
+  { key: "salinas_7_kg", label: "Salinas 7", category: "Inbred" },
+  { key: "salinas_8_kg", label: "Salinas 8", category: "Inbred" },
+  { key: "malagkit_5_kg", label: "Malagkit 5", category: "Inbred" },
+  { key: "rice_seeds_nsic_rc440_kg", label: "NSIC Rc 440", category: "Inbred" },
+  { key: "corn_seeds_hybrid_kg", label: "Corn Seeds (Hybrid)", category: "Hybrid" },
+  { key: "corn_seeds_opm_kg", label: "Corn Seeds (OPM)", category: "Inbred" },
+  { key: "vegetable_seeds_kg", label: "Vegetable Seeds", category: "Inbred" },
 ];
 
 const FERTILIZER_CATALOG_ROWS: Array<{ name: string; category: string }> = [
@@ -328,15 +329,15 @@ const RegionCreateAllocation: React.FC = () => {
   };
 
   // Map varieties to fields for selection
-  const dynamicFertFields = React.useMemo(() => {
+  const dynamicFertFields = React.useMemo<DynamicAllocationField[]>(() => {
     if (fertVarieties.length === 0) return FERTILIZER_FIELDS;
-    const dynamic = fertVarieties.map((v) => ({
+    const dynamic: DynamicAllocationField[] = fertVarieties.map((v) => ({
       key: `${v.id}_bags` as AllocationNumericField,
       label: v.name,
       category: v.category || "Solid",
     }));
     // Merge while avoiding duplicates
-    const combined = [...FERTILIZER_FIELDS];
+    const combined: DynamicAllocationField[] = [...FERTILIZER_FIELDS];
     dynamic.forEach((df) => {
       if (!combined.some((f) => f.key === df.key)) {
         combined.push(df);
@@ -345,15 +346,15 @@ const RegionCreateAllocation: React.FC = () => {
     return combined;
   }, [fertVarieties]);
 
-  const dynamicSeedFields = React.useMemo(() => {
+  const dynamicSeedFields = React.useMemo<DynamicAllocationField[]>(() => {
     if (seedVarieties.length === 0) return SEED_FIELDS;
-    const dynamic = seedVarieties.map((v) => ({
+    const dynamic: DynamicAllocationField[] = seedVarieties.map((v) => ({
       key: `${v.id}_kg` as AllocationNumericField,
       label: v.name,
       category: v.category || "Inbred",
     }));
     // Merge while avoiding duplicates
-    const combined = [...SEED_FIELDS];
+    const combined: DynamicAllocationField[] = [...SEED_FIELDS];
     dynamic.forEach((ds) => {
       if (!combined.some((s) => s.key === ds.key)) {
         combined.push(ds);
@@ -416,6 +417,12 @@ const RegionCreateAllocation: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (selectedFertilizers.length === 0 && selectedSeeds.length === 0) {
+      setError("Please add at least one fertilizer or seed item to the allocation.");
+      setLoading(false);
+      return;
+    }
 
     // Validate: all added items must have quantity >= 1
     const invalidFerts = selectedFertilizers.filter((item) => item.value < 1);

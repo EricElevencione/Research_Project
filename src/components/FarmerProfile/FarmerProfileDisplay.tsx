@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../components/FarmerProfile/farmerProfileModal.css";
 import ParcelGeometryPreview from "../FarmerProfile/ParcelGeometryPreview";
 import { supabase } from "../../supabase";
@@ -124,6 +124,10 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
   );
   const [isUpdatingPic, setIsUpdatingPic] = useState(false);
 
+  useEffect(() => {
+    setProfilePic(farmer.profilePicture || farmer.profile_picture || null);
+  }, [farmer.id, farmer.profilePicture, farmer.profile_picture]);
+
   const handleAvatarClick = () => {
     document.getElementById("farmer-profile-pic-input")?.click();
   };
@@ -138,11 +142,17 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
       reader.onloadend = async () => {
         const base64Data = reader.result as string;
         
+        // Target ID safely whether string, UUID, or integer
+        const targetId =
+          typeof farmer.id === "string" && !isNaN(Number(farmer.id)) && !farmer.id.includes("-")
+            ? Number(farmer.id)
+            : farmer.id;
+
         // Update in Supabase
         const { error } = await supabase
           .from("rsbsa_submission")
           .update({ profile_picture: base64Data })
-          .eq("id", Number(farmer.id));
+          .eq("id", targetId);
 
         if (error) {
           console.error("Error updating profile picture:", error.message);

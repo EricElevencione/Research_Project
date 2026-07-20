@@ -56,6 +56,7 @@ interface LandownerRecord {
   archivedAt?: string | null;
   archiveReason?: string | null;
   hasNoLand?: boolean; // Flagged: no current land ownership
+  profilePicture?: string | null;
 }
 
 interface LandownerSummaryRow {
@@ -94,6 +95,9 @@ interface SubmissionItem {
   archived_at?: string | null;
   archiveReason?: string | null;
   archive_reason?: string | null;
+  profilePicture?: string | null;
+  profile_picture?: string | null;
+  _raw?: any;
   ownershipType?: {
     registeredOwner?: boolean;
     category?: string;
@@ -212,6 +216,7 @@ interface LandownerDetail {
   farmingActivities?: string[];
   statusChangeReason?: string | null;
   parcels: OccupiedParcel[];
+  profilePicture?: string | null;
 }
 
 interface EditFormData {
@@ -611,6 +616,11 @@ const JoLandownerRegistry: React.FC = () => {
             : [],
           archivedAt: item.archivedAt ?? item.archived_at ?? null,
           archiveReason: item.archiveReason ?? item.archive_reason ?? null,
+          profilePicture:
+            item.profilePicture ||
+            item.profile_picture ||
+            item._raw?.profile_picture ||
+            null,
         };
       });
 
@@ -1039,7 +1049,13 @@ const JoLandownerRegistry: React.FC = () => {
         mainLivelihood,
         farmingActivities,
         parcels: combinedParcels,
-        profilePicture: farmerData.profilePicture || null,
+        profilePicture:
+          farmerData.profilePicture ||
+          farmerData.profile_picture ||
+          data?.profilePicture ||
+          data?.profile_picture ||
+          selectedRecord?.profilePicture ||
+          null,
       });
       setShowModal(true);
     } catch (err) {

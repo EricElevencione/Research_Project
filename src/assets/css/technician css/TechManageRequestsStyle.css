@@ -3024,3 +3024,101 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* ─── Mobile Responsive Rules (< 768px) ─────────────────────────────── */
+@media (max-width: 768px) {
+  .tech-manage-requests-main-content {
+    padding: 12px;
+    padding-bottom: 90px;
+  }
+
+  .tech-manage-requests-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .tech-manage-requests-controls-section {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .tech-manage-requests-search-box,
+  .tech-manage-requests-filter-group {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .tech-manage-requests-search-input,
+  .tech-manage-requests-filter-select {
+    width: 100%;
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .tech-manage-requests-table-container {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .tech-manage-requests-table {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  .tech-manage-requests-table thead {
+    display: none;
+  }
+
+  .tech-manage-requests-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tech-manage-requests-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  .tech-manage-requests-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px dashed #f1f5f9;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .tech-manage-requests-table tbody td:last-child {
+    border-bottom: none;
+    padding-top: 10px;
+    justify-content: flex-end;
+  }
+
+  .tech-manage-requests-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #64748b;
+    text-align: left;
+    margin-right: 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .tech-manage-requests-modal-content {
+    width: 95%;
+    max-height: 90vh;
+    border-radius: 16px;
+  }
+}

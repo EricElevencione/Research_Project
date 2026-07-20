@@ -227,27 +227,88 @@
 
 /* Responsive design */
 @media (max-width: 768px) {
-  .tenant-group-header {
-    padding: 1rem;
+  .tenant-table-container {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
   }
 
-  .tenant-group-title {
-    font-size: 1rem;
+  .hierarchical-table {
+    display: block;
+    width: 100%;
   }
 
-  .tenant-table thead th {
-    padding: 0.75rem;
-    font-size: 0.75rem;
+  .hierarchical-table th {
+    display: none;
   }
 
-  .tenant-table tbody td {
-    padding: 0.75rem;
-    font-size: 0.875rem;
+  .hierarchical-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  .action-btn {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
+  .parent-row {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    padding: 12px;
+    background: #e2e8f0;
+    margin-top: 8px;
+  }
+
+  .parent-row td {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: none;
+  }
+
+  .child-row {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    margin-left: 8px;
+  }
+
+  .child-row td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0 !important;
+    border-bottom: 1px dashed #f1f5f9;
+  }
+
+  .child-row td:last-child {
+    border-bottom: none;
+    padding-top: 8px !important;
+  }
+
+  .child-row td:first-child {
+    padding-left: 0 !important;
+  }
+
+  .child-row td:first-child::before,
+  .child-row td:first-child::after {
+    display: none;
+  }
+
+  .child-row td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #64748b;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+
+  .modal-content {
+    width: 95%;
+    max-height: 90vh;
+    border-radius: 16px;
   }
 }
 

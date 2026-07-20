@@ -14,6 +14,9 @@ import "../../assets/css/jo css/FarmerDetailModal.css";
 import "../../components/layout/sidebarStyle.css";
 import { supabase } from "../../supabase";
 import TechSidebar from "../../components/layout/TechSidebar";
+import { addPendingAction } from "../../services/offlineDb";
+import { useOfflineStatus } from "../../hooks/useOfflineStatus";
+import OfflineStatusBanner from "../../components/common/OfflineStatusBanner";
 
 interface RSBSARecord {
   id: string;
@@ -377,6 +380,13 @@ const TechMasterlist: React.FC = () => {
     setStatusModalLoading(true);
     setShowStatusModal(true);
 
+    // If offline, skip the parcels fetch — modal can still work for simple toggle
+    if (!navigator.onLine) {
+      setStatusModalParcels([]);
+      setStatusModalLoading(false);
+      return;
+    }
+
     try {
       const parcelsResponse = await getFarmParcels(record.id);
       const parcelsData = parcelsResponse.data || [];
@@ -613,6 +623,81 @@ const TechMasterlist: React.FC = () => {
       }
     }
 
+    // ─── Offline path: queue the change locally ───────────────────────
+    if (!navigator.onLine) {
+      try {
+        const isNowActive = statusChangeTarget.newStatus === "Active Farmer";
+        const newFarmerStatus = statusChangeTarget.newStatus;
+        const timestamp = new Date().toISOString();
+        let newCultivationStatus = "";
+        let finalReason = "";
+
+        if (statusModalParcels.length === 0) {
+          newCultivationStatus = isNowActive ? "Actively farming" : "Not farming";
+          finalReason = statusChangeReason.trim();
+        } else {
+          const anyActive = statusModalParcels.some((p) => p.isCultivating === true);
+          newCultivationStatus = anyActive ? "Actively farming" : "Not farming";
+          finalReason = statusModalParcels
+            .filter((p) => p.isCultivating === false && (p.cultivationStatusReason || "").trim())
+            .map((p) => `Parcel ${p.parcelNumber !== "N/A" ? p.parcelNumber : p.id}: ${(p.cultivationStatusReason || "").trim()}`)
+            .join("; ");
+        }
+
+        await addPendingAction("CULTIVATION_UPDATE", {
+          farmerId: statusChangeTarget.id,
+          parcels: statusModalParcels.map((p: any) => ({
+            id: p.id,
+            updates: {
+              is_farming: p.isCultivating === true,
+              farming_status_reason:
+                p.isCultivating === true
+                  ? null
+                  : (p.cultivationStatusReason || "").trim(),
+              farming_status_updated_at: timestamp,
+            },
+          })),
+          submission: {
+            id: statusChangeTarget.id,
+            updates: {
+              status: isNowActive ? "Active Farmer" : "Not Active",
+              statusChangeReason: finalReason,
+            },
+          },
+        });
+
+        // ✅ Optimistic local update
+        setRsbsaRecords((prev) =>
+          prev.map((r) =>
+            r.id === statusChangeTarget.id
+              ? {
+                  ...r,
+                  status: newFarmerStatus,
+                  cultivationStatus: newCultivationStatus,
+                }
+              : r,
+          ),
+        );
+
+        showUpdateNotification(
+          `Saved offline — "${newFarmerStatus}" will sync when connection returns.`,
+          "success",
+        );
+      } catch (offlineErr: any) {
+        showUpdateNotification(
+          `Failed to save offline: ${offlineErr.message}`,
+          "error",
+        );
+      } finally {
+        setShowStatusModal(false);
+        setStatusChangeTarget(null);
+        setStatusModalParcels([]);
+        setStatusChangeReason("");
+      }
+      return;
+    }
+
+    // ─── Online path: original Supabase calls ─────────────────────────
     try {
       let newFarmerStatus = "";
       let newCultivationStatus = "";
@@ -1320,6 +1405,8 @@ const TechMasterlist: React.FC = () => {
           </div>
 
           {/* Page header */}
+          <OfflineStatusBanner />
+
           <div className="jo-masterlist-dashboard-header">
             <div>
               <h1 className="jo-masterlist-page-title">Masterlist</h1>
@@ -1564,7 +1651,7 @@ const TechMasterlist: React.FC = () => {
                             aria-label={`Select ${record.farmerName}`}
                           />
                         </td>
-                        <td>
+                        <td data-label="Select">
                           <div className="jo-masterlist-farmer-cell">
                             <div className="jo-masterlist-farmer-avatar">
                               {getFarmerInitials(record.farmerName)}
@@ -1576,12 +1663,12 @@ const TechMasterlist: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td>{record.farmerAddress}</td>
-                        <td>{record.farmLocation}</td>
-                        <td>{record.parcelArea}</td>
-                        <td>{getOwnershipLabel(record)}</td>
-                        <td>{formatDate(record.dateSubmitted)}</td>
-                        <td>
+                        <td data-label="Farmer Address">{record.farmerAddress}</td>
+                        <td data-label="Parcel Address">{record.farmLocation}</td>
+                        <td data-label="Parcel Area">{record.parcelArea}</td>
+                        <td data-label="Ownership Type">{getOwnershipLabel(record)}</td>
+                        <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
+                        <td data-label="Status">
                           <button
                             className={`jo-masterlist-status-pill ${getStatusClass(record.status)}`}
                             onClick={(e) => {

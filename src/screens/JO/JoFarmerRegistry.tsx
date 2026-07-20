@@ -66,6 +66,7 @@ interface RSBSARecord {
   hasNoParcels?: boolean;
   hasNoLandOwner?: boolean;
   mainLivelihood?: string;
+  profilePicture?: string | null;
   ownershipType?: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -112,6 +113,7 @@ interface FarmerDetail {
   mainLivelihood: string;
   farmingActivities: string[];
   parcels: ParcelDetail[];
+  profilePicture?: string | null;
 }
 
 interface ParcelDetail {
@@ -462,7 +464,13 @@ const JoFarmerRegistry: React.FC = () => {
         mainLivelihood: data.mainLivelihood || "N/A",
         farmingActivities: activities,
         parcels: mappedParcels,
-        profilePicture: farmerData.profilePicture || null,
+        profilePicture:
+          farmerData.profilePicture ||
+          farmerData.profile_picture ||
+          data?.profilePicture ||
+          data?.profile_picture ||
+          selectedRecord?.profilePicture ||
+          null,
       });
       setShowModal(true);
     } catch (err: any) {
@@ -724,6 +732,11 @@ const JoFarmerRegistry: React.FC = () => {
             mainLivelihood:
               item.mainLivelihood || item._raw?.["MAIN LIVELIHOOD"] || "",
             hasNoParcels,
+            profilePicture:
+              item.profilePicture ||
+              item.profile_picture ||
+              item._raw?.profile_picture ||
+              null,
           };
         },
       );

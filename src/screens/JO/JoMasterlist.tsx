@@ -69,6 +69,7 @@ interface RSBSARecord {
   farmerOtherCrops: boolean;
   farmerLivestock: boolean;
   farmerPoultry: boolean;
+  profilePicture?: string | null;
   ownershipType?: {
     registeredOwner: boolean;
     tenant: boolean;
@@ -140,6 +141,7 @@ interface FarmerDetail {
   farmingActivities: string[];
   ownershipRole: string;
   parcels: ParcelDetail[];
+  profilePicture?: string | null;
 }
 
 interface ParcelDetail {
@@ -775,6 +777,11 @@ const JoMasterlist: React.FC = () => {
           farmerLivestock:
             item.farmerLivestock || item["FARMER_LIVESTOCK"] || false,
           farmerPoultry: item.farmerPoultry || item["FARMER_POULTRY"] || false,
+          profilePicture:
+            item.profilePicture ||
+            item.profile_picture ||
+            item._raw?.profile_picture ||
+            null,
           ownershipType: item.ownershipType,
           hasNoActiveLand:
             (item.status || "").toLowerCase().trim() === "no parcels" ||
@@ -1002,7 +1009,13 @@ const JoMasterlist: React.FC = () => {
         farmingActivities: activities,
         ownershipRole,
         parcels: mappedParcels,
-        profilePicture: farmerData.profilePicture || null,
+        profilePicture:
+          farmerData.profilePicture ||
+          farmerData.profile_picture ||
+          data?.profilePicture ||
+          data?.profile_picture ||
+          selectedRecord?.profilePicture ||
+          null,
       });
 
       // Determine which profile modal to show based on ownership role

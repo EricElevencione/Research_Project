@@ -11,6 +11,7 @@ import {
   Plus,
   X,
   CheckCircle2,
+  AlertCircle,
   Search,
   SlidersHorizontal,
   Sprout,

@@ -651,45 +651,118 @@
   .tech-masterlist-filters-section {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
 
   .tech-masterlist-search-filter,
   .tech-masterlist-status-filter {
-    min-width: auto;
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .tech-masterlist-search-input,
+  .tech-masterlist-status-select {
+    width: 100%;
+    height: 44px; /* Touch-friendly height */
+    font-size: 14px;
   }
 
   .tech-masterlist-table-container {
-    font-size: 12px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
   }
 
   .tech-masterlist-farmers-table {
-    min-width: 760px;
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
   }
 
-  .tech-masterlist-farmers-table thead th,
+  .tech-masterlist-farmers-table thead {
+    display: none; /* Hide header row on mobile */
+  }
+
+  .tech-masterlist-farmers-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tech-masterlist-farmers-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    position: relative;
+  }
+
   .tech-masterlist-farmers-table tbody td {
-    padding: 8px 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px dashed #f3f4f6;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .tech-masterlist-farmers-table tbody td:last-child {
+    border-bottom: none;
+    padding-top: 10px;
+    justify-content: flex-end;
+  }
+
+  .tech-masterlist-farmers-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #4b5563;
+    text-align: left;
+    margin-right: 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .tech-masterlist-main-content {
-    padding: 10px;
+    padding: 12px;
+    padding-bottom: 90px;
   }
 
   .tech-masterlist-content-card {
-    padding: 16px;
+    padding: 14px;
   }
 
   .tech-masterlist-print-modal {
     width: 95%;
-    margin: 20px;
+    max-height: 90vh;
+    margin: 10px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
   }
 
   .tech-masterlist-print-modal-body {
     padding: 16px;
+    overflow-y: auto;
   }
 
   .tech-masterlist-print-modal-footer {
-    padding: 16px;
+    padding: 14px;
+    flex-direction: column-reverse;
+  }
+
+  .tech-masterlist-print-modal-cancel-button,
+  .tech-masterlist-print-modal-print-button {
+    width: 100%;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .tech-masterlist-update-toast {

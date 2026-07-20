@@ -11,6 +11,7 @@ import {
   getAuditLogger,
   AuditModule,
 } from "../../components/Audit/auditLogger";
+import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 import "../../assets/css/admin css/index.css";
 import "../../assets/css/jo css/JoIncentStyle.css";
 import "../../assets/css/jo css/JoCreateAllocationStyle.css";
@@ -416,6 +417,12 @@ const AdminCreateAllocation: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    if (selectedFertilizers.length === 0 && selectedSeeds.length === 0) {
+      setError("Please add at least one fertilizer or seed item to the allocation.");
+      setLoading(false);
+      return;
+    }
+
     // Validate: all added items must have quantity >= 1
     const invalidFerts = selectedFertilizers.filter((item) => item.value < 1);
     const invalidSeeds = selectedSeeds.filter((item) => item.value < 1);
@@ -464,14 +471,10 @@ const AdminCreateAllocation: React.FC = () => {
 
       // Audit Log
       try {
-        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const auditUser = await getCurrentUserForAudit();
         const auditLogger = getAuditLogger();
         await auditLogger.logCRUD(
-          {
-            id: currentUser.id,
-            name: currentUser.name || "Admin",
-            role: currentUser.role || "ADMIN",
-          },
+          auditUser,
           isEditMode ? "UPDATE" : "CREATE",
           AuditModule.ALLOCATIONS,
           "regional_allocation",
