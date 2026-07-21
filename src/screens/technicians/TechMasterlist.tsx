@@ -100,6 +100,53 @@ const TechMasterlist: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [landSizeFilter, setLandSizeFilter] = useState<string>("");
+
+  const getLandAreaRange = (
+    filterStr: string,
+  ): { min: number | null; max: number | null } => {
+    const s = filterStr.trim();
+    if (!s) return { min: null, max: null };
+
+    if (s.includes("-") || s.toLowerCase().includes("to")) {
+      const parts = s.split(/[-]|to/i).map((p) => p.trim());
+      const minVal = parseFloat(parts[0]);
+      const maxVal = parseFloat(parts[1]);
+      return {
+        min: !isNaN(minVal) ? minVal : null,
+        max: !isNaN(maxVal) ? maxVal : null,
+      };
+    }
+
+    if (s.startsWith("<")) {
+      const num = parseFloat(s.replace(/^<=?/, "").trim());
+      return { min: 0, max: !isNaN(num) ? num : null };
+    }
+
+    if (s.startsWith(">")) {
+      const num = parseFloat(s.replace(/^>=?/, "").trim());
+      return { min: !isNaN(num) ? num : null, max: null };
+    }
+
+    const n = parseFloat(s);
+    if (!isNaN(n)) {
+      if (n <= 1) {
+        return { min: 0, max: n };
+      }
+      return { min: n - 1, max: n };
+    }
+
+    return { min: null, max: null };
+  };
+
+  const parseArea = (v: string): number => {
+    const tokens = String(v || "").match(/-?\d+(?:\.\d+)?/g);
+    if (!tokens) return 0;
+    return tokens.reduce((s, t) => {
+      const n = Number(t);
+      return s + (Number.isFinite(n) && n > 0 ? n : 0);
+    }, 0);
+  };
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printFilter, setPrintFilter] = useState({
     type: "all", // 'all', 'lastname', 'barangay', 'date'
@@ -530,16 +577,15 @@ const TechMasterlist: React.FC = () => {
       return false; // Exclude pure tenants from masterlist
     }
 
-    const matchesStatus =
-      selectedStatus === "all" || record.status === selectedStatus;
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      record.farmerName.toLowerCase().includes(q) ||
-      record.referenceNumber.toLowerCase().includes(q) ||
-      record.farmerAddress.toLowerCase().includes(q) ||
-      record.farmLocation.toLowerCase().includes(q);
+    let matchesLandSize = true;
+    if (landSizeFilter.trim() !== "") {
+      const { min, max } = getLandAreaRange(landSizeFilter);
+      const area = parseArea(record.parcelArea);
+      if (min !== null && area < min) matchesLandSize = false;
+      if (max !== null && area > max) matchesLandSize = false;
+    }
 
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesSearch && matchesLandSize;
   });
 
   const sortedFilteredRecords = [...filteredRecords].sort((a, b) => {
@@ -1468,6 +1514,45 @@ const TechMasterlist: React.FC = () => {
                     <option value="Active Farmer">Active Farmer</option>
                     <option value="Not Active">Not Active</option>
                   </select>
+                </div>
+
+                {/* ── Single Land Area Filter ── */}
+                <div
+                  className="jo-masterlist-land-filter-group"
+                  title="Type a land size in hectares (e.g., '2' filters 1 to 2 ha, '1-3' filters 1 to 3 ha)"
+                >
+                  <span className="jo-masterlist-land-icon">📐</span>
+                  <input
+                    type="text"
+                    placeholder="Land ha (e.g. 2)"
+                    value={landSizeFilter}
+                    onChange={(e) => setLandSizeFilter(e.target.value)}
+                    className="jo-masterlist-land-single-input"
+                    aria-label="Filter by land area in hectares"
+                  />
+                  {landSizeFilter.trim() !== "" && (
+                    <>
+                      <span className="jo-masterlist-land-range-badge">
+                        {(() => {
+                          const { min, max } = getLandAreaRange(landSizeFilter);
+                          if (min !== null && max !== null)
+                            return `${min}–${max} ha`;
+                          if (min !== null) return `≥${min} ha`;
+                          if (max !== null) return `≤${max} ha`;
+                          return "";
+                        })()}
+                      </span>
+                      <button
+                        type="button"
+                        className="jo-masterlist-land-clear-btn"
+                        onClick={() => setLandSizeFilter("")}
+                        title="Clear land area filter"
+                        aria-label="Clear land area filter"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

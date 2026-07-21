@@ -48,6 +48,7 @@ interface NormalizedFarmerForm {
   farmingActivities: string[];
   dateSubmitted: string;
   parcels: NormalizedParcel[];
+  profilePicture?: string | null;
 }
 
 type CoordinatePair = [number, number];
@@ -477,6 +478,15 @@ const normalizeFormData = (
     geometry: findParcelGeometry(parcel, ownerVerifiedPlots),
   }));
 
+  const profilePicture =
+    submissionRecord.profilePicture ||
+    submissionRecord.profile_picture ||
+    data.profilePicture ||
+    data.profile_picture ||
+    data.profile_pic ||
+    data.profilePic ||
+    null;
+
   return {
     referenceNumber,
     farmerName: deriveFarmerName(
@@ -508,6 +518,7 @@ const normalizeFormData = (
         submissionRecord.created_at,
     ),
     parcels: parcelsWithGeometry,
+    profilePicture,
   };
 };
 
@@ -563,16 +574,28 @@ const renderFarmerFormSection = (
     )
     .join("");
 
+  const photoHtml = form.profilePicture
+    ? `<div class="farmer-photo-frame">
+         <img src="${escapeHtml(form.profilePicture)}" alt="Farmer Profile Picture" class="farmer-photo-img" />
+       </div>`
+    : `<div class="farmer-photo-frame farmer-photo-placeholder">
+         <span class="photo-box-label">2" x 2"</span>
+         <span class="photo-box-sub">ID PHOTO</span>
+       </div>`;
+
   return `
     <section class="page ${index > 0 ? "page-break" : ""}">
       <header class="head">
-        <div>
+        <div class="head-left">
           <h1>RSBSA Enrollment Form</h1>
           <p>Registry System for Basic Sectors in Agriculture</p>
         </div>
-        <div class="ref-block">
-          <strong>Reference No.</strong>
-          <span>${escapeHtml(form.referenceNumber)}</span>
+        <div class="head-right">
+          ${photoHtml}
+          <div class="ref-block">
+            <strong>Reference No.</strong>
+            <span>${escapeHtml(form.referenceNumber)}</span>
+          </div>
         </div>
       </header>
 
@@ -708,10 +731,56 @@ const buildFormsDocument = (forms: NormalizedFarmerForm[]): string => {
           .head {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             border: 2px solid #202020;
-            padding: 8px;
+            padding: 8px 12px;
             margin-bottom: 10px;
+          }
+          .head-left {
+            flex: 1;
+          }
+          .head-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+          }
+          .farmer-photo-frame {
+            width: 22mm;
+            height: 22mm;
+            border: 1.5px solid #202020;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+            overflow: hidden;
+            flex-shrink: 0;
+          }
+          .farmer-photo-placeholder {
+            border: 1.5px dashed #444;
+            background: #f4f5f6;
+            color: #555;
+            text-align: center;
+            padding: 2px;
+          }
+          .photo-box-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #214a37;
+            line-height: 1.1;
+          }
+          .photo-box-sub {
+            font-size: 7.5px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            color: #666;
+            margin-top: 2px;
+          }
+          .farmer-photo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
           }
           .head h1 {
             margin: 0;

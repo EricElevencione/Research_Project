@@ -277,6 +277,44 @@ const JoMasterlist: React.FC = () => {
   const [selectedFarmingStatus, setSelectedFarmingStatus] =
     useState<string>("all");
   const [selectedCrop, setSelectedCrop] = useState<string>("all");
+  const [landSizeFilter, setLandSizeFilter] = useState<string>("");
+
+  const getLandAreaRange = (
+    filterStr: string,
+  ): { min: number | null; max: number | null } => {
+    const s = filterStr.trim();
+    if (!s) return { min: null, max: null };
+
+    if (s.includes("-") || s.toLowerCase().includes("to")) {
+      const parts = s.split(/[-]|to/i).map((p) => p.trim());
+      const minVal = parseFloat(parts[0]);
+      const maxVal = parseFloat(parts[1]);
+      return {
+        min: !isNaN(minVal) ? minVal : null,
+        max: !isNaN(maxVal) ? maxVal : null,
+      };
+    }
+
+    if (s.startsWith("<")) {
+      const num = parseFloat(s.replace(/^<=?/, "").trim());
+      return { min: 0, max: !isNaN(num) ? num : null };
+    }
+
+    if (s.startsWith(">")) {
+      const num = parseFloat(s.replace(/^>=?/, "").trim());
+      return { min: !isNaN(num) ? num : null, max: null };
+    }
+
+    const n = parseFloat(s);
+    if (!isNaN(n)) {
+      if (n <= 1) {
+        return { min: 0, max: n };
+      }
+      return { min: n - 1, max: n };
+    }
+
+    return { min: null, max: null };
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerDetail | null>(
@@ -350,6 +388,15 @@ const JoMasterlist: React.FC = () => {
     if (!iso) return "";
     const d = new Date(iso);
     return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
+  };
+
+  const parseArea = (v: string): number => {
+    const tokens = String(v || "").match(/-?\d+(?:\.\d+)?/g);
+    if (!tokens) return 0;
+    return tokens.reduce((s, t) => {
+      const n = Number(t);
+      return s + (Number.isFinite(n) && n > 0 ? n : 0);
+    }, 0);
   };
 
   const formatParcelArea = (parcelArea: string) => {
@@ -1263,6 +1310,13 @@ const JoMasterlist: React.FC = () => {
           if (selectedCrop === "poultry" && !record.farmerPoultry) return false;
         }
 
+        if (landSizeFilter.trim() !== "") {
+          const { min, max } = getLandAreaRange(landSizeFilter);
+          const area = parseArea(record.parcelArea);
+          if (min !== null && area < min) return false;
+          if (max !== null && area > max) return false;
+        }
+
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           const matches =
@@ -1284,14 +1338,6 @@ const JoMasterlist: React.FC = () => {
         const bFlag = b.hasNoActiveLand || b.hasNoLandOwner ? 1 : 0;
         if (aFlag !== bFlag) return aFlag - bFlag;
 
-        const parseArea = (v: string) => {
-          const tokens = String(v || "").match(/-?\d+(?:\.\d+)?/g);
-          if (!tokens) return 0;
-          return tokens.reduce((s, t) => {
-            const n = Number(t);
-            return s + (Number.isFinite(n) ? n : 0);
-          }, 0);
-        };
         for (const config of sortConfigs) {
           const factor = config.direction === "asc" ? 1 : -1;
           if (config.key === "dateSubmitted") {
@@ -1327,6 +1373,7 @@ const JoMasterlist: React.FC = () => {
     selectedFarmBarangay,
     selectedFarmingStatus,
     selectedCrop,
+    landSizeFilter,
     searchQuery,
     sortConfigs,
   ]);
@@ -2132,6 +2179,45 @@ const JoMasterlist: React.FC = () => {
                     <option value="livestock">Livestock</option>
                     <option value="poultry">Poultry</option>
                   </select>
+                </div>
+
+                {/* ── Single Land Area Filter ── */}
+                <div
+                  className="jo-masterlist-land-filter-group"
+                  title="Type a land size in hectares (e.g., '2' filters 1 to 2 ha, '1-3' filters 1 to 3 ha)"
+                >
+                  <span className="jo-masterlist-land-icon">📐</span>
+                  <input
+                    type="text"
+                    placeholder="Land ha (e.g. 2)"
+                    value={landSizeFilter}
+                    onChange={(e) => setLandSizeFilter(e.target.value)}
+                    className="jo-masterlist-land-single-input"
+                    aria-label="Filter by land area in hectares"
+                  />
+                  {landSizeFilter.trim() !== "" && (
+                    <>
+                      <span className="jo-masterlist-land-range-badge">
+                        {(() => {
+                          const { min, max } = getLandAreaRange(landSizeFilter);
+                          if (min !== null && max !== null)
+                            return `${min}–${max} ha`;
+                          if (min !== null) return `≥${min} ha`;
+                          if (max !== null) return `≤${max} ha`;
+                          return "";
+                        })()}
+                      </span>
+                      <button
+                        type="button"
+                        className="jo-masterlist-land-clear-btn"
+                        onClick={() => setLandSizeFilter("")}
+                        title="Clear land area filter"
+                        aria-label="Clear land area filter"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
