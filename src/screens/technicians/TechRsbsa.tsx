@@ -294,6 +294,70 @@ const TechRsbsa: React.FC = () => {
         }
       }
 
+      // Fetch matching land_plots geometries for map preview & area mismatch warning
+      try {
+        const parcelNumbers = mappedParcels
+          .map((p) => p.parcelNumber)
+          .filter((n) => n && n !== "N/A");
+
+        let plotsQuery = supabase
+          .from("land_plots")
+          .select("id, parcel_number, area, geometry, farmer_id");
+
+        if (parcelNumbers.length > 0) {
+          plotsQuery = plotsQuery.or(
+            `farmer_id.eq.${Number(farmerId)},parcel_number.in.(${parcelNumbers.map((n) => `"${n}"`).join(",")})`,
+          );
+        } else {
+          plotsQuery = plotsQuery.eq("farmer_id", Number(farmerId));
+        }
+
+        const { data: plots } = await plotsQuery;
+
+        if (plots && plots.length > 0) {
+          console.log(
+            `[TechRsbsa] Found ${plots.length} land_plots for farmer ${farmerId} (parcels: ${parcelNumbers.join(", ")}):`,
+            plots.map((pl: any) => ({
+              id: pl.id,
+              parcel_number: pl.parcel_number,
+              hasGeometry: !!pl.geometry,
+            })),
+          );
+          mappedParcels = mappedParcels.map((p) => {
+            // Match by parcel_number (case insensitive, trimmed)
+            const plot = plots.find(
+              (plotItem: any) =>
+                plotItem.parcel_number &&
+                p.parcelNumber &&
+                plotItem.parcel_number.trim().toLowerCase() ===
+                  p.parcelNumber.trim().toLowerCase(),
+            );
+            // If only one plot and one parcel, auto-match fallback
+            const resolvedPlot =
+              plot ||
+              (plots.length === 1 && mappedParcels.length === 1
+                ? plots[0]
+                : null);
+            if (resolvedPlot && resolvedPlot.geometry) {
+              return {
+                ...p,
+                geometry: resolvedPlot.geometry,
+              };
+            }
+            return p;
+          });
+        } else {
+          console.log(
+            `[TechRsbsa] No land_plots found for farmer ${farmerId} and parcels ${parcelNumbers.join(", ")}`,
+          );
+        }
+      } catch (geomErr) {
+        console.warn(
+          "Could not fetch parcel geometries for TechRsbsa:",
+          geomErr,
+        );
+      }
+
       const parsedSubmissionDate = selectedRecord
         ? getSubmissionDate(selectedRecord)
         : null;
@@ -1160,6 +1224,7 @@ const TechRsbsa: React.FC = () => {
               ) : (
                 <FarmerProfileDisplay
                   farmer={selectedFarmer}
+                  showAreaMismatchWarning={true}
                   onClose={() => setShowModal(false)}
                 />
               )}

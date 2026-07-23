@@ -923,14 +923,20 @@ const Masterlist: React.FC = () => {
         lesseeLandOwnerId: p.lessee_land_owner_id
           ? String(p.lessee_land_owner_id)
           : null,
-        withinAncestralDomain: p.within_ancestral_domain || "",
-        ownershipDocumentNo: p.ownership_document_no || "",
-        agrarian_reform_beneficiary: p.agrarian_reform_beneficiary || "",
-        ownership_others_specify: p.ownership_others_specify || "",
-        contract_end_date: p.contract_end_date || p.contractEndDate || null,
-        is_farming: typeof p.is_farming === "boolean" ? p.is_farming : null,
-        farming_status_reason: p.farming_status_reason || null,
-        farming_status_updated_at: p.farming_status_updated_at || null,
+        withinAncestralDomain:
+          p.within_ancestral_domain || p.withinAncestralDomain || "",
+        ownershipDocumentNo:
+          p.ownership_document_no || p.ownershipDocumentNo || "",
+        agrarianReformBeneficiary:
+          p.agrarian_reform_beneficiary || p.agrarianReformBeneficiary || "",
+        ownershipOthersSpecify:
+          p.ownership_others_specify || p.ownershipOthersSpecify || "",
+        contractEndDate: p.contract_end_date || p.contractEndDate || null,
+        isFarming: typeof p.is_farming === "boolean" ? p.is_farming : typeof p.isFarming === "boolean" ? p.isFarming : null,
+        farmingStatusReason:
+          p.farming_status_reason || p.cultivation_status_reason || p.farmingStatusReason || null,
+        farmingStatusUpdatedAt:
+          p.farming_status_updated_at || p.farmingStatusUpdatedAt || null,
         role: p.role || "",
         occupants: p.occupants || [],
       }));

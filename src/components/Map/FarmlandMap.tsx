@@ -511,9 +511,56 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
               }
               style={(feature: any) => {
                 const props = feature?.properties || {};
-                const isTransferred = props.is_current_owner === false;
 
-                if (isTransferred) {
+                // Area mismatch detection to highlight parcel in orange-dashed style
+                let hasAreaMismatch = false;
+                const recordedArea = parseFloat(
+                  props.area ||
+                    props.total_farm_area_ha ||
+                    props.totalFarmAreaHa,
+                );
+                if (
+                  Number.isFinite(recordedArea) &&
+                  recordedArea > 0 &&
+                  feature.geometry
+                ) {
+                  try {
+                    const geoJsonLayer = L.geoJSON(feature as any);
+                    let polygonAreaSqm = 0;
+                    geoJsonLayer.eachLayer((lyr: any) => {
+                      if (typeof lyr.getLatLngs === "function") {
+                        const latLngs = lyr.getLatLngs();
+                        if (latLngs && latLngs.length > 0) {
+                          const ring = Array.isArray(latLngs[0])
+                            ? latLngs[0]
+                            : latLngs;
+                          polygonAreaSqm += (L as any).GeometryUtil
+                            ? (L as any).GeometryUtil.geodesicArea(ring)
+                            : 0;
+                        }
+                      }
+                    });
+                    if (polygonAreaSqm <= 0) {
+                      geoJsonLayer.eachLayer((lyr: any) => {
+                        if (typeof (lyr as any).getArea === "function") {
+                          polygonAreaSqm += (lyr as any).getArea();
+                        }
+                      });
+                    }
+                    if (polygonAreaSqm > 0) {
+                      const polygonAreaHa = polygonAreaSqm / 10000;
+                      const diff = Math.abs(recordedArea - polygonAreaHa);
+                      const threshold = Math.max(0.05, recordedArea * 0.1);
+                      if (diff > threshold) {
+                        hasAreaMismatch = true;
+                      }
+                    }
+                  } catch (e) {
+                    console.warn("Map style area calc error:", e);
+                  }
+                }
+
+                if (hasAreaMismatch) {
                   return {
                     color: "#b45309",
                     weight: 2.5,
@@ -737,10 +784,13 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                           : [];
 
                         if (cell) {
-                          // ── Area mismatch detection ──
-                          // Compare recorded area (land_plots.area) vs GIS polygon calculated area
+                          // Area mismatch detection inside map popup
                           let areaMismatchHtml = "";
-                          const recordedArea = parseFloat(feature.properties.area);
+                          const recordedArea = parseFloat(
+                            feature.properties.area ||
+                              feature.properties.total_farm_area_ha ||
+                              feature.properties.totalFarmAreaHa,
+                          );
                           if (
                             Number.isFinite(recordedArea) &&
                             recordedArea > 0 &&
@@ -757,15 +807,17 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                       ? latLngs[0]
                                       : latLngs;
                                     polygonAreaSqm += (L as any).GeometryUtil
-                                      ? (L as any).GeometryUtil.geodesicArea(ring)
+                                      ? (L as any)
+                                          .GeometryUtil.geodesicArea(ring)
                                       : 0;
                                   }
                                 }
                               });
-                              // Fallback: try using geodesicArea if available on layer
                               if (polygonAreaSqm <= 0) {
                                 geoJsonLayer.eachLayer((lyr: any) => {
-                                  if (typeof (lyr as any).getArea === "function") {
+                                  if (
+                                    typeof (lyr as any).getArea === "function"
+                                  ) {
                                     polygonAreaSqm += (lyr as any).getArea();
                                   }
                                 });
@@ -773,8 +825,11 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                               if (polygonAreaSqm > 0) {
                                 const polygonAreaHa = polygonAreaSqm / 10000;
                                 const diff = Math.abs(recordedArea - polygonAreaHa);
-                                const threshold = recordedArea * 0.2; // 20% tolerance
-                                if (diff > threshold && diff > 0.05) {
+                                const threshold = Math.max(
+                                  0.05,
+                                  recordedArea * 0.1,
+                                );
+                                if (diff > threshold) {
                                   areaMismatchHtml = `<div style="
                                     background: #fffbeb;
                                     border-left: 4px solid #d97706;
@@ -786,12 +841,15 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                     margin-bottom: 10px;
                                     line-height: 1.4;
                                   ">
-                                    ⚠️ Area Mismatch: Recorded area is <strong>${recordedArea.toFixed(2)} ha</strong> but the plotted GIS shape is approximately <strong>${polygonAreaHa.toFixed(2)} ha</strong>. Please verify and update the shape or area size.
+                                    ⚠️ Area Mismatch / Shape Needs Update: Recorded size is <strong>${recordedArea.toFixed(2)} ha</strong>, but the plotted GIS map shape is approximately <strong>${polygonAreaHa.toFixed(2)} ha</strong>. The polygon shape needs to be re-plotted in Land Plotting to match the new size.
                                   </div>`;
                                 }
                               }
                             } catch (areaCalcErr) {
-                              console.warn("Area mismatch calc error:", areaCalcErr);
+                              console.warn(
+                                "Area mismatch calc error in popup:",
+                                areaCalcErr,
+                              );
                             }
                           }
                           if (

@@ -55,13 +55,63 @@ const OWN_PARCEL_SELECTED_STYLE = {
   fillOpacity: 0.35,
 };
 
-const TRANSFERRED_PARCEL_STYLE = {
+const MISMATCH_WARNING_STYLE = {
   color: "#b45309",
-  weight: 2,
+  weight: 2.5,
   opacity: 1,
   fillColor: "#f59e0b",
-  fillOpacity: 0.25,
+  fillOpacity: 0.35,
   dashArray: "6 4",
+};
+
+const hasShapeAreaMismatch = (shape: any): boolean => {
+  if (!shape) return false;
+  const recordedArea = parseFloat(
+    shape.properties?.area ||
+      shape.properties?.total_farm_area_ha ||
+      shape.properties?.totalFarmAreaHa,
+  );
+  if (!Number.isFinite(recordedArea) || recordedArea <= 0) return false;
+
+  let polygonAreaSqm = 0;
+  if (shape.layer && typeof shape.layer.getLatLngs === "function") {
+    try {
+      const latLngs = shape.layer.getLatLngs();
+      if (latLngs && latLngs.length > 0) {
+        const ring = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
+        polygonAreaSqm = (L as any).GeometryUtil
+          ? (L as any).GeometryUtil.geodesicArea(ring)
+          : 0;
+      }
+    } catch (e) {
+      console.warn("LandPlottingMap area calculation error:", e);
+    }
+  } else if (shape.geometry) {
+    try {
+      const geoJsonLayer = L.geoJSON(shape as any);
+      geoJsonLayer.eachLayer((lyr: any) => {
+        if (typeof lyr.getLatLngs === "function") {
+          const latLngs = lyr.getLatLngs();
+          if (latLngs && latLngs.length > 0) {
+            const ring = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
+            polygonAreaSqm += (L as any).GeometryUtil
+              ? (L as any).GeometryUtil.geodesicArea(ring)
+              : 0;
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("LandPlottingMap geometry area calculation error:", e);
+    }
+  }
+
+  if (polygonAreaSqm > 0) {
+    const polygonAreaHa = polygonAreaSqm / 10000;
+    const diff = Math.abs(recordedArea - polygonAreaHa);
+    const threshold = Math.max(0.05, recordedArea * 0.1);
+    return diff > threshold;
+  }
+  return false;
 };
 
 const REFERENCE_PARCEL_STYLE = {
@@ -870,8 +920,8 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
             properties: shape.properties,
           });
 
-          const isTransferred = shape.properties?.is_current_owner === false;
-          const parcelStyle = isTransferred ? TRANSFERRED_PARCEL_STYLE : OWN_PARCEL_STYLE;
+          const mismatch = hasShapeAreaMismatch(shape);
+          const parcelStyle = mismatch ? MISMATCH_WARNING_STYLE : OWN_PARCEL_STYLE;
 
           if (shape.layer && !featureGroupRef.current?.hasLayer(shape.layer)) {
             featureGroupRef.current?.addLayer(shape.layer);

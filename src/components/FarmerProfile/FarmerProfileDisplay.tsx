@@ -2,6 +2,24 @@ import React, { useState, useEffect } from "react";
 import "../../components/FarmerProfile/farmerProfileModal.css";
 import ParcelGeometryPreview from "../FarmerProfile/ParcelGeometryPreview";
 import { supabase } from "../../supabase";
+import { area as turfArea } from "@turf/turf";
+
+const getGisAreaHa = (geometry: any): number | null => {
+  if (!geometry) return null;
+  try {
+    const geoJson =
+      geometry.type === "Feature"
+        ? geometry
+        : { type: "Feature", geometry, properties: {} };
+    const areaM2 = turfArea(geoJson as any);
+    if (typeof areaM2 === "number" && areaM2 > 0) {
+      return areaM2 / 10000;
+    }
+  } catch (err) {
+    console.warn("getGisAreaHa error:", err);
+  }
+  return null;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Unified Farmer Profile Display
@@ -73,6 +91,7 @@ export interface FarmerProfileData {
 interface FarmerProfileDisplayProps {
   farmer: FarmerProfileData;
   onClose?: () => void;
+  showAreaMismatchWarning?: boolean;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -114,6 +133,7 @@ const formatDateTime = (iso?: string | null) => {
 export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
   farmer,
   onClose,
+  showAreaMismatchWarning = false,
 }) => {
   const parcels = farmer.parcels || [];
   
@@ -450,6 +470,26 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
                 const farmingVal = isParcelFarming(parcel);
                 const reasonVal = getParcelFarmingReason(parcel);
 
+                const gisAreaHa = getGisAreaHa(parcel.geometry);
+                const recordedAreaHa =
+                  typeof parcel.totalFarmAreaHa === "number"
+                    ? parcel.totalFarmAreaHa
+                    : parseFloat(String(parcel.totalFarmAreaHa || 0));
+
+                let areaMismatchWarning: string | null = null;
+                if (
+                  showAreaMismatchWarning &&
+                  gisAreaHa !== null &&
+                  Number.isFinite(recordedAreaHa) &&
+                  recordedAreaHa > 0
+                ) {
+                  const diff = Math.abs(recordedAreaHa - gisAreaHa);
+                  const threshold = Math.max(0.05, recordedAreaHa * 0.1);
+                  if (diff > threshold) {
+                    areaMismatchWarning = `⚠️ Area Mismatch / Shape Needs Update: Recorded size is ${recordedAreaHa.toFixed(2)} ha, but the plotted GIS map shape is ~${gisAreaHa.toFixed(2)} ha. The polygon shape needs to be re-plotted in Land Plotting to match the new size.`;
+                  }
+                }
+
                 return (
                   <div key={parcel.id || index} className="farmer-modal-parcel-card">
                     <div className="farmer-modal-parcel-header">
@@ -590,6 +630,25 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {/* Area Mismatch Warning */}
+                    {areaMismatchWarning && (
+                      <div
+                        style={{
+                          background: "#fffbeb",
+                          borderLeft: "4px solid #d97706",
+                          color: "#92400e",
+                          padding: "10px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.85em",
+                          fontWeight: 600,
+                          margin: "8px 16px 12px",
+                          lineHeight: "1.4",
+                        }}
+                      >
+                        {areaMismatchWarning}
+                      </div>
+                    )}
 
                     {/* Map Preview */}
                     <div style={{ padding: "0 16px 16px" }}>
