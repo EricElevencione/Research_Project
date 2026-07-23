@@ -737,6 +737,63 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                           : [];
 
                         if (cell) {
+                          // ── Area mismatch detection ──
+                          // Compare recorded area (land_plots.area) vs GIS polygon calculated area
+                          let areaMismatchHtml = "";
+                          const recordedArea = parseFloat(feature.properties.area);
+                          if (
+                            Number.isFinite(recordedArea) &&
+                            recordedArea > 0 &&
+                            feature.geometry
+                          ) {
+                            try {
+                              const geoJsonLayer = L.geoJSON(feature as any);
+                              let polygonAreaSqm = 0;
+                              geoJsonLayer.eachLayer((lyr: any) => {
+                                if (typeof lyr.getLatLngs === "function") {
+                                  const latLngs = lyr.getLatLngs();
+                                  if (latLngs && latLngs.length > 0) {
+                                    const ring = Array.isArray(latLngs[0])
+                                      ? latLngs[0]
+                                      : latLngs;
+                                    polygonAreaSqm += (L as any).GeometryUtil
+                                      ? (L as any).GeometryUtil.geodesicArea(ring)
+                                      : 0;
+                                  }
+                                }
+                              });
+                              // Fallback: try using geodesicArea if available on layer
+                              if (polygonAreaSqm <= 0) {
+                                geoJsonLayer.eachLayer((lyr: any) => {
+                                  if (typeof (lyr as any).getArea === "function") {
+                                    polygonAreaSqm += (lyr as any).getArea();
+                                  }
+                                });
+                              }
+                              if (polygonAreaSqm > 0) {
+                                const polygonAreaHa = polygonAreaSqm / 10000;
+                                const diff = Math.abs(recordedArea - polygonAreaHa);
+                                const threshold = recordedArea * 0.2; // 20% tolerance
+                                if (diff > threshold && diff > 0.05) {
+                                  areaMismatchHtml = `<div style="
+                                    background: #fffbeb;
+                                    border-left: 4px solid #d97706;
+                                    color: #92400e;
+                                    padding: 8px 10px;
+                                    border-radius: 6px;
+                                    font-size: 0.82em;
+                                    font-weight: 600;
+                                    margin-bottom: 10px;
+                                    line-height: 1.4;
+                                  ">
+                                    ⚠️ Area Mismatch: Recorded area is <strong>${recordedArea.toFixed(2)} ha</strong> but the plotted GIS shape is approximately <strong>${polygonAreaHa.toFixed(2)} ha</strong>. Please verify and update the shape or area size.
+                                  </div>`;
+                                }
+                              }
+                            } catch (areaCalcErr) {
+                              console.warn("Area mismatch calc error:", areaCalcErr);
+                            }
+                          }
                           if (
                             !effectiveCropInfo.owner &&
                             effectiveCropInfo.tenants.length === 0 &&
@@ -744,19 +801,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                           ) {
                             const transferredNotice = resolvedOwnerName
                               ? `<div style="
-                                    background: #fffbeb;
-                                    border-left: 4px solid #d97706;
-                                    color: #92400e;
-                                    padding: 10px;
-                                    border-radius: 6px;
-                                    font-size: 0.85em;
-                                    font-weight: 600;
-                                    margin-bottom: 12px;
-                                    line-height: 1.4;
-                                  ">
-                                    ⚠️ Geometry inherited from previous owner.
-                                  </div>
-                                  <div style="
                                     background: #f0fdf4;
                                     border-left: 4px solid #16a34a;
                                     color: #166534;
@@ -768,40 +812,15 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   ">
                                     ✅ Current Owner: ${escapeHtml(resolvedOwnerName)}
                                   </div>`
-                              : `<div style="
-                                    background: #fffbeb;
-                                    border-left: 4px solid #d97706;
-                                    color: #92400e;
-                                    padding: 10px;
-                                    border-radius: 6px;
-                                    font-size: 0.85em;
-                                    font-weight: 600;
-                                    margin-bottom: 12px;
-                                    line-height: 1.4;
-                                  ">
-                                    ⚠️ Geometry inherited from previous owner — please verify and redraw if needed.
-                                  </div>`;
-                            cell.innerHTML = isTransferred
+                              : "";
+                            cell.innerHTML = areaMismatchHtml + (isTransferred
                               ? transferredNotice
-                              : '<div class="farmland-popup-no-data" style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No owner or history information found for this parcel.</div>';
+                              : '<div class="farmland-popup-no-data" style="color: #6c757d; padding: 8px; text-align: center; background: #f8f9fa; border-radius: 4px;">No owner or history information found for this parcel.</div>');
                           } else {
-                            let html = `<div class="farmland-popup-crops-list" style="max-height: 300px; overflow-y: auto;">`;
+                            let html = `<div class="farmland-popup-crops-list" style="max-height: 300px; overflow-y: auto;">${areaMismatchHtml}`;
                             if (isTransferred) {
                               html += usingCurrentOwnerData
                                 ? `
-                                <div style="
-                                  background: #fffbeb;
-                                  border-left: 4px solid #d97706;
-                                  color: #92400e;
-                                  padding: 10px;
-                                  border-radius: 6px;
-                                  font-size: 0.85em;
-                                  font-weight: 600;
-                                  margin-bottom: 8px;
-                                  line-height: 1.4;
-                                ">
-                                  ⚠️ Geometry inherited from previous owner — please verify and redraw if needed.
-                                </div>
                                 <div style="
                                   background: #f0fdf4;
                                   border-left: 4px solid #16a34a;
@@ -819,19 +838,6 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                 : resolvedOwnerName
                                   ? `
                                 <div style="
-                                  background: #fffbeb;
-                                  border-left: 4px solid #d97706;
-                                  color: #92400e;
-                                  padding: 10px;
-                                  border-radius: 6px;
-                                  font-size: 0.85em;
-                                  font-weight: 600;
-                                  margin-bottom: 8px;
-                                  line-height: 1.4;
-                                ">
-                                  ⚠️ Geometry inherited from previous owner.
-                                </div>
-                                <div style="
                                   background: #f0fdf4;
                                   border-left: 4px solid #16a34a;
                                   color: #166534;
@@ -845,21 +851,7 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                                   ✅ Current Owner: ${escapeHtml(resolvedOwnerName)}
                                 </div>
                               `
-                                  : `
-                                <div style="
-                                  background: #fffbeb;
-                                  border-left: 4px solid #d97706;
-                                  color: #92400e;
-                                  padding: 10px;
-                                  border-radius: 6px;
-                                  font-size: 0.85em;
-                                  font-weight: 600;
-                                  margin-bottom: 12px;
-                                  line-height: 1.4;
-                                ">
-                                  ⚠️ Geometry inherited from previous owner — please verify and redraw if needed.
-                                </div>
-                              `;
+                                  : "";
                             }
 
                             // Owner section

@@ -963,29 +963,11 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
 
     // Helper to generate popup content for a shape
     const getPopupContent = (properties: any) => {
-      const isTransferred = properties?.is_current_owner === false;
-      const transferredWarning = isTransferred
-        ? `<div style="
-            margin-top:8px;
-            padding:6px 8px;
-            background:#fef3c7;
-            border-left:3px solid #d97706;
-            border-radius:4px;
-            color:#92400e;
-            font-size:11px;
-            font-weight:600;
-            line-height:1.4;
-          ">
-            ⚠️ Geometry inherited from previous owner — please verify and confirm.
-          </div>`
-        : "";
-
       return `<div style='min-width:200px'>
                 <b>Parcel</b><br/>
                 <b>Name:</b> ${properties.surname || ""} ${properties.firstName || ""} ${properties.middleName || ""}<br/>
                 <b>Barangay:</b> ${properties.barangay || ""}<br/>
                 <b>Municipality:</b> ${properties.municipality || ""}<br/>
-                ${transferredWarning}
             </div>`;
     };
 

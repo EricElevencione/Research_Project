@@ -4755,189 +4755,138 @@ const JoLandRegistry: React.FC = () => {
                       </div>
                     </div>
 
-                    {transferMode === "voluntary" && (
-                      <div className="jo-land-registry-transfer-section-card">
-                        <h4>Step 2: Select Recipient</h4>
-                        <label className="jo-land-registry-transfer-label">
-                          Recipient Farmer
-                        </label>
-                        <select
-                          className="jo-land-registry-transfer-select"
-                          value={
-                            selectedRegisteredOwner
-                              ? sourceRegisteredOwnerId
-                              : ""
-                          }
-                          onChange={(e) =>
-                            handleRegisteredOwnerSelect(e.target.value)
-                          }
-                        >
-                          <option value="">Choose recipient farmer...</option>
-                          {voluntaryDonorOptions.map((owner) => (
-                            <option key={owner.farmerId} value={owner.farmerId}>
-                              {owner.name} ({owner.parcelCount} parcel
-                              {owner.parcelCount > 1 ? "s" : ""})
-                            </option>
-                          ))}
-                        </select>
-
-                        {selectedContextFarmerId !== null && (
-                          <div className="jo-land-registry-transfer-mini-note">
-                            The current owner is excluded to prevent
-                            self-transfer.
-                          </div>
-                        )}
-
-                        {donorSplitParcels.length > 0 && (
-                          <div className="jo-land-registry-transfer-parcel-box">
-                            <div className="jo-land-registry-transfer-subheading">
-                              Donor Parcels ({donorSplitParcels.length})
-                            </div>
-                            <div className="jo-land-registry-donor-parcel-cards">
-                              {donorSplitParcels.map((parcel) => (
-                                <div
-                                  key={parcel.farm_parcel_id}
-                                  className="jo-land-registry-donor-parcel-card"
-                                >
-                                  <div className="jo-land-registry-donor-parcel-card-header">
-                                    <span className="jo-land-registry-donor-parcel-number">
-                                      {parcel.parcel_number ||
-                                        `#${parcel.farm_parcel_id}`}
-                                    </span>
-                                    <span className="jo-land-registry-donor-parcel-area-badge">
-                                      {parcel.total_farm_area_ha.toFixed(2)} ha
-                                    </span>
-                                  </div>
-                                  <div className="jo-land-registry-donor-parcel-card-body">
-                                    <div className="jo-land-registry-donor-parcel-detail">
-                                      <span className="jo-land-registry-donor-parcel-detail-label">
-                                        Barangay
-                                      </span>
-                                      <span className="jo-land-registry-donor-parcel-detail-value">
-                                        {parcel.farm_location_barangay || "—"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            <PartialParcelTransferSection
-                              donorParcels={donorSplitParcels}
-                              totalTransferAreaHa={partialTotalTransferAreaHa}
-                              donorTotalAreaHa={donorSplitParcels.reduce(
-                                (s, p) =>
-                                  s + (Number(p.total_farm_area_ha) || 0),
-                                0,
-                              )}
-                              selectedFullParcelIds={selectedTransferParcelIds}
-                              onToggleFullParcel={handleToggleTransferParcel}
-                            />
-                          </div>
-                        )}
-
-                        {donorSplitParcels.length === 0 && (
-                          <div className="jo-land-registry-transfer-mini-note">
-                            No transferable registered-owner parcels were found
-                            for the current owner.
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {transferMode === "inheritance" && (
-                      <div className="jo-land-registry-transfer-section-card">
-                        <h4>Step 2: Select Heir / Recipient</h4>
-
-                        <label className="jo-land-registry-transfer-label">
-                          Heir / Recipient Farmer
-                        </label>
-                        <select
-                          className="jo-land-registry-transfer-select"
-                          value={
-                            selectedBeneficiaryOwner ? beneficairyOwnerId : ""
-                          }
-                          onChange={(e) =>
-                            handleBeneficairyOwnerSelect(e.target.value)
-                          }
-                        >
-                          <option value="">Choose heir (recipient)...</option>
-                          {inheritanceDonorOptions.map((owner) => (
-                            <option key={owner.farmerId} value={owner.farmerId}>
-                              {owner.name} ({owner.parcelCount} parcel
-                              {owner.parcelCount > 1 ? "s" : ""})
-                            </option>
-                          ))}
-                        </select>
-                        {selectedContextFarmerId !== null && (
-                          <div className="jo-land-registry-transfer-mini-note">
-                            The current owner is excluded to prevent
-                            self-transfer.
-                          </div>
-                        )}
-
-                        {/* SHOW DONOR PARCELS — always visible once inheritance mode is chosen */}
-                        {donorSplitParcels.length > 0 && (
-                          <div className="jo-land-registry-transfer-parcel-box">
-                            <div className="jo-land-registry-transfer-subheading">
-                              Donor Parcels ({donorSplitParcels.length})
-                            </div>
-                            <div className="jo-land-registry-donor-parcel-cards">
-                              {donorSplitParcels.map((parcel) => (
-                                <div
-                                  key={parcel.farm_parcel_id}
-                                  className="jo-land-registry-donor-parcel-card"
-                                >
-                                  <div className="jo-land-registry-donor-parcel-card-header">
-                                    <span className="jo-land-registry-donor-parcel-number">
-                                      {parcel.parcel_number ||
-                                        `#${parcel.farm_parcel_id}`}
-                                    </span>
-                                    <span className="jo-land-registry-donor-parcel-area-badge">
-                                      {parcel.total_farm_area_ha.toFixed(2)} ha
-                                    </span>
-                                  </div>
-                                  <div className="jo-land-registry-donor-parcel-card-body">
-                                    <div className="jo-land-registry-donor-parcel-detail">
-                                      <span className="jo-land-registry-donor-parcel-detail-label">
-                                        Barangay
-                                      </span>
-                                      <span className="jo-land-registry-donor-parcel-detail-value">
-                                        {parcel.farm_location_barangay || "—"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            <PartialParcelTransferSection
-                              donorParcels={donorSplitParcels}
-                              totalTransferAreaHa={partialTotalTransferAreaHa}
-                              donorTotalAreaHa={donorSplitParcels.reduce(
-                                (s, p) =>
-                                  s + (Number(p.total_farm_area_ha) || 0),
-                                0,
-                              )}
-                              selectedFullParcelIds={selectedTransferParcelIds}
-                              onToggleFullParcel={handleToggleTransferParcel}
-                            />
-                          </div>
-                        )}
-
-                        {donorSplitParcels.length === 0 && (
-                          <div className="jo-land-registry-transfer-mini-note">
-                            No transferable registered-owner parcels were found
-                            for the current owner.
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                     {(transferMode === "voluntary" ||
                       transferMode === "inheritance") && (
+                      <>
+                        {/* ── Step 2: Select Land Parcel(s) to Transfer ── */}
                         <div className="jo-land-registry-transfer-section-card">
-                          <h4>Step 3: Proof</h4>
+                          <h4>Step 2: Select Land Parcel(s) to Transfer</h4>
+                          {donorSplitParcels.length > 0 ? (
+                            <div className="jo-land-registry-transfer-parcel-box">
+                              <div className="jo-land-registry-transfer-subheading">
+                                Donor Parcels ({donorSplitParcels.length})
+                              </div>
+                              <div className="jo-land-registry-donor-parcel-cards">
+                                {donorSplitParcels.map((parcel) => (
+                                  <div
+                                    key={parcel.farm_parcel_id}
+                                    className="jo-land-registry-donor-parcel-card"
+                                  >
+                                    <div className="jo-land-registry-donor-parcel-card-header">
+                                      <span className="jo-land-registry-donor-parcel-number">
+                                        {parcel.parcel_number ||
+                                          `#${parcel.farm_parcel_id}`}
+                                      </span>
+                                      <span className="jo-land-registry-donor-parcel-area-badge">
+                                        {parcel.total_farm_area_ha.toFixed(2)} ha
+                                      </span>
+                                    </div>
+                                    <div className="jo-land-registry-donor-parcel-card-body">
+                                      <div className="jo-land-registry-donor-parcel-detail">
+                                        <span className="jo-land-registry-donor-parcel-detail-label">
+                                          Barangay
+                                        </span>
+                                        <span className="jo-land-registry-donor-parcel-detail-value">
+                                          {parcel.farm_location_barangay || "—"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <PartialParcelTransferSection
+                                donorParcels={donorSplitParcels}
+                                totalTransferAreaHa={partialTotalTransferAreaHa}
+                                donorTotalAreaHa={donorSplitParcels.reduce(
+                                  (s, p) =>
+                                    s + (Number(p.total_farm_area_ha) || 0),
+                                  0,
+                                )}
+                                selectedFullParcelIds={selectedTransferParcelIds}
+                                onToggleFullParcel={handleToggleTransferParcel}
+                              />
+                            </div>
+                          ) : (
+                            <div className="jo-land-registry-transfer-mini-note">
+                              No transferable registered-owner parcels were found
+                              for the current owner.
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ── Step 3: Select Recipient / Heir Farmer ── */}
+                        {transferMode === "voluntary" && (
+                          <div className="jo-land-registry-transfer-section-card">
+                            <h4>Step 3: Select Recipient</h4>
+                            <label className="jo-land-registry-transfer-label">
+                              Recipient Farmer
+                            </label>
+                            <select
+                              className="jo-land-registry-transfer-select"
+                              value={
+                                selectedRegisteredOwner
+                                  ? sourceRegisteredOwnerId
+                                  : ""
+                              }
+                              onChange={(e) =>
+                                handleRegisteredOwnerSelect(e.target.value)
+                              }
+                            >
+                              <option value="">Choose recipient farmer...</option>
+                              {voluntaryDonorOptions.map((owner) => (
+                                <option key={owner.farmerId} value={owner.farmerId}>
+                                  {owner.name} ({owner.parcelCount} parcel
+                                  {owner.parcelCount > 1 ? "s" : ""})
+                                </option>
+                              ))}
+                            </select>
+
+                            {selectedContextFarmerId !== null && (
+                              <div className="jo-land-registry-transfer-mini-note">
+                                The current owner is excluded to prevent
+                                self-transfer.
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {transferMode === "inheritance" && (
+                          <div className="jo-land-registry-transfer-section-card">
+                            <h4>Step 3: Select Heir / Recipient</h4>
+
+                            <label className="jo-land-registry-transfer-label">
+                              Heir / Recipient Farmer
+                            </label>
+                            <select
+                              className="jo-land-registry-transfer-select"
+                              value={
+                                selectedBeneficiaryOwner ? beneficairyOwnerId : ""
+                              }
+                              onChange={(e) =>
+                                handleBeneficairyOwnerSelect(e.target.value)
+                              }
+                            >
+                              <option value="">Choose heir (recipient)...</option>
+                              {inheritanceDonorOptions.map((owner) => (
+                                <option key={owner.farmerId} value={owner.farmerId}>
+                                  {owner.name} ({owner.parcelCount} parcel
+                                  {owner.parcelCount > 1 ? "s" : ""})
+                                </option>
+                              ))}
+                            </select>
+                            {selectedContextFarmerId !== null && (
+                              <div className="jo-land-registry-transfer-mini-note">
+                                The current owner is excluded to prevent
+                                self-transfer.
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ── Step 4: Proof ── */}
+                        <div className="jo-land-registry-transfer-section-card">
+                          <h4>Step 4: Proof</h4>
                           <label className="jo-land-registry-transfer-label">
                             Upload proof photo(s) - PNG/JPG (multiple)
                           </label>
@@ -4969,12 +4918,10 @@ const JoLandRegistry: React.FC = () => {
                             </ul>
                           )}
                         </div>
-                      )}
 
-                    {(transferMode === "voluntary" ||
-                      transferMode === "inheritance") && (
+                        {/* ── Step 5: Review & Confirmation ── */}
                         <div className="jo-land-registry-transfer-section-card">
-                          <h4>Step 4: Review</h4>
+                          <h4>Step 5: Review & Confirmation</h4>
                           <label className="jo-land-registry-transfer-label">
                             Reason (Optional)
                           </label>
@@ -5151,7 +5098,8 @@ const JoLandRegistry: React.FC = () => {
                             );
                           })()}
                         </div>
-                      )}
+                      </>
+                    )}
 
                     {!transferReadyForReview && transferBlockingReason && (
                       <div className="jo-land-registry-transfer-mini-note">

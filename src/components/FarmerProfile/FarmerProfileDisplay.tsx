@@ -80,7 +80,6 @@ interface FarmerProfileDisplayProps {
 const getRoleLabel = (role: string) => {
   switch (role) {
     case "owner-farmed":
-      return "Owner-Farming";
     case "land-owner":
       return "Land-owner";
     case "tenant":
@@ -427,7 +426,7 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
               </div>
               {ownerFarmedCount > 0 && (
                 <div>
-                  Owner-farmed: <strong>{ownerFarmedCount}</strong>
+                  Self-farmed: <strong>{ownerFarmedCount}</strong>
                 </div>
               )}
               {landOwnerOnlyCount > 0 && (
@@ -499,15 +498,7 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
                           Occupant Details:
                         </span>
                         <span className="farmer-modal-value">
-                          {parcel.role === "owner-farmed" ? (
-                            <span style={{ color: "#2e7d32", fontWeight: 500 }}>
-                              Self-farmed
-                            </span>
-                          ) : (parcel.occupants || []).length === 0 ? (
-                            <span style={{ color: "#888" }}>
-                              No occupant information available.
-                            </span>
-                          ) : (
+                          {(parcel.occupants || []).length > 0 ? (
                             <span
                               style={{
                                 display: "flex",
@@ -526,21 +517,17 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
                                     }}
                                   >
                                     • {occ.name} ({roleText})
-                                    {occ.isLinked === false && (
-                                      <span
-                                        style={{
-                                          color: "#d32f2f",
-                                          marginLeft: 6,
-                                          fontSize: "0.85em",
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        ⚠️ Unlinked
-                                      </span>
-                                    )}
                                   </span>
                                 );
                               })}
+                            </span>
+                          ) : parcel.role === "owner-farmed" || farmingVal === true ? (
+                            <span style={{ color: "#2e7d32", fontWeight: 500 }}>
+                              Self-farmed
+                            </span>
+                          ) : (
+                            <span style={{ color: "#b91c1c", fontWeight: 500 }}>
+                              Unoccupied (No Farmer)
                             </span>
                           )}
                         </span>

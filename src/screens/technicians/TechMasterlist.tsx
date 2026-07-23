@@ -577,6 +577,15 @@ const TechMasterlist: React.FC = () => {
       return false; // Exclude pure tenants from masterlist
     }
 
+    const matchesStatus =
+      selectedStatus === "all" || record.status === selectedStatus;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      record.farmerName.toLowerCase().includes(q) ||
+      record.referenceNumber.toLowerCase().includes(q) ||
+      record.farmerAddress.toLowerCase().includes(q) ||
+      record.farmLocation.toLowerCase().includes(q);
+
     let matchesLandSize = true;
     if (landSizeFilter.trim() !== "") {
       const { min, max } = getLandAreaRange(landSizeFilter);
@@ -1750,7 +1759,12 @@ const TechMasterlist: React.FC = () => {
                         </td>
                         <td data-label="Farmer Address">{record.farmerAddress}</td>
                         <td data-label="Parcel Address">{record.farmLocation}</td>
-                        <td data-label="Parcel Area">{record.parcelArea}</td>
+                        <td data-label="Parcel Area">
+                          <span style={{ fontWeight: 600 }}>{record.parcelArea}</span>
+                          <small style={{ display: "block", fontSize: "10px", color: "#d97706", marginTop: "2px", fontWeight: 600 }}>
+                            ⚠️ Verify map shape if area changed
+                          </small>
+                        </td>
                         <td data-label="Ownership Type">{getOwnershipLabel(record)}</td>
                         <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
                         <td data-label="Status">
@@ -2114,6 +2128,9 @@ const TechMasterlist: React.FC = () => {
                             {parcel.farmLocationBarangay})
                           </span>
                         </div>
+                        <div style={{ marginBottom: "12px", padding: "6px 10px", background: "#fffbeb", borderLeft: "3px solid #d97706", borderRadius: "4px", fontSize: "11px", color: "#92400e" }}>
+                          ⚠️ <strong>Parcel Area Note:</strong> If physical boundaries or hectare sizes change, please update the GIS map shape accordingly.
+                        </div>
 
                         <div
                           style={{
@@ -2455,6 +2472,15 @@ const TechMasterlist: React.FC = () => {
                                     hectares
                                   </span>
                                 </div>
+                                {(parcel.ownershipTypeTenant || parcel.ownershipTypeLessee) && !parcel.ownershipTypeRegisteredOwner ? (
+                                   <div style={{ margin: "8px 0", padding: "8px 12px", background: "#fef3c7", borderLeft: "3px solid #d97706", borderRadius: "4px", fontSize: "12px", color: "#92400e", lineHeight: 1.4 }}>
+                                     ⚠️ <strong>Tenant / Lessee Notice:</strong> This parcel is cultivated under a Tenant/Lessee agreement ({typeof parcel.totalFarmAreaHa === "number" ? parcel.totalFarmAreaHa.toFixed(2) : parcel.totalFarmAreaHa} ha). Changing this value does <strong>not</strong> alter official land parcel size — only the registered Landowner can modify official land boundary sizes.
+                                   </div>
+                                 ) : (
+                                   <div style={{ margin: "8px 0", padding: "8px 12px", background: "#fffbeb", borderLeft: "3px solid #d97706", borderRadius: "4px", fontSize: "12px", color: "#92400e" }}>
+                                     ⚠️ <strong>GIS Shape Warning:</strong> Registered area is {typeof parcel.totalFarmAreaHa === "number" ? parcel.totalFarmAreaHa.toFixed(2) : parcel.totalFarmAreaHa} ha. If physical boundaries changed, please verify/redraw the plot shape on the GIS map.
+                                   </div>
+                                 )}
                                 <div className="farmer-modal-parcel-item">
                                   <span className="farmer-modal-label">
                                     Cultivation Status:

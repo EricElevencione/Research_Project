@@ -8,6 +8,7 @@ import {
   getFarmParcelsWithOccupants,
   updateRsbsaSubmission,
   updateFarmParcel,
+  getLandownerOwnedArea,
   getLandHistoryAssociationRows,
 } from "../../api";
 import {
@@ -18,6 +19,7 @@ import { printHtmlReport } from "../../utils/printHelper";
 import "../../assets/css/admin css/MasterlistStyle.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
+import { EditFarmerModal } from "../../components/FarmerProfile/EditFarmerModal";
 import {
   getAuditLogger,
   AuditModule,
@@ -1568,105 +1570,10 @@ const Masterlist: React.FC = () => {
 
   // ─── Edit ───────────────────────────────────────────────────────────────────
 
-  const parseName = (fullName: string) => {
-    if (!fullName) return { lastName: "", firstName: "", middleName: "" };
-    const parts = fullName
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    if (parts.length === 0)
-      return { lastName: "", firstName: "", middleName: "" };
-    if (parts.length === 1)
-      return { lastName: parts[0], firstName: "", middleName: "" };
-    const fmp = (parts[1] || "")
-      .split(" ")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    return {
-      lastName: parts[0],
-      firstName: fmp[0] || "",
-      middleName: fmp.slice(1).join(" ") || "",
-    };
-  };
-
-  const parseAddress = (address: string) => {
-    if (!address) return { barangay: "", municipality: "" };
-    const parts = address
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    if (parts.length === 0) return { barangay: "", municipality: "" };
-    if (parts.length === 1) return { barangay: parts[0], municipality: "" };
-    return { barangay: parts[0], municipality: parts[1] };
-  };
-
-  const nt = (v: string) => v.trim().toLowerCase();
-
-  const resolveBarangayForEdit = (
-    addressBarangay: string,
-    farmLocation: string,
-  ): string => {
-    const match = (c: string) => barangays.find((b) => nt(b) === nt(c)) || "";
-    return (
-      match(addressBarangay) ||
-      match(parseAddress(farmLocation || "").barangay || farmLocation) ||
-      ""
-    );
-  };
-
-  const handleEdit = async (recordId: string) => {
+  const handleEdit = (recordId: string) => {
     const record = rsbsaRecords.find((r) => r.id === recordId);
     if (!record) return;
-    const { lastName, firstName, middleName } = parseName(
-      record.farmerName || "",
-    );
-    const pa = parseAddress(record.farmerAddress || "");
-    const pf = parseAddress(record.farmLocation || "");
-    const resolvedBarangay = resolveBarangayForEdit(
-      pa.barangay,
-      record.farmLocation || "",
-    );
-    const resolvedMunicipality = (() => {
-      const fa = (pa.municipality || "").trim();
-      if (fa && nt(fa) !== "iloilo") return fa;
-      return (pf.municipality || "").trim() || "Dumangas";
-    })();
     setEditingRecord(record);
-    setEditError(null);
-    setEditFormData({
-      farmerName: record.farmerName,
-      firstName,
-      middleName,
-      lastName,
-      age: ageToInputValue(record.age),
-      farmerAddress: record.farmerAddress,
-      barangay: resolvedBarangay,
-      municipality: resolvedMunicipality,
-      farmLocation: record.farmLocation,
-      landParcel: record.landParcel,
-      dateSubmitted: record.dateSubmitted,
-      parcelArea: record.parcelArea?.replace(/\s*hectares\s*$/i, "").trim(),
-    });
-    setLoadingParcels(true);
-    setParcelErrors({});
-    try {
-      const res = await getFarmParcels(recordId);
-      if (!res.error) {
-        setEditingParcels(
-          (res.data || []).map((p: Parcel) => ({
-            ...p,
-            is_farming: typeof p.is_farming === "boolean" ? p.is_farming : null,
-            farming_status_reason: p.farming_status_reason || null,
-          })),
-        );
-      } else {
-        setEditingParcels([]);
-      }
-    } catch {
-      setEditingParcels([]);
-    } finally {
-      setLoadingParcels(false);
-    }
     setOpenMenuId(null);
   };
 
@@ -1675,16 +1582,12 @@ const Masterlist: React.FC = () => {
     const editRecordId = String(navState?.editRecordId || "").trim();
     if (!editRecordId || rsbsaRecords.length === 0) return;
     if (rsbsaRecords.some((r) => r.id === editRecordId))
-      void handleEdit(editRecordId);
+      handleEdit(editRecordId);
     navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, rsbsaRecords, navigate]);
 
   const handleCancel = () => {
     setEditingRecord(null);
-    setEditFormData({});
-    setEditError(null);
-    setEditingParcels([]);
-    setParcelErrors({});
   };
 
   const handleInputChange = (field: keyof EditFormData, value: string) => {
@@ -1760,10 +1663,23 @@ const Masterlist: React.FC = () => {
       setEditError(null);
       if (editingParcels.length > 0) {
         const newErrors: Record<string, string> = {};
-        editingParcels.forEach((p) => {
-          if (!p.total_farm_area_ha || p.total_farm_area_ha <= 0)
+        for (const p of editingParcels) {
+          if (!p.total_farm_area_ha || p.total_farm_area_ha <= 0) {
             newErrors[p.id] = "Parcel area must be a valid positive number";
-        });
+          } else if (
+            (p.ownership_type_tenant || p.ownership_type_lessee) &&
+            !p.ownership_type_registered_owner
+          ) {
+            const ownerId = (p as any).tenant_land_owner_id || (p as any).lessee_land_owner_id;
+            const ownerName = (p as any).tenant_land_owner_name || (p as any).lessee_land_owner_name;
+            if (ownerId || ownerName) {
+              const { totalAreaHa, landownerName } = await getLandownerOwnedArea(ownerId, ownerName);
+              if (totalAreaHa > 0 && p.total_farm_area_ha > totalAreaHa) {
+                newErrors[p.id] = `Area (${p.total_farm_area_ha} ha) exceeds total land area owned by ${landownerName} (${totalAreaHa.toFixed(2)} ha)`;
+              }
+            }
+          }
+        }
         if (Object.keys(newErrors).length > 0) {
           setParcelErrors(newErrors);
           setEditError("Fix parcel area errors first");
@@ -2749,220 +2665,20 @@ const Masterlist: React.FC = () => {
         )}
 
         {/* ── Edit Modal ─────────────────────────────────────────────────── */}
-        {editingRecord && (
-          <div className="admin-masterlist-edit-modal-overlay">
-            <div className="admin-masterlist-edit-modal">
-              <div className="admin-masterlist-edit-modal-header">
-                <div className="admin-masterlist-edit-modal-title">
-                  <h2>Edit Farmer Information</h2>
-                  <p>Update farmer details and parcel farming status.</p>
-                </div>
-                <button
-                  className="admin-masterlist-close-button"
-                  onClick={handleCancel}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="admin-masterlist-edit-modal-body">
-                {editError && (
-                  <div className="admin-masterlist-edit-error-banner" role="alert">
-                    {editError}
-                  </div>
-                )}
-                <div className="admin-masterlist-form-grid">
-                  <div className="admin-masterlist-form-group">
-                    <label>Last Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.lastName || ""}
-                      onChange={(e) =>
-                        handleInputChange("lastName", e.target.value)
-                      }
-                      placeholder="Last Name"
-                    />
-                  </div>
-                  <div className="admin-masterlist-form-group">
-                    <label>First Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.firstName || ""}
-                      onChange={(e) =>
-                        handleInputChange("firstName", e.target.value)
-                      }
-                      placeholder="First Name"
-                    />
-                  </div>
-                  <div className="admin-masterlist-form-group">
-                    <label>Middle Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.middleName || ""}
-                      onChange={(e) =>
-                        handleInputChange("middleName", e.target.value)
-                      }
-                      placeholder="Middle Name"
-                    />
-                  </div>
-                  <div className="admin-masterlist-form-group">
-                    <label>Age:</label>
-                    <input
-                      type="text"
-                      value={editFormData.age || ""}
-                      onChange={(e) => handleInputChange("age", e.target.value)}
-                      placeholder="Age"
-                    />
-                  </div>
-                  <div className="admin-masterlist-form-group">
-                    <label>Barangay:</label>
-                    <select
-                      value={editFormData.barangay || ""}
-                      onChange={(e) =>
-                        handleInputChange("barangay", e.target.value)
-                      }
-                      className="admin-masterlist-form-select"
-                    >
-                      <option value="">Select Barangay</option>
-                      {barangays.map((b) => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="admin-masterlist-form-group">
-                    <label>Municipality:</label>
-                    <input
-                      type="text"
-                      value={editFormData.municipality || ""}
-                      onChange={(e) =>
-                        handleInputChange("municipality", e.target.value)
-                      }
-                      placeholder="Municipality"
-                    />
-                  </div>
-                </div>
-                <div className="admin-masterlist-parcel-section">
-                  <h4>Parcels</h4>
-                  {loadingParcels ? (
-                    <p>Loading parcels...</p>
-                  ) : editingParcels.length > 0 ? (
-                    editingParcels.map((parcel, index) => (
-                      <div
-                        key={parcel.id}
-                        className={`admin-masterlist-parcel-item ${parcelErrors[parcel.id] ? "error" : ""}`}
-                      >
-                        <div className="admin-masterlist-form-group">
-                          <label className="admin-masterlist-parcel-label">
-                            Parcel {index + 1} —{" "}
-                            {parcel.parcel_number !== "N/A"
-                              ? `No. ${parcel.parcel_number}`
-                              : "No parcel number"}
-                          </label>
-                          <input
-                            type="text"
-                            value={parcel.total_farm_area_ha || ""}
-                            onChange={(e) =>
-                              handleIndividualParcelChange(
-                                parcel.id,
-                                "total_farm_area_ha",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="e.g., 2.5 (ha)"
-                            className="admin-masterlist-parcel-input"
-                            data-error={
-                              parcelErrors[parcel.id] ? "true" : "false"
-                            }
-                          />
-                          {parcelErrors[parcel.id] && (
-                            <small className="admin-masterlist-parcel-error">
-                              {parcelErrors[parcel.id]}
-                            </small>
-                          )}
-                          <small className="admin-masterlist-parcel-location">
-                            Location: {parcel.farm_location_barangay || "N/A"},{" "}
-                            {parcel.farm_location_municipality || "N/A"}
-                          </small>
-                        </div>
-                        <div className="admin-masterlist-form-group">
-                          <label>Currently farming this parcel?</label>
-                          <select
-                            value={
-                              parcel.is_farming === true
-                                ? "true"
-                                : parcel.is_farming === false
-                                  ? "false"
-                                  : ""
-                            }
-                            onChange={(e) => {
-                              const n =
-                                e.target.value === "true"
-                                  ? true
-                                  : e.target.value === "false"
-                                    ? false
-                                    : null;
-                              handleIndividualParcelChange(
-                                parcel.id,
-                                "is_farming",
-                                n,
-                              );
-                              if (n !== false)
-                                handleIndividualParcelChange(
-                                  parcel.id,
-                                  "farming_status_reason",
-                                  null,
-                                );
-                            }}
-                            className="admin-masterlist-form-select"
-                          >
-                            <option value="true">Yes</option>
-                            <option value="false">No</option>
-                          </select>
-                        </div>
-                        {parcel.is_farming === false && (
-                          <div className="admin-masterlist-form-group">
-                            <label>Reason not farming:</label>
-                            <input
-                              type="text"
-                              value={parcel.farming_status_reason || ""}
-                              onChange={(e) =>
-                                handleIndividualParcelChange(
-                                  parcel.id,
-                                  "farming_status_reason",
-                                  e.target.value || null,
-                                )
-                              }
-                              placeholder="Enter reason"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="admin-masterlist-parcel-empty">
-                      No parcels found for this farmer.
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="admin-masterlist-edit-modal-footer">
-                <button
-                  className="admin-masterlist-cancel-button"
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="admin-masterlist-save-button"
-                  onClick={handleSave}
-                >
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <EditFarmerModal
+          isOpen={!!editingRecord}
+          recordId={editingRecord?.id ?? null}
+          initialRecord={editingRecord}
+          onClose={handleCancel}
+          onSaved={(updatedRecord) => {
+            setRsbsaRecords((prev) =>
+              prev.map((r) =>
+                r.id === updatedRecord.id ? { ...r, ...updatedRecord } : r,
+              ),
+            );
+          }}
+          showNotification={showUpdateNotification}
+        />
 
         {/* ── Farmer Detail Modal ────────────────────────────────────────── */}
         {showModal && selectedFarmer && (
@@ -3244,21 +2960,6 @@ const Masterlist: React.FC = () => {
                           </strong>{" "}
                           actively farmed
                         </span>
-                        {selectedFarmer.parcels.filter(
-                          (p) => p.isFarming === false,
-                        ).length > 0 && (
-                            <span style={{ color: "#c0392b" }}>
-                              ⚠️{" "}
-                              <strong>
-                                {
-                                  selectedFarmer.parcels.filter(
-                                    (p) => p.isFarming === false,
-                                  ).length
-                                }
-                              </strong>{" "}
-                              idle
-                            </span>
-                          )}
                       </div>
                     )}
                     {selectedFarmer.parcels.length === 0 ? (
@@ -3272,31 +2973,9 @@ const Masterlist: React.FC = () => {
                           const hasOwnerName =
                             parcel.tenantLandOwnerName ||
                             parcel.lesseeLandOwnerName;
-                          const hasOwnerLink =
-                            parcel.tenantLandOwnerId ||
-                            parcel.lesseeLandOwnerId;
                           const isUnlinked =
-                            isTL && hasOwnerName && !hasOwnerLink;
-                          const parsedContractEnd = parcel.contractEndDate
-                            ? new Date(parcel.contractEndDate)
-                            : null;
-                          const contractDateLabel =
-                            parsedContractEnd &&
-                              !Number.isNaN(parsedContractEnd.getTime())
-                              ? parsedContractEnd.toLocaleDateString()
-                              : "Not specified";
-                          const contractStatus = (() => {
-                            if (
-                              !parsedContractEnd ||
-                              Number.isNaN(parsedContractEnd.getTime())
-                            )
-                              return null;
-                            const endDate = new Date(parsedContractEnd);
-                            const today = new Date();
-                            endDate.setHours(0, 0, 0, 0);
-                            today.setHours(0, 0, 0, 0);
-                            return endDate < today ? "Ended" : "Active";
-                          })();
+                            (Boolean(parcel.tenantLandOwnerName) && !parcel.tenantLandOwnerId) ||
+                            (Boolean(parcel.lesseeLandOwnerName) && !parcel.lesseeLandOwnerId);
                           return (
                             <div
                               key={parcel.id}
@@ -3348,7 +3027,7 @@ const Masterlist: React.FC = () => {
                                           }}
                                           title="Text-only name — no FFRS record linked"
                                         >
-                                          ⚠️ Unlinked
+                                          Unlinked
                                         </span>
                                       )}
                                       {parcel.ownershipDocumentNo && (
@@ -3462,19 +3141,7 @@ const Masterlist: React.FC = () => {
                                     </span>
                                   </div>
                                 )}
-                                <div className="farmer-modal-parcel-item">
-                                  <span className="farmer-modal-label">
-                                    Contract End Date:
-                                  </span>
-                                  <span className="farmer-modal-value">
-                                    {contractDateLabel}
-                                    {contractStatus && (
-                                      <span className="farmer-modal-owner-name">
-                                        {` · ${contractStatus}`}
-                                      </span>
-                                    )}
-                                  </span>
-                                </div>
+
                                 {parcel.ownershipOthersSpecify && (
                                   <div className="farmer-modal-parcel-item">
                                     <span className="farmer-modal-label">

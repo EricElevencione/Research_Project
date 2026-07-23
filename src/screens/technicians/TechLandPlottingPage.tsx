@@ -268,18 +268,26 @@ const LandPlottingPage: React.FC = () => {
     if (!parcel) return false;
     if (isParcelTransferredOrInactive(parcel)) return false;
 
-    const ownerSignals = [
-      parcel.ownership_type_registered_owner,
-      parcel.ownershipTypeRegisteredOwner,
-      parcel.OWNERSHIP_TYPE_REGISTERED_OWNER,
-      parcel.is_registered_owner,
-      parcel.isRegisteredOwner,
-      parcel.is_current_owner,
-      parcel.isCurrentOwner,
-    ].filter((value): value is boolean => typeof value === "boolean");
+    // Explicit Tenant / Lessee check: Tenants and Lessees cannot plot land polygons
+    const isTenantOrLessee =
+      parcel.ownership_type_tenant === true ||
+      parcel.ownershipTypeTenant === true ||
+      parcel.ownership_type_lessee === true ||
+      parcel.ownershipTypeLessee === true;
 
-    if (ownerSignals.includes(true)) return true;
-    if (ownerSignals.length > 0) return false;
+    const isRegisteredOwner =
+      parcel.ownership_type_registered_owner === true ||
+      parcel.ownershipTypeRegisteredOwner === true ||
+      parcel.OWNERSHIP_TYPE_REGISTERED_OWNER === true ||
+      parcel.is_registered_owner === true ||
+      parcel.isRegisteredOwner === true;
+
+    // If explicitly marked as tenant/lessee and not registered owner, lock plotting
+    if (isTenantOrLessee && !isRegisteredOwner) {
+      return false;
+    }
+
+    if (isRegisteredOwner) return true;
 
     const normalizedStatus = String(
       parcel.status ||
@@ -290,7 +298,9 @@ const LandPlottingPage: React.FC = () => {
       .trim()
       .toLowerCase();
 
-    if (normalizedStatus.includes("owner")) return true;
+    if (normalizedStatus.includes("owner") && !normalizedStatus.includes("tenant") && !normalizedStatus.includes("lessee")) {
+      return true;
+    }
     if (
       normalizedStatus.includes("tenant") ||
       normalizedStatus.includes("lessee")
@@ -298,7 +308,7 @@ const LandPlottingPage: React.FC = () => {
       return false;
     }
 
-    // Legacy records may not include ownership fields.
+    // Default fallback: if no ownership info is present, assume true for legacy records
     return true;
   };
 
@@ -937,23 +947,29 @@ const LandPlottingPage: React.FC = () => {
     // Use React Router's searchParams for hash routing compatibility
     const recordId = searchParams.get("recordId");
     const parcelIndex = searchParams.get("parcelIndex");
+    const parcelNumberParam = searchParams.get("parcelNumber");
+    const parcelIdParam = searchParams.get("parcelId");
     console.log(
-      "≡ƒöì Parsed from searchParams - recordId:",
+      "Parsed from searchParams - recordId:",
       recordId,
       "parcelIndex:",
       parcelIndex,
+      "parcelNumber:",
+      parcelNumberParam,
+      "parcelId:",
+      parcelIdParam,
     );
 
     const parsedIndex = parcelIndex ? parseInt(parcelIndex, 10) : undefined;
 
     if (recordId) {
       console.log(
-        "Γ£à recordId found, setting context and fetching RSBSA record...",
+        "recordId found, setting context and fetching RSBSA record...",
       );
       setParcelContext({ recordId, parcelIndex: parsedIndex });
-      fetchRSBSARecord(recordId, parsedIndex);
+      fetchRSBSARecord(recordId, parsedIndex, parcelNumberParam, parcelIdParam);
     } else {
-      console.log("Γ¥î No recordId found in URL");
+      console.log("No recordId found in URL");
     }
   }, [searchParams.toString()]); // Use toString() to detect any param changes
 
@@ -981,21 +997,24 @@ const LandPlottingPage: React.FC = () => {
   };
 
   // Fetch RSBSA record data
-  const fetchRSBSARecord = async (recordId: string, parcelIndex?: number) => {
-    console.log("≡ƒÜÇ fetchRSBSARecord called with:", {
+  const fetchRSBSARecord = async (
+    recordId: string,
+    parcelIndex?: number,
+    targetParcelNumber?: string | null,
+    targetParcelId?: string | null,
+  ) => {
+    console.log("fetchRSBSARecord called with:", {
       recordId,
       parcelIndex,
+      targetParcelNumber,
+      targetParcelId,
     });
     try {
-      console.log("≡ƒôí Fetching RSBSA submission:", recordId);
+      console.log("Fetching RSBSA submission:", recordId);
       const response = await getRsbsaSubmissionById(recordId);
-      console.log("≡ƒôí Response:", response);
       if (response.error) throw new Error(`HTTP error! ${response.error}`);
       const data = response.data;
-      console.log("Γ£à Fetched RSBSA data:", data);
       setRsbsaRecord(data);
-      console.log("Fetched RSBSA data:", data);
-      console.log("parcelIndex:", parcelIndex);
 
       // Fetch farm parcel data from the database
       let farmParcels = data.farmParcels;
@@ -1032,19 +1051,12 @@ const LandPlottingPage: React.FC = () => {
         }
       }
 
-      if (Array.isArray(farmParcels) && farmParcels.length > 0) {
-        farmParcels = farmParcels.filter(
-          (parcel: any) =>
-            canPlotParcel(parcel) || isParcelTransferredOrInactive(parcel),
-        );
-      }
-
       // Store all parcels for this farmer for progress calculations
       setFarmerParcels(farmParcels || []);
       setBarangayReferenceShapes([]);
       setReferenceLoadSummary(null);
 
-      if (parcelIndex !== undefined && farmParcels) {
+      if (farmParcels && farmParcels.length > 0) {
         const ownerParcels = Array.isArray(farmParcels) ? farmParcels : [];
         if (ownerParcels.length === 0) {
           setCurrentParcel(null);
@@ -1059,11 +1071,32 @@ const LandPlottingPage: React.FC = () => {
           return;
         }
 
-        const safeParcelIndex =
-          parcelIndex >= 0 && parcelIndex < ownerParcels.length
-            ? parcelIndex
-            : 0;
-        const parcel = ownerParcels[safeParcelIndex];
+        let parcel: any = null;
+        if (targetParcelId) {
+          parcel = ownerParcels.find(
+            (p: any) => String(p.id) === String(targetParcelId),
+          );
+        }
+        if (!parcel && targetParcelNumber) {
+          const normTarget = String(targetParcelNumber).trim().toUpperCase();
+          parcel = ownerParcels.find(
+            (p: any) =>
+              String(p.parcel_number || p.parcelNumber || "")
+                .trim()
+                .toUpperCase() === normTarget,
+          );
+        }
+        if (!parcel && parcelIndex !== undefined) {
+          const safeParcelIndex =
+            parcelIndex >= 0 && parcelIndex < ownerParcels.length
+              ? parcelIndex
+              : 0;
+          parcel = ownerParcels[safeParcelIndex];
+        }
+        if (!parcel) {
+          parcel = ownerParcels[0];
+        }
+
         console.log("Selected parcel:", parcel);
         if (parcel) {
           setCurrentParcel(parcel);
@@ -2150,7 +2183,7 @@ const LandPlottingPage: React.FC = () => {
               {!currentParcelCanPlot
                 ? isParcelTransferredOrInactive(currentParcel)
                   ? "Plotting locked: Ownership transferred"
-                  : "Plotting locked: parcel is not owner-eligible"
+                  : "Plotting locked: Registered land owner only (Tenant/Lessee)"
                 : polygonExistsForCurrentParcel
                   ? "Polygon completed for this parcel"
                   : "Ready to draw parcel polygon"}

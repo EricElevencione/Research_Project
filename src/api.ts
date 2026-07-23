@@ -1121,7 +1121,9 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
 
 // ==================== RSBSA SUBMISSION ====================
 
-export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
+export const getRsbsaSubmissions = async (options?: {
+  includeProfilePicture?: boolean;
+}): Promise<ApiResponse> => {
   const toPositiveInt = (value: unknown): number => {
     const parsed = parseInt(String(value ?? ""), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
@@ -1176,8 +1178,14 @@ export const getRsbsaSubmissions = async (): Promise<ApiResponse> => {
     return hasPositiveArea ? 1 : 0;
   };
 
-  // Get all submissions
-  const { data, error } = await supabase.from("rsbsa_submission").select("*");
+  // Get all submissions (exclude heavy profile_picture Base64 payload by default for list performance)
+  const selectQuery = options?.includeProfilePicture
+    ? "*"
+    : 'id, "LAST NAME", "FIRST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", "BARANGAY", "MUNICIPALITY", "FARM LOCATION", "PARCEL AREA", "MAIN LIVELIHOOD", "OWNERSHIP_TYPE_REGISTERED_OWNER", "OWNERSHIP_TYPE_TENANT", "OWNERSHIP_TYPE_LESSEE", status, submitted_at, created_at, updated_at, "TOTAL FARM AREA", "FFRS_CODE", age, "FARMER_RICE", "FARMER_CORN", "FARMER_OTHER_CROPS", "FARMER_OTHER_CROPS_TEXT", "FARMER_LIVESTOCK", "FARMER_LIVESTOCK_TEXT", "FARMER_POULTRY", "FARMER_POULTRY_TEXT", archived_at, archive_reason, ownership_category, status_change_reason, is_actively_farming';
+
+  const { data, error } = await supabase
+    .from("rsbsa_submission")
+    .select(selectQuery);
 
   if (error) return createResponse(null, error.message, 500);
 
@@ -2177,6 +2185,164 @@ export const updateFarmParcel = async (
 
   if (error) return createResponse(null, error.message, 500);
   return createResponse(data, null, 200);
+};
+
+/**
+ * Sync the `area` field in `land_plots` when a parcel's numerical area
+ * (`total_farm_area_ha`) is changed in `rsbsa_farm_parcels`.
+ *
+ * Matches by `farmer_id` (= submission_id) + `parcel_number`.
+ * This keeps the two tables in agreement so the map can detect
+ * mismatches between the recorded area and the GIS polygon.
+ */
+export const syncLandPlotArea = async (
+  submissionId: string | number,
+  parcelNumber: string,
+  newAreaHa: number,
+): Promise<void> => {
+  try {
+    const normalizedParcelNumber = String(parcelNumber ?? "")
+      .trim()
+      .toUpperCase();
+    const normalizedSubmissionId = String(submissionId ?? "").trim();
+    if (!normalizedSubmissionId || !normalizedParcelNumber) return;
+
+    // Find matching land_plots row(s) by farmer_id + parcel_number
+    let { data: matchingPlots, error: findError } = await supabase
+      .from("land_plots")
+      .select("id")
+      .eq("farmer_id", normalizedSubmissionId)
+      .ilike("parcel_number", normalizedParcelNumber);
+
+    // Fallback: If no match by farmer_id, try matching by FFRS_CODE from rsbsa_submission
+    if ((!matchingPlots || matchingPlots.length === 0) && !findError) {
+      const { data: sub } = await supabase
+        .from("rsbsa_submission")
+        .select('"FFRS_CODE"')
+        .eq("id", normalizedSubmissionId)
+        .maybeSingle();
+
+      const ffrsCode = sub?.FFRS_CODE ? String(sub.FFRS_CODE).trim() : "";
+      if (ffrsCode) {
+        const { data: plotsByFfrs } = await supabase
+          .from("land_plots")
+          .select("id")
+          .ilike("ffrs_id", ffrsCode)
+          .ilike("parcel_number", normalizedParcelNumber);
+        if (plotsByFfrs && plotsByFfrs.length > 0) {
+          matchingPlots = plotsByFfrs;
+        }
+      }
+    }
+
+    if (findError || !matchingPlots || matchingPlots.length === 0) {
+      console.log(
+        "syncLandPlotArea: No matching land_plots found for",
+        normalizedSubmissionId,
+        normalizedParcelNumber,
+      );
+      return;
+    }
+
+    // Update area on all matching land_plots rows
+    for (const plot of matchingPlots) {
+      const { error: updateError } = await supabase
+        .from("land_plots")
+        .update({ area: newAreaHa, updated_at: new Date().toISOString() })
+        .eq("id", plot.id);
+
+      if (updateError) {
+        console.error(
+          `syncLandPlotArea: Failed to update land_plot ${plot.id}:`,
+          updateError.message,
+        );
+      } else {
+        console.log(
+          `syncLandPlotArea: Updated land_plot ${plot.id} area to ${newAreaHa} ha`,
+        );
+      }
+    }
+  } catch (error) {
+    console.error("syncLandPlotArea error:", error);
+  }
+};
+
+/**
+ * Helper to fetch total owned land area (in hectares) for a landowner.
+ * Used to validate that a tenant or lessee cannot be assigned more area
+ * than the landowner actually owns.
+ */
+export const getLandownerOwnedArea = async (
+  landownerId?: string | number | null,
+  landownerName?: string | null,
+): Promise<{ totalAreaHa: number; landownerName: string }> => {
+  try {
+    let targetId: string | number | null = landownerId || null;
+    let nameToReturn = landownerName || "";
+
+    // If ID is missing, try looking up submission ID by name
+    if (!targetId && landownerName && landownerName.trim()) {
+      const cleanName = landownerName.trim();
+      const { data: matched } = await supabase
+        .from("rsbsa_submission")
+        .select('id, "FIRST NAME", "LAST NAME", "MIDDLE NAME"')
+        .or(`"LAST NAME".ilike.%${cleanName}%, "FIRST NAME".ilike.%${cleanName}%`)
+        .limit(5);
+
+      if (matched && matched.length > 0) {
+        targetId = matched[0].id;
+        const row = matched[0];
+        const last = row["LAST NAME"] || "";
+        const first = row["FIRST NAME"] || "";
+        const middle = row["MIDDLE NAME"] || "";
+        nameToReturn = [last, [first, middle].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+      }
+    }
+
+    if (!targetId) {
+      return { totalAreaHa: 0, landownerName: nameToReturn || "Landowner" };
+    }
+
+    // Query owned parcels from rsbsa_farm_parcels for this landowner ID
+    const { data: parcels, error: parcelsErr } = await supabase
+      .from("rsbsa_farm_parcels")
+      .select("total_farm_area_ha, ownership_type_registered_owner, is_current_owner")
+      .eq("submission_id", targetId);
+
+    let totalAreaHa = 0;
+    if (!parcelsErr && Array.isArray(parcels)) {
+      parcels.forEach((p: any) => {
+        if (p.ownership_type_registered_owner === true && p.is_current_owner !== false) {
+          totalAreaHa += parseFloat(p.total_farm_area_ha) || 0;
+        }
+      });
+    }
+
+    // Fallback: check rsbsa_submission total farm area if no registered parcels found
+    if (totalAreaHa === 0) {
+      const { data: sub } = await supabase
+        .from("rsbsa_submission")
+        .select('"TOTAL FARM AREA", "PARCEL AREA", "FIRST NAME", "LAST NAME", "MIDDLE NAME"')
+        .eq("id", targetId)
+        .maybeSingle();
+
+      if (sub) {
+        if (!nameToReturn) {
+          const last = sub["LAST NAME"] || "";
+          const first = sub["FIRST NAME"] || "";
+          const middle = sub["MIDDLE NAME"] || "";
+          nameToReturn = [last, [first, middle].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+        }
+        const val = sub["TOTAL FARM AREA"] ?? sub["PARCEL AREA"];
+        totalAreaHa = parseFloat(String(val || "0")) || 0;
+      }
+    }
+
+    return { totalAreaHa, landownerName: nameToReturn || "Landowner" };
+  } catch (err) {
+    console.error("getLandownerOwnedArea error:", err);
+    return { totalAreaHa: 0, landownerName: landownerName || "Landowner" };
+  }
 };
 
 // // ==================== LAND TRANSFER ====================
@@ -4626,6 +4792,7 @@ export default {
   getFarmParcels,
   createFarmParcel,
   updateFarmParcel,
+  syncLandPlotArea,
 
   // Land Plots
   getLandPlots,

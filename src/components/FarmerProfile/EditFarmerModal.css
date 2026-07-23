@@ -1,0 +1,261 @@
+/* EditFarmerModal.css — Unified styling for Edit Farmer Information modal */
+
+.edit-farmer-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 1rem;
+  animation: editFarmerFadeIn 0.2s ease-out;
+}
+
+@keyframes editFarmerFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.edit-farmer-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.edit-farmer-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.edit-farmer-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.edit-farmer-modal-header p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.edit-farmer-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.edit-farmer-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.edit-farmer-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.edit-farmer-error-banner {
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.edit-farmer-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.edit-farmer-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.edit-farmer-form-group label {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.edit-farmer-form-group input,
+.edit-farmer-select {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.edit-farmer-form-group input:focus,
+.edit-farmer-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.edit-farmer-parcel-section {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.25rem;
+}
+
+.edit-farmer-parcel-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.edit-farmer-parcel-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  transition: border-color 0.15s ease;
+}
+
+.edit-farmer-parcel-card.error {
+  border-color: #ef4444;
+  background: #fff5f5;
+}
+
+.edit-farmer-parcel-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.edit-farmer-parcel-input {
+  width: 100%;
+}
+
+.edit-farmer-tenant-notice {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #fef3c7;
+  border-left: 3px solid #d97706;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+.edit-farmer-gis-notice {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.edit-farmer-parcel-error {
+  color: #dc2626;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.edit-farmer-parcel-location {
+  color: #64748b;
+  font-size: 0.775rem;
+  margin-top: 2px;
+}
+
+.edit-farmer-reason-input {
+  width: 100%;
+}
+
+.edit-farmer-loading-text,
+.edit-farmer-no-parcels {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.edit-farmer-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.edit-farmer-btn-cancel {
+  padding: 0.55rem 1.1rem;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edit-farmer-btn-cancel:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.edit-farmer-btn-save {
+  padding: 0.55rem 1.25rem;
+  border: none;
+  background: #16a34a;
+  color: #ffffff;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.edit-farmer-btn-save:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.edit-farmer-btn-cancel:disabled,
+.edit-farmer-btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

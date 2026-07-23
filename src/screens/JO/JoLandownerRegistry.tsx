@@ -469,32 +469,11 @@ const JoLandownerRegistry: React.FC = () => {
     try {
       setLoading(true);
 
-      // Step 1: Get all submissions, filter to registered owners
       const response = await getRsbsaSubmissions();
       if (response.error) throw new Error(response.error);
-
       const allRecords = (response.data || []) as SubmissionItem[];
-      const ownerRecords = allRecords.filter((item: SubmissionItem) => {
-        const flags = item.ownershipType;
-        return (
-          flags?.registeredOwner === true ||
-          flags?.category === "registeredOwner"
-        );
-      });
-
-      // Name lookup covering EVERY submission (owners, tenants, lessees
-      // alike) — used to resolve tenant/lessee names below without an
-      // extra fetch.
-      const nameById = new Map<number, string>();
-      allRecords.forEach((item: SubmissionItem) => {
-        const id = Number(item.id);
-        if (Number.isFinite(id)) nameById.set(id, item.farmerName || "—");
-      });
 
       // Step 2: Fetch ALL tenant/lessee parcel links in one query
-      // This avoids N+1 calls — we get every parcel that references an owner.
-      // is_current_owner is included and filtered below so a tenant/lessee
-      // who has since been replaced doesn't keep counting as "current."
       const { data: tlParcels, error: tlError } = await supabase
         .from("rsbsa_farm_parcels")
         .select(
@@ -509,6 +488,29 @@ const JoLandownerRegistry: React.FC = () => {
           "Tenant/lessee count fetch error (non-blocking):",
           tlError.message,
         );
+
+      const referencedOwnerIds = new Set<number>();
+      ((tlParcels as FarmParcelRow[]) || []).forEach((p) => {
+        if (p.tenant_land_owner_id) referencedOwnerIds.add(Number(p.tenant_land_owner_id));
+        if (p.lessee_land_owner_id) referencedOwnerIds.add(Number(p.lessee_land_owner_id));
+      });
+
+      const ownerRecords = allRecords.filter((item: SubmissionItem) => {
+        const flags = item.ownershipType;
+        const idNum = Number(item.id);
+        return (
+          flags?.registeredOwner === true ||
+          flags?.category === "registeredOwner" ||
+          referencedOwnerIds.has(idNum)
+        );
+      });
+
+      // Name lookup covering EVERY submission
+      const nameById = new Map<number, string>();
+      allRecords.forEach((item: SubmissionItem) => {
+        const id = Number(item.id);
+        if (Number.isFinite(id)) nameById.set(id, item.farmerName || "—");
+      });
 
       // Step 3: Build count maps — ownerId → unique CURRENT tenant submission IDs
       const tenantsByOwner = new Map<number, Set<number>>();

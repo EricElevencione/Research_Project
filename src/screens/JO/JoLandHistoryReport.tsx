@@ -561,10 +561,10 @@ const JoLandHistoryReport: React.FC = () => {
           <div className="jo-land-history-report-header">
             <h1>Land Inventory Report</h1>
             <p>
-              Every plotted parcel — not just ones with a registration on file.
-              Owner is resolved from the GIS plot record directly, so land with
-              no RSBSA registration still shows up here. Click a row with a
-              registration on file to open its full history.
+              Comprehensive municipal overview of all mapped land parcels and their
+              ownership records across Dumangas. Filter by barangay, land status,
+              or role, and click any registered parcel to view its full ownership
+              history timeline.
             </p>
           </div>
 

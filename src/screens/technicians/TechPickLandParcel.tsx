@@ -32,6 +32,7 @@ interface FarmParcel {
   ownershipTypeLessee: boolean;
   createdAt: string;
   updatedAt: string;
+  rawIndex?: number;
 }
 
 const TechPickLandParcel: React.FC = () => {
@@ -94,7 +95,7 @@ const TechPickLandParcel: React.FC = () => {
       console.log("Raw parcels data:", data);
 
       const mappedParcels: FarmParcel[] = data
-        .map((parcel: any) => ({
+        .map((parcel: any, rawIndex: number) => ({
           id: parcel.id,
           submissionId: parcel.submission_id,
           parcelNumber: parcel.parcel_number || "N/A",
@@ -119,6 +120,7 @@ const TechPickLandParcel: React.FC = () => {
           ownershipTypeLessee: parcel.ownership_type_lessee || false,
           createdAt: parcel.created_at || new Date().toISOString(),
           updatedAt: parcel.updated_at || new Date().toISOString(),
+          rawIndex,
         }))
         .filter((parcel: FarmParcel) => parcel.ownershipTypeRegisteredOwner);
 
@@ -157,11 +159,14 @@ const TechPickLandParcel: React.FC = () => {
 
 
   // Handle parcel selection -> navigate to mapping page
-  const handleParcelSelect = (parcel: FarmParcel, parcelIndex: number) => {
+  const handleParcelSelect = (parcel: FarmParcel) => {
     setSelectedParcel(parcel);
     if (ownerId) {
+      const pNum = encodeURIComponent(parcel.parcelNumber || "");
+      const pId = encodeURIComponent(parcel.id || "");
+      const pIdx = parcel.rawIndex !== undefined ? parcel.rawIndex : 0;
       navigate(
-        `/technician-landplotting?recordId=${ownerId}&parcelIndex=${parcelIndex}`,
+        `/technician-landplotting?recordId=${ownerId}&parcelIndex=${pIdx}&parcelNumber=${pNum}&parcelId=${pId}`,
       );
     }
   };
@@ -335,7 +340,7 @@ const TechPickLandParcel: React.FC = () => {
                             key={parcel.id}
                             aria-label={`Select parcel ${parcel.parcelNumber}`}
                             className={`parcel-card ${selectedParcel?.id === parcel.id ? "selected" : ""}`}
-                            onClick={() => handleParcelSelect(parcel, idx)}
+                            onClick={() => handleParcelSelect(parcel)}
                           >
                             <div className="parcel-card-top">
                               <span className="parcel-number-pill">

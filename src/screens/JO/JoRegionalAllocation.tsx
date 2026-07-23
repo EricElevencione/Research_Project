@@ -1,6 +1,5 @@
-import { supabase } from "../../supabase";
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getAllocationBySeason, createAllocation } from "../../api";
 import "../../assets/css/jo css/JoRegionAll.css";
 import JOSidebar from "../../components/layout/JOSidebar";
@@ -203,7 +202,6 @@ function syncAddedItemsFromMerged(merged: RegionalAllocation) {
 
 const JoRegionalAllocation: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);

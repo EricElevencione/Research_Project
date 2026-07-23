@@ -8,6 +8,8 @@ import {
   getFarmParcelsWithOccupants,
   updateRsbsaSubmission,
   updateFarmParcel,
+  syncLandPlotArea,
+  getLandownerOwnedArea,
   getLandHistoryAssociationRows,
 } from "../../api";
 import {
@@ -24,6 +26,7 @@ import {
 } from "../../components/Audit/auditLogger";
 import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfileDisplay";
+import { EditFarmerModal } from "../../components/FarmerProfile/EditFarmerModal";
 import type {
   UnifiedParcel,
   OccupantInfo,
@@ -1684,59 +1687,10 @@ const JoMasterlist: React.FC = () => {
     );
   };
 
-  const handleEdit = async (recordId: string) => {
+  const handleEdit = (recordId: string) => {
     const record = rsbsaRecords.find((r) => r.id === recordId);
     if (!record) return;
-    const { lastName, firstName, middleName } = parseName(
-      record.farmerName || "",
-    );
-    const pa = parseAddress(record.farmerAddress || "");
-    const pf = parseAddress(record.farmLocation || "");
-    const resolvedBarangay = resolveBarangayForEdit(
-      pa.barangay,
-      record.farmLocation || "",
-    );
-    const resolvedMunicipality = (() => {
-      const fa = (pa.municipality || "").trim();
-      if (fa && nt(fa) !== "iloilo") return fa;
-      return (pf.municipality || "").trim() || "Dumangas";
-    })();
     setEditingRecord(record);
-    setEditError(null);
-    setEditFormData({
-      farmerName: record.farmerName,
-      firstName,
-      middleName,
-      lastName,
-      age: ageToInputValue(record.age),
-      farmerAddress: record.farmerAddress,
-      barangay: resolvedBarangay,
-      municipality: resolvedMunicipality,
-      farmLocation: record.farmLocation,
-      landParcel: record.landParcel,
-      dateSubmitted: record.dateSubmitted,
-      parcelArea: record.parcelArea?.replace(/\s*hectares\s*$/i, "").trim(),
-    });
-    setLoadingParcels(true);
-    setParcelErrors({});
-    try {
-      const res = await getFarmParcels(recordId);
-      if (!res.error) {
-        setEditingParcels(
-          (res.data || []).map((p: Parcel) => ({
-            ...p,
-            is_farming: typeof p.is_farming === "boolean" ? p.is_farming : null,
-            farming_status_reason: p.farming_status_reason || null,
-          })),
-        );
-      } else {
-        setEditingParcels([]);
-      }
-    } catch {
-      setEditingParcels([]);
-    } finally {
-      setLoadingParcels(false);
-    }
     setOpenMenuId(null);
   };
 
@@ -1745,229 +1699,12 @@ const JoMasterlist: React.FC = () => {
     const editRecordId = String(navState?.editRecordId || "").trim();
     if (!editRecordId || rsbsaRecords.length === 0) return;
     if (rsbsaRecords.some((r) => r.id === editRecordId))
-      void handleEdit(editRecordId);
+      handleEdit(editRecordId);
     navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, rsbsaRecords, navigate]);
 
   const handleCancel = () => {
     setEditingRecord(null);
-    setEditFormData({});
-    setEditError(null);
-    setEditingParcels([]);
-    setParcelErrors({});
-  };
-
-  const handleInputChange = (field: keyof EditFormData, value: string) => {
-    setEditError(null);
-    setEditFormData((p) => ({ ...p, [field]: value }));
-  };
-
-  const deriveFarmingStatusFromParcels = (parcels: Parcel[]): string => {
-    if (!parcels || parcels.length === 0) return "Not specified";
-    let active = 0,
-      inactive = 0;
-    parcels.forEach((p) => {
-      if (p.is_farming === true) active++;
-      if (p.is_farming === false) inactive++;
-    });
-    if (active > 0 && inactive > 0) return "Mixed";
-    if (active > 0) return "Farming";
-    if (inactive > 0) return "Not farming";
-    return "Not specified";
-  };
-
-  const handleIndividualParcelChange = (
-    parcelId: string,
-    field: keyof Parcel,
-    value: any,
-  ) => {
-    setEditError(null);
-    if (field === "total_farm_area_ha") {
-      const vs = String(value).trim();
-      if (vs === "") {
-        setParcelErrors((p) => ({
-          ...p,
-          [parcelId]: "Parcel area is required",
-        }));
-        setEditingParcels((p) =>
-          p.map((par) => (par.id === parcelId ? { ...par, [field]: 0 } : par)),
-        );
-        return;
-      }
-      const nv = parseFloat(vs);
-      if (isNaN(nv)) {
-        setParcelErrors((p) => ({
-          ...p,
-          [parcelId]: "Must be a valid number",
-        }));
-        return;
-      }
-      if (nv <= 0) {
-        setParcelErrors((p) => ({
-          ...p,
-          [parcelId]: "Must be greater than 0",
-        }));
-        setEditingParcels((p) =>
-          p.map((par) => (par.id === parcelId ? { ...par, [field]: nv } : par)),
-        );
-        return;
-      }
-      setEditingParcels((p) =>
-        p.map((par) => (par.id === parcelId ? { ...par, [field]: nv } : par)),
-      );
-    } else {
-      setEditingParcels((p) =>
-        p.map((par) =>
-          par.id === parcelId ? { ...par, [field]: value } : par,
-        ),
-      );
-    }
-  };
-
-  const handleSave = async () => {
-    if (!editingRecord || !editFormData) return;
-    try {
-      setEditError(null);
-      if (editingParcels.length > 0) {
-        const newErrors: Record<string, string> = {};
-        editingParcels.forEach((p) => {
-          if (!p.total_farm_area_ha || p.total_farm_area_ha <= 0)
-            newErrors[p.id] = "Parcel area must be a valid positive number";
-        });
-        if (Object.keys(newErrors).length > 0) {
-          setParcelErrors(newErrors);
-          setEditError("Fix parcel area errors first");
-          showUpdateNotification(
-            "Fix parcel area errors before saving.",
-            "error",
-          );
-          return;
-        }
-      }
-      const rawAge = (editFormData.age ?? "").trim();
-      const normalizedAge = parseAgeInputToNumber(rawAge);
-      if (rawAge !== "" && (normalizedAge === null || normalizedAge < 18)) {
-        setEditError("Age must be ≥ 18");
-        showUpdateNotification("Age must be at least 18.", "error");
-        return;
-      }
-      const last = (editFormData.lastName ?? "").trim(),
-        first = (editFormData.firstName ?? "").trim(),
-        middle = (editFormData.middleName ?? "").trim();
-      const composedFarmerName = [
-        last,
-        [first, middle].filter(Boolean).join(" "),
-      ]
-        .filter(Boolean)
-        .join(", ");
-      const b = (editFormData.barangay ?? "").trim(),
-        m = (editFormData.municipality ?? "").trim();
-      const composedAddress = [b, m].filter(Boolean).join(", ");
-      const newParcelAreaString =
-        editingParcels.length > 0
-          ? editingParcels.map((p) => p.total_farm_area_ha).join(", ")
-          : (editFormData.parcelArea ?? editingRecord.parcelArea);
-      const formattedData = {
-        farmerName: composedFarmerName,
-        farmerAddress: composedAddress,
-        parcelArea: newParcelAreaString,
-        age: normalizedAge,
-      };
-      const cleanedData = Object.entries({
-        ...editFormData,
-        ...formattedData,
-        firstName: first,
-        middleName: middle,
-        surname: last,
-        addressBarangay: b,
-        addressMunicipality: m,
-      }).reduce(
-        (acc, [k, v]) => {
-          if (v !== undefined && v !== "") acc[k] = v;
-          return acc;
-        },
-        {} as Record<string, any>,
-      );
-      const response = await updateRsbsaSubmission(
-        editingRecord.id,
-        cleanedData,
-      );
-      if (response.error) throw new Error(response.error);
-      for (const parcel of editingParcels) {
-        try {
-          await updateFarmParcel(parcel.id, {
-            total_farm_area_ha: parcel.total_farm_area_ha,
-            farm_location_barangay: parcel.farm_location_barangay,
-            farm_location_municipality: parcel.farm_location_municipality,
-            within_ancestral_domain: parcel.within_ancestral_domain,
-            ownership_document_no: parcel.ownership_document_no,
-            agrarian_reform_beneficiary: parcel.agrarian_reform_beneficiary,
-            ownership_type_registered_owner:
-              parcel.ownership_type_registered_owner,
-            ownership_type_tenant: parcel.ownership_type_tenant,
-            ownership_type_lessee: parcel.ownership_type_lessee,
-            tenant_land_owner_name: parcel.tenant_land_owner_name,
-            lessee_land_owner_name: parcel.lessee_land_owner_name,
-            ownership_others_specify: parcel.ownership_others_specify,
-            is_farming: parcel.is_farming ?? null,
-            farming_status_reason:
-              parcel.is_farming === false
-                ? (parcel.farming_status_reason ?? null)
-                : null,
-            farming_status_updated_at: new Date().toISOString(),
-          });
-        } catch (e) {
-          console.error(`Parcel ${parcel.id} update error:`, e);
-        }
-      }
-      const serverRecord = response.data?.updatedRecord ?? response.data ?? {};
-      setRsbsaRecords((p) =>
-        p.map((r) =>
-          r.id === editingRecord.id
-            ? {
-                ...editingRecord,
-                ...formattedData,
-                ...serverRecord,
-                age: normalizeAgeValue(
-                  serverRecord.age ?? formattedData.age,
-                  null,
-                ),
-                farmingStatus:
-                  editingParcels.length > 0
-                    ? deriveFarmingStatusFromParcels(editingParcels)
-                    : editingRecord.farmingStatus,
-              }
-            : r,
-        ),
-      );
-      setEditingRecord(null);
-      setEditFormData({});
-      setEditError(null);
-      setEditingParcels([]);
-      setParcelErrors({});
-      showUpdateNotification(
-        "Farmer information updated successfully.",
-        "success",
-      );
-      try {
-        const u = await getCurrentUserForAudit();
-        await getAuditLogger().logCRUD(
-          { ...u, id: undefined },
-          "UPDATE",
-          AuditModule.FARMERS,
-          "farmer_record",
-          editingRecord.id,
-          `Updated: ${editingRecord.farmerName}`,
-          { farmerName: editingRecord.farmerName },
-          { updatedName: composedFarmerName },
-        );
-      } catch {}
-    } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : "Failed to update record.";
-      setEditError(msg);
-      showUpdateNotification(msg, "error");
-    }
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -2819,220 +2556,20 @@ const JoMasterlist: React.FC = () => {
         )}
 
         {/* ── Edit Modal ─────────────────────────────────────────────────── */}
-        {editingRecord && (
-          <div className="jo-masterlist-edit-modal-overlay">
-            <div className="jo-masterlist-edit-modal">
-              <div className="jo-masterlist-edit-modal-header">
-                <div className="jo-masterlist-edit-modal-title">
-                  <h2>Edit Farmer Information</h2>
-                  <p>Update farmer details and parcel farming status.</p>
-                </div>
-                <button
-                  className="jo-masterlist-close-button"
-                  onClick={handleCancel}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="jo-masterlist-edit-modal-body">
-                {editError && (
-                  <div className="jo-masterlist-edit-error-banner" role="alert">
-                    {editError}
-                  </div>
-                )}
-                <div className="jo-masterlist-form-grid">
-                  <div className="jo-masterlist-form-group">
-                    <label>Last Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.lastName || ""}
-                      onChange={(e) =>
-                        handleInputChange("lastName", e.target.value)
-                      }
-                      placeholder="Last Name"
-                    />
-                  </div>
-                  <div className="jo-masterlist-form-group">
-                    <label>First Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.firstName || ""}
-                      onChange={(e) =>
-                        handleInputChange("firstName", e.target.value)
-                      }
-                      placeholder="First Name"
-                    />
-                  </div>
-                  <div className="jo-masterlist-form-group">
-                    <label>Middle Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.middleName || ""}
-                      onChange={(e) =>
-                        handleInputChange("middleName", e.target.value)
-                      }
-                      placeholder="Middle Name"
-                    />
-                  </div>
-                  <div className="jo-masterlist-form-group">
-                    <label>Age:</label>
-                    <input
-                      type="text"
-                      value={editFormData.age || ""}
-                      onChange={(e) => handleInputChange("age", e.target.value)}
-                      placeholder="Age"
-                    />
-                  </div>
-                  <div className="jo-masterlist-form-group">
-                    <label>Barangay:</label>
-                    <select
-                      value={editFormData.barangay || ""}
-                      onChange={(e) =>
-                        handleInputChange("barangay", e.target.value)
-                      }
-                      className="jo-masterlist-form-select"
-                    >
-                      <option value="">Select Barangay</option>
-                      {barangays.map((b) => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="jo-masterlist-form-group">
-                    <label>Municipality:</label>
-                    <input
-                      type="text"
-                      value={editFormData.municipality || ""}
-                      onChange={(e) =>
-                        handleInputChange("municipality", e.target.value)
-                      }
-                      placeholder="Municipality"
-                    />
-                  </div>
-                </div>
-                <div className="jo-masterlist-parcel-section">
-                  <h4>Parcels</h4>
-                  {loadingParcels ? (
-                    <p>Loading parcels...</p>
-                  ) : editingParcels.length > 0 ? (
-                    editingParcels.map((parcel, index) => (
-                      <div
-                        key={parcel.id}
-                        className={`jo-masterlist-parcel-item ${parcelErrors[parcel.id] ? "error" : ""}`}
-                      >
-                        <div className="jo-masterlist-form-group">
-                          <label className="jo-masterlist-parcel-label">
-                            Parcel {index + 1} —{" "}
-                            {parcel.parcel_number !== "N/A"
-                              ? `No. ${parcel.parcel_number}`
-                              : "No parcel number"}
-                          </label>
-                          <input
-                            type="text"
-                            value={parcel.total_farm_area_ha || ""}
-                            onChange={(e) =>
-                              handleIndividualParcelChange(
-                                parcel.id,
-                                "total_farm_area_ha",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="e.g., 2.5 (ha)"
-                            className="jo-masterlist-parcel-input"
-                            data-error={
-                              parcelErrors[parcel.id] ? "true" : "false"
-                            }
-                          />
-                          {parcelErrors[parcel.id] && (
-                            <small className="jo-masterlist-parcel-error">
-                              {parcelErrors[parcel.id]}
-                            </small>
-                          )}
-                          <small className="jo-masterlist-parcel-location">
-                            Location: {parcel.farm_location_barangay || "N/A"},{" "}
-                            {parcel.farm_location_municipality || "N/A"}
-                          </small>
-                        </div>
-                        <div className="jo-masterlist-form-group">
-                          <label>Currently farming this parcel?</label>
-                          <select
-                            value={
-                              parcel.is_farming === true
-                                ? "true"
-                                : parcel.is_farming === false
-                                  ? "false"
-                                  : ""
-                            }
-                            onChange={(e) => {
-                              const n =
-                                e.target.value === "true"
-                                  ? true
-                                  : e.target.value === "false"
-                                    ? false
-                                    : null;
-                              handleIndividualParcelChange(
-                                parcel.id,
-                                "is_farming",
-                                n,
-                              );
-                              if (n !== false)
-                                handleIndividualParcelChange(
-                                  parcel.id,
-                                  "farming_status_reason",
-                                  null,
-                                );
-                            }}
-                            className="jo-masterlist-form-select"
-                          >
-                            <option value="true">Yes</option>
-                            <option value="false">No</option>
-                          </select>
-                        </div>
-                        {parcel.is_farming === false && (
-                          <div className="jo-masterlist-form-group">
-                            <label>Reason not farming:</label>
-                            <input
-                              type="text"
-                              value={parcel.farming_status_reason || ""}
-                              onChange={(e) =>
-                                handleIndividualParcelChange(
-                                  parcel.id,
-                                  "farming_status_reason",
-                                  e.target.value || null,
-                                )
-                              }
-                              placeholder="Enter reason"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="jo-masterlist-parcel-empty">
-                      No parcels found for this farmer.
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="jo-masterlist-edit-modal-footer">
-                <button
-                  className="jo-masterlist-cancel-button"
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="jo-masterlist-save-button"
-                  onClick={handleSave}
-                >
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <EditFarmerModal
+          isOpen={!!editingRecord}
+          recordId={editingRecord?.id ?? null}
+          initialRecord={editingRecord}
+          onClose={handleCancel}
+          onSaved={(updatedRecord) => {
+            setRsbsaRecords((prev) =>
+              prev.map((r) =>
+                r.id === updatedRecord.id ? { ...r, ...updatedRecord } : r,
+              ),
+            );
+          }}
+          showNotification={showUpdateNotification}
+        />
 
         {/* ── Farmer Detail Modal ────────────────────────────────────────── */}
         {showModal && selectedFarmer && (
@@ -3316,21 +2853,6 @@ const JoMasterlist: React.FC = () => {
                           </strong>{" "}
                           actively farmed
                         </span>
-                        {selectedFarmer.parcels.filter(
-                          (p) => p.isFarming === false,
-                        ).length > 0 && (
-                          <span style={{ color: "#c0392b" }}>
-                            ⚠️{" "}
-                            <strong>
-                              {
-                                selectedFarmer.parcels.filter(
-                                  (p) => p.isFarming === false,
-                                ).length
-                              }
-                            </strong>{" "}
-                            idle
-                          </span>
-                        )}
                       </div>
                     )}
                     {selectedFarmer.parcels.length === 0 ? (
@@ -3344,31 +2866,6 @@ const JoMasterlist: React.FC = () => {
                           const hasOwnerName =
                             parcel.tenantLandOwnerName ||
                             parcel.lesseeLandOwnerName;
-                          const hasOwnerLink =
-                            parcel.tenantLandOwnerId ||
-                            parcel.lesseeLandOwnerId;
-                          const isUnlinked =
-                            isTL && hasOwnerName && !hasOwnerLink;
-                          const parsedContractEnd = parcel.contractEndDate
-                            ? new Date(parcel.contractEndDate)
-                            : null;
-                          const contractDateLabel =
-                            parsedContractEnd &&
-                            !Number.isNaN(parsedContractEnd.getTime())
-                              ? parsedContractEnd.toLocaleDateString()
-                              : "Not specified";
-                          const contractStatus = (() => {
-                            if (
-                              !parsedContractEnd ||
-                              Number.isNaN(parsedContractEnd.getTime())
-                            )
-                              return null;
-                            const endDate = new Date(parsedContractEnd);
-                            const today = new Date();
-                            endDate.setHours(0, 0, 0, 0);
-                            today.setHours(0, 0, 0, 0);
-                            return endDate < today ? "Ended" : "Active";
-                          })();
                           return (
                             <div
                               key={parcel.id}
@@ -3408,21 +2905,6 @@ const JoMasterlist: React.FC = () => {
                                     <span className="farmer-modal-value">
                                       {parcel.tenantLandOwnerName ||
                                         parcel.lesseeLandOwnerName}
-                                      {isUnlinked && (
-                                        <span
-                                          style={{
-                                            marginLeft: 8,
-                                            fontSize: "11px",
-                                            padding: "2px 8px",
-                                            borderRadius: 99,
-                                            background: "#FAEEDA",
-                                            color: "#633806",
-                                          }}
-                                          title="Text-only name — no FFRS record linked"
-                                        >
-                                          ⚠️ Unlinked
-                                        </span>
-                                      )}
                                       {parcel.ownershipDocumentNo && (
                                         <span className="farmer-modal-owner-name">
                                           {" "}
@@ -3534,19 +3016,7 @@ const JoMasterlist: React.FC = () => {
                                     </span>
                                   </div>
                                 )}
-                                <div className="farmer-modal-parcel-item">
-                                  <span className="farmer-modal-label">
-                                    Contract End Date:
-                                  </span>
-                                  <span className="farmer-modal-value">
-                                    {contractDateLabel}
-                                    {contractStatus && (
-                                      <span className="farmer-modal-owner-name">
-                                        {` · ${contractStatus}`}
-                                      </span>
-                                    )}
-                                  </span>
-                                </div>
+
                                 {parcel.ownershipOthersSpecify && (
                                   <div className="farmer-modal-parcel-item">
                                     <span className="farmer-modal-label">

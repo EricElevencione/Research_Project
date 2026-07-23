@@ -8,12 +8,14 @@ import {
   getFarmParcelsWithOccupants,
   updateRsbsaSubmission,
   updateFarmParcel,
+  getLandownerOwnedArea,
 } from "../../api";
 import "../../assets/css/jo css/JoFarmerStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
 import { printHtmlReport } from "../../utils/printHelper";
 import "../../assets/css/jo css/FarmerDetailModal.css";
 import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfileDisplay";
+import { EditFarmerModal } from "../../components/FarmerProfile/EditFarmerModal";
 import type {
   UnifiedParcel,
   OccupantInfo,
@@ -1453,63 +1455,10 @@ const JoFarmerRegistry: React.FC = () => {
     );
   };
 
-  const handleEdit = async (recordId: string) => {
+  const handleEdit = (recordId: string) => {
     const recordToEdit = rsbsaRecords.find((r) => r.id === recordId);
     if (recordToEdit) {
-      const { lastName, firstName, middleName } = parseName(
-        recordToEdit.farmerName || "",
-      );
-      const parsedAddress = parseAddress(recordToEdit.farmerAddress || "");
-      const parsedFarmLocation = parseAddress(recordToEdit.farmLocation || "");
-      const resolvedBarangay = resolveBarangayForEdit(
-        parsedAddress.barangay,
-        recordToEdit.farmLocation || "",
-      );
-      const resolvedMunicipality = (() => {
-        const fromAddress = (parsedAddress.municipality || "").trim();
-        if (fromAddress && normalizeText(fromAddress) !== "iloilo")
-          return fromAddress;
-        return (parsedFarmLocation.municipality || "").trim() || "Dumangas";
-      })();
-
       setEditingRecord(recordToEdit);
-      setEditError(null);
-      setEditFormData({
-        farmerName: recordToEdit.farmerName,
-        firstName,
-        middleName,
-        lastName,
-        age: ageToInputValue(recordToEdit.age),
-        farmerAddress: recordToEdit.farmerAddress,
-        barangay: resolvedBarangay,
-        municipality: resolvedMunicipality,
-        farmLocation: recordToEdit.farmLocation,
-        landParcel: recordToEdit.landParcel,
-        dateSubmitted: recordToEdit.dateSubmitted,
-        parcelArea: extractParcelAreaNumber(recordToEdit.parcelArea || ""),
-      });
-
-      setLoadingParcels(true);
-      setParcelErrors({});
-      try {
-        const response = await getFarmParcels(recordId);
-        if (!response.error) {
-          setEditingParcels(
-            (response.data || []).map((p: Parcel) => ({
-              ...p,
-              is_farming:
-                typeof p.is_farming === "boolean" ? p.is_farming : null,
-              farming_status_reason: p.farming_status_reason || null,
-            })),
-          );
-        } else {
-          setEditingParcels([]);
-        }
-      } catch {
-        setEditingParcels([]);
-      } finally {
-        setLoadingParcels(false);
-      }
     }
     setOpenMenuId(null);
   };
@@ -1619,10 +1568,23 @@ const JoFarmerRegistry: React.FC = () => {
       setEditError(null);
       if (editingParcels.length > 0) {
         const newErrors: Record<string, string> = {};
-        editingParcels.forEach((p) => {
-          if (!p.total_farm_area_ha || p.total_farm_area_ha <= 0)
+        for (const p of editingParcels) {
+          if (!p.total_farm_area_ha || p.total_farm_area_ha <= 0) {
             newErrors[p.id] = "Parcel area must be a valid positive number";
-        });
+          } else if (
+            (p.ownership_type_tenant || p.ownership_type_lessee) &&
+            !p.ownership_type_registered_owner
+          ) {
+            const ownerId = (p as any).tenant_land_owner_id || (p as any).lessee_land_owner_id;
+            const ownerName = (p as any).tenant_land_owner_name || (p as any).lessee_land_owner_name;
+            if (ownerId || ownerName) {
+              const { totalAreaHa, landownerName } = await getLandownerOwnedArea(ownerId, ownerName);
+              if (totalAreaHa > 0 && p.total_farm_area_ha > totalAreaHa) {
+                newErrors[p.id] = `Area (${p.total_farm_area_ha} ha) exceeds total land area owned by ${landownerName} (${totalAreaHa.toFixed(2)} ha)`;
+              }
+            }
+          }
+        }
         if (Object.keys(newErrors).length > 0) {
           setParcelErrors(newErrors);
           setEditError("Please fix all parcel area errors before saving");
@@ -2382,218 +2344,20 @@ const JoFarmerRegistry: React.FC = () => {
           </div>
         )}
 
-        {editingRecord && (
-          <div className="jo-farmer-edit-modal-overlay">
-            <div className="jo-farmer-edit-modal">
-              <div className="jo-farmer-edit-modal-header">
-                <div className="jo-farmer-edit-modal-title">
-                  <h2>Edit Farmer Information</h2>
-                  <p>Update farmer details and parcel farming status.</p>
-                </div>
-                <button
-                  className="jo-farmer-close-button"
-                  onClick={handleCancel}
-                >
-                  ×
-                </button>
-              </div>
-              <div className="jo-farmer-edit-modal-body">
-                {editError && (
-                  <div className="jo-farmer-edit-error-banner" role="alert">
-                    {editError}
-                  </div>
-                )}
-                <div className="jo-farmer-form-grid">
-                  <div className="jo-farmer-form-group">
-                    <label>Last Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.lastName || ""}
-                      onChange={(e) =>
-                        handleInputChange("lastName", e.target.value)
-                      }
-                      placeholder="Last Name"
-                    />
-                  </div>
-                  <div className="jo-farmer-form-group">
-                    <label>First Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.firstName || ""}
-                      onChange={(e) =>
-                        handleInputChange("firstName", e.target.value)
-                      }
-                      placeholder="First Name"
-                    />
-                  </div>
-                  <div className="jo-farmer-form-group">
-                    <label>Middle Name:</label>
-                    <input
-                      type="text"
-                      value={editFormData.middleName || ""}
-                      onChange={(e) =>
-                        handleInputChange("middleName", e.target.value)
-                      }
-                      placeholder="Middle Name"
-                    />
-                  </div>
-                  <div className="jo-farmer-form-group">
-                    <label>Age:</label>
-                    <input
-                      type="text"
-                      value={editFormData.age || ""}
-                      onChange={(e) => handleInputChange("age", e.target.value)}
-                      placeholder="Age"
-                    />
-                  </div>
-                  <div className="jo-farmer-form-group">
-                    <label>Barangay:</label>
-                    <select
-                      value={editFormData.barangay || ""}
-                      onChange={(e) =>
-                        handleInputChange("barangay", e.target.value)
-                      }
-                      className="jo-farmer-form-select"
-                    >
-                      <option value="">Select Barangay</option>
-                      {barangays.map((b) => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="jo-farmer-form-group">
-                    <label>Municipality:</label>
-                    <input
-                      type="text"
-                      value={editFormData.municipality || ""}
-                      onChange={(e) =>
-                        handleInputChange("municipality", e.target.value)
-                      }
-                      placeholder="Municipality"
-                    />
-                  </div>
-                </div>
-
-                <div className="jo-farmer-parcel-section">
-                  <h4>Parcels</h4>
-                  {loadingParcels ? (
-                    <p>Loading parcels...</p>
-                  ) : editingParcels.length > 0 ? (
-                    editingParcels.map((parcel, index) => (
-                      <div
-                        key={parcel.id}
-                        className={`jo-farmer-parcel-item ${parcelErrors[parcel.id] ? "error" : ""}`}
-                      >
-                        <div className="jo-farmer-form-group">
-                          <label className="jo-farmer-parcel-label">
-                            Parcel {index + 1} —{" "}
-                            {parcel.parcel_number !== "N/A"
-                              ? `No. ${parcel.parcel_number}`
-                              : "No parcel number"}
-                          </label>
-                          <input
-                            type="text"
-                            value={parcel.total_farm_area_ha || ""}
-                            onChange={(e) =>
-                              handleIndividualParcelChange(
-                                parcel.id,
-                                "total_farm_area_ha",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="e.g., 2.5 (ha)"
-                            className="jo-farmer-parcel-input"
-                            data-error={
-                              parcelErrors[parcel.id] ? "true" : "false"
-                            }
-                          />
-                          {parcelErrors[parcel.id] && (
-                            <small className="jo-farmer-parcel-error">
-                              {parcelErrors[parcel.id]}
-                            </small>
-                          )}
-                          <small className="jo-farmer-parcel-location">
-                            Location: {parcel.farm_location_barangay || "N/A"},{" "}
-                            {parcel.farm_location_municipality || "N/A"}
-                          </small>
-                        </div>
-                        <div className="jo-farmer-form-group">
-                          <label>Currently farming this parcel?</label>
-                          <select
-                            value={
-                              parcel.is_farming === true
-                                ? "true"
-                                : parcel.is_farming === false
-                                  ? "false"
-                                  : ""
-                            }
-                            onChange={(e) => {
-                              const normalized =
-                                e.target.value === "true"
-                                  ? true
-                                  : e.target.value === "false"
-                                    ? false
-                                    : null;
-                              handleIndividualParcelChange(
-                                parcel.id,
-                                "is_farming",
-                                normalized,
-                              );
-                              if (normalized !== false)
-                                handleIndividualParcelChange(
-                                  parcel.id,
-                                  "farming_status_reason",
-                                  null,
-                                );
-                            }}
-                            className="jo-farmer-form-select"
-                          >
-                            <option value="true">Yes</option>
-                            <option value="false">No</option>
-                          </select>
-                        </div>
-                        {parcel.is_farming === false && (
-                          <div className="jo-farmer-form-group">
-                            <label>Reason not farming:</label>
-                            <input
-                              type="text"
-                              value={parcel.farming_status_reason || ""}
-                              onChange={(e) =>
-                                handleIndividualParcelChange(
-                                  parcel.id,
-                                  "farming_status_reason",
-                                  e.target.value || null,
-                                )
-                              }
-                              placeholder="Enter reason"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="jo-farmer-parcel-empty">
-                      No parcels found for this farmer.
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="jo-farmer-edit-modal-footer">
-                <button
-                  className="jo-farmer-cancel-button"
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </button>
-                <button className="jo-farmer-save-button" onClick={handleSave}>
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <EditFarmerModal
+          isOpen={!!editingRecord}
+          recordId={editingRecord?.id ?? null}
+          initialRecord={editingRecord}
+          onClose={handleCancel}
+          onSaved={(updatedRecord) => {
+            setRsbsaRecords((prev) =>
+              prev.map((r) =>
+                r.id === updatedRecord.id ? { ...r, ...updatedRecord } : r,
+              ),
+            );
+          }}
+          showNotification={showUpdateNotification}
+        />
 
         {/* Farmer Detail Modal — unchanged */}
         {showModal && selectedFarmer && (
