@@ -2726,7 +2726,7 @@ const Masterlist: React.FC = () => {
                         totalFarmAreaHa: p.totalFarmAreaHa,
                         role: p.role as UnifiedParcel["role"],
                         occupants: p.occupants || [],
-                        geometry: null,
+                        geometry: p.geometry,
                         agrarianReformBeneficiary: p.agrarianReformBeneficiary,
                         withinAncestralDomain: p.withinAncestralDomain,
                         ownershipDocumentNo: p.ownershipDocumentNo,
@@ -2766,7 +2766,7 @@ const Masterlist: React.FC = () => {
                           totalFarmAreaHa: p.totalFarmAreaHa,
                           role: p.role as UnifiedParcel["role"],
                           occupants: p.occupants || [],
-                          geometry: null,
+                          geometry: p.geometry,
                           withinAncestralDomain: p.withinAncestralDomain,
                           ownershipDocumentNo: p.ownershipDocumentNo,
                           agrarianReformBeneficiary:

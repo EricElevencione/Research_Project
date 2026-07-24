@@ -135,11 +135,79 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
   onClose,
   showAreaMismatchWarning = false,
 }) => {
-  const parcels = farmer.parcels || [];
-  
+  const [parcelsWithGeom, setParcelsWithGeom] = useState<UnifiedParcel[]>(
+    farmer.parcels || [],
+  );
+
+  const parcels = parcelsWithGeom;
+
+  // Fetch geometries dynamically if any parcels are missing geometry
+  useEffect(() => {
+    setParcelsWithGeom(farmer.parcels || []);
+
+    const fetchGeometries = async () => {
+      const pList = farmer.parcels || [];
+      const needsGeom = pList.some((p) => !p.geometry);
+      if (!needsGeom) return;
+
+      const parcelNumbers = pList
+        .map((p) => p.parcelNumber)
+        .filter((n) => n && n !== "N/A");
+
+      if (parcelNumbers.length === 0 && !farmer.id) return;
+
+      try {
+        let query = supabase
+          .from("land_plots")
+          .select("id, parcel_number, area, geometry, farmer_id");
+
+        if (parcelNumbers.length > 0) {
+          query = query.or(
+            `farmer_id.eq.${Number(farmer.id)},parcel_number.in.(${parcelNumbers.map((n) => `"${n}"`).join(",")})`,
+          );
+        } else {
+          query = query.eq("farmer_id", Number(farmer.id));
+        }
+
+        const { data: plots } = await query;
+
+        if (plots && plots.length > 0) {
+          const updated = pList.map((p) => {
+            if (p.geometry) return p;
+            const plot = plots.find(
+              (plotItem: any) =>
+                plotItem.parcel_number &&
+                p.parcelNumber &&
+                plotItem.parcel_number.trim().toLowerCase() ===
+                  p.parcelNumber.trim().toLowerCase(),
+            );
+            const resolvedPlot =
+              plot ||
+              (plots.length === 1 && pList.length === 1 ? plots[0] : null);
+            if (resolvedPlot && resolvedPlot.geometry) {
+              return {
+                ...p,
+                geometry: resolvedPlot.geometry,
+              };
+            }
+            return p;
+          });
+          setParcelsWithGeom(updated);
+        }
+      } catch (err) {
+        console.warn(
+          "Error loading geometries inside FarmerProfileDisplay:",
+          err,
+        );
+      }
+    };
+
+    fetchGeometries();
+  }, [farmer.id, farmer.parcels]);
+
   // Local state for profile picture
   const [profilePic, setProfilePic] = useState<string | null>(
-    farmer.profilePicture || farmer.profile_picture || null
+    farmer.profilePicture || farmer.profile_picture || null,
   );
   const [isUpdatingPic, setIsUpdatingPic] = useState(false);
 
