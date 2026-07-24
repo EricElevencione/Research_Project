@@ -1761,9 +1761,6 @@ const TechMasterlist: React.FC = () => {
                         <td data-label="Parcel Address">{record.farmLocation}</td>
                         <td data-label="Parcel Area">
                           <span style={{ fontWeight: 600 }}>{record.parcelArea}</span>
-                          <small style={{ display: "block", fontSize: "10px", color: "#d97706", marginTop: "2px", fontWeight: 600 }}>
-                            ⚠️ Verify map shape if area changed
-                          </small>
                         </td>
                         <td data-label="Ownership Type">{getOwnershipLabel(record)}</td>
                         <td data-label="Date Submitted">{formatDate(record.dateSubmitted)}</td>
