@@ -575,7 +575,14 @@ const LandPlottingPage: React.FC = () => {
   // Add this helper to refresh shapes from backend
   const refreshShapesFromBackend = async () => {
     if (parcelContext.recordId) {
-      await fetchRSBSARecord(parcelContext.recordId, parcelContext.parcelIndex);
+      const parcelNumberParam = searchParams.get("parcelNumber");
+      const parcelIdParam = searchParams.get("parcelId");
+      await fetchRSBSARecord(
+        parcelContext.recordId,
+        parcelContext.parcelIndex,
+        parcelNumberParam,
+        parcelIdParam,
+      );
     }
   };
 
@@ -1184,6 +1191,8 @@ const LandPlottingPage: React.FC = () => {
 
           const landPlotsRes = await getLandPlots({
             currentOwnerOnly: false,
+            barangay: finalBarangay,
+            farmerId: recordId,
           });
 
           if (!landPlotsRes.error) {
@@ -2119,23 +2128,6 @@ const LandPlottingPage: React.FC = () => {
       ) || "N/A"
     );
   }
-
-  function getCultivationStatusDisplay() {
-    const raw =
-      (currentParcel as any)?.is_cultivating ??
-      (currentParcel as any)?.isCultivating;
-    const reason =
-      (currentParcel as any)?.cultivation_status_reason ??
-      (currentParcel as any)?.cultivationStatusReason;
-
-    if (raw === true) return "Actively farming";
-    if (raw === false) {
-      return reason ? `Not farming (${reason})` : "Not farming";
-    }
-
-    return "Not specified";
-  }
-
   return (
     <div className="tech-landplotting-container">
       {/* Toast Notification */}
@@ -2308,12 +2300,6 @@ const LandPlottingPage: React.FC = () => {
                 Parcel Area:
               </span>
               {` ${getDisplayAreaHectares()}`}
-            </div>
-            <div className="tech-landplotting-detail-row">
-              <span className="tech-landplotting-detail-label">
-                Cultivation Status:
-              </span>
-              {` ${getCultivationStatusDisplay()}`}
             </div>
           </div>
 

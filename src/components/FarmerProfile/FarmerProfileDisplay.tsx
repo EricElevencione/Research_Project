@@ -92,6 +92,7 @@ interface FarmerProfileDisplayProps {
   farmer: FarmerProfileData;
   onClose?: () => void;
   showAreaMismatchWarning?: boolean;
+  onStatusChange?: (newStatus: string, reason?: string) => void;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -134,6 +135,7 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
   farmer,
   onClose,
   showAreaMismatchWarning = false,
+  onStatusChange,
 }) => {
   const [parcelsWithGeom, setParcelsWithGeom] = useState<UnifiedParcel[]>(
     farmer.parcels || [],
@@ -210,6 +212,15 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
     farmer.profilePicture || farmer.profile_picture || null,
   );
   const [isUpdatingPic, setIsUpdatingPic] = useState(false);
+
+  const isMismatchedActive =
+    farmer.recordStatus === "Active Farmer" &&
+    parcels.length > 0 &&
+    parcels.every((p) => {
+      const isFarming = isParcelFarming(p) === true;
+      const hasOccupants = (p.occupants || []).length > 0;
+      return !isFarming && !hasOccupants;
+    });
 
   useEffect(() => {
     setProfilePic(farmer.profilePicture || farmer.profile_picture || null);
@@ -318,6 +329,30 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
 
       {/* ── Scrollable Content ── */}
       <div className="farmer-modal-scroll-content">
+        {isMismatchedActive && (
+          <div style={{
+            margin: "12px 20px 0",
+            padding: "14px 16px",
+            background: "#fef2f2",
+            borderLeft: "4px solid #ef4444",
+            borderRadius: "8px",
+            fontSize: "13px",
+            color: "#991b1b",
+            lineHeight: "1.5",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px"
+          }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+              <span style={{ fontSize: "16px" }}>⚠️</span>
+              <div>
+                <strong>Inactivity Mismatch detected:</strong> This farmer's registry status is set to <strong>Active Farmer</strong>, but all listed land parcels are unoccupied (no tenants/lessees) and not actively cultivated. Please update their status to <strong>Not Active</strong> and provide the reason.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Hero Banner ── */}
         <div className="farmer-profile-hero">
           <div className="farmer-profile-avatar-wrapper" onClick={handleAvatarClick} title="Click to upload/change photo">

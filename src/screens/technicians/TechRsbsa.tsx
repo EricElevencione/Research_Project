@@ -705,7 +705,7 @@ const TechRsbsa: React.FC = () => {
     if (selectedBarangay !== "all")
       filterParts.push(`Barangay: ${selectedBarangay}`);
     if (landStatusFilter === "active")
-      filterParts.push("Land Status: Active (Has Land)");
+      filterParts.push("Land Status: Has Land");
     else if (landStatusFilter === "no_land")
       filterParts.push("Land Status: No Land");
     if (searchTerm.trim()) filterParts.push(`Search: "${searchTerm.trim()}"`);
@@ -892,7 +892,7 @@ const TechRsbsa: React.FC = () => {
                         className="jo-masterlist-status-select"
                       >
                         <option value="all">All Land Status</option>
-                        <option value="active">✅ Active (Has Land)</option>
+                        <option value="active">✅ Has Land</option>
                         <option value="no_land">⚠️ No Land</option>
                       </select>
                     </div>
@@ -998,7 +998,6 @@ const TechRsbsa: React.FC = () => {
                       <col style={{ width: "180px" }} /> {/* Farm Location */}
                       <col style={{ width: "100px" }} /> {/* Parcel Area */}
                       <col style={{ width: "85px" }} /> {/* Plotted */}
-                      <col style={{ width: "110px" }} /> {/* Land Status */}
                       <col style={{ width: "80px" }} /> {/* Action */}
                     </colgroup>
                     <thead>
@@ -1023,14 +1022,13 @@ const TechRsbsa: React.FC = () => {
                         <th>Farm Location</th>
                         <th>Parcel Area</th>
                         <th>Plotted</th>
-                        <th>Land Status</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedFilteredOwners.length === 0 ? (
                         <tr>
-                          <td colSpan={13} className="tech-rsbsa-no-data">
+                          <td colSpan={12} className="tech-rsbsa-no-data">
                             {searchTerm
                               ? "No matching records found"
                               : "No registered owners found"}
@@ -1078,17 +1076,6 @@ const TechRsbsa: React.FC = () => {
                                 <span className="tech-rsbsa-plot-status-pill">
                                   {getPlottingRatio(record)}
                                 </span>
-                              </td>
-                              <td data-label="Land Status">
-                                {hasNoLand ? (
-                                  <span className="tech-rsbsa-no-land-badge">
-                                    ⚠️ No Land
-                                  </span>
-                                ) : (
-                                  <span className="tech-rsbsa-active-badge">
-                                    ✅ Active
-                                  </span>
-                                )}
                               </td>
                               <td onClick={(e) => e.stopPropagation()}>
                                 <div

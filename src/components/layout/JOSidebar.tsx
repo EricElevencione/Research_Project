@@ -11,6 +11,7 @@ import {
   FaSignOutAlt,
   FaPersonBooth,
   FaClipboardList,
+  FaHistory,
 } from "react-icons/fa";
 import { supabase } from "../../supabase";
 import "./sidebarStyle.css";
@@ -26,6 +27,7 @@ const navItems = [
   { path: "/jo-incentives", icon: <FaGift />, text: "Subsidy" },
   { path: "/jo-masterlist", icon: <FaListAlt />, text: "Masterlist" },
   { path: "/jo-farmer-registry", icon: <FaPersonBooth />, text: "Farmers" },
+  { path: "/jo-farmer-history", icon: <FaHistory />, text: "Farmer History" },
   {
     path: "/jo-landowner-registry",
     icon: <FaClipboardList />,

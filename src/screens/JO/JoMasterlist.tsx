@@ -170,6 +170,8 @@ interface ParcelDetail {
   farmingStatusUpdatedAt?: string | null;
   role?: string;
   occupants?: any[];
+  geometry?: any | null;
+  plotArea?: number;
 }
 
 interface EditFormData {
@@ -980,6 +982,7 @@ const JoMasterlist: React.FC = () => {
         farmingStatusUpdatedAt: p.farming_status_updated_at || null,
         role: p.role || "",
         occupants: p.occupants || [],
+        plotArea: p.plotArea || 0,
       }));
 
       if (mappedParcels.length === 0) {
@@ -2619,12 +2622,27 @@ const JoMasterlist: React.FC = () => {
                         ownershipDocumentNo: p.ownershipDocumentNo,
                         isFarming: p.isFarming,
                         farmingStatusReason: p.farmingStatusReason,
+                        plotArea: p.plotArea,
                       }),
                     ),
                   }}
                   onClose={() => {
                     setShowModal(false);
                     setModalType(null);
+                  }}
+                  onStatusChange={(newStatus, reason) => {
+                    setRsbsaRecords((prev) =>
+                      prev.map((r) =>
+                        r.id === selectedFarmer.id
+                          ? {
+                              ...r,
+                              status: newStatus,
+                              statusChangeReason: reason || null,
+                              cultivationStatus: "Not farming",
+                            }
+                          : r
+                      )
+                    );
                   }}
                 />
               ) : modalType === "tenantLessee" ? (
@@ -2661,6 +2679,7 @@ const JoMasterlist: React.FC = () => {
                             p.agrarianReformBeneficiary,
                           isFarming: p.isFarming,
                           farmingStatusReason: p.farmingStatusReason,
+                          plotArea: p.plotArea,
                         };
                       },
                     ),
@@ -2668,6 +2687,20 @@ const JoMasterlist: React.FC = () => {
                   onClose={() => {
                     setShowModal(false);
                     setModalType(null);
+                  }}
+                  onStatusChange={(newStatus, reason) => {
+                    setRsbsaRecords((prev) =>
+                      prev.map((r) =>
+                        r.id === selectedFarmer.id
+                          ? {
+                              ...r,
+                              status: newStatus,
+                              statusChangeReason: reason || null,
+                              cultivationStatus: "Not farming",
+                            }
+                          : r
+                      )
+                    );
                   }}
                 />
               ) : (

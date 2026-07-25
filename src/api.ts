@@ -1098,6 +1098,14 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         return a.farmerName.localeCompare(b.farmerName);
       });
 
+    const allFarmersProgress: Record<string, { totalParcels: number; plottedParcels: number }> = {};
+    farmerProgressMap.forEach((prog, farmerId) => {
+      allFarmersProgress[String(farmerId)] = {
+        totalParcels: Number(prog.totalParcels || 0),
+        plottedParcels: Number(prog.plottedParcels || 0),
+      };
+    });
+
     return createResponse(
       {
         totalFarmers: farmers.length,
@@ -1109,6 +1117,7 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         barangayChecklist,
         unplottedByBarangay,
         unplottedFarmers,
+        allFarmersProgress,
       },
       null,
       200,
@@ -1192,7 +1201,7 @@ export const getRsbsaSubmissions = async (options?: {
   // Get all farm parcels with current ownership status
   const { data: parcelsData } = await supabase
     .from("rsbsa_farm_parcels")
-    .select("submission_id, is_current_owner, is_farming");
+    .select("submission_id, is_current_owner, is_farming, ownership_type_registered_owner");
 
   // Create maps of submission_id -> current/all parcel state.
   // Transferred parcels remain in rsbsa_farm_parcels with is_current_owner=false,
@@ -1200,6 +1209,7 @@ export const getRsbsaSubmissions = async (options?: {
   const currentOwnershipMap = new Map<number, boolean>();
   const currentParcelCountMap = new Map<number, number>();
   const totalParcelCountMap = new Map<number, number>();
+  const ownedParcelCountMap = new Map<number, number>();
   (parcelsData || []).forEach((parcel: any) => {
     const subId = parcel.submission_id;
     if (subId === null || subId === undefined) return;
@@ -1214,6 +1224,18 @@ export const getRsbsaSubmissions = async (options?: {
         subId,
         (currentParcelCountMap.get(subId) || 0) + 1,
       );
+
+      const isRegistered =
+        parcel.ownership_type_registered_owner === true ||
+        parcel.ownership_type_registered_owner === "true" ||
+        parcel.ownership_type_registered_owner === 1 ||
+        parcel.ownership_type_registered_owner === "1";
+      if (isRegistered) {
+        ownedParcelCountMap.set(
+          subId,
+          (ownedParcelCountMap.get(subId) || 0) + 1,
+        );
+      }
     } else if (!currentOwnershipMap.has(subId)) {
       currentOwnershipMap.set(subId, false);
     }
@@ -1303,6 +1325,18 @@ export const getRsbsaSubmissions = async (options?: {
             ? totalParcelCount
             : deriveLegacyParcelFallbackCount(item);
 
+    const isRegisteredOwnerSubmission =
+      item.ownership_type_registered_owner === true ||
+      item.ownership_category === "registeredOwner" ||
+      item.ownership_category === "registered_owner";
+
+    const ownedParcelCount =
+      currentParcelCountMap.get(item.id) !== undefined
+        ? (ownedParcelCountMap.get(item.id) || 0)
+        : isRegisteredOwnerSubmission
+          ? fallbackParcelCount
+          : 0;
+
     const cultivationEntry = cultivationMap.get(item.id);
     const cultivationCounts = cultivationEntry
       ? cultivationEntry.current.total > 0
@@ -1317,6 +1351,7 @@ export const getRsbsaSubmissions = async (options?: {
       currentParcelCount,
       totalParcelCount,
       parcelCount: fallbackParcelCount,
+      ownedParcelCount,
       legacyParcelCountEstimated:
         totalParcelCount === 0 && fallbackParcelCount > 0,
       archived_at: item.archived_at ?? null,
@@ -1944,6 +1979,20 @@ export const getFarmParcelsWithOccupants = async (
 ): Promise<ApiResponse> => {
   const farmerNumId = Number(submissionId);
 
+  // Fetch land plots for this farmer to attach plotArea
+  const { data: plotsData } = await supabase
+    .from("land_plots")
+    .select("parcel_number, area")
+    .eq("farmer_id", farmerNumId);
+
+  const plotAreaByParcelNumber = new Map<string, number>();
+  (plotsData || []).forEach((plot: any) => {
+    const pNum = String(plot.parcel_number || "").trim().toUpperCase();
+    if (pNum) {
+      plotAreaByParcelNumber.set(pNum, parseFloat(plot.area) || 0);
+    }
+  });
+
   // 1. Fetch own/active parcels of this farmer using existing getFarmParcels
   const parcelsResponse = await getFarmParcels(submissionId, {
     activeOnly: options.activeOnly ?? true,
@@ -2118,6 +2167,7 @@ export const getFarmParcelsWithOccupants = async (
       ...p,
       role,
       occupants: finalOccupants,
+      plotArea: plotAreaByParcelNumber.get(parcelNum) || 0,
     };
   });
 
@@ -2356,6 +2406,8 @@ export const getLandownerOwnedArea = async (
 export const getLandPlots = async (
   options: {
     currentOwnerOnly?: boolean;
+    barangay?: string;
+    farmerId?: string | number;
   } = {},
 ): Promise<ApiResponse> => {
   const currentOwnerOnly = options.currentOwnerOnly !== false;
@@ -2378,7 +2430,19 @@ export const getLandPlots = async (
     return Number.isFinite(parsed) ? String(parsed) : "";
   };
 
-  const { data, error } = await supabase.from("land_plots").select("*");
+  let query = supabase.from("land_plots").select("*");
+
+  if (options.barangay && options.farmerId) {
+    const escapedBarangay = options.barangay.replace(/'/g, "''");
+    query = query.or(`barangay.ilike.%${escapedBarangay}%,farmer_id.eq.${options.farmerId}`);
+  } else if (options.barangay) {
+    const escapedBarangay = options.barangay.replace(/'/g, "''");
+    query = query.ilike("barangay", `%${escapedBarangay}%`);
+  } else if (options.farmerId) {
+    query = query.eq("farmer_id", options.farmerId);
+  }
+
+  const { data, error } = await query;
 
   if (error) return createResponse(null, error.message, 500);
 
@@ -4631,6 +4695,205 @@ export const getLandHistoryAssociationRows = async (
   return createResponse(data || [], null, 200);
 };
 
+/**
+ * Person-centric land tenure timeline for one RSBSA farmer.
+ * Inverse of getLandHistoryParcelHistory (which is parcel-centric).
+ *
+ * Steps:
+ *  1. Fetch farmer profile from rsbsa_submission.
+ *  2. Query land_history matching farmer's name in farmer_name OR land_owner_name.
+ *  3. For parcels registered in rsbsa_farm_parcels but absent from land_history,
+ *     synthesize an "Initial RSBSA Registration" event (same fallback pattern
+ *     used by getLandHistoryParcelHistory).
+ *  4. Batch-fetch parcel geometries from land_plots and attach to each event.
+ *  5. Return events sorted oldest-first + the farmer's profile.
+ */
+export const getFarmerHistory = async (
+  submissionId: number,
+): Promise<ApiResponse> => {
+  if (!Number.isFinite(submissionId) || submissionId <= 0) {
+    return createResponse(null, "Invalid submission ID", 400);
+  }
+
+  // 1. Farmer profile
+  const { data: profileRow, error: profileError } = await supabase
+    .from("rsbsa_submission")
+    .select(
+      'id, "LAST NAME", "FIRST NAME", "MIDDLE NAME", "EXT NAME", "GENDER", "BIRTHDATE", "BARANGAY", "MUNICIPALITY", "MAIN LIVELIHOOD", "FARMER_RICE", "FARMER_CORN", "FARMER_OTHER_CROPS", "FARMER_OTHER_CROPS_TEXT", "FARMER_LIVESTOCK", "FARMER_LIVESTOCK_TEXT", "FARMER_POULTRY", "FARMER_POULTRY_TEXT", "FFRS_CODE", status, submitted_at, archived_at, archive_reason, ownership_category',
+    )
+    .eq("id", submissionId)
+    .single();
+
+  if (profileError) return createResponse(null, profileError.message, 500);
+  if (!profileRow) return createResponse(null, "Farmer not found", 404);
+
+  // Build composed name in the "LAST NAME, FIRST MIDDLE" format used across land_history
+  const lastName = String(profileRow["LAST NAME"] || "").trim();
+  const firstName = String(profileRow["FIRST NAME"] || "").trim();
+  const middleName = String(profileRow["MIDDLE NAME"] || "").trim();
+  const firstMiddle = [firstName, middleName].filter(Boolean).join(" ");
+  const farmerName = [lastName, firstMiddle].filter(Boolean).join(", ");
+
+  // Search pattern: "DELA CRUZ%JUAN" avoids commas which break PostgREST or() parser,
+  // and catches "DELA CRUZ, JUAN M.", "DELA CRUZ, JUAN", etc.
+  const nameLike = `%${[lastName, firstName].filter(Boolean).join("%")}%`;
+  // Looser pattern for land_owner_name which may be free-form
+  const lastNameLike = lastName ? `%${lastName}%` : nameLike;
+
+  // 2. Query land_history
+  const { data: historyData, error: historyError } = await supabase
+    .from("land_history")
+    .select(
+      "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
+    )
+    .or(
+      `farmer_name.ilike.${nameLike},land_owner_name.ilike.${lastNameLike}`,
+    )
+    .order("period_start_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (historyError) return createResponse(null, historyError.message, 500);
+
+  // 3. Query rsbsa_farm_parcels for this submission
+  const { data: parcelData, error: parcelError } = await supabase
+    .from("rsbsa_farm_parcels")
+    .select(
+      "id, parcel_number, farm_location_barangay, total_farm_area_ha, ownership_type_registered_owner, ownership_type_tenant, ownership_type_lessee, tenant_land_owner_name, lessee_land_owner_name, contract_end_date, is_farming, farming_status_reason, created_at",
+    )
+    .eq("submission_id", submissionId)
+    .order("created_at", { ascending: true });
+
+  if (parcelError) return createResponse(null, parcelError.message, 500);
+
+  // Build set of parcel numbers already covered by land_history
+  const historyParcelNumbers = new Set(
+    (historyData || []).map((h: any) =>
+      String(h.parcel_number || "")
+        .trim()
+        .toUpperCase(),
+    ),
+  );
+
+  // Start with real land_history events
+  let events: any[] = (historyData || []).map((h: any) => ({
+    ...h,
+    _source: "land_history",
+    geometry: null,
+  }));
+
+  // Synthesize events for parcels only in rsbsa_farm_parcels
+  let syntheticId = -1;
+  for (const p of (parcelData || []) as any[]) {
+    const key = String(p.parcel_number || "")
+      .trim()
+      .toUpperCase();
+    if (!key || historyParcelNumbers.has(key)) continue;
+
+    const isOwner = p.ownership_type_registered_owner === true;
+    const isTenant = p.ownership_type_tenant === true;
+    const isLessee = p.ownership_type_lessee === true;
+    const landOwnerName = isOwner
+      ? farmerName
+      : isTenant
+        ? p.tenant_land_owner_name || null
+        : isLessee
+          ? p.lessee_land_owner_name || null
+          : null;
+
+    events.push({
+      id: syntheticId--,
+      parcel_number: p.parcel_number,
+      farm_location_barangay: p.farm_location_barangay,
+      total_farm_area_ha: p.total_farm_area_ha,
+      land_owner_name: landOwnerName,
+      farmer_name: farmerName,
+      is_registered_owner: isOwner,
+      is_tenant: isTenant,
+      is_lessee: isLessee,
+      is_current: true,
+      period_start_date: p.created_at
+        ? new Date(p.created_at).toISOString().slice(0, 10)
+        : null,
+      period_end_date: p.contract_end_date || null,
+      change_type: "REGISTERED",
+      change_reason:
+        "Initial RSBSA registration — no land history transfer on file",
+      created_at: p.created_at,
+      is_farming: p.is_farming,
+      farming_status_reason: p.farming_status_reason,
+      _source: "rsbsa_farm_parcels",
+      geometry: null,
+    });
+  }
+
+  // Sort oldest-first by period_start_date then created_at
+  events.sort((a, b) => {
+    const dateA = String(a.period_start_date || a.created_at || "");
+    const dateB = String(b.period_start_date || b.created_at || "");
+    if (dateA < dateB) return -1;
+    if (dateA > dateB) return 1;
+    return 0;
+  });
+
+  // 4. Batch-fetch geometries from land_plots keyed by parcel_number
+  const uniqueParcelNumbers = Array.from(
+    new Set(
+      events
+        .map((e: any) => String(e.parcel_number || "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  const geometryByParcelNumber = new Map<string, any>();
+  if (uniqueParcelNumbers.length > 0) {
+    const { data: plotData } = await supabase
+      .from("land_plots")
+      .select("parcel_number, geometry")
+      .in("parcel_number", uniqueParcelNumbers);
+
+    (plotData || []).forEach((plot: any) => {
+      const key = String(plot.parcel_number || "").trim();
+      if (key && plot.geometry && !geometryByParcelNumber.has(key)) {
+        geometryByParcelNumber.set(key, plot.geometry);
+      }
+    });
+  }
+
+  // 5. Attach geometry
+  events = events.map((e: any) => ({
+    ...e,
+    geometry:
+      geometryByParcelNumber.get(String(e.parcel_number || "").trim()) || null,
+  }));
+
+  // Build profile object
+  const profile = {
+    id: profileRow.id,
+    farmerName,
+    ffrsCode: String(profileRow["FFRS_CODE"] || "").trim() || null,
+    barangay: String(profileRow["BARANGAY"] || "").trim() || null,
+    municipality: String(profileRow["MUNICIPALITY"] || "").trim() || null,
+    gender: String(profileRow["GENDER"] || "").trim() || null,
+    birthdate: profileRow["BIRTHDATE"] || null,
+    mainLivelihood: String(profileRow["MAIN LIVELIHOOD"] || "").trim() || null,
+    status: String(profileRow.status || "").trim() || null,
+    archivedAt: profileRow.archived_at || null,
+    archiveReason: profileRow.archive_reason || null,
+    farmerRice: profileRow["FARMER_RICE"] === true,
+    farmerCorn: profileRow["FARMER_CORN"] === true,
+    farmerOtherCrops: profileRow["FARMER_OTHER_CROPS"] === true,
+    farmerOtherCropsText: String(profileRow["FARMER_OTHER_CROPS_TEXT"] || "").trim() || null,
+    farmerLivestock: profileRow["FARMER_LIVESTOCK"] === true,
+    farmerLivestockText: String(profileRow["FARMER_LIVESTOCK_TEXT"] || "").trim() || null,
+    farmerPoultry: profileRow["FARMER_POULTRY"] === true,
+    farmerPoultryText: String(profileRow["FARMER_POULTRY_TEXT"] || "").trim() || null,
+    submittedAt: profileRow.submitted_at || null,
+    ownershipCategory: profileRow.ownership_category || null,
+  };
+
+  return createResponse({ profile, events }, null, 200);
+};
+
 // ==================== USERS ====================
 
 export const getUsers = async (): Promise<ApiResponse> => {
@@ -4839,6 +5102,7 @@ export default {
   getLandHistoryBarangays,
   getLandHistoryFarmers,
   getLandHistoryAssociationRows,
+  getFarmerHistory,
 
   // Users
   getUsers,

@@ -40,6 +40,7 @@ import JoLandRegistry from "./screens/JO/JoLandRegistry";
 import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
 import JoAuditTrail from "./screens/JO/JoAuditTrail";
 import JoFarmerRegistry from "./screens/JO/JoFarmerRegistry";
+import JoFarmerHistory from "./screens/JO/JoFarmerHistory";
 import JoLandownerRegistry from "./screens/JO/JoLandownerRegistry";
 import AuditTrail from "./screens/admin/AuditTrail";
 import InventoryPage from "./screens/admin/InventoryPage";
@@ -363,6 +364,14 @@ function App() {
           element={
             <ProtectedRoute>
               <JoFarmerRegistry />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/jo-farmer-history"
+          element={
+            <ProtectedRoute>
+              <JoFarmerHistory />
             </ProtectedRoute>
           }
         />
