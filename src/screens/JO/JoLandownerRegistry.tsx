@@ -337,6 +337,23 @@ const JoLandownerRegistry: React.FC = () => {
     message: string;
   }>({ show: false, type: "success", message: "" });
 
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [expandedOwnerIds, setExpandedOwnerIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [tenantsByOwnerId, setTenantsByOwnerId] = useState<
+    Map<string, any[]>
+  >(new Map());
+
+  const toggleOwnerExpanded = (id: string) => {
+    setExpandedOwnerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const [sortConfigs, setSortConfigs] = useState<
     Array<{ key: SortKey; direction: SortDirection }>
   >([{ ...DEFAULT_SORT_CONFIG }]);
@@ -346,7 +363,6 @@ const JoLandownerRegistry: React.FC = () => {
   const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
   const [showPrintLandownerModal, setShowPrintLandownerModal] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -711,6 +727,106 @@ const JoLandownerRegistry: React.FC = () => {
           }
         })();
       }
+
+      // Compute tenants by landowner ID
+      const submissionById = new Map<string, SubmissionItem>();
+      allRecords.forEach((r) => {
+        submissionById.set(String(r.id), r);
+      });
+
+      const ownerToFarmers = new Map<string, Map<string, { isTenant: boolean; isLessee: boolean; parcels: any[] }>>();
+      
+      (tlParcels as FarmParcelRow[] || []).forEach((p) => {
+        if (p.is_current_owner === false) return;
+        const farmerId = String(p.submission_id);
+        
+        const processLink = (ownerId: string, isTenant: boolean, isLessee: boolean) => {
+          if (!ownerToFarmers.has(ownerId)) {
+            ownerToFarmers.set(ownerId, new Map());
+          }
+          const farmerMap = ownerToFarmers.get(ownerId)!;
+          if (!farmerMap.has(farmerId)) {
+            farmerMap.set(farmerId, { isTenant: false, isLessee: false, parcels: [] });
+          }
+          const info = farmerMap.get(farmerId)!;
+          if (isTenant) info.isTenant = true;
+          if (isLessee) info.isLessee = true;
+          info.parcels.push(p);
+        };
+
+        if (p.tenant_land_owner_id) {
+          processLink(String(p.tenant_land_owner_id), true, false);
+        }
+        if (p.lessee_land_owner_id) {
+          processLink(String(p.lessee_land_owner_id), false, true);
+        }
+      });
+
+      const tenantsMap = new Map<string, any[]>();
+      
+      ownerToFarmers.forEach((farmerMap, ownerId) => {
+        const list: any[] = [];
+        farmerMap.forEach((info, farmerId) => {
+          const sub = submissionById.get(farmerId);
+          if (!sub) return;
+
+          const backendName = sub.farmerName || "";
+          const formattedName = (() => {
+            if (!backendName || backendName === "—") return "—";
+            const parts = backendName
+              .split(",")
+              .map((p: string) => p.trim())
+              .filter(Boolean);
+            if (parts.length === 0) return "—";
+            if (parts.length === 1) return parts[0];
+            return `${parts[0]}, ${parts.slice(1).join(" ")}`;
+          })();
+
+          const totalArea = (() => {
+            const tokens = String(
+              sub.totalFarmArea ?? sub.parcelArea ?? "",
+            ).match(/-?\d+(?:\.\d+)?/g);
+            if (tokens && tokens.length > 0) {
+              const total = tokens.reduce((s: number, t: string) => {
+                const n = Number(t);
+                return s + (Number.isFinite(n) ? n : 0);
+              }, 0);
+              if (total > 0) return String(total);
+            }
+            return "0";
+          })();
+
+          const farmBarangay = (() => {
+            const fromFarm = info.parcels[0]?.farm_location_barangay;
+            if (fromFarm && fromFarm !== "—") return fromFarm;
+            const fromAddress = String(sub.farmerAddress || "")
+              .split(",")[0]
+              ?.trim();
+            if (fromAddress && fromAddress !== "—") return fromAddress;
+            return "—";
+          })();
+
+          const role = info.isTenant && info.isLessee
+            ? "tenant+lessee"
+            : info.isTenant
+              ? "tenant"
+              : "lessee";
+
+          list.push({
+            id: farmerId,
+            farmerName: formattedName,
+            referenceNumber: sub.referenceNumber || `RSBSA-${farmerId}`,
+            farmBarangay,
+            parcelCount: sub.parcelCount || 0,
+            parcelArea: totalArea,
+            role,
+            status: sub.status || "Not Submitted",
+          });
+        });
+        tenantsMap.set(ownerId, list);
+      });
+
+      setTenantsByOwnerId(tenantsMap);
 
       setLandownerRecords(formatted.filter((r) => !r.archivedAt));
       setParcelRows(parcelRows);
@@ -1888,123 +2004,227 @@ const JoLandownerRegistry: React.FC = () => {
                       const ownerRecord = landownerRecords.find(
                         (r) => r.id === record.id,
                       );
+                      const tenants = tenantsByOwnerId.get(record.id) || [];
+                      const hasTenants = tenants.length > 0;
+                      const isExpanded = expandedOwnerIds.has(record.id);
+
                       return (
-                        <tr
-                          key={record.id}
-                          className="jo-landowner-table-row"
-                          onClick={() =>
-                            fetchLandownerDetails(record.id, ownerRecord)
-                          }
-                        >
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={selectedRecordIds.has(record.id)}
-                              onChange={() => toggleSelectRecord(record.id)}
-                              aria-label={`Select ${record.landownerName}`}
-                            />
-                          </td>
-                          {/* Landowner */}
-                          <td>
-                            <div className="jo-landowner-farmer-cell">
-                              <div className="jo-landowner-farmer-avatar">
-                                {getInitials(record.landownerName)}
-                              </div>
-                              <div className="jo-landowner-farmer-meta">
-                                <span className="jo-landowner-farmer-name">
-                                  {record.landownerName}
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: "0.8em",
-                                    color: "var(--color-text-secondary, #888)",
-                                  }}
-                                >
-                                  {record.referenceNumber}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Barangay */}
-                          <td>
-                            <span className="jo-landowner-cultivation-text">
-                              {record.barangay}
-                            </span>
-                          </td>
-
-                          {/* Total Area */}
-                          <td>
-                            <span className="jo-landowner-parcel-area">
-                              {record.totalAreaHa > 0
-                                ? `${record.totalAreaHa.toFixed(2)} ha`
-                                : "—"}
-                            </span>
-                          </td>
-
-                          {/* Parcels */}
-                          <td>
-                            <span className="jo-landowner-cultivation-text">
-                              {record.parcelCount > 0
-                                ? `${record.parcelCount} parcel${record.parcelCount === 1 ? "" : "s"}`
-                                : "—"}
-                            </span>
-                          </td>
-
-                          {/* Tenants / Lessees — plain count, no inferred label */}
-                          <td>
-                            {(() => {
-                              const total =
-                                record.tenantCount + record.lesseeCount;
-                              const { countText, names } =
-                                getTenantLesseeSummary(record);
-                              return (
+                        <React.Fragment key={record.id}>
+                          <tr
+                            className="jo-landowner-table-row"
+                            onClick={() =>
+                              fetchLandownerDetails(record.id, ownerRecord)
+                            }
+                          >
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={selectedRecordIds.has(record.id)}
+                                onChange={() => toggleSelectRecord(record.id)}
+                                aria-label={`Select ${record.landownerName}`}
+                              />
+                            </td>
+                            {/* Landowner */}
+                            <td>
+                              <div className="jo-landowner-farmer-cell">
+                                <div className="jo-landowner-farmer-avatar">
+                                  {getInitials(record.landownerName)}
+                                </div>
                                 <div className="jo-landowner-farmer-meta">
-                                  <span
-                                    className={`jo-landowner-ownership-pill ${
-                                      total > 0
-                                        ? "jo-landowner-ownership-tenant"
-                                        : "jo-landowner-ownership-unknown"
-                                    }`}
-                                  >
-                                    {countText}
+                                  <span className="jo-landowner-farmer-name">
+                                    {record.landownerName}
                                   </span>
-                                  {names.length > 0 && (
-                                    <span
-                                      style={{
-                                        fontSize: "0.8em",
-                                        color:
-                                          "var(--color-text-secondary, #888)",
+                                  <span
+                                    style={{
+                                      fontSize: "0.8em",
+                                      color: "var(--color-text-secondary, #888)",
+                                    }}
+                                  >
+                                    {record.referenceNumber}
+                                  </span>
+                                  {hasTenants && (
+                                    <button
+                                      className="jo-landowner-tenant-badge"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleOwnerExpanded(record.id);
                                       }}
+                                      aria-expanded={isExpanded}
+                                      aria-label={`${isExpanded ? "Collapse" : "Expand"} tenants for ${record.landownerName}`}
                                     >
-                                      {names.join(", ")}
-                                    </span>
+                                      {isExpanded ? "▲" : "▼"} {tenants.length}{" "}
+                                      tenant{tenants.length === 1 ? "" : "s"}
+                                    </button>
                                   )}
                                 </div>
-                              );
-                            })()}
-                          </td>
+                              </div>
+                            </td>
 
-                          {/* Record Status */}
-                          <td>
-                            <span
-                              className={`jo-landowner-ownership-pill ${
-                                [
-                                  "submitted",
-                                  "approved",
-                                  "active",
-                                  "active farmer",
-                                ].includes(
-                                  (record.status || "").toLowerCase().trim(),
-                                )
-                                  ? "jo-landowner-ownership-tenant"
-                                  : "jo-landowner-ownership-unknown"
-                              }`}
-                            >
-                              {formatRecordStatus(record.status)}
-                            </span>
-                          </td>
-                        </tr>
+                            {/* Barangay */}
+                            <td>
+                              <span className="jo-landowner-cultivation-text">
+                                {record.barangay}
+                              </span>
+                            </td>
+
+                            {/* Total Area */}
+                            <td>
+                              <span className="jo-landowner-parcel-area">
+                                {record.totalAreaHa > 0
+                                  ? `${record.totalAreaHa.toFixed(2)} ha`
+                                  : "—"}
+                              </span>
+                            </td>
+
+                            {/* Parcels */}
+                            <td>
+                              <span className="jo-landowner-cultivation-text">
+                                {record.parcelCount > 0
+                                  ? `${record.parcelCount} parcel${record.parcelCount === 1 ? "" : "s"}`
+                                  : "—"}
+                              </span>
+                            </td>
+
+                            {/* Tenants / Lessees — plain count, no inferred label */}
+                            <td>
+                              {(() => {
+                                const total =
+                                  record.tenantCount + record.lesseeCount;
+                                const { countText } =
+                                  getTenantLesseeSummary(record);
+                                return (
+                                  <div className="jo-landowner-farmer-meta">
+                                    <span
+                                      className={`jo-landowner-ownership-pill ${
+                                        total > 0
+                                          ? "jo-landowner-ownership-tenant"
+                                          : "jo-landowner-ownership-unknown"
+                                      }`}
+                                    >
+                                      {countText}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </td>
+
+                            {/* Record Status */}
+                            <td>
+                              <span
+                                className={`jo-landowner-ownership-pill ${
+                                  [
+                                    "submitted",
+                                    "approved",
+                                    "active",
+                                    "active farmer",
+                                  ].includes(
+                                    (record.status || "").toLowerCase().trim(),
+                                  )
+                                    ? "jo-landowner-ownership-tenant"
+                                    : "jo-landowner-ownership-unknown"
+                                }`}
+                              >
+                                {formatRecordStatus(record.status)}
+                              </span>
+                            </td>
+                          </tr>
+
+                          {/* ── Expandable tenant sub-row ── */}
+                          {hasTenants && isExpanded && (
+                            <tr className="jo-landowner-tenant-subrow" onClick={(e) => e.stopPropagation()}>
+                              <td />
+                              <td colSpan={6}>
+                                <div className="jo-landowner-tenant-panel">
+                                  <div className="jo-landowner-tenant-panel-header">
+                                    <span className="jo-landowner-tenant-panel-title">
+                                      🌾 Farmers under{" "}
+                                      <strong>{record.landownerName}</strong>
+                                    </span>
+                                    <span className="jo-landowner-tenant-panel-note">
+                                      Showing RSBSA-registered tenants/lessees
+                                      only
+                                    </span>
+                                  </div>
+                                  <table className="jo-landowner-tenant-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Farmer</th>
+                                        <th>FFRS Code</th>
+                                        <th>Farm Barangay</th>
+                                        <th>Parcel / Area</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {tenants.map((t) => (
+                                        <tr
+                                          key={t.id}
+                                          className="jo-landowner-tenant-row"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            fetchLandownerDetails(t.id);
+                                          }}
+                                          title="Click to view farmer details"
+                                        >
+                                          <td>
+                                            <div className="jo-landowner-tenant-farmer-cell">
+                                              <div className="jo-landowner-tenant-avatar">
+                                                {getInitials(t.farmerName)}
+                                              </div>
+                                              <span className="jo-landowner-tenant-name">
+                                                {t.farmerName}
+                                              </span>
+                                            </div>
+                                          </td>
+                                          <td className="jo-landowner-tenant-ref">
+                                            {t.referenceNumber || "—"}
+                                          </td>
+                                          <td className="jo-landowner-tenant-barangay">
+                                            {t.farmBarangay || "—"}
+                                          </td>
+                                          <td>
+                                            <div className="jo-landowner-parcel-cell" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                              <span className="jo-landowner-parcel-count" style={{
+                                                background: "#f3f4f6",
+                                                padding: "2px 6px",
+                                                borderRadius: "4px",
+                                                fontSize: "10px"
+                                              }}>
+                                                {t.parcelCount} parcel{t.parcelCount === 1 ? "" : "s"}
+                                              </span>
+                                              <span className="jo-landowner-parcel-area" style={{ fontWeight: 600 }}>
+                                                {t.parcelArea > 0 ? `${parseFloat(t.parcelArea).toFixed(2)} ha` : "—"}
+                                              </span>
+                                            </div>
+                                          </td>
+                                          <td>
+                                            <span
+                                              className={`jo-landowner-ownership-pill ${
+                                                t.role === "tenant"
+                                                  ? "jo-landowner-ownership-tenant"
+                                                  : t.role === "lessee"
+                                                    ? "jo-landowner-ownership-lessee"
+                                                    : "jo-landowner-ownership-mixed"
+                                              }`}
+                                            >
+                                              {t.role === "tenant" ? "Tenant" : t.role === "lessee" ? "Lessee" : "Tenant + Lessee"}
+                                            </span>
+                                          </td>
+                                          <td>
+                                            <span className="jo-landowner-cultivation-text">
+                                              {formatRecordStatus(t.status)}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
 

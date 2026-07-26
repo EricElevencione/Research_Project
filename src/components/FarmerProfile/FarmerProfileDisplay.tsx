@@ -64,6 +64,9 @@ export interface UnifiedParcel {
   isCultivating?: boolean | null;
   farmingStatusReason?: string | null;
   cultivationStatusReason?: string | null;
+
+  /** GIS-derived plot area in hectares (from land_plots), distinct from totalFarmAreaHa */
+  plotArea?: number;
 }
 
 export interface FarmerProfileData {
@@ -213,7 +216,24 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
   );
   const [isUpdatingPic, setIsUpdatingPic] = useState(false);
 
+  // Grace period: don't flag newly registered landowners as mismatched.
+  // It's completely normal for a new landowner to have no tenants/lessees yet —
+  // they just registered and haven't had time to assign anyone.
+  // Suppress the mismatch warning for the first 30 days after submission.
+  const GRACE_PERIOD_DAYS = 30;
+  const isWithinGracePeriod = (() => {
+    if (!farmer.dateSubmitted) return false;
+    const submitted = new Date(farmer.dateSubmitted);
+    if (isNaN(submitted.getTime())) return false;
+    const diffMs = Date.now() - submitted.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays <= GRACE_PERIOD_DAYS;
+  })();
+
+  const isNewRecord = isWithinGracePeriod;
+
   const isMismatchedActive =
+    !isWithinGracePeriod &&
     farmer.recordStatus === "Active Farmer" &&
     parcels.length > 0 &&
     parcels.every((p) => {
@@ -349,6 +369,33 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
               <div>
                 <strong>Inactivity Mismatch detected:</strong> This farmer's registry status is set to <strong>Active Farmer</strong>, but all listed land parcels are unoccupied (no tenants/lessees) and not actively cultivated. Please update their status to <strong>Not Active</strong> and provide the reason.
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Soft informational note for newly registered landowners (within 30-day grace period).
+            These records are expected to have unoccupied parcels — they were just created. */}
+        {isNewRecord && parcels.length > 0 && parcels.every((p) => {
+          const isFarming = isParcelFarming(p) === true;
+          const hasOccupants = (p.occupants || []).length > 0;
+          return !isFarming && !hasOccupants;
+        }) && (
+          <div style={{
+            margin: "12px 20px 0",
+            padding: "12px 16px",
+            background: "#eff6ff",
+            borderLeft: "4px solid #3b82f6",
+            borderRadius: "8px",
+            fontSize: "13px",
+            color: "#1e40af",
+            lineHeight: "1.5",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "8px",
+          }}>
+            <span style={{ fontSize: "15px", flexShrink: 0 }}>ℹ️</span>
+            <div>
+              <strong>Newly registered landowner.</strong> This record was created within the last {GRACE_PERIOD_DAYS} days. It's normal for parcels to be unoccupied at this stage — tenants or lessees can be assigned once the land arrangement is confirmed.
             </div>
           </div>
         )}

@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION public.replace_current_tenant_lessee_on_registration(
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
-AS $function$
+ AS $function$
 DECLARE
     v_owner_parcel          record;
     v_owner_id              bigint;
@@ -123,27 +123,26 @@ BEGIN
       AND (is_current_owner IS NULL OR is_current_owner = true)
     FOR UPDATE;
  
-    IF v_old_holder_parcel_id IS NULL THEN
-        RAISE EXCEPTION
-            'No active % parcel record found for old holder (id=%) on parcel_number %. They may have already been replaced.',
+    -- -------------------------------------------------------------------------
+    -- 5. Deactivate the old holder's parcel row (if found/active)
+    -- -------------------------------------------------------------------------
+    IF v_old_holder_parcel_id IS NOT NULL THEN
+        UPDATE rsbsa_farm_parcels
+        SET is_current_owner = false,
+            updated_at       = CURRENT_TIMESTAMP
+        WHERE id = v_old_holder_parcel_id;
+ 
+        -- Close their current land_history period
+        UPDATE land_history
+        SET is_current      = false,
+            period_end_date = p_effective_date,
+            updated_at      = CURRENT_TIMESTAMP
+        WHERE farm_parcel_id = v_old_holder_parcel_id
+          AND is_current      = true;
+    ELSE
+        RAISE NOTICE 'No active % parcel record found for old holder (id=%) on parcel_number %. Proceeding with replacement link.',
             p_role, p_old_holder_id, v_owner_parcel.parcel_number;
     END IF;
- 
-    -- -------------------------------------------------------------------------
-    -- 5. Deactivate the old holder's parcel row
-    -- -------------------------------------------------------------------------
-    UPDATE rsbsa_farm_parcels
-    SET is_current_owner = false,
-        updated_at       = CURRENT_TIMESTAMP
-    WHERE id = v_old_holder_parcel_id;
- 
-    -- Close their current land_history period
-    UPDATE land_history
-    SET is_current      = false,
-        period_end_date = p_effective_date,
-        updated_at      = CURRENT_TIMESTAMP
-    WHERE farm_parcel_id = v_old_holder_parcel_id
-      AND is_current      = true;
  
     -- -------------------------------------------------------------------------
     -- 6. Point the owner's parcel at the new holder

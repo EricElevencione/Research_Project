@@ -1177,3 +1177,170 @@ tr.jo-row--flagged td {
 tr.jo-row--flagged td {
   background: rgba(251, 191, 36, 0.04) !important;
 }
+
+/* ══════════════════════════════════════════════
+   Tenant / Lessee Sub-Row Feature
+   ══════════════════════════════════════════════ */
+
+/* ── Tenant badge button (sits below the ref code in the farmer cell) ── */
+.jo-landowner-tenant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #a78bfa;
+  background: linear-gradient(135deg, #ede9fe, #f5f3ff);
+  color: #5b21b6;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.12s ease;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.jo-landowner-tenant-badge:hover {
+  background: linear-gradient(135deg, #ddd6fe, #ede9fe);
+  border-color: #7c3aed;
+  transform: translateY(-1px);
+}
+
+/* ── Expanded sub-row (the <tr> wrapper) ── */
+.jo-landowner-tenant-subrow {
+  background: #faf8ff;
+  border-bottom: 1px solid #e0d9fc;
+}
+
+.jo-landowner-tenant-subrow>td {
+  padding: 0 !important;
+  border-bottom: 2px solid #c4b5fd !important;
+}
+
+/* ── Panel container ── */
+.jo-landowner-tenant-panel {
+  padding: 10px 14px 12px;
+  animation: landownerTenantPanelIn 0.18s ease;
+}
+
+@keyframes landownerTenantPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Panel header row ── */
+.jo-landowner-tenant-panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.jo-landowner-tenant-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4c1d95;
+}
+
+.jo-landowner-tenant-panel-title strong {
+  color: #3730a3;
+}
+
+.jo-landowner-tenant-panel-note {
+  font-size: 10px;
+  color: #7c3aed;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* ── Inner tenant table ── */
+.jo-landowner-tenant-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ddd6fe;
+}
+
+.jo-landowner-tenant-table thead tr {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+}
+
+.jo-landowner-tenant-table thead th {
+  color: #fff;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.jo-landowner-tenant-table tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #ede9fe;
+  vertical-align: middle;
+  color: #374151;
+}
+
+.jo-landowner-tenant-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Individual tenant row ── */
+.jo-landowner-tenant-row {
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.jo-landowner-tenant-row:hover {
+  background: #f5f3ff;
+}
+
+/* ── Farmer cell inside the tenant table ── */
+.jo-landowner-tenant-farmer-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jo-landowner-tenant-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #ddd6fe, #a78bfa);
+  color: #3b0764;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.jo-landowner-tenant-name {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 12px;
+}
+
+.jo-landowner-tenant-ref,
+.jo-landowner-tenant-barangay {
+  color: #6b7280;
+  font-size: 11px;
+}
+

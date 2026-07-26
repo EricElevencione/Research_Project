@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../../supabase";
 import { ParcelSplitInput } from "../../components/LandRegistry/usePartialTransfer";
 import { PartialParcelTransferSection } from "../../components/LandRegistry/PartialParcelTransferSection";
@@ -474,6 +474,24 @@ const JoLandRegistry: React.FC = () => {
     useState("");
   const [ownerAffiliationContextNote, setOwnerAffiliationContextNote] =
     useState("");
+  const [ownerAffiliationParcelCultivators, setOwnerAffiliationParcelCultivators] = useState<
+    Record<number, string | null>
+  >({});
+
+  const ownerAffiliationHasSingleSourceContext =
+    ownerAffiliationSourceOptions.length === 1;
+  const ownerAffiliationHasExistingLink =
+    ownerAffiliationSourceOptions.length > 0;
+
+  const activeOwnerAffiliationNewOwnerId = (() => {
+    const candidate =
+      ownerAffiliationNewOwnerId === ""
+        ? null
+        : Number(ownerAffiliationNewOwnerId);
+    return Number.isFinite(candidate) && (candidate || 0) > 0
+      ? Number(candidate)
+      : null;
+  })();
 
   const [selectedTransferParcelIds, setSelectedTransferParcelIds] = useState<
     number[]
@@ -493,6 +511,75 @@ const JoLandRegistry: React.FC = () => {
   useEffect(() => {
     setSelectedTransferParcelIds([]);
   }, [sourceRegisteredOwnerId, beneficairyOwnerId]);
+
+  useEffect(() => {
+    const fetchCultivators = async () => {
+      const ownerId = Number(activeOwnerAffiliationNewOwnerId);
+      if (!Number.isFinite(ownerId)) {
+        setOwnerAffiliationParcelCultivators({});
+        return;
+      }
+
+      try {
+        const { data: parcelsData, error: parcelsError } = await supabase
+          .from("rsbsa_farm_parcels")
+          .select("id, cultivator_submission_id")
+          .eq("submission_id", ownerId)
+          .eq("ownership_type_registered_owner", true)
+          .or("is_current_owner.is.null,is_current_owner.eq.true");
+
+        if (parcelsError || !parcelsData || parcelsData.length === 0) {
+          setOwnerAffiliationParcelCultivators({});
+          return;
+        }
+
+        const cultivatorIds = Array.from(
+          new Set(
+            parcelsData
+              .map((p) => p.cultivator_submission_id)
+              .filter((id): id is number => typeof id === "number" && id > 0),
+          ),
+        );
+
+        const nameMap: Record<number, string> = {};
+        if (cultivatorIds.length > 0) {
+          const { data: subsData } = await supabase
+            .from("rsbsa_submission")
+            .select(`id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME"`)
+            .in("id", cultivatorIds);
+
+          if (subsData) {
+            subsData.forEach((row: any) => {
+              const fullName = [
+                row["FIRST NAME"],
+                row["MIDDLE NAME"],
+                row["LAST NAME"],
+                row["EXT NAME"],
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .trim();
+              if (fullName) nameMap[row.id] = fullName;
+            });
+          }
+        }
+
+        const map: Record<number, string | null> = {};
+        parcelsData.forEach((p) => {
+          map[p.id] = p.cultivator_submission_id
+            ? nameMap[p.cultivator_submission_id] || `Farmer #${p.cultivator_submission_id}`
+            : null;
+        });
+
+        setOwnerAffiliationParcelCultivators(map);
+      } catch (err) {
+        console.error("Error fetching owner parcel cultivators:", err);
+        setOwnerAffiliationParcelCultivators({});
+      }
+    };
+
+    fetchCultivators();
+  }, [activeOwnerAffiliationNewOwnerId]);
 
   const refreshLandParcels = useCallback(async () => {
     setLoading(true);
@@ -528,12 +615,14 @@ const JoLandRegistry: React.FC = () => {
       const unifiedData = unifiedResult.data || [];
       const submissions = submissionResult.data || [];
 
-      // Filter submissions to only those that represent landowners, tenants, or lessees
+      // Filter submissions to only those that represent active, non-archived landowners, tenants, or lessees
       const registeredSubmissions = submissions.filter(
         (sub: any) =>
-          sub.OWNERSHIP_TYPE_REGISTERED_OWNER === true ||
-          sub.OWNERSHIP_TYPE_TENANT === true ||
-          sub.OWNERSHIP_TYPE_LESSEE === true,
+          (sub.OWNERSHIP_TYPE_REGISTERED_OWNER === true ||
+            sub.OWNERSHIP_TYPE_TENANT === true ||
+            sub.OWNERSHIP_TYPE_LESSEE === true) &&
+          sub.archived_at === null &&
+          sub.status !== "inactive",
       );
 
       // Create a set of farmer IDs that already have active parcels in unifiedData
@@ -567,7 +656,16 @@ const JoLandRegistry: React.FC = () => {
           };
         });
 
-      const combinedData = [...unifiedData, ...noLandGroups];
+      // Filter combined list to only active, non-archived farmers
+      const activeFarmerIds = new Set(
+        submissions
+          .filter((sub: any) => sub.archived_at === null && sub.status !== "inactive")
+          .map((sub: any) => Number(sub.id)),
+      );
+
+      const combinedData = [...unifiedData, ...noLandGroups].filter((group) =>
+        activeFarmerIds.has(Number(group.farmer_id)),
+      );
 
       // Sort combined data by farmer_name
       combinedData.sort((a, b) => a.farmer_name.localeCompare(b.farmer_name));
@@ -2431,21 +2529,6 @@ const JoLandRegistry: React.FC = () => {
       const area = Number(parcel.areaHa);
       return sum + (Number.isFinite(area) ? area : 0);
     }, 0);
-
-  const ownerAffiliationHasSingleSourceContext =
-    ownerAffiliationSourceOptions.length === 1;
-  const ownerAffiliationHasExistingLink =
-    ownerAffiliationSourceOptions.length > 0;
-
-  const activeOwnerAffiliationNewOwnerId = (() => {
-    const candidate =
-      ownerAffiliationNewOwnerId === ""
-        ? null
-        : Number(ownerAffiliationNewOwnerId);
-    return Number.isFinite(candidate) && (candidate || 0) > 0
-      ? Number(candidate)
-      : null;
-  })();
 
   const getParcelKey = (
     parcel: ReplacementAssignedParcel | OwnerAffiliationStep3Parcel,
@@ -5378,6 +5461,28 @@ const JoLandRegistry: React.FC = () => {
                                       ? "Current holder linked parcel"
                                       : "New owner available parcel"}
                                   </div>
+                                  {(() => {
+                                    const cultivatorName = ownerAffiliationParcelCultivators[parcel.farmParcelId];
+                                    if (!cultivatorName) return null;
+                                    return (
+                                      <div
+                                        className="jo-land-registry-transfer-mini-note"
+                                        style={{
+                                          color: "#b45309",
+                                          backgroundColor: "#fef3c7",
+                                          padding: "0.25rem 0.5rem",
+                                          borderRadius: "4px",
+                                          marginTop: "0.25rem",
+                                          marginBottom: "0.25rem",
+                                          fontWeight: "600",
+                                          display: "inline-block",
+                                          border: "1px solid #fde68a"
+                                        }}
+                                      >
+                                        ⚠️ Already cultivated by: {cultivatorName}
+                                      </div>
+                                    );
+                                  })()}
                                   <div className="jo-land-registry-donor-parcel-detail">
                                     <span className="jo-land-registry-donor-parcel-detail-label">
                                       Location

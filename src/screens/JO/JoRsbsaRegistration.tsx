@@ -884,7 +884,7 @@ const JoRsbsa: React.FC = () => {
         tenantLandOwnerId: isTenant ? selectedLandOwner.id : null,
         lesseeLandOwnerId: isLessee ? selectedLandOwner.id : null,
         ownershipOthersSpecify: "",
-        existingParcelId: ownerParcel.land_parcel_id || ownerParcel.id,
+        existingParcelId: ownerParcel.id,
         existingParcelNumber: ownerParcel.parcel_number || "",
       }),
     );
@@ -918,7 +918,7 @@ const JoRsbsa: React.FC = () => {
               tenantLandOwnerId: isTenant ? group.landOwner.id : null,
               lesseeLandOwnerId: isLessee ? group.landOwner.id : null,
               ownershipOthersSpecify: "",
-              existingParcelId: ownerParcel.land_parcel_id || ownerParcel.id,
+              existingParcelId: ownerParcel.id,
               existingParcelNumber: ownerParcel.parcel_number || "",
             };
           });
@@ -1133,6 +1133,8 @@ const JoRsbsa: React.FC = () => {
           ownershipTypeOthers: false,
           tenantLandOwnerName: isTenant ? selectedLandOwner.name : "",
           lesseeLandOwnerName: isLessee ? selectedLandOwner.name : "",
+          tenantLandOwnerId: isTenant ? selectedLandOwner.id : null,
+          lesseeLandOwnerId: isLessee ? selectedLandOwner.id : null,
           ownershipOthersSpecify: "",
           existingParcelId: p.land_parcel_id || p.id,
           existingParcelNumber: p.parcel_number || "",
@@ -1286,15 +1288,9 @@ const JoRsbsa: React.FC = () => {
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) return;
 
-        const totalCount =
-          selectedOwnedParcelIds.size +
-          (alsoFarmsOthersLand ? selectedParcelIds.size : 0);
-        setConfirmModal({
-          show: true,
-          roleText: "Registered Land Owner (Farmer)",
-          parcelCount: totalCount,
-          landOwnerName: selectedSelfLandOwner?.name || "",
-        });
+        applyOwnedParcels();
+        setErrors({});
+        setCurrentStep(3);
         return;
       }
 
@@ -1320,19 +1316,9 @@ const JoRsbsa: React.FC = () => {
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) return;
 
-      const roleText = ownershipCategory === "tenant" ? "Tenant" : "Lessee";
-      const totalParcelCount =
-        selectedParcelIds.size +
-        additionalLandOwnerGroups.reduce(
-          (sum, g) => sum + g.selectedParcelIds.size,
-          0,
-        );
-      setConfirmModal({
-        show: true,
-        roleText,
-        parcelCount: totalParcelCount,
-        landOwnerName: selectedLandOwner?.name || "",
-      });
+      applySelectedParcels();
+      setErrors({});
+      setCurrentStep(3);
       return;
     }
 
@@ -1556,7 +1542,8 @@ const JoRsbsa: React.FC = () => {
   const processTenantLesseeReplacements = async (
     newSubmissionId: number,
   ): Promise<{ succeeded: number; failed: number }> => {
-    const role = farmerRole === "lessee" ? "lessee" : "tenant";
+    const resolvedRole = farmerRole === "owner" ? ownershipCategory : farmerRole;
+    const role = resolvedRole === "lessee" ? "lessee" : "tenant";
     let succeeded = 0;
     let failed = 0;
 
@@ -1681,7 +1668,12 @@ const JoRsbsa: React.FC = () => {
 
         // Replace any previously-farmed parcels the registrant claimed.
         // Non-fatal: registration already succeeded either way.
-        if (farmerRole === "tenant" || farmerRole === "lessee") {
+        const hasTenantLesseeParcels =
+          farmerRole === "tenant" ||
+          farmerRole === "lessee" ||
+          (farmerRole === "owner" && alsoFarmsOthersLand === true);
+
+        if (hasTenantLesseeParcels) {
           try {
             const { succeeded, failed } = await processTenantLesseeReplacements(
               submitted.submissionId,
@@ -4198,103 +4190,6 @@ const JoRsbsa: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Confirmation Modal */}
-      {confirmModal.show && (
-        <div
-          className="jo-confirm-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="jo-confirm-title"
-        >
-          <div className="jo-confirm-modal">
-            {/* Header */}
-            <div className="jo-confirm-modal-header">
-              <div className="jo-confirm-modal-header-icon">🏛️</div>
-              <div>
-                <h2 id="jo-confirm-title" className="jo-confirm-modal-title">
-                  Registration Confirmation
-                </h2>
-                <p className="jo-confirm-modal-header-sub">
-                  RSBSA — Registry System for Basic Sectors in Agriculture
-                </p>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="jo-confirm-modal-divider" />
-
-            {/* Body */}
-            <div className="jo-confirm-modal-body">
-              <p className="jo-confirm-modal-intro">
-                Please review the following details before proceeding:
-              </p>
-
-              <div className="jo-confirm-modal-details">
-                <div className="jo-confirm-modal-detail-row">
-                  <span className="jo-confirm-modal-detail-label">
-                    Registration Type
-                  </span>
-                  <span className="jo-confirm-modal-detail-value jo-confirm-modal-badge">
-                    {confirmModal.roleText}
-                  </span>
-                </div>
-                <div className="jo-confirm-modal-detail-row">
-                  <span className="jo-confirm-modal-detail-label">
-                    Land Owner
-                  </span>
-                  <span className="jo-confirm-modal-detail-value">
-                    {confirmModal.landOwnerName}
-                  </span>
-                </div>
-                <div className="jo-confirm-modal-detail-row">
-                  <span className="jo-confirm-modal-detail-label">
-                    Selected Parcels
-                  </span>
-                  <span className="jo-confirm-modal-detail-value">
-                    {confirmModal.parcelCount} parcel
-                    {confirmModal.parcelCount !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              </div>
-
-              <p className="jo-confirm-modal-notice">
-                ⚠️ By confirming, you acknowledge that the information provided
-                is accurate and complete.
-              </p>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="jo-confirm-modal-footer">
-              <button
-                className="jo-confirm-modal-btn-cancel"
-                onClick={() =>
-                  setConfirmModal((prev) => ({ ...prev, show: false }))
-                }
-              >
-                Cancel
-              </button>
-              <button
-                className="jo-confirm-modal-btn-confirm"
-                onClick={() => {
-                  setConfirmModal((prev) => ({ ...prev, show: false }));
-
-                  if (farmerRole === "owner") {
-                    applyOwnedParcels();
-                  } else {
-                    applySelectedParcels();
-                  }
-
-                  setErrors({});
-                  setCurrentStep(3);
-                }}
-              >
-                ✓ Confirm &amp; Proceed
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast Notification */}
       {toast.show && (
