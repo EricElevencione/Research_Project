@@ -745,7 +745,7 @@ const TechFarmerProf: React.FC = () => {
                     </span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Gender:</span>
+                    <span className="info-label">Sex:</span>
                     <span className="info-value">{farmer.gender || "N/A"}</span>
                   </div>
                   <div className="info-row">

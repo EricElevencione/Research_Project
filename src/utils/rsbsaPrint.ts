@@ -602,7 +602,7 @@ const renderFarmerFormSection = (
       <h2>Personal Information</h2>
       <div class="grid two">
         <div><strong>Farmer Name:</strong> ${escapeHtml(form.farmerName)}</div>
-        <div><strong>Gender:</strong> ${escapeHtml(form.gender)}</div>
+        <div><strong>Sex:</strong> ${escapeHtml(form.gender)}</div>
         <div><strong>Date of Birth:</strong> ${escapeHtml(form.dateOfBirth)}</div>
         <div><strong>Age:</strong> ${escapeHtml(form.age)}</div>
         <div class="full"><strong>Address:</strong> ${escapeHtml(form.farmerAddress)}</div>

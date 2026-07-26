@@ -671,6 +671,11 @@ const TechMasterlist: React.FC = () => {
   });
 
   const sortedFilteredRecords = [...filteredRecords].sort((a, b) => {
+    // Archived/Inactive status rows always sink to the bottom
+    const aArchived = (a.status || "").toLowerCase().includes("archived") || (a.status || "").toLowerCase().includes("inactive") || (a.status || "").toLowerCase() === "not active" ? 1 : 0;
+    const bArchived = (b.status || "").toLowerCase().includes("archived") || (b.status || "").toLowerCase().includes("inactive") || (b.status || "").toLowerCase() === "not active" ? 1 : 0;
+    if (aArchived !== bArchived) return aArchived - bArchived;
+
     const timeA = a.dateSubmitted ? new Date(a.dateSubmitted).getTime() : 0;
     const timeB = b.dateSubmitted ? new Date(b.dateSubmitted).getTime() : 0;
     return timeB - timeA; // newest first

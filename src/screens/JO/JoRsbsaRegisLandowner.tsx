@@ -868,7 +868,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                         />
                       </div>
                       <div className="jo-registration-form-group">
-                        <label>GENDER</label>
+                        <label>SEX</label>
                         <select
                           value={formData.gender}
                           onChange={(e) =>
@@ -878,7 +878,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                             errors.gender ? "jo-registration-input-error" : ""
                           }
                         >
-                          <option value="">Select Gender</option>
+                          <option value="">Select Sex</option>
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
                         </select>
@@ -1449,7 +1449,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                       </div>
                       <div className="jo-registration-summary-item">
                         <span className="jo-registration-summary-label">
-                          Gender
+                          Sex
                         </span>
                         <span className="jo-registration-summary-value">
                           {formData.gender}

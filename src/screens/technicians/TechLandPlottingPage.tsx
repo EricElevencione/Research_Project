@@ -2292,7 +2292,7 @@ const LandPlottingPage: React.FC = () => {
               {` ${getDisplayBarangay()}`}
             </div>
             <div className="tech-landplotting-detail-row">
-              <span className="tech-landplotting-detail-label">Gender:</span>
+              <span className="tech-landplotting-detail-label">Sex:</span>
               {` ${getDisplayGender()}`}
             </div>
             <div className="tech-landplotting-detail-row">

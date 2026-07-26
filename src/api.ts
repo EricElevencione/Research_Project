@@ -4727,27 +4727,24 @@ export const getFarmerHistory = async (
   if (profileError) return createResponse(null, profileError.message, 500);
   if (!profileRow) return createResponse(null, "Farmer not found", 404);
 
-  // Build composed name in the "LAST NAME, FIRST MIDDLE" format used across land_history
+  // Build composed name in the "LAST NAME, FIRST MIDDLE" format used across frontend
   const lastName = String(profileRow["LAST NAME"] || "").trim();
   const firstName = String(profileRow["FIRST NAME"] || "").trim();
   const middleName = String(profileRow["MIDDLE NAME"] || "").trim();
   const firstMiddle = [firstName, middleName].filter(Boolean).join(" ");
   const farmerName = [lastName, firstMiddle].filter(Boolean).join(", ");
 
-  // Search pattern: "DELA CRUZ%JUAN" avoids commas which break PostgREST or() parser,
-  // and catches "DELA CRUZ, JUAN M.", "DELA CRUZ, JUAN", etc.
-  const nameLike = `%${[lastName, firstName].filter(Boolean).join("%")}%`;
-  // Looser pattern for land_owner_name which may be free-form
-  const lastNameLike = lastName ? `%${lastName}%` : nameLike;
+  // Precise search using IDs and exact name match (First Middle Last format)
+  const exactName = [firstName, middleName, lastName].filter(Boolean).join(" ");
 
   // 2. Query land_history
   const { data: historyData, error: historyError } = await supabase
     .from("land_history")
     .select(
-      "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
+      "id, parcel_number, farm_location_barangay, total_farm_area_ha, land_owner_name, land_owner_id, farmer_id, farmer_name, is_registered_owner, is_tenant, is_lessee, is_current, period_start_date, period_end_date, change_type, change_reason, created_at",
     )
     .or(
-      `farmer_name.ilike.${nameLike},land_owner_name.ilike.${lastNameLike}`,
+      `farmer_id.eq.${submissionId},land_owner_id.eq.${submissionId},farmer_name.eq."${exactName}",land_owner_name.eq."${exactName}"`,
     )
     .order("period_start_date", { ascending: true })
     .order("created_at", { ascending: true });

@@ -1022,6 +1022,11 @@ const JoFarmerRegistry: React.FC = () => {
       );
     })
     .sort((a, b) => {
+      // Archived/Inactive status rows always sink to the bottom
+      const aArchived = (a.status || "").toLowerCase().includes("archived") || (a.status || "").toLowerCase().includes("inactive") || (a.status || "").toLowerCase() === "not active" ? 1 : 0;
+      const bArchived = (b.status || "").toLowerCase().includes("archived") || (b.status || "").toLowerCase().includes("inactive") || (b.status || "").toLowerCase() === "not active" ? 1 : 0;
+      if (aArchived !== bArchived) return aArchived - bArchived;
+
       // Flagged rows always sink to the bottom regardless of other sort keys
       const aFlag =
         a.needsPendingReview || a.hasNoParcels || a.hasNoLandOwner ? 1 : 0;

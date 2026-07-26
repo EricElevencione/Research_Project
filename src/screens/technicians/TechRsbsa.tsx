@@ -474,6 +474,11 @@ const TechRsbsa: React.FC = () => {
 
   const sortedFilteredOwners = React.useMemo(() => {
     return [...filteredOwners].sort((a, b) => {
+      // Archived/Inactive status rows always sink to the bottom
+      const aArchived = (a.status || "").toLowerCase().includes("archived") || (a.status || "").toLowerCase().includes("inactive") || (a.status || "").toLowerCase() === "not active" ? 1 : 0;
+      const bArchived = (b.status || "").toLowerCase().includes("archived") || (b.status || "").toLowerCase().includes("inactive") || (b.status || "").toLowerCase() === "not active" ? 1 : 0;
+      if (aArchived !== bArchived) return aArchived - bArchived;
+
       const dateA = getSubmissionDate(a);
       const dateB = getSubmissionDate(b);
 
@@ -859,7 +864,7 @@ const TechRsbsa: React.FC = () => {
                       <input
                         type="text"
                         className="jo-masterlist-search-input"
-                        placeholder="Search by FFRS ID, Name, Address, Location, or Gender..."
+                        placeholder="Search by FFRS ID, Name, Address, Location, or Sex..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
@@ -1016,7 +1021,7 @@ const TechRsbsa: React.FC = () => {
                         <th>First Name</th>
                         <th>Middle Name</th>
                         <th>EXT Name</th>
-                        <th>Gender</th>
+                        <th>Sex</th>
                         <th>Age</th>
                         <th>Farmer Address</th>
                         <th>Farm Location</th>
@@ -1067,7 +1072,7 @@ const TechRsbsa: React.FC = () => {
                               <td data-label="First Name">{record.firstName || ""}</td>
                               <td data-label="Middle Name">{record.middleName || ""}</td>
                               <td data-label="EXT Name">{record.extName || ""}</td>
-                              <td data-label="Gender">{record.gender || "N/A"}</td>
+                              <td data-label="Sex">{record.gender || "N/A"}</td>
                               <td data-label="Age">{getDisplayAge(record)}</td>
                               <td data-label="Farmer Address">{record.farmerAddress || "N/A"}</td>
                               <td data-label="Farm Location">{record.farmLocation || "N/A"}</td>

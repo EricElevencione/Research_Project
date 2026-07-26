@@ -700,6 +700,11 @@ const JoRsbsaPage: React.FC = () => {
       return true;
     })
     .sort((a, b) => {
+      // Archived/Inactive status rows always sink to the bottom
+      const aArchived = (a.status || "").toLowerCase().includes("archived") || (a.status || "").toLowerCase().includes("inactive") || (a.status || "").toLowerCase() === "not active" ? 1 : 0;
+      const bArchived = (b.status || "").toLowerCase().includes("archived") || (b.status || "").toLowerCase().includes("inactive") || (b.status || "").toLowerCase() === "not active" ? 1 : 0;
+      if (aArchived !== bArchived) return aArchived - bArchived;
+
       const factor = sortConfig.direction === "asc" ? 1 : -1;
 
       if (sortConfig.key === "farmer") {

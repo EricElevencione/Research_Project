@@ -1340,6 +1340,11 @@ const JoMasterlist: React.FC = () => {
         return true;
       })
       .sort((a, b) => {
+        // Archived/Inactive status rows always sink to the bottom
+        const aArchived = (a.status || "").toLowerCase().includes("archived") || (a.status || "").toLowerCase().includes("inactive") || (a.status || "").toLowerCase() === "not active" ? 1 : 0;
+        const bArchived = (b.status || "").toLowerCase().includes("archived") || (b.status || "").toLowerCase().includes("inactive") || (b.status || "").toLowerCase() === "not active" ? 1 : 0;
+        if (aArchived !== bArchived) return aArchived - bArchived;
+
         // Flagged rows always sink to the bottom regardless of other sort keys
         const aFlag = a.hasNoActiveLand || a.hasNoLandOwner ? 1 : 0;
         const bFlag = b.hasNoActiveLand || b.hasNoLandOwner ? 1 : 0;
@@ -2803,7 +2808,7 @@ const JoMasterlist: React.FC = () => {
                         </span>
                       </div>
                       <div className="farmer-modal-info-item">
-                        <span className="farmer-modal-label">Gender:</span>
+                        <span className="farmer-modal-label">Sex:</span>
                         <span className="farmer-modal-value">
                           {selectedFarmer.gender}
                         </span>

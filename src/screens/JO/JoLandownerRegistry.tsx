@@ -1312,6 +1312,11 @@ const JoLandownerRegistry: React.FC = () => {
         );
       })
       .sort((a, b) => {
+        // Archived/Inactive status rows always sink to the bottom
+        const aArchived = (a.status || "").toLowerCase().includes("archived") || (a.status || "").toLowerCase().includes("inactive") || (a.status || "").toLowerCase() === "not active" ? 1 : 0;
+        const bArchived = (b.status || "").toLowerCase().includes("archived") || (b.status || "").toLowerCase().includes("inactive") || (b.status || "").toLowerCase() === "not active" ? 1 : 0;
+        if (aArchived !== bArchived) return aArchived - bArchived;
+
         // Primary: push flagged records to the bottom
         const aFlagged = a.hasNoLand === true ? 1 : 0;
         const bFlagged = b.hasNoLand === true ? 1 : 0;

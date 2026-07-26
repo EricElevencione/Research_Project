@@ -544,7 +544,7 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
               </span>
             </div>
             <div className="farmer-modal-info-item">
-              <span className="farmer-modal-label">Gender:</span>
+              <span className="farmer-modal-label">Sex:</span>
               <span className="farmer-modal-value">
                 {farmer.gender || "—"}
               </span>

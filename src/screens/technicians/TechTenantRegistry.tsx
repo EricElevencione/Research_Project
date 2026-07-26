@@ -966,7 +966,7 @@ const TechTenantRegistry: React.FC = () => {
                   <span className="detail-value">{selectedFarmer.age}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-label">Gender:</span>
+                  <span className="detail-label">Sex:</span>
                   <span className="detail-value">{selectedFarmer.gender}</span>
                 </div>
                 <div className="detail-row">
