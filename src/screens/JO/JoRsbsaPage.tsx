@@ -701,8 +701,18 @@ const JoRsbsaPage: React.FC = () => {
     })
     .sort((a, b) => {
       // Archived/Inactive status rows always sink to the bottom
-      const aArchived = (a.status || "").toLowerCase().includes("archived") || (a.status || "").toLowerCase().includes("inactive") || (a.status || "").toLowerCase() === "not active" ? 1 : 0;
-      const bArchived = (b.status || "").toLowerCase().includes("archived") || (b.status || "").toLowerCase().includes("inactive") || (b.status || "").toLowerCase() === "not active" ? 1 : 0;
+      const aArchived =
+        (a.status || "").toLowerCase().includes("archived") ||
+        (a.status || "").toLowerCase().includes("inactive") ||
+        (a.status || "").toLowerCase() === "not active"
+          ? 1
+          : 0;
+      const bArchived =
+        (b.status || "").toLowerCase().includes("archived") ||
+        (b.status || "").toLowerCase().includes("inactive") ||
+        (b.status || "").toLowerCase() === "not active"
+          ? 1
+          : 0;
       if (aArchived !== bArchived) return aArchived - bArchived;
 
       const factor = sortConfig.direction === "asc" ? 1 : -1;
@@ -1830,7 +1840,7 @@ const JoRsbsaPage: React.FC = () => {
                           </span>
                         </div>
                         <div className="farmer-modal-info-item">
-                          <span className="farmer-modal-label">Gender:</span>
+                          <span className="farmer-modal-label">SEX:</span>
                           <span className="farmer-modal-value">
                             {selectedFarmer.gender}
                           </span>
