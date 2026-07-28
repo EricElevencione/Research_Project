@@ -20,6 +20,13 @@ import { addPendingAction } from "../../services/offlineDb";
 import { useOfflineStatus } from "../../hooks/useOfflineStatus";
 import OfflineStatusBanner from "../../components/common/OfflineStatusBanner";
 
+interface SummaryStats {
+  totalParcels: number;
+  totalAreaHa: number;
+  idleParcels: number;
+  barangaysCovered: number;
+}
+
 interface RSBSARecord {
   id: string;
   referenceNumber: string;
@@ -32,6 +39,12 @@ interface RSBSARecord {
   landParcel: string;
   cultivationStatus?: string;
   statusChangeReason?: string | null;
+  archivedAt?: string | null;
+  mainLivelihood?: string;
+  isActivelyFarming?: boolean;
+  farmingStatus?: string;
+  hasNoActiveLand?: boolean;
+  hasNoLandOwner?: boolean;
   // Simple per-record data quality based on key fields present in masterlist
   completeness: number;
   ownershipType?: {
@@ -112,6 +125,17 @@ const TechMasterlist: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
+  const [selectedFarmBarangay, setSelectedFarmBarangay] = useState<string>("all");
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [summaryStats, setSummaryStats] = useState<SummaryStats>({
+    totalParcels: 0,
+    totalAreaHa: 0,
+    idleParcels: 0,
+    barangaysCovered: 0,
+  });
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rsbsaRecords, setRsbsaRecords] = useState<RSBSARecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,6 +182,63 @@ const TechMasterlist: React.FC = () => {
     }
 
     return { min: null, max: null };
+  };
+
+  const calculateAgeFromBirthdate = (
+    birthdate?: string | null,
+  ): number | null => {
+    if (!birthdate) return null;
+    const bd = new Date(birthdate);
+    if (Number.isNaN(bd.getTime())) return null;
+    const today = new Date();
+    const bdYear = bd.getFullYear();
+    if (bdYear < 1900 || bdYear > today.getFullYear()) return null;
+    let age = today.getFullYear() - bd.getFullYear();
+    const md = today.getMonth() - bd.getMonth();
+    if (md < 0 || (md === 0 && today.getDate() < bd.getDate())) age--;
+    return age >= 0 ? age : null;
+  };
+
+  const normalizeAgeValue = (
+    ageValue: unknown,
+    birthdate?: string | null,
+  ): number | null => {
+    if (
+      ageValue !== null &&
+      ageValue !== undefined &&
+      String(ageValue).trim() !== ""
+    ) {
+      const p = Number(ageValue);
+      if (Number.isFinite(p) && p >= 0) return Math.floor(p);
+    }
+    return calculateAgeFromBirthdate(birthdate);
+  };
+
+  const getRecordBarangay = (record: RSBSARecord) => {
+    const fromAddress = String(record.farmerAddress || "")
+      .split(",")[0]
+      ?.trim();
+    const fromFarm = String(record.farmLocation || "")
+      .split(",")[0]
+      ?.trim();
+    const candidate =
+      fromAddress && fromAddress !== "—" ? fromAddress : fromFarm;
+    if (!candidate) return "";
+    const n = candidate.toLowerCase();
+    if (["—", "n/a", "na", "unknown"].includes(n)) return "";
+    return candidate;
+  };
+
+  const getOwnershipFlags = (record: RSBSARecord) => {
+    const owner = record.ownershipType?.registeredOwner === true;
+    const tenant = record.ownershipType?.tenant === true;
+    const lessee = record.ownershipType?.lessee === true;
+    const tenantLessee =
+      record.ownershipType?.tenantLessee === true || tenant || lessee;
+    const category =
+      record.ownershipType?.category ||
+      (owner ? "registeredOwner" : tenantLessee ? "tenantLessee" : "unknown");
+    return { owner, tenant, lessee, tenantLessee, category };
   };
 
   const parseArea = (v: string): number => {
@@ -223,7 +304,7 @@ const TechMasterlist: React.FC = () => {
 
   useEffect(() => {
     fetchRSBSARecords();
-    fetchIdleParcels();
+    fetchSummaryStats();
   }, []);
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -536,72 +617,160 @@ const TechMasterlist: React.FC = () => {
 
   const fetchRSBSARecords = async () => {
     try {
+      setLoading(true);
       const response = await getRsbsaSubmissions();
       if (response.error) throw new Error(response.error);
-      const data = response.data;
+      const allData = Array.isArray(response.data) ? response.data : [];
 
-      const calculateRecordCompleteness = (record: {
-        referenceNumber: string;
-        farmerName: string;
-        farmerAddress: string;
-        farmLocation: string;
-        parcelArea: string;
-        dateSubmitted: string;
-        status: string;
-      }): number => {
-        const fields = [
-          record.referenceNumber,
-          record.farmerName,
-          record.farmerAddress,
-          record.farmLocation,
-          record.parcelArea,
-          record.dateSubmitted,
-          record.status,
-        ];
+      // Batch queries — avoids N+1
+      const [tlResult, parcelOwnerResult, lhTenantResult] = await Promise.all([
+        supabase
+          .from("rsbsa_farm_parcels")
+          .select(
+            "submission_id, tenant_land_owner_name, lessee_land_owner_name, is_current_owner",
+          )
+          .or("ownership_type_tenant.eq.true,ownership_type_lessee.eq.true"),
+        supabase
+          .from("rsbsa_farm_parcels")
+          .select("submission_id, is_current_owner"),
+        // Fallback: land_history rows for tenants/lessees whose rsbsa_farm_parcels
+        // insert may have failed. The land_owner_name column holds the owner name.
+        // NOTE: farmer_id is the column written by the RPC (same field getFarmParcels uses).
+        supabase
+          .from("land_history")
+          .select("farmer_id, land_owner_name")
+          .or("is_tenant.eq.true,is_lessee.eq.true")
+          .eq("is_current", true),
+      ]);
 
-        const total = fields.length;
-        if (total === 0) return 0;
+      const landownerMap = new Map<string, string>();
+      // Track which tenant/lessee submissions have at least one parcel with
+      // a landowner name filled in. Those missing from this set are flagged
+      // hasNoLandOwner.
+      const submissionsWithOwnerName = new Set<string>();
+      const tenantLesseeSubmissionIds = new Set<string>();
+      (tlResult.data || []).forEach((p: any) => {
+        if (!p.submission_id) return;
+        if (p.is_current_owner === false) return; // Skip inactive/transferred parcels
+        const id = String(p.submission_id);
+        tenantLesseeSubmissionIds.add(id);
+        const name = p.tenant_land_owner_name || p.lessee_land_owner_name || "";
+        if (name) {
+          landownerMap.set(id, name);
+          submissionsWithOwnerName.add(id);
+        }
+      });
 
-        const completed = fields.filter((value) => {
-          const v = String(value ?? "").trim();
-          return v !== "" && v !== "—";
-        }).length;
+      // Apply land_history fallback for submissions not covered by rsbsa_farm_parcels
+      (lhTenantResult.data || []).forEach((h: any) => {
+        if (!h.farmer_id) return;
+        const id = String(h.farmer_id);
+        const name = (h.land_owner_name || "").trim();
+        if (name) {
+          // Only set if not already resolved from rsbsa_farm_parcels
+          if (!landownerMap.has(id)) landownerMap.set(id, name);
+          submissionsWithOwnerName.add(id);
+        }
+      });
 
-        return Math.round((completed / total) * 100);
-      };
+      // Submissions that have at least one parcel where is_current_owner is not false
+      // (null = not set, which applies to tenants/lessees — they pass through correctly)
+      const submissionsWithActiveParcels = new Set<string>();
+      (parcelOwnerResult.data || []).forEach((p: any) => {
+        if (p.is_current_owner !== false) {
+          submissionsWithActiveParcels.add(String(p.submission_id));
+        }
+      });
 
-      // Filter out farmers with 'No Parcels' status
-      const filteredData = (Array.isArray(data) ? data : []).filter(
-        (item: any) => {
-          const status = String(item.status ?? "")
-            .toLowerCase()
-            .trim();
-          return status !== "no parcels";
-        },
-      );
+      const formatted: RSBSARecord[] = allData.map((item: any, idx: number) => {
+        const backendName = item.farmerName || "";
+        const reformattedName = (() => {
+          if (!backendName || backendName === "—") return "—";
+          const parts = backendName
+            .split(",")
+            .map((p: string) => p.trim())
+            .filter(Boolean);
+          if (parts.length === 0) return "—";
+          if (parts.length === 1) return parts[0];
+          return `${parts[0]}, ${parts.slice(1).join(" ")}`;
+        })();
 
-      const formattedRecords: RSBSARecord[] = filteredData.map((item: any) => {
+        const landParcel = String(item.landParcel ?? "—");
+        const parcelArea = (() => {
+          const parseNum = (v: unknown): number | null => {
+            if (v === undefined || v === null) return null;
+            const tokens = String(v).match(/-?\d+(?:\.\d+)?/g);
+            if (!tokens) return null;
+            const t = tokens.reduce((s, tok) => {
+              const n = Number(tok);
+              return s + (Number.isFinite(n) ? n : 0);
+            }, 0);
+            return Number.isFinite(t) && t > 0 ? t : null;
+          };
+          const fromTotal = parseNum(
+            item.totalFarmArea ?? item["TOTAL FARM AREA"],
+          );
+          if (fromTotal !== null) return String(fromTotal);
+          const direct = item.parcelArea ?? item["PARCEL AREA"];
+          const fromDirect = parseNum(direct);
+          if (fromDirect !== null) return String(fromDirect);
+          if (
+            direct !== undefined &&
+            direct !== null &&
+            String(direct).trim() !== ""
+          )
+            return String(direct);
+          const m = /\(([^)]+)\)/.exec(landParcel);
+          return m ? m[1] : "—";
+        })();
+
         const farmLocation = String(item.farmLocation ?? "—");
-        // Use the FFRS code from database, fallback to RSBSA-{id} if not present
-        const referenceNumber = item.referenceNumber || `RSBSA-${item.id}`;
-        const farmerName = String(item.farmerName || "—");
-        const farmerAddress = String(item.farmerAddress ?? "—");
-        const landParcel = String(item.landParcel ?? item.farmLocation ?? "—");
-        const parcelArea = String(item.parcelArea ?? "—");
-        const dateSubmitted = item.dateSubmitted
-          ? new Date(item.dateSubmitted).toISOString()
-          : "";
-        const status = String(item.status ?? "Not Active");
+
+        const calculateRecordCompleteness = (record: {
+          referenceNumber: string;
+          farmerName: string;
+          farmerAddress: string;
+          farmLocation: string;
+          parcelArea: string;
+          dateSubmitted: string;
+          status: string;
+        }): number => {
+          const fields = [
+            record.referenceNumber,
+            record.farmerName,
+            record.farmerAddress,
+            record.farmLocation,
+            record.parcelArea,
+            record.dateSubmitted,
+            record.status,
+          ];
+
+          const total = fields.length;
+          if (total === 0) return 0;
+
+          const completed = fields.filter((value) => {
+            const v = String(value ?? "").trim();
+            return v !== "" && v !== "—";
+          }).length;
+
+          return Math.round((completed / total) * 100);
+        };
 
         const baseRecord = {
           id: String(item.id),
-          referenceNumber,
-          farmerName,
-          farmerAddress,
+          referenceNumber: String(item.referenceNumber ?? `RSBSA-${idx + 1}`),
+          farmerName: String(reformattedName),
+          farmerAddress: String(
+            item.farmerAddress ?? item.addressBarangay ?? "—",
+          ),
           farmLocation,
           parcelArea,
-          dateSubmitted,
-          status,
+          dateSubmitted: item.dateSubmitted
+            ? new Date(item.dateSubmitted).toISOString()
+            : item.createdAt
+              ? new Date(item.createdAt).toISOString()
+              : "",
+          status: String(item.status ?? "Not Active"),
           landParcel,
           cultivationStatus: String(item.cultivationStatus || "Not specified"),
           statusChangeReason:
@@ -609,6 +778,35 @@ const TechMasterlist: React.FC = () => {
             item.status_change_reason ||
             item.archive_reason ||
             null,
+          archivedAt:
+            item.archivedAt ??
+            item.archived_at ??
+            item._raw?.archived_at ??
+            null,
+          mainLivelihood: item.mainLivelihood || "",
+          isActivelyFarming: item.isActivelyFarming === true,
+          farmingStatus: String(
+            item.farmingStatus || item.cultivationStatus || "Not specified",
+          ),
+          hasNoActiveLand:
+            (item.status || "").toLowerCase().trim() === "no parcels" ||
+            item.hasCurrentParcels === false ||
+            typeof item.parcelCount !== "number" ||
+            item.parcelCount === 0 ||
+            !submissionsWithActiveParcels.has(String(item.id)),
+          hasNoLandOwner: (() => {
+            const ot = item.ownershipType;
+            const isTenantOrLessee =
+              ot?.tenant === true ||
+              ot?.lessee === true ||
+              ot?.tenantLessee === true;
+            if (!isTenantOrLessee) return false;
+            const pCount =
+              typeof item.parcelCount === "number" ? item.parcelCount : 0;
+            if (pCount === 0) return false; // Flag as No Parcels first
+            const id = String(item.id);
+            return !submissionsWithOwnerName.has(id);
+          })(),
         };
 
         const completeness = calculateRecordCompleteness(baseRecord);
@@ -624,8 +822,29 @@ const TechMasterlist: React.FC = () => {
         };
       });
 
-      setRsbsaRecords(formattedRecords);
+      const cleaned = formatted.filter((record) => {
+        if (record.archivedAt) return false;
 
+        // Exclude strict non-farming landowners
+        const isLandOwner =
+          String(record.mainLivelihood || "")
+            .toLowerCase()
+            .trim() === "landowner";
+        const isActivelyFarming = record.isActivelyFarming === true;
+        if (isLandOwner && !isActivelyFarming) {
+          return false;
+        }
+
+        // Exclude idle/non-farming farmers
+        const fs = (record.farmingStatus || "").toLowerCase().trim();
+        if (fs === "not farming") {
+          return false;
+        }
+
+        return true;
+      });
+
+      setRsbsaRecords(cleaned);
       setLoading(false);
     } catch (err: any) {
       setError(err.message ?? "Failed to load RSBSA records");
@@ -633,13 +852,14 @@ const TechMasterlist: React.FC = () => {
     }
   };
 
-  const fetchIdleParcels = async () => {
+  const fetchSummaryStats = async () => {
     try {
+      setLoadingStats(true);
       const { data, error: err } = await supabase
-        .from("rsbsa_farm_parcels")
-        .select(
-          "submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, is_cultivating, contract_end_date, ownership_type_tenant, ownership_type_lessee, is_current_owner",
-        );
+          .from("rsbsa_farm_parcels")
+          .select(
+            "submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, is_cultivating, contract_end_date, ownership_type_tenant, ownership_type_lessee, is_current_owner",
+          );
       if (err) throw err;
       const parcels = (data || []).filter(
         (p: any) => p.is_current_owner !== false,
@@ -711,53 +931,107 @@ const TechMasterlist: React.FC = () => {
           idleOwnerCounts.set(id, (idleOwnerCounts.get(id) || 0) + 1);
         });
       });
+      setSummaryStats({
+        totalParcels: parcels.length,
+        totalAreaHa: parcels.reduce(
+          (s, p) => s + (parseFloat(p.total_farm_area_ha) || 0),
+          0,
+        ),
+        idleParcels: idleParcelKeys.length,
+        barangaysCovered: new Set(
+          parcels.map((p) => p.farm_location_barangay).filter(Boolean),
+        ).size,
+      });
       setIdleParcelOwnerCounts(idleOwnerCounts);
+      setLoadingStats(false);
     } catch (e) {
-      console.error("Error fetching idle parcels:", e);
+      console.error("Error fetching summary stats:", e);
       setIdleParcelOwnerCounts(new Map());
+      setLoadingStats(false);
     }
   };
 
   // Filter records by status, search, and ownership type
-  const filteredRecords = rsbsaRecords.filter((record) => {
-    // EXCLUDE TENANTS FROM MASTERLIST - They have their own Tenant Registry page
-    const hasTenantOwnership =
-      record.ownershipType?.tenant === true ||
-      (record.ownershipType?.tenantLessee === true &&
-        record.ownershipType?.lessee !== true);
+  const filteredRecords = React.useMemo(() => {
+    return rsbsaRecords.filter((record) => {
+      const ns = (record.status || "").toLowerCase().trim();
+      const active = new Set([
+        "submitted",
+        "approved",
+        "active",
+        "active farmer",
+      ]);
+      const inactive = new Set([
+        "not submitted",
+        "not_active",
+        "not active",
+        "draft",
+        "pending",
+        "not approved",
+        "inactive",
+      ]);
 
-    if (hasTenantOwnership) {
-      return false; // Exclude pure tenants from masterlist
-    }
+      const f = getOwnershipFlags(record);
+      if (
+        selectedRole === "owner" &&
+        !(f.category === "registeredOwner" || f.owner)
+      )
+        return false;
+      if (selectedRole === "tenant" && !f.tenant) return false;
+      if (selectedRole === "lessee" && !f.lessee) return false;
 
-    const matchesStatus = (() => {
-      if (selectedStatus === "all") return true;
-      const s = String(record.status ?? "").toLowerCase().trim();
-      if (selectedStatus === "Active Farmer") {
-        return s === "active farmer" || s === "active";
+      let matchesStatus = true;
+      if (selectedStatus === "all") {
+        // Default to hiding "Not Active", "No Land Owner", and "No Active Land" (No Parcels) records
+        const isNotActive = inactive.has(ns) || ns === "no parcels";
+        const isNoLandOwner = record.hasNoLandOwner === true;
+        const isNoActiveLand = record.hasNoActiveLand === true;
+        if (isNotActive || isNoLandOwner || isNoActiveLand) {
+          matchesStatus = false;
+        }
+      } else if (selectedStatus === "active") {
+        matchesStatus = active.has(ns);
+      } else if (selectedStatus === "notActive") {
+        matchesStatus = inactive.has(ns);
+      } else if (selectedStatus === "flaggedNoLand") {
+        matchesStatus = record.hasNoActiveLand === true;
+      } else if (selectedStatus === "noLandOwner") {
+        matchesStatus = record.hasNoLandOwner === true;
       }
-      if (selectedStatus === "Not Active") {
-        return s === "not active" || s === "inactive" || s === "inactive farmer";
+      if (!matchesStatus) return false;
+
+      if (selectedBarangay !== "all") {
+        const rb = getRecordBarangay(record);
+        if (
+          rb.localeCompare(selectedBarangay, undefined, {
+            sensitivity: "base",
+          }) !== 0
+        )
+          return false;
       }
-      return false;
-    })();
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      record.farmerName.toLowerCase().includes(q) ||
-      record.referenceNumber.toLowerCase().includes(q) ||
-      record.farmerAddress.toLowerCase().includes(q) ||
-      record.farmLocation.toLowerCase().includes(q);
 
-    let matchesLandSize = true;
-    if (landSizeFilter.trim() !== "") {
-      const { min, max } = getLandAreaRange(landSizeFilter);
-      const area = parseArea(record.parcelArea);
-      if (min !== null && area < min) matchesLandSize = false;
-      if (max !== null && area > max) matchesLandSize = false;
-    }
+      if (landSizeFilter.trim() !== "") {
+        const { min, max } = getLandAreaRange(landSizeFilter);
+        const area = parseArea(record.parcelArea);
+        if (min !== null && area < min) return false;
+        if (max !== null && area > max) return false;
+      }
 
-    return matchesStatus && matchesSearch && matchesLandSize;
-  });
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matches =
+          record.farmerName.toLowerCase().includes(q) ||
+          record.referenceNumber.toLowerCase().includes(q) ||
+          record.farmerAddress.toLowerCase().includes(q) ||
+          record.farmLocation.toLowerCase().includes(q) ||
+          (record.farmBarangay || "").toLowerCase().includes(q) ||
+          record.parcelArea.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+
+      return true;
+    });
+  }, [rsbsaRecords, selectedRole, selectedStatus, selectedBarangay, landSizeFilter, searchQuery]);
 
   const sortedFilteredRecords = [...filteredRecords].sort((a, b) => {
     // Archived/Inactive status rows always sink to the bottom
@@ -1595,16 +1869,46 @@ const TechMasterlist: React.FC = () => {
   };
 
   const statusCounts = React.useMemo(() => {
-    const total = rsbsaRecords.length;
-    const active = rsbsaRecords.filter((r) => {
-      const s = String(r.status ?? "").toLowerCase().trim();
-      return s === "active farmer" || s === "active";
-    }).length;
-    const notActive = rsbsaRecords.filter((r) => {
-      const s = String(r.status ?? "").toLowerCase().trim();
-      return s === "not active" || s === "inactive" || s === "inactive farmer";
-    }).length;
-    return { total, active, notActive };
+    const active = new Set([
+      "submitted",
+      "approved",
+      "active",
+      "active farmer",
+    ]);
+    const inactive = new Set([
+      "not submitted",
+      "not_active",
+      "not active",
+      "draft",
+      "pending",
+      "not approved",
+      "inactive",
+    ]);
+    const isNoParcelsRecord = (record: RSBSARecord) => {
+      const status = (record.status || "").toLowerCase().trim();
+      if (status === "no parcels") return true;
+      if (record.hasNoActiveLand !== true) return false;
+      const flags = getOwnershipFlags(record);
+      return !(
+        flags.tenant ||
+        flags.lessee ||
+        flags.category === "tenantLessee"
+      );
+    };
+
+    return {
+      total: rsbsaRecords.length,
+      active: rsbsaRecords.filter((r) =>
+        active.has((r.status || "").toLowerCase().trim()),
+      ).length,
+      inactive: rsbsaRecords.filter(
+        (r) =>
+          inactive.has((r.status || "").toLowerCase().trim()) &&
+          !isNoParcelsRecord(r),
+      ).length,
+      noParcels: rsbsaRecords.filter(isNoParcelsRecord).length,
+      noLandOwner: rsbsaRecords.filter((r) => r.hasNoLandOwner === true).length,
+    };
   }, [rsbsaRecords]);
 
   return (
@@ -1649,22 +1953,92 @@ const TechMasterlist: React.FC = () => {
               <div className="jo-masterlist-status-card jo-masterlist-card-total">
                 <div className="jo-masterlist-card-icon">👥</div>
                 <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">{statusCounts.total}</span>
-                  <span className="jo-masterlist-card-label">Total Registered</span>
+                  <span className="jo-masterlist-card-count">
+                    {statusCounts.total}
+                  </span>
+                  <span className="jo-masterlist-card-label">
+                    Total Registered
+                  </span>
                 </div>
               </div>
               <div className="jo-masterlist-status-card jo-masterlist-card-active">
                 <div className="jo-masterlist-card-icon">✅</div>
                 <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">{statusCounts.active}</span>
-                  <span className="jo-masterlist-card-label">Active Farmers</span>
+                  <span className="jo-masterlist-card-count">
+                    {statusCounts.active}
+                  </span>
+                  <span className="jo-masterlist-card-label">
+                    Active Farmers
+                  </span>
                 </div>
               </div>
-              <div className="jo-masterlist-status-card jo-masterlist-card-inactive">
-                <div className="jo-masterlist-card-icon">⛔</div>
+              {statusCounts.noParcels > 0 && (
+                <div
+                  className="jo-masterlist-status-card jo-masterlist-card-inactive"
+                  style={{ borderLeft: "3px solid #d97706", cursor: "pointer" }}
+                  onClick={() => setSelectedStatus("flaggedNoLand")}
+                  title="Click to filter No Parcels records"
+                >
+                  <div className="jo-masterlist-card-icon">⚠️</div>
+                  <div className="jo-masterlist-card-info">
+                    <span className="jo-masterlist-card-count">
+                      {statusCounts.noParcels}
+                    </span>
+                    <span className="jo-masterlist-card-label">No Parcels</span>
+                  </div>
+                </div>
+              )}
+              {statusCounts.noLandOwner > 0 && (
+                <div
+                  className="jo-masterlist-status-card jo-masterlist-card-inactive"
+                  style={{ borderLeft: "3px solid #dc2626", cursor: "pointer" }}
+                  onClick={() => setSelectedStatus("noLandOwner")}
+                  title="Click to filter tenants/lessees with no landowner on record"
+                >
+                  <div className="jo-masterlist-card-icon">🚫</div>
+                  <div className="jo-masterlist-card-info">
+                    <span className="jo-masterlist-card-count">
+                      {statusCounts.noLandOwner}
+                    </span>
+                    <span className="jo-masterlist-card-label">
+                      No Land Owner
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="jo-masterlist-status-card jo-masterlist-card-total">
+                <div className="jo-masterlist-card-icon">🌾</div>
                 <div className="jo-masterlist-card-info">
-                  <span className="jo-masterlist-card-count">{statusCounts.notActive}</span>
-                  <span className="jo-masterlist-card-label">Not Active</span>
+                  <span className="jo-masterlist-card-count">
+                    {loadingStats ? "..." : summaryStats.totalParcels}
+                  </span>
+                  <span className="jo-masterlist-card-label">
+                    Total Parcels
+                  </span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-total">
+                <div className="jo-masterlist-card-icon">📐</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {loadingStats
+                      ? "..."
+                      : `${summaryStats.totalAreaHa.toFixed(1)} ha`}
+                  </span>
+                  <span className="jo-masterlist-card-label">
+                    Total Land Area
+                  </span>
+                </div>
+              </div>
+              <div className="jo-masterlist-status-card jo-masterlist-card-total">
+                <div className="jo-masterlist-card-icon">🏘️</div>
+                <div className="jo-masterlist-card-info">
+                  <span className="jo-masterlist-card-count">
+                    {loadingStats ? "..." : summaryStats.barangaysCovered}
+                  </span>
+                  <span className="jo-masterlist-card-label">
+                    Barangays Covered
+                  </span>
                 </div>
               </div>
             </div>
@@ -1687,13 +2061,41 @@ const TechMasterlist: React.FC = () => {
               <div className="jo-masterlist-filters-row-2">
                 <div className="jo-masterlist-status-filter">
                   <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="jo-masterlist-status-select"
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="owner">Registered Owner</option>
+                    <option value="tenant">Tenant</option>
+                    <option value="lessee">Lessee</option>
+                  </select>
+                </div>
+                <div className="jo-masterlist-status-filter">
+                  <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
                     className="jo-masterlist-status-select"
                   >
                     <option value="all">All Status</option>
-                    <option value="Active Farmer">Active Farmer</option>
-                    <option value="Not Active">Not Active</option>
+                    <option value="active">Active</option>
+                    <option value="notActive">Not Active</option>
+                    <option value="flaggedNoLand">Flagged (No Land)</option>
+                    <option value="noLandOwner">No Land Owner</option>
+                  </select>
+                </div>
+                <div className="jo-masterlist-status-filter">
+                  <select
+                    value={selectedBarangay}
+                    onChange={(e) => setSelectedBarangay(e.target.value)}
+                    className="jo-masterlist-status-select"
+                  >
+                    <option value="all">All Barangays</option>
+                    {getUniqueBarangays().map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

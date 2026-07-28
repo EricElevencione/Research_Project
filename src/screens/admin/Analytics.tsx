@@ -20,7 +20,7 @@ interface RSBSARecord {
   status: string;
   landParcel: string;
   parcelArea: number | string | null;
-  totalFarmArea: number;
+  totalFarmArea: number | string;
   parcelCount: number;
   ownershipType: {
     registeredOwner: boolean;

@@ -222,13 +222,16 @@ const ViewAllocation: React.FC = () => {
     fetchAllocationData();
   }, [allocationId]);
 
-  const handleCloseProgram = async () => {
-    if (!allocation) return;
-    const confirmed = window.confirm(
-      `Are you sure you want to close "${allocation.season}"?\n\nThis will mark the program as Closed across all accounts and transfer remaining stock to Excess Inventory.`,
-    );
-    if (!confirmed) return;
+  const [showCloseConfirmModal, setShowCloseConfirmModal] = useState(false);
 
+  const handleCloseProgram = () => {
+    if (!allocation) return;
+    setShowCloseConfirmModal(true);
+  };
+
+  const confirmCloseProgram = async () => {
+    if (!allocation) return;
+    setShowCloseConfirmModal(false);
     setClosingProgram(true);
     try {
       const response = await closeAllocation(allocation.id);
@@ -478,6 +481,136 @@ const ViewAllocation: React.FC = () => {
           </div>
         </div>
       </div>
+      {showCloseConfirmModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "16px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              width: "100%",
+              maxWidth: "460px",
+              padding: "28px",
+              boxSizing: "border-box",
+              border: "1px solid #e2e8f0",
+              fontFamily: "'Outfit', 'Inter', system-ui, sans-serif",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 16px 0",
+                fontSize: "1.25rem",
+                fontWeight: 700,
+                color: "#0f172a",
+                lineHeight: 1.4,
+              }}
+            >
+              Are you sure you want to close the program "{allocation?.season}"?
+            </h3>
+            
+            <div
+              style={{
+                backgroundColor: "#f8fafc",
+                border: "1px solid #f1f5f9",
+                borderRadius: "12px",
+                padding: "16px 20px",
+                marginBottom: "24px",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 10px 0",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "#475569",
+                }}
+              >
+                This will:
+              </p>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: "12px",
+                  fontSize: "0.875rem",
+                  color: "#64748b",
+                  lineHeight: 1.6,
+                  listStyleType: "none",
+                }}
+              >
+                <li style={{ marginBottom: "6px", display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                  <span style={{ color: "#ef4444" }}>•</span>
+                  <span>Mark the program as Closed across all accounts</span>
+                </li>
+                <li style={{ marginBottom: "6px", display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                  <span style={{ color: "#ef4444" }}>•</span>
+                  <span>Transfer remaining stock to Excess Inventory</span>
+                </li>
+                <li style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                  <span style={{ color: "#ef4444" }}>•</span>
+                  <span>Prevent new farmer requests</span>
+                </li>
+              </ul>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+              }}
+            >
+              <button
+                onClick={() => setShowCloseConfirmModal(false)}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: "10px",
+                  border: "1px solid #cbd5e1",
+                  backgroundColor: "#ffffff",
+                  color: "#475569",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmCloseProgram}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "10px",
+                  border: "none",
+                  backgroundColor: "#ef4444",
+                  color: "#ffffff",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 6px -1px rgba(239, 68, 68, 0.2)",
+                  transition: "all 0.2s",
+                }}
+              >
+                Close Program
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

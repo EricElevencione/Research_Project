@@ -835,6 +835,23 @@ const Masterlist: React.FC = () => {
 
       const cleaned = formatted.filter((record) => {
         if (record.archivedAt) return false;
+
+        // Exclude strict non-farming landowners
+        const isLandOwner =
+          String(record.mainLivelihood || "")
+            .toLowerCase()
+            .trim() === "landowner";
+        const isActivelyFarming = record.isActivelyFarming === true;
+        if (isLandOwner && !isActivelyFarming) {
+          return false;
+        }
+
+        // Exclude idle/non-farming farmers
+        const fs = (record.farmingStatus || "").toLowerCase().trim();
+        if (fs === "not farming") {
+          return false;
+        }
+
         return true;
       });
       setRsbsaRecords(cleaned);
@@ -1202,13 +1219,23 @@ const Masterlist: React.FC = () => {
         if (selectedRole === "lessee" && !f.lessee) return false;
 
         let matchesStatus = true;
-        if (selectedStatus === "active") matchesStatus = active.has(ns);
-        else if (selectedStatus === "notActive")
+        if (selectedStatus === "all") {
+          // Default to hiding "Not Active", "No Land Owner", and "No Active Land" (No Parcels) records
+          const isNotActive = inactive.has(ns) || ns === "no parcels";
+          const isNoLandOwner = record.hasNoLandOwner === true;
+          const isNoActiveLand = record.hasNoActiveLand === true;
+          if (isNotActive || isNoLandOwner || isNoActiveLand) {
+            matchesStatus = false;
+          }
+        } else if (selectedStatus === "active") {
+          matchesStatus = active.has(ns);
+        } else if (selectedStatus === "notActive") {
           matchesStatus = inactive.has(ns);
-        else if (selectedStatus === "flaggedNoLand")
+        } else if (selectedStatus === "flaggedNoLand") {
           matchesStatus = record.hasNoActiveLand === true;
-        else if (selectedStatus === "noLandOwner")
+        } else if (selectedStatus === "noLandOwner") {
           matchesStatus = record.hasNoLandOwner === true;
+        }
         if (!matchesStatus) return false;
 
         if (selectedBarangay !== "all") {
