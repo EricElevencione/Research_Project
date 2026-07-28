@@ -260,8 +260,8 @@ const Masterlist: React.FC = () => {
     barangaysCovered: 0,
   });
   const [loadingStats, setLoadingStats] = useState(true);
-  const [idleParcelOwnerIds, setIdleParcelOwnerIds] = useState<Set<string>>(
-    new Set(),
+  const [idleParcelOwnerCounts, setIdleParcelOwnerCounts] = useState<Map<string, number>>(
+    new Map(),
   );
 
   const [selectedRole, setSelectedRole] = useState<string>("all");
@@ -566,7 +566,7 @@ const Masterlist: React.FC = () => {
       const parcels = (data || []).filter(
         (p: any) => p.is_current_owner !== false,
       );
-      const idleOwnerIds = new Set<string>();
+      const idleParcelOwnerCounts = new Map<string, number>();
       const normalizeKey = (value: unknown) =>
         String(value ?? "")
           .trim()
@@ -629,7 +629,9 @@ const Masterlist: React.FC = () => {
       idleParcelKeys.forEach((key) => {
         const owners = parcelGroups.get(key)?.ownerIds;
         if (!owners) return;
-        owners.forEach((id) => idleOwnerIds.add(id));
+        owners.forEach((id) => {
+          idleParcelOwnerCounts.set(id, (idleParcelOwnerCounts.get(id) || 0) + 1);
+        });
       });
       setSummaryStats({
         totalParcels: parcels.length,
@@ -642,10 +644,10 @@ const Masterlist: React.FC = () => {
           parcels.map((p) => p.farm_location_barangay).filter(Boolean),
         ).size,
       });
-      setIdleParcelOwnerIds(idleOwnerIds);
+      setIdleParcelOwnerCounts(idleParcelOwnerCounts);
     } catch (e) {
       console.error("Summary stats error:", e);
-      setIdleParcelOwnerIds(new Set());
+      setIdleParcelOwnerCounts(new Map());
     } finally {
       setLoadingStats(false);
     }
@@ -2305,8 +2307,8 @@ const Masterlist: React.FC = () => {
                       const flags = getOwnershipFlags(record);
                       const isOwner =
                         flags.category === "registeredOwner" || flags.owner;
-                      const hasIdleParcel =
-                        isOwner && idleParcelOwnerIds.has(record.id);
+                      const idleCount = idleParcelOwnerCounts.get(record.id) || 0;
+                      const hasIdleParcel = isOwner && idleCount > 0;
                       const isTenantOrLessee =
                         flags.tenant || flags.lessee || flags.tenantLessee;
                       const missingRecordWarning =
@@ -2356,10 +2358,10 @@ const Masterlist: React.FC = () => {
                                     {hasIdleParcel && (
                                       <span
                                         className="admin-masterlist-idle-pill"
-                                        title="Has idle parcel"
-                                        aria-label="Has idle parcel"
+                                        title={`${idleCount} idle parcel${idleCount > 1 ? "s" : ""}`}
+                                        aria-label={`${idleCount} idle parcel${idleCount > 1 ? "s" : ""}`}
                                       >
-                                        Idle
+                                        Idle ({idleCount})
                                       </span>
                                     )}
                                   </span>

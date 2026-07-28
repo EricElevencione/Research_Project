@@ -119,6 +119,9 @@ const TechMasterlist: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [landSizeFilter, setLandSizeFilter] = useState<string>("");
+  const [idleParcelOwnerCounts, setIdleParcelOwnerCounts] = useState<Map<string, number>>(
+    new Map(),
+  );
 
   const getLandAreaRange = (
     filterStr: string,
@@ -220,6 +223,7 @@ const TechMasterlist: React.FC = () => {
 
   useEffect(() => {
     fetchRSBSARecords();
+    fetchIdleParcels();
   }, []);
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -626,6 +630,91 @@ const TechMasterlist: React.FC = () => {
     } catch (err: any) {
       setError(err.message ?? "Failed to load RSBSA records");
       setLoading(false);
+    }
+  };
+
+  const fetchIdleParcels = async () => {
+    try {
+      const { data, error: err } = await supabase
+        .from("rsbsa_farm_parcels")
+        .select(
+          "submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, is_cultivating, contract_end_date, ownership_type_tenant, ownership_type_lessee, is_current_owner",
+        );
+      if (err) throw err;
+      const parcels = (data || []).filter(
+        (p: any) => p.is_current_owner !== false,
+      );
+      const idleOwnerCounts = new Map<string, number>();
+      const normalizeKey = (value: unknown) =>
+        String(value ?? "")
+          .trim()
+          .toLowerCase();
+      const parcelGroups = new Map<
+        string,
+        { cultivated: boolean; ownerIds: Set<string> }
+      >();
+      const parseContractDate = (value: unknown): Date | null => {
+        if (!value) return null;
+        const raw = String(value).trim();
+        if (!raw) return null;
+        const parts = raw.split("-");
+        if (parts.length >= 3) {
+          const y = Number(parts[0]);
+          const m = Number(parts[1]);
+          const d = Number(parts[2]);
+          if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d))
+            return new Date(y, m - 1, d);
+        }
+        const parsed = new Date(raw);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      };
+      const isContractEndedForOccupant = (p: any) => {
+        const isOccupant =
+          p.ownership_type_tenant === true || p.ownership_type_lessee === true;
+        if (!isOccupant) return false;
+        const end = parseContractDate(p.contract_end_date);
+        if (!end) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        return end <= today;
+      };
+
+      parcels.forEach((p: any) => {
+        const parcelKey = [
+          normalizeKey(p.parcel_number),
+          normalizeKey(p.farm_location_barangay),
+          normalizeKey(p.farm_location_municipality),
+        ].join("|");
+        if (!parcelGroups.has(parcelKey))
+          parcelGroups.set(parcelKey, {
+            cultivated: false,
+            ownerIds: new Set<string>(),
+          });
+        const group = parcelGroups.get(parcelKey)!;
+        const hasActiveContract = !isContractEndedForOccupant(p);
+        if (
+          hasActiveContract &&
+          (p.is_cultivating === true || p.is_farming === true)
+        )
+          group.cultivated = true;
+        if (p.submission_id) group.ownerIds.add(String(p.submission_id));
+      });
+
+      const idleParcelKeys = Array.from(parcelGroups.entries())
+        .filter(([, v]) => !v.cultivated)
+        .map(([k]) => k);
+      idleParcelKeys.forEach((key) => {
+        const owners = parcelGroups.get(key)?.ownerIds;
+        if (!owners) return;
+        owners.forEach((id) => {
+          idleOwnerCounts.set(id, (idleOwnerCounts.get(id) || 0) + 1);
+        });
+      });
+      setIdleParcelOwnerCounts(idleOwnerCounts);
+    } catch (e) {
+      console.error("Error fetching idle parcels:", e);
+      setIdleParcelOwnerCounts(new Map());
     }
   };
 
@@ -1836,6 +1925,21 @@ const TechMasterlist: React.FC = () => {
                             <div className="jo-masterlist-farmer-meta">
                               <span className="jo-masterlist-farmer-name">
                                 {record.farmerName}
+                                {(() => {
+                                  const isOwner = record.ownershipType?.registeredOwner === true;
+                                  const idleCount = idleParcelOwnerCounts.get(record.id) || 0;
+                                  const hasIdleParcel = isOwner && idleCount > 0;
+                                  if (!hasIdleParcel) return null;
+                                  return (
+                                    <span
+                                      className="jo-masterlist-idle-pill"
+                                      title={`${idleCount} idle parcel${idleCount > 1 ? "s" : ""}`}
+                                      aria-label={`${idleCount} idle parcel${idleCount > 1 ? "s" : ""}`}
+                                    >
+                                      Idle ({idleCount})
+                                    </span>
+                                  );
+                                })()}
                               </span>
                             </div>
                           </div>
