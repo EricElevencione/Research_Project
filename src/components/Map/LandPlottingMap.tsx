@@ -1560,10 +1560,6 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
         </div>
       ) : null;
 
-    if (loading) {
-      return <div>Loading map data...</div>;
-    }
-
     if (error) {
       return <div>Error loading map data: {error}</div>;
     }
@@ -1576,6 +1572,45 @@ const LandPlottingMap = forwardRef<LandPlottingMapRef, LandPlottingMapProps>(
           position: "relative",
         }}
       >
+        {loading && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(255, 255, 255, 0.7)",
+              zIndex: 9999,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "12px",
+              fontFamily: "Inter, Roboto, sans-serif",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                border: "4px solid #f3f3f3",
+                borderTop: "4px solid #16a34a",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+            <div style={{ color: "#1f2937", fontWeight: 500 }}>
+              Loading map data...
+            </div>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        )}
         <PolygonLimitModal />
         <ValidationErrorModal />
         <MapContainer
