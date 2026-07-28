@@ -246,23 +246,34 @@ const normalizeCurrentOwnershipGroups = (
       0,
     );
 
+    const hasActiveParcels = currentOwnerParcels.length > 0;
+
+    const has_registered_owner = hasActiveParcels
+      ? parcelsToUse.some((parcel) => parcel?.is_registered_owner === true)
+      : (hasExplicitOwnerRoleFlag
+          ? parcelsToUse.some((parcel) => parcel?.is_registered_owner === true)
+          : false) || group.has_registered_owner;
+
+    const has_tenant = hasActiveParcels
+      ? parcelsToUse.some((parcel) => parcel?.is_tenant === true)
+      : (hasExplicitTenantRoleFlag
+          ? parcelsToUse.some((parcel) => parcel?.is_tenant === true)
+          : false) || group.has_tenant;
+
+    const has_lessee = hasActiveParcels
+      ? parcelsToUse.some((parcel) => parcel?.is_lessee === true)
+      : (hasExplicitLesseeRoleFlag
+          ? parcelsToUse.some((parcel) => parcel?.is_lessee === true)
+          : false) || group.has_lessee;
+
     return {
       ...group,
       parcels: parcelsToUse,
       total_farm_area_ha:
         computedTotalArea > 0 ? computedTotalArea : group.total_farm_area_ha,
-      has_registered_owner:
-        (hasExplicitOwnerRoleFlag
-          ? parcelsToUse.some((parcel) => parcel?.is_registered_owner === true)
-          : false) || group.has_registered_owner,
-      has_tenant:
-        (hasExplicitTenantRoleFlag
-          ? parcelsToUse.some((parcel) => parcel?.is_tenant === true)
-          : false) || group.has_tenant,
-      has_lessee:
-        (hasExplicitLesseeRoleFlag
-          ? parcelsToUse.some((parcel) => parcel?.is_lessee === true)
-          : false) || group.has_lessee,
+      has_registered_owner,
+      has_tenant,
+      has_lessee,
     };
   });
 };

@@ -1136,7 +1136,7 @@ const JoRsbsa: React.FC = () => {
           tenantLandOwnerId: isTenant ? selectedLandOwner.id : null,
           lesseeLandOwnerId: isLessee ? selectedLandOwner.id : null,
           ownershipOthersSpecify: "",
-          existingParcelId: p.land_parcel_id || p.id,
+          existingParcelId: p.id,
           existingParcelNumber: p.parcel_number || "",
         }));
       setFormData((prev) => ({
