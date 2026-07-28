@@ -215,6 +215,13 @@ const JoFarmerHistory: React.FC = () => {
     });
 
     rows = [...rows].sort((a, b) => {
+      // Prioritize active (non-archived) farmers at the top, and archived at the bottom
+      const isArchivedA = !!a.archivedAt;
+      const isArchivedB = !!b.archivedAt;
+      if (isArchivedA !== isArchivedB) {
+        return isArchivedA ? 1 : -1;
+      }
+
       if (sortKey === "parcelArea") {
         const areaA = parseParcelAreaToNumber(a.parcelArea);
         const areaB = parseParcelAreaToNumber(b.parcelArea);

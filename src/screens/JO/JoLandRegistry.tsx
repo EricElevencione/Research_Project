@@ -615,13 +615,9 @@ const JoLandRegistry: React.FC = () => {
       const unifiedData = unifiedResult.data || [];
       const submissions = submissionResult.data || [];
 
-      // Filter submissions to only those that represent active, non-archived landowners, tenants, or lessees
+      // Filter submissions to only those that represent active landowners, tenants, lessees, or farmers who have transferred all their land
       const registeredSubmissions = submissions.filter(
         (sub: any) =>
-          (sub.OWNERSHIP_TYPE_REGISTERED_OWNER === true ||
-            sub.OWNERSHIP_TYPE_TENANT === true ||
-            sub.OWNERSHIP_TYPE_LESSEE === true) &&
-          sub.archived_at === null &&
           sub.status !== "inactive",
       );
 
@@ -656,10 +652,10 @@ const JoLandRegistry: React.FC = () => {
           };
         });
 
-      // Filter combined list to only active, non-archived farmers
+      // Filter combined list to non-inactive farmers
       const activeFarmerIds = new Set(
         submissions
-          .filter((sub: any) => sub.archived_at === null && sub.status !== "inactive")
+          .filter((sub: any) => sub.status !== "inactive")
           .map((sub: any) => Number(sub.id)),
       );
 
@@ -931,10 +927,7 @@ const JoLandRegistry: React.FC = () => {
 
     console.log("Fetching history for parcel IDs:", parcelIds);
 
-    if (parcelIds.length > 0) {
-      fetchParcelHistoryForIds(parcelIds);
-      console.log("fetchParcelHistoryForIds called");
-    } else {
+    if (parcelIds.length === 0) {
       setParcelHistory([]);
       console.log("No parcel IDs found for selected row.");
     }
@@ -1885,24 +1878,27 @@ const JoLandRegistry: React.FC = () => {
 
       if (hasPersistedChanges) {
         await refreshLandParcels();
-        if (selectedFarmer.parcels.length > 0) {
-          await fetchParcelHistoryForIds(
-            selectedFarmer.parcels.map((p) => p.id),
-          );
-        }
       }
     } finally {
       setIsSubmittingOwnerAffiliation(false);
     }
   };
 
-  const fetchParcelHistoryForIds = async (parcelIds: number[]) => {
+  const fetchParcelHistoryForIds = async (parcelIds: number[], parcelNumbers: string[] = []) => {
+    if (parcelIds.length === 0 && parcelNumbers.length === 0) {
+      setParcelHistory([]);
+      return;
+    }
     setHistoryLoading(true);
     try {
-      // Query both land_parcel_id and farm_parcel_id since transfer RPCs use farm_parcel_id
-      const orFilter = parcelIds
+      const idFilters = parcelIds
         .map((id) => `land_parcel_id.eq.${id},farm_parcel_id.eq.${id}`)
         .join(",");
+      const numberFilters = parcelNumbers
+        .filter(Boolean)
+        .map((num) => `parcel_number.eq.${num.trim()}`)
+        .join(",");
+      const orFilter = [idFilters, numberFilters].filter(Boolean).join(",");
 
       const { data, error } = await supabase
         .from("land_history")
@@ -1989,6 +1985,37 @@ const JoLandRegistry: React.FC = () => {
       setHistoryLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchMergedHistory = async () => {
+      const ids: number[] = [];
+      const pNumbers: string[] = [];
+
+      if (selectedFarmer) {
+        selectedFarmer.parcels.forEach((p) => {
+          ids.push(p.id);
+          if (p.parcel_number) pNumbers.push(p.parcel_number);
+        });
+      }
+
+      if (sourceRegisteredOwnerId && typeof sourceRegisteredOwnerId === "number") {
+        const donorGroup = aggregatedFarmers.find((g) => g.farmer_id === sourceRegisteredOwnerId);
+        if (donorGroup) {
+          donorGroup.parcels.forEach((p) => {
+            ids.push(p.id);
+            if (p.parcel_number) pNumbers.push(p.parcel_number);
+          });
+        }
+      }
+
+      const uniqueIds = Array.from(new Set(ids));
+      const uniquePNumbers = Array.from(new Set(pNumbers));
+
+      await fetchParcelHistoryForIds(uniqueIds, uniquePNumbers);
+    };
+
+    void fetchMergedHistory();
+  }, [selectedFarmer, sourceRegisteredOwnerId, aggregatedFarmers]);
 
   // Fetch signed URLs for proofs and open lightbox
   const handleViewProof = async (proofs: ProofItem[]) => {
@@ -2414,6 +2441,24 @@ const JoLandRegistry: React.FC = () => {
 
       const fetched = matches[0];
 
+      // Resolve the active cultivator from parcelHistory (following the timeline)
+      // We look for an active (is_current === true) record in parcelHistory for this parcel
+      const activeHistoryRecord = parcelHistory.find(
+        (h) =>
+          h.is_current &&
+          (h.farm_parcel_id === parcel.id ||
+            h.land_parcel_id === parcel.land_parcel_id ||
+            (h.parcel_number &&
+              parcel.parcel_number &&
+              normalizePN(h.parcel_number) === normalizePN(parcel.parcel_number)))
+      );
+
+      // If the active history record is a tenant or lessee, then they are the active cultivator!
+      // Otherwise, there is no active tenant/lessee cultivator.
+      const activeCultivatorName = activeHistoryRecord && (activeHistoryRecord.is_tenant || activeHistoryRecord.is_lessee)
+        ? activeHistoryRecord.farmer_name
+        : null;
+
       return {
         id: parcel.id,
         submission_id: selectedFarmer.farmer_id,
@@ -2428,11 +2473,13 @@ const JoLandRegistry: React.FC = () => {
         is_farming: fetched?.is_farming ?? null,
         farming_status_reason: fetched?.farming_status_reason ?? null,
         farming_status_updated_at: fetched?.farming_status_updated_at ?? null,
-        cultivator_submission_id: fetched?.cultivator_submission_id ?? null,
-        cultivator_name: fetched?.cultivator_name ?? null,
+        cultivator_submission_id: activeHistoryRecord && (activeHistoryRecord.is_tenant || activeHistoryRecord.is_lessee)
+          ? activeHistoryRecord.farmer_id
+          : null,
+        cultivator_name: activeCultivatorName,
       };
     });
-  }, [cultivationParcels, selectedFarmer]);
+  }, [cultivationParcels, selectedFarmer, parcelHistory]);
 
   const selectedOwnerAffiliationQuickRoleOptions = useMemo<
     ReplacementRole[]
@@ -2857,13 +2904,29 @@ const JoLandRegistry: React.FC = () => {
     : [];
 
   const donorSplitParcels: ParcelSplitInput[] = donorParcelsForTransfer.map(
-    (p) => ({
-      farm_parcel_id: p.id,
-      parcel_number: p.parcel_number,
-      farm_location_barangay: p.farm_location_barangay,
-      total_farm_area_ha: Number(p.total_farm_area_ha) || 0,
-      transfer_area_ha: "",
-    }),
+    (p) => {
+      const normalizePN = (pn: string) => normalizeParcelNumberKey(pn);
+      const activeHistoryRecord = parcelHistory.find(
+        (h) =>
+          h.is_current &&
+          (h.farm_parcel_id === p.id ||
+            (h.parcel_number &&
+              p.parcel_number &&
+              normalizePN(h.parcel_number) === normalizePN(p.parcel_number)))
+      );
+      const cultivatorName = activeHistoryRecord && (activeHistoryRecord.is_tenant || activeHistoryRecord.is_lessee)
+        ? activeHistoryRecord.farmer_name
+        : null;
+
+      return {
+        farm_parcel_id: p.id,
+        parcel_number: p.parcel_number,
+        farm_location_barangay: p.farm_location_barangay,
+        total_farm_area_ha: Number(p.total_farm_area_ha) || 0,
+        transfer_area_ha: "",
+        cultivator_name: cultivatorName,
+      };
+    },
   );
 
   const partialTotalTransferAreaHa: number = donorSplitParcels.reduce(

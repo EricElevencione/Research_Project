@@ -2115,22 +2115,30 @@ const JoLandownerRegistry: React.FC = () => {
 
                             {/* Record Status */}
                             <td>
-                              <span
-                                className={`jo-landowner-ownership-pill ${
-                                  [
-                                    "submitted",
-                                    "approved",
-                                    "active",
-                                    "active farmer",
-                                  ].includes(
-                                    (record.status || "").toLowerCase().trim(),
-                                  )
-                                    ? "jo-landowner-ownership-tenant"
-                                    : "jo-landowner-ownership-unknown"
-                                }`}
-                              >
-                                {formatRecordStatus(record.status)}
-                              </span>
+                              {(() => {
+                                const statusText = record.hasNoLand
+                                  ? "No Parcels"
+                                  : formatRecordStatus(record.status);
+
+                                const normalized = statusText.toLowerCase().trim();
+
+                                const pillModifier =
+                                  normalized === "active"
+                                    ? "jo-landowner-status-approved"
+                                    : normalized === "no parcels"
+                                      ? "jo-landowner-status-no-parcels"
+                                      : normalized === "pending review"
+                                        ? "jo-landowner-status-pending"
+                                        : normalized === "inactive" || normalized === "not submitted"
+                                          ? "jo-landowner-status-not-approved"
+                                          : "jo-landowner-status-draft";
+
+                                return (
+                                  <span className={`jo-landowner-status-pill ${pillModifier}`}>
+                                    {statusText}
+                                  </span>
+                                );
+                              })()}
                             </td>
                           </tr>
 

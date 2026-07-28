@@ -2040,7 +2040,8 @@ export const getFarmParcelsWithOccupants = async (
   }
 
   const occupiedByParcels = ((occupiedByParcelsRaw as any[]) || []).filter(
-    (p: any) => p.is_current_owner !== false
+    (p: any) =>
+      p.ownership_type_tenant === true || p.ownership_type_lessee === true
   );
 
   // Fetch farmer names for occupants submission IDs

@@ -102,6 +102,28 @@ export const PartialParcelTransferSection: React.FC<Props> = ({
                       ? `Selected to Transfer: full ${parcel.total_farm_area_ha.toFixed(4)} ha`
                       : "Click checkbox to select this parcel"}
                   </div>
+
+                  {/* Cultivator notification warning */}
+                  {parcel.cultivator_name && (
+                    <div
+                      style={{
+                        marginTop: "8px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        color: "#b45309",
+                        backgroundColor: "#fef3c7",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid #fde68a",
+                        width: "fit-content",
+                      }}
+                    >
+                      ⚠️ Currently farmed by tenant: <strong>{parcel.cultivator_name}</strong>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

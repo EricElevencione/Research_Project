@@ -523,7 +523,7 @@
 .jo-landowner-status-pill {
   display: inline-block;
   padding: 3px 7px;
-  border-radius: 20px;
+  border-radius: 7px;
   font-size: 10.5px;
   font-weight: 700;
   text-align: center;
@@ -564,6 +564,46 @@
   background: #fef3c7;
   color: #92400e;
   border: 1px solid #f59e0b;
+}
+
+/* ── Status Pills ──────────────────────────── */
+.jo-landowner-status-pill {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.jo-landowner-status-approved {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+.jo-landowner-status-not-approved {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+.jo-landowner-status-pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+.jo-landowner-status-draft {
+  background: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
+}
+.jo-landowner-status-no-parcels {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
 }
 
 /* ── Ownership Pills ───────────────────────── */
@@ -1216,7 +1256,7 @@ tr.jo-row--flagged td {
   border-bottom: 1px solid #e0d9fc;
 }
 
-.jo-landowner-tenant-subrow>td {
+.jo-landowner-tenant-subrow > td {
   padding: 0 !important;
   border-bottom: 2px solid #c4b5fd !important;
 }
@@ -1343,4 +1383,3 @@ tr.jo-row--flagged td {
   color: #6b7280;
   font-size: 11px;
 }
-

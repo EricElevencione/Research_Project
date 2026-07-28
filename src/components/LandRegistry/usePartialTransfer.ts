@@ -21,6 +21,7 @@ export interface ParcelSplitInput {
   farm_location_barangay: string;
   total_farm_area_ha: number; // current area (donor side)
   transfer_area_ha: number | ""; // user input: portion being transferred
+  cultivator_name?: string | null; // name of current tenant/lessee if any
 }
 
 export interface TransferProofUpload {

@@ -230,7 +230,6 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
     return diffDays <= GRACE_PERIOD_DAYS;
   })();
 
-  const isNewRecord = isWithinGracePeriod;
 
   const isMismatchedActive =
     !isWithinGracePeriod &&
@@ -373,32 +372,6 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
           </div>
         )}
 
-        {/* Soft informational note for newly registered landowners (within 30-day grace period).
-            These records are expected to have unoccupied parcels — they were just created. */}
-        {isNewRecord && parcels.length > 0 && parcels.every((p) => {
-          const isFarming = isParcelFarming(p) === true;
-          const hasOccupants = (p.occupants || []).length > 0;
-          return !isFarming && !hasOccupants;
-        }) && (
-          <div style={{
-            margin: "12px 20px 0",
-            padding: "12px 16px",
-            background: "#eff6ff",
-            borderLeft: "4px solid #3b82f6",
-            borderRadius: "8px",
-            fontSize: "13px",
-            color: "#1e40af",
-            lineHeight: "1.5",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "8px",
-          }}>
-            <span style={{ fontSize: "15px", flexShrink: 0 }}>ℹ️</span>
-            <div>
-              <strong>Newly registered landowner.</strong> This record was created within the last {GRACE_PERIOD_DAYS} days. It's normal for parcels to be unoccupied at this stage — tenants or lessees can be assigned once the land arrangement is confirmed.
-            </div>
-          </div>
-        )}
 
         {/* ── Hero Banner ── */}
         <div className="farmer-profile-hero">

@@ -2221,42 +2221,34 @@ const JoFarmerRegistry: React.FC = () => {
 
                         {/* Record status */}
                         <td>
-                          <span
-                            className="jo-farmer-record-status"
-                            style={
-                              record.hasNoParcels || record.hasNoLandOwner
-                                ? {
-                                    background: "#fee2e2",
-                                    color: "#991b1b",
-                                    border: "1px solid #fca5a5",
-                                    borderRadius: 4,
-                                    padding: "2px 8px",
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    whiteSpace: "nowrap",
-                                  }
-                                : record.needsPendingReview
-                                  ? {
-                                      background: "#fef3c7",
-                                      color: "#92400e",
-                                      border: "1px solid #fcd34d",
-                                      borderRadius: 4,
-                                      padding: "2px 8px",
-                                      fontSize: 12,
-                                      fontWeight: 500,
-                                      whiteSpace: "nowrap",
-                                    }
-                                  : undefined
-                            }
-                          >
-                            {record.hasNoLandOwner
-                              ? "No Land Owner" // tenant/lessee with no landowner filled
+                          {(() => {
+                            const statusText = record.hasNoLandOwner
+                              ? "No Land Owner"
                               : record.hasNoParcels
-                                ? "No Parcels" // owner with no parcel on record
+                                ? "No Parcels"
                                 : record.needsPendingReview
                                   ? "Pending Review"
-                                  : formatRecordStatus(record.status)}
-                          </span>
+                                  : formatRecordStatus(record.status);
+
+                            const normalized = statusText.toLowerCase().trim();
+
+                            const pillModifier =
+                              normalized === "active"
+                                ? "jo-farmer-status-approved"
+                                : normalized === "no parcels" || normalized === "no land owner"
+                                  ? "jo-farmer-status-no-parcels"
+                                  : normalized === "pending review"
+                                    ? "jo-farmer-status-pending"
+                                    : normalized === "inactive" || normalized === "not submitted"
+                                      ? "jo-farmer-status-not-approved"
+                                      : "jo-farmer-status-draft";
+
+                            return (
+                              <span className={`jo-farmer-status-pill ${pillModifier}`}>
+                                {statusText}
+                              </span>
+                            );
+                          })()}
                         </td>
 
                         {/* Actions */}
