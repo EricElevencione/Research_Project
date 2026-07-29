@@ -3856,9 +3856,10 @@ export const getLandOwners = async (): Promise<ApiResponse> => {
   const { data, error } = await supabase
     .from("rsbsa_submission")
     .select(
-      'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY", "MUNICIPALITY"',
+      'id, "FIRST NAME", "LAST NAME", "MIDDLE NAME", "BARANGAY", "MUNICIPALITY", status, archived_at',
     )
-    .in("id", ownerIds);
+    .in("id", ownerIds)
+    .is("archived_at", null);
 
   if (error) {
     console.error("getLandOwners error:", error);
@@ -3898,8 +3899,24 @@ export const getLandOwners = async (): Promise<ApiResponse> => {
     isRegisteredFarmerByOwnerId.set(ownerId, row?.is_active_farmer === true);
   });
 
-  // Transform to expected format with full name
+  // Transform to expected format with full name, excluding inactive or 0-parcel owners
   const landOwners = (data || [])
+    .filter((row: any) => {
+      if (row.archived_at) return false;
+      const status = (row.status || "").toLowerCase().trim();
+      if (
+        status === "inactive" ||
+        status === "not active" ||
+        status === "no parcels"
+      ) {
+        return false;
+      }
+      const ownerId = Number(row.id);
+      const count = Number.isFinite(ownerId)
+        ? parcelCountByOwnerId.get(ownerId) || 0
+        : 0;
+      return count > 0;
+    })
     .map((row: any) => {
       const ownerId = Number(row.id);
       return {
@@ -3909,6 +3926,7 @@ export const getLandOwners = async (): Promise<ApiResponse> => {
           .trim(),
         barangay: row["BARANGAY"] || "",
         municipality: row["MUNICIPALITY"] || "Dumangas",
+        status: row.status || "",
         parcelCount: Number.isFinite(ownerId)
           ? parcelCountByOwnerId.get(ownerId) || 0
           : 0,

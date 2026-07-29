@@ -145,6 +145,7 @@ DECLARE
     v_assigned_count     int  := 0;
     v_skipped_count      int  := 0;
     v_notes_payload      text := NULL;
+    v_old_tenant_id      bigint;
 BEGIN
     -- 1. Validate inputs
     IF p_role NOT IN ('tenant', 'lessee') THEN
@@ -215,12 +216,33 @@ BEGIN
             CONTINUE;
         END IF;
 
+        -- Step 0: Deactivate/delete any existing active tenant/lessee copies of this parcel
+        -- and sync their status to prevent multiple active tenants.
+        FOR v_old_tenant_id IN
+            SELECT DISTINCT submission_id 
+              FROM public.rsbsa_farm_parcels fp
+             WHERE (fp.parcel_number IS NOT NULL AND v_parcel.parcel_number IS NOT NULL AND lower(trim(fp.parcel_number)) = lower(trim(v_parcel.parcel_number)))
+               AND (fp.ownership_type_tenant = true OR fp.ownership_type_lessee = true)
+               AND (fp.tenant_land_owner_id = p_current_holder_id OR fp.lessee_land_owner_id = p_current_holder_id)
+               AND fp.submission_id <> p_replacement_holder_id
+        LOOP
+            -- Delete the old tenant's farm parcel record
+            DELETE FROM public.rsbsa_farm_parcels fp 
+             WHERE fp.submission_id = v_old_tenant_id 
+               AND (fp.parcel_number IS NOT NULL AND v_parcel.parcel_number IS NOT NULL AND lower(trim(fp.parcel_number)) = lower(trim(v_parcel.parcel_number))) 
+               AND (fp.ownership_type_tenant = true OR fp.ownership_type_lessee = true);
+            
+            -- Sync status for the old tenant
+            PERFORM public.sync_farmer_no_parcels_status(v_old_tenant_id);
+        END LOOP;
+
         -- Step A: Update landowner's parcel row to show it is cultivated by the tenant
         UPDATE rsbsa_farm_parcels
            SET is_cultivating = false,
                cultivator_submission_id = p_replacement_holder_id,
                cultivation_status_updated_at = CURRENT_TIMESTAMP,
                cultivation_status_reason = 'Cultivated by ' || p_role || ': ' || v_replacement_name,
+               farming_status_reason = 'Cultivated by ' || p_role || ': ' || v_replacement_name,
                updated_at = CURRENT_TIMESTAMP
          WHERE id = v_farm_parcel_id;
 
@@ -365,6 +387,49 @@ END;
 $function$;
 `;
 
+const sqlUpdateTriggerFunction = `
+CREATE OR REPLACE FUNCTION public.land_history_keep_single_current()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF coalesce(new.is_current, false) = true THEN
+    -- Case A: New record is a tenant/lessee. Deactivate other active tenants/lessees.
+    IF new.is_tenant = true OR new.is_lessee = true THEN
+      UPDATE public.land_history lh
+         SET is_current = false,
+             period_end_date = coalesce(lh.period_end_date, coalesce(new.period_start_date, current_date)),
+             updated_at = now()
+       WHERE lh.is_current = true
+         AND lh.id <> coalesce(new.id, -1)
+         AND (
+           (lh.land_parcel_id IS NOT NULL AND new.land_parcel_id IS NOT NULL AND lh.land_parcel_id = new.land_parcel_id)
+           OR (lh.parcel_number IS NOT NULL AND new.parcel_number IS NOT NULL AND lower(trim(lh.parcel_number)) = lower(trim(new.parcel_number)))
+         )
+         AND (lh.is_tenant = true OR lh.is_lessee = true);
+    END IF;
+
+    -- Case B: New record is a registered owner (ownership transfer). Deactivate other active owners.
+    IF new.is_registered_owner = true THEN
+      UPDATE public.land_history lh
+         SET is_current = false,
+             period_end_date = coalesce(lh.period_end_date, coalesce(new.period_start_date, current_date)),
+             updated_at = now()
+       WHERE lh.is_current = true
+         AND lh.id <> coalesce(new.id, -1)
+         AND (
+           (lh.land_parcel_id IS NOT NULL AND new.land_parcel_id IS NOT NULL AND lh.land_parcel_id = new.land_parcel_id)
+           OR (lh.parcel_number IS NOT NULL AND new.parcel_number IS NOT NULL AND lower(trim(lh.parcel_number)) = lower(trim(new.parcel_number)))
+         )
+         AND lh.is_registered_owner = true;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+`;
+
 async function main() {
   const pool = createPool();
   try {
@@ -375,6 +440,10 @@ async function main() {
     console.log("Updating replace_tenant_lessee_holder_with_portions_no_review...");
     await pool.query(sqlReplaceTenantLesseeHolder);
     console.log("✅ replace_tenant_lessee_holder_with_portions_no_review updated!");
+
+    console.log("Updating land_history_keep_single_current trigger function...");
+    await pool.query(sqlUpdateTriggerFunction);
+    console.log("✅ land_history_keep_single_current updated!");
 
   } catch (err) {
     console.error("❌ SQL updates failed:", err);

@@ -864,21 +864,27 @@ const JoFarmerRegistry: React.FC = () => {
           const farmingParcelCount =
             tenantLesseeFarmingCountById.get(r.id) ?? null;
 
+          const isOwner =
+            r.ownershipType?.registeredOwner === true ||
+            r.ownershipType?.category === "registeredOwner";
+
+          const effectiveParcelCount = isOwner
+            ? (r.parcelCount || 0) + tenureParcelCount
+            : isTenantLesseeRecord
+              ? tenureParcelCount
+              : r.parcelCount;
+
           return {
             ...r,
             needsPendingReview: transferredIds.has(r.id),
-            parcelCount: isTenantLesseeRecord
-              ? tenureParcelCount
-              : r.parcelCount,
+            parcelCount: effectiveParcelCount,
             tenureParcelCount: isTenantLesseeRecord
               ? tenureParcelCount
               : r.tenureParcelCount,
             farmingParcelCount: isTenantLesseeRecord
               ? farmingParcelCount
               : r.farmingParcelCount,
-            hasNoParcels: isTenantLesseeRecord
-              ? tenureParcelCount === 0
-              : r.hasNoParcels,
+            hasNoParcels: effectiveParcelCount === 0,
             hasNoLandOwner:
               isTenantLesseeRecord &&
               tenureParcelCount > 0 &&

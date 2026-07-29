@@ -44,6 +44,7 @@ interface LandOwner {
   barangay?: string;
   municipality?: string;
   parcelCount?: number;
+  status?: string;
   isRegisteredFarmer?: boolean;
 }
 
@@ -979,21 +980,42 @@ const JoRsbsa: React.FC = () => {
     };
   };
 
-  // Filter land owners based on search term
+  // Filter land owners based on search term, requiring active status and >0 parcels, and excluding the self landowner
   const filteredLandOwners = useMemo(
     () =>
-      landowners.filter((o) =>
-        o.name.toLowerCase().includes(landOwnerSearchTerm.toLowerCase()),
-      ),
-    [landowners, landOwnerSearchTerm],
+      landowners.filter((o) => {
+        const matchesName = o.name
+          .toLowerCase()
+          .includes(landOwnerSearchTerm.toLowerCase());
+        const hasParcels = (o.parcelCount ?? 0) > 0;
+        const status = (o.status || "").toLowerCase().trim();
+        const isActive =
+          status !== "inactive" &&
+          status !== "not active" &&
+          status !== "no parcels";
+        const isNotSelf =
+          !selectedSelfLandOwner ||
+          String(o.id) !== String(selectedSelfLandOwner.id);
+        return matchesName && hasParcels && isActive && isNotSelf;
+      }),
+    [landowners, landOwnerSearchTerm, selectedSelfLandOwner],
   );
 
   // Filter landowners for the self-search in Step 1 (YES path)
   const filteredSelfOwners = useMemo(
     () =>
-      landowners.filter((o) =>
-        o.name.toLowerCase().includes(selfSearchTerm.toLowerCase()),
-      ),
+      landowners.filter((o) => {
+        const matchesName = o.name
+          .toLowerCase()
+          .includes(selfSearchTerm.toLowerCase());
+        const hasParcels = (o.parcelCount ?? 0) > 0;
+        const status = (o.status || "").toLowerCase().trim();
+        const isActive =
+          status !== "inactive" &&
+          status !== "not active" &&
+          status !== "no parcels";
+        return matchesName && hasParcels && isActive;
+      }),
     [landowners, selfSearchTerm],
   );
 
