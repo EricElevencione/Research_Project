@@ -179,6 +179,12 @@
   gap: 20px;
 }
 
+.jo-allocation-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
 /* Form Field Container */
 .jo-allocation-field {
   display: flex;
@@ -459,7 +465,8 @@
     padding: 24px;
   }
 
-  .jo-allocation-grid-2 {
+  .jo-allocation-grid-2,
+  .jo-allocation-grid-3 {
     grid-template-columns: 1fr;
     gap: 16px;
   }

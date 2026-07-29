@@ -18,6 +18,111 @@ import "../../assets/css/jo css/JoCreateAllocationStyle.css";
 import "../../components/layout/sidebarStyle.css";
 import RegionSidebar from "../../components/layout/RegionSidebar";
 
+const ILOILO_MUNICIPALITIES = [
+  "Ajuy", "Alimodian", "Anilao", "Badiangan", "Balasan", "Banate", "Barotac Nuevo", 
+  "Barotac Viejo", "Batad", "Bingawan", "Cabatuan", "Calinog", "Carles", "Concepcion", 
+  "Dingle", "Dueñas", "Dumangas", "Estancia", "Guimbal", "Igbaras", "Janiuay", 
+  "Lambunao", "Leganes", "Lemery", "Leon", "Maasin", "Miagao", "Mina", "New Lucena", 
+  "Oton", "Pavia", "Pototan", "San Dionisio", "San Enrique", "San Joaquin", "San Miguel", 
+  "San Rafael", "Santa Barbara", "Sara", "Tigbauan", "Tubungan", "Zarraga"
+];
+
+const MunicipalitySelect: React.FC<{
+  value: string;
+  onChange: (val: string) => void;
+  required?: boolean;
+}> = ({ value, onChange, required }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [lastSelected, setLastSelected] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const cached = localStorage.getItem("lastSelectedMunicipality");
+    if (cached) setLastSelected(cached);
+  }, []);
+
+  const handleSelect = (muni: string) => {
+    onChange(muni);
+    localStorage.setItem("lastSelectedMunicipality", muni);
+    setLastSelected(muni);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const filtered = ILOILO_MUNICIPALITIES.filter(m => m.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
+      <input
+        type="text"
+        className="jo-allocation-input"
+        placeholder={value || "Search Municipality..."}
+        value={isOpen ? searchTerm : value}
+        onChange={(e) => {
+          setSearchTerm(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        required={required && !value}
+      />
+      {isOpen && (
+        <div style={{ 
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50, 
+          background: "#fff", border: "1px solid #e2e8f0", borderRadius: "6px", 
+          maxHeight: "250px", overflowY: "auto", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+          marginTop: "4px"
+        }}>
+          {lastSelected && !searchTerm && (
+            <>
+              <div style={{ padding: "8px 12px", fontWeight: "600", background: "#f8fafc", fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Last Selected
+              </div>
+              <div 
+                style={{ padding: "10px 12px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", color: "#334155" }}
+                onClick={() => handleSelect(lastSelected)}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                {lastSelected}
+              </div>
+              <div style={{ padding: "8px 12px", fontWeight: "600", background: "#f8fafc", fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                All Municipalities
+              </div>
+            </>
+          )}
+          {filtered.length > 0 ? (
+            filtered.map(m => (
+              <div 
+                key={m} 
+                style={{ padding: "10px 12px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", color: "#334155" }}
+                onClick={() => handleSelect(m)}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                {m}
+              </div>
+            ))
+          ) : (
+             <div style={{ padding: "10px 12px", color: "#94a3b8", fontStyle: "italic" }}>No results found</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 type NumericInput = number | "";
 
 type AllocationNumericField =
@@ -225,6 +330,7 @@ const RegionCreateAllocation: React.FC = () => {
   const todayDate = new Date().toISOString().split("T")[0];
   const [formData, setFormData] = useState({
     season: "", // This will now store the "Program Name"
+    municipality: "",
     allocation_date: todayDate,
     notes: "",
   });
@@ -281,6 +387,7 @@ const RegionCreateAllocation: React.FC = () => {
       const data = response.data;
       setFormData({
         season: data.season,
+        municipality: data.municipality || "",
         allocation_date: data.allocation_date,
         notes: data.notes || "",
       });
@@ -440,6 +547,7 @@ const RegionCreateAllocation: React.FC = () => {
     try {
       const payload: Record<string, string | number> = {
         season: formData.season,
+        municipality: formData.municipality,
         allocation_date: formData.allocation_date,
         notes: formData.notes,
       };
@@ -542,7 +650,7 @@ const RegionCreateAllocation: React.FC = () => {
                 <h3 className="jo-allocation-section-title">
                   Program Information
                 </h3>
-                <div className="jo-allocation-grid-2">
+                <div className="jo-allocation-grid-3">
                   <div className="jo-allocation-field">
                     <label className="jo-allocation-label">
                       Allocation Date{" "}
@@ -570,6 +678,17 @@ const RegionCreateAllocation: React.FC = () => {
                       required
                       className="jo-allocation-input"
                       placeholder="e.g. Rice Subsidy 2024"
+                    />
+                  </div>
+                  <div className="jo-allocation-field">
+                    <label className="jo-allocation-label">
+                      Municipality{" "}
+                      <span className="jo-allocation-required">*</span>
+                    </label>
+                    <MunicipalitySelect
+                      value={formData.municipality}
+                      onChange={(val) => setFormData((prev) => ({ ...prev, municipality: val }))}
+                      required
                     />
                   </div>
                 </div>
