@@ -26,6 +26,7 @@ export interface SeasonAllocation {
   approvedRequests: number;
   distributedRequests: number;
   claimedCount: number;
+  status: string;
 }
 
 export interface ClaimRateTrend {
@@ -273,8 +274,16 @@ export const useAdminDashboardStats = (
 
       // ── Season Comparison ─────────────────────────────────
       // Build one entry per allocation row (not per unique season)
-      // Sort by allocation_date ascending
+      // Sort by status (active first) then by allocation_date ascending
       const sortedAllocations = [...allocations].sort((a: any, b: any) => {
+        const statusA = (a.status || 'active').toLowerCase();
+        const statusB = (b.status || 'active').toLowerCase();
+        
+        if (statusA !== statusB) {
+          if (statusA === 'active') return -1;
+          if (statusB === 'active') return 1;
+        }
+
         const dateA = a.allocation_date || "";
         const dateB = b.allocation_date || "";
         return dateA.localeCompare(dateB);
@@ -341,6 +350,7 @@ export const useAdminDashboardStats = (
             ).length,
             claimedCount: allocDists.filter((d: any) => d.claimed === true)
               .length,
+            status: allocation.status || 'active',
           };
         },
       );
@@ -424,47 +434,20 @@ export const useAdminDashboardStats = (
       // Calculate totals for allocated vs distributed (ACTIVE programs only)
       const subsidyMap = new Map<string, { allocated: number; requested: number; distributed: number }>();
 
-      if (!selectedAllocationId) {
-        // MASTER VIEW: Pull directly from the new `inventory` table
-        // Show ALL products (even 0 stock) — current stock = stock_qty - used_qty
-        inventory.forEach((item: any) => {
-          const stockQty = Number(item.stock_qty) || 0;
-          const usedQty  = Number(item.used_qty)  || 0;
-          const currentStock = Math.max(0, stockQty - usedQty);
+      const filteredAllocations = selectedAllocationId
+        ? allocations.filter((a: any) => a.id === selectedAllocationId)
+        : activeAllocations;
 
-          // Resolve human-readable name from catalog tables
-          let displayName: string;
-          if (item.product_type === 'seed') {
-            displayName = seedNameMap.get(item.product_id) || item.product_id;
-          } else {
-            displayName = fertNameMap.get(item.product_id) || item.product_id;
+      filteredAllocations.forEach((a: any) => {
+        const fields = Object.keys(a).filter(k => k.includes('_bags') || k.includes('_kg') || k.includes('_liters'));
+        fields.forEach(field => {
+          const val = Number(a[field]) || 0;
+          if (val > 0) {
+            const current = subsidyMap.get(field) || { allocated: 0, requested: 0, distributed: 0 };
+            subsidyMap.set(field, { ...current, allocated: current.allocated + val });
           }
-
-          subsidyMap.set(item.product_id, {
-            allocated: stockQty,       // total stock received
-            requested: 0,
-            distributed: usedQty,      // amount used
-            // We store displayName temporarily via a side-channel below
-          });
-
-          // Override the id→name mapping so the breakdown uses the real name
-          (subsidyMap as any).set(`__name__${item.product_id}`, displayName);
         });
-      } else {
-        // SPECIFIC PROGRAM VIEW: Fallback to summing up regional_allocations
-        const filteredAllocations = allocations.filter((a: any) => a.id === selectedAllocationId);
-
-        filteredAllocations.forEach((a: any) => {
-          const fields = Object.keys(a).filter(k => k.includes('_bags') || k.includes('_kg') || k.includes('_liters'));
-          fields.forEach(field => {
-            const val = Number(a[field]) || 0;
-            if (val > 0) {
-              const current = subsidyMap.get(field) || { allocated: 0, requested: 0, distributed: 0 };
-              subsidyMap.set(field, { ...current, allocated: current.allocated + val });
-            }
-          });
-        });
-      }
+      });
 
       // Requested vs Distributed amounts
       // Filter requests by allocation if selected

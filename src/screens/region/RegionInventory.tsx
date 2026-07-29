@@ -1,10 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  useAdminDashboardStats,
-  SubsidyStock,
-  ExcessInventoryItem,
-} from "../../hooks/useAdminDashboardStats";
+import { useRegionInventory, RegionInventoryItem } from "../../hooks/useRegionInventory";
+import { useAdminDashboardStats } from "../../hooks/useAdminDashboardStats";
 import RegionSidebar from "../../components/layout/RegionSidebar";
 import {
   Package,
@@ -33,6 +30,11 @@ const RegionInventory: React.FC = () => {
   const [selectedAllocationId, setSelectedAllocationId] = useState<
     number | undefined
   >(undefined);
+
+  // Region inventory reads from the `inventory` table (per-product stock)
+  const invData = useRegionInventory(selectedAllocationId);
+
+  // Admin stats still used for Traceability and Excess tabs
   const dashData = useAdminDashboardStats(selectedAllocationId);
 
   const hybridKeywords = ["Jackpot", "US88", "TH82", "RH9000", "Mestiso"];
@@ -45,60 +47,31 @@ const RegionInventory: React.FC = () => {
   >("overview");
 
   const categorizedData = useMemo(() => {
-    const data = dashData.subsidyBreakdown;
+    const seeds = invData.items.filter(i => i.productType === 'seed');
+    const ferts = invData.items.filter(i => i.productType === 'fertilizer');
 
-    const result = {
+    const isLiquidName = (name: string) =>
+      name.toLowerCase().includes("liquid") ||
+      name.toLowerCase().includes("liters") ||
+      name.toLowerCase().includes("foliar") ||
+      name.toLowerCase().includes("biofertilizer");
+
+    const isHybridName = (name: string) =>
+      hybridKeywords.some(k => name.toLowerCase().includes(k.toLowerCase()));
+
+    return {
       seeds: {
-        hybrid: [] as SubsidyStock[],
-        inbred: [] as SubsidyStock[],
-        all: [] as SubsidyStock[],
+        hybrid: seeds.filter(i => isHybridName(i.name)),
+        inbred: seeds.filter(i => !isHybridName(i.name)),
+        all: seeds,
       },
       fertilizers: {
-        solid: [] as SubsidyStock[],
-        liquid: [] as SubsidyStock[],
-        all: [] as SubsidyStock[],
+        solid: ferts.filter(i => !isLiquidName(i.name)),
+        liquid: ferts.filter(i => isLiquidName(i.name)),
+        all: ferts,
       },
     };
-
-    data.forEach((item) => {
-      const name = item.name.toLowerCase();
-
-      const isLiquid =
-        name.includes("region-inv-liquid") ||
-        name.includes("liters") ||
-        name.includes("foliar") ||
-        name.includes("biofertilizer");
-      const isFertilizer =
-        name.includes("urea") ||
-        name.includes("complete") ||
-        name.includes("sulfate") ||
-        name.includes("potash") ||
-        name.includes("manure") ||
-        name.includes("compost") ||
-        isLiquid;
-
-      if (isFertilizer) {
-        result.fertilizers.all.push(item);
-        if (isLiquid) {
-          result.fertilizers.liquid.push(item);
-        } else {
-          result.fertilizers.solid.push(item);
-        }
-      } else {
-        result.seeds.all.push(item);
-        const isHybrid = hybridKeywords.some((keyword) =>
-          item.name.toLowerCase().includes(keyword.toLowerCase()),
-        );
-        if (isHybrid) {
-          result.seeds.hybrid.push(item);
-        } else {
-          result.seeds.inbred.push(item);
-        }
-      }
-    });
-
-    return result;
-  }, [dashData.subsidyBreakdown]);
+  }, [invData.items]);
 
   const InventoryTable = ({
     title,
@@ -110,171 +83,193 @@ const RegionInventory: React.FC = () => {
     categoryHeader = "Category",
   }: {
     title: string;
-    items: SubsidyStock[];
+    items: RegionInventoryItem[];
     icon: React.ReactNode;
     colorClass: string;
     showHeader?: boolean;
     showCategory?: boolean;
     categoryHeader?: string;
-  }) => (
-    <div
-      className={`region-inv-category-card ${colorClass} ${!showHeader ? "region-inv-no-header" : ""}`}
-    >
-      {showHeader && (
-        <div className="region-inv-category-header">
-          <div className="region-inv-category-icon">{icon}</div>
-          <div className="region-inv-category-title-group">
-            <h3>{title}</h3>
-            <span className="region-inv-count">{items.length} Items</span>
+  }) => {
+    // Determine accent color from colorClass
+    const accentColor =
+      colorClass === 'region-inv-hybrid' ? '#16a34a' :
+      colorClass === 'region-inv-inbred' ? '#0ea5e9' :
+      colorClass === 'region-inv-solid'  ? '#f59e0b' :
+      colorClass === 'region-inv-liquid' ? '#8b5cf6' : '#16a34a';
+
+    return (
+      <div style={{
+        background: '#fff',
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        marginBottom: '20px',
+      }}>
+        {showHeader && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '14px 20px',
+            borderBottom: '1px solid #f3f4f6',
+            background: '#fafafa',
+          }}>
+            <span style={{ color: accentColor, display: 'flex', alignItems: 'center' }}>{icon}</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '14px', color: '#111827' }}>{title}</div>
+              <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '1px' }}>{items.length} varieties</div>
+            </div>
+            <div style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              gap: '6px',
+              alignItems: 'center',
+            }}>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                background: accentColor + '18',
+                color: accentColor,
+                letterSpacing: '0.3px',
+              }}>
+                {items.filter(i => i.remaining > 0).length} In Stock
+              </span>
+              {items.filter(i => i.remaining === 0).length > 0 && (
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  background: '#fef2f2',
+                  color: '#ef4444',
+                }}>
+                  {items.filter(i => i.remaining === 0).length} Empty
+                </span>
+              )}
+            </div>
           </div>
-          <div className="inventory-category-actions">
-            <button
-              className="region-inv-btn-mini"
-              onClick={() => navigate("/admin-create-allocation")}
-            >
-              Add Stock
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="region-inventory-table-container">
-        <table className="region-inventory-farmers-table">
-          <thead>
-            <tr>
-              <th>Item Name</th>
-              {showCategory && <th>{categoryHeader}</th>}
-              <th>Total Stock</th>
-              <th>Requested</th>
-              <th>Used</th>
-              <th>Current Stock</th>
-              <th>Usage</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 ? (
-              <tr>
-                <td colSpan={showCategory ? 7 : 6} className="region-inv-empty">
-                  No items found in this category
-                </td>
+        )}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 600, color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Item Name</th>
+                {showCategory && <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{categoryHeader}</th>}
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Total Stock</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Used</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Remaining</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: '#6b7280', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.4px', width: '120px' }}>Usage</th>
               </tr>
-            ) : (
-              items.map((item, idx) => {
-                const progress =
-                  item.allocated > 0
-                    ? (item.distributed / item.allocated) * 100
-                    : 0;
-                const isLow =
-                  item.remaining > 0 && item.remaining < item.allocated * 0.15;
-                const isOut = item.remaining === 0;
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={showCategory ? 6 : 5} style={{ padding: '28px 16px', textAlign: 'center', color: '#9ca3af', fontStyle: 'italic', fontSize: '13px' }}>
+                    No items in this category
+                  </td>
+                </tr>
+              ) : (
+                items.map((item, idx) => {
+                  const progress = item.allocated > 0 ? (item.distributed / item.allocated) * 100 : 0;
+                  const isLow = item.remaining > 0 && item.remaining < item.allocated * 0.15;
+                  const isOut = item.remaining === 0 && item.allocated > 0;
+                  const neverStocked = item.allocated === 0;
 
-                let categoryLabel = "";
-                if (showCategory) {
-                  const name = item.name.toLowerCase();
-                  const isFert =
-                    name.includes("urea") ||
-                    name.includes("complete") ||
-                    name.includes("sulfate") ||
-                    name.includes("potash") ||
-                    name.includes("manure") ||
-                    name.includes("compost") ||
-                    name.includes("region-inv-liquid") ||
-                    name.includes("liters");
-
-                  if (isFert) {
-                    const isLiquid =
-                      name.includes("region-inv-liquid") ||
-                      name.includes("liters") ||
-                      name.includes("foliar") ||
-                      name.includes("biofertilizer");
-                    categoryLabel = isLiquid ? "Liquid" : "Solid";
-                  } else {
-                    const isHybrid = hybridKeywords.some((keyword) =>
-                      item.name.toLowerCase().includes(keyword.toLowerCase()),
-                    );
-                    categoryLabel = isHybrid ? "Hybrid" : "Inbred";
+                  let categoryLabel = '';
+                  if (showCategory) {
+                    const name = item.name.toLowerCase();
+                    const isLiquid = name.includes('liquid') || name.includes('liters') || name.includes('foliar') || name.includes('biofertilizer');
+                    const isFert = name.includes('urea') || name.includes('complete') || name.includes('sulfate') || name.includes('potash') || name.includes('manure') || name.includes('compost') || isLiquid;
+                    if (isFert) {
+                      categoryLabel = isLiquid ? 'Liquid' : 'Solid';
+                    } else {
+                      const isHybrid = hybridKeywords.some(k => item.name.toLowerCase().includes(k.toLowerCase()));
+                      categoryLabel = isHybrid ? 'Hybrid' : 'Inbred';
+                    }
                   }
-                }
 
-                return (
-                  <tr key={idx} className="region-inventory-table-row">
-                    <td className="region-inv-item-name-cell">
-                      <div className="region-inv-item-name-wrapper">
-                        <span
-                          className={`region-inv-item-dot ${colorClass}`}
-                        ></span>
-                        {item.name}
-                      </div>
-                    </td>
-                    {showCategory && (
-                      <td>
-                        <span
-                          className={`cat-badge ${categoryLabel.toLowerCase()}`}
-                        >
-                          {categoryLabel}
-                        </span>
-                      </td>
-                    )}
-                    <td>{item.allocated.toLocaleString()}</td>
-                    <td className="region-inv-requested-cell">
-                      {item.requested.toLocaleString()}
-                    </td>
-                    <td>{item.distributed.toLocaleString()}</td>
-                    <td
-                      className={`region-inv-remaining-cell ${isOut ? "out" : isLow ? "low" : ""}`}
+                  const badgeColor =
+                    categoryLabel === 'Hybrid' ? '#16a34a' :
+                    categoryLabel === 'Inbred' ? '#0ea5e9' :
+                    categoryLabel === 'Solid'  ? '#f59e0b' :
+                    categoryLabel === 'Liquid' ? '#8b5cf6' : accentColor;
+
+                  return (
+                    <tr key={idx} style={{
+                      borderBottom: '1px solid #f3f4f6',
+                      transition: 'background 0.15s',
+                      background: isOut ? '#fffafa' : 'transparent',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f9fafb')}
+                    onMouseLeave={e => (e.currentTarget.style.background = isOut ? '#fffafa' : 'transparent')}
                     >
-                      {isOut ? (
-                        <span
-                          className="region-inv-stock-badge out"
-                          style={{
-                            background: "#ef4444",
-                            color: "#fff",
-                            fontWeight: 700,
-                            padding: "3px 10px",
-                            borderRadius: "6px",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          ⚠ 0 — Out of Stock
-                        </span>
-                      ) : (
-                        <span className="region-inv-stock-badge">
-                          {item.remaining.toLocaleString()}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="region-inv-stock-indicator-wrapper">
-                        <div className="region-inv-stock-progress-bg">
-                          <div
-                            className="region-inv-stock-progress-fill"
-                            style={{
-                              width: `${Math.min(100, progress)}%`,
-                              background:
-                                progress > 90
-                                  ? "#ef4444"
-                                  : progress > 70
-                                    ? "#f59e0b"
-                                    : "#16a34a",
-                            }}
-                          />
+                      <td style={{ padding: '10px 16px', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                            background: neverStocked ? '#d1d5db' : isOut ? '#ef4444' : isLow ? '#f59e0b' : accentColor,
+                          }}></span>
+                          <span style={{ fontWeight: 500, color: '#111827', fontSize: '13px' }}>{item.name}</span>
                         </div>
-                        <span className="region-inv-stock-pct">
-                          {progress.toFixed(0)}%
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      </td>
+                      {showCategory && (
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '9999px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            background: badgeColor + '18',
+                            color: badgeColor,
+                          }}>{categoryLabel}</span>
+                        </td>
+                      )}
+                      <td style={{ padding: '10px 12px', textAlign: 'right', color: '#374151', fontWeight: 500 }}>
+                        {item.allocated > 0 ? item.allocated.toLocaleString() : <span style={{ color: '#d1d5db' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', color: '#6b7280' }}>
+                        {item.distributed > 0 ? item.distributed.toLocaleString() : <span style={{ color: '#d1d5db' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                        {neverStocked ? (
+                          <span style={{ color: '#9ca3af', fontSize: '12px' }}>Not stocked</span>
+                        ) : isOut ? (
+                          <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '12px' }}>Out of stock</span>
+                        ) : (
+                          <span style={{ color: isLow ? '#f59e0b' : '#16a34a', fontWeight: 600 }}>
+                            {item.remaining.toLocaleString()}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                          <div style={{ height: '6px', flex: 1, background: '#f3f4f6', borderRadius: '3px', overflow: 'hidden', minWidth: '60px' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${Math.min(100, progress)}%`,
+                              background: progress > 90 ? '#ef4444' : progress > 70 ? '#f59e0b' : accentColor,
+                              borderRadius: '3px',
+                              transition: 'width 0.6s ease',
+                            }}></div>
+                          </div>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', width: '32px', textAlign: 'right' }}>
+                            {item.allocated > 0 ? `${progress.toFixed(0)}%` : '—'}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const InventoryCategoryCard = ({ title, items, icon, colorClass }: any) => (
     <InventoryTable
@@ -414,7 +409,7 @@ const RegionInventory: React.FC = () => {
                     style={{ width: "100%" }}
                   >
                     <option value="">Master Inventory View</option>
-                    {dashData.seasonComparison.map((alloc) => (
+                    {invData.allocationOptions.map((alloc) => (
                       <option
                         key={alloc.allocationId}
                         value={alloc.allocationId}
@@ -515,7 +510,7 @@ const RegionInventory: React.FC = () => {
             </div>
           </div>
 
-          {dashData.loading ? (
+          {invData.loading ? (
             <div className="admin-viewalloc-loading">
               <div className="spinner"></div>
               Loading inventory data...
@@ -526,37 +521,59 @@ const RegionInventory: React.FC = () => {
                 Search Results for "{searchTerm}"
               </h3>
               <div className="region-inv-search-results-grid">
-                {dashData.subsidyBreakdown.filter((item) =>
+                {invData.items.filter((item) =>
                   item.name.toLowerCase().includes(searchTerm.toLowerCase()),
                 ).length === 0 ? (
                   <div className="region-inv-no-results">
                     No varieties found matching your search.
                   </div>
                 ) : (
-                  dashData.subsidyBreakdown
+                  invData.items
                     .filter((item) =>
                       item.name
                         .toLowerCase()
                         .includes(searchTerm.toLowerCase()),
                     )
                     .map((item, idx) => {
-                      const isFert =
-                        item.name.toLowerCase().includes("urea") ||
-                        item.name.toLowerCase().includes("complete") ||
-                        item.name.toLowerCase().includes("region-inv-liquid");
-                      const colorClass = isFert
-                        ? item.name.toLowerCase().includes("region-inv-liquid")
-                          ? "region-inv-liquid"
-                          : "region-inv-solid"
-                        : hybridKeywords.some((k) => item.name.includes(k))
-                          ? "region-inv-hybrid"
-                          : "region-inv-inbred";
+                      const colorClass = item.productType === 'fertilizer'
+                        ? (item.name.toLowerCase().includes("liquid") || item.name.toLowerCase().includes("foliar") ? "region-inv-liquid" : "region-inv-solid")
+                        : (hybridKeywords.some((k) => item.name.includes(k)) ? "region-inv-hybrid" : "region-inv-inbred");
                       return (
-                        <SearchCard
+                        <div
                           key={idx}
-                          item={item}
-                          colorClass={colorClass}
-                        />
+                          className={`region-inv-search-result-card ${colorClass} ${item.remaining === 0 ? "out" : item.remaining < item.allocated * 0.15 ? "low" : ""}`}
+                        >
+                          <div className="region-inv-search-card-header">
+                            <div className="region-inv-search-card-icon">
+                              {item.productType === 'seed' ? <Sprout size={20} /> : <Droplets size={20} />}
+                            </div>
+                            <div className="region-inv-search-card-title-group">
+                              <h4>{item.name}</h4>
+                              <span className="region-inv-search-card-category">{item.productType.toUpperCase()}</span>
+                            </div>
+                          </div>
+                          <div className="region-inv-search-card-stats">
+                            <div className="region-inv-search-stat">
+                              <span className="search-region-inv-stat-label">Current Stock</span>
+                              <span className="search-region-inv-stat-value">{item.remaining.toLocaleString()}</span>
+                            </div>
+                            <div className="region-inv-search-stat">
+                              <span className="search-region-inv-stat-label">Total Stock</span>
+                              <span className="search-region-inv-stat-value">{item.allocated.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <div className="region-inv-search-card-footer">
+                            <div className="region-inv-search-progress-bar">
+                              <div
+                                className="region-inv-search-progress-fill"
+                                style={{ width: `${Math.min(100, item.allocated > 0 ? (item.distributed / item.allocated) * 100 : 0)}%` }}
+                              ></div>
+                            </div>
+                            <span className="region-inv-search-progress-text">
+                              {item.allocated > 0 ? ((item.distributed / item.allocated) * 100).toFixed(0) : 0}% Used
+                            </span>
+                          </div>
+                        </div>
                       );
                     })
                 )}
@@ -673,40 +690,50 @@ const RegionInventory: React.FC = () => {
                     </div>
                   ) : (
                     <div className="inventory-master-view">
-                      <div className="region-inv-section-header-flex">
-                        <h3 className="region-inv-section-title">
-                          Master Variety Catalog
-                        </h3>
+                      {/* Seeds Section */}
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '10px', borderBottom: '2px solid #e5e7eb' }}>
+                          <Sprout size={18} style={{ color: '#16a34a' }} />
+                          <span style={{ fontWeight: 700, fontSize: '15px', color: '#111827' }}>Seeds</span>
+                          <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '4px' }}>
+                            {categorizedData.seeds.all.length} varieties
+                          </span>
+                        </div>
+                        <InventoryCategoryCard
+                          title="Hybrid Seeds"
+                          items={categorizedData.seeds.hybrid}
+                          icon={<Sprout size={16} />}
+                          colorClass="region-inv-hybrid"
+                        />
+                        <InventoryCategoryCard
+                          title="Inbred Seeds"
+                          items={categorizedData.seeds.inbred}
+                          icon={<Sprout size={16} />}
+                          colorClass="region-inv-inbred"
+                        />
                       </div>
-                      <div className="region-inv-report-tables-section">
-                        <div className="region-inv-category-row">
-                          <InventoryCategoryCard
-                            title="Hybrid Seeds"
-                            items={categorizedData.seeds.hybrid}
-                            icon={<Sprout />}
-                            colorClass="region-inv-hybrid"
-                          />
-                          <InventoryCategoryCard
-                            title="Inbred Seeds"
-                            items={categorizedData.seeds.inbred}
-                            icon={<Sprout />}
-                            colorClass="region-inv-inbred"
-                          />
+
+                      {/* Fertilizers Section */}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '10px', borderBottom: '2px solid #e5e7eb' }}>
+                          <Leaf size={18} style={{ color: '#f59e0b' }} />
+                          <span style={{ fontWeight: 700, fontSize: '15px', color: '#111827' }}>Fertilizers</span>
+                          <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '4px' }}>
+                            {categorizedData.fertilizers.all.length} varieties
+                          </span>
                         </div>
-                        <div className="region-inv-category-row">
-                          <InventoryCategoryCard
-                            title="Solid Fertilizers"
-                            items={categorizedData.fertilizers.solid}
-                            icon={<Leaf />}
-                            colorClass="region-inv-solid"
-                          />
-                          <InventoryCategoryCard
-                            title="Liquid Fertilizers"
-                            items={categorizedData.fertilizers.liquid}
-                            icon={<Leaf />}
-                            colorClass="region-inv-liquid"
-                          />
-                        </div>
+                        <InventoryCategoryCard
+                          title="Solid Fertilizers"
+                          items={categorizedData.fertilizers.solid}
+                          icon={<Leaf size={16} />}
+                          colorClass="region-inv-solid"
+                        />
+                        <InventoryCategoryCard
+                          title="Liquid Fertilizers"
+                          items={categorizedData.fertilizers.liquid}
+                          icon={<Droplets size={16} />}
+                          colorClass="region-inv-liquid"
+                        />
                       </div>
                     </div>
                   )}
@@ -1076,9 +1103,9 @@ const RegionInventory: React.FC = () => {
                 Program:{" "}
                 <strong>
                   {selectedAllocationId
-                    ? dashData.seasonComparison.find(
+                    ? invData.allocationOptions.find(
                         (a) => a.allocationId === selectedAllocationId,
-                      )?.label
+                      )?.label ?? "Master Inventory View"
                     : "Master Inventory View"}
                 </strong>
               </span>

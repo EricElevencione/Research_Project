@@ -127,14 +127,6 @@ const InventoryPage: React.FC = () => {
             <h3>{title}</h3>
             <span className="region-inv-count">{items.length} Items</span>
           </div>
-          <div className="inventory-category-actions">
-            <button
-              className="region-inv-btn-mini"
-              onClick={() => navigate("/admin-create-allocation")}
-            >
-              Add Stock
-            </button>
-          </div>
         </div>
       )}
       <div className="region-inventory-table-container">
@@ -413,7 +405,7 @@ const InventoryPage: React.FC = () => {
                     className="region-inventory-status-select"
                     style={{ width: "100%" }}
                   >
-                    <option value="">Master Inventory View</option>
+                    <option value="">All Allocated Programs</option>
                     {dashData.seasonComparison.map((alloc) => (
                       <option
                         key={alloc.allocationId}
@@ -442,21 +434,7 @@ const InventoryPage: React.FC = () => {
               </button>
 
               <div style={{ display: "flex", gap: "10px" }}>
-                <button
-                  className="inventory-btn-register"
-                  onClick={() => navigate("/admin-create-allocation")}
-                  style={{ background: "#10b981" }}
-                >
-                  <Plus size={18} />
-                  Add Stock
-                </button>
-                <button
-                  className="inventory-btn-register"
-                  onClick={() => navigate("/manage-varieties")}
-                >
-                  <Plus size={18} />
-                  Manage Varieties
-                </button>
+                {/* Add Stock and Manage Varieties buttons removed as per request */}
               </div>
             </div>
           </div>
@@ -675,38 +653,90 @@ const InventoryPage: React.FC = () => {
                     <div className="inventory-master-view">
                       <div className="region-inv-section-header-flex">
                         <h3 className="region-inv-section-title">
-                          Master Variety Catalog
+                          Allocated Programs Overview
                         </h3>
                       </div>
-                      <div className="region-inv-report-tables-section">
-                        <div className="region-inv-category-row">
-                          <InventoryCategoryCard
-                            title="Hybrid Seeds"
-                            items={categorizedData.seeds.hybrid}
-                            icon={<Sprout />}
-                            colorClass="hybrid"
-                          />
-                          <InventoryCategoryCard
-                            title="Inbred Seeds"
-                            items={categorizedData.seeds.inbred}
-                            icon={<Sprout />}
-                            colorClass="inbred"
-                          />
-                        </div>
-                        <div className="region-inv-category-row">
-                          <InventoryCategoryCard
-                            title="Solid Fertilizers"
-                            items={categorizedData.fertilizers.solid}
-                            icon={<Leaf />}
-                            colorClass="solid"
-                          />
-                          <InventoryCategoryCard
-                            title="Liquid Fertilizers"
-                            items={categorizedData.fertilizers.liquid}
-                            icon={<Leaf />}
-                            colorClass="liquid"
-                          />
-                        </div>
+                      <div className="region-inventory-table-container" style={{ marginTop: '16px' }}>
+                        <table className="region-inventory-farmers-table">
+                          <thead>
+                            <tr>
+                              <th>Program</th>
+                              <th>Allocation Date</th>
+                              <th>Total Requests</th>
+                              <th>Seeds Allocated (kg)</th>
+                              <th>Fertilizer Allocated (bags/L)</th>
+                              <th>Utilization</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dashData.seasonComparison.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="region-inv-empty">
+                                  No allocated programs found.
+                                </td>
+                              </tr>
+                            ) : (
+                              dashData.seasonComparison.map((alloc) => {
+                                const progress = alloc.totalAllocated > 0 
+                                  ? (alloc.totalDistributed / alloc.totalAllocated) * 100 
+                                  : 0;
+                                return (
+                                  <tr key={alloc.allocationId} className="region-inventory-table-row">
+                                    <td className="region-inv-item-name-cell">
+                                      <div className="region-inv-item-name-wrapper">
+                                        <span className="region-inv-item-dot inbred"></span>
+                                        {alloc.season.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                      </div>
+                                    </td>
+                                    <td>{alloc.allocationDate ? new Date(alloc.allocationDate).toLocaleDateString() : 'N/A'}</td>
+                                    <td>{alloc.totalRequests.toLocaleString()}</td>
+                                    <td>
+                                      {alloc.seedsDistributed.toLocaleString()} / <span style={{ fontWeight: 600 }}>{alloc.seedsAllocated.toLocaleString()}</span>
+                                    </td>
+                                    <td>
+                                      {alloc.fertilizerDistributed.toLocaleString()} / <span style={{ fontWeight: 600 }}>{alloc.fertilizerAllocated.toLocaleString()}</span>
+                                    </td>
+                                    <td>
+                                      <div className="region-inv-stock-indicator-wrapper">
+                                        <div className="region-inv-stock-progress-bg">
+                                          <div
+                                            className="region-inv-stock-progress-fill"
+                                            style={{
+                                              width: `${Math.min(100, progress)}%`,
+                                              background:
+                                                progress > 90
+                                                  ? "#ef4444"
+                                                  : progress > 70
+                                                    ? "#f59e0b"
+                                                    : "#16a34a",
+                                            }}
+                                          />
+                                        </div>
+                                        <span className="region-inv-stock-pct">
+                                          {progress.toFixed(0)}%
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td>
+                                      <span style={{
+                                        padding: '4px 8px',
+                                        borderRadius: '9999px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        background: alloc.status.toLowerCase() === 'closed' ? '#fee2e2' : '#dcfce3',
+                                        color: alloc.status.toLowerCase() === 'closed' ? '#ef4444' : '#16a34a'
+                                      }}>
+                                        {alloc.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   )}

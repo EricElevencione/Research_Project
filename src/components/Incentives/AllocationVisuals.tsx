@@ -21,103 +21,7 @@ interface BarangayRow {
   farmerCount: number;
 }
 
-// ─── Radial Gauge (SVG) ────────────────────────────────────
-
-interface RadialGaugeProps {
-  label: string;
-  allocated: number;
-  used: number;
-  unit: string;
-  color: string;
-  size?: number;
-}
-
-const RadialGauge: React.FC<RadialGaugeProps> = ({
-  label,
-  allocated,
-  used,
-  unit,
-  color,
-  size = 120,
-}) => {
-  const radius = (size - 16) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const pct = allocated > 0 ? Math.min((used / allocated) * 100, 100) : 0;
-  const offset = circumference - (pct / 100) * circumference;
-
-  const statusColor = pct > 100 ? "#ef4444" : pct > 80 ? "#f59e0b" : color;
-
-  const remaining = allocated - used;
-
-  return (
-    <div className="alloc-gauge-item">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Background ring */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#e5e7eb"
-          strokeWidth="10"
-        />
-        {/* Progress ring */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={statusColor}
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{ transition: "stroke-dashoffset 0.8s ease" }}
-        />
-        {/* Center text */}
-        <text
-          x={size / 2}
-          y={size / 2 - 6}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontSize="18"
-          fontWeight="700"
-          fill={statusColor}
-        >
-          {pct.toFixed(0)}%
-        </text>
-        <text
-          x={size / 2}
-          y={size / 2 + 12}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontSize="9"
-          fill="#9ca3af"
-        >
-          depleted
-        </text>
-      </svg>
-      <div className="alloc-gauge-label">{label}</div>
-      <div className="alloc-gauge-detail">
-        <span style={{ color: statusColor, fontWeight: 600 }}>
-          {used.toFixed(1)}
-        </span>
-        <span className="alloc-gauge-slash">
-          {" "}
-          / {allocated.toFixed(1)} {unit}
-        </span>
-      </div>
-      <div className={`alloc-gauge-remaining ${remaining < 0 ? "over" : ""}`}>
-        {remaining >= 0
-          ? `${remaining.toFixed(1)} ${unit} left`
-          : `${Math.abs(remaining).toFixed(1)} ${unit} over`}
-      </div>
-    </div>
-  );
-};
-
-// ─── Usage Gauges Section ──────────────────────────────────
+// ─── Usage Gauges Section (Now Tables) ─────────────────────
 
 interface UsageGaugesProps {
   fertilizers: GaugeItem[];
@@ -132,44 +36,94 @@ export const UsageGauges: React.FC<UsageGaugesProps> = ({
     <div className="alloc-gauges-section">
       {/* Fertilizers */}
       {fertilizers.length > 0 && (
-        <div className="alloc-gauges-group">
-          <div className="alloc-gauges-group-header">
-            <span className="alloc-gauges-icon">🌱</span>
-            <h3>Fertilizer Depletion</h3>
+        <div className="alloc-gauges-group" style={{ padding: '0', overflow: 'hidden' }}>
+          <div className="alloc-gauges-group-header" style={{ padding: '20px 20px 16px 20px', margin: 0, borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>Fertilizer Depletion</h3>
           </div>
-          <div className="alloc-gauges-grid">
-            {fertilizers.map((f) => (
-              <RadialGauge
-                key={f.name}
-                label={f.name}
-                allocated={f.allocated}
-                used={f.requested}
-                unit={f.unit}
-                color="#16a34a"
-              />
-            ))}
+          <div className="alloc-brgy-table-wrap">
+            <table className="alloc-brgy-table" style={{ margin: 0 }}>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th style={{ textAlign: 'right' }}>Allocated</th>
+                  <th style={{ textAlign: 'right' }}>Requested</th>
+                  <th style={{ textAlign: 'right' }}>Remaining</th>
+                  <th style={{ textAlign: 'center' }}>Depleted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fertilizers.map((f) => {
+                  const pct = f.allocated > 0 ? (f.requested / f.allocated) * 100 : 0;
+                  const remaining = f.allocated - f.requested;
+                  const isOver = remaining < 0;
+                  return (
+                    <tr key={f.name}>
+                      <td style={{ fontWeight: 600, color: '#1f2937' }}>{f.name}</td>
+                      <td style={{ textAlign: 'right' }}>{f.allocated.toLocaleString(undefined, { maximumFractionDigits: 1 })} <span style={{ color: '#9ca3af', fontSize: '11px' }}>{f.unit}</span></td>
+                      <td style={{ textAlign: 'right' }}>{f.requested.toLocaleString(undefined, { maximumFractionDigits: 1 })} <span style={{ color: '#9ca3af', fontSize: '11px' }}>{f.unit}</span></td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: isOver ? '#ef4444' : '#16a34a' }}>
+                        {Math.abs(remaining).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span style={{ color: '#9ca3af', fontSize: '11px', fontWeight: 400 }}>{isOver ? 'over' : 'left'}</span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                           <div style={{ height: '6px', width: '60px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                             <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: pct > 100 ? '#ef4444' : pct > 80 ? '#f59e0b' : '#16a34a' }}></div>
+                           </div>
+                           <span style={{ fontSize: '12px', fontWeight: 600, color: pct > 100 ? '#ef4444' : pct > 80 ? '#f59e0b' : '#374151', width: '36px', textAlign: 'right' }}>{pct.toFixed(0)}%</span>
+                         </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
       {/* Seeds */}
       {seeds.length > 0 && (
-        <div className="alloc-gauges-group">
-          <div className="alloc-gauges-group-header">
-            <span className="alloc-gauges-icon">🌾</span>
-            <h3>Seed Depletion</h3>
+        <div className="alloc-gauges-group" style={{ padding: '0', overflow: 'hidden' }}>
+          <div className="alloc-gauges-group-header" style={{ padding: '20px 20px 16px 20px', margin: 0, borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>Seed Depletion</h3>
           </div>
-          <div className="alloc-gauges-grid">
-            {seeds.map((s) => (
-              <RadialGauge
-                key={s.name}
-                label={s.name}
-                allocated={s.allocated}
-                used={s.requested}
-                unit={s.unit}
-                color="#0ea5e9"
-              />
-            ))}
+          <div className="alloc-brgy-table-wrap">
+            <table className="alloc-brgy-table" style={{ margin: 0 }}>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th style={{ textAlign: 'right' }}>Allocated</th>
+                  <th style={{ textAlign: 'right' }}>Requested</th>
+                  <th style={{ textAlign: 'right' }}>Remaining</th>
+                  <th style={{ textAlign: 'center' }}>Depleted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {seeds.map((s) => {
+                  const pct = s.allocated > 0 ? (s.requested / s.allocated) * 100 : 0;
+                  const remaining = s.allocated - s.requested;
+                  const isOver = remaining < 0;
+                  return (
+                    <tr key={s.name}>
+                      <td style={{ fontWeight: 600, color: '#1f2937' }}>{s.name}</td>
+                      <td style={{ textAlign: 'right' }}>{s.allocated.toLocaleString(undefined, { maximumFractionDigits: 1 })} <span style={{ color: '#9ca3af', fontSize: '11px' }}>{s.unit}</span></td>
+                      <td style={{ textAlign: 'right' }}>{s.requested.toLocaleString(undefined, { maximumFractionDigits: 1 })} <span style={{ color: '#9ca3af', fontSize: '11px' }}>{s.unit}</span></td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: isOver ? '#ef4444' : '#0ea5e9' }}>
+                        {Math.abs(remaining).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span style={{ color: '#9ca3af', fontSize: '11px', fontWeight: 400 }}>{isOver ? 'over' : 'left'}</span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                           <div style={{ height: '6px', width: '60px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                             <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: pct > 100 ? '#ef4444' : pct > 80 ? '#f59e0b' : '#0ea5e9' }}></div>
+                           </div>
+                           <span style={{ fontSize: '12px', fontWeight: 600, color: pct > 100 ? '#ef4444' : pct > 80 ? '#f59e0b' : '#374151', width: '36px', textAlign: 'right' }}>{pct.toFixed(0)}%</span>
+                         </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

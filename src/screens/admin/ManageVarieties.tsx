@@ -90,11 +90,18 @@ const ManageVarieties: React.FC = () => {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let res;
       if (activeType === "seeds") {
-        await addShortageSeed(formData);
+        res = await addShortageSeed(formData);
       } else {
-        await addShortageFertilizer(formData);
+        res = await addShortageFertilizer(formData);
       }
+      
+      if (res?.error) {
+        alert("Failed to add variety: " + res.error);
+        return;
+      }
+      
       setShowAddModal(false);
       resetForm();
       fetchData();
@@ -107,11 +114,18 @@ const ManageVarieties: React.FC = () => {
     e.preventDefault();
     if (!editingId) return;
     try {
+      let res;
       if (activeType === "seeds") {
-        await updateShortageSeed(editingId, formData);
+        res = await updateShortageSeed(editingId, formData);
       } else {
-        await updateShortageFertilizer(editingId, formData);
+        res = await updateShortageFertilizer(editingId, formData);
       }
+      
+      if (res?.error) {
+        alert("Failed to update variety: " + res.error);
+        return;
+      }
+
       setEditingId(null);
       resetForm();
       fetchData();
