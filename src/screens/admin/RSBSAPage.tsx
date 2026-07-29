@@ -259,13 +259,7 @@ const RsbsaAdminPage: React.FC = () => {
         summaryRecord ||
         registeredOwners.find((record) => record.id === farmerId);
 
-      const formattedSubmittedDate = (() => {
-        if (!selectedRecord?.dateSubmitted) return "N/A";
-        const parsedDate = new Date(selectedRecord.dateSubmitted);
-        return Number.isNaN(parsedDate.getTime())
-          ? "N/A"
-          : parsedDate.toLocaleDateString();
-      })();
+      const formattedSubmittedDate = selectedRecord?.dateSubmitted || "N/A";
 
       console.log("Farmer data received:", farmerData);
       console.log("Data object for activities:", data);
@@ -786,7 +780,8 @@ const RsbsaAdminPage: React.FC = () => {
 
   const formatDate = (iso: string) => {
     if (!iso) return "—";
-    const parsed = new Date(iso);
+    const normalizedIso = !/Z|[+-]\d{2}:?\d{2}$/i.test(iso) ? iso + "Z" : iso;
+    const parsed = new Date(normalizedIso);
     if (Number.isNaN(parsed.getTime())) return "—";
     const month = parsed.getMonth() + 1;
     const day = parsed.getDate();
@@ -801,7 +796,8 @@ const RsbsaAdminPage: React.FC = () => {
 
   const formatDateTime = (iso?: string) => {
     if (!iso) return "—";
-    const parsed = new Date(iso);
+    const normalizedIso = !/Z|[+-]\d{2}:?\d{2}$/i.test(iso) ? iso + "Z" : iso;
+    const parsed = new Date(normalizedIso);
     if (Number.isNaN(parsed.getTime())) return "—";
     return parsed.toLocaleString(undefined, {
       year: "numeric",
