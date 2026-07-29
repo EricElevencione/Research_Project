@@ -383,10 +383,29 @@
     justify-content: center;
 }
 
-.region-inv-hybrid .region-inv-category-icon { background: #f0fdf4; color: #16a34a; }
-.region-inv-inbred .region-inv-category-icon { background: #f0f9ff; color: #0ea5e9; }
-.region-inv-solid .region-inv-category-icon { background: #fef7ed; color: #ea580c; }
-.region-inv-liquid .region-inv-category-icon { background: #f5f3ff; color: #7c3aed; }
+.region-inv-hybrid .region-inv-category-icon,
+.hybrid .region-inv-category-icon { background: #f0fdf4; color: #16a34a; }
+.region-inv-inbred .region-inv-category-icon,
+.inbred .region-inv-category-icon { background: #f0f9ff; color: #0ea5e9; }
+.region-inv-solid .region-inv-category-icon,
+.solid .region-inv-category-icon { background: #fef7ed; color: #ea580c; }
+.region-inv-liquid .region-inv-category-icon,
+.liquid .region-inv-category-icon { background: #f5f3ff; color: #7c3aed; }
+
+/* Plain color class aliases for Admin InventoryPage */
+.region-inv-item-dot.hybrid { background: #16a34a; }
+.region-inv-item-dot.inbred { background: #0ea5e9; }
+.region-inv-item-dot.solid { background: #ea580c; }
+.region-inv-item-dot.liquid { background: #7c3aed; }
+
+.region-inv-hybrid .region-inv-search-card-icon,
+.hybrid .region-inv-search-card-icon { background: #f0fdf4; color: #16a34a; }
+.region-inv-inbred .region-inv-search-card-icon,
+.inbred .region-inv-search-card-icon { background: #f0f9ff; color: #0ea5e9; }
+.region-inv-solid .region-inv-search-card-icon,
+.solid .region-inv-search-card-icon { background: #fff7ed; color: #ea580c; }
+.region-inv-liquid .region-inv-search-card-icon,
+.liquid .region-inv-search-card-icon { background: #f5f3ff; color: #7c3aed; }
 
 .region-inv-category-title-group h3 {
     margin: 0;

@@ -23,9 +23,8 @@ import {
   Printer,
   FileText,
 } from "lucide-react";
-import "../../assets/css/admin css/AdminViewAllocation.css";
-import "../../assets/css/admin css/InventoryPageStyle.css";
-import "../../assets/css/admin css/InventoryStyle.css";
+
+import "../../assets/css/region css/RegionInventoryStyle.css";
 
 const InventoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,7 +37,11 @@ const InventoryPage: React.FC = () => {
 
   const hybridKeywords = ["Jackpot", "US88", "TH82", "RH9000", "Mestiso"];
   const [activeTab, setActiveTab] = useState<
-    "overview" | "seeds" | "ferts" | "traceability" | "excess"
+    | "overview"
+    | "seeds"
+    | "ferts"
+    | "traceability"
+    | "excess"
   >("overview");
 
   const categorizedData = useMemo(() => {
@@ -61,7 +64,7 @@ const InventoryPage: React.FC = () => {
       const name = item.name.toLowerCase();
 
       const isLiquid =
-        name.includes("liquid") ||
+        name.includes("region-inv-liquid") ||
         name.includes("liters") ||
         name.includes("foliar") ||
         name.includes("biofertilizer");
@@ -115,18 +118,18 @@ const InventoryPage: React.FC = () => {
     categoryHeader?: string;
   }) => (
     <div
-      className={`inventory-category-card ${colorClass} ${!showHeader ? "no-header" : ""}`}
+      className={`region-inv-category-card ${colorClass} ${!showHeader ? "region-inv-no-header" : ""}`}
     >
       {showHeader && (
-        <div className="inventory-category-header">
-          <div className="inventory-category-icon">{icon}</div>
-          <div className="inventory-category-title-group">
+        <div className="region-inv-category-header">
+          <div className="region-inv-category-icon">{icon}</div>
+          <div className="region-inv-category-title-group">
             <h3>{title}</h3>
-            <span className="inventory-count">{items.length} Items</span>
+            <span className="region-inv-count">{items.length} Items</span>
           </div>
           <div className="inventory-category-actions">
             <button
-              className="inventory-btn-mini"
+              className="region-inv-btn-mini"
               onClick={() => navigate("/admin-create-allocation")}
             >
               Add Stock
@@ -134,8 +137,8 @@ const InventoryPage: React.FC = () => {
           </div>
         </div>
       )}
-      <div className="admin-inventory-table-container">
-        <table className="admin-inventory-farmers-table">
+      <div className="region-inventory-table-container">
+        <table className="region-inventory-farmers-table">
           <thead>
             <tr>
               <th>Item Name</th>
@@ -150,7 +153,7 @@ const InventoryPage: React.FC = () => {
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={showCategory ? 7 : 6} className="inventory-empty">
+                <td colSpan={showCategory ? 7 : 6} className="region-inv-empty">
                   No items found in this category
                 </td>
               </tr>
@@ -193,10 +196,12 @@ const InventoryPage: React.FC = () => {
                 }
 
                 return (
-                  <tr key={idx} className="admin-inventory-table-row">
-                    <td className="item-name-cell">
-                      <div className="item-name-wrapper">
-                        <span className={`item-dot ${colorClass}`}></span>
+                  <tr key={idx} className="region-inventory-table-row">
+                    <td className="region-inv-item-name-cell">
+                      <div className="region-inv-item-name-wrapper">
+                        <span
+                          className={`region-inv-item-dot ${colorClass}`}
+                        ></span>
                         {item.name}
                       </div>
                     </td>
@@ -210,16 +215,16 @@ const InventoryPage: React.FC = () => {
                       </td>
                     )}
                     <td>{item.allocated.toLocaleString()}</td>
-                    <td className="requested-cell">
+                    <td className="region-inv-requested-cell">
                       {item.requested.toLocaleString()}
                     </td>
                     <td>{item.distributed.toLocaleString()}</td>
                     <td
-                      className={`remaining-cell ${isOut ? "out" : isLow ? "low" : ""}`}
+                      className={`region-inv-remaining-cell ${isOut ? "out" : isLow ? "low" : ""}`}
                     >
                       {isOut ? (
                         <span
-                          className="stock-badge out"
+                          className="region-inv-stock-badge out"
                           style={{
                             background: "#ef4444",
                             color: "#fff",
@@ -235,16 +240,16 @@ const InventoryPage: React.FC = () => {
                           ⚠ 0 — Out of Stock
                         </span>
                       ) : (
-                        <span className="stock-badge">
+                        <span className="region-inv-stock-badge">
                           {item.remaining.toLocaleString()}
                         </span>
                       )}
                     </td>
                     <td>
-                      <div className="stock-indicator-wrapper">
-                        <div className="stock-progress-bg">
+                      <div className="region-inv-stock-indicator-wrapper">
+                        <div className="region-inv-stock-progress-bg">
                           <div
-                            className="stock-progress-fill"
+                            className="region-inv-stock-progress-fill"
                             style={{
                               width: `${Math.min(100, progress)}%`,
                               background:
@@ -256,7 +261,7 @@ const InventoryPage: React.FC = () => {
                             }}
                           />
                         </div>
-                        <span className="stock-pct">
+                        <span className="region-inv-stock-pct">
                           {progress.toFixed(0)}%
                         </span>
                       </div>
@@ -294,45 +299,46 @@ const InventoryPage: React.FC = () => {
 
     return (
       <div
-        className={`inventory-search-result-card ${colorClass} ${isOut ? "out" : isLow ? "low" : ""}`}
+        className={`region-inv-search-result-card ${colorClass} ${isOut ? "out" : isLow ? "low" : ""}`}
       >
-        <div className="search-card-header">
-          <div className="search-card-icon">
-            {colorClass === "hybrid" || colorClass === "inbred" ? (
+        <div className="region-inv-search-card-header">
+          <div className="region-inv-search-card-icon">
+            {colorClass === "region-inv-hybrid" ||
+            colorClass === "region-inv-inbred" ? (
               <Sprout size={20} />
             ) : (
               <Droplets size={20} />
             )}
           </div>
-          <div className="search-card-title-group">
+          <div className="region-inv-search-card-title-group">
             <h4>{item.name}</h4>
-            <span className="search-card-category">
+            <span className="region-inv-search-card-category">
               {colorClass.toUpperCase()}
             </span>
           </div>
         </div>
-        <div className="search-card-stats">
-          <div className="search-stat">
-            <span className="search-stat-label">Current Stock</span>
-            <span className="search-stat-value">
+        <div className="region-inv-search-card-stats">
+          <div className="region-inv-search-stat">
+            <span className="search-region-inv-stat-label">Current Stock</span>
+            <span className="search-region-inv-stat-value">
               {item.remaining.toLocaleString()}
             </span>
           </div>
-          <div className="search-stat">
-            <span className="search-stat-label">Total Stock</span>
-            <span className="search-stat-value">
+          <div className="region-inv-search-stat">
+            <span className="search-region-inv-stat-label">Total Stock</span>
+            <span className="search-region-inv-stat-value">
               {item.allocated.toLocaleString()}
             </span>
           </div>
         </div>
-        <div className="search-card-footer">
-          <div className="search-progress-bar">
+        <div className="region-inv-search-card-footer">
+          <div className="region-inv-search-progress-bar">
             <div
-              className="search-progress-fill"
+              className="region-inv-search-progress-fill"
               style={{ width: `${Math.min(100, progress)}%` }}
             ></div>
           </div>
-          <span className="search-progress-text">
+          <span className="region-inv-search-progress-text">
             {progress.toFixed(0)}% Distributed
           </span>
         </div>
@@ -341,14 +347,14 @@ const InventoryPage: React.FC = () => {
   };
 
   return (
-    <div className="admin-inventory-page-container">
-      <div className="admin-inventory-page has-mobile-sidebar">
+    <div className="region-inventory-page-container">
+      <div className="region-inventory-page has-mobile-sidebar">
         <AdminSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
 
-        <div className="admin-inventory-main-content">
+        <div className="region-inventory-main-content">
           <div className="tech-incent-mobile-header">
             <button
               className="tech-incent-hamburger"
@@ -360,12 +366,12 @@ const InventoryPage: React.FC = () => {
           </div>
 
           {/* Page header */}
-          <div className="admin-inventory-dashboard-header">
+          <div className="region-inventory-dashboard-header">
             <div>
-              <h1 className="admin-inventory-page-title">
+              <h1 className="region-inventory-page-title">
                 Inventory Management
               </h1>
-              <p className="admin-inventory-page-subtitle">
+              <p className="region-inventory-page-subtitle">
                 Track and manage variety of fertilizers and seeds in
                 Municipality of Dumangas, Iloilo
               </p>
@@ -374,10 +380,10 @@ const InventoryPage: React.FC = () => {
 
           {/* Filters */}
           <div
-            className="admin-inventory-content-card"
+            className="region-inventory-content-card"
             style={{ flex: "none", marginBottom: "5px", padding: "12px 16px" }}
           >
-            <div className="admin-inventory-filters-section">
+            <div className="region-inventory-filters-section">
               <div
                 style={{
                   display: "flex",
@@ -392,7 +398,7 @@ const InventoryPage: React.FC = () => {
                     placeholder="Search variety..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="admin-inventory-search-input"
+                    className="region-inventory-search-input"
                     style={{ width: "100%" }}
                   />
                 </div>
@@ -404,7 +410,7 @@ const InventoryPage: React.FC = () => {
                         e.target.value ? Number(e.target.value) : undefined,
                       )
                     }
-                    className="admin-inventory-status-select"
+                    className="region-inventory-status-select"
                     style={{ width: "100%" }}
                   >
                     <option value="">Master Inventory View</option>
@@ -424,49 +430,71 @@ const InventoryPage: React.FC = () => {
 
           {/* Print toolbar */}
           <div
-            className="admin-inventory-bulk-toolbar"
+            className="region-inventory-bulk-toolbar"
             style={{ margin: "5px 0 10px" }}
           >
-            <div className="admin-inventory-bulk-actions">
+            <div className="region-inventory-bulk-actions">
               <button
-                className="admin-inventory-bulk-btn"
+                className="region-inventory-bulk-btn"
                 onClick={() => window.print()}
               >
                 🖨️ Print Report
               </button>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  className="inventory-btn-register"
+                  onClick={() => navigate("/admin-create-allocation")}
+                  style={{ background: "#10b981" }}
+                >
+                  <Plus size={18} />
+                  Add Stock
+                </button>
+                <button
+                  className="inventory-btn-register"
+                  onClick={() => navigate("/manage-varieties")}
+                >
+                  <Plus size={18} />
+                  Manage Varieties
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="inventory-tabs-container">
-            <div className="inventory-tabs">
+          <div className="region-inv-tabs-container">
+            <div className="region-inv-tabs">
               <button
-                className={`inventory-tab ${activeTab === "overview" ? "active" : ""}`}
+                className={`region-inv-tab ${activeTab === "overview" ? "active" : ""}`}
                 onClick={() => setActiveTab("overview")}
               >
+                <BarChart3 size={16} />
                 Overview
               </button>
               <button
-                className={`inventory-tab ${activeTab === "seeds" ? "active" : ""}`}
+                className={`region-inv-tab ${activeTab === "seeds" ? "active" : ""}`}
                 onClick={() => setActiveTab("seeds")}
               >
+                <Sprout size={16} />
                 Seeds Variety
               </button>
               <button
-                className={`inventory-tab ${activeTab === "ferts" ? "active" : ""}`}
+                className={`region-inv-tab ${activeTab === "ferts" ? "active" : ""}`}
                 onClick={() => setActiveTab("ferts")}
               >
+                <Leaf size={16} />
                 Fertilizers Variety
               </button>
               <button
-                className={`inventory-tab ${activeTab === "traceability" ? "active" : ""}`}
+                className={`region-inv-tab ${activeTab === "traceability" ? "active" : ""}`}
                 onClick={() => setActiveTab("traceability")}
               >
                 Traceability
               </button>
               <button
-                className={`inventory-tab ${activeTab === "excess" ? "active" : ""}`}
+                className={`region-inv-tab ${activeTab === "excess" ? "active" : ""}`}
                 onClick={() => setActiveTab("excess")}
               >
+                <Package size={16} />
                 Unused
                 {dashData.excessInventory.length > 0 && (
                   <span
@@ -493,15 +521,15 @@ const InventoryPage: React.FC = () => {
               Loading inventory data...
             </div>
           ) : searchTerm ? (
-            <div className="inventory-search-results">
-              <h3 className="section-title">
+            <div className="region-inv-search-results">
+              <h3 className="region-inv-section-title">
                 Search Results for "{searchTerm}"
               </h3>
-              <div className="search-results-grid">
+              <div className="region-inv-search-results-grid">
                 {dashData.subsidyBreakdown.filter((item) =>
                   item.name.toLowerCase().includes(searchTerm.toLowerCase()),
                 ).length === 0 ? (
-                  <div className="no-results">
+                  <div className="region-inv-no-results">
                     No varieties found matching your search.
                   </div>
                 ) : (
@@ -539,25 +567,29 @@ const InventoryPage: React.FC = () => {
               {activeTab === "overview" && (
                 <>
                   {!selectedAllocationId && (
-                    <div className="inventory-summary-row">
-                      <div className="inventory-stat-card">
-                        <div className="stat-icon seeds">
+                    <div className="region-inv-summary-row">
+                      <div className="region-inv-stat-card">
+                        <div className="region-inv-stat-icon region-inv-seeds">
                           <Sprout />
                         </div>
-                        <div className="stat-info">
-                          <span className="stat-label">Seeds Variety</span>
-                          <span className="stat-value">
+                        <div className="region-inv-stat-info">
+                          <span className="region-inv-stat-label">
+                            Seeds Variety
+                          </span>
+                          <span className="region-inv-stat-value">
                             {categorizedData.seeds.all.length}
                           </span>
                         </div>
                       </div>
-                      <div className="inventory-stat-card">
-                        <div className="stat-icon ferts">
+                      <div className="region-inv-stat-card">
+                        <div className="region-inv-stat-icon region-inv-ferts">
                           <Leaf />
                         </div>
-                        <div className="stat-info">
-                          <span className="stat-label">Fertilizer Variety</span>
-                          <span className="stat-value">
+                        <div className="region-inv-stat-info">
+                          <span className="region-inv-stat-label">
+                            Fertilizer Variety
+                          </span>
+                          <span className="region-inv-stat-value">
                             {categorizedData.fertilizers.all.length}
                           </span>
                         </div>
@@ -566,28 +598,30 @@ const InventoryPage: React.FC = () => {
                   )}
 
                   {selectedAllocationId ? (
-                    <div className="inventory-report-view">
-                      <div className="report-header-flex">
-                        <h3 className="section-title">
+                    <div className="region-inv-report-view">
+                      <div className="region-inv-report-header-flex">
+                        <h3 className="region-inv-section-title">
                           Program Utilization Report
                         </h3>
-                        <div className="report-date">
+                        <div className="region-inv-report-date">
                           {new Date().toLocaleDateString()}
                         </div>
                       </div>
 
-                      <div className="report-summary-grid">
-                        <div className="report-stat-box">
+                      <div className="region-inv-report-summary-grid">
+                        <div className="region-inv-report-stat-box">
                           <h4>Seeds Utilization</h4>
-                          <div className="report-stat-main">
-                            <span className="stat-big">
+                          <div className="region-inv-report-stat-main">
+                            <span className="region-inv-stat-big">
                               {categorizedData.seeds.all
                                 .reduce((s, i) => s + i.distributed, 0)
                                 .toLocaleString()}
                             </span>
-                            <span className="stat-unit">KG Distributed</span>
+                            <span className="region-inv-stat-unit">
+                              KG Distributed
+                            </span>
                           </div>
-                          <div className="report-stat-sub">
+                          <div className="region-inv-report-stat-sub">
                             Out of{" "}
                             {categorizedData.seeds.all
                               .reduce((s, i) => s + i.allocated, 0)
@@ -596,17 +630,19 @@ const InventoryPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="report-stat-box">
+                        <div className="region-inv-report-stat-box">
                           <h4>Fertilizer Utilization</h4>
-                          <div className="report-stat-main">
-                            <span className="stat-big">
+                          <div className="region-inv-report-stat-main">
+                            <span className="region-inv-stat-big">
                               {categorizedData.fertilizers.all
                                 .reduce((s, i) => s + i.distributed, 0)
                                 .toLocaleString()}
                             </span>
-                            <span className="stat-unit">Bags/Liters Given</span>
+                            <span className="region-inv-stat-unit">
+                              Bags/Liters Given
+                            </span>
                           </div>
-                          <div className="report-stat-sub">
+                          <div className="region-inv-report-stat-sub">
                             Out of{" "}
                             {categorizedData.fertilizers.all
                               .reduce((s, i) => s + i.allocated, 0)
@@ -616,12 +652,12 @@ const InventoryPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="report-tables-section">
+                      <div className="region-inv-report-tables-section">
                         <InventoryTable
                           title="Seeds Distribution Report"
                           items={categorizedData.seeds.all}
                           icon={<Sprout />}
-                          colorClass="hybrid"
+                        colorClass="hybrid"
                           showCategory={true}
                           categoryHeader="Variety"
                         />
@@ -637,13 +673,13 @@ const InventoryPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="inventory-master-view">
-                      <div className="section-header-flex">
-                        <h3 className="section-title">
+                      <div className="region-inv-section-header-flex">
+                        <h3 className="region-inv-section-title">
                           Master Variety Catalog
                         </h3>
                       </div>
-                      <div className="report-tables-section">
-                        <div className="category-row">
+                      <div className="region-inv-report-tables-section">
+                        <div className="region-inv-category-row">
                           <InventoryCategoryCard
                             title="Hybrid Seeds"
                             items={categorizedData.seeds.hybrid}
@@ -657,7 +693,7 @@ const InventoryPage: React.FC = () => {
                             colorClass="inbred"
                           />
                         </div>
-                        <div className="category-row">
+                        <div className="region-inv-category-row">
                           <InventoryCategoryCard
                             title="Solid Fertilizers"
                             items={categorizedData.fertilizers.solid}
@@ -678,11 +714,13 @@ const InventoryPage: React.FC = () => {
               )}
 
               {activeTab === "seeds" && (
-                <div className="inventory-section fade-in">
-                  <div className="section-header-flex">
-                    <h3 className="section-title">All Seeds Inventory</h3>
+                <div className="inventory-section region-inv-fade-in">
+                  <div className="region-inv-section-header-flex">
+                    <h3 className="region-inv-section-title">
+                      All Seeds Inventory
+                    </h3>
                     <div className="section-actions">
-                      <span className="section-header-hint">
+                      <span className="region-inv-section-header-hint">
                         {categorizedData.seeds.all.length} Varieties Found
                       </span>
                     </div>
@@ -702,11 +740,13 @@ const InventoryPage: React.FC = () => {
               )}
 
               {activeTab === "ferts" && (
-                <div className="inventory-section fade-in">
-                  <div className="section-header-flex">
-                    <h3 className="section-title">All Fertilizers Inventory</h3>
+                <div className="inventory-section region-inv-fade-in">
+                  <div className="region-inv-section-header-flex">
+                    <h3 className="region-inv-section-title">
+                      All Fertilizers Inventory
+                    </h3>
                     <div className="section-actions">
-                      <span className="section-header-hint">
+                      <span className="region-inv-section-header-hint">
                         {categorizedData.fertilizers.all.length} Varieties Found
                       </span>
                     </div>
@@ -736,8 +776,8 @@ const InventoryPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="admin-inventory-table-container">
-                    <table className="admin-inventory-farmers-table">
+                  <div className="region-inventory-table-container">
+                    <table className="region-inventory-farmers-table">
                       <thead>
                         <tr>
                           <th>Date</th>
@@ -753,17 +793,14 @@ const InventoryPage: React.FC = () => {
                           <tr>
                             <td
                               colSpan={selectedAllocationId ? 5 : 6}
-                              className="inventory-empty"
+                              className="region-inv-empty"
                             >
                               No distribution records found.
                             </td>
                           </tr>
                         ) : (
                           dashData.traceabilityLog.map((log) => (
-                            <tr
-                              key={log.id}
-                              className="admin-inventory-table-row"
-                            >
+                            <tr key={log.id} className="region-inventory-table-row">
                               <td className="date-cell">
                                 {new Date(log.date).toLocaleDateString(
                                   undefined,
@@ -809,15 +846,15 @@ const InventoryPage: React.FC = () => {
               )}
 
               {activeTab === "excess" && (
-                <div className="inventory-section fade-in">
-                  <div className="section-header-flex">
+                <div className="inventory-section region-inv-fade-in">
+                  <div className="region-inv-section-header-flex">
                     <div className="header-with-icon">
                       <Package className="header-icon-main" />
-                      <h3 className="section-title">
+                      <h3 className="region-inv-section-title">
                         Unused Inventory from Closed Programs
                       </h3>
                     </div>
-                    <span className="section-header-hint">
+                    <span className="region-inv-section-header-hint">
                       {dashData.excessInventory.length} unused item(s) total
                     </span>
                   </div>
@@ -843,16 +880,16 @@ const InventoryPage: React.FC = () => {
                         (i) => i.category === "Fertilizer",
                       ).length > 0 && (
                         <div
-                          className="inventory-category-card solid"
+                          className="region-inv-category-card solid"
                           style={{ marginBottom: 20 }}
                         >
-                          <div className="inventory-category-header">
-                            <div className="inventory-category-icon">
+                          <div className="region-inv-category-header">
+                            <div className="region-inv-category-icon">
                               <Leaf size={20} />
                             </div>
-                            <div className="inventory-category-title-group">
+                            <div className="region-inv-category-title-group">
                               <h3>Fertilizers (Unused)</h3>
-                              <span className="inventory-count">
+                              <span className="region-inv-count">
                                 {
                                   dashData.excessInventory.filter(
                                     (i) => i.category === "Fertilizer",
@@ -862,8 +899,8 @@ const InventoryPage: React.FC = () => {
                               </span>
                             </div>
                           </div>
-                          <div className="inventory-table-container">
-                            <table className="inventory-table">
+                          <div className="region-inv-table-container">
+                            <table className="region-inv-table">
                               <thead>
                                 <tr>
                                   <th>Item Name</th>
@@ -879,12 +916,12 @@ const InventoryPage: React.FC = () => {
                                   .map((item, idx) => (
                                     <tr
                                       key={`fert-excess-${idx}`}
-                                      className="inventory-row-hover"
+                                      className="region-inv-row-hover"
                                     >
-                                      <td className="item-name-cell">
-                                        <div className="item-name-wrapper">
+                                      <td className="region-inv-item-name-cell">
+                                        <div className="region-inv-item-name-wrapper">
                                           <span
-                                            className={`item-dot ${item.subCategory.toLowerCase()}`}
+                                            className={`region-inv-item-dot ${item.subCategory.toLowerCase()}`}
                                           ></span>
                                           {item.name}
                                         </div>
@@ -928,16 +965,16 @@ const InventoryPage: React.FC = () => {
                         (i) => i.category === "Seed",
                       ).length > 0 && (
                         <div
-                          className="inventory-category-card hybrid"
+                          className="region-inv-category-card hybrid"
                           style={{ marginBottom: 20 }}
                         >
-                          <div className="inventory-category-header">
-                            <div className="inventory-category-icon">
+                          <div className="region-inv-category-header">
+                            <div className="region-inv-category-icon">
                               <Sprout size={20} />
                             </div>
-                            <div className="inventory-category-title-group">
+                            <div className="region-inv-category-title-group">
                               <h3>Seeds (Unused)</h3>
-                              <span className="inventory-count">
+                              <span className="region-inv-count">
                                 {
                                   dashData.excessInventory.filter(
                                     (i) => i.category === "Seed",
@@ -947,8 +984,8 @@ const InventoryPage: React.FC = () => {
                               </span>
                             </div>
                           </div>
-                          <div className="inventory-table-container">
-                            <table className="inventory-table">
+                          <div className="region-inv-table-container">
+                            <table className="region-inv-table">
                               <thead>
                                 <tr>
                                   <th>Item Name</th>
@@ -964,12 +1001,12 @@ const InventoryPage: React.FC = () => {
                                   .map((item, idx) => (
                                     <tr
                                       key={`seed-excess-${idx}`}
-                                      className="inventory-row-hover"
+                                      className="region-inv-row-hover"
                                     >
-                                      <td className="item-name-cell">
-                                        <div className="item-name-wrapper">
+                                      <td className="region-inv-item-name-cell">
+                                        <div className="region-inv-item-name-wrapper">
                                           <span
-                                            className={`item-dot ${item.subCategory.toLowerCase()}`}
+                                            className={`region-inv-item-dot ${item.subCategory.toLowerCase()}`}
                                           ></span>
                                           {item.name}
                                         </div>
@@ -1126,32 +1163,6 @@ const InventoryPage: React.FC = () => {
                     )}
                     %
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="print-section page-break">
-          <h3>Farmer Distribution Traceability Log</h3>
-          <table className="print-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Farmer Name</th>
-                <th>Barangay</th>
-                <th>Items Received</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dashData.traceabilityLog.map((log) => (
-                <tr key={log.id}>
-                  <td>{new Date(log.date).toLocaleDateString()}</td>
-                  <td>{log.farmerName}</td>
-                  <td>{log.barangay}</td>
-                  <td>{log.items}</td>
-                  <td>{log.status}</td>
                 </tr>
               ))}
             </tbody>

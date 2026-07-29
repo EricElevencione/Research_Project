@@ -235,6 +235,7 @@ CREATE TABLE public.regional_allocations (
   nsic_rc222_kg integer DEFAULT 0,
   rice_seeds_nsic_rc440_kg integer DEFAULT 0,
   closed_date timestamp with time zone,
+  municipality character varying,
   CONSTRAINT regional_allocations_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.rsbsa_farm_parcels (
@@ -317,6 +318,7 @@ CREATE TABLE public.rsbsa_submission (
   status_change_reason text,
   OWNERSHIP_TYPE_LENDER boolean DEFAULT false,
   is_actively_farming boolean DEFAULT false,
+  profile_picture text,
   CONSTRAINT rsbsa_submission_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.users (
@@ -487,6 +489,7 @@ CREATE TABLE public.shortages_fertilizers (
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  unit text DEFAULT 'bags'::text,
   CONSTRAINT shortages_fertilizers_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.shortages_seeds (
@@ -507,6 +510,7 @@ CREATE TABLE public.shortages_seeds (
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  unit text DEFAULT 'kg'::text,
   CONSTRAINT shortages_seeds_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.shortages_fertilizer_role_fallback (
@@ -701,4 +705,14 @@ CREATE TABLE public.backup_land_history_92 (
   transferred_area_ha numeric,
   remaining_area_ha numeric,
   ownership_category text
+);
+CREATE TABLE public.inventory (
+  id integer NOT NULL DEFAULT nextval('inventory_id_seq'::regclass),
+  product_id text NOT NULL UNIQUE,
+  product_type text NOT NULL CHECK (product_type = ANY (ARRAY['seed'::text, 'fertilizer'::text])),
+  category text,
+  stock_qty numeric DEFAULT 0,
+  used_qty numeric DEFAULT 0,
+  last_updated timestamp with time zone DEFAULT now(),
+  CONSTRAINT inventory_pkey PRIMARY KEY (id)
 );

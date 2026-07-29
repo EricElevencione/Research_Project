@@ -131,44 +131,55 @@ export const UsageGauges: React.FC<UsageGaugesProps> = ({
   return (
     <div className="alloc-gauges-section">
       {/* Fertilizers */}
-      <div className="alloc-gauges-group">
-        <div className="alloc-gauges-group-header">
-          <span className="alloc-gauges-icon">🌱</span>
-          <h3>Fertilizer Depletion</h3>
+      {fertilizers.length > 0 && (
+        <div className="alloc-gauges-group">
+          <div className="alloc-gauges-group-header">
+            <span className="alloc-gauges-icon">🌱</span>
+            <h3>Fertilizer Depletion</h3>
+          </div>
+          <div className="alloc-gauges-grid">
+            {fertilizers.map((f) => (
+              <RadialGauge
+                key={f.name}
+                label={f.name}
+                allocated={f.allocated}
+                used={f.requested}
+                unit={f.unit}
+                color="#16a34a"
+              />
+            ))}
+          </div>
         </div>
-        <div className="alloc-gauges-grid">
-          {fertilizers.map((f) => (
-            <RadialGauge
-              key={f.name}
-              label={f.name}
-              allocated={f.allocated}
-              used={f.requested}
-              unit={f.unit}
-              color="#16a34a"
-            />
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Seeds */}
-      <div className="alloc-gauges-group">
-        <div className="alloc-gauges-group-header">
-          <span className="alloc-gauges-icon">🌾</span>
-          <h3>Seed Depletion</h3>
+      {seeds.length > 0 && (
+        <div className="alloc-gauges-group">
+          <div className="alloc-gauges-group-header">
+            <span className="alloc-gauges-icon">🌾</span>
+            <h3>Seed Depletion</h3>
+          </div>
+          <div className="alloc-gauges-grid">
+            {seeds.map((s) => (
+              <RadialGauge
+                key={s.name}
+                label={s.name}
+                allocated={s.allocated}
+                used={s.requested}
+                unit={s.unit}
+                color="#0ea5e9"
+              />
+            ))}
+          </div>
         </div>
-        <div className="alloc-gauges-grid">
-          {seeds.map((s) => (
-            <RadialGauge
-              key={s.name}
-              label={s.name}
-              allocated={s.allocated}
-              used={s.requested}
-              unit={s.unit}
-              color="#0ea5e9"
-            />
-          ))}
+      )}
+
+      {/* Empty State when both are 0 */}
+      {fertilizers.length === 0 && seeds.length === 0 && (
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '12px', width: '100%' }}>
+          No resources have been allocated or requested for this program yet.
         </div>
-      </div>
+      )}
     </div>
   );
 };

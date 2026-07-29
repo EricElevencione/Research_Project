@@ -3456,6 +3456,16 @@ export const addShortageSeed = async (seedData: any): Promise<ApiResponse> => {
     .single();
 
   if (error) return createResponse(null, error.message, 500);
+
+  // Also add to inventory
+  await supabase.from("inventory").insert({
+    product_id: data.id,
+    product_type: "seed",
+    category: data.category,
+    stock_qty: 0,
+    used_qty: 0,
+  });
+
   return createResponse(data, null, 201);
 };
 
@@ -3494,6 +3504,16 @@ export const addShortageFertilizer = async (
     .single();
 
   if (error) return createResponse(null, error.message, 500);
+
+  // Also add to inventory
+  await supabase.from("inventory").insert({
+    product_id: data.id,
+    product_type: "fertilizer",
+    category: data.category,
+    stock_qty: 0,
+    used_qty: 0,
+  });
+
   return createResponse(data, null, 201);
 };
 

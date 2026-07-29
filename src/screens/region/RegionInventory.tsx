@@ -137,7 +137,7 @@ const RegionInventory: React.FC = () => {
           </div>
         </div>
       )}
-      <div className="region-region-inv-table-container">
+      <div className="region-inventory-table-container">
         <table className="region-inventory-farmers-table">
           <thead>
             <tr>
@@ -196,7 +196,7 @@ const RegionInventory: React.FC = () => {
                 }
 
                 return (
-                  <tr key={idx} className="region-region-inv-table-row">
+                  <tr key={idx} className="region-inventory-table-row">
                     <td className="region-inv-item-name-cell">
                       <div className="region-inv-item-name-wrapper">
                         <span
@@ -776,8 +776,8 @@ const RegionInventory: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="traceability-table-container">
-                    <table className="inventory-table traceability-table">
+                  <div className="region-inventory-table-container">
+                    <table className="region-inventory-farmers-table">
                       <thead>
                         <tr>
                           <th>Date</th>
@@ -793,14 +793,14 @@ const RegionInventory: React.FC = () => {
                           <tr>
                             <td
                               colSpan={selectedAllocationId ? 5 : 6}
-                              className="inventory-empty"
+                              className="region-inv-empty"
                             >
                               No distribution records found.
                             </td>
                           </tr>
                         ) : (
                           dashData.traceabilityLog.map((log) => (
-                            <tr key={log.id} className="inventory-row-hover">
+                            <tr key={log.id} className="region-inventory-table-row">
                               <td className="date-cell">
                                 {new Date(log.date).toLocaleDateString(
                                   undefined,
