@@ -3449,22 +3449,24 @@ export const getShortagesFertilizers = async (): Promise<ApiResponse> => {
 };
 
 export const addShortageSeed = async (seedData: any): Promise<ApiResponse> => {
+  const { description, ...dataToInsert } = seedData;
   const { data, error } = await supabase
     .from("shortages_seeds")
-    .insert(seedData)
+    .insert(dataToInsert)
     .select()
     .single();
 
   if (error) return createResponse(null, error.message, 500);
 
   // Also add to inventory
-  await supabase.from("inventory").insert({
+  const { error: invError } = await supabase.from("inventory").insert({
     product_id: data.id,
     product_type: "seed",
     category: data.category,
     stock_qty: 0,
     used_qty: 0,
   });
+  if (invError) console.error("Failed to insert inventory:", invError);
 
   return createResponse(data, null, 201);
 };
@@ -3473,9 +3475,10 @@ export const updateShortageSeed = async (
   id: string,
   updateData: any,
 ): Promise<ApiResponse> => {
+  const { description, ...dataToUpdate } = updateData;
   const { data, error } = await supabase
     .from("shortages_seeds")
-    .update(updateData)
+    .update(dataToUpdate)
     .eq("id", id)
     .select()
     .single();
@@ -3497,22 +3500,24 @@ export const deleteShortageSeed = async (id: string): Promise<ApiResponse> => {
 export const addShortageFertilizer = async (
   fertData: any,
 ): Promise<ApiResponse> => {
+  const dataToInsert = { ...fertData, tier: fertData.tier || 1 };
   const { data, error } = await supabase
     .from("shortages_fertilizers")
-    .insert(fertData)
+    .insert(dataToInsert)
     .select()
     .single();
 
   if (error) return createResponse(null, error.message, 500);
 
   // Also add to inventory
-  await supabase.from("inventory").insert({
+  const { error: invError } = await supabase.from("inventory").insert({
     product_id: data.id,
     product_type: "fertilizer",
     category: data.category,
     stock_qty: 0,
     used_qty: 0,
   });
+  if (invError) console.error("Failed to insert inventory:", invError);
 
   return createResponse(data, null, 201);
 };
@@ -3521,9 +3526,10 @@ export const updateShortageFertilizer = async (
   id: string,
   updateData: any,
 ): Promise<ApiResponse> => {
+  const dataToUpdate = { ...updateData, tier: updateData.tier || 1 };
   const { data, error } = await supabase
     .from("shortages_fertilizers")
-    .update(updateData)
+    .update(dataToUpdate)
     .eq("id", id)
     .select()
     .single();
