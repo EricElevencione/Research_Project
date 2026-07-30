@@ -116,9 +116,16 @@ BEGIN
     WHERE submission_id   = p_old_holder_id
       AND parcel_number   = v_owner_parcel.parcel_number
       AND (
-            (p_role = 'tenant' AND ownership_type_tenant = true AND tenant_land_owner_id = v_owner_id)
+            (p_role = 'tenant' AND ownership_type_tenant = true)
             OR
-            (p_role = 'lessee' AND ownership_type_lessee = true AND lessee_land_owner_id = v_owner_id)
+            (p_role = 'lessee' AND ownership_type_lessee = true)
+          )
+      AND (
+            tenant_land_owner_id = v_owner_id
+            OR lessee_land_owner_id = v_owner_id
+            OR tenant_land_owner_name ILIKE v_owner_name
+            OR lessee_land_owner_name ILIKE v_owner_name
+            OR farm_location_barangay = v_owner_parcel.farm_location_barangay
           )
       AND (is_current_owner IS NULL OR is_current_owner = true)
     FOR UPDATE;
@@ -197,6 +204,10 @@ BEGIN
             p_role, p_new_holder_id, v_owner_id, SQLERRM;
     END;
  
+        -- Call status sync for both users to apply changes immediately
+    PERFORM public.sync_farmer_no_parcels_status(p_old_holder_id);
+    PERFORM public.sync_farmer_no_parcels_status(p_new_holder_id);
+
     -- -------------------------------------------------------------------------
     -- 8. Return result
     -- -------------------------------------------------------------------------

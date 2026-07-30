@@ -398,6 +398,14 @@ const JoRsbsaRegisLandowner: React.FC = () => {
       if (!hasValidFarmland)
         newErrors.farmland = "Please fill in farm location and area";
 
+      const hasNegativeArea = formData.farmlandParcels.some((parcel) => {
+        const area = parseFloat(parcel.totalFarmAreaHa || "0");
+        return !isNaN(area) && area < 0;
+      });
+      if (hasNegativeArea) {
+        newErrors.farmland = "Total farm area cannot be negative.";
+      }
+
       const hasUndesignatedCultivation = formData.farmlandParcels.some(
         (parcel) => {
           const hasCoreParcelData =
@@ -410,7 +418,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
           );
         },
       );
-      if (hasUndesignatedCultivation) {
+      if (hasUndesignatedCultivation && !newErrors.farmland) {
         newErrors.farmland =
           "Set 'Are you farming this parcel?' for each listed parcel.";
       }
@@ -458,6 +466,14 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     if (!hasValidFarmlandFinal)
       newErrors.farmland = "At least one parcel must include barangay and area";
 
+    const hasNegativeAreaFinal = formData.farmlandParcels.some((parcel) => {
+      const area = parseFloat(parcel.totalFarmAreaHa || "0");
+      return !isNaN(area) && area < 0;
+    });
+    if (hasNegativeAreaFinal) {
+      newErrors.farmland = "Total farm area cannot be negative.";
+    }
+
     const hasUndesignatedCultivationFinal = formData.farmlandParcels.some(
       (parcel) => {
         const hasCoreParcelData =
@@ -469,7 +485,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         );
       },
     );
-    if (hasUndesignatedCultivationFinal) {
+    if (hasUndesignatedCultivationFinal && !newErrors.farmland) {
       newErrors.farmland =
         "Each listed parcel must have a cultivation status (Yes or No).";
     }
@@ -1187,6 +1203,8 @@ const JoRsbsaRegisLandowner: React.FC = () => {
                         <label>Total Farm Area (in hectares)</label>
                         <input
                           type="number"
+                          min="0"
+                          step="any"
                           value={p.totalFarmAreaHa || ""}
                           onChange={(e) =>
                             handleParcelChange(

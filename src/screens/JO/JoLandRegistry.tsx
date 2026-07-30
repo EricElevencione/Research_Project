@@ -683,7 +683,7 @@ const JoLandRegistry: React.FC = () => {
 
   useEffect(() => {
     setSelectedTransferParcelIds([]);
-  }, [sourceRegisteredOwnerId, beneficairyOwnerId]);
+  }, [selectedFarmer?.farmer_id, transferMode]);
 
   useEffect(() => {
     const fetchCultivators = async () => {

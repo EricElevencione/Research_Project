@@ -1,0 +1,7 @@
+.monaco-workbench .part.auxiliarybar {
+  background-color: rgba(20, 20, 20, 0.5) !important;
+}
+
+.monaco-workbench .part.panel {
+  background-color: rgba(20, 20, 20, 0.5) !important;
+}
