@@ -651,15 +651,42 @@ const FarmlandMap: React.FC<FarmlandMapProps> = ({
                     "surname:",
                     surname,
                     "ffrsId:",
-                    ffrsId,
+                        ffrsId,
                     "farmerId:",
                     farmerId,
                   );
 
+                  // Pull parcel-level fields (support both snake_case and camelCase)
+                  const parcelNumber =
+                    feature.properties.parcel_number ||
+                    feature.properties.parcelNumber ||
+                    feature.properties.ffrs_code ||
+                    feature.properties.ffrsCode ||
+                    "";
+
                   // Initial popup content with crop/planting info
                   let popupContent = `<div class="farmland-popup-container" style="min-width: 320px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                                        <div class="farmland-popup-crops-section" style="padding-top: 8px;">
-                                            <div class="farmland-popup-crops-title" style="font-weight: 600; color: #16a34a; margin-bottom: 6px; font-size: 0.9em;">🌾 Crops & Planting Info</div>
+                                        <!-- Parcel header -->
+                                        <div style="
+                                          background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+                                          border-radius: 10px 10px 0 0;
+                                          padding: 10px 14px;
+                                          margin: -1px -1px 12px;
+                                        ">
+                                          ${parcelNumber ? `<div style="
+                                            display: inline-block;
+                                            background: rgba(255,255,255,0.15);
+                                            border: 1px solid rgba(255,255,255,0.25);
+                                            color: #ffffff;
+                                            font-size: 0.85em;
+                                            font-weight: 700;
+                                            letter-spacing: 0.04em;
+                                            padding: 3px 10px;
+                                            border-radius: 20px;
+                                          ">📍 ${escapeHtml(parcelNumber)}</div>` : ""}
+                                        </div>
+                                        <div class="farmland-popup-crops-section" style="padding-top: 0px;">
+                                            <div class="farmland-popup-crops-title" style="font-weight: 600; color: #16a34a; margin-bottom: 6px; font-size: 0.9em;">🌾 Crops &amp; Planting Info</div>
                                             <div id="crops-cell-${featureKey}" class="farmland-popup-crops-content" style="color: #6c757d; font-style: italic;">Loading...</div>
                                         </div>
                                     </div>`;

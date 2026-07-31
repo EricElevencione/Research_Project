@@ -1480,7 +1480,18 @@ export const createRsbsaSubmission = async (
             : "No",
         ownershipDocumentNo: p.ownershipDocumentNo || "",
         isCultivating,
-        isFarming: typeof p.isFarming === "boolean" ? p.isFarming : (p.is_farming ?? isCultivating),
+        // For registered-owner parcels the land is always "being farmed" even
+        // when the owner isn't personally cultivating it (a tenant may be doing
+        // so). Default isFarming to true for owner parcels so the parcel is
+        // never filtered out by the getFarmParcels `.neq("is_farming", false)`
+        // guard. For tenant/lessee parcels, honour whatever value was supplied.
+        isFarming: typeof p.isFarming === "boolean"
+          ? p.isFarming
+          : typeof p.is_farming === "boolean"
+          ? p.is_farming
+          : (p.ownershipTypeRegisteredOwner ?? p.ownershipType?.registeredOwner)
+          ? true          // owner parcel → land is active by default
+          : isCultivating, // tenant/lessee parcel → follow isCultivating
         cultivationStatusUpdatedAt: p.cultivationStatusUpdatedAt || null,
         cultivationStatusReason: p.cultivationStatusReason || null,
         cultivatorSubmissionId: p.cultivatorSubmissionId || null,
@@ -1798,6 +1809,36 @@ export const deleteRsbsaSubmission = async (
 
 // ==================== FARM PARCELS ====================
 
+const mapParcelToCamelCase = (parcel: any) => {
+  if (!parcel) return parcel;
+
+  const withinAncestralDomain =
+    parcel.within_ancestral_domain === true || parcel.within_ancestral_domain === "Yes"
+      ? "Yes"
+      : parcel.within_ancestral_domain === false || parcel.within_ancestral_domain === "No"
+      ? "No"
+      : (parcel.withinAncestralDomain || "");
+
+  const agrarianReformBeneficiary =
+    parcel.agrarian_reform_beneficiary === true || parcel.agrarian_reform_beneficiary === "Yes"
+      ? "Yes"
+      : parcel.agrarian_reform_beneficiary === false || parcel.agrarian_reform_beneficiary === "No"
+      ? "No"
+      : (parcel.agrarianReformBeneficiary || "");
+
+  return {
+    ...parcel,
+    withinAncestralDomain,
+    agrarianReformBeneficiary,
+    ownershipDocumentNo: parcel.ownership_document_no || parcel.ownershipDocumentNo || "",
+    isFarming: parcel.is_farming ?? parcel.isFarming,
+    isCultivating: parcel.is_cultivating ?? parcel.isCultivating,
+    ownershipTypeRegisteredOwner: parcel.ownership_type_registered_owner ?? parcel.ownershipTypeRegisteredOwner,
+    ownershipTypeTenant: parcel.ownership_type_tenant ?? parcel.ownershipTypeTenant,
+    ownershipTypeLessee: parcel.ownership_type_lessee ?? parcel.ownershipTypeLessee,
+  };
+};
+
 export const getFarmParcels = async (
   submissionId: string | number,
   options: {
@@ -1808,11 +1849,11 @@ export const getFarmParcels = async (
   const currentOwnerOnly = options.currentOwnerOnly === true;
   const activeOnly = options.activeOnly === true;
 
-  // First get the farm parcels
   let parcelQuery = supabase
     .from("rsbsa_farm_parcels")
     .select("*")
-    .eq("submission_id", submissionId);
+    .eq("submission_id", submissionId)
+    .neq("is_farming", false);
 
   if (currentOwnerOnly) {
     parcelQuery = parcelQuery
@@ -1856,8 +1897,8 @@ export const getFarmParcels = async (
       console.log(
         `📍 No rsbsa_farm_parcels found, but found ${historyParcels.length} land_history record(s) for farmer ${submissionId}`,
       );
-      const fallbackParcels = historyParcels.map((h: any) => ({
-        id: h.id,
+      const fallbackParcels = historyParcels.map((h: any) => mapParcelToCamelCase({
+        id: h.farm_parcel_id || h.id,
         submission_id: submissionId,
         parcel_number: h.parcel_number || "N/A",
         farm_location_barangay: h.farm_location_barangay || "N/A",
@@ -1962,12 +2003,11 @@ export const getFarmParcels = async (
   const enhancedParcels = parcels.map((parcel: any) => {
     const parcelNumber = String(parcel.parcel_number ?? "").trim();
     const landParcelId = landParcelIdByParcelNumber[parcelNumber];
-    if (!landParcelId) return parcel;
 
-    return {
+    return mapParcelToCamelCase({
       ...parcel,
-      land_parcel_id: landParcelId,
-    };
+      land_parcel_id: landParcelId || parcel.land_parcel_id || null,
+    });
   });
 
   return createResponse(enhancedParcels, null, 200);

@@ -174,7 +174,7 @@
 /* Table Container */
 .jo-land-registry-table-container {
   flex: 1;
-  min-height: 0;
+  min-height: 260px;
   overflow: auto;
   border-radius: 10px;
   border: 1px solid #dbe6cf;
@@ -494,7 +494,7 @@
 
 .jo-land-registry-row-action-cell {
   position: relative;
-  overflow: visible;
+  overflow: visible !important;
 }
 
 .jo-land-registry-row-action-menu-wrap {
@@ -1840,3 +1840,244 @@
   border: 1px solid #fcd34d;
   margin-left: 8px;
 }
+
+/* ── Unused/Idle Land Registry Tab styles ── */
+.jo-land-registry-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 2px;
+}
+
+.jo-land-registry-tab-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jo-land-registry-tab-btn:hover {
+  color: #10b981;
+  border-bottom-color: #d1fae5;
+}
+
+.jo-land-registry-tab-btn.active {
+  color: #059669;
+  border-bottom-color: #059669;
+}
+
+/* ── Stop Farming / Delete modal styles ── */
+.jo-land-registry-delete-modal {
+  border-top: 4px solid #dc2626;
+}
+
+.jo-land-registry-delete-header {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  border-bottom: 3px solid #b91c1c !important;
+}
+
+.jo-land-registry-delete-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.jo-land-registry-delete-btn:hover {
+  background: #dc2626;
+}
+
+.jo-land-registry-delete-btn:disabled {
+  background: #f87171;
+  cursor: not-allowed;
+}
+
+.jo-land-registry-unused-label {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.jo-land-registry-unused-action-group {
+  display: flex;
+  gap: 6px;
+}
+
+.jo-land-registry-action-btn-reactivate {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.jo-land-registry-action-btn-reactivate:hover {
+  background: #a7f3d0;
+}
+
+.jo-land-registry-action-btn-assign {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.jo-land-registry-action-btn-assign:hover {
+  background: #bfdbfe;
+}
+
+.jo-land-registry-action-btn-delete {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.jo-land-registry-action-btn-delete:hover {
+  background: #fecaca;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Transfer Success Toast Notification
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes jo-lr-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes jo-lr-toast-progress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+.jo-lr-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 340px;
+  max-width: 520px;
+  padding: 16px 48px 16px 18px;
+  border-radius: 14px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.10);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  animation: jo-lr-toast-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
+}
+
+.jo-lr-toast--success {
+  background: linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%);
+  border: 1.5px solid #86efac;
+  color: #14532d;
+}
+
+.jo-lr-toast__icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  line-height: 1;
+}
+
+.jo-lr-toast__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.jo-lr-toast__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #15803d;
+  margin-bottom: 3px;
+  letter-spacing: 0.01em;
+}
+
+.jo-lr-toast__message {
+  font-size: 13px;
+  font-weight: 500;
+  color: #166534;
+  line-height: 1.45;
+}
+
+.jo-lr-toast__id {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.jo-lr-toast__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: #16a34a;
+  opacity: 0.6;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.jo-lr-toast__close:hover {
+  opacity: 1;
+  background: rgba(22, 163, 74, 0.12);
+}
+
+.jo-lr-toast__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+  border-radius: 0 0 14px 14px;
+  animation: jo-lr-toast-progress 5s linear forwards;
+}

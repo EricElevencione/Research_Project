@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRegionInventory, RegionInventoryItem } from "../../hooks/useRegionInventory";
-import { useAdminDashboardStats } from "../../hooks/useAdminDashboardStats";
+import { useAdminDashboardStats, SubsidyStock } from "../../hooks/useAdminDashboardStats";
 import RegionSidebar from "../../components/layout/RegionSidebar";
 import {
   Package,

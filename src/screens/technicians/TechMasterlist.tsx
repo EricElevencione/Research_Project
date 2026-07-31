@@ -33,6 +33,7 @@ interface RSBSARecord {
   farmerName: string;
   farmerAddress: string;
   farmLocation: string;
+  farmBarangay: string;
   parcelArea: string;
   dateSubmitted: string;
   status: string;
@@ -725,6 +726,7 @@ const TechMasterlist: React.FC = () => {
         })();
 
         const farmLocation = String(item.farmLocation ?? "—");
+        const farmBarangay = farmLocation.split(",")[0]?.trim() || "—";
 
         const calculateRecordCompleteness = (record: {
           referenceNumber: string;
@@ -764,6 +766,7 @@ const TechMasterlist: React.FC = () => {
             item.farmerAddress ?? item.addressBarangay ?? "—",
           ),
           farmLocation,
+          farmBarangay,
           parcelArea,
           dateSubmitted: item.dateSubmitted
             ? new Date(item.dateSubmitted).toISOString()

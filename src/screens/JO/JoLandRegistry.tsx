@@ -561,6 +561,19 @@ const JoLandRegistry: React.FC = () => {
   const [landStatusFilter, setLandStatusFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState(false);
 
+  // Tab toggle and Unused parcels state
+  const [activeViewTab, setActiveViewTab] = useState<"farmers" | "unused">("farmers");
+  const [unusedParcels, setUnusedParcels] = useState<any[]>([]);
+  const [loadingUnused, setLoadingUnused] = useState(false);
+  const [openUnusedActionMenuId, setOpenUnusedActionMenuId] = useState<number | null>(null);
+
+  // Retire/Stop Farming modal states
+  const [showDeleteParcelModal, setShowDeleteParcelModal] = useState(false);
+  const [selectedDeleteParcel, setSelectedDeleteParcel] = useState<CultivationParcel | null>(null);
+  const [deleteParcelReason, setDeleteParcelReason] = useState("");
+  const [isDeletingParcel, setIsDeletingParcel] = useState(false);
+  const [deleteParcelError, setDeleteParcelError] = useState("");
+
   // Proof viewer state
   const [transferProofMap, setTransferProofMap] = useState<
     Map<string, ProofItem[]>
@@ -598,6 +611,7 @@ const JoLandRegistry: React.FC = () => {
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
   const [transferSubmitError, setTransferSubmitError] = useState("");
   const [transferSubmitSuccess, setTransferSubmitSuccess] = useState("");
+  const [transferToast, setTransferToast] = useState<{ message: string; transferId?: string | number } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openActionMenuRowId, setOpenActionMenuRowId] = useState<string | null>(
     null,
@@ -686,17 +700,24 @@ const JoLandRegistry: React.FC = () => {
   }, [selectedFarmer?.farmer_id, transferMode]);
 
   useEffect(() => {
+    if (!transferToast) return;
+    const timer = setTimeout(() => setTransferToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [transferToast]);
+
+  useEffect(() => {
     const fetchCultivators = async () => {
       const ownerId = Number(activeOwnerAffiliationNewOwnerId);
-      if (!Number.isFinite(ownerId)) {
+      if (!Number.isFinite(ownerId) || ownerId <= 0) {
         setOwnerAffiliationParcelCultivators({});
         return;
       }
 
       try {
+        // Step 1: Fetch the owner's registered parcel rows
         const { data: parcelsData, error: parcelsError } = await supabase
           .from("rsbsa_farm_parcels")
-          .select("id, cultivator_submission_id")
+          .select("id, parcel_number, cultivator_submission_id")
           .eq("submission_id", ownerId)
           .eq("ownership_type_registered_owner", true)
           .or("is_current_owner.is.null,is_current_owner.eq.true");
@@ -706,20 +727,47 @@ const JoLandRegistry: React.FC = () => {
           return;
         }
 
-        const cultivatorIds = Array.from(
-          new Set(
-            parcelsData
-              .map((p) => p.cultivator_submission_id)
-              .filter((id): id is number => typeof id === "number" && id > 0),
-          ),
+        // Step 2: Also find tenant/lessee rows that are farming THIS owner's land
+        // (They have a separate row with tenant_land_owner_id = ownerId)
+        const parcelNumbers = parcelsData
+          .map((p: any) => p.parcel_number)
+          .filter(Boolean);
+
+        const tenantRowsByParcelNumber: Record<string, number> = {};
+        if (parcelNumbers.length > 0) {
+          const { data: tenantRows } = await supabase
+            .from("rsbsa_farm_parcels")
+            .select("submission_id, parcel_number, ownership_type_tenant, ownership_type_lessee")
+            .or(`tenant_land_owner_id.eq.${ownerId},lessee_land_owner_id.eq.${ownerId}`)
+            .eq("is_current_owner", true)
+            .in("parcel_number", parcelNumbers);
+
+          if (tenantRows) {
+            tenantRows.forEach((row: any) => {
+              const pNum = (row.parcel_number || "").trim().toUpperCase();
+              if (pNum && row.submission_id) {
+                tenantRowsByParcelNumber[pNum] = row.submission_id;
+              }
+            });
+          }
+        }
+
+        // Step 3: Collect all farmer IDs to resolve names for
+        const allFarmerIds = Array.from(
+          new Set([
+            ...parcelsData
+              .map((p: any) => p.cultivator_submission_id)
+              .filter((id: any): id is number => typeof id === "number" && id > 0),
+            ...Object.values(tenantRowsByParcelNumber),
+          ]),
         );
 
         const nameMap: Record<number, string> = {};
-        if (cultivatorIds.length > 0) {
+        if (allFarmerIds.length > 0) {
           const { data: subsData } = await supabase
             .from("rsbsa_submission")
             .select(`id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME"`)
-            .in("id", cultivatorIds);
+            .in("id", allFarmerIds);
 
           if (subsData) {
             subsData.forEach((row: any) => {
@@ -737,11 +785,28 @@ const JoLandRegistry: React.FC = () => {
           }
         }
 
+        // Step 4: Build the final map: parcel ID → cultivator name (or null = owner farmed)
         const map: Record<number, string | null> = {};
-        parcelsData.forEach((p) => {
-          map[p.id] = p.cultivator_submission_id
-            ? nameMap[p.cultivator_submission_id] || `Farmer #${p.cultivator_submission_id}`
-            : null;
+        parcelsData.forEach((p: any) => {
+          const pNum = (p.parcel_number || "").trim().toUpperCase();
+
+          // Priority 1: explicit cultivator_submission_id on owner's parcel
+          if (p.cultivator_submission_id) {
+            map[p.id] =
+              nameMap[p.cultivator_submission_id] ||
+              `Farmer #${p.cultivator_submission_id}`;
+            return;
+          }
+
+          // Priority 2: matched tenant/lessee row by parcel_number
+          const tenantId = tenantRowsByParcelNumber[pNum];
+          if (tenantId) {
+            map[p.id] = nameMap[tenantId] || `Farmer #${tenantId}`;
+            return;
+          }
+
+          // No cultivator — land is owner-farmed or unassigned
+          map[p.id] = null;
         });
 
         setOwnerAffiliationParcelCultivators(map);
@@ -753,6 +818,7 @@ const JoLandRegistry: React.FC = () => {
 
     fetchCultivators();
   }, [activeOwnerAffiliationNewOwnerId]);
+
 
   const refreshLandParcels = useCallback(async () => {
     setLoading(true);
@@ -846,19 +912,301 @@ const JoLandRegistry: React.FC = () => {
         "[STATE SET] Set aggregatedFarmers to length:",
         normalizedData.length || 0,
       );
-    } catch (err) {
-      console.error("[FETCH CRASH]", err);
     } finally {
       setLoading(false);
       console.log("[FETCH END] Loading set to false");
     }
   }, []);
 
-  // Fetch all land parcels with current owners
+  const fetchUnusedParcels = useCallback(async () => {
+    setLoadingUnused(true);
+    try {
+      const { data: parcelsData, error: parcelsError } = await supabase
+        .from("rsbsa_farm_parcels")
+        .select("id, submission_id, parcel_number, farm_location_barangay, total_farm_area_ha, is_farming, farming_status_reason, farming_status_updated_at")
+        .eq("is_farming", false)
+        .or("is_current_owner.is.null,is_current_owner.eq.true");
+
+      if (parcelsError) throw parcelsError;
+
+      const farmerIds = Array.from(
+        new Set((parcelsData || []).map((p: any) => p.submission_id).filter(Boolean))
+      );
+
+      const nameMap: Record<number, string> = {};
+      if (farmerIds.length > 0) {
+        const { data: subs } = await supabase
+          .from("rsbsa_submission")
+          .select(`id, "FIRST NAME", "MIDDLE NAME", "LAST NAME", "EXT NAME"`)
+          .in("id", farmerIds);
+
+        if (subs) {
+          subs.forEach((row: any) => {
+            const fullName = [
+              row["FIRST NAME"],
+              row["MIDDLE NAME"],
+              row["LAST NAME"],
+              row["EXT NAME"],
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+            nameMap[row.id] = fullName;
+          });
+        }
+      }
+
+      const enriched = (parcelsData || []).map((p: any) => ({
+        ...p,
+        landowner_name: nameMap[p.submission_id] || `Farmer #${p.submission_id}`,
+      }));
+
+      setUnusedParcels(enriched);
+    } catch (err) {
+      console.error("Error fetching unused parcels:", err);
+    } finally {
+      setLoadingUnused(false);
+    }
+  }, []);
+
+  const handleDeleteParcelSubmit = async () => {
+    if (!selectedDeleteParcel) return;
+    setIsDeletingParcel(true);
+    setDeleteParcelError("");
+
+    try {
+      const parcelId = selectedDeleteParcel.id;
+      const farmerId = selectedFarmer?.farmer_id || selectedDeleteParcel.submission_id;
+
+      const { error: parcelErr } = await supabase
+        .from("rsbsa_farm_parcels")
+        .update({
+          is_farming: false,
+          farming_status_reason: deleteParcelReason || "Retired from farming by Journal Officer request",
+          farming_status_updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", parcelId);
+
+      if (parcelErr) throw parcelErr;
+
+      const { error: historyErr } = await supabase
+        .from("land_history")
+        .update({
+          is_current: false,
+          period_end_date: new Date().toISOString().slice(0, 10),
+          change_type: "STOPPED_FARMING",
+          change_reason: deleteParcelReason || "Retired from farming",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("farm_parcel_id", parcelId)
+        .eq("is_current", true);
+
+      if (historyErr) {
+        console.warn("History update warning (non-fatal):", historyErr.message);
+      }
+
+      if (farmerId) {
+        await supabase.rpc("sync_farmer_no_parcels_status", {
+          p_farmer_id: farmerId,
+        });
+      }
+
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "UPDATE",
+          AuditModule.LAND_HISTORY,
+          "retire_farm_parcel",
+          `${parcelId}`,
+          `Retired parcel #${selectedDeleteParcel.parcel_number || parcelId} from farmer ${selectedFarmer?.farmer_name || farmerId}`,
+          { is_farming: true },
+          { is_farming: false, reason: deleteParcelReason }
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
+
+      await refreshLandParcels();
+      await fetchUnusedParcels();
+      setShowDeleteParcelModal(false);
+
+      const stillHasParcels = selectedFarmer
+        ? selectedFarmer.parcels.some(p => p.id !== parcelId)
+        : false;
+      if (!selectedFarmer || !stillHasParcels) {
+        setShowModal(false);
+        setSelectedFarmer(null);
+        setSelectedRegistryRowId(null);
+      } else {
+        const pNumbers = selectedFarmer.parcels
+          .filter(p => p.id !== parcelId)
+          .map(p => p.parcel_number)
+          .filter((pn): pn is string => Boolean(pn));
+        const pIds = selectedFarmer.parcels
+          .filter(p => p.id !== parcelId)
+          .map(p => p.id);
+        void fetchCultivationParcelsForFarmer(farmerId, pIds, pNumbers);
+      }
+    } catch (err: any) {
+      console.error("Retire parcel failed:", err);
+      setDeleteParcelError(err?.message || "Failed to retire parcel.");
+    } finally {
+      setIsDeletingParcel(false);
+    }
+  };
+
+  const handleReactivateParcel = async (parcel: any) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to reactivate parcel No. ${parcel.parcel_number || parcel.id} for farming?`
+    );
+    if (!confirmed) return;
+
+    try {
+      const parcelId = parcel.id;
+      const farmerId = parcel.submission_id;
+
+      const { error: parcelErr } = await supabase
+        .from("rsbsa_farm_parcels")
+        .update({
+          is_farming: true,
+          farming_status_reason: null,
+          farming_status_updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", parcelId);
+
+      if (parcelErr) throw parcelErr;
+
+      const { error: historyErr } = await supabase
+        .from("land_history")
+        .update({
+          is_current: true,
+          period_start_date: new Date().toISOString().slice(0, 10),
+          period_end_date: null,
+          change_type: "REACTIVATE",
+          change_reason: "Reactivated for farming",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("farm_parcel_id", parcelId);
+
+      if (historyErr) {
+        console.warn("History update warning (non-fatal):", historyErr.message);
+      }
+
+      if (farmerId) {
+        await supabase.rpc("sync_farmer_no_parcels_status", {
+          p_farmer_id: farmerId,
+        });
+      }
+
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "UPDATE",
+          AuditModule.LAND_HISTORY,
+          "reactivate_farm_parcel",
+          `${parcelId}`,
+          `Reactivated parcel #${parcel.parcel_number || parcelId} for cultivation`,
+          { is_farming: false },
+          { is_farming: true }
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
+
+      await refreshLandParcels();
+      await fetchUnusedParcels();
+    } catch (err: any) {
+      console.error("Reactivation failed:", err);
+      alert(err?.message || "Failed to reactivate parcel.");
+    }
+  };
+
+  const handleDeleteUnusedParcel = async (parcel: any) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete parcel No. ${parcel.parcel_number || parcel.id} from the system? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const parcelId = parcel.id;
+      const farmerId = parcel.submission_id;
+
+      const { error: deleteErr } = await supabase
+        .from("rsbsa_farm_parcels")
+        .delete()
+        .eq("id", parcelId);
+
+      if (deleteErr) throw deleteErr;
+
+      const { error: historyErr } = await supabase
+        .from("land_history")
+        .update({
+          is_current: false,
+          period_end_date: new Date().toISOString().slice(0, 10),
+          change_type: "HARD_DELETE",
+          change_reason: "Permanently deleted parcel record",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("farm_parcel_id", parcelId);
+
+      if (historyErr) {
+        console.warn("History update warning (non-fatal):", historyErr.message);
+      }
+
+      if (farmerId) {
+        await supabase.rpc("sync_farmer_no_parcels_status", {
+          p_farmer_id: farmerId,
+        });
+      }
+
+      try {
+        const user = await getCurrentUserForAudit();
+        await getAuditLogger().logCRUD(
+          { ...user, id: undefined },
+          "DELETE",
+          AuditModule.LAND_HISTORY,
+          "delete_farm_parcel",
+          `${parcelId}`,
+          `Permanently deleted parcel #${parcel.parcel_number || parcelId}`,
+          { parcel },
+          null
+        );
+      } catch (auditErr) {
+        console.error("Audit log failed (non-blocking):", auditErr);
+      }
+
+      await refreshLandParcels();
+      await fetchUnusedParcels();
+    } catch (err: any) {
+      console.error("Hard deletion failed:", err);
+      alert(err?.message || "Failed to delete parcel permanently.");
+    }
+  };
+
+  // Fetch all land parcels and unused parcels
   useEffect(() => {
-    console.log("Fetching aggregated farmers...");
+    console.log("Fetching aggregated farmers and unused parcels...");
     refreshLandParcels();
-  }, [refreshLandParcels]);
+    fetchUnusedParcels();
+  }, [refreshLandParcels, fetchUnusedParcels]);
+
+  // Close all row action menus on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest(".jo-land-registry-row-action-menu-wrap")) {
+        return;
+      }
+      setOpenActionMenuRowId(null);
+      setOpenUnusedActionMenuId(null);
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, []);
 
   const fetchCultivationParcelsForFarmer = async (
     farmerId: number,
@@ -3730,6 +4078,10 @@ const JoLandRegistry: React.FC = () => {
         setShowModal(false);
       }
 
+      setTransferToast({
+        message: "Ownership transfer completed successfully!",
+        transferId: transferId ?? undefined,
+      });
       closeTransferModal();
     } catch (error: any) {
       if (uploadedProofs.length > 0) {
@@ -3849,6 +4201,31 @@ const JoLandRegistry: React.FC = () => {
 
   return (
     <div className="jo-land-registry-page-container">
+      {/* ── Transfer Success Toast ─────────────────────────────────── */}
+      {transferToast && (
+        <div className="jo-lr-toast jo-lr-toast--success" role="alert">
+          <div className="jo-lr-toast__icon">✅</div>
+          <div className="jo-lr-toast__body">
+            <div className="jo-lr-toast__title">Transfer Successful</div>
+            <div className="jo-lr-toast__message">
+              {transferToast.message}
+              {transferToast.transferId !== undefined && (
+                <span className="jo-lr-toast__id">
+                  {" "}(Transfer ID: {String(transferToast.transferId)})
+                </span>
+              )}
+            </div>
+          </div>
+          <button
+            className="jo-lr-toast__close"
+            onClick={() => setTransferToast(null)}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+          <div className="jo-lr-toast__progress" />
+        </div>
+      )}
       <div className="jo-land-registry-page has-mobile-sidebar">
         {/* Sidebar */}
         <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -3874,8 +4251,37 @@ const JoLandRegistry: React.FC = () => {
 
           {/* Content Card */}
           <div className="jo-land-registry-content-card">
-            {/* Filters */}
-            <div className="jo-land-registry-filters-section">
+            {/* Toggle Tabs */}
+            {false && (
+              <div className="jo-land-registry-tabs">
+                <button
+                  className={`jo-land-registry-tab-btn ${activeViewTab === "farmers" ? "active" : ""}`}
+                  onClick={() => {
+                    setActiveViewTab("farmers");
+                    setSearchTerm("");
+                    setFilterBarangay("");
+                  }}
+                >
+                  🧑‍🌾 Cultivators & Active Farms
+                </button>
+                <button
+                  className={`jo-land-registry-tab-btn ${activeViewTab === "unused" ? "active" : ""}`}
+                  onClick={() => {
+                    setActiveViewTab("unused");
+                    setSearchTerm("");
+                    setFilterBarangay("");
+                    void fetchUnusedParcels();
+                  }}
+                >
+                  🍂 Idle & Unused Farms
+                </button>
+              </div>
+            )}
+
+            {activeViewTab === "farmers" && (
+              <>
+                {/* Filters */}
+                <div className="jo-land-registry-filters-section">
               <div className="jo-land-registry-search-filter">
                 <input
                   type="text"
@@ -4114,6 +4520,214 @@ const JoLandRegistry: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </>
+        )}
+
+        {false && activeViewTab === "unused" && (
+          <>
+            {/* Filters */}
+            <div className="jo-land-registry-filters-section">
+              <div className="jo-land-registry-search-filter">
+                <input
+                  type="text"
+                  className="jo-land-registry-search-input"
+                  placeholder="🔍 Search by parcel number, landowner, or reason..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="jo-land-registry-barangay-filter">
+                <select
+                  className="jo-land-registry-barangay-select"
+                  value={filterBarangay}
+                  onChange={(e) => setFilterBarangay(e.target.value)}
+                >
+                  <option value="">All Barangays</option>
+                  {uniqueBarangays.map((brgy) => (
+                    <option key={brgy} value={brgy}>
+                      {brgy}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="jo-land-registry-table-container">
+              <table className="jo-land-registry-table">
+                <thead>
+                  <tr>
+                    <th>Parcel Number</th>
+                    <th>Location</th>
+                    <th>Area (ha)</th>
+                    <th>Landowner</th>
+                    <th>Retired Date</th>
+                    <th>Reason for Retirement</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingUnused ? (
+                    <tr>
+                      <td colSpan={7} className="jo-land-registry-loading-cell">
+                        Loading unused land parcels...
+                      </td>
+                    </tr>
+                  ) : unusedParcels.filter(p => {
+                    const term = searchTerm.toLowerCase();
+                    const matchSearch =
+                      !searchTerm ||
+                      (p.parcel_number || "").toLowerCase().includes(term) ||
+                      (p.landowner_name || "").toLowerCase().includes(term) ||
+                      (p.farming_status_reason || "").toLowerCase().includes(term);
+
+                    const matchBarangay =
+                      !filterBarangay ||
+                      (p.farm_location_barangay || "").toLowerCase() === filterBarangay.toLowerCase();
+
+                    return matchSearch && matchBarangay;
+                  }).length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="jo-land-registry-empty-cell">
+                        No unused land parcels found
+                      </td>
+                    </tr>
+                  ) : (
+                    unusedParcels
+                      .filter(p => {
+                        const term = searchTerm.toLowerCase();
+                        const matchSearch =
+                          !searchTerm ||
+                          (p.parcel_number || "").toLowerCase().includes(term) ||
+                          (p.landowner_name || "").toLowerCase().includes(term) ||
+                          (p.farming_status_reason || "").toLowerCase().includes(term);
+
+                        const matchBarangay =
+                          !filterBarangay ||
+                          (p.farm_location_barangay || "").toLowerCase() === filterBarangay.toLowerCase();
+
+                        return matchSearch && matchBarangay;
+                      })
+                      .map((parcel) => {
+                        return (
+                          <tr key={parcel.id}>
+                            <td>{parcel.parcel_number || "N/A"}</td>
+                            <td>{parcel.farm_location_barangay || "—"}</td>
+                            <td>{Number(parcel.total_farm_area_ha || 0).toFixed(2)}</td>
+                            <td>{parcel.landowner_name}</td>
+                            <td>{parcel.farming_status_updated_at ? formatDate(parcel.farming_status_updated_at) : "—"}</td>
+                            <td>{parcel.farming_status_reason || "Not specified"}</td>
+                            <td
+                              className="jo-land-registry-row-action-cell"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.nativeEvent.stopImmediatePropagation();
+                              }}
+                            >
+                              <div
+                                className="jo-land-registry-row-action-menu-wrap"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.nativeEvent.stopImmediatePropagation();
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  className="jo-land-registry-row-action-trigger"
+                                  aria-label="Open row actions"
+                                  aria-haspopup="menu"
+                                  aria-expanded={
+                                    openUnusedActionMenuId === parcel.id
+                                  }
+                                  onClick={() =>
+                                    setOpenUnusedActionMenuId((prev) =>
+                                      prev === parcel.id ? null : parcel.id
+                                    )
+                                  }
+                                  title="Actions"
+                                >
+                                  ...
+                                </button>
+
+                                {openUnusedActionMenuId === parcel.id && (
+                                  <div
+                                    className="jo-land-registry-row-action-menu"
+                                    role="menu"
+                                    style={{ right: 0 }}
+                                  >
+                                    <button
+                                      type="button"
+                                      className="jo-land-registry-row-action-menu-item"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setOpenUnusedActionMenuId(null);
+                                        handleReactivateParcel(parcel);
+                                      }}
+                                    >
+                                      Re-activate
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="jo-land-registry-row-action-menu-item"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setOpenUnusedActionMenuId(null);
+                                        const ownerGroup = aggregatedFarmers.find(
+                                          (g) => g.farmer_id === parcel.submission_id
+                                        );
+                                        if (ownerGroup) {
+                                          openFarmAnotherModal(ownerGroup, "tenant");
+                                        } else {
+                                          const fallbackGroup: FarmerGroup = {
+                                            farmer_id: parcel.submission_id,
+                                            farmer_name: parcel.landowner_name,
+                                            ffrs_code: "",
+                                            parcels: [
+                                              {
+                                                id: parcel.id,
+                                                parcel_number: parcel.parcel_number,
+                                                farm_location_barangay: parcel.farm_location_barangay,
+                                                farm_location_municipality: "Dumangas",
+                                                total_farm_area_ha: parcel.total_farm_area_ha,
+                                              }
+                                            ],
+                                            total_farm_area_ha: parcel.total_farm_area_ha,
+                                            last_updated: new Date().toISOString(),
+                                            has_registered_owner: true,
+                                            has_tenant: false,
+                                            has_lessee: false,
+                                          };
+                                          openFarmAnotherModal(fallbackGroup, "tenant");
+                                        }
+                                      }}
+                                    >
+                                      Assign Tenant
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="jo-land-registry-row-action-menu-item jo-land-registry-row-action-menu-item-owner"
+                                      role="menuitem"
+                                      style={{ color: "#ef4444" }}
+                                      onClick={() => {
+                                        setOpenUnusedActionMenuId(null);
+                                        handleDeleteUnusedParcel(parcel);
+                                      }}
+                                    >
+                                      Delete Parcel
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
           </div>
         </div>
 
@@ -4371,13 +4985,35 @@ const JoLandRegistry: React.FC = () => {
                             <div
                               style={{
                                 display: "flex",
-                                flexDirection: "column",
-                                gap: "4px",
+                                justifyContent: "space-between",
+                                alignItems: "center",
                               }}
                             >
-                              <strong>
-                                {parcelLabel} - {occupantLabel}
-                              </strong>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "4px",
+                                }}
+                              >
+                                <strong>
+                                  {parcelLabel} - {occupantLabel}
+                                </strong>
+                              </div>
+                              {parcel.is_farming !== false && selectedFarmerViewRole !== "owner" && (
+                                <button
+                                  className="jo-land-registry-action-btn-delete"
+                                  onClick={() => {
+                                    setSelectedDeleteParcel(parcel);
+                                    setDeleteParcelReason("");
+                                    setDeleteParcelError("");
+                                    setShowDeleteParcelModal(true);
+                                  }}
+                                  title="Stop farming this parcel"
+                                >
+                                  🗑️ Stop Farming
+                                </button>
+                              )}
                             </div>
                             <div
                               style={{
@@ -4904,6 +5540,128 @@ const JoLandRegistry: React.FC = () => {
                     For official land transfers, please contact the Municipal
                     Agriculture Office.
                   </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stop Farming / Retire Modal */}
+        {showDeleteParcelModal && selectedDeleteParcel && (
+          <div
+            className="jo-land-registry-modal-overlay"
+            onClick={() => setShowDeleteParcelModal(false)}
+          >
+            <div
+              className="jo-land-registry-modal jo-land-registry-delete-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="jo-land-registry-modal-header jo-land-registry-delete-header">
+                <h3>🍂 Stop Farming / Retire Land</h3>
+                <button
+                  className="jo-land-registry-close-button"
+                  onClick={() => setShowDeleteParcelModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="jo-land-registry-modal-body">
+                <div className="jo-land-registry-replacement-flow">
+                  <div className="jo-land-registry-replacement-note" style={{ borderColor: "#fca5a5", borderLeftColor: "#ef4444", background: "#fef2f2", color: "#991b1b" }}>
+                    <strong>Warning:</strong> You are about to mark this land parcel as <strong>inactive/not farming</strong>. It will be excluded from the farmer's active profile, active maps, and the active dashboard stats.
+                  </div>
+
+                  {deleteParcelError && (
+                    <div
+                      className="jo-land-registry-replacement-note"
+                      style={{
+                        borderColor: "#fecaca",
+                        borderLeftColor: "#dc2626",
+                        background: "#fef2f2",
+                        color: "#991b1b",
+                      }}
+                    >
+                      <strong>Error:</strong> {deleteParcelError}
+                    </div>
+                  )}
+
+                  <div className="jo-land-registry-transfer-section-card">
+                    <h4>Land Parcel Information</h4>
+                    <div className="jo-land-registry-info-grid" style={{ marginTop: "10px" }}>
+                      <div className="jo-land-registry-info-item">
+                        <span className="jo-land-registry-info-label">Parcel Number</span>
+                        <span className="jo-land-registry-info-value">{selectedDeleteParcel.parcel_number || "N/A"}</span>
+                      </div>
+                      <div className="jo-land-registry-info-item">
+                        <span className="jo-land-registry-info-label">Location (Barangay)</span>
+                        <span className="jo-land-registry-info-value">{selectedDeleteParcel.farm_location_barangay || "—"}</span>
+                      </div>
+                      <div className="jo-land-registry-info-item">
+                        <span className="jo-land-registry-info-label">Area</span>
+                        <span className="jo-land-registry-info-value">{Number(selectedDeleteParcel.total_farm_area_ha || 0).toFixed(2)} ha</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="jo-land-registry-transfer-section-card" style={{ marginTop: "20px" }}>
+                    <h4>Reason for Stopping Farming</h4>
+                    <div style={{ marginTop: "10px" }}>
+                      <textarea
+                        className="jo-land-registry-reason-textarea"
+                        style={{
+                          width: "100%",
+                          minHeight: "80px",
+                          borderRadius: "8px",
+                          border: "1px solid #d1d5db",
+                          padding: "10px",
+                          fontSize: "13px",
+                          fontFamily: "inherit",
+                          resize: "vertical",
+                        }}
+                        placeholder="e.g. Farmer decided to retire, contract expired, or land was sold..."
+                        value={deleteParcelReason}
+                        onChange={(e) => setDeleteParcelReason(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: "12px",
+                      marginTop: "24px",
+                      borderTop: "1px solid #e5e7eb",
+                      paddingTop: "16px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        padding: "10px 20px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setShowDeleteParcelModal(false)}
+                      disabled={isDeletingParcel}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="jo-land-registry-delete-btn"
+                      onClick={handleDeleteParcelSubmit}
+                      disabled={isDeletingParcel}
+                    >
+                      {isDeletingParcel ? "Retiring..." : "Confirm & Stop Farming"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -5776,23 +6534,44 @@ const JoLandRegistry: React.FC = () => {
                                   </div>
                                   {(() => {
                                     const cultivatorName = ownerAffiliationParcelCultivators[parcel.farmParcelId];
-                                    if (!cultivatorName) return null;
+                                    // If still loading (key not present yet), show nothing
+                                    if (!(parcel.farmParcelId in ownerAffiliationParcelCultivators)) return null;
+                                    if (cultivatorName) {
+                                      return (
+                                        <div
+                                          className="jo-land-registry-transfer-mini-note"
+                                          style={{
+                                            color: "#b45309",
+                                            backgroundColor: "#fef3c7",
+                                            padding: "0.25rem 0.5rem",
+                                            borderRadius: "4px",
+                                            marginTop: "0.25rem",
+                                            marginBottom: "0.25rem",
+                                            fontWeight: "600",
+                                            display: "inline-block",
+                                            border: "1px solid #fde68a"
+                                          }}
+                                        >
+                                          ⚠️ Farmed by: {cultivatorName}
+                                        </div>
+                                      );
+                                    }
                                     return (
                                       <div
                                         className="jo-land-registry-transfer-mini-note"
                                         style={{
-                                          color: "#b45309",
-                                          backgroundColor: "#fef3c7",
+                                          color: "#15803d",
+                                          backgroundColor: "#f0fdf4",
                                           padding: "0.25rem 0.5rem",
                                           borderRadius: "4px",
                                           marginTop: "0.25rem",
                                           marginBottom: "0.25rem",
                                           fontWeight: "600",
                                           display: "inline-block",
-                                          border: "1px solid #fde68a"
+                                          border: "1px solid #bbf7d0"
                                         }}
                                       >
-                                        ⚠️ Already cultivated by: {cultivatorName}
+                                        ✅ Owner-farmed (no current tenant)
                                       </div>
                                     );
                                   })()}

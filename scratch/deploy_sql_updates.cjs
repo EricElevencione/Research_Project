@@ -239,6 +239,7 @@ BEGIN
         -- Step A: Update landowner's parcel row to show it is cultivated by the tenant
         UPDATE rsbsa_farm_parcels
            SET is_cultivating = false,
+               is_farming = true,
                cultivator_submission_id = p_replacement_holder_id,
                cultivation_status_updated_at = CURRENT_TIMESTAMP,
                cultivation_status_reason = 'Cultivated by ' || p_role || ': ' || v_replacement_name,

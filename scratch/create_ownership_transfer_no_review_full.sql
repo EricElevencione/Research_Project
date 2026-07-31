@@ -184,90 +184,75 @@ begin
       where (parcel_number IS NOT NULL AND v_parcel_number IS NOT NULL AND lower(trim(parcel_number)) = lower(trim(v_parcel_number)))
         and (farmer_id = p_from_farmer_id or ffrs_id = v_from_ffrs);
 
-      -- Keep current history row aligned to new owner (current snapshot behavior)
+      -- 1. Deactivate old owner's history record (if exists) and set period_end_date to v_now
       update land_history
       set
-        rsbsa_submission_id = p_to_farmer_id,
-        farmer_id = p_to_farmer_id,
-        farmer_name = v_to_name,
-        farmer_ffrs_code = v_to_ffrs,
-        land_owner_id = p_to_farmer_id,
-        land_owner_name = v_to_name,
-        land_owner_ffrs_code = v_to_ffrs,
-        total_farm_area_ha = v_parcel_area,
-        transferred_area_ha = v_parcel_area,
-        remaining_area_ha = 0,
-        is_registered_owner = true,
-        is_tenant = false,
-        is_lessee = false,
-        change_type = 'TRANSFER',
-        change_reason = v_reason,
-        notes = format('Full transfer from farmer %s to %s', p_from_farmer_id, p_to_farmer_id),
+        is_current = false,
+        period_end_date = v_now,
         updated_at = now()
       where farm_parcel_id = v_farm_parcel_id
         and is_current = true;
 
-      if not found then
-        insert into land_history (
-          rsbsa_submission_id,
-          farm_parcel_id,
-          parcel_number,
-          farm_location_barangay,
-          farm_location_municipality,
-          total_farm_area_ha,
-          transferred_area_ha,
-          remaining_area_ha,
-          land_owner_id,
-          land_owner_name,
-          land_owner_ffrs_code,
-          farmer_id,
-          farmer_name,
-          farmer_ffrs_code,
-          is_tenant,
-          is_lessee,
-          is_registered_owner,
-          ownership_document_no,
-          agrarian_reform_beneficiary,
-          within_ancestral_domain,
-          period_start_date,
-          is_current,
-          change_type,
-          change_reason,
-          notes,
-          created_at,
-          updated_at
-        )
-        select
-          p_to_farmer_id,
-          fp.id,
-          fp.parcel_number,
-          fp.farm_location_barangay,
-          fp.farm_location_municipality,
-          fp.total_farm_area_ha,
-          fp.total_farm_area_ha,
-          0,
-          p_to_farmer_id,
-          v_to_name,
-          v_to_ffrs,
-          p_to_farmer_id,
-          v_to_name,
-          v_to_ffrs,
-          false,
-          false,
-          true,
-          fp.ownership_document_no,
-          case when coalesce(fp.agrarian_reform_beneficiary, 'No') = 'Yes' then true else false end,
-          case when coalesce(fp.within_ancestral_domain, 'No') = 'Yes' then true else false end,
-          v_now,
-          true,
-          'TRANSFER',
-          v_reason,
-          format('Full transfer from farmer %s to %s', p_from_farmer_id, p_to_farmer_id),
-          now(),
-          now()
-        from rsbsa_farm_parcels fp
-        where fp.id = v_farm_parcel_id;
-      end if;
+      -- 2. Insert the new owner's history record
+      insert into land_history (
+        rsbsa_submission_id,
+        farm_parcel_id,
+        parcel_number,
+        farm_location_barangay,
+        farm_location_municipality,
+        total_farm_area_ha,
+        transferred_area_ha,
+        remaining_area_ha,
+        land_owner_id,
+        land_owner_name,
+        land_owner_ffrs_code,
+        farmer_id,
+        farmer_name,
+        farmer_ffrs_code,
+        is_tenant,
+        is_lessee,
+        is_registered_owner,
+        ownership_document_no,
+        agrarian_reform_beneficiary,
+        within_ancestral_domain,
+        period_start_date,
+        is_current,
+        change_type,
+        change_reason,
+        notes,
+        created_at,
+        updated_at
+      )
+      select
+        p_to_farmer_id,
+        v_farm_parcel_id,
+        v_parcel_number,
+        v_barangay,
+        v_municipality,
+        v_parcel_area,
+        v_parcel_area,
+        0,
+        p_to_farmer_id,
+        v_to_name,
+        v_to_ffrs,
+        p_to_farmer_id,
+        v_to_name,
+        v_to_ffrs,
+        false,
+        false,
+        true,
+        v_ownership_doc,
+        case when coalesce(v_arb, 'No') = 'Yes' then true else false end,
+        case when coalesce(v_within_domain, 'No') = 'Yes' then true else false end,
+        v_now,
+        true,
+        'TRANSFER',
+        v_reason,
+        format('Full transfer from farmer %s to %s', p_from_farmer_id, p_to_farmer_id),
+        now(),
+        now()
+      from rsbsa_farm_parcels fp
+      where fp.id = v_farm_parcel_id;
 
     -- PARTIAL transfer: reduce donor parcel + create recipient parcel
     else

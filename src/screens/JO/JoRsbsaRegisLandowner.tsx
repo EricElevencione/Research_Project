@@ -127,6 +127,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
 
   const [_activeTab] = useState("overview");
   const [landowners, setLandowners] = useState<LandOwner[]>([]);
+  const [unusedParcels, setUnusedParcels] = useState<any[]>([]);
   const [draftId, _setDraftId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -161,7 +162,24 @@ const JoRsbsaRegisLandowner: React.FC = () => {
         console.error("Error fetching landowners:", error);
       }
     };
+
+    const fetchUnusedParcelsList = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("rsbsa_farm_parcels")
+          .select("id, submission_id, parcel_number, farm_location_barangay, total_farm_area_ha, is_farming, ownership_document_no, agrarian_reform_beneficiary, within_ancestral_domain")
+          .eq("is_farming", false)
+          .or("is_current_owner.is.null,is_current_owner.eq.true");
+
+        if (error) throw error;
+        setUnusedParcels(data || []);
+      } catch (error) {
+        console.error("Error fetching unused parcels:", error);
+      }
+    };
+
     fetchLandowners();
+    fetchUnusedParcelsList();
   }, []);
 
   const [formData, setFormData] = useState<FormData>({

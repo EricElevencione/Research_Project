@@ -172,7 +172,7 @@ export const useAdminDashboardStats = (
         supabase
           .from("rsbsa_farm_parcels")
           .select(
-            "submission_id, farm_location_barangay, total_farm_area_ha, is_current_owner",
+            "submission_id, farm_location_barangay, total_farm_area_ha, is_current_owner, is_farming",
           ),
         supabase
           .from("farmer_requests")
@@ -206,9 +206,9 @@ export const useAdminDashboardStats = (
       // ── KPI Stats ─────────────────────────────────────────
       const totalFarmers = farmers.length;
 
-      // Total hectares from farm parcels (current owners only)
+      // Total hectares from farm parcels (current owners and active farming only)
       const currentParcels = parcels.filter(
-        (p: any) => p.is_current_owner === true,
+        (p: any) => p.is_current_owner === true && p.is_farming !== false,
       );
       const totalHectares = currentParcels.reduce((sum: number, p: any) => {
         const area = parseFloat(p.total_farm_area_ha) || 0;
