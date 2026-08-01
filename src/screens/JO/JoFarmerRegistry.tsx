@@ -364,13 +364,15 @@ const JoFarmerRegistry: React.FC = () => {
         ownershipOthersSpecify: p.ownership_others_specify || "",
         contractEndDate: p.contract_end_date || p.contractEndDate || null,
         isFarming:
-          typeof p.is_farming === "boolean"
-            ? p.is_farming
-            : typeof p.is_cultivating === "boolean"
-              ? p.is_cultivating
-              : null,
+          typeof p.isFarming === "boolean"
+            ? p.isFarming
+            : typeof p.is_farming === "boolean"
+              ? p.is_farming
+              : typeof p.is_cultivating === "boolean"
+                ? p.is_cultivating
+                : null,
         isCultivating:
-          typeof p.is_cultivating === "boolean" ? p.is_cultivating : null,
+          typeof p.isCultivating === "boolean" ? p.isCultivating : typeof p.is_cultivating === "boolean" ? p.is_cultivating : null,
         farmingStatusReason: p.farming_status_reason || null,
         farmingStatusUpdatedAt: p.farming_status_updated_at || null,
         role: p.role || "",

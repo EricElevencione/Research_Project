@@ -442,7 +442,7 @@ const TechMasterlist: React.FC = () => {
         agrarianReformBeneficiary: p.agrarian_reform_beneficiary || "",
         ownershipOthersSpecify: p.ownership_others_specify || "",
         contractEndDate: p.contract_end_date || p.contractEndDate || null,
-        isFarming: typeof p.is_farming === "boolean" ? p.is_farming : null,
+        isFarming: typeof p.isFarming === "boolean" ? p.isFarming : typeof p.is_farming === "boolean" ? p.is_farming : null,
         farmingStatusReason:
           p.farming_status_reason || p.cultivation_status_reason || p.farmingStatusReason || null,
         farmingStatusUpdatedAt: p.farming_status_updated_at || null,

@@ -2080,4 +2080,31 @@
   background: linear-gradient(90deg, #22c55e, #4ade80);
   border-radius: 0 0 14px 14px;
   animation: jo-lr-toast-progress 5s linear forwards;
+}
+
+/* ── Stop Farming toast variant (amber) ── */
+.jo-lr-toast--stop-farming {
+  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  border: 1.5px solid #fcd34d;
+  color: #78350f;
+}
+
+.jo-lr-toast--stop-farming .jo-lr-toast__title {
+  color: #92400e;
+}
+
+.jo-lr-toast--stop-farming .jo-lr-toast__message {
+  color: #78350f;
+}
+
+.jo-lr-toast--stop-farming .jo-lr-toast__close {
+  color: #b45309;
+}
+
+.jo-lr-toast--stop-farming .jo-lr-toast__close:hover {
+  background: rgba(180, 83, 9, 0.12);
+}
+
+.jo-lr-toast__progress--amber {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
 }

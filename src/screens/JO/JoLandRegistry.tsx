@@ -612,6 +612,7 @@ const JoLandRegistry: React.FC = () => {
   const [transferSubmitError, setTransferSubmitError] = useState("");
   const [transferSubmitSuccess, setTransferSubmitSuccess] = useState("");
   const [transferToast, setTransferToast] = useState<{ message: string; transferId?: string | number } | null>(null);
+  const [stopFarmingToast, setStopFarmingToast] = useState<{ message: string; parcelNumber?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openActionMenuRowId, setOpenActionMenuRowId] = useState<string | null>(
     null,
@@ -706,6 +707,12 @@ const JoLandRegistry: React.FC = () => {
   }, [transferToast]);
 
   useEffect(() => {
+    if (!stopFarmingToast) return;
+    const timer = setTimeout(() => setStopFarmingToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [stopFarmingToast]);
+
+  useEffect(() => {
     const fetchCultivators = async () => {
       const ownerId = Number(activeOwnerAffiliationNewOwnerId);
       if (!Number.isFinite(ownerId) || ownerId <= 0) {
@@ -740,6 +747,7 @@ const JoLandRegistry: React.FC = () => {
             .select("submission_id, parcel_number, ownership_type_tenant, ownership_type_lessee")
             .or(`tenant_land_owner_id.eq.${ownerId},lessee_land_owner_id.eq.${ownerId}`)
             .eq("is_current_owner", true)
+            .neq("is_farming", false)
             .in("parcel_number", parcelNumbers);
 
           if (tenantRows) {
@@ -982,6 +990,7 @@ const JoLandRegistry: React.FC = () => {
         .from("rsbsa_farm_parcels")
         .update({
           is_farming: false,
+          is_current_owner: false,
           farming_status_reason: deleteParcelReason || "Retired from farming by Journal Officer request",
           farming_status_updated_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -1031,6 +1040,10 @@ const JoLandRegistry: React.FC = () => {
       await refreshLandParcels();
       await fetchUnusedParcels();
       setShowDeleteParcelModal(false);
+      setStopFarmingToast({
+        message: `Successfully stopped farming parcel ${selectedDeleteParcel.parcel_number || `#${parcelId}`}. The parcel has been marked as inactive.`,
+        parcelNumber: selectedDeleteParcel.parcel_number || `#${parcelId}`,
+      });
 
       const stillHasParcels = selectedFarmer
         ? selectedFarmer.parcels.some(p => p.id !== parcelId)
@@ -4226,6 +4239,32 @@ const JoLandRegistry: React.FC = () => {
           <div className="jo-lr-toast__progress" />
         </div>
       )}
+
+      {/* ── Stop Farming Success Toast ───────────────────────────────── */}
+      {stopFarmingToast && (
+        <div className="jo-lr-toast jo-lr-toast--stop-farming" role="alert">
+          <div className="jo-lr-toast__icon">🍂</div>
+          <div className="jo-lr-toast__body">
+            <div className="jo-lr-toast__title">Stop Farming Recorded</div>
+            <div className="jo-lr-toast__message">
+              {stopFarmingToast.message}
+              {stopFarmingToast.parcelNumber && (
+                <span className="jo-lr-toast__id">
+                  {" "}(Parcel: {stopFarmingToast.parcelNumber})
+                </span>
+              )}
+            </div>
+          </div>
+          <button
+            className="jo-lr-toast__close"
+            onClick={() => setStopFarmingToast(null)}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+          <div className="jo-lr-toast__progress jo-lr-toast__progress--amber" />
+        </div>
+      )}
       <div className="jo-land-registry-page has-mobile-sidebar">
         {/* Sidebar */}
         <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -5000,7 +5039,7 @@ const JoLandRegistry: React.FC = () => {
                                   {parcelLabel} - {occupantLabel}
                                 </strong>
                               </div>
-                              {parcel.is_farming !== false && selectedFarmerViewRole !== "owner" && (
+                              {parcel.is_farming !== false && isTenantOrLessee && (
                                 <button
                                   className="jo-land-registry-action-btn-delete"
                                   onClick={() => {

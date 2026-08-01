@@ -991,10 +991,10 @@ const JoLandownerRegistry: React.FC = () => {
           withinAncestralDomain: p.within_ancestral_domain || "",
           ownershipDocumentNo: p.ownership_document_no || "",
           geometry: getGeometryFor(p.farm_location_barangay, p.parcel_number),
-          isFarming: p.is_farming ?? undefined,
-          isCultivating: p.is_cultivating ?? undefined,
-          farmingStatusReason: p.farming_status_reason ?? null,
-          cultivationStatusReason: p.cultivation_status_reason ?? null,
+          isFarming: p.isFarming ?? (p.is_farming ?? undefined),
+          isCultivating: p.isCultivating ?? (p.is_cultivating ?? undefined),
+          farmingStatusReason: p.farmingStatusReason ?? (p.farming_status_reason ?? null),
+          cultivationStatusReason: p.cultivationStatusReason ?? (p.cultivation_status_reason ?? null),
         };
       });
 

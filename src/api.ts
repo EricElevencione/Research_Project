@@ -2071,7 +2071,7 @@ export const getFarmParcelsWithOccupants = async (
       total_farm_area_ha, ownership_type_tenant, ownership_type_lessee,
       tenant_land_owner_id, lessee_land_owner_id,
       tenant_land_owner_name, lessee_land_owner_name,
-      is_current_owner`
+      is_current_owner, is_farming`
     )
     .or(`tenant_land_owner_id.eq.${farmerNumId},lessee_land_owner_id.eq.${farmerNumId}`);
 
@@ -2081,8 +2081,24 @@ export const getFarmParcelsWithOccupants = async (
 
   const occupiedByParcels = ((occupiedByParcelsRaw as any[]) || []).filter(
     (p: any) =>
-      p.ownership_type_tenant === true || p.ownership_type_lessee === true
+      (p.ownership_type_tenant === true || p.ownership_type_lessee === true) &&
+      p.is_farming !== false &&
+      p.is_current_owner !== false
   );
+
+  // Track which parcel numbers had a tenant/lessee who stopped farming
+  // Used to show landowner parcel as "unoccupied" instead of "owner-farmed"
+  const stoppedOccupantParcelNums = new Set<string>();
+  ((occupiedByParcelsRaw as any[]) || [])
+    .filter(
+      (p: any) =>
+        (p.ownership_type_tenant === true || p.ownership_type_lessee === true) &&
+        (p.is_farming === false || p.is_current_owner === false)
+    )
+    .forEach((p: any) => {
+      const pNum = String(p.parcel_number || "").trim().toUpperCase();
+      if (pNum) stoppedOccupantParcelNums.add(pNum);
+    });
 
   // Fetch farmer names for occupants submission IDs
   const occupantIds = [
@@ -2171,11 +2187,18 @@ export const getFarmParcelsWithOccupants = async (
 
     // Compute dynamic role
     let role = "tenant";
+    // Whether this parcel had a stopped tenant (tenant stopped farming, so now unoccupied)
+    const hadStoppedTenant = stoppedOccupantParcelNums.has(parcelNum);
+
     if (isRegisteredOwner) {
       if (occupants.length > 0) {
         role = "land-owner";
+      } else if (hadStoppedTenant) {
+        // Tenant retired/stopped farming - parcel is now unoccupied
+        // Stay as "land-owner" (NOT "owner-farmed") so it shows "Unoccupied / Not farming"
+        role = "land-owner";
       } else {
-        const isCultivatingParcel = p.is_cultivating === true || p.is_farming === true;
+        const isCultivatingParcel = p.isCultivating === true || p.isFarming === true;
         role = isCultivatingParcel ? "owner-farmed" : "land-owner";
       }
     } else if (isTenant && isLessee) {
@@ -2206,6 +2229,9 @@ export const getFarmParcelsWithOccupants = async (
 
     return {
       ...p,
+      // When tenant stopped farming, override isFarming to false in the RESPONSE only
+      // (the DB value stays true so getFarmParcels doesn't hide the parcel entirely)
+      isFarming: hadStoppedTenant && occupants.length === 0 ? false : p.isFarming,
       role,
       occupants: finalOccupants,
       plotArea: plotAreaByParcelNumber.get(parcelNum) || 0,
@@ -2214,6 +2240,8 @@ export const getFarmParcelsWithOccupants = async (
 
   // 4. Merge virtual landowner parcels (occupied by tenant/lessee but not registered by owner yet)
   const virtualParcels: any[] = [];
+
+  // 4a. Active-tenant virtual parcels (existing logic)
   occupantsByParcelNumber.forEach((occupants, parcelNum) => {
     // If the landowner has a historical entry in land_history for this parcel,
     // and DOES NOT have a current entry, do not create a virtual parcel for it.
@@ -2243,6 +2271,51 @@ export const getFarmParcelsWithOccupants = async (
           is_virtual: true,
         });
       }
+    }
+  });
+
+  // 4b. Stopped-tenant virtual parcels:
+  // When a parcel's ONLY tenant stopped farming, it no longer appears in
+  // occupantsByParcelNumber (active-only map). We still need to show the
+  // landowner's parcel — just marked as unoccupied / not farming.
+  stoppedOccupantParcelNums.forEach((parcelNum) => {
+    // Skip if this parcel is already covered by an active-tenant virtual parcel or a primary parcel
+    if (primaryParcelNumbers.has(parcelNum)) return;
+    if (occupantsByParcelNumber.has(parcelNum)) return;
+
+    // Skip if the landowner has explicitly transferred/no-longer-current history for this parcel
+    if (
+      historicalHistoryParcels.has(parcelNum) &&
+      !currentHistoryParcels.has(parcelNum)
+    ) {
+      return;
+    }
+
+    // Use the stopped occupant's raw row as a template for the virtual parcel
+    const template = ((occupiedByParcelsRaw as any[]) || []).find(
+      (op: any) =>
+        String(op.parcel_number || "").trim().toUpperCase() === parcelNum &&
+        (op.ownership_type_tenant === true || op.ownership_type_lessee === true) &&
+        (op.is_farming === false || op.is_current_owner === false)
+    );
+
+    if (template) {
+      virtualParcels.push({
+        id: `virtual-stopped-${template.id}`,
+        parcel_number: template.parcel_number,
+        farm_location_barangay: template.farm_location_barangay || "N/A",
+        farm_location_municipality: template.farm_location_municipality || "N/A",
+        total_farm_area_ha: template.total_farm_area_ha || 0,
+        ownership_type_registered_owner: true,
+        ownership_type_tenant: false,
+        ownership_type_lessee: false,
+        // No active occupants — tenant stopped farming
+        isFarming: false,
+        role: "land-owner",
+        occupants: [],
+        is_virtual: true,
+        is_unoccupied: true,
+      });
     }
   });
 
