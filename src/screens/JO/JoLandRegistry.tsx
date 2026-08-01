@@ -1245,7 +1245,7 @@ const JoLandRegistry: React.FC = () => {
       // Don't rely on group.parcels since normalizeCurrentOwnershipGroups
       // may have already dropped parcels with is_current_owner === false
       const selectColumns =
-        "id, submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, farming_status_reason, farming_status_updated_at, cultivator_submission_id";
+        "id, submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, farming_status_reason, farming_status_updated_at, cultivator_submission_id, is_cultivating, cultivation_status_reason, cultivation_status_updated_at";
       const normalizeParcelId = (value: unknown): number | null => {
         const parsed =
           typeof value === "number" ? value : Number(String(value));
@@ -2605,10 +2605,23 @@ const JoLandRegistry: React.FC = () => {
     }
   };
 
+  // Helper to parse date strings as UTC if no timezone is specified
+  const parseUtcDate = (dateString: string | null): Date | null => {
+    if (!dateString) return null;
+    // Check if it already has Z or offset suffix (+/-XX:XX)
+    if (/Z|[+-]\d{2}:?\d{2}$/i.test(dateString)) {
+      return new Date(dateString);
+    }
+    // Treat as UTC by replacing space with T and appending Z
+    const isoString = dateString.includes("T") ? dateString : dateString.replace(" ", "T");
+    return new Date(`${isoString}Z`);
+  };
+
   // Format date
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Present";
-    const date = new Date(dateString);
+    const date = parseUtcDate(dateString);
+    if (!date || isNaN(date.getTime())) return "—";
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -2619,7 +2632,8 @@ const JoLandRegistry: React.FC = () => {
   // Format date and time
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return "—";
-    const date = new Date(dateString);
+    const date = parseUtcDate(dateString);
+    if (!date || isNaN(date.getTime())) return "—";
     const datePart = date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -2775,7 +2789,7 @@ const JoLandRegistry: React.FC = () => {
 
     aggregatedFarmers.forEach((group) => {
       if (!group || !Array.isArray(group.parcels)) return;
-      if (group.archived_at && group.parcels.length > 0) return;
+      if (group.archived_at) return;
 
       rows.push(buildRow(group));
     });
@@ -3008,6 +3022,7 @@ const JoLandRegistry: React.FC = () => {
       const activeHistoryRecord = parcelHistory.find(
         (h) =>
           h.is_current &&
+          (h.is_tenant || h.is_lessee) &&
           (h.farm_parcel_id === parcel.id ||
             h.land_parcel_id === parcel.land_parcel_id ||
             (h.parcel_number &&
@@ -3304,6 +3319,7 @@ const JoLandRegistry: React.FC = () => {
           };
         })
         .filter(({ group, ownerParcels }) => {
+          if (group.archived_at) return false;
           if (ownerParcels.length === 0) return false;
           if (
             activeOwnerAffiliationSourceOwnerId !== null &&
@@ -3389,7 +3405,7 @@ const JoLandRegistry: React.FC = () => {
   // Build recipient options: all farmers excluding the current donor (Farmer A)
   const recipientOptions = useMemo<TransferActorOption[]>(() => {
     return aggregatedFarmers
-      .filter((g) => g.farmer_id !== selectedContextFarmerId)
+      .filter((g) => g.farmer_id !== selectedContextFarmerId && !g.archived_at)
       .map((g) => ({
         farmerId: g.farmer_id,
         name: g.farmer_name || `Farmer #${g.farmer_id}`,
@@ -3405,17 +3421,27 @@ const JoLandRegistry: React.FC = () => {
   const inheritanceDonorOptions = recipientOptions;
 
   const voluntaryOptions = useMemo<SearchableSelectOption[]>(() => {
-    return voluntaryDonorOptions.map((owner) => ({
-      value: owner.farmerId,
-      label: `${owner.name} (${owner.parcelCount} parcel${owner.parcelCount !== 1 ? "s" : ""})`,
-    }));
+    return voluntaryDonorOptions.map((owner) => {
+      const parcelSuffix = owner.parcelCount === 0
+        ? "No Active Parcels"
+        : `${owner.parcelCount} parcel${owner.parcelCount !== 1 ? "s" : ""}`;
+      return {
+        value: owner.farmerId,
+        label: `${owner.name} (${parcelSuffix})`,
+      };
+    });
   }, [voluntaryDonorOptions]);
 
   const inheritanceOptions = useMemo<SearchableSelectOption[]>(() => {
-    return inheritanceDonorOptions.map((owner) => ({
-      value: owner.farmerId,
-      label: `${owner.name} (${owner.parcelCount} parcel${owner.parcelCount !== 1 ? "s" : ""})`,
-    }));
+    return inheritanceDonorOptions.map((owner) => {
+      const parcelSuffix = owner.parcelCount === 0
+        ? "No Active Parcels"
+        : `${owner.parcelCount} parcel${owner.parcelCount !== 1 ? "s" : ""}`;
+      return {
+        value: owner.farmerId,
+        label: `${owner.name} (${parcelSuffix})`,
+      };
+    });
   }, [inheritanceDonorOptions]);
 
   const selectedRegisteredOwner =
@@ -3492,6 +3518,7 @@ const JoLandRegistry: React.FC = () => {
       const activeHistoryRecord = parcelHistory.find(
         (h) =>
           h.is_current &&
+          (h.is_tenant || h.is_lessee) &&
           (h.farm_parcel_id === p.id ||
             (h.parcel_number &&
               p.parcel_number &&
@@ -4982,11 +5009,9 @@ const JoLandRegistry: React.FC = () => {
                               : null);
                         const isTenantOrLessee = Boolean(fallbackRoleLabel);
                         const isFarming =
-                          typeof parcel.is_farming === "boolean"
-                            ? parcel.is_farming
-                            : typeof parcel.is_cultivating === "boolean"
-                              ? parcel.is_cultivating
-                              : null;
+                          !isTenantOrLessee
+                            ? (typeof parcel.is_cultivating === "boolean" ? parcel.is_cultivating : parcel.is_farming)
+                            : (typeof parcel.is_farming === "boolean" ? parcel.is_farming : parcel.is_cultivating);
                         const statusLabel =
                           isFarming === true
                             ? "Farming"
