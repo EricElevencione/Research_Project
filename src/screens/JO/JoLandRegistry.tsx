@@ -613,6 +613,7 @@ const JoLandRegistry: React.FC = () => {
   const [transferSubmitSuccess, setTransferSubmitSuccess] = useState("");
   const [transferToast, setTransferToast] = useState<{ message: string; transferId?: string | number } | null>(null);
   const [stopFarmingToast, setStopFarmingToast] = useState<{ message: string; parcelNumber?: string } | null>(null);
+  const [ownerAffiliationToast, setOwnerAffiliationToast] = useState<{ message: string; isFarmAnother?: boolean } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openActionMenuRowId, setOpenActionMenuRowId] = useState<string | null>(
     null,
@@ -711,6 +712,12 @@ const JoLandRegistry: React.FC = () => {
     const timer = setTimeout(() => setStopFarmingToast(null), 5000);
     return () => clearTimeout(timer);
   }, [stopFarmingToast]);
+
+  useEffect(() => {
+    if (!ownerAffiliationToast) return;
+    const timer = setTimeout(() => setOwnerAffiliationToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [ownerAffiliationToast]);
 
   useEffect(() => {
     const fetchCultivators = async () => {
@@ -2393,11 +2400,16 @@ const JoLandRegistry: React.FC = () => {
         throw new Error("No valid parcel selection to process.");
       }
 
-      setOwnerAffiliationSubmitSuccess(
-        isFarmAnotherMode
-          ? `Farm Another Land assignment complete: ${successParts.join(" and ")}.`
-          : `${ownerAffiliationRoleLabel} update complete: ${successParts.join(" and ")}.`,
-      );
+      const successMsg = isFarmAnotherMode
+        ? `Farm Another Land assignment complete: ${successParts.join(" and ")}.`
+        : `${ownerAffiliationRoleLabel} update complete: ${successParts.join(" and ")}.`;
+
+      setOwnerAffiliationSubmitSuccess(successMsg);
+
+      setOwnerAffiliationToast({
+        message: successMsg,
+        isFarmAnother: isFarmAnotherMode,
+      });
 
       try {
         const user = await getCurrentUserForAudit();
@@ -4292,6 +4304,30 @@ const JoLandRegistry: React.FC = () => {
           <div className="jo-lr-toast__progress jo-lr-toast__progress--amber" />
         </div>
       )}
+
+      {/* ── Owner Affiliation / Farm Another Success Toast ───────────────── */}
+      {ownerAffiliationToast && (
+        <div className="jo-lr-toast jo-lr-toast--success" role="alert">
+          <div className="jo-lr-toast__icon">🚜</div>
+          <div className="jo-lr-toast__body">
+            <div className="jo-lr-toast__title">
+              {ownerAffiliationToast.isFarmAnother ? "Farm Another Land Assigned" : "Landowner Linked Successfully"}
+            </div>
+            <div className="jo-lr-toast__message">
+              {ownerAffiliationToast.message}
+            </div>
+          </div>
+          <button
+            className="jo-lr-toast__close"
+            onClick={() => setOwnerAffiliationToast(null)}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+          <div className="jo-lr-toast__progress" />
+        </div>
+      )}
+
       <div className="jo-land-registry-page has-mobile-sidebar">
         {/* Sidebar */}
         <JOSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
