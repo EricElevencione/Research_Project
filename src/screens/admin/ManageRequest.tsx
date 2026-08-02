@@ -1120,7 +1120,7 @@ const ManageRequests: React.FC = () => {
                   >
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  Approved Requests
+                  Claimed Requests
                 </h3>
                 <div className="admin-req-card-content">
                   <div className="admin-req-stat-box fertilizers">
@@ -1227,7 +1227,7 @@ const ManageRequests: React.FC = () => {
                         .length
                     }
                   </div>
-                  <div className="admin-req-card-label">Approved Requests</div>
+                  <div className="admin-req-card-label">Claimed Requests</div>
                 </div>
               </div>
 
