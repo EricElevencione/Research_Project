@@ -249,6 +249,15 @@ const JoRsbsa: React.FC = () => {
   const [selectedOwnedParcelIds, setSelectedOwnedParcelIds] = useState<
     Set<string>
   >(new Set());
+  const [activeTenantsMap, setActiveTenantsMap] = useState<
+    Record<string, { farmerName: string; farmerId: number }>
+  >({});
+  const [reclaimConfirmModal, setReclaimConfirmModal] = useState<{
+    show: boolean;
+    tenantName: string;
+    parcelNumber: string;
+    pid: string;
+  } | null>(null);
 
   // ── Land Owner path Step 3: "do you also farm others' land?" ────────────
   const [alsoFarmsOthersLand, setAlsoFarmsOthersLand] = useState<
@@ -1041,6 +1050,7 @@ const JoRsbsa: React.FC = () => {
     setIsFetchingSelfRecord(true);
     setOwnedParcels([]);
     setSelectedOwnedParcelIds(new Set());
+    setActiveTenantsMap({});
     setErrors((prev) => ({ ...prev, selfLandOwner: "", farmerRole: "" }));
 
     try {
@@ -1094,6 +1104,33 @@ const JoRsbsa: React.FC = () => {
           return isOwner && p.is_current_owner !== false;
         });
         setOwnedParcels(parcels);
+
+        // Fetch active tenants for these parcel numbers from land_history
+        const parcelNumbers = parcels.map((p: any) => p.parcel_number).filter(Boolean);
+        if (parcelNumbers.length > 0) {
+          const { data: activeHistoryRecords, error: historyError } = await supabase
+            .from("land_history")
+            .select("parcel_number, farmer_name, farmer_id, is_tenant, is_lessee")
+            .eq("is_current", true)
+            .in("parcel_number", parcelNumbers)
+            .or("is_tenant.eq.true,is_lessee.eq.true");
+
+          if (!historyError && activeHistoryRecords) {
+            const map: Record<string, { farmerName: string; farmerId: number }> = {};
+            activeHistoryRecords.forEach((h: any) => {
+              const key = String(h.parcel_number || "").trim().toUpperCase();
+              if (key) {
+                map[key] = {
+                  farmerName: h.farmer_name || "Unknown Farmer",
+                  farmerId: h.farmer_id
+                };
+              }
+            });
+            setActiveTenantsMap(map);
+          } else if (historyError) {
+            console.error("Error fetching active tenants:", historyError.message);
+          }
+        }
       }
     } catch (err) {
       console.error("handleSelfLandOwnerSelect error:", err);
@@ -1662,6 +1699,75 @@ const JoRsbsa: React.FC = () => {
     return { succeeded, failed };
   };
 
+  const processLandownerSelfFarmingReplacements = async (): Promise<{ succeeded: number; failed: number }> => {
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const parcel of ownedParcels) {
+      const pid = String(parcel.id);
+      if (!selectedOwnedParcelIds.has(pid)) continue;
+      const pNum = String(parcel.parcel_number || "").trim().toUpperCase();
+      const activeTenant = pNum ? activeTenantsMap[pNum] : null;
+      if (!activeTenant) continue;
+
+      try {
+        // Find the active tenant's parcel record
+        const { data: tenantParcels, error: fetchErr } = await supabase
+          .from("rsbsa_farm_parcels")
+          .select("id")
+          .eq("submission_id", activeTenant.farmerId)
+          .eq("parcel_number", parcel.parcel_number)
+          .eq("is_farming", true);
+
+        if (fetchErr) throw fetchErr;
+
+        if (tenantParcels && tenantParcels.length > 0) {
+          const tenantParcelId = tenantParcels[0].id;
+
+          // 1. Update rsbsa_farm_parcels to stop farming
+          const { error: updateParcelErr } = await supabase
+            .from("rsbsa_farm_parcels")
+            .update({
+              is_farming: false,
+              farming_status_reason: "Reclaimed by landowner for self-farming",
+              farming_status_updated_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", tenantParcelId);
+
+          if (updateParcelErr) throw updateParcelErr;
+
+          // 2. Update land_history to mark as non-current
+          const { error: updateHistoryErr } = await supabase
+            .from("land_history")
+            .update({
+              is_current: false,
+              period_end_date: new Date().toISOString().slice(0, 10),
+              change_type: "STOPPED_FARMING",
+              change_reason: "Reclaimed by landowner for self-farming",
+              updated_at: new Date().toISOString()
+            })
+            .eq("farm_parcel_id", tenantParcelId)
+            .eq("is_current", true);
+
+          if (updateHistoryErr) throw updateHistoryErr;
+
+          // 3. Sync farmer status
+          const { error: syncErr } = await supabase.rpc("sync_farmer_no_parcels_status", {
+            p_farmer_id: activeTenant.farmerId
+          });
+
+          if (syncErr) console.warn("Failed to sync farmer no parcels status:", syncErr.message);
+        }
+        succeeded += 1;
+      } catch (err) {
+        console.error(`Failed to process landowner reclaiming replacement for parcel ${parcel.parcel_number}:`, err);
+        failed += 1;
+      }
+    }
+    return { succeeded, failed };
+  };
+
   const handleFinalSubmit = async () => {
     if (isSubmitting) return;
 
@@ -1720,6 +1826,25 @@ const JoRsbsa: React.FC = () => {
               "Registered, but parcel replacement could not be completed automatically. Please check the Land Registry.",
               "warning",
             );
+          }
+        }
+
+        if (farmerRole === "owner") {
+          try {
+            const { succeeded, failed } = await processLandownerSelfFarmingReplacements();
+            if (failed > 0) {
+              showToast(
+                `Registered, but ${failed} tenant deactivation${failed > 1 ? "s" : ""} failed. Please check the Land Registry.`,
+                "warning",
+              );
+            } else if (succeeded > 0) {
+              showToast(
+                `${succeeded} tenant${succeeded > 1 ? "s" : ""} successfully replaced for self-farming.`,
+                "success",
+              );
+            }
+          } catch (replaceErr) {
+            console.error("Landowner self-farming replacement step failed:", replaceErr);
           }
         }
 
@@ -3036,6 +3161,9 @@ const JoRsbsa: React.FC = () => {
                         {ownedParcels.map((parcel) => {
                           const pid = String(parcel.id);
                           const isSelected = selectedOwnedParcelIds.has(pid);
+                          const pNum = String(parcel.parcel_number || "").trim().toUpperCase();
+                          const activeTenant = pNum ? activeTenantsMap[pNum] : null;
+
                           return (
                             <div
                               key={pid}
@@ -3045,13 +3173,22 @@ const JoRsbsa: React.FC = () => {
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => {
-                                  setSelectedOwnedParcelIds((prev) => {
-                                    const next = new Set(prev);
-                                    next.has(pid)
-                                      ? next.delete(pid)
-                                      : next.add(pid);
-                                    return next;
-                                  });
+                                  if (!isSelected && activeTenant) {
+                                    setReclaimConfirmModal({
+                                      show: true,
+                                      tenantName: activeTenant.farmerName,
+                                      parcelNumber: parcel.parcel_number || `Parcel ${pid}`,
+                                      pid: pid,
+                                    });
+                                  } else {
+                                    setSelectedOwnedParcelIds((prev) => {
+                                      const next = new Set(prev);
+                                      next.has(pid)
+                                        ? next.delete(pid)
+                                        : next.add(pid);
+                                      return next;
+                                    });
+                                  }
                                 }}
                               />
                               <div className="jo-registration-parcel-details">
@@ -3071,6 +3208,18 @@ const JoRsbsa: React.FC = () => {
                                     ha
                                   </span>
                                 </div>
+                                 {activeTenant && (
+                                   <div
+                                     style={{
+                                       marginTop: "0.25rem",
+                                       fontSize: "0.82rem",
+                                       color: "#c2410c",
+                                       fontWeight: "500"
+                                     }}
+                                   >
+                                     ⚠️ Farmed by tenant: {activeTenant.farmerName}
+                                   </div>
+                                 )}
                               </div>
                             </div>
                           );
@@ -4234,6 +4383,67 @@ const JoRsbsa: React.FC = () => {
           >
             ×
           </button>
+        </div>
+      )}
+
+      {/* Reclaim Confirmation Modal */}
+      {reclaimConfirmModal?.show && (
+        <div className="jo-confirm-modal-overlay">
+          <div className="jo-confirm-modal">
+            <div className="jo-confirm-modal-header">
+              <div className="jo-confirm-modal-header-icon">⚠️</div>
+              <div>
+                <p className="jo-confirm-modal-header-label">Land Registry Alert</p>
+                <h3 className="jo-confirm-modal-title">Farmed Parcel Conflict</h3>
+                <p className="jo-confirm-modal-header-sub">Tenant replacement confirmation</p>
+              </div>
+            </div>
+            <div className="jo-confirm-modal-divider" />
+            <div className="jo-confirm-modal-body">
+              <p className="jo-confirm-modal-intro">Conflict Details</p>
+              <div className="jo-confirm-modal-details">
+                <div className="jo-confirm-modal-detail-row">
+                  <span className="jo-confirm-modal-detail-label">Parcel Number</span>
+                  <span className="jo-confirm-modal-detail-value">{reclaimConfirmModal.parcelNumber}</span>
+                </div>
+                <div className="jo-confirm-modal-detail-row">
+                  <span className="jo-confirm-modal-detail-label">Current Tenant</span>
+                  <span className="jo-confirm-modal-detail-value">
+                    <span className="jo-confirm-modal-badge">{reclaimConfirmModal.tenantName}</span>
+                  </span>
+                </div>
+              </div>
+              <p className="jo-confirm-modal-notice">
+                This parcel is currently farmed by tenant <strong>{reclaimConfirmModal.tenantName}</strong>. 
+                Checking this will replace the tenant and mark this parcel as self-farmed. 
+                Do you want to proceed?
+              </p>
+            </div>
+            <div className="jo-confirm-modal-footer">
+              <button
+                className="jo-confirm-modal-btn-cancel"
+                onClick={() => {
+                  setReclaimConfirmModal(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="jo-confirm-modal-btn-confirm"
+                onClick={() => {
+                  const pid = reclaimConfirmModal.pid;
+                  setSelectedOwnedParcelIds((prev) => {
+                    const next = new Set(prev);
+                    next.add(pid);
+                    return next;
+                  });
+                  setReclaimConfirmModal(null);
+                }}
+              >
+                Proceed
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

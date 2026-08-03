@@ -194,6 +194,52 @@ interface RegistryDisplayRow {
 
 const TRANSFER_PROOF_BUCKET = "ownership-transfer-proofs";
 
+const DUMANGAS_BARANGAYS = [
+  "Aurora-Del Pilar",
+  "Bacay",
+  "Bacong",
+  "Balabag",
+  "Balud",
+  "Bantud",
+  "Bantud Fabrica",
+  "Baras",
+  "Barasan",
+  "Basa-Mabini Bonifacio",
+  "Bolilao",
+  "Buenaflor Embarkadero",
+  "Burgos-Regidor",
+  "Calao",
+  "Cali",
+  "Cansilayan",
+  "Capaliz",
+  "Cayos",
+  "Compayan",
+  "Dacutan",
+  "Ermita",
+  "Ilaya 1st",
+  "Ilaya 2nd",
+  "Ilaya 3rd",
+  "Jardin",
+  "Lacturan",
+  "Lopez Jaena - Rizal",
+  "Managuit",
+  "Maquina",
+  "Nanding Lopez",
+  "Pagdugue",
+  "Paloc Anao",
+  "Paloc Sool",
+  "Patlad",
+  "Pulao",
+  "Punta Mesa",
+  "Salinas",
+  "Sapao",
+  "Sulangan",
+  "Tabucan",
+  "Talusan",
+  "Tambobo",
+  "Victorias",
+];
+
 interface SearchableSelectOption {
   value: string | number;
   label: string;
@@ -614,6 +660,21 @@ const JoLandRegistry: React.FC = () => {
   const [transferToast, setTransferToast] = useState<{ message: string; transferId?: string | number } | null>(null);
   const [stopFarmingToast, setStopFarmingToast] = useState<{ message: string; parcelNumber?: string } | null>(null);
   const [ownerAffiliationToast, setOwnerAffiliationToast] = useState<{ message: string; isFarmAnother?: boolean } | null>(null);
+  
+  // States for Add Registered Parcel Modal
+  const [showAddParcelModal, setShowAddParcelModal] = useState(false);
+  const [isSubmittingAddParcel, setIsSubmittingAddParcel] = useState(false);
+  const [addParcelError, setAddParcelError] = useState("");
+  const [addParcelInputs, setAddParcelInputs] = useState<Array<{
+    parcelNumber: string;
+    barangay: string;
+    totalAreaHa: string;
+    withinAncestralDomain: string;
+    agrarianReformBeneficiary: string;
+    isCultivating: boolean;
+  }>>([]);
+
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openActionMenuRowId, setOpenActionMenuRowId] = useState<string | null>(
     null,
@@ -1492,6 +1553,232 @@ const JoLandRegistry: React.FC = () => {
       row.parcels.map((parcel) => parcel.id),
       row.rowId,
     );
+  };
+
+  const getNextGlobalParcelNumber = async (): Promise<number> => {
+    try {
+      const { data, error } = await supabase
+        .from("land_parcels")
+        .select("parcel_number");
+        
+      if (error || !data) return 135;
+
+      let maxNum = 134; // Start at 134 so next defaults to 135
+      for (const row of data) {
+        const num = row.parcel_number || "";
+        const match = num.match(/#?Parcel-(\d+)(?:-\d+)?/i);
+        if (match) {
+          const val = parseInt(match[1], 10);
+          if (val > maxNum) maxNum = val;
+        }
+      }
+      return maxNum + 1;
+    } catch (err) {
+      console.error("Error getting next global parcel number:", err);
+      return 135;
+    }
+  };
+
+  const openAddParcelModal = async () => {
+    const nextNum = await getNextGlobalParcelNumber();
+
+    setAddParcelInputs([
+      {
+        parcelNumber: 'Parcel-' + nextNum + '-1',
+        barangay: "",
+        totalAreaHa: "",
+        withinAncestralDomain: "No",
+        agrarianReformBeneficiary: "No",
+        isCultivating: true
+      }
+    ]);
+
+    setAddParcelError("");
+    setShowAddParcelModal(true);
+  };
+
+  const handleAddAnotherParcelForm = () => {
+    const firstParcelNum = addParcelInputs[0]?.parcelNumber || "Parcel-135-1";
+    const match = firstParcelNum.match(/#?Parcel-(\d+)-\d+/i);
+    const globalNum = match ? parseInt(match[1], 10) : 135;
+    const localIndex = addParcelInputs.length + 1;
+
+    setAddParcelInputs((prev) => [
+      ...prev,
+      {
+        parcelNumber: 'Parcel-' + globalNum + '-' + localIndex,
+        barangay: "",
+        totalAreaHa: "",
+        withinAncestralDomain: "No",
+        agrarianReformBeneficiary: "No",
+        isCultivating: true
+      }
+    ]);
+  };
+
+  const handleRemoveParcelForm = (index: number) => {
+    if (addParcelInputs.length <= 1) {
+      setAddParcelError("You must keep at least one parcel form.");
+      return;
+    }
+    setAddParcelInputs((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleUpdateParcelField = (index: number, field: string, value: any) => {
+    setAddParcelInputs((prev) =>
+      prev.map((item, idx) => {
+        if (idx === index) {
+          return { ...item, [field]: value };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleSubmitAddParcel = async () => {
+    if (isSubmittingAddParcel) return;
+    setAddParcelError("");
+
+    const ownerId = selectedFarmer?.farmer_id;
+    const ownerName = selectedFarmer?.farmer_name || "";
+    if (!ownerId) {
+      setAddParcelError("No valid landowner selected.");
+      return;
+    }
+
+    // 1. Validation
+    for (let i = 0; i < addParcelInputs.length; i++) {
+      const p = addParcelInputs[i];
+      const pNum = p.parcelNumber.trim();
+      const area = Number(p.totalAreaHa);
+
+      if (!pNum) {
+        setAddParcelError("Parcel number in Form #" + (i + 1) + " is required.");
+        return;
+      }
+      if (!p.barangay) {
+        setAddParcelError("Barangay in Form #" + (i + 1) + " is required.");
+        return;
+      }
+      if (isNaN(area) || area <= 0) {
+        setAddParcelError("Total farm area in Form #" + (i + 1) + " must be a valid positive number.");
+        return;
+      }
+    }
+
+
+    setIsSubmittingAddParcel(true);
+
+    try {
+
+      // Process each parcel
+      for (const p of addParcelInputs) {
+        const finalParcelNumber = p.parcelNumber.trim();
+        const finalWithinAncestralDomain = p.withinAncestralDomain || "No";
+        const finalAgrarianReformBeneficiary = p.agrarianReformBeneficiary || "No";
+
+        // Check if parcel number already exists
+        const { data: existingLP, error: checkErr } = await supabase
+          .from("land_parcels")
+          .select("id, is_active")
+          .eq("parcel_number", finalParcelNumber);
+
+        if (checkErr) throw checkErr;
+
+        if (existingLP && existingLP.length > 0) {
+          // If active, reject
+          if (existingLP[0].is_active) {
+            throw new Error("Parcel number \"" + finalParcelNumber + "\" already exists and is active. Please use a unique parcel number.");
+          } else {
+            // Re-activate existing parcel row
+            const { error: reactivateErr } = await supabase
+              .from("land_parcels")
+              .update({
+                farm_location_barangay: p.barangay,
+                total_farm_area_ha: Number(p.totalAreaHa),
+                within_ancestral_domain: finalWithinAncestralDomain === "Yes",
+                agrarian_reform_beneficiary: finalAgrarianReformBeneficiary === "Yes",
+                ownership_document_no: null,
+                is_active: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", existingLP[0].id);
+            if (reactivateErr) throw reactivateErr;
+          }
+        } else {
+          // Insert a new row in land_parcels
+          const { error: insertLPErr } = await supabase
+            .from("land_parcels")
+            .insert({
+              parcel_number: finalParcelNumber,
+              farm_location_barangay: p.barangay,
+              farm_location_municipality: "Dumangas",
+              farm_location_province: "Iloilo",
+              total_farm_area_ha: Number(p.totalAreaHa),
+              within_ancestral_domain: finalWithinAncestralDomain === "Yes",
+              agrarian_reform_beneficiary: finalAgrarianReformBeneficiary === "Yes",
+              ownership_document_no: null,
+              is_active: true
+            });
+          if (insertLPErr) throw insertLPErr;
+        }
+
+        // Insert new row in rsbsa_farm_parcels
+        const { error: insertRFPErr } = await supabase
+          .from("rsbsa_farm_parcels")
+          .insert({
+            submission_id: ownerId,
+            parcel_number: finalParcelNumber,
+            farm_location_barangay: p.barangay,
+            farm_location_municipality: "Dumangas",
+            total_farm_area_ha: Number(p.totalAreaHa),
+            within_ancestral_domain: finalWithinAncestralDomain,
+            agrarian_reform_beneficiary: finalAgrarianReformBeneficiary,
+            ownership_document_no: null,
+            ownership_type_registered_owner: true,
+            is_current_owner: true,
+            is_farming: true,
+            is_cultivating: p.isCultivating,
+            cultivation_status_updated_at: new Date().toISOString(),
+            cultivation_status_reason: "Initial registration"
+          });
+
+        if (insertRFPErr) throw insertRFPErr;
+      }
+
+      // Log to ownership_transfers as a new parcel registration
+      const parcelNamesList = addParcelInputs.map(p => p.parcelNumber.trim()).join(", ");
+      const { error: logTransferErr } = await supabase
+        .from("ownership_transfers")
+        .insert({
+          from_farmer_id: null,
+          to_farmer_id: ownerId,
+          parcel_number: parcelNamesList,
+          transfer_type: "ADD_PARCEL",
+          transfer_reason: "Added registered parcel(s) by Journal Officer. Cultivated: " + addParcelInputs.map(p => p.isCultivating ? "Yes" : "No").join(", "),
+          documents: null,
+          transferred_area_ha: addParcelInputs.reduce((sum, p) => sum + (Number(p.totalAreaHa) || 0), 0)
+        });
+
+      if (logTransferErr) console.warn("Could not log ownership transfer record (non-blocking):", logTransferErr.message);
+
+      // Refresh list
+      await refreshLandParcels();
+
+      // Show success toast
+      setOwnerAffiliationToast({
+        message: "Successfully registered " + addParcelInputs.length + " new parcel(s) to landowner " + ownerName + "!",
+        isFarmAnother: false
+      });
+
+      // Clear states and close
+      setShowAddParcelModal(false);
+    } catch (err: any) {
+      console.error("Error adding registered parcel:", err);
+      setAddParcelError(err.message || "Failed to register new parcel. Please try again.");
+    } finally {
+      setIsSubmittingAddParcel(false);
+    }
   };
 
   const handleRowActionTransfer = (row: RegistryDisplayRow) => {
@@ -4998,7 +5285,28 @@ const JoLandRegistry: React.FC = () => {
 
                 {/* Parcel Details Section */}
                 <div className="jo-land-registry-detail-section">
-                  <h4>🌾 Land Parcels</h4>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <h4 style={{ margin: 0 }}>🌾 Land Parcels</h4>
+                    {selectedFarmerViewRole === "owner" && (
+                      <button
+                        type="button"
+                        className="jo-land-registry-transfer-button"
+                        style={{
+                          margin: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          padding: "6px 12px"
+                        }}
+                        onClick={() => {
+                          setShowModal(false);
+                          openAddParcelModal();
+                        }}
+                      >
+                        ➕ Add Registered Parcel
+                      </button>
+                    )}
+                  </div>
                   {cultivationLoading ? (
                     <p>Loading parcel details...</p>
                   ) : parcelDetailRows.length === 0 ? (
@@ -5016,7 +5324,7 @@ const JoLandRegistry: React.FC = () => {
                           parcel.parcel_number || ""
                         ).trim();
                         const parcelLabel = rawParcelNumber
-                          ? /^parcel/i.test(rawParcelNumber)
+                          ? /^#?parcel/i.test(rawParcelNumber)
                             ? rawParcelNumber
                             : `Parcel-${rawParcelNumber}`
                           : "Parcel";
@@ -6378,6 +6686,224 @@ const JoLandRegistry: React.FC = () => {
             </div>
           )}
 
+        {/* Add Registered Farmland Modal */}
+        {showAddParcelModal && selectedFarmer && (
+          <div
+            className="jo-land-registry-modal-overlay"
+            onClick={() => setShowAddParcelModal(false)}
+          >
+            <div
+              className="jo-land-registry-modal"
+              style={{ maxWidth: "680px", width: "90%" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="jo-land-registry-modal-header" style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)", color: "#fff" }}>
+                <h3>Add Registered Farmland</h3>
+                <button
+                  className="jo-land-registry-close-button"
+                  style={{ color: "#fff" }}
+                  onClick={() => setShowAddParcelModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="jo-land-registry-modal-body" style={{ maxHeight: "calc(80vh - 120px)", overflowY: "auto" }}>
+                <p style={{ color: "#4b5563", fontSize: "0.875rem", marginBottom: "1.5rem" }}>
+                  Add one or more parcels directly to landowner <strong>{selectedFarmer.farmer_name}</strong> (FFRS Code: {selectedFarmer.ffrs_code || "N/A"}).
+                </p>
+
+                {addParcelError && (
+                  <div style={{ color: "#b91c1c", backgroundColor: "#fef2f2", border: "1px solid #fca5a5", padding: "10px 14px", borderRadius: "6px", marginBottom: "1rem", fontSize: "0.875rem", fontWeight: 500 }}>
+                    ⚠️ {addParcelError}
+                  </div>
+                )}
+
+                {/* List of dynamic parcel input cards */}
+                {addParcelInputs.map((input, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "10px",
+                      padding: "16px",
+                      marginBottom: "16px",
+                      backgroundColor: "#f9fafb",
+                      position: "relative"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px solid #f3f4f6", paddingBottom: "6px" }}>
+                      <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1f2937" }}>
+                        🌾 Farmland Card #{index + 1}
+                      </span>
+                      {addParcelInputs.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveParcelForm(index)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            cursor: "pointer",
+                            fontSize: "0.8rem",
+                            fontWeight: 600
+                          }}
+                        >
+                          ✕ Remove Card
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                      {/* Parcel Number (Read-only / Disabled styling) */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#4b5563", marginBottom: "4px" }}>
+                          Parcel Number
+                        </label>
+                        <input
+                          type="text"
+                          value={input.parcelNumber}
+                          readOnly
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px",
+                            borderRadius: "6px",
+                            border: "1px solid #d1d5db",
+                            backgroundColor: "#f3f4f6",
+                            cursor: "not-allowed",
+                            color: "#6b7280"
+                          }}
+                        />
+                      </div>
+
+                      {/* Barangay */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#4b5563", marginBottom: "4px" }}>
+                          Barangay *
+                        </label>
+                        <select
+                          value={input.barangay}
+                          onChange={(e) => handleUpdateParcelField(index, "barangay", e.target.value)}
+                          style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #d1d5db", backgroundColor: "#fff" }}
+                        >
+                          <option value="">Select Barangay</option>
+                          {DUMANGAS_BARANGAYS.map((brgy) => (
+                            <option key={brgy} value={brgy}>{brgy}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Total Area */}
+                      <div style={{ gridColumn: "span 2" }}>
+                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#4b5563", marginBottom: "4px" }}>
+                          Total Area (ha) *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="e.g. 1.50"
+                          value={input.totalAreaHa}
+                          onChange={(e) => handleUpdateParcelField(index, "totalAreaHa", e.target.value)}
+                          style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #d1d5db" }}
+                        />
+                      </div>
+
+                      {/* Ancestral Domain */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#4b5563", marginBottom: "4px" }}>
+                          Within Ancestral Domain?
+                        </label>
+                        <select
+                          value={input.withinAncestralDomain}
+                          onChange={(e) => handleUpdateParcelField(index, "withinAncestralDomain", e.target.value)}
+                          style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #d1d5db", backgroundColor: "#fff" }}
+                        >
+                          <option value="No">No</option>
+                          <option value="Yes">Yes</option>
+                        </select>
+                      </div>
+
+                      {/* ARB */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#4b5563", marginBottom: "4px" }}>
+                          Agrarian Reform Beneficiary (ARB)?
+                        </label>
+                        <select
+                          value={input.agrarianReformBeneficiary}
+                          onChange={(e) => handleUpdateParcelField(index, "agrarianReformBeneficiary", e.target.value)}
+                          style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #d1d5db", backgroundColor: "#fff" }}
+                        >
+                          <option value="No">No</option>
+                          <option value="Yes">Yes</option>
+                        </select>
+                      </div>
+
+                      {/* Cultivation Status */}
+                      <div style={{ gridColumn: "span 2" }}>
+                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#4b5563", marginBottom: "4px" }}>
+                          Cultivation Status
+                        </label>
+                        <select
+                          value={input.isCultivating ? "true" : "false"}
+                          onChange={(e) => handleUpdateParcelField(index, "isCultivating", e.target.value === "true")}
+                          style={{ width: "100%", padding: "8px 10px", borderRadius: "6px", border: "1px solid #d1d5db", backgroundColor: "#fff" }}
+                        >
+                          <option value="true">Personally Cultivated (Self-farmed)</option>
+                          <option value="false">Not Cultivated (Open for tenants)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add Another button */}
+                <button
+                  type="button"
+                  onClick={handleAddAnotherParcelForm}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    border: "1px dashed #3b82f6",
+                    borderRadius: "8px",
+                    backgroundColor: "#eff6ff",
+                    color: "#2563eb",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    marginBottom: "1.5rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
+                >
+                  ➕ Add Another Farmland
+                </button>
+
+              </div>
+
+              <div className="jo-land-registry-transfer-actions" style={{ borderTop: "1px solid #e5e7eb", padding: "14px 24px 20px" }}>
+                <button
+                  type="button"
+                  className="jo-land-registry-transfer-cancel"
+                  onClick={() => setShowAddParcelModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="jo-land-registry-transfer-confirm"
+                  style={{ background: "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)", color: "#fff" }}
+                  disabled={isSubmittingAddParcel}
+                  onClick={handleSubmitAddParcel}
+                >
+                  {isSubmittingAddParcel ? "Saving..." : "Save Farmland"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Update Tenant/Lessee Landowner Modal */}
         {showOwnerAffiliationModal && selectedFarmer && (
           <div

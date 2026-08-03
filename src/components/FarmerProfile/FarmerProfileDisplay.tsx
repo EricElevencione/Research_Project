@@ -617,9 +617,11 @@ export const FarmerProfileDisplay: React.FC<FarmerProfileDisplayProps> = ({
                   <div key={parcel.id || index} className="farmer-modal-parcel-card">
                     <div className="farmer-modal-parcel-header">
                       <h4>
-                        Parcel Number {index + 1} – #
+                        Parcel Number {index + 1} –{" "}
                         {parcel.parcelNumber !== "N/A"
-                          ? parcel.parcelNumber
+                          ? parcel.parcelNumber.startsWith("#")
+                            ? parcel.parcelNumber
+                            : `#${parcel.parcelNumber}`
                           : `ID-${parcel.id}`}
                       </h4>
                     </div>
