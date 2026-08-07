@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
@@ -77,78 +76,13 @@ interface ParcelDetail {
   cultivatorSubmissionId?: number | null;
 }
 
-interface Parcel {
-  id: string;
-  parcel_number: string;
-  farm_location_barangay: string;
-  farm_location_municipality: string;
-  total_farm_area_ha: number;
-  within_ancestral_domain: string;
-  ownership_document_no: string;
-  agrarian_reform_beneficiary: string;
-  ownership_type_registered_owner: boolean;
-  ownership_type_tenant: boolean;
-  ownership_type_lessee: boolean;
-  tenant_land_owner_name: string;
-  lessee_land_owner_name: string;
-  ownership_others_specify: string;
-  is_cultivating?: boolean | null;
-  cultivation_status_reason?: string | null;
-  cultivation_status_updated_at?: string | null;
-}
+
 
 type SortKey = "farmer" | "parcelArea" | "dateSubmitted";
 type SortDirection = "asc" | "desc";
 
 const RsbsaAdminPage: React.FC = () => {
-  const navigate = useNavigate();
-  const barangays = [
-    "Aurora-Del Pilar",
-    "Bacay",
-    "Bacong",
-    "Balabag",
-    "Balud",
-    "Bantud",
-    "Bantud Fabrica",
-    "Baras",
-    "Barasan",
-    "Basa-Mabini Bonifacio",
-    "Bolilao",
-    "Buenaflor Embarkadero",
-    "Burgos-Regidor",
-    "Calao",
-    "Cali",
-    "Cansilayan",
-    "Capaliz",
-    "Cayos",
-    "Compayan",
-    "Dacutan",
-    "Ermita",
-    "Ilaya 1st",
-    "Ilaya 2nd",
-    "Ilaya 3rd",
-    "Jardin",
-    "Lacturan",
-    "Lopez Jaena - Rizal",
-    "Managuit",
-    "Maquina",
-    "Nanding Lopez",
-    "Pagdugue",
-    "Paloc Bigque",
-    "Paloc Sool",
-    "Patlad",
-    "Pd Monfort North",
-    "Pd Monfort South",
-    "Pulao",
-    "Rosario",
-    "Sapao",
-    "Sulangan",
-    "Tabucan",
-    "Talusan",
-    "Tambobo",
-    "Tamboilan",
-    "Victorias",
-  ].sort();
+
 
   const [activeTab, setActiveTab] = useState<"registry" | "analytics">(
     "registry",
@@ -534,125 +468,6 @@ const RsbsaAdminPage: React.FC = () => {
     return { today, week };
   }, [registeredOwners]);
 
-  const latestRegistrants = React.useMemo(() => {
-    const sorted = [...registeredOwners].sort((a, b) => {
-      const dateA = Date.parse(a.dateSubmitted || "");
-      const dateB = Date.parse(b.dateSubmitted || "");
-      const safeA = Number.isNaN(dateA) ? -Infinity : dateA;
-      const safeB = Number.isNaN(dateB) ? -Infinity : dateB;
-      if (safeA !== safeB) return safeB - safeA;
-      return String(b.id || "").localeCompare(String(a.id || ""));
-    });
-
-    return sorted.slice(0, 5);
-  }, [registeredOwners]);
-
-  const topBarangays = React.useMemo(() => {
-    const counts = new Map<string, number>();
-    registeredOwners.forEach((record) => {
-      const barangay = getBarangayFromAddress(record.farmerAddress);
-      if (!barangay || barangay === "N/A") return;
-      counts.set(barangay, (counts.get(barangay) ?? 0) + 1);
-    });
-
-    const total = registeredOwners.length;
-    const entries = Array.from(counts.entries()).map(([barangay, count]) => ({
-      barangay,
-      count,
-      share: total > 0 ? (count / total) * 100 : 0,
-    }));
-
-    entries.sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return a.barangay.localeCompare(b.barangay);
-    });
-
-    return entries.slice(0, 5);
-  }, [registeredOwners]);
-
-  const landParcelSummary = React.useMemo(() => {
-    const cropCounts = new Map<string, number>();
-    const tenureCounts = new Map<string, number>();
-    let totalArea = 0;
-    let totalParcels = 0;
-
-    registeredOwners.forEach((record) => {
-      const parsedArea =
-        typeof record.totalFarmArea === "number"
-          ? record.totalFarmArea
-          : parseFloat(
-              String(record.totalFarmArea ?? "").replace(/[^0-9.-]/g, ""),
-            );
-      if (Number.isFinite(parsedArea)) totalArea += parsedArea;
-
-      const parsedParcels =
-        typeof record.parcelCount === "number"
-          ? record.parcelCount
-          : parseInt(String(record.parcelCount ?? "0"), 10);
-      if (Number.isFinite(parsedParcels)) totalParcels += parsedParcels;
-
-      if (record.ownershipType?.registeredOwner) {
-        tenureCounts.set(
-          "Registered Owner",
-          (tenureCounts.get("Registered Owner") ?? 0) + 1,
-        );
-      }
-      if (record.ownershipType?.tenant) {
-        tenureCounts.set("Tenant", (tenureCounts.get("Tenant") ?? 0) + 1);
-      }
-      if (record.ownershipType?.lessee) {
-        tenureCounts.set("Lessee", (tenureCounts.get("Lessee") ?? 0) + 1);
-      }
-
-      const crops = new Set<string>();
-      if (record.farmerRice) crops.add("Rice");
-      if (record.farmerCorn) crops.add("Corn");
-      if (record.farmerOtherCrops) crops.add("Other Crops");
-      if (record.farmerLivestock) crops.add("Livestock");
-      if (record.farmerPoultry) crops.add("Poultry");
-
-      if (crops.size === 0 && record.mainLivelihood) {
-        const normalized = String(record.mainLivelihood).trim();
-        if (normalized && normalized.toLowerCase() !== "n/a") {
-          crops.add(normalized);
-        }
-      }
-
-      crops.forEach((crop) => {
-        cropCounts.set(crop, (cropCounts.get(crop) ?? 0) + 1);
-      });
-    });
-
-    const cropBreakdown = Array.from(cropCounts.entries())
-      .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => {
-        if (b.count !== a.count) return b.count - a.count;
-        return a.label.localeCompare(b.label);
-      })
-      .slice(0, 6);
-
-    const tenureBreakdown = Array.from(tenureCounts.entries())
-      .map(([label, count]) => ({
-        label,
-        count,
-        share:
-          registeredOwners.length > 0
-            ? (count / registeredOwners.length) * 100
-            : 0,
-      }))
-      .sort((a, b) => {
-        if (b.count !== a.count) return b.count - a.count;
-        return a.label.localeCompare(b.label);
-      });
-
-    return {
-      totalArea,
-      totalParcels,
-      cropBreakdown,
-      tenureBreakdown,
-    };
-  }, [registeredOwners]);
-
   // Filter registered owners based on search query and filters
   const filteredOwners = registeredOwners
     .filter((record) => {
@@ -794,20 +609,6 @@ const RsbsaAdminPage: React.FC = () => {
     return `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
   };
 
-  const formatDateTime = (iso?: string) => {
-    if (!iso) return "—";
-    const normalizedIso = !/Z|[+-]\d{2}:?\d{2}$/i.test(iso) ? iso + "Z" : iso;
-    const parsed = new Date(normalizedIso);
-    if (Number.isNaN(parsed.getTime())) return "—";
-    return parsed.toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const formatParcelArea = (value: number | string | null | undefined) => {
     const parsed =
       typeof value === "number" ? value : parseFloat(String(value ?? ""));
@@ -815,55 +616,7 @@ const RsbsaAdminPage: React.FC = () => {
     return `${parsed.toFixed(2)} ha`;
   };
 
-  const formatAreaSummary = (value: number) => {
-    if (!Number.isFinite(value) || value < 0) return "0.00 ha";
-    return `${value.toFixed(2)} ha`;
-  };
 
-  const formatRecordStatus = (status?: string | null) => {
-    const normalized = String(status || "")
-      .toLowerCase()
-      .trim();
-    if (!normalized) return "Not Submitted";
-    if (normalized === "no parcels") return "No Parcels";
-
-    const activeStatuses = new Set([
-      "submitted",
-      "approved",
-      "active",
-      "active farmer",
-    ]);
-    const inactiveStatuses = new Set([
-      "not submitted",
-      "not_active",
-      "not active",
-      "draft",
-      "pending",
-      "not approved",
-      "inactive",
-    ]);
-
-    if (activeStatuses.has(normalized)) return "Active Farmer";
-    if (inactiveStatuses.has(normalized)) return "Inactive Farmer";
-    return status || "Not Submitted";
-  };
-
-  const getStatusPillClass = (status?: string | null) => {
-    const normalized = String(status || "")
-      .toLowerCase()
-      .trim();
-    if (!normalized) return "jo-rsbsa-status-inactive";
-    if (normalized === "no parcels") return "jo-rsbsa-status-no-parcels";
-    if (isActiveFarmerStatus(normalized)) return "jo-rsbsa-status-active";
-    return "jo-rsbsa-status-inactive";
-  };
-
-  function getBarangayFromAddress(address?: string | null) {
-    const barangay = String(address || "")
-      .split(",")[0]
-      ?.trim();
-    return barangay || "N/A";
-  }
 
   const getOwnershipFlags = (record: RSBSARecord) => {
     const owner = record.ownershipType?.registeredOwner === true;

@@ -189,8 +189,7 @@ This will create distributable installers in the `dist` folder.
 Research-Project/
 ├── backend/           # Express.js backend server
 │   ├── server.cjs    # Main server file
-│   ├── routes/       # API endpoints
-│   └── dss-scripts/  # Decision support system scripts
+│   └── routes/       # API endpoints
 ├── database/          # SQL scripts for database setup
 ├── electron/          # Electron main and preload scripts
 ├── src/              # React frontend source code

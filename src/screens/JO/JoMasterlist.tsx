@@ -4,12 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
-  getFarmParcels,
   getFarmParcelsWithOccupants,
-  updateRsbsaSubmission,
-  updateFarmParcel,
-  syncLandPlotArea,
-  getLandownerOwnedArea,
   getLandHistoryAssociationRows,
 } from "../../api";
 import {
@@ -29,9 +24,7 @@ import { FarmerProfileDisplay } from "../../components/FarmerProfile/FarmerProfi
 import { EditFarmerModal } from "../../components/FarmerProfile/EditFarmerModal";
 import type {
   UnifiedParcel,
-  OccupantInfo,
 } from "../../components/FarmerProfile/FarmerProfileDisplay";
-import { getParcelOccupationType } from "../../utils/parcelOccupationType";
 
 // ─────────────────────────────────────────────
 // MASTERLIST — Universal "Find Anyone" page
@@ -107,26 +100,7 @@ interface LandHistoryEntry {
   changeReason: string | null;
 }
 
-interface Parcel {
-  id: string;
-  parcel_number: string;
-  farm_location_barangay: string;
-  farm_location_municipality: string;
-  total_farm_area_ha: number;
-  within_ancestral_domain: string;
-  ownership_document_no: string;
-  agrarian_reform_beneficiary: string;
-  ownership_type_registered_owner: boolean;
-  ownership_type_tenant: boolean;
-  ownership_type_lessee: boolean;
-  tenant_land_owner_name: string;
-  lessee_land_owner_name: string;
-  ownership_others_specify: string;
-  contract_end_date?: string | null;
-  is_farming?: boolean | null;
-  farming_status_reason?: string | null;
-  farming_status_updated_at?: string | null;
-}
+
 
 interface FarmerDetail {
   id: string;
@@ -174,20 +148,7 @@ interface ParcelDetail {
   plotArea?: number;
 }
 
-interface EditFormData {
-  farmerName?: string;
-  firstName?: string;
-  middleName?: string;
-  lastName?: string;
-  farmerAddress?: string;
-  barangay?: string;
-  municipality?: string;
-  farmLocation?: string;
-  landParcel?: string;
-  dateSubmitted?: string;
-  parcelArea?: string;
-  age?: string;
-}
+
 
 type SortKey = "farmerName" | "dateSubmitted" | "status" | "parcelArea";
 type SortDirection = "asc" | "desc";
@@ -277,10 +238,8 @@ const JoMasterlist: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
-  const [selectedFarmBarangay, setSelectedFarmBarangay] =
-    useState<string>("all");
-  const [selectedFarmingStatus, setSelectedFarmingStatus] =
-    useState<string>("all");
+  const selectedFarmBarangay = "all";
+  const selectedFarmingStatus = "all";
   const [selectedCrop, setSelectedCrop] = useState<string>("all");
   const [landSizeFilter, setLandSizeFilter] = useState<string>("");
 
@@ -336,11 +295,6 @@ const JoMasterlist: React.FC = () => {
   const [loadingLandHistory, setLoadingLandHistory] = useState(false);
 
   const [editingRecord, setEditingRecord] = useState<RSBSARecord | null>(null);
-  const [editFormData, setEditFormData] = useState<EditFormData>({});
-  const [editError, setEditError] = useState<string | null>(null);
-  const [editingParcels, setEditingParcels] = useState<Parcel[]>([]);
-  const [loadingParcels, setLoadingParcels] = useState(false);
-  const [parcelErrors, setParcelErrors] = useState<Record<string, string>>({});
 
   const [updateNotification, setUpdateNotification] = useState<{
     show: boolean;
@@ -360,7 +314,6 @@ const JoMasterlist: React.FC = () => {
   const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
   const [showPrintMasterlistModal, setShowPrintMasterlistModal] =
     useState(false);
-  const [isModalPrinting, setIsModalPrinting] = useState(false);
   const [isBulkPrinting, setIsBulkPrinting] = useState(false);
   const [printingRecordIds, setPrintingRecordIds] = useState<Set<string>>(
     new Set(),
@@ -415,15 +368,6 @@ const JoMasterlist: React.FC = () => {
         return `${total.toLocaleString(undefined, { minimumFractionDigits: total % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })} ha`;
     }
     return parcelArea && parcelArea !== "—" ? parcelArea : "—";
-  };
-
-  const formatFarmingStatus = (status?: string | null) => {
-    if (!status) return "Not specified";
-    const n = status.toLowerCase().trim();
-    if (n === "farming" || n === "actively farming") return "Farming";
-    if (n === "not farming") return "Not farming";
-    if (n === "mixed") return "Mixed";
-    return status;
   };
 
   const formatRecordStatus = (status?: string | null) => {
@@ -489,15 +433,6 @@ const JoMasterlist: React.FC = () => {
     return calculateAgeFromBirthdate(birthdate);
   };
 
-  const ageToInputValue = (ageValue: unknown): string => String(ageValue ?? "");
-
-  const parseAgeInputToNumber = (ageValue?: string): number | null => {
-    if (!ageValue || ageValue.trim() === "") return null;
-    const parsed = Number(ageValue);
-    if (!Number.isFinite(parsed) || parsed < 0) return null;
-    return Math.floor(parsed);
-  };
-
   const getRecordBarangay = (record: RSBSARecord) => {
     const fromAddress = String(record.farmerAddress || "")
       .split(",")[0]
@@ -523,16 +458,6 @@ const JoMasterlist: React.FC = () => {
       record.ownershipType?.category ||
       (owner ? "registeredOwner" : tenantLessee ? "tenantLessee" : "unknown");
     return { owner, tenant, lessee, tenantLessee, category };
-  };
-
-  const getOwnershipLabel = (record: RSBSARecord) => {
-    const f = getOwnershipFlags(record);
-    if (f.category === "registeredOwner" || f.owner) return "Registered Owner";
-    if (f.tenant && f.lessee) return "Tenant + Lessee";
-    if (f.tenant) return "Tenant";
-    if (f.lessee) return "Lessee";
-    if (f.tenantLessee) return "Tenant or Lessee";
-    return "—";
   };
 
   const getOwnershipClass = (record: RSBSARecord) => {
@@ -1637,66 +1562,7 @@ const JoMasterlist: React.FC = () => {
     } catch {}
   };
 
-  const handleModalPrint = async () => {
-    if (!selectedFarmer) return;
-    setIsModalPrinting(true);
-    const result = await printRsbsaFormById({
-      farmerId: selectedFarmer.id,
-      fallbackReferenceNumber: selectedFarmer.referenceNumber,
-      fallbackFarmerName: selectedFarmer.farmerName,
-    });
-    setIsModalPrinting(false);
-    if (!result.success && !result.cancelled)
-      showUpdateNotification(result.error || "Failed to print.", "error");
-  };
 
-  // ─── Edit ───────────────────────────────────────────────────────────────────
-
-  const parseName = (fullName: string) => {
-    if (!fullName) return { lastName: "", firstName: "", middleName: "" };
-    const parts = fullName
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    if (parts.length === 0)
-      return { lastName: "", firstName: "", middleName: "" };
-    if (parts.length === 1)
-      return { lastName: parts[0], firstName: "", middleName: "" };
-    const fmp = (parts[1] || "")
-      .split(" ")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    return {
-      lastName: parts[0],
-      firstName: fmp[0] || "",
-      middleName: fmp.slice(1).join(" ") || "",
-    };
-  };
-
-  const parseAddress = (address: string) => {
-    if (!address) return { barangay: "", municipality: "" };
-    const parts = address
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    if (parts.length === 0) return { barangay: "", municipality: "" };
-    if (parts.length === 1) return { barangay: parts[0], municipality: "" };
-    return { barangay: parts[0], municipality: parts[1] };
-  };
-
-  const nt = (v: string) => v.trim().toLowerCase();
-
-  const resolveBarangayForEdit = (
-    addressBarangay: string,
-    farmLocation: string,
-  ): string => {
-    const match = (c: string) => barangays.find((b) => nt(b) === nt(c)) || "";
-    return (
-      match(addressBarangay) ||
-      match(parseAddress(farmLocation || "").barangay || farmLocation) ||
-      ""
-    );
-  };
 
   const handleEdit = (recordId: string) => {
     const record = rsbsaRecords.find((r) => r.id === recordId);
@@ -2198,8 +2064,6 @@ const JoMasterlist: React.FC = () => {
                         flags.category === "registeredOwner" || flags.owner;
                       const idleCount = idleParcelOwnerCounts.get(record.id) || 0;
                       const hasIdleParcel = isOwner && idleCount > 0;
-                      const isTenantOrLessee =
-                        flags.tenant || flags.lessee || flags.tenantLessee;
                       const missingRecordWarning =
                         getMissingRecordWarning(record);
 

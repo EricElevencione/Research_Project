@@ -177,7 +177,7 @@ const toTitleCase = (text: string): string => {
     .trim();
 };
 
-const JoRsbsa: React.FC = () => {
+const JoFarmerRegistration: React.FC = () => {
   const navigate = useNavigate();
 
   type OwnershipCategory = "tenant" | "lessee" | "owner";
@@ -3706,11 +3706,6 @@ const JoRsbsa: React.FC = () => {
                   selectedLandOwner !== null && (
                     <>
                       {additionalLandOwnerGroups.map((group, idx) => {
-                        const filteredGroupOwners = landowners.filter((o) =>
-                          o.name
-                            .toLowerCase()
-                            .includes(group.searchTerm.toLowerCase()),
-                        );
                         return (
                           <div
                             key={group.groupId}
@@ -4450,4 +4445,4 @@ const JoRsbsa: React.FC = () => {
   );
 };
 
-export default JoRsbsa;
+export default JoFarmerRegistration;

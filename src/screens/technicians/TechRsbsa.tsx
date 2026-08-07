@@ -68,7 +68,6 @@ const TechRsbsa: React.FC = () => {
   >("active");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isActive = (path: string) => location.pathname === path;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{
@@ -300,16 +299,16 @@ const TechRsbsa: React.FC = () => {
 
       const submittedDateLabel = parsedSubmissionDate
         ? parsedSubmissionDate.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
         : getValue(
-            farmerData.dateSubmitted,
-            (farmerData as any).date_submitted,
-            (farmerData as any).submitted_at,
-            (farmerData as any).created_at,
-          );
+          farmerData.dateSubmitted,
+          (farmerData as any).date_submitted,
+          (farmerData as any).submitted_at,
+          (farmerData as any).created_at,
+        );
 
       const farmerDetail: FarmerProfileData = {
         id: farmerId,
@@ -733,9 +732,9 @@ const TechRsbsa: React.FC = () => {
         const total = progress
           ? Math.max(0, Number(progress.totalParcels || 0))
           : Math.max(0, Number(record.parcelCount || 0)) || 1;
-         const plotted = progress
-           ? Math.min(total, Math.max(0, Number(progress.plottedParcels || 0)))
-           : total;
+        const plotted = progress
+          ? Math.min(total, Math.max(0, Number(progress.plottedParcels || 0)))
+          : total;
 
         return {
           id: record.id,

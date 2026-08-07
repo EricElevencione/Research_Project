@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
-  getFarmParcels,
   getFarmParcelsWithOccupants,
   updateRsbsaSubmission,
 } from "../../api";
@@ -13,7 +12,6 @@ import {
   printRsbsaFormsByIds,
 } from "../../utils/rsbsaPrint";
 import { printHtmlReport } from "../../utils/printHelper";
-import { getParcelOccupationType } from "../../utils/parcelOccupationType";
 import "../../assets/css/jo css/JoLandownerStyle.css";
 import JOSidebar from "../../components/layout/JOSidebar";
 import "../../assets/css/jo css/FarmerDetailModal.css";
@@ -128,14 +126,6 @@ interface FarmParcelRow {
   lessee_land_owner_name?: string | null;
 }
 
-interface OccupantSubmissionRow {
-  id: string | number;
-  "FIRST NAME"?: string | null;
-  "LAST NAME"?: string | null;
-  "MIDDLE NAME"?: string | null;
-  "EXT NAME"?: string | null;
-  "FFRS_CODE"?: string | null;
-}
 
 interface LandPlotRow {
   id: string | number;
@@ -172,11 +162,11 @@ interface OccupiedParcel {
   totalFarmAreaHa: number;
   // Occupation
   occupationType:
-    | "land-owner"
-    | "owner-farmed"
-    | "tenant"
-    | "lessee"
-    | "tenant+lessee";
+  | "land-owner"
+  | "owner-farmed"
+  | "tenant"
+  | "lessee"
+  | "tenant+lessee";
   occupants: FarmerOccupantInfo[];
   // Parcel attributes
   agrarianReformBeneficiary: string;
@@ -735,11 +725,11 @@ const JoLandownerRegistry: React.FC = () => {
       });
 
       const ownerToFarmers = new Map<string, Map<string, { isTenant: boolean; isLessee: boolean; parcels: any[] }>>();
-      
+
       (tlParcels as FarmParcelRow[] || []).forEach((p) => {
         if (p.is_current_owner === false) return;
         const farmerId = String(p.submission_id);
-        
+
         const processLink = (ownerId: string, isTenant: boolean, isLessee: boolean) => {
           if (!ownerToFarmers.has(ownerId)) {
             ownerToFarmers.set(ownerId, new Map());
@@ -763,7 +753,7 @@ const JoLandownerRegistry: React.FC = () => {
       });
 
       const tenantsMap = new Map<string, any[]>();
-      
+
       ownerToFarmers.forEach((farmerMap, ownerId) => {
         const list: any[] = [];
         farmerMap.forEach((info, farmerId) => {
@@ -883,10 +873,10 @@ const JoLandownerRegistry: React.FC = () => {
       const age = normalizeAgeValue(
         farmerData.age ?? data.age ?? data.AGE,
         data.dateOfBirth ||
-          data.birthdate ||
-          data["DATE OF BIRTH"] ||
-          data.BIRTHDATE ||
-          null,
+        data.birthdate ||
+        data["DATE OF BIRTH"] ||
+        data.BIRTHDATE ||
+        null,
       );
 
       // Step A: Fetch owned parcels and occupants
@@ -955,8 +945,8 @@ const JoLandownerRegistry: React.FC = () => {
         const key = `${String(plot.barangay || "")
           .trim()
           .toUpperCase()}|${String(plot.parcel_number || "")
-          .trim()
-          .toUpperCase()}`;
+            .trim()
+            .toUpperCase()}`;
         // First match wins — don't silently overwrite if duplicates exist,
         // that's a data-quality question for the GIS side, not something
         // to guess through here.
@@ -972,8 +962,8 @@ const JoLandownerRegistry: React.FC = () => {
         const key = `${String(barangay || "")
           .trim()
           .toUpperCase()}|${String(parcelNumber || "")
-          .trim()
-          .toUpperCase()}`;
+            .trim()
+            .toUpperCase()}`;
         return geometryByParcelKey.get(key) || null;
       };
 
@@ -1092,11 +1082,11 @@ const JoLandownerRegistry: React.FC = () => {
               // more often than first+last alone would.
               const middleNarrowed = normalizedOwnerMiddle
                 ? nameMatches.filter((row: CandidateSubmission) => {
-                    const rowMiddle = String(row["MIDDLE NAME"] || "")
-                      .trim()
-                      .toLowerCase();
-                    return !rowMiddle || rowMiddle === normalizedOwnerMiddle;
-                  })
+                  const rowMiddle = String(row["MIDDLE NAME"] || "")
+                    .trim()
+                    .toLowerCase();
+                  return !rowMiddle || rowMiddle === normalizedOwnerMiddle;
+                })
                 : nameMatches;
 
               const finalMatches =
@@ -1298,8 +1288,8 @@ const JoLandownerRegistry: React.FC = () => {
             record.barangayCount !== 1
               ? false
               : record.barangay.localeCompare(selectedBarangay, undefined, {
-                  sensitivity: "base",
-                }) !== 0
+                sensitivity: "base",
+              }) !== 0
           )
             return false;
         }
@@ -1601,12 +1591,12 @@ const JoLandownerRegistry: React.FC = () => {
         prev.map((r) =>
           r.id === editingRecord.id
             ? {
-                ...r,
-                landownerName: composedName || r.landownerName,
-                landownerAddress: composedAddress || r.landownerAddress,
-                barangay: b || r.barangay,
-                age: parsedAge,
-              }
+              ...r,
+              landownerName: composedName || r.landownerName,
+              landownerAddress: composedAddress || r.landownerAddress,
+              barangay: b || r.barangay,
+              age: parsedAge,
+            }
             : r,
         ),
       );
@@ -2100,11 +2090,10 @@ const JoLandownerRegistry: React.FC = () => {
                                 return (
                                   <div className="jo-landowner-farmer-meta">
                                     <span
-                                      className={`jo-landowner-ownership-pill ${
-                                        total > 0
-                                          ? "jo-landowner-ownership-tenant"
-                                          : "jo-landowner-ownership-unknown"
-                                      }`}
+                                      className={`jo-landowner-ownership-pill ${total > 0
+                                        ? "jo-landowner-ownership-tenant"
+                                        : "jo-landowner-ownership-unknown"
+                                        }`}
                                     >
                                       {countText}
                                     </span>
@@ -2213,13 +2202,12 @@ const JoLandownerRegistry: React.FC = () => {
                                           </td>
                                           <td>
                                             <span
-                                              className={`jo-landowner-ownership-pill ${
-                                                t.role === "tenant"
-                                                  ? "jo-landowner-ownership-tenant"
-                                                  : t.role === "lessee"
-                                                    ? "jo-landowner-ownership-lessee"
-                                                    : "jo-landowner-ownership-mixed"
-                                              }`}
+                                              className={`jo-landowner-ownership-pill ${t.role === "tenant"
+                                                ? "jo-landowner-ownership-tenant"
+                                                : t.role === "lessee"
+                                                  ? "jo-landowner-ownership-lessee"
+                                                  : "jo-landowner-ownership-mixed"
+                                                }`}
                                             >
                                               {t.role === "tenant" ? "Tenant" : t.role === "lessee" ? "Lessee" : "Tenant + Lessee"}
                                             </span>

@@ -87,9 +87,9 @@ const buildOwnershipTypeFromRecord = (item: any) => {
     explicitCategory !== "unknown"
       ? explicitCategory
       : deriveOwnershipCategoryFromFlags({
-          registeredOwner,
-          tenantLessee,
-        });
+        registeredOwner,
+        tenantLessee,
+      });
 
   return {
     registeredOwner,
@@ -199,8 +199,8 @@ export const getDashboardStats = async (
 
     let currentSeason =
       !isAllocationId &&
-      typeof seasonOrAllocationId === "string" &&
-      seasonOrAllocationId
+        typeof seasonOrAllocationId === "string" &&
+        seasonOrAllocationId
         ? seasonOrAllocationId
         : defaultSeason;
 
@@ -984,12 +984,12 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
       barangayCodes.length > 0
         ? barangayCodes.map((b: any) => b.barangay_name)
         : [
-            ...new Set(
-              allParcels
-                .map((p: any) => p.farm_location_barangay)
-                .filter(Boolean) as string[],
-            ),
-          ].sort();
+          ...new Set(
+            allParcels
+              .map((p: any) => p.farm_location_barangay)
+              .filter(Boolean) as string[],
+          ),
+        ].sort();
 
     const barangayChecklist = barangayNames
       .map((brgy) => {
@@ -1074,7 +1074,7 @@ export const getTechDashboardData = async (): Promise<ApiResponse> => {
         const unplottedParcels = Math.max(
           0,
           Number(progress.totalParcels || 0) -
-            Number(progress.plottedParcels || 0),
+          Number(progress.plottedParcels || 0),
         );
 
         return {
@@ -1359,11 +1359,11 @@ export const getRsbsaSubmissions = async (options?: {
       cultivationStatus: deriveCultivationStatus(cultivationCounts),
       cultivationSummary: cultivationCounts
         ? {
-            active: cultivationCounts.active,
-            inactive: cultivationCounts.inactive,
-            unknown: cultivationCounts.unknown,
-            total: cultivationCounts.total,
-          }
+          active: cultivationCounts.active,
+          inactive: cultivationCounts.inactive,
+          unknown: cultivationCounts.unknown,
+          total: cultivationCounts.total,
+        }
         : null,
     };
   });
@@ -1475,7 +1475,7 @@ export const createRsbsaSubmission = async (
             : "No",
         agrarianReformBeneficiary:
           p.agrarianReformBeneficiary === "Yes" ||
-          p.agrarianReformBeneficiary === true
+            p.agrarianReformBeneficiary === true
             ? "Yes"
             : "No",
         ownershipDocumentNo: p.ownershipDocumentNo || "",
@@ -1488,10 +1488,10 @@ export const createRsbsaSubmission = async (
         isFarming: typeof p.isFarming === "boolean"
           ? p.isFarming
           : typeof p.is_farming === "boolean"
-          ? p.is_farming
-          : (p.ownershipTypeRegisteredOwner ?? p.ownershipType?.registeredOwner)
-          ? true          // owner parcel → land is active by default
-          : isCultivating, // tenant/lessee parcel → follow isCultivating
+            ? p.is_farming
+            : (p.ownershipTypeRegisteredOwner ?? p.ownershipType?.registeredOwner)
+              ? true          // owner parcel → land is active by default
+              : isCultivating, // tenant/lessee parcel → follow isCultivating
         cultivationStatusUpdatedAt: p.cultivationStatusUpdatedAt || null,
         cultivationStatusReason: p.cultivationStatusReason || null,
         cultivatorSubmissionId: p.cultivatorSubmissionId || null,
@@ -1816,15 +1816,15 @@ const mapParcelToCamelCase = (parcel: any) => {
     parcel.within_ancestral_domain === true || parcel.within_ancestral_domain === "Yes"
       ? "Yes"
       : parcel.within_ancestral_domain === false || parcel.within_ancestral_domain === "No"
-      ? "No"
-      : (parcel.withinAncestralDomain || "");
+        ? "No"
+        : (parcel.withinAncestralDomain || "");
 
   const agrarianReformBeneficiary =
     parcel.agrarian_reform_beneficiary === true || parcel.agrarian_reform_beneficiary === "Yes"
       ? "Yes"
       : parcel.agrarian_reform_beneficiary === false || parcel.agrarian_reform_beneficiary === "No"
-      ? "No"
-      : (parcel.agrarianReformBeneficiary || "");
+        ? "No"
+        : (parcel.agrarianReformBeneficiary || "");
 
   return {
     ...parcel,
@@ -2211,7 +2211,7 @@ export const getFarmParcelsWithOccupants = async (
 
     // Attach occupant information
     const finalOccupants = [...occupants];
-    
+
     // For tenant/lessee parcels, if the landowner name is known, add them as an occupant with role 'land-owner'
     if (!isRegisteredOwner) {
       const ownerName = p.tenant_land_owner_name || p.lessee_land_owner_name;
@@ -2220,7 +2220,7 @@ export const getFarmParcelsWithOccupants = async (
         finalOccupants.push({
           submissionId: ownerId ? String(ownerId) : "",
           name: ownerName,
-          ffrsCode: "", 
+          ffrsCode: "",
           role: "land-owner",
           isLinked: !!ownerId,
         });
@@ -3377,18 +3377,7 @@ export const getSeedCatalog = async (): Promise<ApiResponse> => {
   return createResponse(data || [], null, 200);
 };
 
-// ==================== SHORTAGES SUGGESTIONS ====================
 
-type FertilizerShortagePayload = {
-  seedId: string | null;
-  shortageFertId: string;
-  unavailableIds?: string[];
-};
-
-type SeedShortagePayload = {
-  seedId: string;
-  unavailableIds?: string[];
-};
 
 const SHORTAGES_API_COOLDOWN_MS = 30_000;
 let shortagesApiCooldownUntil = 0;
@@ -3400,8 +3389,6 @@ const USE_SUPABASE_SHORTAGES =
 const SUPABASE_SHORTAGES_RPC = {
   listSeeds: "list_shortages_seeds",
   listFertilizers: "list_shortages_fertilizers",
-  resolveFertilizer: "resolve_fertilizer_shortage",
-  resolveSeed: "resolve_seed_shortage",
 } as const;
 
 const mapSupabaseShortagesError = (error: any): string => {
@@ -3415,7 +3402,6 @@ const mapSupabaseShortagesError = (error: any): string => {
 
 const callShortagesSupabase = async (
   path: string,
-  body?: Record<string, unknown>,
 ): Promise<ApiResponse> => {
   try {
     if (path === "/seeds") {
@@ -3434,37 +3420,6 @@ const callShortagesSupabase = async (
       if (error)
         return createResponse(null, mapSupabaseShortagesError(error), 500);
       return createResponse(data ?? [], null, 200);
-    }
-
-    if (path === "/fertilizer") {
-      const { data, error } = await supabase.rpc(
-        SUPABASE_SHORTAGES_RPC.resolveFertilizer,
-        {
-          seed_id: body?.seedId ?? null,
-          shortage_fert_id: body?.shortageFertId,
-          unavailable_ids: Array.isArray(body?.unavailableIds)
-            ? body?.unavailableIds
-            : [],
-        },
-      );
-      if (error)
-        return createResponse(null, mapSupabaseShortagesError(error), 500);
-      return createResponse(data, null, 200);
-    }
-
-    if (path === "/seed") {
-      const { data, error } = await supabase.rpc(
-        SUPABASE_SHORTAGES_RPC.resolveSeed,
-        {
-          seed_id: body?.seedId,
-          unavailable_ids: Array.isArray(body?.unavailableIds)
-            ? body?.unavailableIds
-            : [],
-        },
-      );
-      if (error)
-        return createResponse(null, mapSupabaseShortagesError(error), 500);
-      return createResponse(data, null, 200);
     }
 
     return createResponse(null, `Unsupported shortages path: ${path}`, 400);
@@ -3496,8 +3451,8 @@ const callShortagesApiViaNode = async (
       method: body ? "POST" : "GET",
       headers: body
         ? {
-            "Content-Type": "application/json",
-          }
+          "Content-Type": "application/json",
+        }
         : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -3663,35 +3618,7 @@ export const deleteShortageFertilizer = async (
   return createResponse({ success: true }, null, 200);
 };
 
-export const resolveFertilizerShortageSuggestion = async (
-  payload: FertilizerShortagePayload,
-): Promise<ApiResponse> => {
-  if (!USE_SUPABASE_SHORTAGES) {
-    return callShortagesApiViaNode("/fertilizer", payload);
-  }
 
-  const supabaseResponse = await callShortagesSupabase("/fertilizer", payload);
-  if (!supabaseResponse.error) {
-    return supabaseResponse;
-  }
-
-  return callShortagesApiViaNode("/fertilizer", payload);
-};
-
-export const resolveSeedShortageSuggestion = async (
-  payload: SeedShortagePayload,
-): Promise<ApiResponse> => {
-  if (!USE_SUPABASE_SHORTAGES) {
-    return callShortagesApiViaNode("/seed", payload);
-  }
-
-  const supabaseResponse = await callShortagesSupabase("/seed", payload);
-  if (!supabaseResponse.error) {
-    return supabaseResponse;
-  }
-
-  return callShortagesApiViaNode("/seed", payload);
-};
 
 export const getAllocations = async (): Promise<ApiResponse> => {
   const { data, error } = await supabase
@@ -4294,10 +4221,10 @@ export const getLandHistoryParcelHistory = async (
     const landOwnerName = isOwner
       ? resolvedFarmerName
       : (isTenant
-          ? p.tenant_land_owner_name
-          : isLessee
-            ? p.lessee_land_owner_name
-            : null) || resolvedFarmerName;
+        ? p.tenant_land_owner_name
+        : isLessee
+          ? p.lessee_land_owner_name
+          : null) || resolvedFarmerName;
 
     return {
       id: syntheticId--,
@@ -5225,8 +5152,6 @@ export default {
   getSeedCatalog,
   getShortagesSeeds,
   getShortagesFertilizers,
-  resolveFertilizerShortageSuggestion,
-  resolveSeedShortageSuggestion,
   getAllocations,
   getAllocationById,
   getAllocationBySeason,

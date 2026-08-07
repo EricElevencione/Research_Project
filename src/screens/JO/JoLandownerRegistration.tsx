@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getLandOwners, createRsbsaSubmission } from "../../api";
+import { createRsbsaSubmission } from "../../api";
 import { supabase } from "../../supabase";
 import BirthDatePicker from "../../components/common/BirthDatePicker";
 import { getAuditLogger } from "../../components/Audit/auditLogger";
@@ -80,12 +79,7 @@ interface FormData {
   profile_picture?: string | null;
 }
 
-interface LandOwner {
-  id: number;
-  name: string;
-  barangay?: string;
-  municipality?: string;
-}
+
 
 const toTitleCase = (text: string): string => {
   if (!text) return "";
@@ -122,13 +116,10 @@ const toTitleCase = (text: string): string => {
     .trim();
 };
 
-const JoRsbsaRegisLandowner: React.FC = () => {
+const JoLandownerRegistration: React.FC = () => {
   const navigate = useNavigate();
 
-  const [_activeTab] = useState("overview");
-  const [landowners, setLandowners] = useState<LandOwner[]>([]);
-  const [unusedParcels, setUnusedParcels] = useState<any[]>([]);
-  const [draftId, _setDraftId] = useState<string | null>(null);
+  const draftId = null;
   const [currentStep, setCurrentStep] = useState(1);
 
   const [toast, setToast] = useState<{
@@ -152,35 +143,7 @@ const JoRsbsaRegisLandowner: React.FC = () => {
     );
   };
 
-  useEffect(() => {
-    const fetchLandowners = async () => {
-      try {
-        const response = await getLandOwners();
-        if (response.error) throw new Error("Failed to fetch landowners");
-        setLandowners(response.data || []);
-      } catch (error) {
-        console.error("Error fetching landowners:", error);
-      }
-    };
 
-    const fetchUnusedParcelsList = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("rsbsa_farm_parcels")
-          .select("id, submission_id, parcel_number, farm_location_barangay, total_farm_area_ha, is_farming, ownership_document_no, agrarian_reform_beneficiary, within_ancestral_domain")
-          .eq("is_farming", false)
-          .or("is_current_owner.is.null,is_current_owner.eq.true");
-
-        if (error) throw error;
-        setUnusedParcels(data || []);
-      } catch (error) {
-        console.error("Error fetching unused parcels:", error);
-      }
-    };
-
-    fetchLandowners();
-    fetchUnusedParcelsList();
-  }, []);
 
   const [formData, setFormData] = useState<FormData>({
     surname: "",
@@ -370,12 +333,10 @@ const JoRsbsaRegisLandowner: React.FC = () => {
           console.error("Error checking duplicates:", checkError);
         } else if (nameMatches && nameMatches.length > 0) {
           const duplicate = nameMatches.find((m) => {
-            const dbFirst = (m["FIRST NAME"] || "").trim().toLowerCase();
             const dbLast = (m["LAST NAME"] || "").trim().toLowerCase();
             const dbMiddle = (m["MIDDLE NAME"] || "").trim().toLowerCase();
             const dbExt = (m["EXT NAME"] || "").trim().toLowerCase();
 
-            const inputFirst = checkFirstName.toLowerCase();
             const inputLast = checkLastName.toLowerCase();
             const inputMiddle = checkMiddleName.toLowerCase();
             const inputExt = checkExtName.toLowerCase();
@@ -1676,4 +1637,4 @@ const JoRsbsaRegisLandowner: React.FC = () => {
   );
 };
 
-export default JoRsbsaRegisLandowner;
+export default JoLandownerRegistration;

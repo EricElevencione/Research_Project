@@ -51,7 +51,6 @@ interface NormalizedFarmerForm {
   profilePicture?: string | null;
 }
 
-type CoordinatePair = [number, number];
 
 interface SupportedGeometry {
   type: "Polygon" | "MultiPolygon";
@@ -219,8 +218,8 @@ const findParcelGeometry = (
       );
       const plotBarangayToken = normalizeToken(
         plot.barangay ||
-          plot.farm_location_barangay ||
-          plot.farmLocationBarangay,
+        plot.farm_location_barangay ||
+        plot.farmLocationBarangay,
       );
 
       if (requireParcel && (!parcelToken || plotParcelToken !== parcelToken)) {
@@ -426,9 +425,9 @@ const normalizeFormData = (
         ),
         totalFarmAreaHa: toNumericArea(
           data.totalFarmArea ||
-            data["TOTAL FARM AREA"] ||
-            data.parcelArea ||
-            data["PARCEL AREA"],
+          data["TOTAL FARM AREA"] ||
+          data.parcelArea ||
+          data["PARCEL AREA"],
         ),
         ownershipDocumentNo: toSafeText(data.ownershipDocumentNo, "N/A"),
         withinAncestralDomain: toYesNo(data.withinAncestralDomain),
@@ -459,10 +458,10 @@ const normalizeFormData = (
 
   const referenceNumber = toSafeText(
     submissionRecord.referenceNumber ||
-      data.referenceNumber ||
-      data.ffrsId ||
-      data.ffrs_id ||
-      request.fallbackReferenceNumber,
+    data.referenceNumber ||
+    data.ffrsId ||
+    data.ffrs_id ||
+    request.fallbackReferenceNumber,
     "N/A",
   );
 
@@ -496,13 +495,13 @@ const normalizeFormData = (
     ),
     farmerAddress: toSafeText(
       submissionRecord.farmerAddress ||
-        data.farmerAddress ||
-        [
-          data.barangay || data["BARANGAY"],
-          data.municipality || data["MUNICIPALITY"],
-        ]
-          .filter(Boolean)
-          .join(", "),
+      data.farmerAddress ||
+      [
+        data.barangay || data["BARANGAY"],
+        data.municipality || data["MUNICIPALITY"],
+      ]
+        .filter(Boolean)
+        .join(", "),
       "N/A",
     ),
     gender: toSafeText(genderValue),
@@ -514,8 +513,8 @@ const normalizeFormData = (
     farmingActivities: activities,
     dateSubmitted: formatDateValue(
       submissionRecord.dateSubmitted ||
-        submissionRecord.submitted_at ||
-        submissionRecord.created_at,
+      submissionRecord.submitted_at ||
+      submissionRecord.created_at,
     ),
     parcels: parcelsWithGeometry,
     profilePicture,

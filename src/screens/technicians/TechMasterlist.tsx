@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
   getRsbsaSubmissions,
   getRsbsaSubmissionById,
@@ -8,7 +7,7 @@ import {
   updateRsbsaSubmission,
   updateFarmParcel, // ✅ add this
 } from "../../api";
-import { printRsbsaFormById, printRsbsaFormsByIds } from "../../utils/rsbsaPrint";
+import { printRsbsaFormsByIds } from "../../utils/rsbsaPrint";
 import FarmerProfileDisplay, { UnifiedParcel } from "../../components/FarmerProfile/FarmerProfileDisplay";
 import "../../assets/css/jo css/JoMasterlistStyle.css";
 import "../../assets/css/technician css/TechMasterlistStyle.css";
@@ -17,7 +16,6 @@ import "../../components/layout/sidebarStyle.css";
 import { supabase } from "../../supabase";
 import TechSidebar from "../../components/layout/TechSidebar";
 import { addPendingAction } from "../../services/offlineDb";
-import { useOfflineStatus } from "../../hooks/useOfflineStatus";
 import OfflineStatusBanner from "../../components/common/OfflineStatusBanner";
 
 interface SummaryStats {
@@ -123,12 +121,9 @@ declare global {
 }
 
 const TechMasterlist: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
-  const [selectedFarmBarangay, setSelectedFarmBarangay] = useState<string>("all");
   const [loadingStats, setLoadingStats] = useState(false);
   const [summaryStats, setSummaryStats] = useState<SummaryStats>({
     totalParcels: 0,
@@ -185,35 +180,8 @@ const TechMasterlist: React.FC = () => {
     return { min: null, max: null };
   };
 
-  const calculateAgeFromBirthdate = (
-    birthdate?: string | null,
-  ): number | null => {
-    if (!birthdate) return null;
-    const bd = new Date(birthdate);
-    if (Number.isNaN(bd.getTime())) return null;
-    const today = new Date();
-    const bdYear = bd.getFullYear();
-    if (bdYear < 1900 || bdYear > today.getFullYear()) return null;
-    let age = today.getFullYear() - bd.getFullYear();
-    const md = today.getMonth() - bd.getMonth();
-    if (md < 0 || (md === 0 && today.getDate() < bd.getDate())) age--;
-    return age >= 0 ? age : null;
-  };
 
-  const normalizeAgeValue = (
-    ageValue: unknown,
-    birthdate?: string | null,
-  ): number | null => {
-    if (
-      ageValue !== null &&
-      ageValue !== undefined &&
-      String(ageValue).trim() !== ""
-    ) {
-      const p = Number(ageValue);
-      if (Number.isFinite(p) && p >= 0) return Math.floor(p);
-    }
-    return calculateAgeFromBirthdate(birthdate);
-  };
+
 
   const getRecordBarangay = (record: RSBSARecord) => {
     const fromAddress = String(record.farmerAddress || "")
@@ -260,7 +228,6 @@ const TechMasterlist: React.FC = () => {
   );
   const [loadingFarmerDetail, setLoadingFarmerDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [isModalPrinting, setIsModalPrinting] = useState(false);
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set());
   const [showBulkExportMenu, setShowBulkExportMenu] = useState(false);
   const [showPrintMasterlistModal, setShowPrintMasterlistModal] = useState(false);
@@ -292,7 +259,6 @@ const TechMasterlist: React.FC = () => {
     lastName: string;
   } | null>(null);
 
-  const isActive = (path: string) => location.pathname === path;
   const showUpdateNotification = (
     message: string,
     type: "success" | "error",
@@ -457,10 +423,10 @@ const TechMasterlist: React.FC = () => {
           data.farmLocation || data["FARM LOCATION"] || "";
         const submissionParcelArea = parseFloat(
           data.totalFarmArea ||
-            data["TOTAL FARM AREA"] ||
-            data.parcelArea ||
-            data["PARCEL AREA"] ||
-            "0",
+          data["TOTAL FARM AREA"] ||
+          data.parcelArea ||
+          data["PARCEL AREA"] ||
+          "0",
         );
         const submissionOwnership = data.ownershipType || {};
 
@@ -859,10 +825,10 @@ const TechMasterlist: React.FC = () => {
     try {
       setLoadingStats(true);
       const { data, error: err } = await supabase
-          .from("rsbsa_farm_parcels")
-          .select(
-            "submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, is_cultivating, contract_end_date, ownership_type_tenant, ownership_type_lessee, is_current_owner",
-          );
+        .from("rsbsa_farm_parcels")
+        .select(
+          "submission_id, parcel_number, farm_location_barangay, farm_location_municipality, total_farm_area_ha, is_farming, is_cultivating, contract_end_date, ownership_type_tenant, ownership_type_lessee, is_current_owner",
+        );
       if (err) throw err;
       const parcels = (data || []).filter(
         (p: any) => p.is_current_owner !== false,
@@ -1169,10 +1135,10 @@ const TechMasterlist: React.FC = () => {
           prev.map((r) =>
             r.id === statusChangeTarget.id
               ? {
-                  ...r,
-                  status: newFarmerStatus,
-                  cultivationStatus: newCultivationStatus,
-                }
+                ...r,
+                status: newFarmerStatus,
+                cultivationStatus: newCultivationStatus,
+              }
               : r,
           ),
         );
@@ -1250,10 +1216,10 @@ const TechMasterlist: React.FC = () => {
         prev.map((r) =>
           r.id === statusChangeTarget.id
             ? {
-                ...r,
-                status: newFarmerStatus,
-                cultivationStatus: newCultivationStatus,
-              }
+              ...r,
+              status: newFarmerStatus,
+              cultivationStatus: newCultivationStatus,
+            }
             : r,
         ),
       );
@@ -1519,8 +1485,8 @@ const TechMasterlist: React.FC = () => {
               </thead>
               <tbody>
                 ${activeFarmers
-                  .map(
-                    (farmer, index) => `
+        .map(
+          (farmer, index) => `
                   <tr>
                     <td>${index + 1}</td>
                     <td>${farmer.referenceNumber}</td>
@@ -1531,8 +1497,8 @@ const TechMasterlist: React.FC = () => {
                     <td>${formatDate(farmer.dateSubmitted)}</td>
                   </tr>
                 `,
-                  )
-                  .join("")}
+        )
+        .join("")}
               </tbody>
             </table>
             
@@ -1577,24 +1543,7 @@ const TechMasterlist: React.FC = () => {
     setPrintFilter({ type: "all", value: "" });
   };
 
-  const handleModalPrint = async () => {
-    if (!selectedFarmer) return;
 
-    setIsModalPrinting(true);
-    const result = await printRsbsaFormById({
-      farmerId: selectedFarmer.id,
-      fallbackReferenceNumber: selectedFarmer.referenceNumber,
-      fallbackFarmerName: selectedFarmer.farmerName,
-    });
-    setIsModalPrinting(false);
-
-    if (!result.success && !result.cancelled) {
-      showUpdateNotification(
-        result.error || "Failed to print RSBSA form.",
-        "error",
-      );
-    }
-  };
 
   const allFilteredSelected =
     sortedFilteredRecords.length > 0 &&
@@ -1777,8 +1726,8 @@ const TechMasterlist: React.FC = () => {
               </thead>
               <tbody>
                 ${recordsToPrint
-                  .map(
-                    (farmer, index) => `
+        .map(
+          (farmer, index) => `
                   <tr>
                     <td>${index + 1}</td>
                     <td>${farmer.referenceNumber}</td>
@@ -1789,8 +1738,8 @@ const TechMasterlist: React.FC = () => {
                     <td>${formatDate(farmer.dateSubmitted)}</td>
                   </tr>
                 `,
-                  )
-                  .join("")}
+        )
+        .join("")}
               </tbody>
             </table>
             
@@ -1855,10 +1804,6 @@ const TechMasterlist: React.FC = () => {
     showUpdateNotification("Selected RSBSA forms sent to print.", "success");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   const getFarmerInitials = (name: string) => {
@@ -2511,12 +2456,12 @@ const TechMasterlist: React.FC = () => {
                 {(printFilter.type === "all" ||
                   printFilter.type === "all_farmers" ||
                   printFilter.value) && (
-                  <div className="tech-masterlist-print-match-count">
-                    📊 {getFilteredPrintRecords().length} farmer
-                    {getFilteredPrintRecords().length !== 1 ? "s" : ""} will be
-                    printed
-                  </div>
-                )}
+                    <div className="tech-masterlist-print-match-count">
+                      📊 {getFilteredPrintRecords().length} farmer
+                      {getFilteredPrintRecords().length !== 1 ? "s" : ""} will be
+                      printed
+                    </div>
+                  )}
               </div>
               <div className="tech-masterlist-print-modal-footer">
                 <button
@@ -2718,7 +2663,7 @@ const TechMasterlist: React.FC = () => {
                           </span>
                         </div>
 
-                         <div
+                        <div
                           style={{
                             display: "flex",
                             gap: "16px",
@@ -2742,10 +2687,10 @@ const TechMasterlist: React.FC = () => {
                                   prev.map((p) =>
                                     p.id === parcel.id
                                       ? {
-                                          ...p,
-                                          isCultivating: true,
-                                          cultivationStatusReason: "",
-                                        }
+                                        ...p,
+                                        isCultivating: true,
+                                        cultivationStatusReason: "",
+                                      }
                                       : p,
                                   ),
                                 )
@@ -2797,10 +2742,10 @@ const TechMasterlist: React.FC = () => {
                                   prev.map((p) =>
                                     p.id === parcel.id
                                       ? {
-                                          ...p,
-                                          cultivationStatusReason:
-                                            e.target.value,
-                                        }
+                                        ...p,
+                                        cultivationStatusReason:
+                                          e.target.value,
+                                      }
                                       : p,
                                   ),
                                 )
@@ -2911,11 +2856,11 @@ const TechMasterlist: React.FC = () => {
                       prev.map((r) =>
                         r.id === selectedFarmer.id
                           ? {
-                              ...r,
-                              status: newStatus,
-                              statusChangeReason: reason || null,
-                              cultivationStatus: "Not farming",
-                            }
+                            ...r,
+                            status: newStatus,
+                            statusChangeReason: reason || null,
+                            cultivationStatus: "Not farming",
+                          }
                           : r
                       )
                     );

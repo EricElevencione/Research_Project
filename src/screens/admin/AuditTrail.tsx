@@ -1,15 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+
 import "../../components/layout/sidebarStyle.css";
 import "../../assets/css/admin css/AdminAuditTrail.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import { AuditAPI } from "../../components/Audit/auditAPI";
 import { supabase } from "../../supabase";
-import {
-  getAuditLogger,
-  AuditModule,
-} from "../../components/Audit/auditLogger";
-import { getCurrentUserForAudit } from "../../components/Audit/getCurrentUserForAudit";
 import {
   FERTILIZER_FIELD_MAPS,
   SEED_FIELD_MAPS,
@@ -327,8 +322,7 @@ const FARM_ACTIVITY_LABELS: Record<string, string> = {
 const auditAPI = new AuditAPI(supabase);
 
 const AuditTrail: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+
 
   // State
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -365,7 +359,6 @@ const AuditTrail: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  const isActive = (path: string) => location.pathname === path;
 
   // Colors for charts
   const ACTION_COLORS: { [key: string]: string } = {
@@ -1303,11 +1296,11 @@ const AuditTrail: React.FC = () => {
         record.season
       ) === "string"
         ? String(
-            record.allocation_program ??
-              record.allocationSeason ??
-              record.allocation_season ??
-              record.season,
-          )
+          record.allocation_program ??
+          record.allocationSeason ??
+          record.allocation_season ??
+          record.season,
+        )
         : (record.allocation_program ??
           record.allocationSeason ??
           record.allocation_season ??
@@ -1329,15 +1322,15 @@ const AuditTrail: React.FC = () => {
     const fertilizerTotal = fertilizerTotalProvided
       ? Number(record.requested_fertilizer_total_bags)
       : REQUEST_FERTILIZER_FIELDS.reduce(
-          (sum, field) => sum + (Number(record[field.key]) || 0),
-          0,
-        );
+        (sum, field) => sum + (Number(record[field.key]) || 0),
+        0,
+      );
     const seedTotal = seedTotalProvided
       ? Number(record.requested_seed_total_kg)
       : REQUEST_SEED_FIELDS.reduce(
-          (sum, field) => sum + (Number(record[field.key]) || 0),
-          0,
-        );
+        (sum, field) => sum + (Number(record[field.key]) || 0),
+        0,
+      );
 
     const notesValue =
       typeof (record.request_notes ?? record.notes) === "string"
@@ -1541,7 +1534,7 @@ const AuditTrail: React.FC = () => {
         id: item.id ?? item.parcel_id ?? item.parcelId ?? null,
         parcelNumber:
           typeof (item.parcelNumber ?? item.parcel_number ?? item.parcelNo) ===
-          "string"
+            "string"
             ? String(item.parcelNumber ?? item.parcel_number ?? item.parcelNo)
             : (item.parcelNumber ??
               item.parcel_number ??
@@ -1563,10 +1556,10 @@ const AuditTrail: React.FC = () => {
             item.barangay
           ) === "string"
             ? String(
-                item.farmLocationBarangay ??
-                  item.farm_location_barangay ??
-                  item.barangay,
-              )
+              item.farmLocationBarangay ??
+              item.farm_location_barangay ??
+              item.barangay,
+            )
             : (item.farmLocationBarangay ??
               item.farm_location_barangay ??
               item.barangay ??
@@ -1578,10 +1571,10 @@ const AuditTrail: React.FC = () => {
             item.cultivationReason
           ) === "string"
             ? String(
-                item.cultivationStatusReason ??
-                  item.cultivation_status_reason ??
-                  item.cultivationReason,
-              )
+              item.cultivationStatusReason ??
+              item.cultivation_status_reason ??
+              item.cultivationReason,
+            )
             : (item.cultivationStatusReason ??
               item.cultivation_status_reason ??
               item.cultivationReason ??
@@ -1746,7 +1739,7 @@ const AuditTrail: React.FC = () => {
               typeof parcel.cultivationStatusReason === "string"
                 ? parcel.cultivationStatusReason.trim()
                 : parcel.cultivationStatusReason !== null &&
-                    parcel.cultivationStatusReason !== undefined
+                  parcel.cultivationStatusReason !== undefined
                   ? String(parcel.cultivationStatusReason)
                   : "";
 
@@ -1831,8 +1824,8 @@ const AuditTrail: React.FC = () => {
             <span className="admin-audit-landowner-meta-label">Age</span>
             <span className="admin-audit-landowner-meta-value">
               {payload.age === null ||
-              payload.age === undefined ||
-              payload.age === ""
+                payload.age === undefined ||
+                payload.age === ""
                 ? "N/A"
                 : String(payload.age)}
             </span>
@@ -1891,14 +1884,14 @@ const AuditTrail: React.FC = () => {
     const details = payload.farmDetails;
     const farmLocation =
       details.farmLocation &&
-      typeof details.farmLocation === "object" &&
-      !Array.isArray(details.farmLocation)
+        typeof details.farmLocation === "object" &&
+        !Array.isArray(details.farmLocation)
         ? details.farmLocation
         : {};
     const selectedLandOwner =
       details.selectedLandOwner &&
-      typeof details.selectedLandOwner === "object" &&
-      !Array.isArray(details.selectedLandOwner)
+        typeof details.selectedLandOwner === "object" &&
+        !Array.isArray(details.selectedLandOwner)
         ? details.selectedLandOwner
         : null;
     const parcels = Array.isArray(details.farmlandParcels)
@@ -1909,16 +1902,16 @@ const AuditTrail: React.FC = () => {
     const totalFarmArea = Number.isFinite(parsedArea)
       ? parsedArea
       : parcels.reduce(
-          (sum, parcel) => sum + (Number(parcel?.totalFarmAreaHa) || 0),
-          0,
-        );
+        (sum, parcel) => sum + (Number(parcel?.totalFarmAreaHa) || 0),
+        0,
+      );
     const selectedParcelIds = Array.isArray(details.selectedParcelIds)
       ? details.selectedParcelIds
       : [];
     const farmActivities =
       details.farmActivities &&
-      typeof details.farmActivities === "object" &&
-      !Array.isArray(details.farmActivities)
+        typeof details.farmActivities === "object" &&
+        !Array.isArray(details.farmActivities)
         ? details.farmActivities
         : {};
 
@@ -2114,7 +2107,7 @@ const AuditTrail: React.FC = () => {
                       {parcel?.ownershipType?.registeredOwner
                         ? "Registered Owner"
                         : parcel?.ownershipType?.tenant &&
-                            parcel?.ownershipType?.lessee
+                          parcel?.ownershipType?.lessee
                           ? "Tenant + Lessee"
                           : parcel?.ownershipType?.tenant
                             ? "Tenant"
@@ -2217,8 +2210,8 @@ const AuditTrail: React.FC = () => {
         : null;
     const allocationFromLookup =
       rawAllocationId !== null &&
-      rawAllocationId !== undefined &&
-      rawAllocationId !== ""
+        rawAllocationId !== undefined &&
+        rawAllocationId !== ""
         ? allocationLookup[String(rawAllocationId)] || null
         : null;
     const allocationSeason =
@@ -2917,7 +2910,7 @@ const AuditTrail: React.FC = () => {
                               <div className="admin-audit-user-cell">
                                 <span className="admin-audit-user-display-name">
                                   {log.user_name &&
-                                  log.user_name.toLowerCase() !== "unknown"
+                                    log.user_name.toLowerCase() !== "unknown"
                                     ? log.user_name
                                     : "Unknown User"}
                                 </span>
@@ -3119,7 +3112,7 @@ const AuditTrail: React.FC = () => {
                       {stats.byUser.map((user, idx) => {
                         const displayName =
                           user.user_name &&
-                          user.user_name.toLowerCase() !== "unknown"
+                            user.user_name.toLowerCase() !== "unknown"
                             ? user.user_name
                             : "Anonymous";
                         const displayRole = user.user_role || "anonymous";
@@ -3209,7 +3202,7 @@ const AuditTrail: React.FC = () => {
                     </span>
                     <span className="admin-audit-detail-value">
                       {selectedLog.user_name &&
-                      selectedLog.user_name.toLowerCase() !== "unknown"
+                        selectedLog.user_name.toLowerCase() !== "unknown"
                         ? selectedLog.user_name
                         : "Unknown User"}
                     </span>
@@ -3266,11 +3259,28 @@ const AuditTrail: React.FC = () => {
               </div>
 
               {selectedLog.old_values &&
-                selectedLog.new_values &&
+              selectedLog.new_values &&
+              selectedLog.record_type === "regional_allocation" ? (
                 renderAllocationChangeSummary(
                   selectedLog.old_values,
                   selectedLog.new_values,
-                )}
+                )
+              ) : (
+                <>
+                  {selectedLog.old_values && (
+                    <div className="admin-audit-detail-section">
+                      <h4>Old Values</h4>
+                      {renderValueBlock(selectedLog.old_values, "old", selectedLog)}
+                    </div>
+                  )}
+                  {selectedLog.new_values && (
+                    <div className="admin-audit-detail-section">
+                      <h4>New Values</h4>
+                      {renderValueBlock(selectedLog.new_values, "new", selectedLog)}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

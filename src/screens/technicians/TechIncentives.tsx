@@ -3,7 +3,6 @@ import {
   getAllocations,
   getFarmerRequests,
   updateAllocation,
-  deleteAllocation,
 } from "../../api";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../../assets/css/jo css/JoIncentStyle.css";
@@ -178,7 +177,6 @@ const TechIncentives: React.FC = () => {
     "all",
   );
 
-  const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
     fetchAllocations();
@@ -246,32 +244,6 @@ const TechIncentives: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEditAllocation = async (allocation: RegionalAllocation) => {
-    try {
-      const response = await getFarmerRequests(allocation.id, true);
-      if (!response.error) {
-        const requests = response.data || [];
-        setRequestCount(requests.length);
-      } else {
-        setRequestCount(0);
-      }
-    } catch (err) {
-      console.error("Error fetching requests:", err);
-      setRequestCount(0);
-    }
-
-    const fieldsWithValues = new Set<string>();
-    [...FERTILIZER_FIELDS, ...SEED_FIELDS].forEach((field) => {
-      if (Number(allocation[field.name as keyof RegionalAllocation] || 0) > 0) {
-        fieldsWithValues.add(field.name);
-      }
-    });
-
-    setAddedFields(fieldsWithValues);
-    setEditAllocationModal(allocation);
-    setEditFormData({ ...allocation });
   };
 
   const handleEditInputChange = (
@@ -380,11 +352,6 @@ const TechIncentives: React.FC = () => {
       return next;
     });
     setEditFormData((prev) => (prev ? { ...prev, [fieldName]: 0 } : null));
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
   };
 
   return (
@@ -590,14 +557,14 @@ const TechIncentives: React.FC = () => {
                             <button
                               onClick={() => navigate(`/technician-manage-requests/${allocation.id}`)}
                               disabled={(allocation as any).status === "closed"}
-                              style={{ 
-                                padding: '0.4rem 0.8rem', 
-                                background: '#10b981', 
-                                color: '#fff', 
-                                border: 'none', 
-                                borderRadius: '6px', 
-                                fontSize: '0.85rem', 
-                                fontWeight: 600, 
+                              style={{
+                                padding: '0.4rem 0.8rem',
+                                background: '#10b981',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
                                 cursor: (allocation as any).status === "closed" ? "not-allowed" : "pointer",
                                 opacity: (allocation as any).status === "closed" ? 0.5 : 1
                               }}
@@ -710,7 +677,7 @@ const TechIncentives: React.FC = () => {
                             name={fieldName}
                             value={
                               editFormData[
-                                fieldName as keyof RegionalAllocation
+                              fieldName as keyof RegionalAllocation
                               ] || 0
                             }
                             onChange={handleEditInputChange}

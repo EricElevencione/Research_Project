@@ -4,8 +4,6 @@ import { getAllocations } from "../../api";
 import "../../assets/css/jo css/JoGapAnalysis.css";
 import "../../components/layout/sidebarStyle.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
-import ApproveIcon from "../../assets/images/approve.png";
-
 interface GapAnalysisData {
   season: string;
   allocation_date: string;
@@ -42,7 +40,6 @@ interface RegionalAllocation {
 }
 
 const GapAnalysis: React.FC = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState("");
   const [gapData, setGapData] = useState<GapAnalysisData | null>(null);
@@ -58,9 +55,6 @@ const GapAnalysis: React.FC = () => {
   const [showRecommendations, setShowRecommendations] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const isActive = (path: string) => {
-    return window.location.pathname === path;
-  };
 
   // Fetch available allocations on mount
   useEffect(() => {

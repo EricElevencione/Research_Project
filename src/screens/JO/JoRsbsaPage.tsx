@@ -76,78 +76,14 @@ interface ParcelDetail {
   cultivatorSubmissionId?: number | null;
 }
 
-interface Parcel {
-  id: string;
-  parcel_number: string;
-  farm_location_barangay: string;
-  farm_location_municipality: string;
-  total_farm_area_ha: number;
-  within_ancestral_domain: string;
-  ownership_document_no: string;
-  agrarian_reform_beneficiary: string;
-  ownership_type_registered_owner: boolean;
-  ownership_type_tenant: boolean;
-  ownership_type_lessee: boolean;
-  tenant_land_owner_name: string;
-  lessee_land_owner_name: string;
-  ownership_others_specify: string;
-  is_cultivating?: boolean | null;
-  cultivation_status_reason?: string | null;
-  cultivation_status_updated_at?: string | null;
-}
+
 
 type SortKey = "farmer" | "parcelArea" | "dateSubmitted";
 type SortDirection = "asc" | "desc";
 
 const JoRsbsaPage: React.FC = () => {
   const navigate = useNavigate();
-  const barangays = [
-    "Aurora-Del Pilar",
-    "Bacay",
-    "Bacong",
-    "Balabag",
-    "Balud",
-    "Bantud",
-    "Bantud Fabrica",
-    "Baras",
-    "Barasan",
-    "Basa-Mabini Bonifacio",
-    "Bolilao",
-    "Buenaflor Embarkadero",
-    "Burgos-Regidor",
-    "Calao",
-    "Cali",
-    "Cansilayan",
-    "Capaliz",
-    "Cayos",
-    "Compayan",
-    "Dacutan",
-    "Ermita",
-    "Ilaya 1st",
-    "Ilaya 2nd",
-    "Ilaya 3rd",
-    "Jardin",
-    "Lacturan",
-    "Lopez Jaena - Rizal",
-    "Managuit",
-    "Maquina",
-    "Nanding Lopez",
-    "Pagdugue",
-    "Paloc Bigque",
-    "Paloc Sool",
-    "Patlad",
-    "Pd Monfort North",
-    "Pd Monfort South",
-    "Pulao",
-    "Rosario",
-    "Sapao",
-    "Sulangan",
-    "Tabucan",
-    "Talusan",
-    "Tambobo",
-    "Tamboilan",
-    "Victorias",
-  ].sort();
+
 
   const [activeTab, setActiveTab] = useState<"registry" | "analytics">(
     "registry",

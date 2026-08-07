@@ -28,17 +28,15 @@ import TechAddFarmerRequest from "./screens/technicians/TechAddFarmerRequest";
 import TechViewAllocation from "./screens/technicians/TechViewAllocation";
 import TechManageRequests from "./screens/technicians/TechManageRequests";
 import JoDashboard from "./screens/JO/JoDashboard";
-import JoRsbsa from "./screens/JO/JoRsbsaRegistration";
+import JoFarmerRegistration from "./screens/JO/JoFarmerRegistration";
 import JoMasterlist from "./screens/JO/JoMasterlist";
 import JoIncentives from "./screens/JO/JoIncentives";
 import JoAddFarmerRequest from "./screens/JO/JoAddFarmerRequest";
 import JoManageRequests from "./screens/JO/JoManageRequests";
 import JoViewAllocation from "./screens/JO/JoViewAllocation";
 import JoRsbsaPage from "./screens/JO/JoRsbsaPage";
-import JoDistribution from "./screens/JO/JoDistribution";
 import JoLandRegistry from "./screens/JO/JoLandRegistry";
 import JoLandHistoryReport from "./screens/JO/JoLandHistoryReport";
-import JoAuditTrail from "./screens/JO/JoAuditTrail";
 import JoFarmerRegistry from "./screens/JO/JoFarmerRegistry";
 import JoFarmerHistory from "./screens/JO/JoFarmerHistory";
 import JoLandownerRegistry from "./screens/JO/JoLandownerRegistry";
@@ -46,8 +44,7 @@ import AuditTrail from "./screens/admin/AuditTrail";
 import InventoryPage from "./screens/admin/InventoryPage";
 import AdminCreateAllocation from "./screens/admin/AdminCreateAllocation";
 import ManageVarieties from "./screens/admin/ManageVarieties";
-import ShortagesSuggestions from "./screens/dss/ShortagesSuggestions.jsx";
-import JoRsbsaRegisLandowner from "./screens/JO/JoRsbsaRegisLandowner";
+import JoLandownerRegistration from "./screens/JO/JoLandownerRegistration";
 import "../src/assets/css/admin css/index.css";
 import Register from "./screens/auth/Register";
 
@@ -346,7 +343,7 @@ function App() {
           path="/jo-rsbsa"
           element={
             <ProtectedRoute>
-              <JoRsbsa />
+              <JoFarmerRegistration />
             </ProtectedRoute>
           }
         />
@@ -354,7 +351,7 @@ function App() {
           path="/jo-rsbsa-landowner"
           element={
             <ProtectedRoute>
-              <JoRsbsaRegisLandowner />
+              <JoLandownerRegistration />
             </ProtectedRoute>
           }
         />
@@ -431,14 +428,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/jo-distribution"
-          element={
-            <ProtectedRoute>
-              <JoDistribution />
-            </ProtectedRoute>
-          }
-        />
+
         <Route
           path="/jo-land-registry"
           element={
@@ -455,14 +445,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/jo-audit-trail"
-          element={
-            <ProtectedRoute>
-              <JoAuditTrail />
-            </ProtectedRoute>
-          }
-        />
+
         <Route
           path="/audit-trail"
           element={
@@ -471,14 +454,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/shortages-suggestions"
-          element={
-            <ProtectedRoute>
-              <ShortagesSuggestions />
-            </ProtectedRoute>
-          }
-        />
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </HashRouter>

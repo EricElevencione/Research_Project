@@ -1,4 +1,3 @@
-import { supabase } from "../../supabase";
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -6,15 +5,12 @@ import {
   getFarmerRequests,
   getRsbsaSubmissions,
   createFarmerRequest,
-  resolveFertilizerShortageSuggestion,
-  resolveSeedShortageSuggestion,
 } from "../../api";
 import {
   FERTILIZER_FIELD_MAPS,
   SEED_FIELD_MAPS,
   type ShortageFieldMap,
 } from "../../constants/shortageFieldMaps";
-import { detectActiveSeedId } from "../../utils/detectActiveSeedId";
 import {
   getAuditLogger,
   AuditModule,
@@ -166,11 +162,6 @@ type AllocationSummaryItem = {
   remaining: number;
 };
 
-type InlineSuggestion = {
-  title: string;
-  message: string;
-  status: "resolved" | "tier2_fallback" | "unresolvable" | "error";
-};
 
 const FERTILIZER_ITEMS: AllocationItem[] = FERTILIZER_FIELD_MAPS.map(
   (item) => ({
@@ -266,9 +257,7 @@ const JoAddFarmerRequest: React.FC = () => {
   });
   const [debouncedFormData, setDebouncedFormData] =
     useState<FarmerRequestForm>(formData);
-  const [inlineSuggestions, setInlineSuggestions] = useState<
-    Record<string, InlineSuggestion>
-  >({});
+
 
   const [selectedFertilizerKeys, setSelectedFertilizerKeys] = useState<
     RequestField[]
@@ -574,14 +563,6 @@ const JoAddFarmerRequest: React.FC = () => {
     return Math.max(0, requested - allocated);
   };
 
-  const getInlineExceedAmountFromData = (
-    item: AllocationItem,
-    data: FarmerRequestForm,
-  ): number => {
-    const allocated = toSafeNumber(allocation?.[item.allocationField]);
-    const requested = Math.max(0, toSafeNumber(data[item.requestField]));
-    return Math.max(0, requested - allocated);
-  };
 
   const hasOverAllocation = [
     ...fertilizerSummaryItems,
@@ -629,130 +610,7 @@ const JoAddFarmerRequest: React.FC = () => {
     };
   }, [exceededSummaryItems]);
 
-  useEffect(() => {
-    let isCancelled = false;
 
-    const resolveInlineSuggestions = async () => {
-      if (!allocation) {
-        setInlineSuggestions({});
-        return;
-      }
-
-      const exceededItems = [...visibleFertilizerItems, ...visibleSeedItems]
-        .filter(
-          (item) => getInlineExceedAmountFromData(item, debouncedFormData) > 0,
-        )
-        .sort((a, b) => a.label.localeCompare(b.label));
-
-      if (exceededItems.length === 0) {
-        setInlineSuggestions({});
-        return;
-      }
-
-      const nextSuggestions: Record<string, InlineSuggestion> = {};
-      const activeSeedId = detectActiveSeedId(
-        debouncedFormData as unknown as Record<string, unknown>,
-      );
-      const noSubstituteMessageFor = (itemLabel: string): string =>
-        `No substitute found for ${itemLabel}. Consider contacting your supplier for restock.`;
-
-      await Promise.all(
-        exceededItems.map(async (item) => {
-          if (item.category === "fertilizer") {
-            const response = await resolveFertilizerShortageSuggestion({
-              seedId: activeSeedId,
-              shortageFertId: item.shortageId,
-            });
-
-            const payload: any = response.data;
-            if (response.error || !payload) {
-              nextSuggestions[item.requestField] = {
-                title: "Suggestion unavailable",
-                message:
-                  response.error || "Unable to load fertilizer suggestion.",
-                status: "error",
-              };
-              return;
-            }
-
-            if (
-              payload.status === "resolved" ||
-              payload.status === "tier2_fallback"
-            ) {
-              const tierLabel =
-                payload.status === "tier2_fallback"
-                  ? "Tier 2 fallback"
-                  : "Tier 1";
-              nextSuggestions[item.requestField] = {
-                title: `Suggested: ${payload.suggestion?.name || "N/A"}`,
-                message:
-                  payload.suggestion?.reason ||
-                  `${tierLabel} substitute selected for ${payload.shortage?.name || item.label}.`,
-                status: payload.status,
-              };
-              return;
-            }
-
-            nextSuggestions[item.requestField] = {
-              title: "No fertilizer substitute found",
-              message: noSubstituteMessageFor(item.label),
-              status: "unresolvable",
-            };
-            return;
-          }
-
-          const response = await resolveSeedShortageSuggestion({
-            seedId: item.shortageId,
-          });
-
-          const payload: any = response.data;
-          if (response.error || !payload) {
-            nextSuggestions[item.requestField] = {
-              title: "Suggestion unavailable",
-              message:
-                response.error || "Unable to load seed substitute suggestion.",
-              status: "error",
-            };
-            return;
-          }
-
-          const topSubstitute = Array.isArray(payload.substitutes)
-            ? payload.substitutes[0]
-            : null;
-
-          if (payload.status === "resolved" && topSubstitute) {
-            const maturityText =
-              topSubstitute.maturity_diff_days == null
-                ? "maturity diff unavailable"
-                : `${topSubstitute.maturity_diff_days >= 0 ? "+" : ""}${topSubstitute.maturity_diff_days} days`;
-
-            nextSuggestions[item.requestField] = {
-              title: `Suggested: ${topSubstitute.name}`,
-              message: `Best substitute for ${payload.original?.name || item.label}; maturity delta ${maturityText}.`,
-              status: "resolved",
-            };
-            return;
-          }
-
-          nextSuggestions[item.requestField] = {
-            title: "No seed substitute found",
-            message: noSubstituteMessageFor(item.label),
-            status: "unresolvable",
-          };
-        }),
-      );
-
-      if (!isCancelled) {
-        setInlineSuggestions(nextSuggestions);
-      }
-    };
-
-    resolveInlineSuggestions();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [allocation, debouncedFormData, visibleFertilizerItems, visibleSeedItems]);
 
   const runSubmitRequest = async () => {
     if (!formData.farmer_id) {
@@ -1020,10 +878,6 @@ const JoAddFarmerRequest: React.FC = () => {
     await runSubmitRequest();
   };
 
-  const handleConfirmSubmitWithExceeded = async () => {
-    setShowExceedConfirmModal(false);
-    await runSubmitRequest();
-  };
 
   const filteredFarmers = farmers.filter((farmer) => {
     if (existingRequests.includes(Number(farmer.id))) {
@@ -1172,7 +1026,7 @@ const JoAddFarmerRequest: React.FC = () => {
                           checked={
                             Number(formData.farmer_id) === Number(farmer.id)
                           }
-                          onChange={() => {}}
+                          onChange={() => { }}
                           className="jo-add-farmer-radio"
                         />
                         <div className="jo-add-farmer-item-content">
@@ -1382,19 +1236,7 @@ const JoAddFarmerRequest: React.FC = () => {
                             bags.
                           </div>
                         )}
-                        {getInlineExceedAmount(item) > 0 &&
-                          inlineSuggestions[field] && (
-                            <div
-                              className={`jo-add-farmer-inline-suggestion-card jo-add-farmer-inline-suggestion-${inlineSuggestions[field].status}`}
-                            >
-                              <div className="jo-add-farmer-inline-suggestion-title">
-                                {inlineSuggestions[field].title}
-                              </div>
-                              <div className="jo-add-farmer-inline-suggestion-message">
-                                {inlineSuggestions[field].message}
-                              </div>
-                            </div>
-                          )}
+
                       </div>
                     );
                   })}
@@ -1489,19 +1331,7 @@ const JoAddFarmerRequest: React.FC = () => {
                             kg.
                           </div>
                         )}
-                        {getInlineExceedAmount(item) > 0 &&
-                          inlineSuggestions[field] && (
-                            <div
-                              className={`jo-add-farmer-inline-suggestion-card jo-add-farmer-inline-suggestion-${inlineSuggestions[field].status}`}
-                            >
-                              <div className="jo-add-farmer-inline-suggestion-title">
-                                {inlineSuggestions[field].title}
-                              </div>
-                              <div className="jo-add-farmer-inline-suggestion-message">
-                                {inlineSuggestions[field].message}
-                              </div>
-                            </div>
-                          )}
+
                       </div>
                     );
                   })}

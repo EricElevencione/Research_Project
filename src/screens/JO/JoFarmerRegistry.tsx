@@ -896,8 +896,8 @@ const JoFarmerRegistry: React.FC = () => {
       }
 
       // Exclude landowner-only registrations from the Farmer Registry.
-      // These are people registered via JoRsbsaRegisLandowner who haven't
-      // been registered as farmers yet through JoRsbsaRegistration.
+      // These are people registered via JoLandownerRegistration who haven't
+      // been registered as farmers yet through JoFarmerRegistration.
       formattedRecords = formattedRecords.filter((record) => {
         if (record.archivedAt) return false;
         const livelihood = String(record.mainLivelihood || "")

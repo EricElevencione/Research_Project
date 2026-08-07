@@ -14,7 +14,6 @@ import "../../assets/css/jo css/FarmerDetailModal.css";
 import { supabase } from "../../supabase";
 import TechSidebar from "../../components/layout/TechSidebar";
 import { addPendingAction } from "../../services/offlineDb";
-import { useOfflineStatus } from "../../hooks/useOfflineStatus";
 import OfflineStatusBanner from "../../components/common/OfflineStatusBanner";
 
 interface TenantRecord {
@@ -136,7 +135,6 @@ const TechTenantRegistry: React.FC = () => {
     }, 3200);
   };
 
-  const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
     fetchTenantRecords();
@@ -545,11 +543,6 @@ const TechTenantRegistry: React.FC = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
 
   if (loading) {
     return (

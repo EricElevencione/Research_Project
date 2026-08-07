@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getAllocations, getFarmerRequests, closeAllocation, reopenAllocation } from "../../api";
 import {
   UsageGauges,
@@ -13,7 +13,7 @@ import {
 import "../../assets/css/admin css/AdminViewAllocation.css";
 import "../../components/layout/sidebarStyle.css";
 import AdminSidebar from "../../components/layout/AdminSidebar";
-import { FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { FileText, CheckCircle, Clock } from "lucide-react";
 
 interface FarmerRequest extends Record<
   string,
@@ -55,7 +55,6 @@ interface AllocationDetails extends Record<
 
 const ViewAllocation: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { allocationId } = useParams<{ allocationId: string }>();
 
   const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
@@ -66,7 +65,6 @@ const ViewAllocation: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [closingProgram, setClosingProgram] = useState(false);
 
-  const isActive = (path: string) => location.pathname === path;
 
   const formatSeasonName = (season: string) => {
     return season || "Unknown Program";
@@ -522,7 +520,7 @@ const ViewAllocation: React.FC = () => {
             >
               Are you sure you want to close the program "{allocation?.season}"?
             </h3>
-            
+
             <div
               style={{
                 backgroundColor: "#f8fafc",

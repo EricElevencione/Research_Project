@@ -55,7 +55,6 @@ const landHistoryRoutes = require("./routes/land-history.cjs");
 const distributionRoutes = require("./routes/distribution.cjs");
 const transferRoutes = require("./routes/transfer.cjs");
 const auditRoutes = require("./routes/audit.cjs");
-const uploadRoutes = require("./routes/uploads.cjs");
 const shortagesRoutes = require("./routes/shortages");
 
 // ============================================================================
@@ -78,7 +77,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // ============================================================================
 const frontendBuildPath = path.join(__dirname, "../dist");
 app.use(express.static(frontendBuildPath));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 // ============================================================================
 // API ROUTES
@@ -116,7 +115,6 @@ app.use("/api/land-owners-with-tenants", (req, res, next) => {
 
 // Ownership transfer
 app.use("/api/transfer-ownership", transferRoutes);
-app.use("/api/uploads", uploadRoutes);
 
 // Agricultural input distribution system (DSS)
 app.use("/api/distribution", distributionRoutes);

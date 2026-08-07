@@ -331,7 +331,7 @@ const TechPickLandParcel: React.FC = () => {
                     </div>
                   ) : (
                     <div className="parcel-grid">
-                      {landParcels.map((parcel, idx) => {
+                      {landParcels.map((parcel) => {
                         const ownershipMeta = getOwnershipMeta(parcel);
 
                         return (

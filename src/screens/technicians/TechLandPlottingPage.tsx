@@ -25,7 +25,6 @@ import {
   cacheLandPlot,
   removeCachedLandPlot,
 } from "../../services/offlineDb";
-import { useOfflineStatus } from "../../hooks/useOfflineStatus";
 import OfflineStatusBanner from "../../components/common/OfflineStatusBanner";
 
 // interfaces unchanged...
@@ -104,7 +103,6 @@ const LandPlottingPage: React.FC = () => {
   const [, setFarmerParcels] = useState<any[]>([]);
   // State to track the actual parcel barangay (from RSBSA form)
   const [parcelBarangay, setParcelBarangay] = useState<string>("");
-  const [geometryWarning, setGeometryWarning] = useState<string | null>(null);
 
   const [landAttributes, setLandAttributes] = useState<LandAttributes>({
     name: "",
@@ -132,10 +130,6 @@ const LandPlottingPage: React.FC = () => {
     type: "success" | "error";
   } | null>(null);
 
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
 
   // Only validate location/parcel fields - personal info is already validated in RSBSA registration
   const requiredFields: (keyof LandAttributes)[] = [
@@ -291,9 +285,9 @@ const LandPlottingPage: React.FC = () => {
 
     const normalizedStatus = String(
       parcel.status ||
-        parcel.ownership_status ||
-        parcel.ownership_category ||
-        "",
+      parcel.ownership_status ||
+      parcel.ownership_category ||
+      "",
     )
       .trim()
       .toLowerCase();
@@ -1141,9 +1135,9 @@ const LandPlottingPage: React.FC = () => {
             municipality: parcelMunicipalityLocation,
             area: parseFloat(
               parcel.total_farm_area_ha ||
-                parcel.farm_size ||
-                parcel.total_farm_area ||
-                "0",
+              parcel.farm_size ||
+              parcel.total_farm_area ||
+              "0",
             ),
             parcel_address: `${finalBarangay}, ${parcelMunicipalityLocation}`,
             farmType: parcel.farm_type || "Irrigated",
@@ -1406,42 +1400,42 @@ const LandPlottingPage: React.FC = () => {
               matches.length > 0
                 ? []
                 : allPlots.filter((plot: any) => {
-                    if (!targetParcelNumber) return false;
+                  if (!targetParcelNumber) return false;
 
-                    const plotParcelNumber = normalize(
-                      plot.parcel_number || plot.parcelNumber || "",
-                    );
-                    if (
-                      !plotParcelNumber ||
-                      plotParcelNumber !== targetParcelNumber
-                    ) {
-                      return false;
-                    }
+                  const plotParcelNumber = normalize(
+                    plot.parcel_number || plot.parcelNumber || "",
+                  );
+                  if (
+                    !plotParcelNumber ||
+                    plotParcelNumber !== targetParcelNumber
+                  ) {
+                    return false;
+                  }
 
-                    const plotSubmissionId = normalize(
-                      plot.farmer_id || plot.submission_id || "",
-                    );
-                    const plotFfrs = normalize(plot.ffrs_id || "");
-                    const plotFirstName = normalize(
-                      plot.firstName || plot.first_name || "",
-                    );
-                    const plotSurname = normalize(
-                      plot.surname || plot.last_name || "",
-                    );
+                  const plotSubmissionId = normalize(
+                    plot.farmer_id || plot.submission_id || "",
+                  );
+                  const plotFfrs = normalize(plot.ffrs_id || "");
+                  const plotFirstName = normalize(
+                    plot.firstName || plot.first_name || "",
+                  );
+                  const plotSurname = normalize(
+                    plot.surname || plot.last_name || "",
+                  );
 
-                    const sameSubmission =
-                      currentSubmissionId &&
-                      plotSubmissionId &&
-                      currentSubmissionId === plotSubmissionId;
-                    const sameFfrs = ffrsId && plotFfrs && plotFfrs === ffrsId;
-                    const sameName =
-                      firstName &&
-                      surname &&
-                      plotFirstName === firstName &&
-                      plotSurname === surname;
+                  const sameSubmission =
+                    currentSubmissionId &&
+                    plotSubmissionId &&
+                    currentSubmissionId === plotSubmissionId;
+                  const sameFfrs = ffrsId && plotFfrs && plotFfrs === ffrsId;
+                  const sameName =
+                    firstName &&
+                    surname &&
+                    plotFirstName === firstName &&
+                    plotSurname === surname;
 
-                    return sameSubmission || sameFfrs || sameName;
-                  });
+                  return sameSubmission || sameFfrs || sameName;
+                });
 
             const resolvedOwnMatches =
               matches.length > 0 ? matches : identityFallbackMatches;
@@ -1500,9 +1494,9 @@ const LandPlottingPage: React.FC = () => {
               const parcelAddress = String(plot?.parcel_address || "").trim();
               const addressCandidates = parcelAddress
                 ? parcelAddress
-                    .split(",")
-                    .map((part) => part.trim())
-                    .filter(Boolean)
+                  .split(",")
+                  .map((part) => part.trim())
+                  .filter(Boolean)
                 : [];
 
               return [...directCandidates, ...addressCandidates];
@@ -1522,9 +1516,9 @@ const LandPlottingPage: React.FC = () => {
               const parcelAddress = String(plot?.parcel_address || "").trim();
               const addressCandidates = parcelAddress
                 ? parcelAddress
-                    .split(",")
-                    .map((part) => part.trim())
-                    .filter(Boolean)
+                  .split(",")
+                  .map((part) => part.trim())
+                  .filter(Boolean)
                 : [];
 
               return [...directCandidates, ...addressCandidates];
@@ -1918,7 +1912,7 @@ const LandPlottingPage: React.FC = () => {
     const geo = shape.layer && shape.layer.toGeoJSON && shape.layer.toGeoJSON();
     const shapeParcelNumber = normalizeParcelNumber(
       (shape.properties as any)?.parcelNumber ??
-        (shape.properties as any)?.parcel_number,
+      (shape.properties as any)?.parcel_number,
     );
     // Only check for Polygon type
     return (
@@ -2166,11 +2160,10 @@ const LandPlottingPage: React.FC = () => {
               </div>
             </div>
             <div
-              className={`tech-landplotting-map-status ${
-                !currentParcelCanPlot || polygonExistsForCurrentParcel
+              className={`tech-landplotting-map-status ${!currentParcelCanPlot || polygonExistsForCurrentParcel
                   ? "locked"
                   : "ready"
-              }`}
+                }`}
             >
               {!currentParcelCanPlot
                 ? isParcelTransferredOrInactive(currentParcel)
@@ -2242,12 +2235,12 @@ const LandPlottingPage: React.FC = () => {
 
           <div className="tech-landplotting-parcel-title">
             {currentParcel &&
-            currentParcel.parcel_number !== undefined &&
-            currentParcel.parcel_number !== null &&
-            currentParcel.parcel_number !== ""
+              currentParcel.parcel_number !== undefined &&
+              currentParcel.parcel_number !== null &&
+              currentParcel.parcel_number !== ""
               ? `Farm Parcel #${currentParcel.parcel_number}`
               : selectedShape &&
-                  (selectedShape.properties as any).parcelNumber !== undefined
+                (selectedShape.properties as any).parcelNumber !== undefined
                 ? `Farm Parcel #${(selectedShape.properties as any).parcelNumber}`
                 : "Farm Parcel #1"}
           </div>

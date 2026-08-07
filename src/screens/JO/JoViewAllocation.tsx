@@ -1,4 +1,3 @@
-import { supabase } from "../../supabase";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getAllocationById, getFarmerRequests } from "../../api";
@@ -129,97 +128,97 @@ const FERTILIZER_ROWS: Array<{
   requested: RequestValueField;
   unit: "bags" | "kg" | "liters";
 }> = [
-  {
-    name: "Urea (46-0-0)",
-    allocated: "urea_46_0_0_bags",
-    requested: "requested_urea_bags",
-    unit: "bags",
-  },
-  {
-    name: "Complete (14-14-14)",
-    allocated: "complete_14_14_14_bags",
-    requested: "requested_complete_14_bags",
-    unit: "bags",
-  },
-  {
-    name: "16-20-0",
-    allocated: "np_16_20_0_bags",
-    requested: "requested_ammonium_phosphate_bags",
-    unit: "bags",
-  },
-  {
-    name: "Ammonium Sulfate (21-0-0)",
-    allocated: "ammonium_sulfate_21_0_0_bags",
-    requested: "requested_ammonium_sulfate_bags",
-    unit: "bags",
-  },
-  {
-    name: "Muriate of Potash (0-0-60)",
-    allocated: "muriate_potash_0_0_60_bags",
-    requested: "requested_muriate_potash_bags",
-    unit: "bags",
-  },
-  {
-    name: "Zinc Sulfate",
-    allocated: "zinc_sulfate_bags",
-    requested: "requested_zinc_sulfate_bags",
-    unit: "bags",
-  },
-  {
-    name: "Vermicompost",
-    allocated: "vermicompost_bags",
-    requested: "requested_vermicompost_bags",
-    unit: "bags",
-  },
-  {
-    name: "Chicken Manure",
-    allocated: "chicken_manure_bags",
-    requested: "requested_chicken_manure_bags",
-    unit: "bags",
-  },
-  {
-    name: "Rice Straw",
-    allocated: "rice_straw_kg",
-    requested: "requested_rice_straw_kg",
-    unit: "kg",
-  },
-  {
-    name: "Carbonized Rice Hull (CRH)",
-    allocated: "carbonized_rice_hull_bags",
-    requested: "requested_carbonized_rice_hull_bags",
-    unit: "bags",
-  },
-  {
-    name: "Biofertilizer (Liquid Concentrate)",
-    allocated: "biofertilizer_liters",
-    requested: "requested_biofertilizer_liters",
-    unit: "liters",
-  },
-  {
-    name: "Nanobiofertilizer",
-    allocated: "nanobiofertilizer_liters",
-    requested: "requested_nanobiofertilizer_liters",
-    unit: "liters",
-  },
-  {
-    name: "Organic Root Exudate Mix",
-    allocated: "organic_root_exudate_mix_liters",
-    requested: "requested_organic_root_exudate_mix_liters",
-    unit: "liters",
-  },
-  {
-    name: "Azolla microphylla",
-    allocated: "azolla_microphylla_kg",
-    requested: "requested_azolla_microphylla_kg",
-    unit: "kg",
-  },
-  {
-    name: "Foliar Liquid Fertilizer (NPK)",
-    allocated: "foliar_liquid_fertilizer_npk_liters",
-    requested: "requested_foliar_liquid_fertilizer_npk_liters",
-    unit: "liters",
-  },
-];
+    {
+      name: "Urea (46-0-0)",
+      allocated: "urea_46_0_0_bags",
+      requested: "requested_urea_bags",
+      unit: "bags",
+    },
+    {
+      name: "Complete (14-14-14)",
+      allocated: "complete_14_14_14_bags",
+      requested: "requested_complete_14_bags",
+      unit: "bags",
+    },
+    {
+      name: "16-20-0",
+      allocated: "np_16_20_0_bags",
+      requested: "requested_ammonium_phosphate_bags",
+      unit: "bags",
+    },
+    {
+      name: "Ammonium Sulfate (21-0-0)",
+      allocated: "ammonium_sulfate_21_0_0_bags",
+      requested: "requested_ammonium_sulfate_bags",
+      unit: "bags",
+    },
+    {
+      name: "Muriate of Potash (0-0-60)",
+      allocated: "muriate_potash_0_0_60_bags",
+      requested: "requested_muriate_potash_bags",
+      unit: "bags",
+    },
+    {
+      name: "Zinc Sulfate",
+      allocated: "zinc_sulfate_bags",
+      requested: "requested_zinc_sulfate_bags",
+      unit: "bags",
+    },
+    {
+      name: "Vermicompost",
+      allocated: "vermicompost_bags",
+      requested: "requested_vermicompost_bags",
+      unit: "bags",
+    },
+    {
+      name: "Chicken Manure",
+      allocated: "chicken_manure_bags",
+      requested: "requested_chicken_manure_bags",
+      unit: "bags",
+    },
+    {
+      name: "Rice Straw",
+      allocated: "rice_straw_kg",
+      requested: "requested_rice_straw_kg",
+      unit: "kg",
+    },
+    {
+      name: "Carbonized Rice Hull (CRH)",
+      allocated: "carbonized_rice_hull_bags",
+      requested: "requested_carbonized_rice_hull_bags",
+      unit: "bags",
+    },
+    {
+      name: "Biofertilizer (Liquid Concentrate)",
+      allocated: "biofertilizer_liters",
+      requested: "requested_biofertilizer_liters",
+      unit: "liters",
+    },
+    {
+      name: "Nanobiofertilizer",
+      allocated: "nanobiofertilizer_liters",
+      requested: "requested_nanobiofertilizer_liters",
+      unit: "liters",
+    },
+    {
+      name: "Organic Root Exudate Mix",
+      allocated: "organic_root_exudate_mix_liters",
+      requested: "requested_organic_root_exudate_mix_liters",
+      unit: "liters",
+    },
+    {
+      name: "Azolla microphylla",
+      allocated: "azolla_microphylla_kg",
+      requested: "requested_azolla_microphylla_kg",
+      unit: "kg",
+    },
+    {
+      name: "Foliar Liquid Fertilizer (NPK)",
+      allocated: "foliar_liquid_fertilizer_npk_liters",
+      requested: "requested_foliar_liquid_fertilizer_npk_liters",
+      unit: "liters",
+    },
+  ];
 
 const SEED_ROWS: Array<{
   name: string;
@@ -227,199 +226,199 @@ const SEED_ROWS: Array<{
   requested: RequestValueField;
   unit: "bags" | "kg";
 }> = [
-  {
-    name: "NSIC Rc 160",
-    allocated: "rice_seeds_nsic_rc160_kg",
-    requested: "requested_rice_seeds_nsic_rc160_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 222",
-    allocated: "rice_seeds_nsic_rc222_kg",
-    requested: "requested_rice_seeds_nsic_rc222_kg",
-    unit: "kg",
-  },
-  {
-    name: "Jackpot",
-    allocated: "jackpot_kg",
-    requested: "requested_jackpot_kg",
-    unit: "kg",
-  },
-  {
-    name: "US88",
-    allocated: "us88_kg",
-    requested: "requested_us88_kg",
-    unit: "kg",
-  },
-  {
-    name: "TH82",
-    allocated: "th82_kg",
-    requested: "requested_th82_kg",
-    unit: "kg",
-  },
-  {
-    name: "RH9000",
-    allocated: "rh9000_kg",
-    requested: "requested_rh9000_kg",
-    unit: "kg",
-  },
-  {
-    name: "Lumping143",
-    allocated: "lumping143_kg",
-    requested: "requested_lumping143_kg",
-    unit: "kg",
-  },
-  {
-    name: "LP296",
-    allocated: "lp296_kg",
-    requested: "requested_lp296_kg",
-    unit: "kg",
-  },
-  {
-    name: "Mestiso 1",
-    allocated: "mestiso_1_kg",
-    requested: "requested_mestiso_1_kg",
-    unit: "kg",
-  },
-  {
-    name: "Mestiso 20",
-    allocated: "mestiso_20_kg",
-    requested: "requested_mestiso_20_kg",
-    unit: "kg",
-  },
-  {
-    name: "Mestiso 29",
-    allocated: "mestiso_29_kg",
-    requested: "requested_mestiso_29_kg",
-    unit: "kg",
-  },
-  {
-    name: "Mestiso 55",
-    allocated: "mestiso_55_kg",
-    requested: "requested_mestiso_55_kg",
-    unit: "kg",
-  },
-  {
-    name: "Mestiso 73",
-    allocated: "mestiso_73_kg",
-    requested: "requested_mestiso_73_kg",
-    unit: "kg",
-  },
-  {
-    name: "Mestiso 99",
-    allocated: "mestiso_99_kg",
-    requested: "requested_mestiso_99_kg",
-    unit: "kg",
-  },
-  {
-    name: "Mestiso 103",
-    allocated: "mestiso_103_kg",
-    requested: "requested_mestiso_103_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 402",
-    allocated: "nsic_rc402_kg",
-    requested: "requested_nsic_rc402_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 480",
-    allocated: "nsic_rc480_kg",
-    requested: "requested_nsic_rc480_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 216",
-    allocated: "nsic_rc216_kg",
-    requested: "requested_nsic_rc216_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 218",
-    allocated: "nsic_rc218_kg",
-    requested: "requested_nsic_rc218_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 506",
-    allocated: "nsic_rc506_kg",
-    requested: "requested_nsic_rc506_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 508",
-    allocated: "nsic_rc508_kg",
-    requested: "requested_nsic_rc508_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 512",
-    allocated: "nsic_rc512_kg",
-    requested: "requested_nsic_rc512_kg",
-    unit: "kg",
-  },
-  {
-    name: "NSIC Rc 534",
-    allocated: "nsic_rc534_kg",
-    requested: "requested_nsic_rc534_kg",
-    unit: "kg",
-  },
-  {
-    name: "Tubigan 28",
-    allocated: "tubigan_28_kg",
-    requested: "requested_tubigan_28_kg",
-    unit: "kg",
-  },
-  {
-    name: "Tubigan 30",
-    allocated: "tubigan_30_kg",
-    requested: "requested_tubigan_30_kg",
-    unit: "kg",
-  },
-  {
-    name: "Tubigan 22",
-    allocated: "tubigan_22_kg",
-    requested: "requested_tubigan_22_kg",
-    unit: "kg",
-  },
-  {
-    name: "Sahod Ulan 2",
-    allocated: "sahod_ulan_2_kg",
-    requested: "requested_sahod_ulan_2_kg",
-    unit: "kg",
-  },
-  {
-    name: "Sahod Ulan 10",
-    allocated: "sahod_ulan_10_kg",
-    requested: "requested_sahod_ulan_10_kg",
-    unit: "kg",
-  },
-  {
-    name: "Salinas 6",
-    allocated: "salinas_6_kg",
-    requested: "requested_salinas_6_kg",
-    unit: "kg",
-  },
-  {
-    name: "Salinas 7",
-    allocated: "salinas_7_kg",
-    requested: "requested_salinas_7_kg",
-    unit: "kg",
-  },
-  {
-    name: "Salinas 8",
-    allocated: "salinas_8_kg",
-    requested: "requested_salinas_8_kg",
-    unit: "kg",
-  },
-  {
-    name: "Malagkit 5",
-    allocated: "malagkit_5_kg",
-    requested: "requested_malagkit_5_kg",
-    unit: "kg",
-  },
-];
+    {
+      name: "NSIC Rc 160",
+      allocated: "rice_seeds_nsic_rc160_kg",
+      requested: "requested_rice_seeds_nsic_rc160_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 222",
+      allocated: "rice_seeds_nsic_rc222_kg",
+      requested: "requested_rice_seeds_nsic_rc222_kg",
+      unit: "kg",
+    },
+    {
+      name: "Jackpot",
+      allocated: "jackpot_kg",
+      requested: "requested_jackpot_kg",
+      unit: "kg",
+    },
+    {
+      name: "US88",
+      allocated: "us88_kg",
+      requested: "requested_us88_kg",
+      unit: "kg",
+    },
+    {
+      name: "TH82",
+      allocated: "th82_kg",
+      requested: "requested_th82_kg",
+      unit: "kg",
+    },
+    {
+      name: "RH9000",
+      allocated: "rh9000_kg",
+      requested: "requested_rh9000_kg",
+      unit: "kg",
+    },
+    {
+      name: "Lumping143",
+      allocated: "lumping143_kg",
+      requested: "requested_lumping143_kg",
+      unit: "kg",
+    },
+    {
+      name: "LP296",
+      allocated: "lp296_kg",
+      requested: "requested_lp296_kg",
+      unit: "kg",
+    },
+    {
+      name: "Mestiso 1",
+      allocated: "mestiso_1_kg",
+      requested: "requested_mestiso_1_kg",
+      unit: "kg",
+    },
+    {
+      name: "Mestiso 20",
+      allocated: "mestiso_20_kg",
+      requested: "requested_mestiso_20_kg",
+      unit: "kg",
+    },
+    {
+      name: "Mestiso 29",
+      allocated: "mestiso_29_kg",
+      requested: "requested_mestiso_29_kg",
+      unit: "kg",
+    },
+    {
+      name: "Mestiso 55",
+      allocated: "mestiso_55_kg",
+      requested: "requested_mestiso_55_kg",
+      unit: "kg",
+    },
+    {
+      name: "Mestiso 73",
+      allocated: "mestiso_73_kg",
+      requested: "requested_mestiso_73_kg",
+      unit: "kg",
+    },
+    {
+      name: "Mestiso 99",
+      allocated: "mestiso_99_kg",
+      requested: "requested_mestiso_99_kg",
+      unit: "kg",
+    },
+    {
+      name: "Mestiso 103",
+      allocated: "mestiso_103_kg",
+      requested: "requested_mestiso_103_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 402",
+      allocated: "nsic_rc402_kg",
+      requested: "requested_nsic_rc402_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 480",
+      allocated: "nsic_rc480_kg",
+      requested: "requested_nsic_rc480_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 216",
+      allocated: "nsic_rc216_kg",
+      requested: "requested_nsic_rc216_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 218",
+      allocated: "nsic_rc218_kg",
+      requested: "requested_nsic_rc218_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 506",
+      allocated: "nsic_rc506_kg",
+      requested: "requested_nsic_rc506_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 508",
+      allocated: "nsic_rc508_kg",
+      requested: "requested_nsic_rc508_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 512",
+      allocated: "nsic_rc512_kg",
+      requested: "requested_nsic_rc512_kg",
+      unit: "kg",
+    },
+    {
+      name: "NSIC Rc 534",
+      allocated: "nsic_rc534_kg",
+      requested: "requested_nsic_rc534_kg",
+      unit: "kg",
+    },
+    {
+      name: "Tubigan 28",
+      allocated: "tubigan_28_kg",
+      requested: "requested_tubigan_28_kg",
+      unit: "kg",
+    },
+    {
+      name: "Tubigan 30",
+      allocated: "tubigan_30_kg",
+      requested: "requested_tubigan_30_kg",
+      unit: "kg",
+    },
+    {
+      name: "Tubigan 22",
+      allocated: "tubigan_22_kg",
+      requested: "requested_tubigan_22_kg",
+      unit: "kg",
+    },
+    {
+      name: "Sahod Ulan 2",
+      allocated: "sahod_ulan_2_kg",
+      requested: "requested_sahod_ulan_2_kg",
+      unit: "kg",
+    },
+    {
+      name: "Sahod Ulan 10",
+      allocated: "sahod_ulan_10_kg",
+      requested: "requested_sahod_ulan_10_kg",
+      unit: "kg",
+    },
+    {
+      name: "Salinas 6",
+      allocated: "salinas_6_kg",
+      requested: "requested_salinas_6_kg",
+      unit: "kg",
+    },
+    {
+      name: "Salinas 7",
+      allocated: "salinas_7_kg",
+      requested: "requested_salinas_7_kg",
+      unit: "kg",
+    },
+    {
+      name: "Salinas 8",
+      allocated: "salinas_8_kg",
+      requested: "requested_salinas_8_kg",
+      unit: "kg",
+    },
+    {
+      name: "Malagkit 5",
+      allocated: "malagkit_5_kg",
+      requested: "requested_malagkit_5_kg",
+      unit: "kg",
+    },
+  ];
 
 const JoViewAllocation: React.FC = () => {
   const navigate = useNavigate();
@@ -720,7 +719,7 @@ const JoViewAllocation: React.FC = () => {
                       <td
                         className={
                           totalAllocatedFertilizer - totalRequestedFertilizer <
-                          0
+                            0
                             ? "negative"
                             : "positive"
                         }

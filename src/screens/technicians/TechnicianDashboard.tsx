@@ -25,8 +25,6 @@ interface DashboardData {
 }
 
 const TechnicianDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null,
@@ -41,7 +39,6 @@ const TechnicianDashboard: React.FC = () => {
     lastName: string;
   } | null>(null);
 
-  const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -73,11 +70,6 @@ const TechnicianDashboard: React.FC = () => {
     };
     fetchCurrentUser();
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
 
   const filteredChecklist =
     dashboardData?.barangayChecklist?.filter((row) => {

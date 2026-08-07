@@ -6,12 +6,8 @@ const {
   fertilizerById,
   seedById,
 } = require("../loaders/dataLoader");
-const {
-  resolveFertilizerShortage,
-} = require("../resolvers/fertilizerResolver");
-const { resolveSeedShortage } = require("../resolvers/seedResolver");
-
 const router = express.Router();
+
 
 router.get("/seeds", (req, res) => {
   const list = seeds.map((seed) => ({
@@ -39,64 +35,6 @@ router.get("/fertilizers", (req, res) => {
   res.json(list);
 });
 
-router.post("/fertilizer", (req, res) => {
-  const { seedId, shortageFertId, unavailableIds } = req.body || {};
-  const normalizedSeedId =
-    typeof seedId === "string" && seedId.trim().length > 0 ? seedId : null;
 
-  if (!shortageFertId) {
-    return res.status(400).json({
-      error: "shortageFertId is required.",
-    });
-  }
-
-  if (normalizedSeedId && !seedById.get(normalizedSeedId)) {
-    return res.status(404).json({
-      error: "Seed id was not found.",
-    });
-  }
-
-  if (!fertilizerById.get(shortageFertId)) {
-    return res.status(404).json({
-      error: "Fertilizer id was not found.",
-    });
-  }
-
-  const result = resolveFertilizerShortage(
-    normalizedSeedId,
-    shortageFertId,
-    unavailableIds,
-  );
-
-  if (result.status === "error") {
-    return res.status(500).json(result);
-  }
-
-  return res.json(result);
-});
-
-router.post("/seed", (req, res) => {
-  const { seedId, unavailableIds } = req.body || {};
-
-  if (!seedId) {
-    return res.status(400).json({
-      error: "seedId is required.",
-    });
-  }
-
-  if (!seedById.get(seedId)) {
-    return res.status(404).json({
-      error: "Seed id was not found.",
-    });
-  }
-
-  const result = resolveSeedShortage(seedId, unavailableIds);
-
-  if (result.status === "error") {
-    return res.status(500).json(result);
-  }
-
-  return res.json(result);
-});
 
 module.exports = router;

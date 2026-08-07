@@ -5,14 +5,6 @@ function readJsonInOrder(preferredName, fallbackName) {
   const candidates = [
     path.join(__dirname, "..", "data", preferredName),
     path.join(__dirname, "..", "data", fallbackName || preferredName),
-    path.join(__dirname, "..", "dss-scripts", "knowledge", preferredName),
-    path.join(
-      __dirname,
-      "..",
-      "dss-scripts",
-      "knowledge",
-      fallbackName || preferredName,
-    ),
   ];
 
   const resolvedPath = candidates.find((candidate) => fs.existsSync(candidate));

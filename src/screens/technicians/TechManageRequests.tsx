@@ -1,23 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   getAllocations,
   getFarmerRequests,
   updateFarmerRequest,
-  deleteFarmerRequest,
   createDistributionRecord,
 } from "../../api";
-import {
-  suggestAlternatives,
-  calculateRemainingStock,
-} from "../../services/alternativeEngine";
 import {
   FERTILIZER_FIELD_MAPS,
   SEED_FIELD_MAPS,
 } from "../../constants/shortageFieldMaps";
 import "../../assets/css/technician css/TechManageRequestsStyle.css";
-import "../../components/layout/sidebarStyle.css";
-import { supabase } from "../../supabase";
 import TechSidebar from "../../components/layout/TechSidebar";
 import {
   getAuditLogger,
@@ -393,7 +386,6 @@ const EDIT_SEED_ITEMS: AllocationItem[] = [
 
 const TechManageRequests: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { allocationId } = useParams<{ allocationId: string }>();
   const [allocation, setAllocation] = useState<AllocationDetails | null>(null);
   const [requests, setRequests] = useState<FarmerRequest[]>([]);
@@ -404,22 +396,7 @@ const TechManageRequests: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [barangayFilter, setBarangayFilter] = useState<string>("all");
 
-  // DSS Feature: Alternative suggestions
-  const [, setShowAlternatives] = useState<{ [key: number]: boolean }>({});
-  const [alternatives, setAlternatives] = useState<{ [key: number]: any }>({});
-  const [, setLoadingAlternatives] = useState<{ [key: number]: boolean }>({});
 
-  // DSS Feature: Apply alternatives
-  const [selectedAlternative, setSelectedAlternative] = useState<{
-    [key: number]: { suggestionIdx: number; alternativeIdx: number };
-  }>({});
-  const [applyingAlternative, setApplyingAlternative] = useState<{
-    [key: number]: boolean;
-  }>({});
-
-  // Auto-suggestion notifications
-  const [autoSuggestionsCount, setAutoSuggestionsCount] = useState<number>(0);
-  const [newSuggestionsCount, setNewSuggestionsCount] = useState<number>(0);
 
   // Edit Feature
   const [editingRequest, setEditingRequest] = useState<number | null>(null);
@@ -427,12 +404,7 @@ const TechManageRequests: React.FC = () => {
   const [viewingRequest, setViewingRequest] = useState<FarmerRequest | null>(
     null,
   );
-  const [pendingAlternativeConfirmation, setPendingAlternativeConfirmation] =
-    useState<{
-      requestId: number;
-      suggestionIdx: number;
-      alternativeIdx: number;
-    } | null>(null);
+
   const [openActionsMenuFor, setOpenActionsMenuFor] = useState<number | null>(
     null,
   );
@@ -441,24 +413,6 @@ const TechManageRequests: React.FC = () => {
     left: number;
     openUp: boolean;
   } | null>(null);
-
-  // Delete confirmation modal state
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean;
-    requestId: number | null;
-    farmerName: string;
-  }>({
-    open: false,
-    requestId: null,
-    farmerName: "",
-  });
-  const [isDeletingRequest, setIsDeletingRequest] = useState(false);
-
-  // Suggestions Modal Feature
-  const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
-  const [expandedFarmerInModal, setExpandedFarmerInModal] = useState<
-    number | null
-  >(null);
 
   // Toast notification state
   const [toast, setToast] = useState<{
@@ -476,10 +430,6 @@ const TechManageRequests: React.FC = () => {
   const [includePrintDetails, setIncludePrintDetails] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  const [currentUser, setCurrentUser] = useState<{
-    firstName: string;
-    lastName: string;
-  } | null>(null);
 
   // Show toast notification
   const showToast = (
@@ -493,13 +443,6 @@ const TechManageRequests: React.FC = () => {
     }, 3000);
   };
 
-  const isActive = (path: string) => location.pathname === path;
-
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
-
   useEffect(() => {
     fetchAllocation();
     fetchRequests();
@@ -509,19 +452,6 @@ const TechManageRequests: React.FC = () => {
     filterRequests();
   }, [requests, searchTerm, statusFilter, barangayFilter]);
 
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const firstName = user.user_metadata?.first_name || "";
-        const lastName = user.user_metadata?.last_name || "";
-        setCurrentUser({ firstName, lastName });
-      }
-    };
-    fetchCurrentUser();
-  }, []);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
@@ -599,11 +529,7 @@ const TechManageRequests: React.FC = () => {
       const data = response.data;
       setRequests(data);
 
-      // Auto-fetch alternatives for requests with potential shortages
-      setTimeout(
-        () => autoFetchAlternativesForShortages(data, currentAllocation),
-        500,
-      );
+
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -611,117 +537,7 @@ const TechManageRequests: React.FC = () => {
     }
   };
 
-  // Auto-fetch alternatives for all pending requests with shortages
-  const autoFetchAlternativesForShortages = async (
-    requestsList: FarmerRequest[],
-    allocationData: AllocationDetails,
-  ) => {
-    if (!allocationData) {
-      console.log("⚠️ No allocation data provided, skipping auto-fetch");
-      return;
-    }
 
-    const pendingRequests = requestsList.filter((r) => r.status === "pending");
-    console.log(
-      `📊 Checking ${pendingRequests.length} pending requests for shortages...`,
-    );
-
-    let countWithShortages = 0;
-    let newSuggestions = 0;
-
-    for (const request of pendingRequests) {
-      const hasShortage = checkPotentialShortageForRequest(
-        request,
-        requestsList,
-        allocationData,
-      );
-
-      if (hasShortage) {
-        countWithShortages++;
-        console.log(
-          `⚠️ Shortage detected for request #${request.id} (${request.farmer_name})`,
-        );
-
-        // Auto-fetch if not already loaded
-        if (!alternatives[request.id]) {
-          try {
-            setLoadingAlternatives((prev) => ({ ...prev, [request.id]: true }));
-
-            console.log(
-              `🤖 Computing alternatives for request #${request.id}...`,
-            );
-
-            // Calculate remaining stock for this request
-            const remainingStock = calculateRemainingStock(
-              allocationData,
-              requestsList,
-              request.id,
-            );
-
-            // Run client-side alternative engine
-            const result = suggestAlternatives(
-              {
-                farmer_name: request.farmer_name,
-                crop_type: "rice",
-                requested_urea_bags: request.requested_urea_bags || 0,
-                requested_complete_14_bags:
-                  request.requested_complete_14_bags || 0,
-                requested_ammonium_sulfate_bags:
-                  request.requested_ammonium_sulfate_bags || 0,
-                requested_muriate_potash_bags:
-                  request.requested_muriate_potash_bags || 0,
-                requested_jackpot_kg: request.requested_jackpot_kg || 0,
-                requested_us88_kg: request.requested_us88_kg || 0,
-                requested_th82_kg: request.requested_th82_kg || 0,
-                requested_rh9000_kg: request.requested_rh9000_kg || 0,
-                requested_lumping143_kg: request.requested_lumping143_kg || 0,
-                requested_lp296_kg: request.requested_lp296_kg || 0,
-              },
-              remainingStock,
-            );
-
-            const hasSolutionAlternatives = Boolean(
-              result?.suggestions?.suggestions?.some(
-                (s: any) =>
-                  Array.isArray(s?.alternatives) && s.alternatives.length > 0,
-              ),
-            );
-
-            console.log(
-              `Alternatives computed for request #${request.id}:`,
-              result,
-            );
-            setAlternatives((prev) => ({ ...prev, [request.id]: result }));
-            setShowAlternatives((prev) => ({ ...prev, [request.id]: true }));
-            if (hasSolutionAlternatives) {
-              newSuggestions++;
-            }
-          } catch (error) {
-            console.error(
-              `Failed to compute alternatives for request ${request.id}:`,
-              error,
-            );
-          } finally {
-            setLoadingAlternatives((prev) => ({
-              ...prev,
-              [request.id]: false,
-            }));
-          }
-
-          // Small delay between requests
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        } else {
-          console.log(`Alternatives already loaded for request #${request.id}`);
-        }
-      }
-    }
-
-    console.log(
-      `Summary: ${countWithShortages} requests with shortages, ${newSuggestions} new alternatives fetched`,
-    );
-    setAutoSuggestionsCount(countWithShortages);
-    setNewSuggestionsCount(newSuggestions);
-  };
 
   const filterRequests = () => {
     let filtered = [...requests];
@@ -755,57 +571,7 @@ const TechManageRequests: React.FC = () => {
     setFilteredRequests(filtered);
   };
 
-  const openDeleteDialog = (id: number, farmerName: string) => {
-    setDeleteDialog({
-      open: true,
-      requestId: id,
-      farmerName,
-    });
-  };
 
-  const closeDeleteDialog = () => {
-    if (isDeletingRequest) return;
-    setDeleteDialog({
-      open: false,
-      requestId: null,
-      farmerName: "",
-    });
-  };
-
-  const confirmDeleteRequest = async () => {
-    if (!deleteDialog.requestId) return;
-
-    try {
-      setIsDeletingRequest(true);
-      const response = await deleteFarmerRequest(deleteDialog.requestId);
-
-      if (!response.error) {
-        showToast("Request deleted successfully", "success");
-        closeDeleteDialog();
-        fetchRequests();
-        try {
-          const user = await getCurrentUserForAudit();
-          await getAuditLogger().logCRUD(
-            { ...user, id: undefined },
-            "DELETE",
-            AuditModule.REQUESTS,
-            "farmer_request",
-            deleteDialog.requestId,
-            `Deleted farmer request for ${deleteDialog.farmerName}`,
-          );
-        } catch (auditErr) {
-          console.error("Audit log failed (non-blocking):", auditErr);
-        }
-      } else {
-        showToast("Failed to delete request", "error");
-      }
-    } catch (error) {
-      console.error("Error deleting request:", error);
-      showToast("Error deleting request", "error");
-    } finally {
-      setIsDeletingRequest(false);
-    }
-  };
 
   const handleStatusChange = async (
     id: number,
@@ -816,14 +582,7 @@ const TechManageRequests: React.FC = () => {
       const response = await updateFarmerRequest(id, { status: newStatus });
 
       if (!response.error) {
-        // If status is rejected, clear alternatives for this request
-        if (newStatus === "rejected") {
-          setAlternatives((prev) => {
-            const updated = { ...prev };
-            delete updated[id];
-            return updated;
-          });
-        }
+
         // If status is Claimed, automatically create distribution log
         if (newStatus === "Claimed") {
           await createDistributionLog(id);
@@ -898,9 +657,9 @@ const TechManageRequests: React.FC = () => {
       // Calculate totals
       const totalFertilizer = Math.round(
         (Number(request.requested_urea_bags) || 0) +
-          (Number(request.requested_complete_14_bags) || 0) +
-          (Number(request.requested_ammonium_sulfate_bags) || 0) +
-          (Number(request.requested_muriate_potash_bags) || 0),
+        (Number(request.requested_complete_14_bags) || 0) +
+        (Number(request.requested_ammonium_sulfate_bags) || 0) +
+        (Number(request.requested_muriate_potash_bags) || 0),
       );
 
       const totalSeeds = Number(
@@ -991,17 +750,7 @@ const TechManageRequests: React.FC = () => {
         ),
       );
 
-      // Clear alternatives for this request - will be re-evaluated after refresh
-      setAlternatives((prev) => {
-        const updated = { ...prev };
-        delete updated[editingRequest];
-        return updated;
-      });
-      setSelectedAlternative((prev) => {
-        const updated = { ...prev };
-        delete updated[editingRequest];
-        return updated;
-      });
+
 
       // Close edit modal
       setEditingRequest(null);
@@ -1204,9 +953,8 @@ const TechManageRequests: React.FC = () => {
       <div className="tech-manage-requests-modal-meta-panel">
         <div className="tech-manage-requests-modal-meta-top">
           <span
-            className={`tech-manage-requests-modal-meta-status ${
-              hasRisk ? "is-danger" : "is-safe"
-            }`}
+            className={`tech-manage-requests-modal-meta-status ${hasRisk ? "is-danger" : "is-safe"
+              }`}
           >
             {hasRisk ? "Exceeded" : "Within limit"}
           </span>
@@ -1248,9 +996,8 @@ const TechManageRequests: React.FC = () => {
         </div>
         <div className="tech-manage-requests-modal-meta-bar-track">
           <div
-            className={`tech-manage-requests-modal-meta-bar-fill ${
-              hasRisk ? "is-danger" : "is-safe"
-            }`}
+            className={`tech-manage-requests-modal-meta-bar-fill ${hasRisk ? "is-danger" : "is-safe"
+              }`}
             style={{ width: `${usagePercent}%` }}
           />
         </div>
@@ -1273,224 +1020,7 @@ const TechManageRequests: React.FC = () => {
     !!editingRequestData &&
     editableRequestFields.some((field) => getEditFieldRiskData(field)?.hasRisk);
 
-  const getAlternativeSelectionDetails = (
-    requestId: number,
-    selectionOverride?: { suggestionIdx: number; alternativeIdx: number },
-  ) => {
-    const selection = selectionOverride || selectedAlternative[requestId];
-    if (!selection) return null;
 
-    const altData = alternatives[requestId];
-    if (!altData || !altData.suggestions?.suggestions) return null;
-
-    const suggestion = altData.suggestions.suggestions[selection.suggestionIdx];
-    if (!suggestion || !suggestion.alternatives) return null;
-
-    const alternative = suggestion.alternatives[selection.alternativeIdx];
-    if (!alternative) return null;
-
-    return {
-      selection,
-      altData,
-      suggestion,
-      alternative,
-    };
-  };
-
-  const openAlternativeConfirmation = (requestId: number) => {
-    const currentSelection = selectedAlternative[requestId];
-    if (!currentSelection) {
-      showToast("Please select an alternative first", "warning");
-      return;
-    }
-
-    const details = getAlternativeSelectionDetails(requestId, currentSelection);
-    if (!details) {
-      showToast("Alternative details are unavailable", "error");
-      return;
-    }
-
-    setPendingAlternativeConfirmation({
-      requestId,
-      suggestionIdx: details.selection.suggestionIdx,
-      alternativeIdx: details.selection.alternativeIdx,
-    });
-  };
-
-  // Apply selected alternative to farmer request
-  const applyAlternative = async (
-    requestId: number,
-    selectionOverride?: { suggestionIdx: number; alternativeIdx: number },
-  ) => {
-    const details = getAlternativeSelectionDetails(
-      requestId,
-      selectionOverride,
-    );
-    if (!details) {
-      showToast("Selected alternative not found", "error");
-      return;
-    }
-
-    const { suggestion, alternative } = details;
-
-    try {
-      setApplyingAlternative((prev) => ({ ...prev, [requestId]: true }));
-
-      const request = requests.find((r) => r.id === requestId);
-      if (!request) {
-        throw new Error("Request not found");
-      }
-
-      // Prepare updated request data
-      const updatedRequest: any = { ...request };
-
-      // Map substitution item ids to request fields (fertilizer + seed)
-      const requestFieldByItemKey: Record<string, RequestField> = {
-        urea_46_0_0: "requested_urea_bags",
-        complete_14_14_14: "requested_complete_14_bags",
-        complete_16_16_16: "requested_complete_14_bags",
-        ammonium_sulfate_21_0_0: "requested_ammonium_sulfate_bags",
-        muriate_potash_0_0_60: "requested_muriate_potash_bags",
-        jackpot: "requested_jackpot_kg",
-        us88: "requested_us88_kg",
-        th82: "requested_th82_kg",
-        rh9000: "requested_rh9000_kg",
-        lumping143: "requested_lumping143_kg",
-        lp296: "requested_lp296_kg",
-      };
-
-      const originalItemKey =
-        suggestion.original_fertilizer || suggestion.original_seed;
-      const substituteItemKey = alternative.substitute_id;
-
-      const originalField = originalItemKey
-        ? requestFieldByItemKey[originalItemKey]
-        : undefined;
-      const substituteField = substituteItemKey
-        ? requestFieldByItemKey[substituteItemKey]
-        : undefined;
-
-      if (!originalField || !substituteField) {
-        throw new Error(
-          `Invalid substitution field mapping (original: ${String(originalItemKey)}, substitute: ${String(substituteItemKey)})`,
-        );
-      }
-
-      const isSeedSubstitution = suggestion.category === "seed";
-      const amountUnit = isSeedSubstitution ? "kg" : "bags";
-      const shortageAmount = Number(
-        suggestion.shortage_kg ?? suggestion.shortage_bags ?? 0,
-      );
-      const neededAmount = Number(
-        alternative.needed_kg ?? alternative.needed_bags ?? 0,
-      );
-
-      // Update quantities
-      const currentOriginalAmount = updatedRequest[originalField] || 0;
-      const newOriginalAmount = Math.max(
-        0,
-        currentOriginalAmount - shortageAmount,
-      );
-      updatedRequest[originalField] = newOriginalAmount;
-
-      // Add substitute amount
-      const currentSubstituteAmount = updatedRequest[substituteField] || 0;
-      updatedRequest[substituteField] = currentSubstituteAmount + neededAmount;
-
-      const originalFert =
-        suggestion.original_fertilizer_name ||
-        suggestion.original_seed_name ||
-        suggestion.original_fertilizer ||
-        suggestion.original_seed ||
-        "original item";
-      const substituteFert = alternative.substitute_name;
-      const confidence = (
-        Number(alternative.confidence_score || 0) * 100
-      ).toFixed(0);
-
-      // Add note about substitution
-      const timestamp = new Date().toLocaleString();
-      const substitutionNote =
-        `[${timestamp}] SUBSTITUTION APPLIED: ` +
-        `Replaced ${shortageAmount} ${amountUnit} ${originalFert} with ` +
-        `${neededAmount} ${amountUnit} ${substituteFert} ` +
-        `(${confidence}% confidence). ` +
-        `${alternative.can_fulfill ? "Full substitution." : `Partial: ${alternative.remaining_shortage || 0} ${amountUnit} shortage remains.`}`;
-
-      updatedRequest.request_notes = request.request_notes
-        ? `${request.request_notes}\n\n${substitutionNote}`
-        : substitutionNote;
-
-      // Send update to backend
-      const response = await updateFarmerRequest(requestId, updatedRequest);
-
-      if (!response.error) {
-        const updatedData = response.data;
-
-        // Update local state immediately with the new data
-        setRequests((prev) =>
-          prev.map((r) => (r.id === requestId ? { ...r, ...updatedData } : r)),
-        );
-
-        showToast("Alternative applied successfully", "success");
-
-        // Refresh from backend to ensure consistency
-        await fetchRequests();
-        // Collapse the farmer in the modal after applying
-        setExpandedFarmerInModal(null);
-      } else {
-        throw new Error("Failed to update request");
-      }
-    } catch (error) {
-      console.error("Error applying alternative:", error);
-      showToast(
-        `Error applying alternative: ${error instanceof Error ? error.message : "Unknown error"}`,
-        "error",
-      );
-    } finally {
-      setApplyingAlternative((prev) => ({ ...prev, [requestId]: false }));
-    }
-  };
-
-  const handleConfirmAlternativeSubstitution = async () => {
-    if (!pendingAlternativeConfirmation) return;
-
-    const { requestId, suggestionIdx, alternativeIdx } =
-      pendingAlternativeConfirmation;
-
-    setPendingAlternativeConfirmation(null);
-    await applyAlternative(requestId, { suggestionIdx, alternativeIdx });
-  };
-
-  const pendingAlternativeDetails = pendingAlternativeConfirmation
-    ? getAlternativeSelectionDetails(
-        pendingAlternativeConfirmation.requestId,
-        pendingAlternativeConfirmation,
-      )
-    : null;
-
-  const pendingSuggestion = pendingAlternativeDetails?.suggestion;
-  const pendingAlternative = pendingAlternativeDetails?.alternative;
-  const pendingIsSeedSubstitution = pendingSuggestion?.category === "seed";
-  const pendingAmountUnit = pendingIsSeedSubstitution ? "kg" : "bags";
-  const pendingOriginalName =
-    pendingSuggestion?.original_fertilizer_name ||
-    pendingSuggestion?.original_seed_name ||
-    pendingSuggestion?.original_fertilizer ||
-    pendingSuggestion?.original_seed ||
-    "Original item";
-  const pendingShortageAmount = Number(
-    pendingSuggestion?.shortage_kg ?? pendingSuggestion?.shortage_bags ?? 0,
-  );
-  const pendingNeededAmount = Number(
-    pendingAlternative?.needed_kg ?? pendingAlternative?.needed_bags ?? 0,
-  );
-  const pendingAvailableAmount = Number(
-    pendingAlternative?.available_kg ?? pendingAlternative?.available_bags ?? 0,
-  );
-  const pendingRemainingShortage = Number(
-    pendingAlternative?.remaining_shortage ?? 0,
-  );
 
   // Helper function to check if a request might have stock issues
   const checkPotentialShortage = (request: FarmerRequest): boolean => {
@@ -1646,7 +1176,7 @@ const TechManageRequests: React.FC = () => {
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
+      .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
   };
 
@@ -2035,11 +1565,10 @@ const TechManageRequests: React.FC = () => {
             <td class="text-center">${escapeHtml(formatRequestDateForPrint(request))}</td>
             <td class="text-right">${fertilizerTotal.toFixed(2)}</td>
             <td class="text-right">${seedTotal.toFixed(2)}</td>
-            <td class="text-center">${
-              hasShortage
-                ? '<span class="badge shortage">Yes</span>'
-                : '<span class="badge approved">No</span>'
-            }</td>
+            <td class="text-center">${hasShortage
+            ? '<span class="badge shortage">Yes</span>'
+            : '<span class="badge approved">No</span>'
+          }</td>
           </tr>
         `;
       })
@@ -2047,10 +1576,10 @@ const TechManageRequests: React.FC = () => {
 
     const detailsSection = includeDetails
       ? requestsToPrint
-          .map((request, index) => {
-            const { totalFertilizer: fertilizerTotal, totalSeeds: seedTotal } =
-              getRequestTotalsForPrint(request);
-            return `
+        .map((request, index) => {
+          const { totalFertilizer: fertilizerTotal, totalSeeds: seedTotal } =
+            getRequestTotalsForPrint(request);
+          return `
               <div class="request-section">
                 <div class="request-head">
                   <strong>${index + 1}. ${escapeHtml(request.farmer_name || "N/A")}</strong>
@@ -2100,8 +1629,8 @@ const TechManageRequests: React.FC = () => {
                 <div class="notes-block">${escapeHtml(request.request_notes?.trim() || "No notes provided.")}</div>
               </div>
             `;
-          })
-          .join("")
+        })
+        .join("")
       : "";
 
     return buildPrintDocument(
@@ -2330,15 +1859,15 @@ const TechManageRequests: React.FC = () => {
                         <span className="tech-manage-requests-stat-value">
                           {allocation
                             ? FERTILIZER_FIELD_MAPS.reduce((sum, map) => {
-                                return (
-                                  sum +
-                                  (Number(
-                                    allocation[
-                                      map.allocationField as keyof AllocationDetails
-                                    ],
-                                  ) || 0)
-                                );
-                              }, 0).toFixed(2)
+                              return (
+                                sum +
+                                (Number(
+                                  allocation[
+                                  map.allocationField as keyof AllocationDetails
+                                  ],
+                                ) || 0)
+                              );
+                            }, 0).toFixed(2)
                             : "0.00"}{" "}
                           bags
                         </span>
@@ -2350,15 +1879,15 @@ const TechManageRequests: React.FC = () => {
                         <span className="tech-manage-requests-stat-value">
                           {allocation
                             ? SEED_FIELD_MAPS.reduce((sum, map) => {
-                                return (
-                                  sum +
-                                  (Number(
-                                    allocation[
-                                      map.allocationField as keyof AllocationDetails
-                                    ],
-                                  ) || 0)
-                                );
-                              }, 0).toFixed(2)
+                              return (
+                                sum +
+                                (Number(
+                                  allocation[
+                                  map.allocationField as keyof AllocationDetails
+                                  ],
+                                ) || 0)
+                              );
+                            }, 0).toFixed(2)
                             : "0.00"}{" "}
                           kg
                         </span>
@@ -2453,7 +1982,7 @@ const TechManageRequests: React.FC = () => {
                                       innerSum +
                                       (Number(
                                         r[
-                                          map.requestField as keyof FarmerRequest
+                                        map.requestField as keyof FarmerRequest
                                         ],
                                       ) || 0)
                                     );
@@ -2484,7 +2013,7 @@ const TechManageRequests: React.FC = () => {
                                     innerSum +
                                     (Number(
                                       r[
-                                        map.requestField as keyof FarmerRequest
+                                      map.requestField as keyof FarmerRequest
                                       ],
                                     ) || 0)
                                   );
@@ -2604,24 +2133,21 @@ const TechManageRequests: React.FC = () => {
                 {filteredRequests.filter(
                   (r) => r.status === "pending" && checkPotentialShortage(r),
                 ).length > 0 && (
-                  <div className="tech-manage-requests-info-box">
-                    <span className="tech-manage-requests-info-box-icon">
-                      ⚠️
-                    </span>
-                    <div className="tech-manage-requests-info-box-content">
-                      <strong className="tech-manage-requests-info-box-title">
-                        Alternatives Auto-Loaded & Displayed
-                      </strong>
-                      <p className="tech-manage-requests-info-box-text">
-                        Rows highlighted in yellow (⚠️) show automatic
-                        suggestions. Alternative fertilizer options are
-                        displayed automatically based on agronomic equivalency.
-                        Click the "⚠️ Suggestions" card above to view and apply
-                        alternatives.
-                      </p>
+                    <div className="tech-manage-requests-info-box">
+                      <span className="tech-manage-requests-info-box-icon">
+                        ⚠️
+                      </span>
+                      <div className="tech-manage-requests-info-box-content">
+                        <strong className="tech-manage-requests-info-box-title">
+                          Potential Shortage Detected
+                        </strong>
+                        <p className="tech-manage-requests-info-box-text">
+                          Rows highlighted in yellow (⚠️) show requests that
+                          exceed available stock. Please edit the request to resolve.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Requests Table */}
                 {filteredRequests.length === 0 ? (
@@ -2725,13 +2251,13 @@ const TechManageRequests: React.FC = () => {
                                             triggerRect.right - menuWidth,
                                           ),
                                           window.innerWidth -
-                                            menuWidth -
-                                            viewportMargin,
+                                          menuWidth -
+                                          viewportMargin,
                                         );
                                         const openUpward =
                                           triggerRect.bottom +
-                                            estimatedMenuHeight +
-                                            viewportMargin >
+                                          estimatedMenuHeight +
+                                          viewportMargin >
                                           window.innerHeight;
                                         const menuTop = openUpward
                                           ? triggerRect.top - 8
@@ -2967,9 +2493,8 @@ const TechManageRequests: React.FC = () => {
                   return (
                     <div
                       key={String(item.requestField)}
-                      className={`tech-manage-requests-modal-field ${
-                        hasRisk ? "tech-manage-requests-modal-field-danger" : ""
-                      }`}
+                      className={`tech-manage-requests-modal-field ${hasRisk ? "tech-manage-requests-modal-field-danger" : ""
+                        }`}
                     >
                       <label className="tech-manage-requests-modal-label">
                         {item.label}
@@ -3012,9 +2537,8 @@ const TechManageRequests: React.FC = () => {
                   return (
                     <div
                       key={String(item.requestField)}
-                      className={`tech-manage-requests-modal-field ${
-                        hasRisk ? "tech-manage-requests-modal-field-danger" : ""
-                      }`}
+                      className={`tech-manage-requests-modal-field ${hasRisk ? "tech-manage-requests-modal-field-danger" : ""
+                        }`}
                     >
                       <label className="tech-manage-requests-modal-label">
                         {item.label}
@@ -3074,38 +2598,7 @@ const TechManageRequests: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Request Confirmation Modal */}
-      {deleteDialog.open && (
-        <div className="tech-manage-requests-modal-overlay">
-          <div className="tech-manage-requests-delete-modal-content">
-            <h3 className="tech-manage-requests-modal-title">Delete Request</h3>
-            <p className="tech-manage-requests-delete-modal-text">
-              Are you sure you want to delete the request from
-              <strong> {deleteDialog.farmerName}</strong>?
-            </p>
-            <p className="tech-manage-requests-delete-modal-subtext">
-              This action cannot be undone.
-            </p>
 
-            <div className="tech-manage-requests-modal-actions">
-              <button
-                onClick={closeDeleteDialog}
-                className="tech-manage-requests-modal-btn-cancel"
-                disabled={isDeletingRequest}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteRequest}
-                className="tech-manage-requests-modal-btn-delete-confirm"
-                disabled={isDeletingRequest}
-              >
-                {isDeletingRequest ? "Deleting..." : "Yes, Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Print Requests Modal */}
       {showPrintModal && (
@@ -3170,545 +2663,6 @@ const TechManageRequests: React.FC = () => {
                 disabled={isPrinting}
               >
                 {isPrinting ? "Preparing..." : "Open Print Preview"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Suggestions Modal */}
-      {showSuggestionsModal && (
-        <div className="tech-manage-requests-modal-overlay">
-          <div
-            className="tech-manage-requests-modal-content"
-            style={{ maxWidth: "700px", maxHeight: "80vh" }}
-          >
-            <h3 className="tech-manage-requests-modal-title">
-              Suggestions Overview
-            </h3>
-
-            <div
-              style={{
-                overflowY: "auto",
-                maxHeight: "calc(80vh - 140px)",
-                padding: "15px 9px",
-              }}
-            >
-              {Object.keys(alternatives).length === 0 ? (
-                <div className="tech-manage-requests-suggestions-empty">
-                  <div className="tech-manage-requests-suggestions-empty-icon">
-                    Empty
-                  </div>
-                  <h4>No Suggestions Available</h4>
-                  <p>There are no shortage-based suggestions at this time.</p>
-                </div>
-              ) : (
-                <div className="tech-manage-requests-suggestions-list">
-                  {Object.keys(alternatives).map((key) => {
-                    const requestId = parseInt(key);
-                    const altData = alternatives[requestId];
-                    const request = requests.find((r) => r.id === requestId);
-
-                    if (
-                      !altData?.suggestions?.suggestions?.length ||
-                      !request ||
-                      request.status !== "pending"
-                    ) {
-                      return null;
-                    }
-
-                    const isExpanded = expandedFarmerInModal === requestId;
-                    const blockedSuggestions =
-                      altData.suggestions.suggestions.filter(
-                        (s: any) => !s.alternatives?.length,
-                      );
-                    const hasActionableSuggestions =
-                      altData.suggestions.suggestions.some(
-                        (s: any) => s.alternatives?.length > 0,
-                      );
-
-                    const handleEditFromOverview = () => {
-                      setShowSuggestionsModal(false);
-                      setExpandedFarmerInModal(null);
-                      handleEdit(request);
-                    };
-
-                    const handleDeleteFromOverview = () => {
-                      setShowSuggestionsModal(false);
-                      setExpandedFarmerInModal(null);
-                      openDeleteDialog(request.id, request.farmer_name);
-                    };
-
-                    return (
-                      <div
-                        key={requestId}
-                        className="tech-manage-requests-suggestion-card"
-                      >
-                        {/* Clickable Header */}
-                        <div
-                          className="tech-manage-requests-suggestion-card-header"
-                          onClick={() =>
-                            setExpandedFarmerInModal(
-                              isExpanded ? null : requestId,
-                            )
-                          }
-                          style={{ cursor: "pointer" }}
-                        >
-                          <div className="tech-manage-requests-suggestion-farmer-info">
-                            <span className="tech-manage-requests-suggestion-farmer-name">
-                              ⚠️ {altData.farmer_name || request.farmer_name}
-                            </span>
-                            <span className="tech-manage-requests-suggestion-farmer-barangay">
-                              {request.barangay}
-                            </span>
-                          </div>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "12px",
-                            }}
-                          >
-                            <span className="tech-manage-requests-suggestion-status">
-                              {altData.suggestions.suggestions.length}{" "}
-                              shortage(s)
-                            </span>
-                            <span
-                              style={{ fontSize: "16px", color: "#7c3aed" }}
-                            >
-                              {isExpanded ? "⚠️" : "⚠️"}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Expandable Details */}
-                        {isExpanded && (
-                          <div className="tech-manage-requests-suggestion-details">
-                            {blockedSuggestions.length > 0 && (
-                              <div className="tech-manage-requests-unresolved-overview">
-                                <div className="tech-manage-requests-unresolved-overview-header">
-                                  <h5 className="tech-manage-requests-unresolved-overview-title">
-                                    Exceeded allocations with no alternatives
-                                  </h5>
-                                  <span className="tech-manage-requests-unresolved-overview-count">
-                                    {blockedSuggestions.length}
-                                  </span>
-                                </div>
-
-                                <p className="tech-manage-requests-unresolved-overview-text">
-                                  These items are beyond the remaining stock and
-                                  currently have no substitution suggestions.
-                                </p>
-
-                                <ul className="tech-manage-requests-unresolved-overview-list">
-                                  {blockedSuggestions.map(
-                                    (blocked: any, blockedIdx: number) => {
-                                      const blockedName =
-                                        blocked.original_fertilizer_name ||
-                                        blocked.original_seed_name ||
-                                        blocked.original_fertilizer ||
-                                        blocked.original_seed ||
-                                        "Requested item";
-                                      const blockedShortage =
-                                        blocked.category === "seed"
-                                          ? `${Number(blocked.shortage_kg || 0)} kg`
-                                          : `${Number(blocked.shortage_bags || 0)} bags`;
-
-                                      return (
-                                        <li
-                                          key={`${blockedName}-${blockedIdx}`}
-                                          className="tech-manage-requests-unresolved-overview-item"
-                                        >
-                                          <span className="tech-manage-requests-unresolved-overview-item-name">
-                                            {blockedName}
-                                          </span>
-                                          <span className="tech-manage-requests-unresolved-overview-item-shortage">
-                                            Short by {blockedShortage}
-                                          </span>
-                                        </li>
-                                      );
-                                    },
-                                  )}
-                                </ul>
-
-                                <div className="tech-manage-requests-unresolved-overview-actions">
-                                  <button
-                                    type="button"
-                                    onClick={handleEditFromOverview}
-                                    className="tech-manage-requests-btn-unresolved-edit"
-                                  >
-                                    Edit Request
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {altData.suggestions.suggestions.map(
-                              (suggestion: any, idx: number) => {
-                                const shortageItemName =
-                                  suggestion.original_fertilizer_name ||
-                                  suggestion.original_seed_name ||
-                                  suggestion.original_fertilizer ||
-                                  suggestion.original_seed ||
-                                  "Requested item";
-                                const shortageAmountLabel =
-                                  suggestion.category === "seed"
-                                    ? `${Number(suggestion.shortage_kg || 0)} kg`
-                                    : `${Number(suggestion.shortage_bags || 0)} bags`;
-                                const selectedForShortage =
-                                  selectedAlternative[requestId]
-                                    ?.suggestionIdx === idx
-                                    ? suggestion.alternatives?.[
-                                        selectedAlternative[requestId]
-                                          .alternativeIdx
-                                      ]
-                                    : null;
-
-                                return (
-                                  <div
-                                    key={idx}
-                                    className="tech-manage-requests-shortage-item"
-                                  >
-                                    <div className="tech-manage-requests-shortage-header">
-                                      <span className="tech-manage-requests-shortage-label">
-                                        ⚠️ Shortage:{" "}
-                                        <strong>{shortageItemName}</strong>
-                                      </span>
-                                      <span className="tech-manage-requests-shortage-amount">
-                                        {shortageAmountLabel}
-                                      </span>
-                                    </div>
-
-                                    {suggestion.alternatives &&
-                                    suggestion.alternatives.length > 0 ? (
-                                      <div className="tech-manage-requests-alternatives-section">
-                                        <label className="tech-manage-requests-alternatives-label">
-                                          Available alternatives
-                                        </label>
-
-                                        <div className="tech-manage-requests-alternatives-grid">
-                                          {suggestion.alternatives.map(
-                                            (alt: any, altIdx: number) => {
-                                              const isSelected =
-                                                selectedAlternative[requestId]
-                                                  ?.suggestionIdx === idx &&
-                                                selectedAlternative[requestId]
-                                                  ?.alternativeIdx === altIdx;
-                                              const confidencePercent =
-                                                Math.round(
-                                                  Number(
-                                                    alt.confidence_score || 0,
-                                                  ) * 100,
-                                                );
-
-                                              return (
-                                                <button
-                                                  key={altIdx}
-                                                  type="button"
-                                                  onClick={() =>
-                                                    setSelectedAlternative(
-                                                      (prev) => ({
-                                                        ...prev,
-                                                        [requestId]: {
-                                                          suggestionIdx: idx,
-                                                          alternativeIdx:
-                                                            altIdx,
-                                                        },
-                                                      }),
-                                                    )
-                                                  }
-                                                  className={`tech-manage-requests-alternative-card ${
-                                                    isSelected
-                                                      ? "is-selected"
-                                                      : ""
-                                                  }`}
-                                                >
-                                                  <div className="tech-manage-requests-alternative-card-top">
-                                                    <span className="tech-manage-requests-alternative-name">
-                                                      {alt.substitute_name}
-                                                    </span>
-                                                    <span
-                                                      className={`tech-manage-requests-alternative-fit-badge ${
-                                                        alt.can_fulfill
-                                                          ? "is-full"
-                                                          : "is-partial"
-                                                      }`}
-                                                    >
-                                                      {alt.can_fulfill
-                                                        ? "Full cover"
-                                                        : "Partial cover"}
-                                                    </span>
-                                                  </div>
-
-                                                  <div className="tech-manage-requests-alternative-card-metrics">
-                                                    <span>
-                                                      {alt.needed_bags} bags
-                                                      needed
-                                                    </span>
-                                                    <span>
-                                                      {alt.available_bags} bags
-                                                      available
-                                                    </span>
-                                                  </div>
-
-                                                  <div className="tech-manage-requests-alternative-confidence-row">
-                                                    <span>Confidence</span>
-                                                    <strong>
-                                                      {confidencePercent}%
-                                                    </strong>
-                                                  </div>
-                                                  <div className="tech-manage-requests-alternative-confidence-track">
-                                                    <div
-                                                      className="tech-manage-requests-alternative-confidence-fill"
-                                                      style={{
-                                                        width: `${confidencePercent}%`,
-                                                      }}
-                                                    />
-                                                  </div>
-                                                </button>
-                                              );
-                                            },
-                                          )}
-                                        </div>
-
-                                        {selectedForShortage && (
-                                          <div className="tech-manage-requests-selected-alternative-preview">
-                                            <div className="tech-manage-requests-selected-alternative-header">
-                                              <span className="tech-manage-requests-selected-alternative-kicker">
-                                                Selected substitute
-                                              </span>
-                                              <span
-                                                className={`tech-manage-requests-alternative-fit-badge ${
-                                                  selectedForShortage.can_fulfill
-                                                    ? "is-full"
-                                                    : "is-partial"
-                                                }`}
-                                              >
-                                                {selectedForShortage.can_fulfill
-                                                  ? "Full cover"
-                                                  : "Partial cover"}
-                                              </span>
-                                            </div>
-
-                                            <div className="tech-manage-requests-selected-alternative-name">
-                                              {
-                                                selectedForShortage.substitute_name
-                                              }
-                                            </div>
-
-                                            <div className="tech-manage-requests-selected-alternative-metrics-grid">
-                                              <div className="tech-manage-requests-selected-alternative-metric">
-                                                <span>Needed</span>
-                                                <strong>
-                                                  {
-                                                    selectedForShortage.needed_bags
-                                                  }{" "}
-                                                  bags
-                                                </strong>
-                                              </div>
-                                              <div className="tech-manage-requests-selected-alternative-metric">
-                                                <span>Available</span>
-                                                <strong>
-                                                  {
-                                                    selectedForShortage.available_bags
-                                                  }{" "}
-                                                  bags
-                                                </strong>
-                                              </div>
-                                              <div className="tech-manage-requests-selected-alternative-metric">
-                                                <span>Confidence</span>
-                                                <strong>
-                                                  {Math.round(
-                                                    Number(
-                                                      selectedForShortage.confidence_score ||
-                                                        0,
-                                                    ) * 100,
-                                                  )}
-                                                  %
-                                                </strong>
-                                              </div>
-                                            </div>
-
-                                            {!selectedForShortage.can_fulfill && (
-                                              <p className="tech-manage-requests-selected-alternative-warning">
-                                                Remaining shortage:{" "}
-                                                {Number(
-                                                  selectedForShortage.remaining_shortage ||
-                                                    0,
-                                                )}{" "}
-                                                bags
-                                              </p>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="tech-manage-requests-no-alternatives">
-                                        No suitable alternatives available
-                                        {suggestion.recommendation
-                                          ?.next_steps && (
-                                          <div className="tech-manage-requests-recommendation">
-                                            <strong>Recommendation:</strong>
-                                            <ul>
-                                              {suggestion.recommendation.next_steps.map(
-                                                (
-                                                  step: string,
-                                                  stepIdx: number,
-                                                ) => (
-                                                  <li key={stepIdx}>{step}</li>
-                                                ),
-                                              )}
-                                            </ul>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              },
-                            )}
-
-                            {hasActionableSuggestions && (
-                              <div className="tech-manage-requests-suggestion-card-actions">
-                                <button
-                                  onClick={() =>
-                                    openAlternativeConfirmation(requestId)
-                                  }
-                                  disabled={
-                                    !selectedAlternative[requestId] ||
-                                    applyingAlternative[requestId]
-                                  }
-                                  className="tech-manage-requests-btn-apply-alternative"
-                                >
-                                  {applyingAlternative[requestId]
-                                    ? "Applying..."
-                                    : "Apply Selected Alternative"}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="tech-manage-requests-modal-actions">
-              <button
-                onClick={() => {
-                  setShowSuggestionsModal(false);
-                  setExpandedFarmerInModal(null);
-                }}
-                className="tech-manage-requests-modal-btn-cancel"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Fertilizer Substitution Modal */}
-      {pendingAlternativeConfirmation && pendingAlternativeDetails && (
-        <div className="tech-manage-requests-modal-overlay">
-          <div className="tech-manage-requests-modal-content tech-manage-requests-substitution-modal">
-            <h3 className="tech-manage-requests-modal-title">
-              Confirm Substitution
-            </h3>
-
-            <div className="tech-manage-requests-substitution-header">
-              <span>
-                <strong>Farmer:</strong>{" "}
-                {pendingAlternativeDetails.altData.farmer_name}
-              </span>
-              <span
-                className={`tech-manage-requests-substitution-badge ${
-                  pendingAlternative?.can_fulfill ? "is-full" : "is-partial"
-                }`}
-              >
-                {pendingAlternative?.can_fulfill
-                  ? "Full substitution"
-                  : "Partial substitution"}
-              </span>
-            </div>
-
-            <div className="tech-manage-requests-substitution-compare">
-              <div className="tech-manage-requests-substitution-card is-from">
-                <small>Replace</small>
-                <strong>{pendingOriginalName}</strong>
-                <span>
-                  {pendingShortageAmount} {pendingAmountUnit} shortage
-                </span>
-              </div>
-              <div className="tech-manage-requests-substitution-arrow">→</div>
-              <div className="tech-manage-requests-substitution-card is-to">
-                <small>With</small>
-                <strong>{pendingAlternative?.substitute_name}</strong>
-                <span>
-                  {pendingNeededAmount} {pendingAmountUnit} needed
-                </span>
-              </div>
-            </div>
-
-            <div className="tech-manage-requests-substitution-metrics">
-              <div>
-                <span>Confidence</span>
-                <strong>
-                  {Math.round(
-                    Number(pendingAlternative?.confidence_score || 0) * 100,
-                  )}
-                  %
-                </strong>
-              </div>
-              <div>
-                <span>Available stock</span>
-                <strong>
-                  {pendingAvailableAmount} {pendingAmountUnit}
-                </strong>
-              </div>
-              <div>
-                <span>Remaining shortage</span>
-                <strong>
-                  {pendingRemainingShortage} {pendingAmountUnit}
-                </strong>
-              </div>
-            </div>
-
-            {!pendingAlternative?.can_fulfill && (
-              <div className="tech-manage-requests-substitution-warning">
-                Partial substitution warning: this option cannot fully cover the
-                shortage. A remaining shortage of {pendingRemainingShortage}{" "}
-                {pendingAmountUnit} will remain.
-              </div>
-            )}
-
-            <p className="tech-manage-requests-substitution-note">
-              This action will update the request quantities and append a
-              substitution note. Status remains pending for final review.
-            </p>
-
-            <div className="tech-manage-requests-modal-actions">
-              <button
-                type="button"
-                onClick={() => setPendingAlternativeConfirmation(null)}
-                className="tech-manage-requests-modal-btn-cancel"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmAlternativeSubstitution}
-                disabled={
-                  applyingAlternative[pendingAlternativeConfirmation.requestId]
-                }
-                className="tech-manage-requests-modal-btn-confirm-substitution"
-              >
-                {applyingAlternative[pendingAlternativeConfirmation.requestId]
-                  ? "Applying..."
-                  : "Apply Substitution"}
               </button>
             </div>
           </div>

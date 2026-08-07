@@ -601,9 +601,7 @@ const JoLandRegistry: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBarangay, setFilterBarangay] = useState("");
-  const [filterCultivation, setFilterCultivation] = useState<
-    "all" | "active" | "inactive"
-  >("all");
+  const filterCultivation = "all";
   const [landStatusFilter, setLandStatusFilter] = useState<string>("all");
   const [showModal, setShowModal] = useState(false);
 
@@ -2268,28 +2266,7 @@ const JoLandRegistry: React.FC = () => {
     setOwnerAffiliationSubmitSuccess("");
   };
 
-  const handleOwnerAffiliationTakeoverModeChange = (
-    mode: ReplacementTakeoverMode,
-  ) => {
-    setOwnerAffiliationTakeoverMode(mode);
-    setOwnerAffiliationSubmitError("");
-    setOwnerAffiliationSubmitSuccess("");
-  };
 
-  const handleOwnerAffiliationSpecificAreaChange = (
-    farmParcelId: number,
-    rawValue: string,
-  ) => {
-    const trimmed = rawValue.trim();
-    setOwnerAffiliationSpecificLotInputs((prev) => ({
-      ...prev,
-      [farmParcelId]: {
-        customAreaHa: trimmed === "" ? "" : Number(trimmed),
-      },
-    }));
-    setOwnerAffiliationSubmitError("");
-    setOwnerAffiliationSubmitSuccess("");
-  };
 
   const handleOwnerAffiliationDocsSelected = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -3113,51 +3090,7 @@ const JoLandRegistry: React.FC = () => {
     );
   };
 
-  // Build transfer actor options (for dropdowns) from aggregated farmers
-  const buildTransferActorOptions = (
-    farmers: FarmerGroup[],
-    excludeFarmerId?: number, // ← second parameter (optional)
-  ): TransferActorOption[] => {
-    const toPositiveArea = (value: unknown) => {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-    };
 
-    return farmers
-      .map((group) => {
-        const ownerParcels = getEligibleTransferDonorParcels(group);
-        const ownerAreaHa = ownerParcels.reduce(
-          (sum, parcel) => sum + toPositiveArea(parcel?.total_farm_area_ha),
-          0,
-        );
-
-        return {
-          group,
-          ownerParcels,
-          ownerAreaHa,
-        };
-      })
-      .filter((group) => {
-        // Exclude the current clicked farmer to prevent self-transfer
-        if (excludeFarmerId && group.group.farmer_id === excludeFarmerId) {
-          return false;
-        }
-        if (group.ownerParcels.length === 0 || group.ownerAreaHa <= 0) {
-          return false;
-        }
-        return (
-          group.group.has_registered_owner || group.ownerParcels.length > 0
-        );
-      })
-      .map(({ group, ownerParcels }) => ({
-        farmerId: group.farmer_id,
-        name: group.farmer_name || `Farmer #${group.farmer_id}`,
-        barangay: ownerParcels[0]?.farm_location_barangay || "",
-        parcelIds: ownerParcels.map((p) => p.id),
-        parcelCount: ownerParcels.length,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  };
 
   const filteredRegistryRows = useMemo(() => {
     const toDisplayDayTime = (value: string | null | undefined) => {
@@ -3268,7 +3201,6 @@ const JoLandRegistry: React.FC = () => {
   );
 
   const selectedContextFarmerId = selectedFarmer?.farmer_id ?? null;
-  const selectedContextFarmerName = selectedFarmer?.farmer_name || "Unknown";
   const selectedFarmerCapabilities = selectedFarmer
     ? deriveRegistryActionCapabilities(selectedFarmer)
     : null;
@@ -3582,13 +3514,7 @@ const JoLandRegistry: React.FC = () => {
     setOwnerAffiliationSubmitSuccess("");
   }, []);
 
-  const ownerAffiliationSelectableAreaHa = ownerAffiliationStep3Parcels.reduce(
-    (sum, parcel) => {
-      const area = Number(parcel.areaHa);
-      return sum + (Number.isFinite(area) ? area : 0);
-    },
-    0,
-  );
+
 
   const ownerAffiliationTakeoverPlan = useMemo(() => {
     return buildReplacementTakeoverPlan(

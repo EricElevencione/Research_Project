@@ -102,8 +102,8 @@ export const getCurrentUserForAudit = async (): Promise<AuditUser> => {
 // ─────────────────────────────────────────────────────────────────────────────
 // PAGES THAT NEED THIS CHANGE:
 //
-// 1. JoRsbsaRegisLandowner.tsx   → logFarmerRegistration call in handleFinalSubmit
-// 2. JoRsbsaRegisFarmer.tsx      → logFarmerRegistration call in handleFinalSubmit
+// 1. JoLandownerRegistration.tsx   → logFarmerRegistration call in handleFinalSubmit
+// 2. JoFarmerRegistration.tsx      → logFarmerRegistration call in handleFinalSubmit
 // 3. Tenant/Lessee page          → logFarmerRegistration call (once built)
 // 4. Edit Farmer page            → logCRUD("UPDATE", ...) — needs logger call added
 // 5. Delete Farmer               → logCRUD("DELETE", ...) — needs logger call added
